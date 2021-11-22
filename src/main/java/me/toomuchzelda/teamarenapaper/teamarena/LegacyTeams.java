@@ -11,7 +11,7 @@ public class LegacyTeams
 	//create the RWF teams from the config.yml within each SND map
 	// "BLUE", "RED", etc
 	public static TeamArenaTeam fromRWF(String configName) {
-		TeamArenaTeam team;
+		TeamArenaTeam team = null;
 		
 		switch(configName) {
 			case "BLUE":
@@ -35,5 +35,7 @@ public class LegacyTeams
 						new ItemStack(Material.GOLD_BLOCK), DyeColor.YELLOW);
 				break;
 		}
+		
+		return team;
 	}
 }
