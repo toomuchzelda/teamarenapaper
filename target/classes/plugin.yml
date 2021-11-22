@@ -1,0 +1,6 @@
+name: TeamArenaPaper
+version: '1.0-FOREVER'
+main: me.toomuchzelda.teamarenapaper.Main
+api-version: 1.17
+authors: [ toomuchzelda ]
+description: Minigames inspired by libraryaddict's Search and Destroy
