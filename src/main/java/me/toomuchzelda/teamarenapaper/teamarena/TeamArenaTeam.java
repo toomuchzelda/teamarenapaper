@@ -22,8 +22,11 @@ public class TeamArenaTeam
 {
 	private final String name;
 	private final String simpleName;
+
 	private final Color colour;
-	private final ItemStack hat;
+	//null if single flat colour
+	private final Color secondColour;
+
 	private final DyeColor dyeColour;
 	private final TextColor RGBColour;
 	
@@ -44,11 +47,11 @@ public class TeamArenaTeam
 	//abstract score value, game-specific
 	public int score;
 	
-	public TeamArenaTeam(String name, String simpleName, Color colour, ItemStack hat, DyeColor dyeColor) {
+	public TeamArenaTeam(String name, String simpleName, Color colour, Color secondColour, DyeColor dyeColor) {
 		this.name = name;
 		this.simpleName = simpleName;
 		this.colour = colour;
-		this.hat = hat;
+		this.secondColour = secondColour;
 		this.dyeColour = dyeColor;
 		
 		this.RGBColour = TextColor.color(colour.asRGB());
@@ -79,9 +82,13 @@ public class TeamArenaTeam
 	public Color getColour() {
 		return colour;
 	}
-	
-	public ItemStack getHat() {
-		return hat;
+
+	public boolean isGradient() {
+		return secondColour != null;
+	}
+
+	public Color getSecondColour() {
+		return secondColour;
 	}
 	
 	public DyeColor getDyeColour() {
@@ -163,5 +170,17 @@ public class TeamArenaTeam
 	
 	public Set<Entity> getEntityMembers() {
 		return entityMembers;
+	}
+
+	public static Color parseString(String string) {
+		String[] strings = string.split(",");
+		int[] ints = new int[3];
+		for(int i = 0; i < strings.length; i++) {
+			ints[i] = Integer.parseInt(strings[i]);
+			if(i < 0 || i > 255) {
+				throw new IllegalArgumentException("Bad colour info, must be between 0 and 255: " + i + " in " + string);
+			}
+		}
+		return Color.fromRGB(ints[0], ints[1], ints[2]);
 	}
 }

@@ -7,6 +7,8 @@ import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
+import org.bukkit.event.weather.WeatherChangeEvent;
+import org.bukkit.util.BlockVector;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.yaml.snakeyaml.Yaml;
@@ -24,18 +26,18 @@ public abstract class TeamArena
 {
 	private File worldFile;
 	protected World gameWorld;
-	
+
 	protected long gameTick;
 	protected long waitingSince;
 	protected GameState gameState;
-	
+
 	public static final NamedTextColor noTeamColour = NamedTextColor.YELLOW;
-	
+
 	protected BoundingBox border;
 	protected Location spawnPos;
-	
+
 	protected TeamArenaTeam[] teams;
-	
+
 	public TeamArena() {
 		Main.logger().info("Reading info from " + mapPath() + ':');
 		File[] maps = new File(mapPath()).listFiles();
@@ -48,7 +50,7 @@ public abstract class TeamArena
 		}
 		String chosenMapName = maps[rand].getAbsolutePath();
 		Main.logger().info("Loading Map: " + chosenMapName);
-		
+
 		//copy the map to another directory and load from there to avoid any accidental modifying of the original
 		// map
 		File source = maps[rand];
@@ -63,11 +65,29 @@ public abstract class TeamArena
 		worldFile = dest;
 		WorldCreator worldCreator = new WorldCreator(dest.getAbsolutePath());
 		gameWorld = worldCreator.createWorld();
-		
-		//parse config before to know world options
-		
+
+		//parse config before world gamerules to know world options
+		String filename = chosenMapName + "/config.yml";
+		Yaml yaml = new Yaml();
+		Main.logger().info("Reading config YAML: " + filename);
+		try
+		{
+			FileInputStream fileStream = new FileInputStream(filename);
+			Map<String, Object> map = yaml.load(fileStream);
+			Iterator<Map.Entry<String, Object>> iter = map.entrySet().iterator();
+			while(iter.hasNext()) {
+				Main.logger().info(iter.next().toString());
+			}
+			parseConfig(map);
+		}
+		catch(IOException e)
+		{
+			e.printStackTrace();
+		}
+
+
 		//sussy
-		
+
 		gameWorld.setAutoSave(false);
 		gameWorld.setGameRule(GameRule.DISABLE_RAIDS, true);
 		gameWorld.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS,false);
@@ -92,114 +112,119 @@ public abstract class TeamArena
 		gameWorld.setGameRule(GameRule.NATURAL_REGENERATION, false);
 		gameWorld.setGameRule(GameRule.RANDOM_TICK_SPEED, 0);
 		gameWorld.setGameRule(GameRule.SHOW_DEATH_MESSAGES, false);
-		
+
 		gameTick = 0;
 		waitingSince = 0;
 		gameState = GameState.PREGAME;
-		
+
 		for(Player p : Bukkit.getOnlinePlayers()) {
 			p.teleport(gameWorld.getSpawnLocation());
 		}
 	}
-	
+
 	public void tick() {
-	
+
 	}
-	
-	//return the data so that sub-classes can read gamemode-specific stuff from it
-	public Map<String, Object> parseConfig(String filename) {
-		Yaml yaml = new Yaml();
-		Main.logger().info("Reading config YAML: " + filename);
-		try
-		{
-			FileInputStream fileStream = new FileInputStream(filename);
-			Map<String, Object> map = yaml.load(fileStream);
-			Iterator<Map.Entry<String, Object>> iter = map.entrySet().iterator();
-			while(iter.hasNext()) {
-				Main.logger().info(iter.next().toString());
-			}
-			
-			//Map border
-			// Only supports rectangular prism borders as of now
-			ArrayList<String> borders = (ArrayList<String>) map.get("Border");
-			Vector corner1 = BlockUtils.parseCoordsToVec(borders.get(0), 0, 0, 0);
-			Vector corner2 = BlockUtils.parseCoordsToVec(borders.get(1), 0, 0, 0);
-			border = BoundingBox.of(corner1, corner2);
-			Main.logger().info("MapBorder: " + border.toString());
-			
-			//calculate spawnpoint based on map border
-			Vector centre = border.getCenter();
+
+	public void parseConfig(Map<String, Object> map) {
+		//Map border
+		// Only supports rectangular prism borders as of now
+		ArrayList<String> borders = (ArrayList<String>) map.get("Border");
+		Vector corner1 = BlockUtils.parseCoordsToVec(borders.get(0), 0, 0, 0);
+		Vector corner2 = BlockUtils.parseCoordsToVec(borders.get(1), 0, 0, 0);
+		border = BoundingBox.of(corner1, corner2);
+		Main.logger().info("MapBorder: " + border.toString());
+
+		//calculate spawnpoint based on map border
+		Vector centre = border.getCenter();
 			/*Vec spawnpoint = BlockStuff.getFloor(centre, instance);
 			//if not safe to spawn just spawn them in the sky
 			if(spawnpoint == null) {
 				spawnpoint = new Vec(centre.x(), 255, centre.z());
 			}*/
-			int y = gameWorld.getHighestBlockYAt(centre.getBlockX(), centre.getBlockZ());
-			if(y > centre.getY())
-				centre.setY(y);
-			
-			spawnPos = centre.toLocation(gameWorld, 90, 0);
-			spawnPos.setY(spawnPos.getY() + 1);
-			
-			Main.logger().info("spawnPos: " + spawnPos.toString());
-			
-			//Create the teams
-			//Key = team e.g RED, BLUE. value = Map:
-			//		key = "Spawns" value: ArrayList<String>
-			Map<String, Map<String, ArrayList<String>>> teamsMap =
-					(Map<String, Map<String, ArrayList<String>>>) map.get("Teams");
-			
-			int numOfTeams = teamsMap.size();
-			teams = new TeamArenaTeam[numOfTeams];
-			int teamsArrIndex = 0;
-			
-			Iterator<Map.Entry<String, Map<String, ArrayList<String>>>> teamsIter = teamsMap.entrySet().iterator();
-			while(teamsIter.hasNext()) {
-				Map.Entry<String, Map<String, ArrayList<String>>> entry = teamsIter.next();
-				String teamName = entry.getKey();
-				
-				Map<String, ArrayList<String>> spawnsYaml = entry.getValue();
-				ArrayList<String> spawnsList = spawnsYaml.get("Spawns");
-				
-				//if it's a legacy RWF team
-				//TeamColours teamColour = TeamColours.valueOf(teamName);
-				TeamArenaTeam teamArenaTeam = LegacyTeams.fromRWF(teamName);
-				if(teamArenaTeam == null) {
-					//it's not a legacy rwf team
+		int y = gameWorld.getHighestBlockYAt(centre.getBlockX(), centre.getBlockZ());
+		if(y > centre.getY())
+			centre.setY(y);
 
+		spawnPos = centre.toLocation(gameWorld, 90, 0);
+		spawnPos.setY(spawnPos.getY() + 1);
+
+		Main.logger().info("spawnPos: " + spawnPos.toString());
+
+		//Create the teams
+		//Key = team e.g RED, BLUE. value = Map:
+		//		key = "Spawns" value: ArrayList<String>
+		Map<String, Map<String, ArrayList<String>>> teamsMap =
+				(Map<String, Map<String, ArrayList<String>>>) map.get("Teams");
+
+		int numOfTeams = teamsMap.size();
+		teams = new TeamArenaTeam[numOfTeams];
+		int teamsArrIndex = 0;
+
+		Iterator<Map.Entry<String, Map<String, ArrayList<String>>>> teamsIter = teamsMap.entrySet().iterator();
+		while(teamsIter.hasNext()) {
+			Map.Entry<String, Map<String, ArrayList<String>>> entry = teamsIter.next();
+			String teamName = entry.getKey();
+
+			Map<String, ArrayList<String>> spawnsYaml = entry.getValue();
+			ArrayList<String> spawnsList = spawnsYaml.get("Spawns");
+
+			//if it's a legacy RWF team
+			//TeamColours teamColour = TeamColours.valueOf(teamName);
+			TeamArenaTeam teamArenaTeam = LegacyTeams.fromRWF(teamName);
+			if(teamArenaTeam == null) {
+				//it's not a legacy rwf team
+
+				String simpleName = teamName;
+				if(spawnsYaml.containsKey("SimpleName")) {
+					simpleName = spawnsYaml.get("SimpleName").get(0);
 				}
-				
-				Pos[] positionArray = new Pos[spawnsList.size()];
-				
-				int index = 0;
-				for(String loc : spawnsList) {
-					double[] coords = BlockStuff.parseCoords(loc, 0.5, 0, 0.5);
-					Pos pos = new Pos(coords[0], coords[1], coords[2]);
-					Vec direction = centre.withY(0).sub(spawnPos.withY(0));
-					direction = direction.normalize();
-					positionArray[index] = pos.withDirection(direction);
-					index++;
+
+				ArrayList<String> coloursInfo = spawnsYaml.get("Colour");
+				boolean isGradient = coloursInfo.get(0).equals("GRADIENT");
+				Color first = TeamArenaTeam.parseString(coloursInfo.get(1));
+				Color second = null;
+				if(isGradient) {
+					second = TeamArenaTeam.parseString(coloursInfo.get(2));
 				}
-				teamArenaTeam.setSpawns(positionArray);
-				teams[teamsArrIndex] = teamArenaTeam;
-				teamsArrIndex++;
+
+				//probably do later: seperate choosable name and simple names for non-legacy teams
+				// and also choosable hats
+				// and dye color
+				teamArenaTeam = new TeamArenaTeam(teamName, simpleName, first, second, null);
 			}
-			
-		}
-		catch(IOException e)
-		{
-			e.printStackTrace();
+
+			//Pos[] positionArray = new Pos[spawnsList.size()];
+			Location[] locArray = new Location[spawnsList.size()];
+
+			int index = 0;
+			for(String loc : spawnsList) {
+				//double[] coords = BlockStuff.parseCoords(loc, 0.5, 0, 0.5);
+				Vector coords = BlockUtils.parseCoordsToVec(loc, 0.5, 0, 0.5);
+				Location location = coords.toLocation(gameWorld);
+				//Pos pos = new Pos(coords[0], coords[1], coords[2]);
+				Vector direction = centre.clone().setY(0).subtract(spawnPos.toVector().setY(0));
+				//Vec direction = centre.withY(0).sub(spawnPos.withY(0));
+				direction.normalize();
+				location.setDirection(direction);
+				//positionArray[index] = pos.withDirection(direction);
+				locArray[index] = location;
+				index++;
+			}
+			teamArenaTeam.setSpawns(locArray);
+			teams[teamsArrIndex] = teamArenaTeam;
+			teamsArrIndex++;
 		}
 	}
-	
+
 	public String mapPath() {
 		return "Maps/";
 	}
-	
+
 	public World getWorld() {
 		return gameWorld;
 	}
-	
+
 	public File getWorldFile() {
 		return worldFile;
 	}

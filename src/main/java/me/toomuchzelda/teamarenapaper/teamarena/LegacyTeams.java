@@ -16,23 +16,23 @@ public class LegacyTeams
 		switch(configName) {
 			case "BLUE":
 				team = new TeamArenaTeam("Blue Team","Blue", TeamArenaTeam.convert(NamedTextColor.BLUE),
-						new ItemStack(Material.DIAMOND_BLOCK), DyeColor.BLUE);
+						null, DyeColor.BLUE);
 				break;
 			case "RED":
 				team = new TeamArenaTeam("Red Team", "Red", TeamArenaTeam.convert(NamedTextColor.RED),
-						new ItemStack(Material.REDSTONE_BLOCK), DyeColor.RED);
+						null, DyeColor.RED);
 				break;
 			case "GREEN":
 				team = new TeamArenaTeam("Green Team", "Green", TeamArenaTeam.convert(NamedTextColor.DARK_GREEN),
-						new ItemStack(Material.BIRCH_LEAVES), DyeColor.GREEN);
+						null, DyeColor.GREEN);
 				break;
 			case "PURPLE":
 				team = new TeamArenaTeam("Purple Team", "Purple", TeamArenaTeam.convert(NamedTextColor.DARK_PURPLE),
-						new ItemStack(Material.OBSIDIAN), DyeColor.PURPLE);
+						null, DyeColor.PURPLE);
 				break;
 			case "YELLOW":
 				team = new TeamArenaTeam("Yellow Team", "Yellow", TeamArenaTeam.convert(NamedTextColor.YELLOW),
-						new ItemStack(Material.GOLD_BLOCK), DyeColor.YELLOW);
+						null, DyeColor.YELLOW);
 				break;
 		}
 		return team;
