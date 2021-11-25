@@ -35,7 +35,6 @@ public class LegacyTeams
 						new ItemStack(Material.GOLD_BLOCK), DyeColor.YELLOW);
 				break;
 		}
-		
 		return team;
 	}
 }
