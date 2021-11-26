@@ -4,18 +4,20 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.BlockUtils;
 import me.toomuchzelda.teamarenapaper.core.FileUtils;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
-import org.bukkit.event.weather.WeatherChangeEvent;
-import org.bukkit.util.BlockVector;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -37,6 +39,8 @@ public abstract class TeamArena
 	protected Location spawnPos;
 
 	protected TeamArenaTeam[] teams;
+
+	protected ItemStack kitMenuItem;
 
 	protected MapInfo mapInfo;
 
@@ -87,9 +91,6 @@ public abstract class TeamArena
 			e.printStackTrace();
 		}
 
-
-		//sussy
-
 		gameWorld.setAutoSave(false);
 		gameWorld.setGameRule(GameRule.DISABLE_RAIDS, true);
 		gameWorld.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS,false);
@@ -125,6 +126,11 @@ public abstract class TeamArena
 		waitingSince = 0;
 		gameState = GameState.PREGAME;
 
+		kitMenuItem = new ItemStack(Material.FEATHER);
+		Component kitMenuName = Component.text("Select a Kit").color(NamedTextColor.BLUE)
+				.decoration(TextDecoration.ITALIC, false);
+		kitMenuItem.getItemMeta().displayName(kitMenuName);
+
 		for(Player p : Bukkit.getOnlinePlayers()) {
 			p.teleport(gameWorld.getSpawnLocation());
 		}
@@ -132,6 +138,33 @@ public abstract class TeamArena
 
 	public void tick() {
 
+
+
+		gameTick++;
+	}
+
+	public void balancePlayerLeave() {
+		if(gameState == GameState.PREGAME) {
+			int maxTeamSize = Bukkit.getOnlinePlayers().size() / teams.length;
+			for (TeamArenaTeam team : teams)
+			{
+				if (team.getEntityMembers().size() > maxTeamSize)
+				{
+					//peek not pop, since removeMembers will remove them from the Stack
+					Entity removed = team.lastIn.peek();
+					team.removeMembers(removed);
+					if(removed instanceof Player p) {
+						p.sendMessage(Component.text("A player left, so you were removed from your chosen team for balance. Sorry!").color(NamedTextColor.AQUA));
+						p.playSound(p.getLocation(), Sound.ENTITY_CHICKEN_HURT, SoundCategory.AMBIENT, 2f, 1f);
+					}
+				}
+			}
+		}
+	}
+
+	public void giveLobbyItems(Player player) {
+		PlayerInventory inventory = player.getInventory();
+		inventory.setItem(0, kitMenuItem.clone());
 	}
 
 	public void parseConfig(Map<String, Object> map) {
@@ -204,8 +237,6 @@ public abstract class TeamArena
 		Main.logger().info("spawnPos: " + spawnPos.toString());
 
 		//Create the teams
-		//Key = team e.g RED, BLUE. value = Map:
-		//		key = "Spawns" value: ArrayList<String>
 		Map<String, Map<String, ArrayList<String>>> teamsMap =
 				(Map<String, Map<String, ArrayList<String>>>) map.get("Teams");
 

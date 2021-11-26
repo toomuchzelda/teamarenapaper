@@ -1,16 +1,14 @@
 package me.toomuchzelda.teamarenapaper;
 
-import jdk.jfr.Event;
 import me.toomuchzelda.teamarenapaper.core.FileUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.KingOfTheHill;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scoreboard.Team;
 
-import java.io.File;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
@@ -43,7 +41,6 @@ public final class Main extends JavaPlugin
 		eventListeners = new EventListeners(this);
 		
 		teamArena = new KingOfTheHill();
-		
 	}
 	
 	@Override
