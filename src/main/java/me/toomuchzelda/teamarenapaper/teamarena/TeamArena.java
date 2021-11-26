@@ -38,6 +38,8 @@ public abstract class TeamArena
 
 	protected TeamArenaTeam[] teams;
 
+	protected MapInfo mapInfo;
+
 	public TeamArena() {
 		Main.logger().info("Reading info from " + mapPath() + ':');
 		File[] maps = new File(mapPath()).listFiles();
@@ -92,18 +94,17 @@ public abstract class TeamArena
 		gameWorld.setGameRule(GameRule.DISABLE_RAIDS, true);
 		gameWorld.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS,false);
 		gameWorld.setGameRule(GameRule.DO_INSOMNIA,	false);
-		//These to be adjustable within map config
-		// gameWorld.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
-		// gameWorld.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
+		gameWorld.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, mapInfo.doDaylightCycle);
+		gameWorld.setGameRule(GameRule.DO_WEATHER_CYCLE, mapInfo.doWeatherCycle);
 		//undecided
-		// gameWorld.setGameRule(GameRule.DO_ENTITY_DROPS, false);
+		gameWorld.setGameRule(GameRule.DO_ENTITY_DROPS, false);
 		gameWorld.setGameRule(GameRule.DO_FIRE_TICK, false);
 		//undecided
-		// gameWorld.setGameRule(GameRule.DO_MOB_LOOT, false);
+		gameWorld.setGameRule(GameRule.DO_MOB_LOOT, false);
 		gameWorld.setGameRule(GameRule.DO_MOB_SPAWNING, false);
 		gameWorld.setGameRule(GameRule.DO_PATROL_SPAWNING, false);
 		//undecided
-		// gameWorld.setGameRule(GameRule.DO_TILE_DROPS, false);
+		gameWorld.setGameRule(GameRule.DO_TILE_DROPS, false);
 		//handle ourselves
 		gameWorld.setGameRule(GameRule.KEEP_INVENTORY, true);
 		gameWorld.setGameRule(GameRule.MAX_ENTITY_CRAMMING, 0);
@@ -112,6 +113,13 @@ public abstract class TeamArena
 		gameWorld.setGameRule(GameRule.NATURAL_REGENERATION, false);
 		gameWorld.setGameRule(GameRule.RANDOM_TICK_SPEED, 0);
 		gameWorld.setGameRule(GameRule.SHOW_DEATH_MESSAGES, false);
+
+		if(mapInfo.weatherType == 2)
+			gameWorld.setThundering(true);
+		else if(mapInfo.weatherType == 1)
+			gameWorld.setStorm(true);
+		else
+			gameWorld.setClearWeatherDuration(6000); //5 minutes
 
 		gameTick = 0;
 		waitingSince = 0;
@@ -127,6 +135,50 @@ public abstract class TeamArena
 	}
 
 	public void parseConfig(Map<String, Object> map) {
+		//basic info
+		mapInfo = new MapInfo();
+		mapInfo.name = (String) map.get("Name");
+		mapInfo.author = (String) map.get("Author");
+		mapInfo.description = (String) map.get("Description");
+
+		try {
+			mapInfo.doDaylightCycle = (boolean) map.get("DoDaylightCycle");
+		}
+		//the element doesn't exist, or spelled incorrectly and recognized by snakeyaml as a String instead of a boolean
+		catch(NullPointerException | ClassCastException e) {
+			mapInfo.doDaylightCycle = false;
+			e.printStackTrace();
+		}
+
+		try {
+			String weather = (String) map.get("Weather");
+
+			if(weather.equalsIgnoreCase("DOWNPOUR"))
+				mapInfo.weatherType = 1;
+			else if(weather.equalsIgnoreCase("THUNDER"))
+				mapInfo.weatherType = 2;
+			else
+				mapInfo.weatherType = 0;
+
+			/*switch (weather) {
+				case "DOWNPOUR" -> mapInfo.weatherType = 1;
+				case "THUNDER" -> mapInfo.weatherType = 2;
+				default -> mapInfo.weatherType = 0;
+			}*/
+		}
+		catch(NullPointerException | ClassCastException e) {
+			mapInfo.weatherType = 0;
+			e.printStackTrace();
+		}
+
+		try {
+			mapInfo.doWeatherCycle = (boolean) map.get("DoWeatherCycle");
+		}
+		catch(NullPointerException | ClassCastException e) {
+			mapInfo.doWeatherCycle = false;
+			e.printStackTrace();
+		}
+
 		//Map border
 		// Only supports rectangular prism borders as of now
 		ArrayList<String> borders = (ArrayList<String>) map.get("Border");
