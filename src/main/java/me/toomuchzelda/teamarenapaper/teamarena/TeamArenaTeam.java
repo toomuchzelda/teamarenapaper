@@ -10,8 +10,6 @@ import org.bukkit.DyeColor;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.scoreboard.ScoreboardManager;
 import org.bukkit.scoreboard.Team;
 
 import java.util.Set;
@@ -158,6 +156,7 @@ public class TeamArenaTeam
 			entityMembers.remove(entity);
 			lastIn.remove(entity);
 		}
+		Main.getGame().lastHadLeft = this;
 	}
 	
 	public void removeAllMembers() {

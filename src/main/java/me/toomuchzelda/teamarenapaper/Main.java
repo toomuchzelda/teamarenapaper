@@ -63,6 +63,10 @@ public final class Main extends JavaPlugin
 		playerInfo.put(player, info);
 	}
 	
+	public static void removePlayerInfo(Player player) {
+		playerInfo.remove(player);
+	}
+	
 	public static Logger logger() {
 		return logger;
 	}
