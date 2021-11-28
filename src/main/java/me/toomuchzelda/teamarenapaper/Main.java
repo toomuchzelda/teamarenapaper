@@ -1,5 +1,7 @@
 package me.toomuchzelda.teamarenapaper;
 
+import com.comphenix.protocol.ProtocolLib;
+import com.comphenix.protocol.ProtocolLibrary;
 import me.toomuchzelda.teamarenapaper.core.FileUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.KingOfTheHill;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
@@ -9,6 +11,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.Collection;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
@@ -16,9 +20,11 @@ public final class Main extends JavaPlugin
 {
 	private static TeamArena teamArena;
 	private static EventListeners eventListeners;
+	private static PacketListeners packetListeners;
 	private static Logger logger;
 	
 	private static final ConcurrentHashMap<Player, PlayerInfo> playerInfo = new ConcurrentHashMap<Player, PlayerInfo>();
+	public static final ConcurrentHashMap<Integer, Player> playerIdLookup = new ConcurrentHashMap<>();
 	
 	@Override
 	public void onEnable()
@@ -38,7 +44,9 @@ public final class Main extends JavaPlugin
 		}*/
 		
 		//register Commands here
+		
 		eventListeners = new EventListeners(this);
+		packetListeners = new PacketListeners(this);
 		
 		teamArena = new KingOfTheHill();
 	}
@@ -57,6 +65,10 @@ public final class Main extends JavaPlugin
 	
 	public static PlayerInfo getPlayerInfo(Player player) {
 		return playerInfo.get(player);
+	}
+	
+	public static Collection<PlayerInfo> getPlayerInfos() {
+		return playerInfo.values();
 	}
 	
 	public static void addPlayerInfo(Player player, PlayerInfo info) {

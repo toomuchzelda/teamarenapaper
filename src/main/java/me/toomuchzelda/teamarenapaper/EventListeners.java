@@ -1,16 +1,16 @@
 package me.toomuchzelda.teamarenapaper;
 
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
+import me.toomuchzelda.teamarenapaper.core.Hologram;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
+import net.minecraft.world.entity.Entity;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.craftbukkit.v1_17_R1.entity.CraftEntity;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerLoginEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.plugin.Plugin;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 
@@ -25,6 +25,13 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void endTick(ServerTickEndEvent event) {
 		Main.getGame().tick();
+		
+		//update nametag positions
+		for(PlayerInfo pinfo : Main.getPlayerInfos()) {
+			if(pinfo.nametag != null) {
+				pinfo.nametag.updatePosition();
+			}
+		}
 	}
 
 	//these three events are called in this order
@@ -35,13 +42,11 @@ public class EventListeners implements Listener
 		// and also use the PreLoginEvent
 		Main.addPlayerInfo(event.getPlayer(), new PlayerInfo());
 		Main.getGame().loggingInPlayer(event.getPlayer());
-		Main.logger().info("Login Event Called");
+		Main.playerIdLookup.put(event.getPlayer().getEntityId(), event.getPlayer());
 	}
 	
 	@EventHandler
 	public void playerSpawn(PlayerSpawnLocationEvent event) {
-		//event.setSpawnLocation(Main.getGame().getWorld().getSpawnLocation());
-		Main.logger().info("Spawn Event Called");
 		event.setSpawnLocation(Main.getPlayerInfo(event.getPlayer()).spawnPoint);
 	}
 	
@@ -50,7 +55,7 @@ public class EventListeners implements Listener
 		//disable yellow "Player has joined the game" messages
 		event.joinMessage(null);
 		Main.getGame().joiningPlayer(event.getPlayer());
-		Main.logger().info("Join Event Called");
+		new Hologram(event.getPlayer());
 	}
 	
 	@EventHandler
@@ -58,6 +63,7 @@ public class EventListeners implements Listener
 		event.quitMessage(null);
 		Main.getGame().leavingPlayer(event.getPlayer());
 		Main.removePlayerInfo(event.getPlayer());
+		Main.playerIdLookup.remove(event.getPlayer().getEntityId());
 	}
 	
 	@EventHandler
@@ -69,6 +75,14 @@ public class EventListeners implements Listener
 			if(prev.getX() != next.getX() || prev.getZ() != next.getZ()) {
 				event.setCancelled(true);
 			}
+		}
+	}
+	
+	@EventHandler
+	public void playerToggleSneak(PlayerToggleSneakEvent event) {
+		Hologram hologram = Main.getPlayerInfo(event.getPlayer()).nametag;
+		if(hologram != null) {
+			hologram.setSneaking(event.isSneaking());
 		}
 	}
 }

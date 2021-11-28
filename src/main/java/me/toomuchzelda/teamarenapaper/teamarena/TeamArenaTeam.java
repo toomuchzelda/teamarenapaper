@@ -65,7 +65,7 @@ public class TeamArenaTeam
 		paperTeam.setAllowFriendlyFire(true);
 		paperTeam.setCanSeeFriendlyInvisibles(true);
 		paperTeam.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
-		paperTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
+		paperTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.ALWAYS);//Team.OptionStatus.NEVER);
 		paperTeam.color(NamedTextColor.nearestTo(this.RGBColour));
 	}
 	
@@ -128,6 +128,8 @@ public class TeamArenaTeam
 				}
 				Main.getPlayerInfo(player).team = this;
 				//change tab list name to colour for RGB colours
+				// and armor stand nametag
+				
 				player.playerListName(Component.text(player.getName()).color(this.getRGBTextColor()));
 				paperTeam.addEntry(player.getName());
 			}
