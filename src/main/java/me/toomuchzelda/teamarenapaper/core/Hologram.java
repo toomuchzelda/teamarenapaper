@@ -3,19 +3,20 @@ package me.toomuchzelda.teamarenapaper.core;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
+import com.comphenix.protocol.wrappers.WrappedDataWatcher;
+import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import me.toomuchzelda.teamarenapaper.Main;
 import net.kyori.adventure.text.Component;
+import net.minecraft.network.protocol.Packet;
 import net.minecraft.world.entity.Entity;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.craftbukkit.libs.it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.bukkit.craftbukkit.v1_17_R1.entity.CraftEntity;
-import org.bukkit.craftbukkit.v1_17_R1.util.CraftMagicNumbers;
 import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
-import org.bukkit.event.entity.CreatureSpawnEvent;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -29,17 +30,22 @@ public class Hologram
 	private final int id;
 	public static final int armorStandID = 1;
 	private PacketContainer spawnPacket;
-	private PacketContainer destroyPacket;
+	private PacketContainer metadataPacket;
+	private PacketContainer teleportPacket;
 	
-	private ArmorStand armorStand;
+	//private ArmorStand armorStand;
 	
 	private final Player player;
 	private Location position;
+	public boolean poseChanged;
+	
+	public static final byte sneakingMask = 2;
+	public static final byte glowingMask = 64;
 	
 	//constructor for player nametag
 	// position updated every tick in EventListeners.java
 	public Hologram(Player player) {
-		armorStand = (ArmorStand) player.getWorld().spawnEntity(player.getLocation().add(0, player.getHeight(), 0),
+		/*armorStand = (ArmorStand) player.getWorld().spawnEntity(player.getLocation().add(0, player.getHeight(), 0),
 				EntityType.ARMOR_STAND,	CreatureSpawnEvent.SpawnReason.CUSTOM);
 		//not entirely sure which of these flags i need
 		armorStand.setCollidable(false);
@@ -51,87 +57,121 @@ public class Hologram
 		armorStand.setCanTick(false);
 		
 		armorStand.customName(player.displayName());
-		armorStand.setCustomNameVisible(true);
+		armorStand.setCustomNameVisible(true);*/
+		
 		this.player = player;
-		this.position = armorStand.getLocation();
+		this.position = calcPosition();
 		
 		//create and cache the spawn packet to send to players
-		spawnPacket = new PacketContainer(PacketType.Play.Server.SPAWN_ENTITY_LIVING);
-		StructureModifier<Integer> ints = spawnPacket.getIntegers();
-		
-		//entity ID
-		this.id = Bukkit.getUnsafe().nextEntityId();
-		ints.write(0, id);
-		//entity type
-		ints.write(1, armorStandID);
-		
-		Location loc = getPosition();
-		StructureModifier<Double> doubles = spawnPacket.getDoubles();
-		doubles.write(0, loc.getX());
-		doubles.write(1, loc.getY());
-		doubles.write(2, loc.getZ());
-		
-		spawnPacket.getModifier().write(1, UUID.randomUUID());
+		{
+			spawnPacket = new PacketContainer(PacketType.Play.Server.SPAWN_ENTITY_LIVING);
+			StructureModifier<Integer> ints = spawnPacket.getIntegers();
+			
+			//entity ID
+			this.id = Bukkit.getUnsafe().nextEntityId();
+			ints.write(0, id);
+			//entity type
+			ints.write(1, armorStandID);
+			
+			/*Location loc = calcPosition();
+			StructureModifier<Double> doubles = spawnPacket.getDoubles();
+			doubles.write(0, loc.getX());
+			doubles.write(1, loc.getY());
+			doubles.write(2, loc.getZ());*/
+			
+			spawnPacket.getModifier().write(1, UUID.randomUUID());
+		}
 		
 		//create and cache destroy packet
-		destroyPacket = new PacketContainer(PacketType.Play.Server.ENTITY_DESTROY);
-		IntArrayList intList = new IntArrayList(1);
-		intList.set(0, id);
+		/*{
+			destroyPacket = new PacketContainer(PacketType.Play.Server.ENTITY_DESTROY);
+			IntArrayList intList = new IntArrayList(1);
+			intList.set(0, id);
+		}*/
+		
+		//create metadata packet
+		{
+			metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
+			metadataPacket.getIntegers().write(0, id);
+			
+			//this shit does not make any sense
+			//https://www.spigotmc.org/threads/simulating-potion-effect-glowing-with-protocollib.218828/#post-2246160
+			// and https://www.spigotmc.org/threads/protocollib-entity-metadata-packet.219146/
+			WrappedDataWatcher data = new WrappedDataWatcher();
+			
+			//metaObject: implies a field with index 0 and type of byte
+			WrappedDataWatcher.WrappedDataWatcherObject metaObject = new WrappedDataWatcher.WrappedDataWatcherObject(
+					0, WrappedDataWatcher.Registry.get(Byte.class));
+			
+			//metaObject the field, byte the value
+			// in this case the status bit of the metadata packet. 32 is the bit mask for invis
+			data.setObject(metaObject, (byte) 64);
+			
+			metadataPacket.getWatchableCollectionModifier().write(0, data.getWatchableObjects());
+		}
+		
+		//create teleport packet
+		{
+			teleportPacket = new PacketContainer(PacketType.Play.Server.ENTITY_TELEPORT);
+			teleportPacket.getIntegers().write(0, id);
+			
+			//coords initialised in getTeleportPacket()
+		}
 		
 		
 		Main.getPlayerInfo(player).nametag = this;
-		idTable.put(armorStand.getEntityId(), this);
+		idTable.put(id, this);
 	}
 	
-	public Location getPosition() {
+	public Location calcPosition() {
 		Location pos = player.getLocation();
-		double height = player.getEyeHeight();
-		if(player.isSneaking())
-			height -= 0.12;
+		double height = calcHeight();
 		
 		pos.add(0, height, 0);
 		return pos;
 	}
 	
+	public double calcHeight() {
+		double height = player.getHeight();
+		
+		if(player.isSneaking())
+			height -= 0.12;
+		
+		return height;
+	}
+	
+	//called every tick
 	public void updatePosition() {
-		Location lastPos = position.clone();
-		
-		position = player.getLocation().add(0, player.getHeight(), 0);
-		if(player.isSneaking()) {
-			position.setY(position.getY() - 0.11); //trial and error
-		}
-		
-		if(!lastPos.equals(position)) {
-			
-			armorStand.teleport(position);
-			
-			/*PacketContainer packet = new PacketContainer(PacketType.Play.Server.ENTITY_TELEPORT);
-			packet.getIntegers().write(0, armorStand.getEntityId());
-			packet.getDoubles().write(0, position.getX());
-			packet.getDoubles().write(1, position.getY());
-			packet.getDoubles().write(2, position.getZ());
-			packet.getBytes().write(0, (byte) 0);
-			packet.getBytes().write(1, (byte) 0);
-			packet.getBooleans().write(0, false);
-			
-			for(Player p : armorStand.getTrackedPlayers()) {
-				try {
-					ProtocolLibrary.getProtocolManager().sendServerPacket(p, packet);
-				}
-				catch (InvocationTargetException e) {
-					e.printStackTrace();
-				}
-			}*/
+		//Location lastPos = position.clone();
+		//position = calcPosition();
+		if(poseChanged) {
+			sendTeleportPacket();
+			poseChanged = false;
 		}
 	}
 	
-	public void setText(Component component) {
+	/*public void setText(Component component) {
 		armorStand.customName(component);
-	}
+	}*/
 	
-	public void setSneaking(boolean sneaking) {
-		Entity nmsArmorStand = ((CraftEntity) armorStand).getHandle();
-		nmsArmorStand.setSharedFlag(1, sneaking);
+	//used for changes in armorstand Y position: sneaking, swimming etc.
+	// they wouldn't be caught in the entity relative move packets so send another teleport packet for these changes
+	public void sendTeleportPacket() {
+		List<WrappedWatchableObject> list = metadataPacket.getWatchableCollectionModifier().read(0);
+		
+		byte metadata = 0;
+		
+		if(player.isSneaking()) {
+			metadata = (byte) (metadata | sneakingMask);
+			metadata = (byte) (metadata | glowingMask);
+		}
+		
+		list.get(0).setValue(metadata, false);
+		
+		updateTeleportPacket();
+		for(Player p : player.getTrackedPlayers()) {
+			PlayerUtils.sendPacket(p, teleportPacket, metadataPacket); //send teleport to update position (put slightly lower)
+		}
 	}
 	
 	public static Hologram getById(int id) {
@@ -142,7 +182,41 @@ public class Hologram
 		return player;
 	}
 	
-	public ArmorStand getArmorStand() {
-		return armorStand;
+	public int getId() {
+		return id;
 	}
+	
+	//make sure spawn location is correct each time
+	public PacketContainer getSpawnPacket() {
+		Location loc = calcPosition();
+		
+		StructureModifier<Double> coords = spawnPacket.getDoubles();
+		coords.write(0, loc.getX());
+		coords.write(1, loc.getY());
+		coords.write(2, loc.getZ());
+		
+		return spawnPacket;
+	}
+	
+	public PacketContainer getTeleportPacket() {
+		updateTeleportPacket();
+		return teleportPacket;
+	}
+	
+	private void updateTeleportPacket() {
+		Location loc = calcPosition();
+		
+		StructureModifier<Double> coords = teleportPacket.getDoubles();
+		coords.write(0, loc.getX());
+		coords.write(1, loc.getY());
+		coords.write(2, loc.getZ());
+	}
+	
+	public PacketContainer getMetadataPacket() {
+		return metadataPacket;
+	}
+	
+	/*public ArmorStand getArmorStand() {
+		return armorStand;
+	}*/
 }
