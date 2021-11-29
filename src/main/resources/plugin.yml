@@ -3,4 +3,5 @@ version: '${project.version}'
 main: me.toomuchzelda.teamarenapaper.Main
 api-version: 1.17
 authors: [ toomuchzelda ]
+depend: [ProtocolLib]
 description: Minigames inspired by libraryaddict's Search and Destroy
