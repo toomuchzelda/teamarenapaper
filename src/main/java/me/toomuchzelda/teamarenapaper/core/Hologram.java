@@ -3,20 +3,14 @@ package me.toomuchzelda.teamarenapaper.core;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
-import com.comphenix.protocol.wrappers.WrappedDataWatcher;
-import com.comphenix.protocol.wrappers.WrappedWatchableObject;
+import com.comphenix.protocol.wrappers.*;
 import me.toomuchzelda.teamarenapaper.Main;
-import net.kyori.adventure.text.Component;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.world.entity.Entity;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.craftbukkit.libs.it.unimi.dsi.fastutil.ints.IntArrayList;
-import org.bukkit.craftbukkit.v1_17_R1.entity.CraftEntity;
-import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -33,14 +27,23 @@ public class Hologram
 	private PacketContainer metadataPacket;
 	private PacketContainer teleportPacket;
 	
+	//store the field for metadata so we can easily access and modify
+	private WrappedWatchableObject metadataWatcher;
+	
 	//private ArmorStand armorStand;
 	
 	private final Player player;
 	private Location position;
 	public boolean poseChanged;
 	
-	public static final byte sneakingMask = 2;
-	public static final byte glowingMask = 64;
+	public static final int metadataIndex = 0;
+	public static final byte sneakingBitMask = 2;
+	public static final byte invisBitMask = 0x20;
+	public static final int customNameIndex = 2;
+	public static final int customNameVisibleIndex = 3;
+	public static final int armorStandMetadataIndex = 15;
+	public static final byte armorStandMarkerBitMask = 0x10;
+	
 	
 	//constructor for player nametag
 	// position updated every tick in EventListeners.java
@@ -99,13 +102,37 @@ public class Hologram
 			// and https://www.spigotmc.org/threads/protocollib-entity-metadata-packet.219146/
 			WrappedDataWatcher data = new WrappedDataWatcher();
 			
-			//metaObject: implies a field with index 0 and type of byte
+			//metaObject: implies a field with index 0 and type of byte, i think
 			WrappedDataWatcher.WrappedDataWatcherObject metaObject = new WrappedDataWatcher.WrappedDataWatcherObject(
-					0, WrappedDataWatcher.Registry.get(Byte.class));
+					metadataIndex, WrappedDataWatcher.Registry.get(Byte.class));
+			
+			//cache for easy access
+			metadataWatcher = new WrappedWatchableObject(metaObject, invisBitMask);
 			
 			//metaObject the field, byte the value
 			// in this case the status bit of the metadata packet. 32 is the bit mask for invis
-			data.setObject(metaObject, (byte) 64);
+			data.setObject(metaObject, invisBitMask);
+			
+			//custom name field
+			WrappedDataWatcher.WrappedDataWatcherObject customName =
+					new WrappedDataWatcher.WrappedDataWatcherObject(customNameIndex,
+					WrappedDataWatcher.Registry.getChatComponentSerializer(true));
+			
+			Optional<?> nameComponent = Optional.of(AdventureComponentConverter.fromComponent(
+					player.playerListName()).getHandle());
+			data.setObject(customName, nameComponent);
+			
+			//custom name visible
+			WrappedDataWatcher.WrappedDataWatcherObject customNameVisible =
+					new WrappedDataWatcher.WrappedDataWatcherObject(customNameVisibleIndex,
+							WrappedDataWatcher.Registry.get(Boolean.class));
+			data.setObject(customNameVisible, true);
+			
+			//marker armorstand (no client side hitbox)
+			WrappedDataWatcher.WrappedDataWatcherObject armorStandMeta =
+					new WrappedDataWatcher.WrappedDataWatcherObject(armorStandMetadataIndex,
+							WrappedDataWatcher.Registry.get(Byte.class));
+			data.setObject(armorStandMeta, armorStandMarkerBitMask);
 			
 			metadataPacket.getWatchableCollectionModifier().write(0, data.getWatchableObjects());
 		}
@@ -145,7 +172,7 @@ public class Hologram
 		//Location lastPos = position.clone();
 		//position = calcPosition();
 		if(poseChanged) {
-			sendTeleportPacket();
+			updatePose();
 			poseChanged = false;
 		}
 	}
@@ -156,17 +183,18 @@ public class Hologram
 	
 	//used for changes in armorstand Y position: sneaking, swimming etc.
 	// they wouldn't be caught in the entity relative move packets so send another teleport packet for these changes
-	public void sendTeleportPacket() {
-		List<WrappedWatchableObject> list = metadataPacket.getWatchableCollectionModifier().read(0);
+	public void updatePose() {
+		//List<WrappedWatchableObject> list = metadataPacket.getWatchableCollectionModifier().read(0);
 		
-		byte metadata = 0;
+		byte metadata = 0x20;
 		
 		if(player.isSneaking()) {
-			metadata = (byte) (metadata | sneakingMask);
-			metadata = (byte) (metadata | glowingMask);
+			//set sneaking to partially hide the nametag behind blocks
+			metadata = (byte) (metadata | sneakingBitMask);
 		}
 		
-		list.get(0).setValue(metadata, false);
+		//list.get(0).setValue(metadata, false);
+		metadataWatcher.setValue(metadata, false);
 		
 		updateTeleportPacket();
 		for(Player p : player.getTrackedPlayers()) {
