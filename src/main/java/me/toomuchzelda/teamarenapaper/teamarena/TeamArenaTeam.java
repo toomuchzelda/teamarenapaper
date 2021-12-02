@@ -142,12 +142,9 @@ public class TeamArenaTeam
 					Component component = colourWord(player.getName());
 					//mfw component doesnt have equals method
 					if (!player.playerListName().contains(component)) {
-						Bukkit.broadcastMessage("Did not contain component");
+						//Bukkit.broadcastMessage("Did not contain component");
 						player.playerListName(component);
 						Main.getPlayerInfo(player).nametag.setText(component, true);
-					}
-					else {
-						Bukkit.broadcastMessage("Did contain component");
 					}
 				}
 				paperTeam.addEntry(player.getName());

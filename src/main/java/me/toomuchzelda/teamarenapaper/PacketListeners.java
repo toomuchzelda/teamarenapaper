@@ -44,7 +44,7 @@ public class PacketListeners
 					//send to this spawn packet's recipient
 					PlayerUtils.sendPacket(event.getPlayer(), spawnPacket, metaDataPacket);
 					
-					Main.logger().info("Spawned hologram along with player");
+					//Main.logger().info("Spawned hologram along with player");
 				}
 			}
 		});

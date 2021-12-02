@@ -11,6 +11,7 @@ import org.bukkit.craftbukkit.v1_17_R1.entity.CraftEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityPoseChangeEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.plugin.Plugin;
@@ -59,7 +60,6 @@ public class EventListeners implements Listener
 		Main.getGame().joiningPlayer(event.getPlayer());
 		new Hologram(event.getPlayer());
 		//put them on team after their hologram made
-		Main.getPlayerInfo(event.getPlayer()).team.addMembers(event.getPlayer());
 	}
 	
 	@EventHandler
@@ -82,6 +82,11 @@ public class EventListeners implements Listener
 			}
 		}
 	}
+
+	@EventHandler
+	public void blockBreak(BlockBreakEvent event) {
+		event.setCancelled(true);
+	}
 	
 	@EventHandler
 	public void entityPoseChange(EntityPoseChangeEvent event) {
@@ -90,10 +95,17 @@ public class EventListeners implements Listener
 			if(hologram != null) {
 				//need to update the position of the nametag when Pose changes
 				// would do this within the event but we need to let the event pass to be able to get the
-				// player's height (otherwise have to use hardcoded values)
+				// player's changed height (otherwise have to use hardcoded values)
 				//just signal to update it at the end of the tick
 				hologram.poseChanged = true;
 			}
 		}
+	}
+
+	//shouldn't run since we handle deaths on our own, but just in case
+	// we want the server to avoid loading the default "world" world
+	@EventHandler
+	public void playerRespawn(PlayerRespawnEvent event) {
+		event.setRespawnLocation(Main.getPlayerInfo(event.getPlayer()).spawnPoint);
 	}
 }

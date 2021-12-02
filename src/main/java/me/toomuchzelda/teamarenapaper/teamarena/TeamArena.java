@@ -4,6 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.BlockUtils;
 import me.toomuchzelda.teamarenapaper.core.FileUtils;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -14,6 +15,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.yaml.snakeyaml.Yaml;
@@ -43,8 +45,6 @@ public abstract class TeamArena
 	
 	protected static final int minPlayersRequired = 1;
 
-	public static final NamedTextColor noTeamColour = NamedTextColor.YELLOW;
-
 	protected BoundingBox border;
 	protected Location spawnPos;
 
@@ -55,7 +55,11 @@ public abstract class TeamArena
 	protected TeamArenaTeam lastHadLeft;
 	//whether to show team colours in tab list + nametag yet
 	protected boolean showTeamColours;
+	public static final NamedTextColor noTeamColour = NamedTextColor.YELLOW;
 
+	protected TeamArenaTeam spectatorTeam;
+
+	protected Kit[] kits;
 	protected ItemStack kitMenuItem;
 
 	protected MapInfo mapInfo;
@@ -107,8 +111,6 @@ public abstract class TeamArena
 			e.printStackTrace();
 		}
 		
-		noTeamTeam = new TeamArenaTeam("No Team", "No Team", Color.YELLOW, Color.ORANGE, DyeColor.YELLOW);
-
 		gameWorld.setSpawnLocation(spawnPos);
 		gameWorld.setAutoSave(false);
 		gameWorld.setGameRule(GameRule.DISABLE_RAIDS, true);
@@ -123,7 +125,6 @@ public abstract class TeamArena
 		gameWorld.setGameRule(GameRule.DO_MOB_LOOT, false);
 		gameWorld.setGameRule(GameRule.DO_MOB_SPAWNING, false);
 		gameWorld.setGameRule(GameRule.DO_PATROL_SPAWNING, false);
-		//undecided
 		gameWorld.setGameRule(GameRule.DO_TILE_DROPS, false);
 		//handle ourselves
 		gameWorld.setGameRule(GameRule.KEEP_INVENTORY, true);
@@ -145,10 +146,16 @@ public abstract class TeamArena
 		waitingSince = 0;
 		gameState = GameState.PREGAME;
 
+		noTeamTeam = new TeamArenaTeam("No Team", "No Team", Color.YELLOW, Color.ORANGE, DyeColor.YELLOW);
+		spectatorTeam = new TeamArenaTeam("Spectators", "Specs", TeamArenaTeam.convert(NamedTextColor.DARK_GRAY), null,
+				null);
+
 		kitMenuItem = new ItemStack(Material.FEATHER);
 		Component kitMenuName = Component.text("Select a Kit").color(NamedTextColor.BLUE)
 				.decoration(TextDecoration.ITALIC, false);
-		kitMenuItem.getItemMeta().displayName(kitMenuName);
+		ItemMeta kitItemMeta = kitMenuItem.getItemMeta();
+		kitItemMeta.displayName(kitMenuName);
+		kitMenuItem.setItemMeta(kitItemMeta);
 
 		for(Player p : Bukkit.getOnlinePlayers()) {
 			p.teleport(gameWorld.getSpawnLocation());
@@ -324,13 +331,12 @@ public abstract class TeamArena
 				Main.getPlayerInfo(player).team = noTeamTeam;
 			}
 		}
+		else {
+			spectatorTeam.addMembers(player);
+		}
 		//TODO: else if live, put them in spectator, or prepare to respawn
 		// else if dead, put them in spectator
-		
-		
-		//TODO: create nametag
-		//createName(player);
-		
+
 		//pass spawnpoint to the PlayerSpawnEvent
 		Main.getPlayerInfo(player).spawnPoint = toTeleport;
 	}
@@ -338,6 +344,7 @@ public abstract class TeamArena
 	public void joiningPlayer(Player player) {
 		player.setGameMode(GameMode.SURVIVAL);
 		if(gameState.isPreGame()) {
+			Main.getPlayerInfo(player).team.addMembers(player);
 			giveLobbyItems(player);
 			if(gameState == GameState.TEAMS_CHOSEN || gameState == GameState.GAME_STARTING) {
 				informOfTeam(player);
@@ -409,6 +416,7 @@ public abstract class TeamArena
 				lowestTeam = lastHadLeft;
 			}
 		}
+
 		if(add)
 			lowestTeam.addMembers(player);
 
