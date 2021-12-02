@@ -5,11 +5,11 @@ import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.*;
 import me.toomuchzelda.teamarenapaper.Main;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,9 +27,11 @@ public class Hologram
 	private PacketContainer metadataPacket;
 	private PacketContainer teleportPacket;
 	
-	//store the field for metadata so we can easily access and modify
-	private WrappedWatchableObject metadataWatcher;
-	
+	//store the fields for metadata so we can easily access and modify
+	WrappedDataWatcher data;
+	WrappedDataWatcher.WrappedDataWatcherObject metadata;
+	WrappedDataWatcher.WrappedDataWatcherObject customNameMetadata;
+
 	//private ArmorStand armorStand;
 	
 	private final Player player;
@@ -43,25 +45,13 @@ public class Hologram
 	public static final int customNameVisibleIndex = 3;
 	public static final int armorStandMetadataIndex = 15;
 	public static final byte armorStandMarkerBitMask = 0x10;
-	
-	
+
+	//marker for if this nametag should exist
+	private boolean isAlive;
+
 	//constructor for player nametag
 	// position updated every tick in EventListeners.java
 	public Hologram(Player player) {
-		/*armorStand = (ArmorStand) player.getWorld().spawnEntity(player.getLocation().add(0, player.getHeight(), 0),
-				EntityType.ARMOR_STAND,	CreatureSpawnEvent.SpawnReason.CUSTOM);
-		//not entirely sure which of these flags i need
-		armorStand.setCollidable(false);
-		armorStand.setSilent(true);
-		//armorStand.setVisible(false);
-		//armorStand.getBoundingBox().resize(0, 0, 0, 0, 0, 0);
-		armorStand.setMarker(true);
-		armorStand.setCanMove(false);
-		armorStand.setCanTick(false);
-		
-		armorStand.customName(player.displayName());
-		armorStand.setCustomNameVisible(true);*/
-		
 		this.player = player;
 		this.position = calcPosition();
 		
@@ -75,22 +65,11 @@ public class Hologram
 			ints.write(0, id);
 			//entity type
 			ints.write(1, armorStandID);
-			
-			/*Location loc = calcPosition();
-			StructureModifier<Double> doubles = spawnPacket.getDoubles();
-			doubles.write(0, loc.getX());
-			doubles.write(1, loc.getY());
-			doubles.write(2, loc.getZ());*/
-			
+
+			//coordinates written in getSpawnPacket()
+
 			spawnPacket.getModifier().write(1, UUID.randomUUID());
 		}
-		
-		//create and cache destroy packet
-		/*{
-			destroyPacket = new PacketContainer(PacketType.Play.Server.ENTITY_DESTROY);
-			IntArrayList intList = new IntArrayList(1);
-			intList.set(0, id);
-		}*/
 		
 		//create metadata packet
 		{
@@ -106,9 +85,6 @@ public class Hologram
 			WrappedDataWatcher.WrappedDataWatcherObject metaObject = new WrappedDataWatcher.WrappedDataWatcherObject(
 					metadataIndex, WrappedDataWatcher.Registry.get(Byte.class));
 			
-			//cache for easy access
-			metadataWatcher = new WrappedWatchableObject(metaObject, invisBitMask);
-			
 			//metaObject the field, byte the value
 			// in this case the status bit of the metadata packet. 32 is the bit mask for invis
 			data.setObject(metaObject, invisBitMask);
@@ -120,6 +96,7 @@ public class Hologram
 			
 			Optional<?> nameComponent = Optional.of(AdventureComponentConverter.fromComponent(
 					player.playerListName()).getHandle());
+
 			data.setObject(customName, nameComponent);
 			
 			//custom name visible
@@ -135,6 +112,10 @@ public class Hologram
 			data.setObject(armorStandMeta, armorStandMarkerBitMask);
 			
 			metadataPacket.getWatchableCollectionModifier().write(0, data.getWatchableObjects());
+
+			this.data = data;
+			this.metadata = metaObject;
+			this.customNameMetadata = customName;
 		}
 		
 		//create teleport packet
@@ -145,7 +126,7 @@ public class Hologram
 			//coords initialised in getTeleportPacket()
 		}
 		
-		
+		this.isAlive = true;
 		Main.getPlayerInfo(player).nametag = this;
 		idTable.put(id, this);
 	}
@@ -169,23 +150,29 @@ public class Hologram
 	
 	//called every tick
 	public void updatePosition() {
-		//Location lastPos = position.clone();
-		//position = calcPosition();
 		if(poseChanged) {
 			updatePose();
 			poseChanged = false;
 		}
 	}
 	
-	/*public void setText(Component component) {
-		armorStand.customName(component);
-	}*/
+	public void setText(Component component, boolean sendPacket) {
+		Optional<?> nameComponent = Optional.of(AdventureComponentConverter.fromComponent(
+				component).getHandle());
+
+		//customNameWatcher.setValue(nameComponent, true);
+		this.data.setObject(customNameMetadata, nameComponent);
+
+		if(sendPacket) {
+			for (Player p : player.getTrackedPlayers()) {
+				PlayerUtils.sendPacket(p, metadataPacket);
+			}
+		}
+	}
 	
 	//used for changes in armorstand Y position: sneaking, swimming etc.
 	// they wouldn't be caught in the entity relative move packets so send another teleport packet for these changes
 	public void updatePose() {
-		//List<WrappedWatchableObject> list = metadataPacket.getWatchableCollectionModifier().read(0);
-		
 		byte metadata = 0x20;
 		
 		if(player.isSneaking()) {
@@ -194,12 +181,24 @@ public class Hologram
 		}
 		
 		//list.get(0).setValue(metadata, false);
-		metadataWatcher.setValue(metadata, false);
+		this.data.setObject(this.metadata, metadata);
 		
 		updateTeleportPacket();
 		for(Player p : player.getTrackedPlayers()) {
 			PlayerUtils.sendPacket(p, teleportPacket, metadataPacket); //send teleport to update position (put slightly lower)
 		}
+	}
+
+	//this method only use when player disconnect
+	public void remove() {
+		this.isAlive = false;
+		idTable.remove(this.id);
+		//delete packet should be sent with the player's entity remove packet by
+		// PacketListeners.java
+	}
+
+	public boolean isAlive() {
+		return isAlive;
 	}
 	
 	public static Hologram getById(int id) {
@@ -243,8 +242,4 @@ public class Hologram
 	public PacketContainer getMetadataPacket() {
 		return metadataPacket;
 	}
-	
-	/*public ArmorStand getArmorStand() {
-		return armorStand;
-	}*/
 }

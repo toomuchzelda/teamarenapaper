@@ -1,5 +1,8 @@
 package me.toomuchzelda.teamarenapaper.core;
 
+import net.kyori.adventure.text.format.TextColor;
+import org.bukkit.Color;
+
 import java.util.Random;
 
 public class MathUtils
@@ -46,5 +49,19 @@ public class MathUtils
 			return max;
 		else
 			return value;
+	}
+
+	public static Color randomColor() {
+		int r = randomMax(255);
+		int g = randomMax(255);
+		int b = randomMax(255);
+		return Color.fromRGB(r, g, b);
+	}
+
+	public static TextColor randomTextColor() {
+		int r = randomMax(255);
+		int g = randomMax(255);
+		int b = randomMax(255);
+		return TextColor.color(r, g, b);
 	}
 }

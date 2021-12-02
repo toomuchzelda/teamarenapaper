@@ -62,20 +62,22 @@ public class PacketListeners
 				Player player = Main.playerIdLookup.get(id);
 				if(player != null) {
 					Hologram hologram = Main.getPlayerInfo(player).nametag;
-					int holoID = hologram.getId();
-					PacketContainer movePacket = event.getPacket().shallowClone();
-					
-					movePacket.getIntegers().write(0, holoID);
-					
-					//teleport entity uses absolute coordinates
-					if(event.getPacketType() == PacketType.Play.Server.ENTITY_TELEPORT) {
-						StructureModifier<Double> doubles = movePacket.getDoubles();
-						double y = doubles.read(1);
-						double height = hologram.calcHeight();
-						doubles.write(1, y + height);
+					if(hologram.isAlive()) {
+						int holoID = hologram.getId();
+						PacketContainer movePacket = event.getPacket().shallowClone();
+
+						movePacket.getIntegers().write(0, holoID);
+
+						//teleport entity uses absolute coordinates
+						if (event.getPacketType() == PacketType.Play.Server.ENTITY_TELEPORT) {
+							StructureModifier<Double> doubles = movePacket.getDoubles();
+							double y = doubles.read(1);
+							double height = hologram.calcHeight();
+							doubles.write(1, y + height);
+						}
+
+						PlayerUtils.sendPacket(event.getPlayer(), movePacket);
 					}
-					
-					PlayerUtils.sendPacket(event.getPlayer(), movePacket);
 				}
 			}
 		});

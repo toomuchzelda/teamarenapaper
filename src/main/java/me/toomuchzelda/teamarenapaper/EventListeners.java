@@ -58,12 +58,15 @@ public class EventListeners implements Listener
 		event.joinMessage(null);
 		Main.getGame().joiningPlayer(event.getPlayer());
 		new Hologram(event.getPlayer());
+		//put them on team after their hologram made
+		Main.getPlayerInfo(event.getPlayer()).team.addMembers(event.getPlayer());
 	}
 	
 	@EventHandler
 	public void playerQuit(PlayerQuitEvent event) {
 		event.quitMessage(null);
 		Main.getGame().leavingPlayer(event.getPlayer());
+		Main.getPlayerInfo(event.getPlayer()).nametag.remove();
 		Main.removePlayerInfo(event.getPlayer());
 		Main.playerIdLookup.remove(event.getPlayer().getEntityId());
 	}

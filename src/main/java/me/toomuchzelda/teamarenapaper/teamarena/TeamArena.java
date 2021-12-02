@@ -32,7 +32,7 @@ public abstract class TeamArena
 	protected long gameTick;
 	protected long waitingSince;
 	protected GameState gameState;
-	
+
 	//ticks of wait time before teams are decided
 	protected static final int preTeamsTime = 25 * 20;
 	//ticks of wait time after teams chosen, before game starting phase
@@ -53,6 +53,8 @@ public abstract class TeamArena
 	//store the last team that a player has left from
 	// to prevent players leaving -> rejoining before game start to try get on another team
 	protected TeamArenaTeam lastHadLeft;
+	//whether to show team colours in tab list + nametag yet
+	protected boolean showTeamColours;
 
 	protected ItemStack kitMenuItem;
 
@@ -172,11 +174,13 @@ public abstract class TeamArena
 			//announce Game starting in:
 			// and play sound
 			sendCountdown(false);
+			//teams decided time
 			if(waitingSince + preTeamsTime == gameTick) {
 				//set teams here
+				showTeamColours = true;
 				setupTeams();
 				gameState = GameState.TEAMS_CHOSEN;
-				
+
 				for (Player p : Bukkit.getOnlinePlayers())
 				{
 					p.sendMessage(Component.text("Teams have been decided!").color(NamedTextColor.RED));
@@ -216,10 +220,21 @@ public abstract class TeamArena
 			waitingSince = gameTick;
 			
 			if(gameState == GameState.TEAMS_CHOSEN) {
-				//remove players from all teams (and send packets)
-				for(TeamArenaTeam team : teams) {
+				//remove players from all teams
+				/*for(TeamArenaTeam team : teams) {
 					team.removeAllMembers();
+				}*/
+				showTeamColours = false;
+				for(Player p : Bukkit.getOnlinePlayers()) {
+					noTeamTeam.addMembers(p);
 				}
+
+				//announce game cancelled
+				// spam sounds lol xddddddd
+				for(int i = 0; i < 10; i++) {
+					gameWorld.playSound(spawnPos, Sound.values()[MathUtils.randomMax(Sound.values().length)], SoundCategory.AMBIENT, 99999, (float) MathUtils.randomRange(-1, 1));
+				}
+				Bukkit.broadcast(Component.text("Not enough players to start the game, game cancelled!").color(MathUtils.randomTextColor()));
 			}
 			gameState = GameState.PREGAME;
 		}
@@ -272,7 +287,8 @@ public abstract class TeamArena
 				{
 					//peek not pop, since removeMembers will remove them from the Stack
 					Entity removed = team.lastIn.peek();
-					team.removeMembers(removed);
+					//team.removeMembers(removed);
+					noTeamTeam.addMembers(removed);
 					if(removed instanceof Player p) {
 						p.sendMessage(Component.text("A player left, so you were removed from your chosen team for balance. Sorry!").color(NamedTextColor.AQUA));
 						p.playSound(p.getLocation(), Sound.ENTITY_CHICKEN_HURT, SoundCategory.AMBIENT, 2f, 1f);
@@ -292,7 +308,9 @@ public abstract class TeamArena
 		Location toTeleport = spawnPos;
 		if(gameState.isPreGame()) {
 			if(gameState == GameState.TEAMS_CHOSEN || gameState == GameState.GAME_STARTING) {
-				addToLowestTeam(player);
+				//cache the team and put them on it when they've joined
+				TeamArenaTeam toJoin = addToLowestTeam(player, false);
+				Main.getPlayerInfo(player).team = toJoin;
 				if(gameState == GameState.GAME_STARTING) {
 					TeamArenaTeam team = Main.getPlayerInfo(player).team;
 					Location[] spawns = team.getSpawns();
@@ -302,7 +320,8 @@ public abstract class TeamArena
 				}
 			}
 			else if (gameState == GameState.PREGAME) {
-				noTeamTeam.addMembers(player);
+				//noTeamTeam.addMembers(player);
+				Main.getPlayerInfo(player).team = noTeamTeam;
 			}
 		}
 		//TODO: else if live, put them in spectator, or prepare to respawn
@@ -345,7 +364,8 @@ public abstract class TeamArena
 	}
 	
 	//find an appropriate team to put player on at any point during game
-	public void addToLowestTeam(Player player) {
+	// boolean to actually put them on that team or just to get the team they would've been put on
+	public TeamArenaTeam addToLowestTeam(Player player, boolean add) {
 		int remainder = Bukkit.getOnlinePlayers().size() % teams.length;
 		
 		//find the lowest player count on any of the teams
@@ -389,7 +409,10 @@ public abstract class TeamArena
 				lowestTeam = lastHadLeft;
 			}
 		}
-		lowestTeam.addMembers(player);
+		if(add)
+			lowestTeam.addMembers(player);
+
+		return lowestTeam;
 	}
 	
 	public void sendCountdown(boolean force) {
