@@ -5,6 +5,7 @@ import me.toomuchzelda.teamarenapaper.core.BlockUtils;
 import me.toomuchzelda.teamarenapaper.core.FileUtils;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitNone;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -24,6 +25,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 //main game class
 public abstract class TeamArena
@@ -156,6 +158,8 @@ public abstract class TeamArena
 		ItemMeta kitItemMeta = kitMenuItem.getItemMeta();
 		kitItemMeta.displayName(kitMenuName);
 		kitMenuItem.setItemMeta(kitItemMeta);
+
+		kits = new Kit[]{new KitNone()};
 
 		for(Player p : Bukkit.getOnlinePlayers()) {
 			p.teleport(gameWorld.getSpawnLocation());
@@ -308,6 +312,35 @@ public abstract class TeamArena
 	public void giveLobbyItems(Player player) {
 		PlayerInventory inventory = player.getInventory();
 		inventory.setItem(0, kitMenuItem.clone());
+	}
+
+	public Kit[] getKits() {
+		return kits;
+	}
+
+	public abstract boolean canSelectKitNow();
+
+	public void selectKit(Player player, String kitName) {
+		if(canSelectKitNow()) {
+			boolean found = false;
+			for (int i = 0; i < kits.length; i++) {
+				if (kits[i].getName().equalsIgnoreCase(kitName)) {
+					//chosenKits.put(player.getUuid(), kits[i]);
+					//player.setKit(kits[i]);
+					Main.getPlayerInfo(player).kit = kits[i];
+					found = true;
+					player.sendMessage(Component.text("Using kit " + kitName).color(NamedTextColor.BLUE));
+					player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.PLAYERS, 1f, 2f);
+					break;
+				}
+			}
+
+			if(!found)
+				player.sendMessage(Component.text("Kit " + kitName + " doesn't exist").color(NamedTextColor.RED));
+		}
+		else {
+			player.sendMessage(Component.text("You can't choose a kit right now").color(NamedTextColor.RED));
+		}
 	}
 
 	//process logging in player

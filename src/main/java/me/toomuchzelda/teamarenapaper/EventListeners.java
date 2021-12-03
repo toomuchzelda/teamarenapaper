@@ -57,8 +57,8 @@ public class EventListeners implements Listener
 	public void playerJoin(PlayerJoinEvent event) {
 		//disable yellow "Player has joined the game" messages
 		event.joinMessage(null);
-		Main.getGame().joiningPlayer(event.getPlayer());
 		new Hologram(event.getPlayer());
+		Main.getGame().joiningPlayer(event.getPlayer());
 		//put them on team after their hologram made
 	}
 	

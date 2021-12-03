@@ -6,8 +6,10 @@ import me.toomuchzelda.teamarenapaper.core.FileUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.KingOfTheHill;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandKit;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
+import org.bukkit.command.CommandMap;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -56,6 +58,8 @@ public final class Main extends JavaPlugin
 		packetListeners = new PacketListeners(this);
 		
 		teamArena = new KingOfTheHill();
+
+		registerCommands();
 	}
 	
 	@Override
@@ -68,6 +72,13 @@ public final class Main extends JavaPlugin
 			FileUtils.delete(teamArena.getWorldFile());
 			getLogger().info("Deleted " + name);
 		}
+	}
+
+	private static void registerCommands() {
+		CommandMap commandMap = Bukkit.getCommandMap();
+		String fallbackPrefix = "tma";
+
+		commandMap.register(fallbackPrefix, new CommandKit());
 	}
 	
 	public static PlayerInfo getPlayerInfo(Player player) {

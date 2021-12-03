@@ -2,9 +2,13 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import org.bukkit.Material;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.Arrays;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class Kit
 {
@@ -14,6 +18,8 @@ public abstract class Kit
     private ItemStack[] armour;
     private ItemStack[] items;
     private Ability[] abilities;
+
+    public Set<Player> users;
 
     public Kit(String name, String description, Material icon) {
         this.name = name;
@@ -27,6 +33,8 @@ public abstract class Kit
 
         this.items = new ItemStack[0];
         this.abilities = new Ability[0];
+
+        users = ConcurrentHashMap.newKeySet();
     }
 
     public void setArmour(ItemStack[] armour) {
@@ -48,4 +56,9 @@ public abstract class Kit
     public String getName() {
         return name;
     }
+
+    public Set<Player> getUsers() {
+        return users;
+    }
+
 }
