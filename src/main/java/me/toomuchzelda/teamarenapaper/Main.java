@@ -7,6 +7,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.KingOfTheHill;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandKit;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandTeam;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.command.CommandMap;
@@ -79,6 +80,7 @@ public final class Main extends JavaPlugin
 		String fallbackPrefix = "tma";
 
 		commandMap.register(fallbackPrefix, new CommandKit());
+		commandMap.register(fallbackPrefix, new CommandTeam());
 	}
 	
 	public static PlayerInfo getPlayerInfo(Player player) {

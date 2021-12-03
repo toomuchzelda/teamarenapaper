@@ -23,6 +23,9 @@ public class TeamArenaTeam
 	private final String name;
 	private final String simpleName;
 
+	private Component componentName;
+	private Component componentSimpleName;
+
 	private final Color colour;
 	//null if single flat colour
 	private final Color secondColour;
@@ -69,6 +72,9 @@ public class TeamArenaTeam
 		paperTeam.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
 		paperTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
 		paperTeam.color(NamedTextColor.nearestTo(this.RGBColour));
+
+		this.componentName = colourWord(this.name);
+		this.componentSimpleName = colourWord(this.simpleName);
 	}
 	
 	public String getName() {
@@ -77,6 +83,14 @@ public class TeamArenaTeam
 	
 	public String getSimpleName() {
 		return simpleName;
+	}
+
+	public Component getComponentName() {
+		return componentName;
+	}
+
+	public Component getComponentSimpleName() {
+		return componentSimpleName;
 	}
 	
 	public Color getColour() {

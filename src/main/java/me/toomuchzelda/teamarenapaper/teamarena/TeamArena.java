@@ -60,6 +60,9 @@ public abstract class TeamArena
 	public static final NamedTextColor noTeamColour = NamedTextColor.YELLOW;
 
 	protected TeamArenaTeam spectatorTeam;
+	//use Bukkit.getOnlinePlayers() for all players
+	protected Set<Player> players;
+	protected Set<Player> spectators;
 
 	protected Kit[] kits;
 	protected ItemStack kitMenuItem;
@@ -161,8 +164,12 @@ public abstract class TeamArena
 
 		kits = new Kit[]{new KitNone()};
 
+		players = ConcurrentHashMap.newKeySet();
+		spectators = ConcurrentHashMap.newKeySet();
+
 		for(Player p : Bukkit.getOnlinePlayers()) {
 			p.teleport(gameWorld.getSpawnLocation());
+			players.add(p);
 		}
 	}
 
@@ -181,7 +188,7 @@ public abstract class TeamArena
 	
 	public void preGameTick() {
 		//if countdown is ticking, do announcements
-		if(Bukkit.getOnlinePlayers().size() >= minPlayersRequired) {
+		if(players.size() >= minPlayersRequired) {
 			//announce Game starting in:
 			// and play sound
 			sendCountdown(false);
@@ -192,9 +199,9 @@ public abstract class TeamArena
 				setupTeams();
 				gameState = GameState.TEAMS_CHOSEN;
 
-				for (Player p : Bukkit.getOnlinePlayers())
+				Bukkit.broadcast(Component.text("Teams have been decided!").color(NamedTextColor.RED));
+				for (Player p : players)
 				{
-					p.sendMessage(Component.text("Teams have been decided!").color(NamedTextColor.RED));
 					informOfTeam(p);
 					Main.logger().info("Decided Teams");
 				}
@@ -236,14 +243,15 @@ public abstract class TeamArena
 					team.removeAllMembers();
 				}*/
 				showTeamColours = false;
-				for(Player p : Bukkit.getOnlinePlayers()) {
+				for(Player p : players) {
 					noTeamTeam.addMembers(p);
 				}
 
 				//announce game cancelled
 				// spam sounds lol xddddddd
 				for(int i = 0; i < 10; i++) {
-					gameWorld.playSound(spawnPos, Sound.values()[MathUtils.randomMax(Sound.values().length)], SoundCategory.AMBIENT, 99999, (float) MathUtils.randomRange(-1, 1));
+					gameWorld.playSound(spawnPos, Sound.values()[MathUtils.randomMax(Sound.values().length - 1)],
+							SoundCategory.AMBIENT, 99999, (float) MathUtils.randomRange(-1, 1));
 				}
 				Bukkit.broadcast(Component.text("Not enough players to start the game, game cancelled!").color(MathUtils.randomTextColor()));
 			}
@@ -258,7 +266,7 @@ public abstract class TeamArena
 		
 		//players that didn't choose a team yet
 		ArrayList<Player> shuffledPlayers = new ArrayList<>();
-		for(Player p : Bukkit.getOnlinePlayers()) {
+		for(Player p : players) {
 			if(/*p.getTeamArenaTeam() == null || */Main.getPlayerInfo(p).team == noTeamTeam)
 				shuffledPlayers.add(p);
 		}
@@ -269,7 +277,7 @@ public abstract class TeamArena
 		Collections.shuffle(shuffledPlayers);
 		
 		//not considering remainders/odd players
-		int maxOnTeam = Bukkit.getOnlinePlayers().size() / teams.length;
+		int maxOnTeam = players.size() / teams.length;
 		
 		//theoretically playerIdx shouldn't become larger than the number of players
 		int playerIdx = 0;
@@ -280,7 +288,7 @@ public abstract class TeamArena
 			}
 		}
 		
-		int numOfRemainders = Bukkit.getOnlinePlayers().size() % teams.length;
+		int numOfRemainders = players.size() % teams.length;
 		if(numOfRemainders > 0) {
 			for(int i = 0; i < numOfRemainders; i++) {
 				shuffledTeams[i].addMembers(shuffledPlayers.get(playerIdx));
@@ -291,7 +299,7 @@ public abstract class TeamArena
 	
 	public void balancePlayerLeave() {
 		if(gameState == GameState.PREGAME) {
-			int maxTeamSize = Bukkit.getOnlinePlayers().size() / teams.length;
+			int maxTeamSize = players.size() / teams.length;
 			for (TeamArenaTeam team : teams)
 			{
 				if (team.getEntityMembers().size() > maxTeamSize)
@@ -316,6 +324,10 @@ public abstract class TeamArena
 
 	public Kit[] getKits() {
 		return kits;
+	}
+
+	public TeamArenaTeam[] getTeams() {
+		return teams;
 	}
 
 	public abstract boolean canSelectKitNow();
@@ -343,6 +355,39 @@ public abstract class TeamArena
 		}
 	}
 
+	public void selectTeam(Player player, String teamName) {
+		//see if team by this name exists
+		TeamArenaTeam requestedTeam = null;
+		for(TeamArenaTeam team : teams) {
+			if(team.getName().equalsIgnoreCase(teamName) || team.getSimpleName().equalsIgnoreCase(teamName)) {
+				requestedTeam = team;
+				break;
+			}
+		}
+		//if team wasn't found
+		if(requestedTeam == null) {
+			player.sendMessage(Component.text("Could not find team: " + teamName).color(NamedTextColor.RED));
+			return;
+		}
+
+		//figure out if the team can hold any more players
+		int numPlayers = players.size();
+		int maxOnTeam = numPlayers / teams.length;
+		if(numPlayers % teams.length > 0)
+			maxOnTeam++;
+
+		if(requestedTeam.getEntityMembers().size() >= maxOnTeam) {
+			player.sendMessage(Component.text("This team is already full!").color(NamedTextColor.RED));
+		}
+		else {
+			requestedTeam.addMembers(player);
+			/*player.sendMessage(Component.text("You are now on ").color(NamedTextColor.GOLD)
+					.append(requestedTeam.getComponentName()));
+			player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.AMBIENT, 1f, 2f);*/
+			informOfTeam(player);
+		}
+	}
+
 	//process logging in player
 	public void loggingInPlayer(Player player) {
 		Location toTeleport = spawnPos;
@@ -363,9 +408,11 @@ public abstract class TeamArena
 				//noTeamTeam.addMembers(player);
 				Main.getPlayerInfo(player).team = noTeamTeam;
 			}
+			players.add(player);
 		}
 		else {
 			spectatorTeam.addMembers(player);
+			spectators.add(player);
 		}
 		//TODO: else if live, put them in spectator, or prepare to respawn
 		// else if dead, put them in spectator
@@ -391,13 +438,13 @@ public abstract class TeamArena
 	public void leavingPlayer(Player player) {
 		Main.getPlayerInfo(player).team.removeMembers(player);
 		balancePlayerLeave();
+		players.remove(player);
+		spectators.remove(player);
 	}
 	
 	public void informOfTeam(Player p) {
 		TeamArenaTeam team = Main.getPlayerInfo(p).team;
-		String name = team.getName();
-		TextColor colour = team.getRGBTextColor();
-		Component text = Component.text("You are on ").color(NamedTextColor.GOLD).append(Component.text(name).color(colour));
+		Component text = Component.text("You are on ").color(NamedTextColor.GOLD).append(team.getComponentName());
 		p.sendMessage(text);
 		p.showTitle(Title.title(Component.empty(), text));
 		p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.AMBIENT, 2f, 0.1f);
@@ -406,7 +453,7 @@ public abstract class TeamArena
 	//find an appropriate team to put player on at any point during game
 	// boolean to actually put them on that team or just to get the team they would've been put on
 	public TeamArenaTeam addToLowestTeam(Player player, boolean add) {
-		int remainder = Bukkit.getOnlinePlayers().size() % teams.length;
+		int remainder = players.size() % teams.length;
 		
 		//find the lowest player count on any of the teams
 		TeamArenaTeam lowestTeam = null;
