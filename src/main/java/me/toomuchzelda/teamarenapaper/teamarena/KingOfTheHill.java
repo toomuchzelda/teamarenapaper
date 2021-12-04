@@ -13,6 +13,11 @@ public class KingOfTheHill extends TeamArena
 	}
 
 	@Override
+	public boolean canSelectTeamNow() {
+		return gameState == GameState.PREGAME;
+	}
+
+	@Override
 	public String mapPath() {
 		return super.mapPath() + "KOTH";
 	}

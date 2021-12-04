@@ -8,6 +8,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.craftbukkit.libs.it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.bukkit.entity.Player;
 
 import java.util.Optional;
@@ -24,6 +25,7 @@ public class Hologram
 	private final int id;
 	public static final int armorStandID = 1;
 	private PacketContainer spawnPacket;
+	private PacketContainer deletePacket;
 	private PacketContainer metadataPacket;
 	private PacketContainer teleportPacket;
 	
@@ -70,7 +72,15 @@ public class Hologram
 
 			spawnPacket.getModifier().write(1, UUID.randomUUID());
 		}
-		
+
+		//delete packet
+		{
+			deletePacket = new PacketContainer(PacketType.Play.Server.ENTITY_DESTROY);
+			IntArrayList intList = new IntArrayList(1);
+			intList.add(this.id);
+			deletePacket.getModifier().write(0, intList);
+		}
+
 		//create metadata packet
 		{
 			metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
@@ -184,8 +194,10 @@ public class Hologram
 		this.data.setObject(this.metadata, metadata);
 		
 		updateTeleportPacket();
-		for(Player p : player.getTrackedPlayers()) {
-			PlayerUtils.sendPacket(p, teleportPacket, metadataPacket); //send teleport to update position (put slightly lower)
+		if(isAlive) {
+			for (Player p : player.getTrackedPlayers()) {
+				PlayerUtils.sendPacket(p, teleportPacket, metadataPacket); //send teleport to update position (put slightly lower)
+			}
 		}
 	}
 
@@ -193,8 +205,9 @@ public class Hologram
 	public void remove() {
 		this.isAlive = false;
 		idTable.remove(this.id);
-		//delete packet should be sent with the player's entity remove packet by
-		// PacketListeners.java
+		for(Player p : player.getTrackedPlayers()) {
+			PlayerUtils.sendPacket(p, deletePacket);
+		}
 	}
 
 	public boolean isAlive() {

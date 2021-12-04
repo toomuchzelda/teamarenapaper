@@ -32,39 +32,39 @@ public class TeamArenaTeam
 
 	private final DyeColor dyeColour;
 	private final TextColor RGBColour;
-	
+
 	//paper good spigot bad
 	private Team paperTeam;
-	
+
 	private Location[] spawns;
 	private Set<Entity> entityMembers = ConcurrentHashMap.newKeySet();
-	
+
 	//if someone needs to be booted out when a player leaves before game start
 	//only used before teams decided
 	public final Stack<Entity> lastIn = new Stack<>();
-	
+
 	//in the rare case a player joins during GAME_STARTING, need to find an unused spawn position
 	// to teleport to
 	public int spawnsIndex;
-	
+
 	//abstract score value, game-specific
 	public int score;
-	
+
 	public TeamArenaTeam(String name, String simpleName, Color colour, Color secondColour, DyeColor dyeColor) {
 		this.name = name;
 		this.simpleName = simpleName;
 		this.colour = colour;
 		this.secondColour = secondColour;
 		this.dyeColour = dyeColor;
-		
+
 		this.RGBColour = TextColor.color(colour.asRGB());
-		
+
 		spawns = null;
 		score = 0;
-		
+
 		if(Bukkit.getScoreboardManager().getMainScoreboard().getTeam(name) != null)
 			Bukkit.getScoreboardManager().getMainScoreboard().getTeam(name).unregister();
-		
+
 		paperTeam = Bukkit.getScoreboardManager().getMainScoreboard().registerNewTeam(name);
 		paperTeam.displayName(Component.text(this.name).color(this.RGBColour));
 		paperTeam.setAllowFriendlyFire(true);
@@ -76,11 +76,11 @@ public class TeamArenaTeam
 		this.componentName = colourWord(this.name);
 		this.componentSimpleName = colourWord(this.simpleName);
 	}
-	
+
 	public String getName() {
 		return name;
 	}
-	
+
 	public String getSimpleName() {
 		return simpleName;
 	}
@@ -92,7 +92,7 @@ public class TeamArenaTeam
 	public Component getComponentSimpleName() {
 		return componentSimpleName;
 	}
-	
+
 	public Color getColour() {
 		return colour;
 	}
@@ -104,32 +104,32 @@ public class TeamArenaTeam
 	public Color getSecondColour() {
 		return secondColour;
 	}
-	
+
 	public DyeColor getDyeColour() {
 		return dyeColour;
 	}
-	
+
 	public TextColor getRGBTextColor() {
 		return RGBColour;
 	}
-	
+
 	public static Color convert(NamedTextColor textColor) {
 		return Color.fromRGB(textColor.red(), textColor.green(), textColor.blue());
 	}
-	
+
 	public Team getPaperTeam() {
 		return paperTeam;
 	}
-	
+
 	public Location[] getSpawns() {
 		return spawns;
 	}
-	
+
 	public void setSpawns(Location[] array) {
 		this.spawns = array;
 		this.spawnsIndex = 0;
 	}
-	
+
 	public void addMembers(Entity... entities) {
 		for (Entity entity : entities)
 		{
@@ -143,24 +143,11 @@ public class TeamArenaTeam
 					team.removeMembers(player);
 				}
 				Main.getPlayerInfo(player).team = this;
+
 				//change tab list name to colour for RGB colours
 				// and armor stand nametag
+				updateNametag(player);
 
-				//don't change name if it's not different
-				// avoid sending packets and trouble
-				{
-					TextColor colour = TeamArena.noTeamColour;
-					if (Main.getGame().showTeamColours)
-						colour = this.getRGBTextColor();
-
-					Component component = colourWord(player.getName());
-					//mfw component doesnt have equals method
-					if (!player.playerListName().contains(component)) {
-						//Bukkit.broadcastMessage("Did not contain component");
-						player.playerListName(component);
-						Main.getPlayerInfo(player).nametag.setText(component, true);
-					}
-				}
 				paperTeam.addEntry(player.getName());
 			}
 			else
@@ -191,7 +178,7 @@ public class TeamArenaTeam
 		}
 		Main.getGame().lastHadLeft = this;
 	}
-	
+
 	public void removeAllMembers() {
 		removeMembers(entityMembers.toArray(new Entity[0]));
 	}
@@ -199,9 +186,38 @@ public class TeamArenaTeam
 	public Set<String> getStringMembers() {
 		return paperTeam.getEntries();
 	}
-	
+
 	public Set<Entity> getEntityMembers() {
 		return entityMembers;
+	}
+
+	public void updateNametags() {
+		for(Entity e : entityMembers) {
+			if(e instanceof Player player) {
+				updateNametag(player);
+			}
+		}
+	}
+
+	public void updateNametag(Player player) {
+		//don't change name if it's not different
+		// avoid sending packets and trouble
+		Component component;
+		if (Main.getGame().showTeamColours)
+			component = colourWord(player.getName());
+		else
+			component = Main.getGame().noTeamTeam.colourWord(player.getName());
+
+		if (!player.playerListName().contains(component)) {
+			//Bukkit.broadcastMessage("Did not contain component");
+			player.playerListName(component);
+			Main.getPlayerInfo(player).nametag.setText(component, true);
+		}
+	}
+
+	//for the spectator team only
+	public void setNametagVisible() {
+		paperTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.FOR_OWN_TEAM);
 	}
 
 	//create gradient component word like player name or team name
@@ -209,7 +225,6 @@ public class TeamArenaTeam
 		Component component = Component.empty();
 
 		if(secondColour != null) {
-			Bukkit.broadcastMessage("Secnd colour not null");
 			for (float i = 0; i < str.length(); i++) {
 				//percentage of second colour to use, leftover is percentage of first colour
 				// from 0 to 1
@@ -230,7 +245,6 @@ public class TeamArenaTeam
 			}
 		}
 		else {
-			Bukkit.broadcastMessage("second colour null");
 			component = Component.text(str).color(getRGBTextColor());
 		}
 		return component;
