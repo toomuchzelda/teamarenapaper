@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 //main game class
 public abstract class TeamArena
 {
-	private File worldFile;
+	private final File worldFile;
 	protected World gameWorld;
 
 	protected long gameTick;
@@ -56,7 +56,6 @@ public abstract class TeamArena
 	protected TeamArenaTeam lastHadLeft;
 	//whether to show team colours in tab list + nametag yet
 	protected boolean showTeamColours;
-	public static final NamedTextColor noTeamColour = NamedTextColor.YELLOW;
 
 	protected TeamArenaTeam spectatorTeam;
 	//use Bukkit.getOnlinePlayers() for all players
@@ -395,12 +394,19 @@ public abstract class TeamArena
 
 	//put a player on the spectators, remove from participating players if necessary
 	public void setSpectator(Player player) {
-		if(gameState == GameState.LIVE && players.contains(player)) {
-			//kill the player
+		if((gameState == GameState.LIVE || gameState == GameState.TEAMS_CHOSEN)) {
+			if(players.contains(player)) {
+				if (gameState == GameState.LIVE) {
+					//kill the player
+				}
 
-
-			Bukkit.broadcast(player.playerListName()
-					.append(Component.text(" has joined the spectators").color(NamedTextColor.GRAY)));
+				Bukkit.broadcast(player.playerListName()
+						.append(Component.text(" has joined the spectators").color(NamedTextColor.GRAY)));
+			}
+			else {
+				player.sendMessage(Component.text("You cannot re-join the game after becoming a spectator!")
+						.color(NamedTextColor.RED));
+			}
 		}
 
 		if(players.contains(player)) {
@@ -419,7 +425,7 @@ public abstract class TeamArena
 			spectators.remove(player);
 			players.add(player);
 			noTeamTeam.addMembers(player);
-			Component text = Component.text("No longer spectating this game").color(NamedTextColor.GRAY);
+			Component text = Component.text("You won't spectating this game").color(NamedTextColor.GRAY);
 			player.showTitle(Title.title(Component.empty(), text));
 			player.sendMessage(text);
 		}
@@ -447,9 +453,10 @@ public abstract class TeamArena
 			}
 			players.add(player);
 		}
-		else {
-			spectatorTeam.addMembers(player);
-			spectators.add(player);
+		else if (gameState == GameState.LIVE){
+			setSpectator(player);
+			player.sendMessage(Component.text("If you want to join this game, click the [item tbd] or type \"/ready\"!")
+					.color(TextColor.color(0, 255, 0)));
 		}
 		//TODO: else if live, put them in spectator, or prepare to respawn
 		// else if dead, put them in spectator
@@ -484,7 +491,7 @@ public abstract class TeamArena
 		Component text = Component.text("You are on ").color(NamedTextColor.GOLD).append(team.getComponentName());
 		p.sendMessage(text);
 		p.showTitle(Title.title(Component.empty(), text));
-		p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.AMBIENT, 2f, 0.1f);
+		p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.AMBIENT, 2f, 0.5f);
 	}
 
 	//find an appropriate team to put player on at any point during game
