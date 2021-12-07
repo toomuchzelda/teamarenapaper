@@ -152,7 +152,6 @@ public abstract class TeamArena
 		noTeamTeam = new TeamArenaTeam("No Team", "No Team", Color.YELLOW, Color.ORANGE, DyeColor.YELLOW);
 		spectatorTeam = new TeamArenaTeam("Spectators", "Specs", TeamArenaTeam.convert(NamedTextColor.DARK_GRAY), null,
 				null);
-		spectatorTeam.setNametagVisible();
 
 		kitMenuItem = new ItemStack(Material.FEATHER);
 		Component kitMenuName = Component.text("Select a Kit").color(NamedTextColor.BLUE)
@@ -202,8 +201,8 @@ public abstract class TeamArena
 				for (Player p : players)
 				{
 					informOfTeam(p);
-					Main.logger().info("Decided Teams");
 				}
+				Main.logger().info("Decided Teams");
 
 				sendCountdown(true);
 			}
@@ -230,6 +229,11 @@ public abstract class TeamArena
 			else if(waitingSince + totalWaitingTime == gameTick)
 			{
 				gameState = GameState.LIVE;
+
+				for(Player p : spectators) {
+					giveSpectatorItems(p);
+				}
+
 				Main.logger().info("gameState now LIVE");
 			}
 		}
@@ -241,8 +245,14 @@ public abstract class TeamArena
 				/*for(TeamArenaTeam team : teams) {
 					team.removeAllMembers();
 				}*/
-				for(Player p : players) {
-					noTeamTeam.addMembers(p);
+
+				//maybe band-aid, needed to be done now for setSpectator() to work
+				gameState = GameState.PREGAME;
+				for(Player p : Bukkit.getOnlinePlayers()) {
+					if(isSpectator(p))
+						setSpectator(p, false);
+					else
+						noTeamTeam.addMembers(p);
 				}
 				showTeamColours = false;
 
@@ -278,7 +288,7 @@ public abstract class TeamArena
 		//not considering remainders/odd players
 		int maxOnTeam = players.size() / teams.length;
 
-		//theoretically playerIdx shouldn't become larger than the number of players
+		//theoretically playerIdx shouldn't become larger than the number of players so i don't need to modulus
 		int playerIdx = 0;
 		for(TeamArenaTeam team : shuffledTeams) {
 			while(team.getEntityMembers().size() < maxOnTeam) {
@@ -392,43 +402,48 @@ public abstract class TeamArena
 		}
 	}
 
-	//put a player on the spectators, remove from participating players if necessary
-	public void setSpectator(Player player) {
-		if((gameState == GameState.LIVE || gameState == GameState.TEAMS_CHOSEN)) {
-			if(players.contains(player)) {
-				if (gameState == GameState.LIVE) {
-					//kill the player
-				}
-
-				Bukkit.broadcast(player.playerListName()
-						.append(Component.text(" has joined the spectators").color(NamedTextColor.GRAY)));
-			}
-			else {
-				player.sendMessage(Component.text("You cannot re-join the game after becoming a spectator!")
-						.color(NamedTextColor.RED));
-			}
-		}
-
-		if(players.contains(player)) {
+	//switch a player between spectator and player
+	public void setSpectator(Player player, boolean spec) {
+		if(spec) {
 			players.remove(player);
 			spectators.add(player);
+
+			if (gameState == GameState.PREGAME) {
+				final Component text = Component.text("You will spectate this game").color(NamedTextColor.GRAY);
+				//player.showTitle(Title.title(Component.empty(), text));
+				player.sendMessage(text);
+			} else {
+				//kill the player here (remove from game)
+
+				Bukkit.broadcast(player.displayName().append(Component.text(" has joined the spectators").color(NamedTextColor.GRAY)));
+			}
+			//do after so it gets the correct displayName above
 			spectatorTeam.addMembers(player);
-			player.setAllowFlight(true);
-			//player.teleport(spawnPos);
-			Component text = Component.text("You will spectate this game").color(NamedTextColor.GRAY);
-			player.showTitle(Title.title(Component.empty(), text));
-			player.sendMessage(text);
 		}
-		//else they are in spectators keySet (or should be) && PREGAME
-		// toggle back to normal player
-		else if(gameState == GameState.PREGAME) {
-			spectators.remove(player);
-			players.add(player);
-			noTeamTeam.addMembers(player);
-			Component text = Component.text("You won't spectating this game").color(NamedTextColor.GRAY);
-			player.showTitle(Title.title(Component.empty(), text));
-			player.sendMessage(text);
+		//else they are (or set to be) a spectator
+		// only re-set them as a player if the game hasn't started
+		else {
+			if(gameState == GameState.PREGAME) {
+				spectators.remove(player);
+				players.add(player);
+				noTeamTeam.addMembers(player);
+				final Component text = Component.text("No longer spectating this game").color(NamedTextColor.GRAY);
+				player.sendMessage(text);
+			}
+			else {
+				final Component text = Component.text("You can't rejoin after becoming a spectator").color(NamedTextColor.RED);
+				player.sendMessage(text);
+			}
 		}
+	}
+
+	public boolean isSpectator(Player player) {
+		Main.logger().info("spectators contains player: " + spectators.contains(player));
+		return spectators.contains(player);
+	}
+
+	public void giveSpectatorItems(Player player) {
+		player.getInventory().addItem(new ItemStack(Material.COMPASS));
 	}
 
 	//process logging in player
@@ -454,9 +469,7 @@ public abstract class TeamArena
 			players.add(player);
 		}
 		else if (gameState == GameState.LIVE){
-			setSpectator(player);
-			player.sendMessage(Component.text("If you want to join this game, click the [item tbd] or type \"/ready\"!")
-					.color(TextColor.color(0, 255, 0)));
+			Main.getPlayerInfo(player).team = spectatorTeam;
 		}
 		//TODO: else if live, put them in spectator, or prepare to respawn
 		// else if dead, put them in spectator
@@ -468,6 +481,7 @@ public abstract class TeamArena
 	public void joiningPlayer(Player player) {
 		player.setGameMode(GameMode.SURVIVAL);
 		if(gameState.isPreGame()) {
+			//decided from loggingInPlayer(Player)
 			Main.getPlayerInfo(player).team.addMembers(player);
 			giveLobbyItems(player);
 			if(gameState == GameState.TEAMS_CHOSEN || gameState == GameState.GAME_STARTING) {
@@ -475,6 +489,14 @@ public abstract class TeamArena
 			}
 			if(gameState == GameState.PREGAME || gameState == GameState.TEAMS_CHOSEN) {
 				player.setAllowFlight(true);
+			}
+		}
+		else if(gameState == GameState.LIVE) {
+			if(Main.getPlayerInfo(player).team == spectatorTeam) {
+				setSpectator(player, true);
+				player.sendMessage(Component.text("If you want to join this game, click the [item tbd] or type \"/ready\"," +
+								" otherwise you can keep spectating.")
+						.color(TextColor.color(0, 255, 0)));
 			}
 		}
 	}

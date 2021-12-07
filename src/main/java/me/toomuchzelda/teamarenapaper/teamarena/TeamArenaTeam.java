@@ -65,16 +65,16 @@ public class TeamArenaTeam
 		if(Bukkit.getScoreboardManager().getMainScoreboard().getTeam(name) != null)
 			Bukkit.getScoreboardManager().getMainScoreboard().getTeam(name).unregister();
 
+		this.componentName = colourWord(this.name);
+		this.componentSimpleName = colourWord(this.simpleName);
+
 		paperTeam = Bukkit.getScoreboardManager().getMainScoreboard().registerNewTeam(name);
-		paperTeam.displayName(Component.text(this.name).color(this.RGBColour));
+		paperTeam.displayName(componentName);
 		paperTeam.setAllowFriendlyFire(true);
 		paperTeam.setCanSeeFriendlyInvisibles(true);
 		paperTeam.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
 		paperTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
 		paperTeam.color(NamedTextColor.nearestTo(this.RGBColour));
-
-		this.componentName = colourWord(this.name);
-		this.componentSimpleName = colourWord(this.simpleName);
 	}
 
 	public String getName() {
@@ -135,13 +135,20 @@ public class TeamArenaTeam
 		{
 			if (entity instanceof Player player)
 			{
-				//if they're already on a team
-				// remove them from that team and update the reference in their own class
 				TeamArenaTeam team = Main.getPlayerInfo(player).team;
-				if (team != null)
-				{
-					team.removeMembers(player);
+
+				//if they're already on this team
+				// check both their reference and this Set as having the reference point here doesn't always mean
+				// being in the team yet i.e when player logging in
+				if(team == this && entityMembers.contains(player)) {
+					updateNametag(player);
+					continue;
 				}
+
+				//if (team != null)
+				//{
+					team.removeMembers(player);
+				//}
 				Main.getPlayerInfo(player).team = this;
 
 				//change tab list name to colour for RGB colours
@@ -200,14 +207,14 @@ public class TeamArenaTeam
 	}
 
 	public void updateNametag(Player player) {
-		//don't change name if it's not different
-		// avoid sending packets and trouble
 		Component component;
 		if (Main.getGame().showTeamColours)
 			component = colourWord(player.getName());
 		else
 			component = Main.getGame().noTeamTeam.colourWord(player.getName());
 
+		//don't change name if it's not different
+		// avoid sending packets and trouble
 		if (!player.playerListName().contains(component)) {
 			//Bukkit.broadcastMessage("Did not contain component");
 			player.playerListName(component);

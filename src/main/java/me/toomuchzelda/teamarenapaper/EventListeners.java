@@ -4,6 +4,7 @@ import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import me.toomuchzelda.teamarenapaper.core.Hologram;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import net.minecraft.world.entity.Entity;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -73,7 +74,8 @@ public class EventListeners implements Listener
 	
 	@EventHandler
 	public void playerMove(PlayerMoveEvent event) {
-		if(Main.getGame().getGameState() == GameState.GAME_STARTING) {
+		TeamArena game = Main.getGame();
+		if(game.getGameState() == GameState.GAME_STARTING && !game.isSpectator(event.getPlayer())) {
 			Location prev = event.getFrom();
 			Location next = event.getTo();
 			

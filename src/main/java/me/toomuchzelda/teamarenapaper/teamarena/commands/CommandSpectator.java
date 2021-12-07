@@ -20,7 +20,7 @@ public class CommandSpectator extends Command {
     @Override
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         if(sender instanceof Player p) {
-            Main.getGame().setSpectator(p);
+            Main.getGame().setSpectator(p, !Main.getGame().isSpectator(p));
         }
         else {
             sender.sendMessage(Component.text("You can't spectate as console!").color(NamedTextColor.RED));
