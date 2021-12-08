@@ -6,6 +6,8 @@ import me.toomuchzelda.teamarenapaper.core.FileUtils;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitNone;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitTrooper;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -163,7 +165,12 @@ public abstract class TeamArena
 		kitItemMeta.displayName(kitMenuName);
 		kitMenuItem.setItemMeta(kitItemMeta);
 
-		kits = new Kit[]{new KitNone()};
+		kits = new Kit[]{new KitTrooper(), new KitNone()};
+		for(Kit kit : kits) {
+			for(Ability ability : kit.getAbilities()) {
+				ability.registerAbility();
+			}
+		}
 
 		players = ConcurrentHashMap.newKeySet();
 		spectators = ConcurrentHashMap.newKeySet();
@@ -238,8 +245,24 @@ public abstract class TeamArena
 			{
 				setGameState(GameState.LIVE);
 
+				Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
+				while(iter.hasNext()) {
+					Map.Entry<Player, PlayerInfo> entry = iter.next();
+					Kit kit = entry.getValue().kit;
+					Player player = entry.getKey();
 
+					//haven't selected a kit, use their default kit
+					if(kit == null) {
+						kit = findKit(entry.getValue().defaultKit);
+						//default kit somehow invalid; maybe a kit was removed
+						if(kit == null) {
+							kit = kits[0];
+						}
+					}
 
+					player.getInventory().clear();
+					kit.giveKit(player, true);
+				}
 			}
 		}
 		else {
@@ -364,8 +387,6 @@ public abstract class TeamArena
 			boolean found = false;
 			for (int i = 0; i < kits.length; i++) {
 				if (kits[i].getName().equalsIgnoreCase(kitName)) {
-					//chosenKits.put(player.getUuid(), kits[i]);
-					//player.setKit(kits[i]);
 					Main.getPlayerInfo(player).kit = kits[i];
 					found = true;
 					player.sendMessage(Component.text("Using kit " + kitName).color(NamedTextColor.BLUE));
@@ -380,6 +401,17 @@ public abstract class TeamArena
 		else {
 			player.sendMessage(Component.text("You can't choose a kit right now").color(NamedTextColor.RED));
 		}
+	}
+
+	public Kit findKit(String name) {
+		Kit kit = null;
+		for (int i = 0; i < kits.length; i++) {
+			if (kits[i].getName().equalsIgnoreCase(name)) {
+				kit = kits[i];
+				break;
+			}
+		}
+		return kit;
 	}
 
 	public void selectTeam(Player player, String teamName) {

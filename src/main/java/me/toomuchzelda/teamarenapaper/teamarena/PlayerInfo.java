@@ -11,11 +11,14 @@ public class PlayerInfo
 	public Location spawnPoint;
 	public Hologram nametag;
 	public Kit kit;
+	//todo: read from DB or other persistent storage
+	public String defaultKit;
 
 	public PlayerInfo() {
 		team = null;
 		spawnPoint = null;
 		nametag = null;
 		kit = null;
+		defaultKit = "Trooper";
 	}
 }

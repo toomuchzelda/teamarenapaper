@@ -17,6 +17,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
@@ -95,6 +97,10 @@ public final class Main extends JavaPlugin
 	
 	public static Collection<PlayerInfo> getPlayerInfos() {
 		return playerInfo.values();
+	}
+
+	public static Iterator<Map.Entry<Player, PlayerInfo>> getPlayersIter() {
+		return playerInfo.entrySet().iterator();
 	}
 	
 	public static void addPlayerInfo(Player player, PlayerInfo info) {
