@@ -27,13 +27,17 @@ public final class Main extends JavaPlugin
 	private static EventListeners eventListeners;
 	private static PacketListeners packetListeners;
 	private static Logger logger;
-	
+
+	private static JavaPlugin plugin;
+
 	private static final ConcurrentHashMap<Player, PlayerInfo> playerInfo = new ConcurrentHashMap<Player, PlayerInfo>();
 	public static final ConcurrentHashMap<Integer, Player> playerIdLookup = new ConcurrentHashMap<>();
-	
+
 	@Override
 	public void onEnable()
 	{
+		plugin = this;
+
 		logger = this.getLogger();
 		logger.info("Starting TMA");
 
@@ -103,6 +107,10 @@ public final class Main extends JavaPlugin
 	
 	public static Logger logger() {
 		return logger;
+	}
+
+	public static JavaPlugin getPlugin() {
+		return plugin;
 	}
 	
 	public static TeamArena getGame() {

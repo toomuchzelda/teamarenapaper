@@ -20,6 +20,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.yaml.snakeyaml.Yaml;
+import oshi.util.tuples.Pair;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -61,6 +62,8 @@ public abstract class TeamArena
 	//use Bukkit.getOnlinePlayers() for all players
 	protected Set<Player> players;
 	protected Set<Player> spectators;
+	//for mid-game joiners with whatever amount of time to decide if they wanna join
+	protected LinkedList<Pair<Player, Long>> joinedSpecTimers;
 
 	protected Kit[] kits;
 	protected ItemStack kitMenuItem;
@@ -164,6 +167,7 @@ public abstract class TeamArena
 
 		players = ConcurrentHashMap.newKeySet();
 		spectators = ConcurrentHashMap.newKeySet();
+		joinedSpecTimers = new LinkedList<>();
 
 		for(Player p : Bukkit.getOnlinePlayers()) {
 			p.teleport(gameWorld.getSpawnLocation());
@@ -195,14 +199,18 @@ public abstract class TeamArena
 				//set teams here
 				showTeamColours = true;
 				setupTeams();
-				gameState = GameState.TEAMS_CHOSEN;
+				setGameState(GameState.TEAMS_CHOSEN);
 
 				Bukkit.broadcast(Component.text("Teams have been decided!").color(NamedTextColor.RED));
-				for (Player p : players)
-				{
+				for (Player p : players) {
 					informOfTeam(p);
 				}
 				Main.logger().info("Decided Teams");
+
+
+				for(Player p : spectators) {
+					makeSpectator(p);
+				}
 
 				sendCountdown(true);
 			}
@@ -223,31 +231,28 @@ public abstract class TeamArena
 				}
 
 				//EventListeners.java should stop them from moving
-				gameState = GameState.GAME_STARTING;
+				setGameState(GameState.GAME_STARTING);
 			}
 			//start game
 			else if(waitingSince + totalWaitingTime == gameTick)
 			{
-				gameState = GameState.LIVE;
+				setGameState(GameState.LIVE);
 
-				for(Player p : spectators) {
-					giveSpectatorItems(p);
-				}
 
-				Main.logger().info("gameState now LIVE");
+
 			}
 		}
 		else {
 			waitingSince = gameTick;
 
-			if(gameState == GameState.TEAMS_CHOSEN) {
+			if(gameState == GameState.TEAMS_CHOSEN || gameState == GameState.GAME_STARTING) {
 				//remove players from all teams
 				/*for(TeamArenaTeam team : teams) {
 					team.removeAllMembers();
 				}*/
 
-				//maybe band-aid, needed to be done now for setSpectator() to work
-				gameState = GameState.PREGAME;
+				//maybe band-aid, needed to set gamestate now for setSpectator() to work
+				setGameState(GameState.PREGAME);
 				for(Player p : Bukkit.getOnlinePlayers()) {
 					if(isSpectator(p))
 						setSpectator(p, false);
@@ -264,8 +269,12 @@ public abstract class TeamArena
 				}
 				Bukkit.broadcast(Component.text("Not enough players to start the game, game cancelled!").color(MathUtils.randomTextColor()));
 			}
-			gameState = GameState.PREGAME;
+			//setGameState(GameState.PREGAME);
 		}
+	}
+
+	public void liveTick() {
+
 	}
 
 	public void setupTeams() {
@@ -308,6 +317,9 @@ public abstract class TeamArena
 		for(TeamArenaTeam team : teams) {
 			team.updateNametags();
 		}
+
+		//also update name colours for spectators
+		spectatorTeam.updateNametags();
 	}
 
 	public void balancePlayerLeave() {
@@ -403,6 +415,7 @@ public abstract class TeamArena
 	}
 
 	//switch a player between spectator and player
+	// teams stuff only, practical changes happen in makeSpectator(Player)
 	public void setSpectator(Player player, boolean spec) {
 		if(spec) {
 			players.remove(player);
@@ -437,8 +450,19 @@ public abstract class TeamArena
 		}
 	}
 
+	public void makeSpectator(Player player) {
+		player.getInventory().clear();
+		giveSpectatorItems(player);
+		player.setAllowFlight(true);
+
+		//hide all the spectators from everyone else
+		for(Player p : Bukkit.getOnlinePlayers()) {
+			p.hidePlayer(Main.getPlugin(), player);
+		}
+	}
+
 	public boolean isSpectator(Player player) {
-		Main.logger().info("spectators contains player: " + spectators.contains(player));
+		//Main.logger().info("spectators contains player: " + spectators.contains(player));
 		return spectators.contains(player);
 	}
 
@@ -494,9 +518,12 @@ public abstract class TeamArena
 		else if(gameState == GameState.LIVE) {
 			if(Main.getPlayerInfo(player).team == spectatorTeam) {
 				setSpectator(player, true);
+				makeSpectator(player);
 				player.sendMessage(Component.text("If you want to join this game, click the [item tbd] or type \"/ready\"," +
 								" otherwise you can keep spectating.")
 						.color(TextColor.color(0, 255, 0)));
+
+				joinedSpecTimers.add(new Pair<>(player, gameTick));
 			}
 		}
 	}
@@ -731,6 +758,11 @@ public abstract class TeamArena
 			teams[teamsArrIndex] = teamArenaTeam;
 			teamsArrIndex++;
 		}
+	}
+
+	public void setGameState(GameState gameState) {
+		this.gameState = gameState;
+		Main.logger().info("GameState: " + gameState);
 	}
 
 	public String mapPath() {
