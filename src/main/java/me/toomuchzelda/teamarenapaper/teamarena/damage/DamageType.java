@@ -1,10 +1,15 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
+import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.core.EntityUtils;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageEvent;
 
 import java.lang.reflect.Field;
@@ -15,14 +20,14 @@ import java.util.Arrays;
 // https://github.com/libraryaddict/RedWarfare/blob/master/redwarfare-core/src/me/libraryaddict/core/damage/AttackType.java
 public class DamageType {
 
-    public static DamageType CACTUS = new DamageType("Cactus", "%Killed% licked a cactus").setNoKnockback();
+    public static DamageType CACTUS = new DamageType("Cactus", "%Killed% hugged a cactus").setNoKnockback();
 
     public static DamageType CUSTOM = new DamageType("Custom", "%Killed% fell over and died").setNoKnockback();
 
     public static DamageType DAMAGE_POTION = new DamageType("Damage Potion",
             "%Killed% died to %Killer%'s damage potion which isn't part of the game?").setNoKnockback();
 
-    public static DamageType DRAGON_BREATH = new DamageType("Dragon Breath", "%Killed% sucked a lungfull of dragon's breath")
+    public static DamageType DRAGON_BREATH = new DamageType("Dragon Breath", "%Killed% sucked a lungful of dragon's breath")
             .setNoKnockback();
 
     public static DamageType DROWNED = new DamageType("Drowned", "%Killed% is swimming with the fishes").setIgnoreArmor()
@@ -85,7 +90,7 @@ public class DamageType {
 
     public static DamageType SUFFOCATION = new DamageType("Suffocation", "%Killed% choked on block").setNoKnockback();
 
-    public static DamageType SUICIDE = new DamageType("Suicide", "%Killed% commited suicide").setInstantDeath().setNoKnockback();
+    public static DamageType SUICIDE = new DamageType("Suicide", "%Killed% died").setInstantDeath().setNoKnockback();
 
     public static DamageType SUICIDE_ASSISTED = new DamageType("Assisted Suicide", "%Killed% was assisted on the path to suicide")
             .setInstantDeath().setNoKnockback();
@@ -185,27 +190,27 @@ public class DamageType {
         return _deathMessages[MathUtils.randomMax(_deathMessages.length - 1)];
     }
 
-    /*public String getDeathMessage(String color, Entity victim, Entity killer, Entity cause) {
-        String victimName;
-        if(victim == null)
-            victimName = "Unknown";
+    public Component getDeathMessage(TextColor color, Entity victim, Entity killer, Entity cause) {
+        return getDeathMessage(color, EntityUtils.getName(victim), EntityUtils.getName(victim), EntityUtils.getName(cause));
+    }
 
-        return getDeathMessage(color, UtilEnt.getName(victim), UtilEnt.getName(killer), UtilEnt.getName(cause));
-    }*/
+    public Component getDeathMessage(TextColor color, Component victim, Component killer, Component cause) {
+        String message = color + getDeathMessage();
 
-    public String getDeathMessage(TextColor color, Component victim, Component killer, Component cause) {
-        //String message = color + getDeathMessage();
-        Component message = Component.text(getDeathMessage());
-
+        //sigh
+        final TextReplacementConfig victimConfig = TextReplacementConfig.builder().match("%Killed%").replacement(victim).build();
+        final TextReplacementConfig causeConfig = TextReplacementConfig.builder().match("%Cause%").replacement(cause).build();
+        final TextReplacementConfig killerConfig = TextReplacementConfig.builder().match("%Killer%").replacement(killer).build();
         
-        message = replace(message, "%Killed%", victim);
+        /*message = replace(message, "%Killed%", victim);
         message = replace(message, "%Killed%", victim);
         message = replace(message, "%Cause%", cause);
         message = replace(message, "%Cause%", cause);
         message = replace(message, "%Killer%", killer);
-        message = replace(message, "%Killer%", killer);
+        message = replace(message, "%Killer%", killer);*/
 
-        return message;
+        return Component.text(message).replaceText(victimConfig).replaceText(causeConfig)
+                .replaceText(killerConfig);
     }
 
     public String getName() {
@@ -326,5 +331,16 @@ public class DamageType {
 
     public String toString() {
         return "DamageType[" + getName() + "]";
+    }
+
+    public static void checkDamageTypes() {
+        for (EntityDamageEvent.DamageCause cause : EntityDamageEvent.DamageCause.values()) {
+            DamageType attack = DamageType.getAttack(cause);
+
+            if (attack == null || attack == DamageType.UNKNOWN) {
+                Main.logger().warning("The DamageCause '" + cause.name() +
+                        "' has not been registered as a DamageType");
+            }
+        }
     }
 }

@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper;
 
 import com.comphenix.protocol.ProtocolLib;
 import com.comphenix.protocol.ProtocolLibrary;
+import me.toomuchzelda.teamarenapaper.core.EntityUtils;
 import me.toomuchzelda.teamarenapaper.core.FileUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.KingOfTheHill;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
@@ -9,6 +10,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandKit;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandSpectator;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.command.CommandMap;
@@ -32,7 +34,7 @@ public final class Main extends JavaPlugin
 
 	private static JavaPlugin plugin;
 
-	private static final ConcurrentHashMap<Player, PlayerInfo> playerInfo = new ConcurrentHashMap<Player, PlayerInfo>();
+	private static final ConcurrentHashMap<Player, PlayerInfo> playerInfo = new ConcurrentHashMap<>();
 	public static final ConcurrentHashMap<Integer, Player> playerIdLookup = new ConcurrentHashMap<>();
 
 	@Override
@@ -66,6 +68,9 @@ public final class Main extends JavaPlugin
 		packetListeners = new PacketListeners(this);
 		
 		teamArena = new KingOfTheHill();
+
+		EntityUtils.cacheReflection();
+		DamageType.checkDamageTypes();
 
 		registerCommands();
 	}

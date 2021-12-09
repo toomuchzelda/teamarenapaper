@@ -2,6 +2,8 @@ package me.toomuchzelda.teamarenapaper.core;
 
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
@@ -25,6 +27,13 @@ public class PlayerUtils
 		}
 	}
 
+	public static void sendPacket(Player player, Packet... packets) {
+		ServerPlayer nmsPlayer = ((CraftPlayer) player).getHandle();
+		for(Packet p : packets) {
+			nmsPlayer.connection.send(p);
+		}
+	}
+
 	//set velocity fields and send the packet immediately
 	// otherwise use entity.setVelocity(Vector) for spigot to do it's stuff first
 	public static void sendVelocity(Player player, Vector velocity) {
@@ -35,7 +44,7 @@ public class PlayerUtils
 		nmsPlayer.hurtMarked = false;
 
 		//send a packet NOW
-		// can avoid protocollib since the constructor is public and modular
+		// can avoid protocollib since the nms constructor is public and modular
 		Vec3 vec = CraftVector.toNMS(velocity);
 		ClientboundSetEntityMotionPacket packet = new ClientboundSetEntityMotionPacket(player.getEntityId(), vec);
 		nmsPlayer.connection.send(packet);

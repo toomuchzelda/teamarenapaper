@@ -5,6 +5,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.BlockUtils;
 import me.toomuchzelda.teamarenapaper.core.FileUtils;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitNone;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitTrooper;
@@ -297,8 +298,18 @@ public abstract class TeamArena
 
 		//checking team states (win/lose) done in liveTick() per-game
 
+		boolean hadEvents = damageQueue.size() > 0;
 		//process damage events
+		Iterator<EntityDamageEvent> iter = damageQueue.iterator();
+		while(iter.hasNext()) {
+			EntityDamageEvent eEvent = iter.next();
+			DamageEvent event = new DamageEvent(eEvent);
+			event.executeAttack();
+			iter.remove();
+		}
 
+		if(hadEvents)
+			Bukkit.broadcast(Component.text("Processed damage events"));
 	}
 
 	public abstract TeamArenaTeam checkTeams();
@@ -533,8 +544,7 @@ public abstract class TeamArena
 		//TODO: else if live, put them in spectator, or prepare to respawn
 		// else if dead, put them in spectator
 
-		Kit kit = Main.getPlayerInfo(player).kit;
-		//haven't selected a kit, use their default kit
+		Kit kit = playerInfo.kit;
 		if(kit == null) {
 			kit = findKit(playerInfo.defaultKit);
 			//default kit somehow invalid; maybe a kit was removed
