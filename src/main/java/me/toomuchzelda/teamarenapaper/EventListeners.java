@@ -13,10 +13,15 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityPoseChangeEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.plugin.Plugin;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
+
+import static me.toomuchzelda.teamarenapaper.teamarena.GameState.LIVE;
 
 public class EventListeners implements Listener
 {
@@ -44,8 +49,9 @@ public class EventListeners implements Listener
 		//todo: read from MySQL server or something for stored player data.
 		// or use persistent data containers, or option to use either
 		// and also use the PreLoginEvent
-		Main.addPlayerInfo(event.getPlayer(), new PlayerInfo());
-		Main.getGame().loggingInPlayer(event.getPlayer());
+		PlayerInfo playerInfo = new PlayerInfo();
+		Main.addPlayerInfo(event.getPlayer(), playerInfo);
+		Main.getGame().loggingInPlayer(event.getPlayer(), playerInfo);
 		Main.playerIdLookup.put(event.getPlayer().getEntityId(), event.getPlayer());
 	}
 	
@@ -102,6 +108,21 @@ public class EventListeners implements Listener
 				hologram.poseChanged = true;
 			}
 		}
+	}
+
+	//create and cache damage events
+	@EventHandler
+	public void entityDamage(EntityDamageEvent event) {
+		event.setCancelled(true);
+		if(Main.getGame().getGameState() == LIVE) {
+			Main.getGame().queueDamage(event);
+		}
+	}
+
+	@EventHandler
+	public void playerDeath(PlayerDeathEvent event) {
+		//todo
+		event.setCancelled(true);
 	}
 
 	//shouldn't run since we handle deaths on our own, but just in case

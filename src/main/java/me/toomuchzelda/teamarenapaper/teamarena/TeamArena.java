@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
+import com.destroystokyo.paper.event.entity.EntityKnockbackByEntityEvent;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.BlockUtils;
 import me.toomuchzelda.teamarenapaper.core.FileUtils;
@@ -16,6 +17,7 @@ import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -29,6 +31,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 //main game class
 public abstract class TeamArena
@@ -71,6 +74,8 @@ public abstract class TeamArena
 	protected ItemStack kitMenuItem;
 
 	protected MapInfo mapInfo;
+
+	protected ConcurrentLinkedQueue<EntityDamageEvent> damageQueue;
 
 	public TeamArena() {
 		Main.logger().info("Reading info from " + mapPath() + ':');
@@ -175,6 +180,7 @@ public abstract class TeamArena
 		players = ConcurrentHashMap.newKeySet();
 		spectators = ConcurrentHashMap.newKeySet();
 		joinedSpecTimers = new LinkedList<>();
+		damageQueue = new ConcurrentLinkedQueue();
 
 		for(Player p : Bukkit.getOnlinePlayers()) {
 			p.teleport(gameWorld.getSpawnLocation());
@@ -191,7 +197,7 @@ public abstract class TeamArena
 		}
 		else if(gameState == GameState.LIVE)
 		{
-
+			liveTick();
 		}
 	}
 
@@ -251,15 +257,6 @@ public abstract class TeamArena
 					Kit kit = entry.getValue().kit;
 					Player player = entry.getKey();
 
-					//haven't selected a kit, use their default kit
-					if(kit == null) {
-						kit = findKit(entry.getValue().defaultKit);
-						//default kit somehow invalid; maybe a kit was removed
-						if(kit == null) {
-							kit = kits[0];
-						}
-					}
-
 					player.getInventory().clear();
 					kit.giveKit(player, true);
 				}
@@ -298,7 +295,13 @@ public abstract class TeamArena
 
 	public void liveTick() {
 
+		//checking team states (win/lose) done in liveTick() per-game
+
+		//process damage events
+
 	}
+
+	public abstract TeamArenaTeam checkTeams();
 
 	public void setupTeams() {
 		//shuffle order of teams first so certain teams don't always get the odd player(s)
@@ -503,13 +506,13 @@ public abstract class TeamArena
 	}
 
 	//process logging in player
-	public void loggingInPlayer(Player player) {
+	public void loggingInPlayer(Player player, PlayerInfo playerInfo) {
 		Location toTeleport = spawnPos;
 		if(gameState.isPreGame()) {
 			if(gameState == GameState.TEAMS_CHOSEN || gameState == GameState.GAME_STARTING) {
 				//cache the team and put them on it when they've joined
 				TeamArenaTeam toJoin = addToLowestTeam(player, false);
-				Main.getPlayerInfo(player).team = toJoin;
+				playerInfo.team = toJoin;
 				if(gameState == GameState.GAME_STARTING) {
 					TeamArenaTeam team = Main.getPlayerInfo(player).team;
 					Location[] spawns = team.getSpawns();
@@ -520,15 +523,25 @@ public abstract class TeamArena
 			}
 			else if (gameState == GameState.PREGAME) {
 				//noTeamTeam.addMembers(player);
-				Main.getPlayerInfo(player).team = noTeamTeam;
+				playerInfo.team = noTeamTeam;
 			}
 			players.add(player);
 		}
 		else if (gameState == GameState.LIVE){
-			Main.getPlayerInfo(player).team = spectatorTeam;
+			playerInfo.team = spectatorTeam;
 		}
 		//TODO: else if live, put them in spectator, or prepare to respawn
 		// else if dead, put them in spectator
+
+		Kit kit = Main.getPlayerInfo(player).kit;
+		//haven't selected a kit, use their default kit
+		if(kit == null) {
+			kit = findKit(playerInfo.defaultKit);
+			//default kit somehow invalid; maybe a kit was removed
+			if(kit == null) {
+				playerInfo.kit = kits[0];
+			}
+		}
 
 		//pass spawnpoint to the PlayerSpawnEvent
 		Main.getPlayerInfo(player).spawnPoint = toTeleport;
@@ -795,6 +808,19 @@ public abstract class TeamArena
 	public void setGameState(GameState gameState) {
 		this.gameState = gameState;
 		Main.logger().info("GameState: " + gameState);
+	}
+
+	public boolean canAttack(Player one, Player two) {
+		TeamArenaTeam team = Main.getPlayerInfo(one).team;
+		//if two is on the same team as one
+		if(team.getEntityMembers().contains(two)) {
+			return false;
+		}
+		return true;
+	}
+
+	public void queueDamage(EntityDamageEvent event) {
+		damageQueue.add(event);
 	}
 
 	public String mapPath() {
