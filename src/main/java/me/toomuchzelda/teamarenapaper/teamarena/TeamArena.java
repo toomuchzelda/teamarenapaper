@@ -40,7 +40,7 @@ public abstract class TeamArena
 	private final File worldFile;
 	protected World gameWorld;
 
-	protected long gameTick;
+	protected static long gameTick;
 	protected long waitingSince;
 	protected GameState gameState;
 
@@ -298,18 +298,14 @@ public abstract class TeamArena
 
 		//checking team states (win/lose) done in liveTick() per-game
 
-		boolean hadEvents = damageQueue.size() > 0;
 		//process damage events
 		Iterator<EntityDamageEvent> iter = damageQueue.iterator();
 		while(iter.hasNext()) {
 			EntityDamageEvent eEvent = iter.next();
+			iter.remove();
 			DamageEvent event = new DamageEvent(eEvent);
 			event.executeAttack();
-			iter.remove();
 		}
-
-		if(hadEvents)
-			Bukkit.broadcast(Component.text("Processed damage events"));
 	}
 
 	public abstract TeamArenaTeam checkTeams();
@@ -847,5 +843,9 @@ public abstract class TeamArena
 
 	public GameState getGameState() {
 		return gameState;
+	}
+
+	public static long getGameTick() {
+		return gameTick;
 	}
 }

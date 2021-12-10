@@ -13,6 +13,10 @@ public class PlayerInfo
 	public Kit kit;
 	//todo: read from DB or other persistent storage
 	public String defaultKit;
+	//tick they last received damage
+	public long lastHurt;
+	//last amount of damage received from 1 damage source within the current (if any) invulnerability period
+	public double lastDamage;
 
 	public PlayerInfo() {
 		team = null;
@@ -20,5 +24,7 @@ public class PlayerInfo
 		nametag = null;
 		kit = null;
 		defaultKit = "Trooper";
+		lastHurt = -1;
+		lastDamage = 0;
 	}
 }

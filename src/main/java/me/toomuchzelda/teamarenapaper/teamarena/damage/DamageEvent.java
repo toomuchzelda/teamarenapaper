@@ -1,13 +1,17 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
+import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.EntityUtils;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.Bukkit;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.craftbukkit.v1_17_R1.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_17_R1.util.CraftVector;
 import org.bukkit.enchantments.Enchantment;
@@ -39,6 +43,8 @@ public class DamageEvent {
     //shooter of arrow, snowball etc where attacker would be the projectile
     private Entity realDamager;
     private boolean isCritical;
+    //if the attacker was sprinting, only applicable if the attacker is a Player
+    private boolean wasSprinting;
 
     public static final double yVal = 0.4;
     public static final double xzVal = 0.4;
@@ -49,7 +55,10 @@ public class DamageEvent {
         damagee = event.getEntity();
         rawDamage = event.getDamage();
         finalDamage = event.getFinalDamage();
-        damageType = DamageType.getAttack(event.getCause());
+        damageType = DamageType.getAttack(event);
+
+        Bukkit.broadcast(Component.text("DamageCause: " + event.getCause()));
+        Bukkit.broadcast(Component.text("DamageType: " + damageType.toString()));
 
         if(damageType.isKnockback())
             knockbackMults = new LinkedList<>();
@@ -77,18 +86,27 @@ public class DamageEvent {
                         double level = ((double) item.getEnchantmentLevel(Enchantment.KNOCKBACK)) / 2;
                         knockbackMults.add(level);
                     }
+
+                    if(living instanceof Player p) {
+                        if(p.isSprinting()) {
+                            knockbackMults.add(1d);
+                        }
+                        wasSprinting = p.isSprinting();
+                    }
                 }
             }
             isCritical = dEvent.isCritical();
         }
 
         //add stuff to knockback multipliers list before calculating knockback
-        knockback = calculateKnockback();
+        if(damageType.isKnockback())
+            knockback = calculateKnockback();
+        else
+            knockback = null;
     }
 
     public void executeAttack() {
         if(damagee instanceof LivingEntity living) {
-            EntityUtils.playHurtAnimation(living);
             if(knockback != null) {
                 if (damagee instanceof Player player) {
                     //send knockback packet
@@ -102,16 +120,47 @@ public class DamageEvent {
             }
 
             double newHealth = living.getHealth() - finalDamage;
-            if(finalDamage <= 0) {
+            if(newHealth <= 0) {
                 //todo: handle death here
                 Bukkit.broadcast(Component.text(living.getName() + " has died"));
-                newHealth = 10;
+                newHealth = living.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
             }
             living.setHealth(newHealth);
+            EntityUtils.playHurtAnimation(living, damageType);
         }
         else if(!damagee.isInvulnerable()){
             damagee.remove();
         }
+
+        if(damager instanceof LivingEntity living) {
+            if (damager instanceof Player p) {
+                if (wasSprinting) {
+                    net.minecraft.world.entity.player.Player nmsPlayer = ((CraftPlayer) p).getHandle();
+                    //3 for sprinting flag
+                    // dont use setSprinting as it sends an attribute packet that may stop the client from sprinting
+                    // server-client desync good? it's 1.8 behaviour anyway, may change later
+                    nmsPlayer.setSharedFlag(3, false);
+                }
+                //reset their attack cooldown
+                p.resetCooldown();
+            }
+        }
+    }
+
+    /**
+     * determine if an entity can be hurt at any point in time
+     * if yes, also update their invuln tick info
+     * @param damagee entity getting hurt
+     * @param damage amount of damage being dealt
+     * @return
+     */
+    public boolean canHit(Entity damagee, double damage) {
+        if(damagee instanceof Player p) {
+            PlayerInfo info = Main.getPlayerInfo(p);
+            long currentNDT = TeamArena.getGameTick() - info.lastHurt;
+
+        }
+        return false;
     }
 
     public Vector calculateKnockback() {
