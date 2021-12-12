@@ -1,11 +1,11 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
-import com.destroystokyo.paper.event.entity.EntityKnockbackByEntityEvent;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.BlockUtils;
 import me.toomuchzelda.teamarenapaper.core.FileUtils;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitNone;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitTrooper;
@@ -40,7 +40,7 @@ public abstract class TeamArena
 	private final File worldFile;
 	protected World gameWorld;
 
-	protected static long gameTick;
+	protected static long gameTick = 0;
 	protected long waitingSince;
 	protected GameState gameState;
 
@@ -181,7 +181,7 @@ public abstract class TeamArena
 		players = ConcurrentHashMap.newKeySet();
 		spectators = ConcurrentHashMap.newKeySet();
 		joinedSpecTimers = new LinkedList<>();
-		damageQueue = new ConcurrentLinkedQueue();
+		damageQueue = new ConcurrentLinkedQueue<>();
 
 		for(Player p : Bukkit.getOnlinePlayers()) {
 			p.teleport(gameWorld.getSpawnLocation());
@@ -200,6 +200,11 @@ public abstract class TeamArena
 		{
 			liveTick();
 		}
+
+		//every 3 minutes
+		if(gameTick % 3 * 60 * 20 == 0) {
+			DamageTimes.cleanup();
+		}
 	}
 
 	public void preGameTick() {
@@ -210,57 +215,16 @@ public abstract class TeamArena
 			sendCountdown(false);
 			//teams decided time
 			if(waitingSince + preTeamsTime == gameTick) {
-				//set teams here
-				showTeamColours = true;
-				setupTeams();
-				setGameState(GameState.TEAMS_CHOSEN);
-
-				Bukkit.broadcast(Component.text("Teams have been decided!").color(NamedTextColor.RED));
-				for (Player p : players) {
-					informOfTeam(p);
-				}
-				Main.logger().info("Decided Teams");
-
-
-				for(Player p : spectators) {
-					makeSpectator(p);
-				}
-
-				sendCountdown(true);
+				prepTeamsDecided();
 			}
 			//Game starting; teleport everyone to spawns and freeze them
 			else if(waitingSince + preTeamsTime + preGameStartingTime == gameTick) {
-				//teleport players to team spawns
-				for(TeamArenaTeam team : teams) {
-					int i = 0;
-					Location[] spawns = team.getSpawns();
-					for(Entity e : team.getEntityMembers()) {
-						if(e instanceof Player p)
-							p.setAllowFlight(false);
-
-						e.teleport(spawns[i % spawns.length]);
-						team.spawnsIndex++;
-						i++;
-					}
-				}
-
-				//EventListeners.java should stop them from moving
-				setGameState(GameState.GAME_STARTING);
+				prepGameStarting();
 			}
 			//start game
 			else if(waitingSince + totalWaitingTime == gameTick)
 			{
-				setGameState(GameState.LIVE);
-
-				Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
-				while(iter.hasNext()) {
-					Map.Entry<Player, PlayerInfo> entry = iter.next();
-					Kit kit = entry.getValue().kit;
-					Player player = entry.getKey();
-
-					player.getInventory().clear();
-					kit.giveKit(player, true);
-				}
+				prepLive();
 			}
 		}
 		else {
@@ -308,7 +272,58 @@ public abstract class TeamArena
 		}
 	}
 
-	public abstract TeamArenaTeam checkTeams();
+	public void prepTeamsDecided() {
+		//set teams here
+		showTeamColours = true;
+		setupTeams();
+		setGameState(GameState.TEAMS_CHOSEN);
+
+		Bukkit.broadcast(Component.text("Teams have been decided!").color(NamedTextColor.RED));
+		for (Player p : players) {
+			informOfTeam(p);
+		}
+		Main.logger().info("Decided Teams");
+
+
+		for(Player p : spectators) {
+			makeSpectator(p);
+		}
+
+		sendCountdown(true);
+	}
+
+	public void prepLive() {
+		setGameState(GameState.LIVE);
+
+		Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
+		while(iter.hasNext()) {
+			Map.Entry<Player, PlayerInfo> entry = iter.next();
+			Kit kit = entry.getValue().kit;
+			Player player = entry.getKey();
+
+			player.getInventory().clear();
+			kit.giveKit(player, true);
+		}
+	}
+
+	public void prepGameStarting() {
+		//teleport players to team spawns
+		for(TeamArenaTeam team : teams) {
+			int i = 0;
+			Location[] spawns = team.getSpawns();
+			for(Entity e : team.getEntityMembers()) {
+				if(e instanceof Player p)
+					p.setAllowFlight(false);
+
+				e.teleport(spawns[i % spawns.length]);
+				team.spawnsIndex++;
+				i++;
+			}
+		}
+
+		//EventListeners.java should stop them from moving
+		setGameState(GameState.GAME_STARTING);
+	}
 
 	public void setupTeams() {
 		//shuffle order of teams first so certain teams don't always get the odd player(s)

@@ -9,6 +9,7 @@ import net.minecraft.world.entity.Entity;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.craftbukkit.v1_17_R1.entity.CraftEntity;
+import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -114,6 +115,11 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void entityDamage(EntityDamageEvent event) {
 		event.setCancelled(true);
+		
+		//marker armorstands must never be damaged/killed
+		if(event.getEntity() instanceof ArmorStand stand && stand.isMarker())
+			return;
+		
 		if(Main.getGame().getGameState() == LIVE) {
 			Main.getGame().queueDamage(event);
 		}

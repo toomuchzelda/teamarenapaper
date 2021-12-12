@@ -5,6 +5,7 @@ import com.comphenix.protocol.events.PacketContainer;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
+import net.minecraft.network.protocol.game.ClientboundSetHealthPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.craftbukkit.v1_17_R1.entity.CraftPlayer;
@@ -48,5 +49,15 @@ public class PlayerUtils
 		Vec3 vec = CraftVector.toNMS(velocity);
 		ClientboundSetEntityMotionPacket packet = new ClientboundSetEntityMotionPacket(player.getEntityId(), vec);
 		nmsPlayer.connection.send(packet);
+	}
+
+	public static void sendHealth(Player player, double newHealth) {
+		float health = (float) player.getHealth();
+		int food = player.getFoodLevel();
+		float saturation = player.getSaturation();
+
+		ClientboundSetHealthPacket packet = new ClientboundSetHealthPacket(health, food, saturation);
+		
+		PlayerUtils.sendPacket(player, packet);
 	}
 }

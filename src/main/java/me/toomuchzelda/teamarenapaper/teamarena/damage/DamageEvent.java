@@ -57,8 +57,8 @@ public class DamageEvent {
         finalDamage = event.getFinalDamage();
         damageType = DamageType.getAttack(event);
 
-        Bukkit.broadcast(Component.text("DamageCause: " + event.getCause()));
-        Bukkit.broadcast(Component.text("DamageType: " + damageType.toString()));
+        //Bukkit.broadcast(Component.text("DamageCause: " + event.getCause()));
+        //Bukkit.broadcast(Component.text("DamageType: " + damageType.toString()));
 
         if(damageType.isKnockback())
             knockbackMults = new LinkedList<>();
@@ -106,33 +106,91 @@ public class DamageEvent {
     }
 
     public void executeAttack() {
-        if(damagee instanceof LivingEntity living) {
+    
+        //not-livingentitys dont have NDT or health, can't do much
+        if(!(damagee instanceof LivingEntity)) {
+            //projectiles shouldn't be killable
+            if(!(damagee instanceof Projectile))
+                damagee.remove();
+        }
+        else
+        {
+            LivingEntity living = (LivingEntity) damagee;
+            DamageTimes dTimes = DamageTimes.getDamageTimes(living);
+            long ndt;
+            
+            boolean doHurtEffect = true;
+    
+            if(damageType.isMelee() || damageType.isProjectile())
+            {
+                ndt = TeamArena.getGameTick() - dTimes.lastAttackTime;
+        
+                //they are still in no-damage-time
+                // if they were hit with a stronger attack, only apply
+                // strength of new attack - strength of last attack, as if they were only hit
+                // by the person with the stronger weapon
+                // also do not extra knockback, and don't play the hurt effect again
+                // else if the new attack isn't stronger than the previous attack with this invulnerability period
+                // then don't take damage
+                if(ndt < living.getMaximumNoDamageTicks() / 2) {
+                    if(finalDamage > living.getLastDamage() && dTimes.lastDamager != damager) {
+                        this.setNoKnockback();
+                        this.finalDamage = this.finalDamage - living.getLastDamage();
+                        doHurtEffect = false;
+                    }
+                    else {
+                        return;
+                    }
+                }
+            }
+            else {
+                if (damageType.isFire())
+                    ndt = TeamArena.getGameTick() - dTimes.lastFireTime;
+                else
+                    ndt = TeamArena.getGameTick() - dTimes.lastMiscDamageTime;
+        
+                //not do damage if not enough invuln ticks elapsed
+                if (ndt < living.getMaximumNoDamageTicks() / 2) {
+                    return;
+                }
+            }
+            
+            updateNDT(dTimes, damageType, this.getFinalDamager());
+            
+            //knockback
             if(knockback != null) {
                 if (damagee instanceof Player player) {
                     //send knockback packet
                     Vec3 vec = CraftVector.toNMS(knockback);
                     ClientboundSetEntityMotionPacket packet = new ClientboundSetEntityMotionPacket(player.getEntityId(), vec);
                     PlayerUtils.sendPacket(player, packet);
-                }
-                else {
+                } else {
                     damagee.setVelocity(knockback);
                 }
             }
-
+    
+            //damage
             double newHealth = living.getHealth() - finalDamage;
-            if(newHealth <= 0) {
+            if (newHealth <= 0) {
                 //todo: handle death here
                 Bukkit.broadcast(Component.text(living.getName() + " has died"));
                 newHealth = living.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
             }
             living.setHealth(newHealth);
-            EntityUtils.playHurtAnimation(living, damageType);
+            living.setLastDamage(finalDamage);
+            if(doHurtEffect)
+                EntityUtils.playHurtAnimation(living, damageType);
+            if(isCritical)
+                EntityUtils.playCritEffect(living);
+            //need to send this packet for the hearts to flash white when lost, otherwise they just decrease with no
+            // effect
+            if (damagee instanceof Player player) {
+                PlayerUtils.sendHealth(player, player.getHealth());
+            }
         }
-        else if(!damagee.isInvulnerable()){
-            damagee.remove();
-        }
-
-        if(damager instanceof LivingEntity living) {
+    
+        //damager stuff
+        if(damager instanceof LivingEntity livingDamager) {
             if (damager instanceof Player p) {
                 if (wasSprinting) {
                     net.minecraft.world.entity.player.Player nmsPlayer = ((CraftPlayer) p).getHandle();
@@ -141,26 +199,29 @@ public class DamageEvent {
                     // server-client desync good? it's 1.8 behaviour anyway, may change later
                     nmsPlayer.setSharedFlag(3, false);
                 }
-                //reset their attack cooldown
+                //reset their attack cooldown?
                 p.resetCooldown();
             }
         }
     }
 
-    /**
-     * determine if an entity can be hurt at any point in time
-     * if yes, also update their invuln tick info
-     * @param damagee entity getting hurt
-     * @param damage amount of damage being dealt
-     * @return
-     */
-    public boolean canHit(Entity damagee, double damage) {
-        if(damagee instanceof Player p) {
-            PlayerInfo info = Main.getPlayerInfo(p);
-            long currentNDT = TeamArena.getGameTick() - info.lastHurt;
-
+    //if damagee is a player pinfo must not be null
+    // mfw java no primitive pointers
+    private static void updateNDT(DamageTimes dTimes, DamageType damageType, Entity lastDamager) {
+        if(damageType.isMelee() || damageType.isProjectile())
+        {
+            dTimes.lastAttackTime = TeamArena.getGameTick();
+            //Bukkit.broadcast(Component.text("Point 5"));
         }
-        return false;
+        else if(damageType.isFire()) {
+            dTimes.lastFireTime = TeamArena.getGameTick();
+        }
+        else {
+            dTimes.lastMiscDamageTime = TeamArena.getGameTick();
+            //Bukkit.broadcast(Component.text("Point 7"));
+        }
+
+        dTimes.lastDamager = lastDamager;
     }
 
     public Vector calculateKnockback() {
@@ -230,5 +291,13 @@ public class DamageEvent {
     @Nullable
     public Vector getKnockback() {
         return knockback;
+    }
+    
+    public void setNoKnockback() {
+        this.knockback = null;
+    }
+
+    public Entity getFinalDamager() {
+        return realDamager != null ? realDamager : damager;
     }
 }

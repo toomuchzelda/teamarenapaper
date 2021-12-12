@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.core;
 
+import com.comphenix.protocol.PacketType;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
@@ -54,7 +55,26 @@ public class EntityUtils {
 
         return entityName;
     }
-
+    
+    /**
+     * play critical hit animation on entity
+     * @param entity Entity playing the effect on
+     */
+    public static void playCritEffect(Entity entity) {
+        net.minecraft.world.entity.Entity nmsEntity = ((CraftEntity) entity).getHandle();
+        ClientboundAnimatePacket packet = new ClientboundAnimatePacket(nmsEntity, ClientboundAnimatePacket.CRITICAL_HIT);
+        
+        //if a player, send packet to self
+        if(entity instanceof Player p) {
+            PlayerUtils.sendPacket(p, packet);
+        }
+        
+        //send to all viewers
+        for(Player p : entity.getTrackedPlayers()) {
+            PlayerUtils.sendPacket(p, packet);
+        }
+    }
+    
     /**
      * play entity hurt animation and sound
      * @param entity LivingEntity being damaged

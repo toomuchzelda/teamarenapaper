@@ -7,11 +7,6 @@ public class KingOfTheHill extends TeamArena
 		super();
 	}
 
-	@Override
-	public TeamArenaTeam checkTeams() {
-		return null;
-	}
-
 	//respawning game, can change kit at any time (change takes effect on respawn doe)
 	@Override
 	public boolean canSelectKitNow() {
