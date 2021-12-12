@@ -5,6 +5,8 @@ import me.toomuchzelda.teamarenapaper.core.Hologram;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import net.kyori.adventure.text.Component;
 import net.minecraft.world.entity.Entity;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -115,14 +117,18 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void entityDamage(EntityDamageEvent event) {
 		event.setCancelled(true);
+		//Bukkit.broadcast(Component.text("DamageCause: " + event.getCause()));
 		
 		//marker armorstands must never be damaged/killed
 		if(event.getEntity() instanceof ArmorStand stand && stand.isMarker())
 			return;
 		
 		if(Main.getGame().getGameState() == LIVE) {
-			Main.getGame().queueDamage(event);
+			//Main.getGame().queueDamage(new DamageEvent(event));
+			//will queue itself
+			new DamageEvent(event);
 		}
+		
 	}
 
 	@EventHandler

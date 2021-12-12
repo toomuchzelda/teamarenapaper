@@ -16,6 +16,7 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import org.bukkit.*;
+import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageEvent;
@@ -76,7 +77,7 @@ public abstract class TeamArena
 
 	protected MapInfo mapInfo;
 
-	protected ConcurrentLinkedQueue<EntityDamageEvent> damageQueue;
+	protected ConcurrentLinkedQueue<DamageEvent> damageQueue;
 
 	public TeamArena() {
 		Main.logger().info("Reading info from " + mapPath() + ':');
@@ -263,11 +264,11 @@ public abstract class TeamArena
 		//checking team states (win/lose) done in liveTick() per-game
 
 		//process damage events
-		Iterator<EntityDamageEvent> iter = damageQueue.iterator();
+		Iterator<DamageEvent> iter = damageQueue.iterator();
 		while(iter.hasNext()) {
-			EntityDamageEvent eEvent = iter.next();
+			DamageEvent event = iter.next();
 			iter.remove();
-			DamageEvent event = new DamageEvent(eEvent);
+			
 			event.executeAttack();
 		}
 	}
@@ -840,7 +841,7 @@ public abstract class TeamArena
 		return true;
 	}
 
-	public void queueDamage(EntityDamageEvent event) {
+	public void queueDamage(DamageEvent event) {
 		damageQueue.add(event);
 	}
 

@@ -9,22 +9,32 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.SwordItem;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.Bukkit;
+import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.craftbukkit.v1_17_R1.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_17_R1.entity.CraftLivingEntity;
 import org.bukkit.craftbukkit.v1_17_R1.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_17_R1.inventory.CraftItemStack;
 import org.bukkit.craftbukkit.v1_17_R1.util.CraftVector;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
 import javax.annotation.Nullable;
+import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 
-//a custom damage event; custom calculations for damage, knockback etc. good to enable things spigot/paper event can't
+//a custom damage event for custom knockback and other customisability bukkit/spigot/paper can't provide
 public class DamageEvent {
 
     private Entity damagee;
@@ -38,6 +48,8 @@ public class DamageEvent {
     // dont use 0,0,0 vector as that'll stop the player moving for a split moment
     private Vector knockback;
     private LinkedList<Double> knockbackMults;
+    //from 0 to 1, 0 = no knockback received, 1 = all knockback received
+    private double knockbackResistance;
 
     private Entity damager;
     //shooter of arrow, snowball etc where attacker would be the projectile
@@ -45,7 +57,7 @@ public class DamageEvent {
     private boolean isCritical;
     //if the attacker was sprinting, only applicable if the attacker is a Player
     private boolean wasSprinting;
-
+    
     public static final double yVal = 0.4;
     public static final double xzVal = 0.4;
     public static final double yMult = 0.1;
@@ -56,12 +68,18 @@ public class DamageEvent {
         rawDamage = event.getDamage();
         finalDamage = event.getFinalDamage();
         damageType = DamageType.getAttack(event);
-
-        //Bukkit.broadcast(Component.text("DamageCause: " + event.getCause()));
-        //Bukkit.broadcast(Component.text("DamageType: " + damageType.toString()));
+        
+        Bukkit.broadcast(Component.text("DamageCause: " + event.getCause()));
+        Bukkit.broadcast(Component.text("DamageType: " + damageType.toString()));
 
         if(damageType.isKnockback())
             knockbackMults = new LinkedList<>();
+    
+        knockbackResistance = 1;
+        
+        if(damagee instanceof LivingEntity living) {
+            knockbackResistance = 1 - living.getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE).getValue();
+        }
 
         if(event instanceof EntityDamageByEntityEvent dEvent) {
             if(dEvent.getDamager() instanceof Projectile projectile) {
@@ -81,10 +99,62 @@ public class DamageEvent {
 
                 if(dEvent.getDamager() instanceof LivingEntity living) {
                     if(living.getEquipment() != null) {
+                        //item used during the attack, if applicable
                         ItemStack item = living.getEquipment().getItemInMainHand();
                         //halve the strength of knockback enchantments
                         double level = ((double) item.getEnchantmentLevel(Enchantment.KNOCKBACK)) / 2;
                         knockbackMults.add(level);
+                        
+                        //cancelled event doesn't do sweeping attacks, re-do them here
+                        if(living instanceof Player p && damageType.is(DamageType.MELEE)) {
+                            Bukkit.broadcastMessage("DamageType is melee: line 99");
+                            //same as nmsP.getAttackStrengthCooldown(0.5f);
+                            boolean isChargedWeapon = p.getAttackCooldown() > 0.9f;
+                            
+                            boolean isChargedSprintAttack = isChargedWeapon && p.isSprinting();
+    
+                            net.minecraft.world.entity.player.Player nmsPlayer = ((CraftPlayer) p).getHandle();
+                            double walkedDist = nmsPlayer.walkDist - nmsPlayer.walkDistO;
+                            boolean notExceedingWalkSpeed = walkedDist < p.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).getValue();
+                            
+                            boolean isSweepAttack = false;
+                            if(isChargedWeapon && !isChargedSprintAttack && !isCritical &&
+                                    notExceedingWalkSpeed) {
+                                net.minecraft.world.item.ItemStack nmsItem = CraftItemStack.asNMSCopy(item);
+                                if(nmsItem.getItem() instanceof SwordItem)
+                                    isSweepAttack = true;
+                            }
+                            
+                            if(isSweepAttack) {
+                                float sweepingEdgeDmg = (float) (1f + EnchantmentHelper.getSweepingDamageRatio(nmsPlayer)
+                                        * finalDamage);
+                                
+                                List<LivingEntity> list = p.getWorld().getLivingEntities();
+                                Iterator<LivingEntity> iter = list.iterator();
+                                //only mobs colliding with this bounding box
+                                BoundingBox box = damagee.getBoundingBox().expand(1, 0.25, 1);
+                                while(iter.hasNext()) {
+                                    LivingEntity livingEntity = iter.next();
+                                    net.minecraft.world.entity.LivingEntity nmsLivingEntity = ((CraftLivingEntity) livingEntity).getHandle();
+                                    //disqualifying conditions
+                                    if(livingEntity == p || livingEntity == damagee)
+                                        continue;
+                                        
+                                    if(nmsPlayer.isAlliedTo(nmsLivingEntity))
+                                        continue;
+                                    
+                                    if(livingEntity instanceof ArmorStand stand && stand.isMarker())
+                                        continue;
+                                    
+                                    if(nmsPlayer.distanceToSqr(nmsLivingEntity) < 9 && livingEntity.getBoundingBox().overlaps(box)) {
+                                        //does the damage/armor calculations and calls the EntityDamageEvent,
+                                        // which will create another one of these and queue it
+                                        // somewhat inefficient, but i don't wanna do the damage numbers myself
+                                        nmsLivingEntity.hurt(DamageType.getSweeping(p).getDamageSource(), sweepingEdgeDmg);
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     if(living instanceof Player p) {
@@ -103,11 +173,28 @@ public class DamageEvent {
             knockback = calculateKnockback();
         else
             knockback = null;
+        
+        
+        Bukkit.broadcastMessage("kbresist: " + knockbackResistance);
+        
+        
+        //queue this damage
+        Main.getGame().queueDamage(this);
     }
-
+    
+    public DamageEvent(Entity damagee, double rawDamage, double finalDamage, DamageType damageType, Entity damager,
+                       Entity realDamager) {
+        this.damagee = damagee;
+        this.rawDamage = rawDamage;
+        this.finalDamage = finalDamage;
+        this.damageType = damageType;
+        this.damager = damager;
+        this.realDamager = realDamager;
+    }
+    
     public void executeAttack() {
     
-        //not-livingentitys dont have NDT or health, can't do much
+        //non-livingentitys dont have NDT or health, can't do much
         if(!(damagee instanceof LivingEntity)) {
             //projectiles shouldn't be killable
             if(!(damagee instanceof Projectile))
@@ -116,6 +203,10 @@ public class DamageEvent {
         else
         {
             LivingEntity living = (LivingEntity) damagee;
+            
+            net.minecraft.world.entity.LivingEntity nmsLiving = ((CraftLivingEntity) living).getHandle();
+            nmsLiving.animationSpeed = 1.5f;
+            
             DamageTimes dTimes = DamageTimes.getDamageTimes(living);
             long ndt;
             
@@ -188,12 +279,15 @@ public class DamageEvent {
                 PlayerUtils.sendHealth(player, player.getHealth());
             }
         }
+        net.minecraft.world.entity.Entity nmsEntity = ((CraftEntity) damagee).getHandle();
+        nmsEntity.hasImpulse = true;
     
         //damager stuff
         if(damager instanceof LivingEntity livingDamager) {
             if (damager instanceof Player p) {
+                net.minecraft.world.entity.player.Player nmsPlayer = ((CraftPlayer) p).getHandle();
                 if (wasSprinting) {
-                    net.minecraft.world.entity.player.Player nmsPlayer = ((CraftPlayer) p).getHandle();
+                    nmsPlayer.setDeltaMovement(nmsPlayer.getDeltaMovement().multiply(0.6, 1, 0.6));
                     //3 for sprinting flag
                     // dont use setSprinting as it sends an attribute packet that may stop the client from sprinting
                     // server-client desync good? it's 1.8 behaviour anyway, may change later
@@ -201,6 +295,11 @@ public class DamageEvent {
                 }
                 //reset their attack cooldown?
                 p.resetCooldown();
+                
+                if(damageType.is(DamageType.SWEEP_ATTACK)) {
+                    p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 1f, 1f);
+                    nmsPlayer.sweepAttack();
+                }
             }
         }
     }
@@ -255,8 +354,8 @@ public class DamageEvent {
             vec.setX(vec.getX() / 2);
             vec.setY(vec.getY() / 2);
             vec.setZ(vec.getZ() / 2);
-
-            vec.add(new Vector(-(xDist / dist * xzVal), yVal, -(zDist / dist * xzVal)));
+            
+            vec.add(new Vector(-(xDist / dist * xzVal * knockbackResistance), yVal, -(zDist / dist * xzVal * knockbackResistance)));
 
             if(vec.getY() > yVal)
                 vec.setY(yVal);
@@ -280,7 +379,7 @@ public class DamageEvent {
                 double xKb = -Math.sin(damager.getLocation().getYaw() * 3.1415927F / 180.0f) * level;
                 double zKb = Math.cos(damager.getLocation().getYaw() * 3.1415927F / 180.0f) * level;
 
-                kbEnch = new Vector(xKb, yMult, zKb);
+                kbEnch = new Vector(xKb * knockbackResistance, yMult, zKb * knockbackResistance);
                 knockback.add(kbEnch);
             }
         }
