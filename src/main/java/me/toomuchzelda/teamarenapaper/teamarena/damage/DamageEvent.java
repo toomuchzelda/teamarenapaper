@@ -16,10 +16,12 @@ import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.craftbukkit.v1_17_R1.CraftSoundGroup;
 import org.bukkit.craftbukkit.v1_17_R1.entity.CraftEntity;
 import org.bukkit.craftbukkit.v1_17_R1.entity.CraftLivingEntity;
 import org.bukkit.craftbukkit.v1_17_R1.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_17_R1.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.v1_17_R1.util.CraftDamageSource;
 import org.bukkit.craftbukkit.v1_17_R1.util.CraftVector;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
@@ -57,6 +59,7 @@ public class DamageEvent {
     private boolean isCritical;
     //if the attacker was sprinting, only applicable if the attacker is a Player
     private boolean wasSprinting;
+    private boolean isSweep = false;
     
     public static final double yVal = 0.4;
     public static final double xzVal = 0.4;
@@ -69,8 +72,8 @@ public class DamageEvent {
         finalDamage = event.getFinalDamage();
         damageType = DamageType.getAttack(event);
         
-        Bukkit.broadcast(Component.text("DamageCause: " + event.getCause()));
-        Bukkit.broadcast(Component.text("DamageType: " + damageType.toString()));
+        /*Bukkit.broadcast(Component.text("DamageCause: " + event.getCause()));
+        Bukkit.broadcast(Component.text("DamageType: " + damageType.toString()));*/
 
         if(damageType.isKnockback())
             knockbackMults = new LinkedList<>();
@@ -107,7 +110,7 @@ public class DamageEvent {
                         
                         //cancelled event doesn't do sweeping attacks, re-do them here
                         if(living instanceof Player p && damageType.is(DamageType.MELEE)) {
-                            Bukkit.broadcastMessage("DamageType is melee: line 99");
+                            //Bukkit.broadcastMessage("DamageType is melee: line 99");
                             //same as nmsP.getAttackStrengthCooldown(0.5f);
                             boolean isChargedWeapon = p.getAttackCooldown() > 0.9f;
                             
@@ -117,15 +120,14 @@ public class DamageEvent {
                             double walkedDist = nmsPlayer.walkDist - nmsPlayer.walkDistO;
                             boolean notExceedingWalkSpeed = walkedDist < p.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).getValue();
                             
-                            boolean isSweepAttack = false;
                             if(isChargedWeapon && !isChargedSprintAttack && !isCritical &&
                                     notExceedingWalkSpeed) {
                                 net.minecraft.world.item.ItemStack nmsItem = CraftItemStack.asNMSCopy(item);
                                 if(nmsItem.getItem() instanceof SwordItem)
-                                    isSweepAttack = true;
+                                    isSweep = true;
                             }
                             
-                            if(isSweepAttack) {
+                            if(isSweep) {
                                 float sweepingEdgeDmg = (float) (1f + EnchantmentHelper.getSweepingDamageRatio(nmsPlayer)
                                         * finalDamage);
                                 
@@ -169,13 +171,18 @@ public class DamageEvent {
         }
 
         //add stuff to knockback multipliers list before calculating knockback
-        if(damageType.isKnockback())
-            knockback = calculateKnockback();
+        // sweep attack no do base knockback
+        if(damageType.isKnockback()) {
+            boolean isntSweep = !damageType.is(DamageType.SWEEP_ATTACK);
+            if(!isntSweep)
+                knockbackMults.add(1d);
+            knockback = calculateKnockback(isntSweep);
+        }
         else
             knockback = null;
         
         
-        Bukkit.broadcastMessage("kbresist: " + knockbackResistance);
+        //Bukkit.broadcastMessage("kbresist: " + knockbackResistance);
         
         
         //queue this damage
@@ -271,8 +278,9 @@ public class DamageEvent {
             living.setLastDamage(finalDamage);
             if(doHurtEffect)
                 EntityUtils.playHurtAnimation(living, damageType);
-            if(isCritical)
+            if(isCritical) {
                 EntityUtils.playCritEffect(living);
+            }
             //need to send this packet for the hearts to flash white when lost, otherwise they just decrease with no
             // effect
             if (damagee instanceof Player player) {
@@ -294,12 +302,27 @@ public class DamageEvent {
                     nmsPlayer.setSharedFlag(3, false);
                 }
                 //reset their attack cooldown?
-                p.resetCooldown();
                 
-                if(damageType.is(DamageType.SWEEP_ATTACK)) {
-                    p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 1f, 1f);
+                
+                if(isSweep) {
+                    p.getWorld().playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 1f, 1f);
                     nmsPlayer.sweepAttack();
                 }
+    
+                if(isCritical) {
+                    p.getWorld().playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_CRIT, SoundCategory.PLAYERS, 1f, 1f);
+                }
+                else {
+                    Sound sound;
+                    if(p.getAttackCooldown() > 0.9f)
+                        sound = Sound.ENTITY_PLAYER_ATTACK_STRONG;
+                    else
+                        sound = Sound.ENTITY_PLAYER_ATTACK_WEAK;
+                    
+                    p.getWorld().playSound(p.getLocation(), sound, SoundCategory.PLAYERS, 1f, 1f);
+                }
+    
+                p.resetCooldown();
             }
         }
     }
@@ -323,44 +346,44 @@ public class DamageEvent {
         dTimes.lastDamager = lastDamager;
     }
 
-    public Vector calculateKnockback() {
+    public Vector calculateKnockback(boolean baseKnockback) {
         Vector knockback = new Vector();
         if (damager != null)
         {
             Vector offset;
-            if(damager instanceof Projectile && damageType.isProjectile())
-            {
-                offset = damager.getLocation().getDirection();
-                offset.setZ(-offset.getZ());
-            }
-            else
-            {
-                offset = damager.getLocation().toVector().subtract(damagee.getLocation().toVector());
-            }
-
-            double xDist = offset.getX();
-            double zDist = offset.getZ();
-
-            while (!Double.isFinite(xDist * xDist + zDist * zDist) || xDist * xDist + zDist * zDist < 0.0001)
-            {
-                xDist = MathUtils.randomRange(-0.01, -0.01);
-                zDist = MathUtils.randomRange(-0.01, -0.01);
-            }
-
-            double dist = Math.sqrt(xDist * xDist + zDist * zDist);
-
-            Vector vec = damagee.getVelocity();
-
-            vec.setX(vec.getX() / 2);
-            vec.setY(vec.getY() / 2);
-            vec.setZ(vec.getZ() / 2);
             
-            vec.add(new Vector(-(xDist / dist * xzVal * knockbackResistance), yVal, -(zDist / dist * xzVal * knockbackResistance)));
-
-            if(vec.getY() > yVal)
-                vec.setY(yVal);
-
-            knockback.add(vec);
+            if(baseKnockback) {
+                if (damager instanceof Projectile && damageType.isProjectile()) {
+                    offset = damager.getLocation().getDirection();
+                    offset.setZ(-offset.getZ());
+                }
+                else {
+                    offset = damager.getLocation().toVector().subtract(damagee.getLocation().toVector());
+                }
+    
+                double xDist = offset.getX();
+                double zDist = offset.getZ();
+    
+                while (!Double.isFinite(xDist * xDist + zDist * zDist) || xDist * xDist + zDist * zDist < 0.0001) {
+                    xDist = MathUtils.randomRange(-0.01, -0.01);
+                    zDist = MathUtils.randomRange(-0.01, -0.01);
+                }
+    
+                double dist = Math.sqrt(xDist * xDist + zDist * zDist);
+    
+                Vector vec = damagee.getVelocity();
+    
+                vec.setX(vec.getX() / 2);
+                vec.setY(vec.getY() / 2);
+                vec.setZ(vec.getZ() / 2);
+    
+                vec.add(new Vector(-(xDist / dist * xzVal * knockbackResistance), yVal, -(zDist / dist * xzVal * knockbackResistance)));
+    
+                if (vec.getY() > yVal)
+                    vec.setY(yVal);
+    
+                knockback.add(vec);
+            }
 
             double level = 0;
 

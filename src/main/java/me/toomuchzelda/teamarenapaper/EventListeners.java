@@ -36,14 +36,28 @@ public class EventListeners implements Listener
 	//paper good spigot bad
 	@EventHandler
 	public void endTick(ServerTickEndEvent event) {
-		Main.getGame().tick();
+		PacketListeners.cancelDamageSounds = false;
 		
-		//update nametag positions
-		for(PlayerInfo pinfo : Main.getPlayerInfos()) {
-			if(pinfo.nametag != null) {
-				pinfo.nametag.updatePosition();
+		try {
+			Main.getGame().tick();
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+		
+		try {
+			//update nametag positions
+			for (PlayerInfo pinfo : Main.getPlayerInfos()) {
+				if (pinfo.nametag != null) {
+					pinfo.nametag.updatePosition();
+				}
 			}
 		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+		
+		PacketListeners.cancelDamageSounds = true;
 	}
 
 	//these three events are called in this order

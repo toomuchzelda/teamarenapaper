@@ -1,10 +1,8 @@
 package me.toomuchzelda.teamarenapaper;
 
-import com.comphenix.protocol.ProtocolLib;
-import com.comphenix.protocol.ProtocolLibrary;
 import me.toomuchzelda.teamarenapaper.core.EntityUtils;
 import me.toomuchzelda.teamarenapaper.core.FileUtils;
-import me.toomuchzelda.teamarenapaper.teamarena.KingOfTheHill;
+import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandGame;
@@ -16,13 +14,11 @@ import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.command.CommandMap;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
@@ -80,6 +76,8 @@ public final class Main extends JavaPlugin
 	public void onDisable()
 	{
 		// Plugin shutdown logic
+
+		//delete temporarily loaded map if any
 		if(teamArena.getWorld() != null) {
 			Bukkit.unloadWorld(teamArena.getWorld(), false);
 			String name = teamArena.getWorldFile().getName();

@@ -261,8 +261,6 @@ public abstract class TeamArena
 
 	public void liveTick() {
 
-		//checking team states (win/lose) done in liveTick() per-game
-
 		//process damage events
 		Iterator<DamageEvent> iter = damageQueue.iterator();
 		while(iter.hasNext()) {
@@ -271,6 +269,8 @@ public abstract class TeamArena
 			
 			event.executeAttack();
 		}
+
+		//checking team states (win/lose) done in liveTick() per-game
 	}
 
 	public void prepTeamsDecided() {

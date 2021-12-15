@@ -11,6 +11,7 @@ import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
 import net.minecraft.network.protocol.Packet;
 import org.bukkit.Location;
+import org.bukkit.Sound;
 import org.bukkit.craftbukkit.libs.it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.bukkit.craftbukkit.libs.it.unimi.dsi.fastutil.ints.IntList;
 import org.bukkit.craftbukkit.libs.it.unimi.dsi.fastutil.ints.IntListIterator;
@@ -23,6 +24,12 @@ import java.util.LinkedList;
 
 public class PacketListeners
 {
+	/**
+	 * modified in EventListeners.endTick(ServerTickEndEvent), used to cancel punching sounds made by vanilla mc
+	 * but not those made by TeamArena
+	 */
+	public static boolean cancelDamageSounds = false;
+	
 	public PacketListeners(JavaPlugin plugin) {
 		
 		//Spawn player's nametag hologram whenever the player is spawned on a client
@@ -82,6 +89,7 @@ public class PacketListeners
 			}
 		});
 		
+		//despawn hologram clientside when player is despawned (moved out of render distance or other)
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.ENTITY_DESTROY)
 		{
@@ -105,6 +113,25 @@ public class PacketListeners
 						ids.add(i);
 					}
 					event.getPacket().getModifier().write(0, ids);
+				}
+			}
+		});
+		
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
+				PacketType.Play.Server.NAMED_SOUND_EFFECT)
+		{
+			@Override
+			public void onPacketSending(PacketEvent event) {
+				if (cancelDamageSounds) {
+					Sound sound = event.getPacket().getSoundEffects().read(0);
+					if(sound == Sound.ENTITY_PLAYER_ATTACK_STRONG ||
+							sound == Sound.ENTITY_PLAYER_ATTACK_CRIT ||
+							sound == Sound.ENTITY_PLAYER_ATTACK_NODAMAGE ||
+							sound == Sound.ENTITY_PLAYER_ATTACK_WEAK ||
+							sound == Sound.ENTITY_PLAYER_ATTACK_SWEEP ||
+							sound == Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK) {
+						event.setCancelled(true);
+					}
 				}
 			}
 		});
