@@ -16,10 +16,9 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import org.bukkit.*;
-import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -41,7 +40,7 @@ public abstract class TeamArena
 	private final File worldFile;
 	protected World gameWorld;
 
-	protected static long gameTick = 0;
+	protected static int gameTick = 0;
 	protected long waitingSince;
 	protected GameState gameState;
 
@@ -70,7 +69,7 @@ public abstract class TeamArena
 	protected Set<Player> players;
 	protected Set<Player> spectators;
 	//for mid-game joiners with whatever amount of time to decide if they wanna join
-	protected LinkedList<Pair<Player, Long>> joinedSpecTimers;
+	protected LinkedList<Pair<Player, Integer>> respawnTimers;
 
 	protected Kit[] kits;
 	protected ItemStack kitMenuItem;
@@ -181,7 +180,7 @@ public abstract class TeamArena
 
 		players = ConcurrentHashMap.newKeySet();
 		spectators = ConcurrentHashMap.newKeySet();
-		joinedSpecTimers = new LinkedList<>();
+		respawnTimers = new LinkedList<>();
 		damageQueue = new ConcurrentLinkedQueue<>();
 
 		for(Player p : Bukkit.getOnlinePlayers()) {
@@ -200,11 +199,6 @@ public abstract class TeamArena
 		else if(gameState == GameState.LIVE)
 		{
 			liveTick();
-		}
-
-		//every 3 minutes
-		if(gameTick % 3 * 60 * 20 == 0) {
-			DamageTimes.cleanup();
 		}
 	}
 
@@ -266,7 +260,18 @@ public abstract class TeamArena
 		while(iter.hasNext()) {
 			DamageEvent event = iter.next();
 			iter.remove();
-			
+
+			//halve knockback done by axes
+			if(event.hasKnockback() && event.getDamageType().isMelee() && event.getFinalDamager() instanceof LivingEntity living) {
+				if(living.getEquipment() != null) {
+					ItemStack weapon = living.getEquipment().getItemInMainHand();
+					if(weapon.getType().toString().endsWith("AXE")) {
+						event.getKnockback().multiply(0.8);
+						//Bukkit.broadcastMessage("Reduced axe knockback");
+					}
+				}
+			}
+
 			event.executeAttack();
 		}
 
@@ -519,6 +524,11 @@ public abstract class TeamArena
 		}
 	}
 
+	public void handleDeath(DamageEvent event) {
+		Bukkit.broadcast(event.getDamageType().getDeathMessage(NamedTextColor.YELLOW, event.getDamagee(), event.getFinalDamager(), null));
+
+	}
+
 	public boolean isSpectator(Player player) {
 		//Main.logger().info("spectators contains player: " + spectators.contains(player));
 		return spectators.contains(player);
@@ -556,17 +566,16 @@ public abstract class TeamArena
 		//TODO: else if live, put them in spectator, or prepare to respawn
 		// else if dead, put them in spectator
 
-		Kit kit = playerInfo.kit;
-		if(kit == null) {
-			kit = findKit(playerInfo.defaultKit);
+		if(playerInfo.kit == null) {
+			playerInfo.kit = findKit(playerInfo.defaultKit);
 			//default kit somehow invalid; maybe a kit was removed
-			if(kit == null) {
+			if(playerInfo.kit == null) {
 				playerInfo.kit = kits[0];
 			}
 		}
 
 		//pass spawnpoint to the PlayerSpawnEvent
-		Main.getPlayerInfo(player).spawnPoint = toTeleport;
+		playerInfo.spawnPoint = toTeleport;
 	}
 
 	public void joiningPlayer(Player player) {
@@ -590,7 +599,7 @@ public abstract class TeamArena
 								" otherwise you can keep spectating.")
 						.color(TextColor.color(0, 255, 0)));
 
-				joinedSpecTimers.add(new Pair<>(player, gameTick));
+				respawnTimers.add(new Pair<>(player, gameTick));
 			}
 		}
 	}
@@ -861,7 +870,7 @@ public abstract class TeamArena
 		return gameState;
 	}
 
-	public static long getGameTick() {
+	public static int getGameTick() {
 		return gameTick;
 	}
 }

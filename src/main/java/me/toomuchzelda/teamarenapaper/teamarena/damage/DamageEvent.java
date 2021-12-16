@@ -9,6 +9,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.phys.Vec3;
@@ -84,11 +85,19 @@ public class DamageEvent {
             knockbackResistance = 1 - living.getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE).getValue();
         }
 
+        boolean doBaseKB = true;
+        float kbLevels = 0;
         if(event instanceof EntityDamageByEntityEvent dEvent) {
             if(dEvent.getDamager() instanceof Projectile projectile) {
 
                 if(dEvent.getDamager() instanceof AbstractArrow aa) {
-                    knockbackMults.add((double) aa.getKnockbackStrength());
+                    //knockbackMults.add((double) aa.getKnockbackStrength());
+                    kbLevels += aa.getKnockbackStrength();
+                    if(aa.getPierceLevel() > 0) {
+                        //store info about how it's moving now, before the EntityDamageEvent ends and the cancellation
+                        // makes the arrow bounce off the damagee, so we can re-set the movement later
+                        ArrowPierceManager.addInfo(aa);
+                    }
                 }
 
                 if (projectile.getShooter() instanceof LivingEntity living) {
@@ -105,9 +114,9 @@ public class DamageEvent {
                         //item used during the attack, if applicable
                         ItemStack item = living.getEquipment().getItemInMainHand();
                         //halve the strength of knockback enchantments
-                        double level = ((double) item.getEnchantmentLevel(Enchantment.KNOCKBACK)) / 2;
-                        knockbackMults.add(level);
-                        
+                        kbLevels += ((float) item.getEnchantmentLevel(Enchantment.KNOCKBACK)) / 2;
+                        //knockbackMults.add(level);
+
                         //cancelled event doesn't do sweeping attacks, re-do them here
                         if(living instanceof Player p && damageType.is(DamageType.MELEE)) {
                             //Bukkit.broadcastMessage("DamageType is melee: line 99");
@@ -142,9 +151,6 @@ public class DamageEvent {
                                     if(livingEntity == p || livingEntity == damagee)
                                         continue;
                                         
-                                    if(nmsPlayer.isAlliedTo(nmsLivingEntity))
-                                        continue;
-                                    
                                     if(livingEntity instanceof ArmorStand stand && stand.isMarker())
                                         continue;
                                     
@@ -157,31 +163,28 @@ public class DamageEvent {
                                 }
                             }
                         }
+                        else if(damageType.is(DamageType.SWEEP_ATTACK)) {
+                            //sweep attacks no do base kb
+                            // use de kb level based on attacker looking direction instead
+                            doBaseKB = false;
+                            kbLevels += 1;
+                        }
                     }
 
-                    if(living instanceof Player p) {
-                        if(p.isSprinting()) {
-                            knockbackMults.add(1d);
-                        }
+                    if(living instanceof Player p && damageType.isMelee()) {
                         wasSprinting = p.isSprinting();
+                        if(wasSprinting)
+                            kbLevels += 1;
                     }
                 }
             }
             isCritical = dEvent.isCritical();
         }
 
-        //add stuff to knockback multipliers list before calculating knockback
-        // sweep attack no do base knockback
         if(damageType.isKnockback()) {
-            boolean isntSweep = !damageType.is(DamageType.SWEEP_ATTACK);
-            if(!isntSweep)
-                knockbackMults.add(1d);
-            knockback = calculateKnockback(isntSweep);
+            knockback = calculateKnockback(doBaseKB, kbLevels);
         }
-        else
-            knockback = null;
-        
-        
+
         //Bukkit.broadcastMessage("kbresist: " + knockbackResistance);
         
         
@@ -200,11 +203,33 @@ public class DamageEvent {
     }
     
     public void executeAttack() {
-    
+
+        //if its an arrow check if it can hit this particular damagee
+        // also fix it's movement
+        if(damager instanceof AbstractArrow aa && aa.isValid()) {
+            if(aa.getPierceLevel() > 0) {
+                ArrowPierceManager.PierceType type = ArrowPierceManager.canPierce(aa, damager);
+                if (type == ArrowPierceManager.PierceType.REMOVE_ARROW) {
+                    aa.remove();
+                } else {
+                    //cancelled EntityDamageEvent makes arrows bounce off hit entities.
+                    // reset the arrow's direction and velocity at the end of the tick to counter this
+                    ArrowPierceManager.fixArrowMovement(aa);
+
+                    //don't do damage to the same entity more than once for piercing enchanted arrows
+                    if (type == ArrowPierceManager.PierceType.ALREADY_HIT) {
+                        return;
+                    }
+                }
+            }
+            else
+                aa.remove();
+        }
+
         //non-livingentitys dont have NDT or health, can't do much
         if(!(damagee instanceof LivingEntity)) {
             //projectiles shouldn't be killable
-            if(!(damagee instanceof Projectile))
+            //if(!(damagee instanceof Projectile))
                 damagee.remove();
         }
         else
@@ -215,7 +240,7 @@ public class DamageEvent {
             nmsLiving.animationSpeed = 1.5f;
             
             DamageTimes dTimes = DamageTimes.getDamageTimes(living);
-            long ndt;
+            int ndt;
             
             boolean doHurtEffect = true;
     
@@ -271,8 +296,9 @@ public class DamageEvent {
             double newHealth = living.getHealth() - finalDamage;
             if (newHealth <= 0) {
                 //todo: handle death here
-                Bukkit.broadcast(Component.text(living.getName() + " has died"));
+                //Bukkit.broadcast(Component.text(living.getName() + " has died"));
                 newHealth = living.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+                Main.getGame().handleDeath(this);
             }
             living.setHealth(newHealth);
             living.setLastDamage(finalDamage);
@@ -292,6 +318,15 @@ public class DamageEvent {
     
         //damager stuff
         if(damager instanceof LivingEntity livingDamager) {
+
+            if(livingDamager.getEquipment() != null) {
+                ItemStack weapon = livingDamager.getEquipment().getItemInMainHand();
+                int fireTime = weapon.getEnchantmentLevel(Enchantment.FIRE_ASPECT);
+                fireTime *= 80; //80 ticks of fire per level
+
+                damager.setFireTicks(fireTime);
+            }
+
             if (damager instanceof Player p) {
                 net.minecraft.world.entity.player.Player nmsPlayer = ((CraftPlayer) p).getHandle();
                 if (wasSprinting) {
@@ -301,16 +336,17 @@ public class DamageEvent {
                     // server-client desync good? it's 1.8 behaviour anyway, may change later
                     nmsPlayer.setSharedFlag(3, false);
                 }
-                //reset their attack cooldown?
-                
-                
+
+                if(isCritical) {
+                    p.getWorld().playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_CRIT, SoundCategory.PLAYERS, 1f, 1f);
+                }
+
                 if(isSweep) {
                     p.getWorld().playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 1f, 1f);
                     nmsPlayer.sweepAttack();
                 }
-    
-                if(isCritical) {
-                    p.getWorld().playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_CRIT, SoundCategory.PLAYERS, 1f, 1f);
+                else if(wasSprinting) {
+                    p.getWorld().playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK, SoundCategory.PLAYERS, 1f, 1f);
                 }
                 else {
                     Sound sound;
@@ -321,7 +357,8 @@ public class DamageEvent {
                     
                     p.getWorld().playSound(p.getLocation(), sound, SoundCategory.PLAYERS, 1f, 1f);
                 }
-    
+
+                //reset their attack cooldown
                 p.resetCooldown();
             }
         }
@@ -346,13 +383,12 @@ public class DamageEvent {
         dTimes.lastDamager = lastDamager;
     }
 
-    public Vector calculateKnockback(boolean baseKnockback) {
+    public Vector calculateKnockback(boolean baseKnockback, float knockbackLevels) {
         Vector knockback = new Vector();
         if (damager != null)
         {
-            Vector offset;
-            
             if(baseKnockback) {
+                Vector offset;
                 if (damager instanceof Projectile && damageType.isProjectile()) {
                     offset = damager.getLocation().getDirection();
                     offset.setZ(-offset.getZ());
@@ -385,22 +421,15 @@ public class DamageEvent {
                 knockback.add(vec);
             }
 
-            double level = 0;
-
-            for (double value : knockbackMults)
+            if (knockbackLevels != 0)
             {
-                level += value;
-            }
-
-            if (level != 0)
-            {
-                level *= xzMult;
-                level /= 2;
+                knockbackLevels *= xzMult;
+                knockbackLevels /= 2;
 
                 Vector kbEnch;
 
-                double xKb = -Math.sin(damager.getLocation().getYaw() * 3.1415927F / 180.0f) * level;
-                double zKb = Math.cos(damager.getLocation().getYaw() * 3.1415927F / 180.0f) * level;
+                double xKb = -Math.sin(damager.getLocation().getYaw() * 3.1415927F / 180.0f) * knockbackLevels;
+                double zKb = Math.cos(damager.getLocation().getYaw() * 3.1415927F / 180.0f) * knockbackLevels;
 
                 kbEnch = new Vector(xKb * knockbackResistance, yMult, zKb * knockbackResistance);
                 knockback.add(kbEnch);
@@ -410,11 +439,27 @@ public class DamageEvent {
         return knockback;
     }
 
+    public boolean hasKnockback() {
+        return knockback != null;
+    }
+
     @Nullable
     public Vector getKnockback() {
         return knockback;
     }
-    
+
+    public void setKnockback(Vector knockback) {
+        this.knockback = knockback;
+    }
+
+    public DamageType getDamageType() {
+        return damageType;
+    }
+
+    public Entity getDamagee() {
+        return damagee;
+    }
+
     public void setNoKnockback() {
         this.knockback = null;
     }

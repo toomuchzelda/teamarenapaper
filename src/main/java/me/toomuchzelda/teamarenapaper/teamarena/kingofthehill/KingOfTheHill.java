@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.kingofthehill;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.BlockUtils;
+import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import org.bukkit.Color;
@@ -27,7 +28,7 @@ public class KingOfTheHill extends TeamArena
 		for(Hill hill : hills) {
 			//hill.playParticles(Color.WHITE);
 
-			hill.playParticles(Color.WHITE, Color.BLACK, Color.BLUE, Color.RED, Color.GREEN);
+			hill.playParticles(MathUtils.randomColor());
 		}
 	}
 

@@ -253,16 +253,28 @@ public class DamageType {
     }
 
     public Component getDeathMessage(TextColor color, Entity victim, Entity killer, Entity cause) {
-        return getDeathMessage(color, EntityUtils.getName(victim), EntityUtils.getName(victim), EntityUtils.getName(cause));
+        return getDeathMessage(color, EntityUtils.getName(victim), EntityUtils.getName(killer), EntityUtils.getName(cause));
     }
 
     public Component getDeathMessage(TextColor color, Component victim, Component killer, Component cause) {
-        String message = color + getDeathMessage();
+        String message = getDeathMessage();
+
+        Component component = Component.text(message).color(color);
 
         //sigh
-        final TextReplacementConfig victimConfig = TextReplacementConfig.builder().match("%Killed%").replacement(victim).build();
-        final TextReplacementConfig causeConfig = TextReplacementConfig.builder().match("%Cause%").replacement(cause).build();
-        final TextReplacementConfig killerConfig = TextReplacementConfig.builder().match("%Killer%").replacement(killer).build();
+        if(victim != null) {
+            final TextReplacementConfig victimConfig = TextReplacementConfig.builder().match("%Killed%").replacement(victim).build();
+            component = component.replaceText(victimConfig);
+        }
+        //%Cause% is never used, but eh
+        if(cause != null) {
+            final TextReplacementConfig causeConfig = TextReplacementConfig.builder().match("%Cause%").replacement(cause).build();
+            component = component.replaceText(causeConfig);
+        }
+        if(killer != null) {
+            final TextReplacementConfig killerConfig = TextReplacementConfig.builder().match("%Killer%").replacement(killer).build();
+            component = component.replaceText(killerConfig);
+        }
         
         /*message = replace(message, "%Killed%", victim);
         message = replace(message, "%Killed%", victim);
@@ -271,8 +283,7 @@ public class DamageType {
         message = replace(message, "%Killer%", killer);
         message = replace(message, "%Killer%", killer);*/
 
-        return Component.text(message).replaceText(victimConfig).replaceText(causeConfig)
-                .replaceText(killerConfig);
+        return component;
     }
 
     public static DamageType getMelee(EntityDamageEvent event) {

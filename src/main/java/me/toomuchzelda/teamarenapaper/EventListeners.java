@@ -1,25 +1,26 @@
 package me.toomuchzelda.teamarenapaper;
 
+import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import me.toomuchzelda.teamarenapaper.core.Hologram;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
 import net.kyori.adventure.text.Component;
 import net.minecraft.world.entity.Entity;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.craftbukkit.v1_17_R1.entity.CraftEntity;
+import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityPoseChangeEvent;
-import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.entity.*;
 import org.bukkit.event.player.*;
 import org.bukkit.plugin.Plugin;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
@@ -56,7 +57,13 @@ public class EventListeners implements Listener
 		catch(Exception e) {
 			e.printStackTrace();
 		}
-		
+
+		//every 3 minutes
+		if(event.getTickNumber() % 3 * 60 * 20 == 0) {
+			DamageTimes.cleanup();
+			ArrowPierceManager.cleanup();
+		}
+
 		PacketListeners.cancelDamageSounds = true;
 	}
 
@@ -136,7 +143,7 @@ public class EventListeners implements Listener
 		//marker armorstands must never be damaged/killed
 		if(event.getEntity() instanceof ArmorStand stand && stand.isMarker())
 			return;
-		
+
 		if(Main.getGame().getGameState() == LIVE) {
 			//Main.getGame().queueDamage(new DamageEvent(event));
 			//will queue itself
@@ -156,5 +163,13 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void playerRespawn(PlayerRespawnEvent event) {
 		event.setRespawnLocation(Main.getPlayerInfo(event.getPlayer()).spawnPoint);
+	}
+
+	@EventHandler
+	public void entityRemoveFromWorld(EntityRemoveFromWorldEvent event) {
+		//don't get arrows still in motion
+		if(event.getEntity() instanceof AbstractArrow aa && aa.isInBlock()) {
+			ArrowPierceManager.piercedEntitiesMap.remove(event.getEntity());
+		}
 	}
 }

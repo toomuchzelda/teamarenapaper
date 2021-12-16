@@ -16,12 +16,12 @@ public class DamageTimes {
     public static final HashMap<LivingEntity, DamageTimes> entityDamageTimes = new HashMap<>();
 
     //tick they last received damage from direct "Fighting" sources i.e melee / projectile
-    public long lastAttackTime;
+    public int lastAttackTime;
 
-    public long lastFireTime;
+    public int lastFireTime;
     //public long lastPoisonTime;
     //for all damagetypes not covered
-    public long lastMiscDamageTime;
+    public int lastMiscDamageTime;
 
     public Entity lastDamager;
 
