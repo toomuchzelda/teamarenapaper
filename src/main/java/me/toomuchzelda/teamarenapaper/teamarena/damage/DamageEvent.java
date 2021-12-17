@@ -4,25 +4,18 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.EntityUtils;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
-import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.phys.Vec3;
-import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.attribute.Attribute;
-import org.bukkit.craftbukkit.v1_17_R1.CraftSoundGroup;
 import org.bukkit.craftbukkit.v1_17_R1.entity.CraftEntity;
 import org.bukkit.craftbukkit.v1_17_R1.entity.CraftLivingEntity;
 import org.bukkit.craftbukkit.v1_17_R1.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_17_R1.inventory.CraftItemStack;
-import org.bukkit.craftbukkit.v1_17_R1.util.CraftDamageSource;
 import org.bukkit.craftbukkit.v1_17_R1.util.CraftVector;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
@@ -96,7 +89,7 @@ public class DamageEvent {
                     if(aa.getPierceLevel() > 0) {
                         //store info about how it's moving now, before the EntityDamageEvent ends and the cancellation
                         // makes the arrow bounce off the damagee, so we can re-set the movement later
-                        ArrowPierceManager.addInfo(aa);
+                        ArrowPierceManager.addOrUpdateInfo(aa);
                     }
                 }
 
@@ -467,6 +460,10 @@ public class DamageEvent {
 
     public void setNoKnockback() {
         this.knockback = null;
+    }
+
+    public Entity getDamager() {
+        return damager;
     }
 
     public Entity getFinalDamager() {

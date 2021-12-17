@@ -1,8 +1,9 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
-import org.bukkit.Bukkit;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import org.bukkit.craftbukkit.v1_17_R1.entity.CraftArrow;
 import org.bukkit.entity.AbstractArrow;
+import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Entity;
 import org.bukkit.util.Vector;
 
@@ -14,16 +15,32 @@ public class ArrowPierceManager {
     public static final Hashtable<AbstractArrow, ArrowInfo> piercedEntitiesMap = new Hashtable<>();
 
 
-    public static void addInfo(AbstractArrow arrow) {
-        if(!piercedEntitiesMap.containsKey(arrow)) {
-            ArrowInfo info = new ArrowInfo();
+    public static void addOrUpdateInfo(AbstractArrow arrow) {
+        ArrowInfo info = piercedEntitiesMap.get(arrow);
+        if(info == null) {
+            info = new ArrowInfo();
             info.piercedEntities = new LinkedList<>();
             info.velocity = arrow.getVelocity();
             info.pitch = arrow.getLocation().getPitch();
             info.yaw = arrow.getLocation().getYaw();
 
+            info.lastUpdated = TeamArena.getGameTick();
+
             //Bukkit.broadcastMessage("added new arrowInfo to map");
             piercedEntitiesMap.put(arrow, info);
+        }
+        //slightly unelegant, but sometimes an arrow may collide with two entities in one tick
+        // this fires two EntityDamageByEntityEvents, which means the first one will go through and update the
+        // velocity and pitch/yaw just fine, but then it will move on and the event will be cancelled and the
+        // arrow will get bounced back. which is normally fine, but there's two EntityDamageByEntityEvents and the second
+        // one will update these fields with the arrow's bounced back movement + direction which is undesirable.
+        // so just check to make sure these aren't updated twice in the same tick
+        else if(info.lastUpdated != TeamArena.getGameTick()) {
+
+            info.velocity = arrow.getVelocity();
+            info.pitch = arrow.getLocation().getPitch();
+            info.yaw = arrow.getLocation().getYaw();
+            info.lastUpdated = TeamArena.getGameTick();
         }
     }
 
@@ -77,6 +94,7 @@ public class ArrowPierceManager {
         public Vector velocity;
         public float yaw;
         public float pitch;
+        public int lastUpdated;
 
         public ArrowInfo() {
         }

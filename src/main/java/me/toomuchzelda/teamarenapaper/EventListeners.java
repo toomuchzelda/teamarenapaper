@@ -2,8 +2,10 @@ package me.toomuchzelda.teamarenapaper;
 
 import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
+import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import me.toomuchzelda.teamarenapaper.core.Hologram;
+import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
@@ -24,6 +26,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.player.*;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.util.Vector;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 
 import static me.toomuchzelda.teamarenapaper.teamarena.GameState.LIVE;
@@ -148,6 +151,13 @@ public class EventListeners implements Listener
 		if(event.getEntity().getWorld() != Main.getGame().getWorld())
 			return;
 
+		//make arrows have more reliable damage - no inconsistent garbage
+		/*if(event.getCause() == EntityDamageEvent.DamageCause.PROJECTILE &&
+				event instanceof EntityDamageByEntityEvent dEvent && dEvent.getDamager() instanceof AbstractArrow aa) {
+			aa.getDamage()
+		}
+		 */
+
 		if(Main.getGame().getGameState() == LIVE) {
 			//Main.getGame().queueDamage(new DamageEvent(event));
 			//will queue itself
@@ -163,10 +173,40 @@ public class EventListeners implements Listener
 	}
 
 	//shouldn't run since we handle deaths on our own, but just in case
-	// we want the server to avoid loading the default "world" world
+	// try have the server avoid loading the default "world" world
 	@EventHandler
 	public void playerRespawn(PlayerRespawnEvent event) {
 		event.setRespawnLocation(Main.getPlayerInfo(event.getPlayer()).spawnPoint);
+	}
+
+	//don't
+	@EventHandler
+	public void entityShootBow(EntityShootBowEvent event) {
+
+	}
+
+	//stop projectiles from inheriting thrower's velocity
+	// like moving too up/down when player is jumping/falling/rising
+	@EventHandler
+	public void playerLaunchProjectile(PlayerLaunchProjectileEvent event) {
+		/*Bukkit.broadcastMessage(event.getItemStack().getType().toString());
+		Bukkit.broadcastMessage(event.getProjectile().getVelocity().toString());*/
+
+		double power = event.getProjectile().getVelocity().length();
+		//slight randomness in direction
+		double randX = MathUtils.random.nextGaussian() * 0.0075;
+		double randY = MathUtils.random.nextGaussian() * 0.0075;
+		double randZ = MathUtils.random.nextGaussian() * 0.0075;
+
+		Vector direction = event.getPlayer().getLocation().getDirection();
+		//probably add to each component?
+		direction.setX(direction.getX() + randX);
+		direction.setY(direction.getY() + randY);
+		direction.setZ(direction.getZ() + randZ);
+
+		direction.multiply(power);
+
+		event.getProjectile().setVelocity(direction);
 	}
 
 	/*

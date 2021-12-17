@@ -19,6 +19,7 @@ import org.bukkit.*;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -261,13 +262,21 @@ public abstract class TeamArena
 			DamageEvent event = iter.next();
 			iter.remove();
 
-			//halve knockback done by axes
-			if(event.hasKnockback() && event.getDamageType().isMelee() && event.getFinalDamager() instanceof LivingEntity living) {
-				if(living.getEquipment() != null) {
-					ItemStack weapon = living.getEquipment().getItemInMainHand();
-					if(weapon.getType().toString().endsWith("AXE")) {
+			if(event.hasKnockback()) {
+				//reduce knockback done by axes
+				if (event.getDamageType().isMelee() && event.getFinalDamager() instanceof LivingEntity living) {
+					if (living.getEquipment() != null) {
+						ItemStack weapon = living.getEquipment().getItemInMainHand();
+						if (weapon.getType().toString().endsWith("AXE")) {
+							event.getKnockback().multiply(0.8);
+							//Bukkit.broadcastMessage("Reduced axe knockback");
+						}
+					}
+				}
+				//reduce knockback done by projectiles
+				else if(event.getDamageType().isProjectile()) {
+					if(event.getDamager() instanceof Projectile) {
 						event.getKnockback().multiply(0.8);
-						//Bukkit.broadcastMessage("Reduced axe knockback");
 					}
 				}
 			}
