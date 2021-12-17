@@ -207,14 +207,19 @@ public class DamageEvent {
         //if its an arrow check if it can hit this particular damagee
         // also fix it's movement
         if(damager instanceof AbstractArrow aa && aa.isValid()) {
+            //Bukkit.broadcastMessage("arrow pirece levels: " + aa.getPierceLevel());
             if(aa.getPierceLevel() > 0) {
-                ArrowPierceManager.PierceType type = ArrowPierceManager.canPierce(aa, damager);
+                ArrowPierceManager.PierceType type = ArrowPierceManager.canPierce(aa, damagee);
+                //Bukkit.broadcastMessage(type.toString());
                 if (type == ArrowPierceManager.PierceType.REMOVE_ARROW) {
                     aa.remove();
                 } else {
                     //cancelled EntityDamageEvent makes arrows bounce off hit entities.
                     // reset the arrow's direction and velocity at the end of the tick to counter this
+
+
                     ArrowPierceManager.fixArrowMovement(aa);
+
 
                     //don't do damage to the same entity more than once for piercing enchanted arrows
                     if (type == ArrowPierceManager.PierceType.ALREADY_HIT) {

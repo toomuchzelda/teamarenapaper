@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper;
 
 import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
+import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import me.toomuchzelda.teamarenapaper.core.Hologram;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
@@ -144,6 +145,9 @@ public class EventListeners implements Listener
 		if(event.getEntity() instanceof ArmorStand stand && stand.isMarker())
 			return;
 
+		if(event.getEntity().getWorld() != Main.getGame().getWorld())
+			return;
+
 		if(Main.getGame().getGameState() == LIVE) {
 			//Main.getGame().queueDamage(new DamageEvent(event));
 			//will queue itself
@@ -165,6 +169,7 @@ public class EventListeners implements Listener
 		event.setRespawnLocation(Main.getPlayerInfo(event.getPlayer()).spawnPoint);
 	}
 
+	/*
 	@EventHandler
 	public void entityRemoveFromWorld(EntityRemoveFromWorldEvent event) {
 		//don't get arrows still in motion
@@ -172,4 +177,5 @@ public class EventListeners implements Listener
 			ArrowPierceManager.piercedEntitiesMap.remove(event.getEntity());
 		}
 	}
+	*/
 }

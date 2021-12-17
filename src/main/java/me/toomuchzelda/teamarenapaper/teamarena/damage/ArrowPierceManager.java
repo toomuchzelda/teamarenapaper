@@ -1,19 +1,17 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
+import org.bukkit.Bukkit;
 import org.bukkit.craftbukkit.v1_17_R1.entity.CraftArrow;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.Entity;
 import org.bukkit.util.Vector;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.Map;
+import java.util.*;
 
 //maybe not needed, uhhhhhh
 public class ArrowPierceManager {
 
-    public static final HashMap<AbstractArrow, ArrowInfo> piercedEntitiesMap = new HashMap<>();
+    public static final Hashtable<AbstractArrow, ArrowInfo> piercedEntitiesMap = new Hashtable<>();
 
 
     public static void addInfo(AbstractArrow arrow) {
@@ -24,13 +22,13 @@ public class ArrowPierceManager {
             info.pitch = arrow.getLocation().getPitch();
             info.yaw = arrow.getLocation().getYaw();
 
+            //Bukkit.broadcastMessage("added new arrowInfo to map");
             piercedEntitiesMap.put(arrow, info);
         }
     }
 
     public static void fixArrowMovement(AbstractArrow arrow) {
-        //shouldn't be needed after this
-        ArrowInfo info = piercedEntitiesMap.remove(arrow);
+        ArrowInfo info = piercedEntitiesMap.get(arrow);
 
         net.minecraft.world.entity.projectile.AbstractArrow nmsArrow = ((CraftArrow) arrow).getHandle();
 
@@ -43,12 +41,19 @@ public class ArrowPierceManager {
     public static PierceType canPierce(AbstractArrow arrow, Entity piercedEntity) {
         ArrowInfo info = piercedEntitiesMap.get(arrow);
 
+        //memory address
+        //Bukkit.broadcastMessage(info.toString());
+
         LinkedList<Entity> hitList = info.piercedEntities;
+
+        //Bukkit.broadcastMessage(hitList.toString());
 
         if(hitList.contains(piercedEntity))
             return PierceType.ALREADY_HIT;
 
         hitList.add(piercedEntity);
+
+        //Bukkit.broadcastMessage("hitList: " + hitList.size() + ", arrowPierce: " + arrow.getPierceLevel());
 
         if(hitList.size() > arrow.getPierceLevel()) {
             //piercedEntitiesMap.remove(arrow);
