@@ -18,20 +18,23 @@ public class DamageTimes {
     //tick they last received damage from direct "Fighting" sources i.e melee / projectile
     public int lastAttackTime;
 
-    public int lastFireTime;
-    //public long lastPoisonTime;
+    public FireTimes fireTimes;
     //for all damagetypes not covered
     public int lastMiscDamageTime;
 
     public Entity lastDamager;
 
     public DamageTimes(LivingEntity living) {
-        //long time = TeamArena.getGameTick();
+
+        fireTimes = new FireTimes();
+        fireTimes.lastFireTime = 0;
+        fireTimes.fireGiver = null;
+        fireTimes.fireType = null;
+
         lastAttackTime = 0;
-        lastFireTime = 0;
-        //lastPoisonTime = time;
-        lastMiscDamageTime = 0;
         lastDamager = null;
+
+        lastMiscDamageTime = 0;
 
         entityDamageTimes.put(living, this);
     }
@@ -42,6 +45,19 @@ public class DamageTimes {
             times = new DamageTimes(living);
 
         return times;
+    }
+
+    public static class FireTimes
+    {
+        public int lastFireTime;
+        public DamageType fireType;
+        //if fire was caused by an entity, the entity that caused it
+        // reset when the fire stops in EventListeners.endTick()
+        public Entity fireGiver;
+
+        public FireTimes() {
+
+        }
     }
 
     public static void cleanup() {

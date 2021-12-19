@@ -19,6 +19,7 @@ import org.bukkit.Location;
 import org.bukkit.craftbukkit.v1_17_R1.entity.CraftEntity;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -28,6 +29,9 @@ import org.bukkit.event.player.*;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.Vector;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
+
+import java.util.Iterator;
+import java.util.Map;
 
 import static me.toomuchzelda.teamarenapaper.teamarena.GameState.LIVE;
 
@@ -42,7 +46,17 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void endTick(ServerTickEndEvent event) {
 		PacketListeners.cancelDamageSounds = false;
-		
+
+		//Reset mobs' fire status if they've been extinguished
+		Iterator<Map.Entry<LivingEntity, DamageTimes>> iter = DamageTimes.entityDamageTimes.entrySet().iterator();
+		while(iter.hasNext()) {
+			Map.Entry<LivingEntity, DamageTimes> entry = iter.next();
+			if(entry.getKey().getFireTicks() <= 0) {
+				entry.getValue().fireTimes.fireGiver = null;
+				entry.getValue().fireTimes.fireType = null;
+			}
+		}
+
 		try {
 			Main.getGame().tick();
 		}

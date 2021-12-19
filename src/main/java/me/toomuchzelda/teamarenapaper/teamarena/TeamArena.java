@@ -5,7 +5,6 @@ import me.toomuchzelda.teamarenapaper.core.BlockUtils;
 import me.toomuchzelda.teamarenapaper.core.FileUtils;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitNone;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitTrooper;
@@ -264,7 +263,7 @@ public abstract class TeamArena
 
 			if(event.hasKnockback()) {
 				//reduce knockback done by axes
-				if (event.getDamageType().isMelee() && event.getFinalDamager() instanceof LivingEntity living) {
+				if (event.getDamageType().isMelee() && event.getFinalAttacker() instanceof LivingEntity living) {
 					if (living.getEquipment() != null) {
 						ItemStack weapon = living.getEquipment().getItemInMainHand();
 						if (weapon.getType().toString().endsWith("AXE")) {
@@ -275,7 +274,7 @@ public abstract class TeamArena
 				}
 				//reduce knockback done by projectiles
 				else if(event.getDamageType().isProjectile()) {
-					if(event.getDamager() instanceof Projectile) {
+					if(event.getAttacker() instanceof Projectile) {
 						event.getKnockback().multiply(0.8);
 					}
 				}
@@ -534,7 +533,7 @@ public abstract class TeamArena
 	}
 
 	public void handleDeath(DamageEvent event) {
-		Bukkit.broadcast(event.getDamageType().getDeathMessage(NamedTextColor.YELLOW, event.getDamagee(), event.getFinalDamager(), null));
+		Bukkit.broadcast(event.getDamageType().getDeathMessage(NamedTextColor.YELLOW, event.getVictim(), event.getFinalAttacker(), null));
 
 	}
 
