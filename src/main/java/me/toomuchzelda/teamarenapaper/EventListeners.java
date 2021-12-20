@@ -201,6 +201,10 @@ public class EventListeners implements Listener
 		if(event.getEntity().getWorld() != Main.getGame().getWorld())
 			return;
 
+		//prevent spectators from getting hurt
+		if(event.getEntity() instanceof Player p && Main.getGame().isSpectator(p))
+			return;
+
 		//make arrows have more reliable damage - no inconsistent garbage
 		/*if(event.getCause() == EntityDamageEvent.DamageCause.PROJECTILE &&
 				event instanceof EntityDamageByEntityEvent dEvent && dEvent.getDamager() instanceof AbstractArrow aa) {
@@ -257,6 +261,13 @@ public class EventListeners implements Listener
 		direction.multiply(power);
 
 		event.getProjectile().setVelocity(direction);
+	}
+
+	//stop projectiles from colliding with spectators
+	@EventHandler
+	public void projectileCollide(ProjectileCollideEvent event) {
+		if(event.getCollidedWith() instanceof Player p && Main.getGame().isSpectator(p))
+			event.setCancelled(true);
 	}
 
 	/*
