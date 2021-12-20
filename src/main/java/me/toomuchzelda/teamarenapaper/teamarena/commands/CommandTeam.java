@@ -13,11 +13,11 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedList;
 
-public class CommandTeam extends Command {
+public class CommandTeam extends CustomCommand {
 
     public CommandTeam() {
         super("team", "Select team to play on", "\"/team\" to list teams, \"/team <team name>\" to pick that team.",
-                new LinkedList<String>());
+                new LinkedList<String>(), CustomCommand.ALL);
     }
 
     @Override

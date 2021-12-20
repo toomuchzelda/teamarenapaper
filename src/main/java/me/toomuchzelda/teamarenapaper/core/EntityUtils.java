@@ -27,6 +27,7 @@ public class EntityUtils {
 
     public static Method getHurtSoundMethod;
     public static Method getSoundVolumeMethod;
+    public static Method getDeathSoundMethod;
 
     public static void cacheReflection() {
         try {
@@ -37,6 +38,9 @@ public class EntityUtils {
 
             getSoundVolumeMethod = net.minecraft.world.entity.LivingEntity.class.getDeclaredMethod("getSoundVolume");
             getSoundVolumeMethod.setAccessible(true);
+
+            getDeathSoundMethod = net.minecraft.world.entity.LivingEntity.class.getDeclaredMethod("getSoundDeath");
+            getDeathSoundMethod.setAccessible(true);
         } catch (NoSuchMethodException e) {
             e.printStackTrace();
         }
@@ -79,7 +83,7 @@ public class EntityUtils {
      * play entity hurt animation and sound
      * @param entity LivingEntity being damaged
      */
-    public static void playHurtAnimation(LivingEntity entity, DamageType damageType) {
+    public static void playHurtAnimation(LivingEntity entity, DamageType damageType, boolean deathSound) {
 
         //never mind, there's API for it...
         // double never mind, doesn't always choose the right sound? i.e direct fire damage sounds wrong to the person
@@ -111,7 +115,11 @@ public class EntityUtils {
         float volume;
 
         try {
-            nmsSound = (SoundEvent) getHurtSoundMethod.invoke(nmsLivingEntity, damageType.getDamageSource());
+            if(deathSound)
+                nmsSound = (SoundEvent) getDeathSoundMethod.invoke(nmsLivingEntity);
+            else
+                nmsSound = (SoundEvent) getHurtSoundMethod.invoke(nmsLivingEntity, damageType.getDamageSource());
+
             pitch = nmsLivingEntity.getVoicePitch();
             volume = (float) getSoundVolumeMethod.invoke(nmsLivingEntity);
         } catch (IllegalAccessException | InvocationTargetException e) {

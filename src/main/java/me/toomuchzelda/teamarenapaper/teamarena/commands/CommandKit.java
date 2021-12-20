@@ -13,11 +13,11 @@ import org.jetbrains.annotations.NotNull;
 import java.util.LinkedList;
 import java.util.List;
 
-public class CommandKit extends Command {
+public class CommandKit extends CustomCommand {
 
     public CommandKit() {
         super("kit", "Select or view kits", "\"/kit\" to view all kits, \"/kit <kit name>\" to select that kit.",
-                new LinkedList<String>());
+                new LinkedList<String>(), CustomCommand.ALL);
     }
 
     @Override

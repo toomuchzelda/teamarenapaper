@@ -307,17 +307,19 @@ public class DamageEvent {
             }
     
             //damage
+            boolean deathSound = false;
             double newHealth = living.getHealth() - finalDamage;
             if (newHealth <= 0) {
                 //todo: handle death here
                 //Bukkit.broadcast(Component.text(living.getName() + " has died"));
                 newHealth = living.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
                 Main.getGame().handleDeath(this);
+                deathSound = true;
             }
             living.setHealth(newHealth);
             living.setLastDamage(finalDamage);
             if(doHurtEffect)
-                EntityUtils.playHurtAnimation(living, damageType);
+                EntityUtils.playHurtAnimation(living, damageType, deathSound);
             if(isCritical) {
                 EntityUtils.playCritEffect(living);
             }

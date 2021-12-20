@@ -95,6 +95,11 @@ public class KingOfTheHill extends TeamArena
 	}
 
 	@Override
+	public boolean isRespawningGame() {
+		return true;
+	}
+
+	@Override
 	public String mapPath() {
 		return super.mapPath() + "KOTH";
 	}

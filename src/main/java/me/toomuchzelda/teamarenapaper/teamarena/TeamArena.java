@@ -497,12 +497,13 @@ public abstract class TeamArena
 				//player.showTitle(Title.title(Component.empty(), text));
 				player.sendMessage(text);
 			} else {
-				//kill the player here (remove from game)
+				//todo: kill the player here (remove from game)
 
 				Bukkit.broadcast(player.displayName().append(Component.text(" has joined the spectators").color(NamedTextColor.GRAY)));
 			}
 			//do after so it gets the correct displayName above
 			spectatorTeam.addMembers(player);
+			makeSpectator(player);
 		}
 		//else they are (or set to be) a spectator
 		// only re-set them as a player if the game hasn't started
@@ -529,13 +530,27 @@ public abstract class TeamArena
 		//hide all the spectators from everyone else
 		for(Player p : Bukkit.getOnlinePlayers()) {
 			p.hidePlayer(Main.getPlugin(), player);
+			
 		}
 	}
 
 	public void handleDeath(DamageEvent event) {
 		Bukkit.broadcast(event.getDamageType().getDeathMessage(NamedTextColor.YELLOW, event.getVictim(), event.getFinalAttacker(), null));
+		//if player make them a spectator and put them in queue to respawn if is a respawning game
+		if(event.getVictim() instanceof Player p) {
+			p.showTitle(Title.title(Component.empty(), Component.text("You died!").color(TextColor.color(255, 0, 0))));
+
+			setSpectator(p, true);
+			makeSpectator(p);
+			if(this.isRespawningGame()) {
+				Pair<Player, Integer> pair = new Pair<>(p, getGameTick());
+				respawnTimers.add(pair);
+			}
+		}
 
 	}
+
+	public abstract boolean isRespawningGame();
 
 	public boolean isSpectator(Player player) {
 		//Main.logger().info("spectators contains player: " + spectators.contains(player));

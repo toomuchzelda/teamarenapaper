@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
 import me.toomuchzelda.teamarenapaper.core.Hologram;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import org.bukkit.Location;
 
@@ -9,6 +10,7 @@ public class PlayerInfo
 {
 	public static final byte lowestKothParticles = 10;
 
+	public byte permissionLevel;
 	public TeamArenaTeam team;
 	public Location spawnPoint;
 	public Hologram nametag;
@@ -25,5 +27,7 @@ public class PlayerInfo
 		kit = null;
 		defaultKit = "Trooper";
 		kothHillParticles = 1;
+
+		permissionLevel = CustomCommand.ALL;
 	}
 }

@@ -10,11 +10,12 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedList;
 
-public class CommandSpectator extends Command {
+public class CommandSpectator extends CustomCommand {
 
     public CommandSpectator() {
         super("spectate", "Toggle participation or spectating of this game",
-                "\"/spectate\" to toggle whether you'll spectate for this game or play in it", new LinkedList<String>());
+                "\"/spectate\" to toggle whether you'll spectate for this game or play in it", new LinkedList<String>(),
+                CustomCommand.ALL);
     }
 
     @Override

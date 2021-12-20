@@ -9,6 +9,7 @@ import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
@@ -16,6 +17,7 @@ import net.kyori.adventure.text.Component;
 import net.minecraft.world.entity.Entity;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.command.Command;
 import org.bukkit.craftbukkit.v1_17_R1.entity.CraftEntity;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.ArmorStand;
@@ -28,8 +30,10 @@ import org.bukkit.event.entity.*;
 import org.bukkit.event.player.*;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -92,6 +96,11 @@ public class EventListeners implements Listener
 		// or use persistent data containers, or option to use either
 		// and also use the PreLoginEvent
 		PlayerInfo playerInfo = new PlayerInfo();
+
+		//todo: read perms from db or other
+		if(event.getPlayer().getName().equalsIgnoreCase("toomuchzelda"))
+			playerInfo.permissionLevel = CustomCommand.OWNER;
+
 		Main.addPlayerInfo(event.getPlayer(), playerInfo);
 		Main.getGame().loggingInPlayer(event.getPlayer(), playerInfo);
 		Main.playerIdLookup.put(event.getPlayer().getEntityId(), event.getPlayer());
@@ -109,6 +118,33 @@ public class EventListeners implements Listener
 		new Hologram(event.getPlayer());
 		Main.getGame().joiningPlayer(event.getPlayer());
 		//put them on team after their hologram made
+	}
+
+	//don't show any commands the the player doesn't have permission to use in the tab list
+	@EventHandler
+	public void playerCommandSend(PlayerCommandSendEvent event) {
+		@NotNull Collection<String> commands = event.getCommands();
+
+		Iterator<String> iter = commands.iterator();
+		PlayerInfo pinfo = Main.getPlayerInfo(event.getPlayer());
+		while(iter.hasNext()) {
+			String strCommand = iter.next();
+			Command command = Bukkit.getCommandMap().getCommand(strCommand);
+			if(command != null) {
+				//if it's custom command check for my own permission level otherwise use
+				// bukkit ones or whatever
+				if (command instanceof CustomCommand customCmd) {
+					if (pinfo.permissionLevel < customCmd.permissionLevel) {
+						iter.remove();
+					}
+				}
+				else if (command.getPermission() != null){
+					if (!event.getPlayer().hasPermission(command.getPermission())) {
+						iter.remove();
+					}
+				}
+			}
+		}
 	}
 	
 	@EventHandler

@@ -11,11 +11,11 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedList;
 
-public class CommandGame extends Command {
+public class CommandGame extends CustomCommand {
 
     public CommandGame() {
         super("game", "modify the game state", "\"/game [start/stop/kill]\"",
-                new LinkedList<String>());
+                new LinkedList<String>(), CustomCommand.MOD);
     }
 
     @Override
