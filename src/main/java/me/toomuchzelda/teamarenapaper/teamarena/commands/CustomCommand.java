@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
+import me.toomuchzelda.teamarenapaper.Main;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
@@ -31,6 +32,7 @@ public class CustomCommand extends Command {
 
     @Override
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
+        Main.logger().warning("Command " + this.getName() + " execute method has not been overriden!");
         return false;
     }
 }

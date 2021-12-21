@@ -2,13 +2,10 @@ package me.toomuchzelda.teamarenapaper;
 
 import me.toomuchzelda.teamarenapaper.core.EntityUtils;
 import me.toomuchzelda.teamarenapaper.core.FileUtils;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandGame;
-import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandKit;
-import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandSpectator;
-import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
@@ -86,6 +83,7 @@ public final class Main extends JavaPlugin
 		}
 	}
 
+	//fuck YAML
 	private static void registerCommands() {
 		CommandMap commandMap = Bukkit.getCommandMap();
 		String fallbackPrefix = "tma";
@@ -94,6 +92,7 @@ public final class Main extends JavaPlugin
 		commandMap.register(fallbackPrefix, new CommandTeam());
 		commandMap.register(fallbackPrefix, new CommandSpectator());
 		commandMap.register(fallbackPrefix, new CommandGame());
+		commandMap.register(fallbackPrefix, new CommandRespawn());
 	}
 	
 	public static PlayerInfo getPlayerInfo(Player player) {

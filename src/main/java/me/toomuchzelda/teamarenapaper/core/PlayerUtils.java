@@ -2,8 +2,9 @@ package me.toomuchzelda.teamarenapaper.core;
 
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.title.Title;
 import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.network.protocol.game.ClientboundSetHealthPacket;
 import net.minecraft.server.level.ServerPlayer;
@@ -12,8 +13,10 @@ import org.bukkit.craftbukkit.v1_17_R1.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_17_R1.util.CraftVector;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.InvocationTargetException;
+import java.time.Duration;
 
 public class PlayerUtils
 {
@@ -35,7 +38,7 @@ public class PlayerUtils
 		}
 	}
 
-	//set velocity fields and send the packet immediately
+	//set velocity fields and send the packet immediately instead of waiting for next tick
 	// otherwise use entity.setVelocity(Vector) for spigot to do it's stuff first
 	public static void sendVelocity(Player player, Vector velocity) {
 		player.setVelocity(velocity);
@@ -59,5 +62,17 @@ public class PlayerUtils
 		ClientboundSetHealthPacket packet = new ClientboundSetHealthPacket(health, food, saturation);
 		
 		PlayerUtils.sendPacket(player, packet);
+	}
+
+	//fuck paper, this is fucking insanity
+	public static void sendTitle(Player player, @NotNull Component title, @NotNull Component subtitle, int fadeInTicks,
+								 int stayTicks, int fadeOutTicks) {
+
+		Title.Times times = Title.Times.of(Duration.ofMillis(fadeInTicks * 50L), Duration.ofMillis(stayTicks * 50L),
+				Duration.ofMillis(fadeOutTicks * 50L));
+
+		Title fucktitle = Title.title(title, subtitle, times);
+
+		player.showTitle(fucktitle);
 	}
 }

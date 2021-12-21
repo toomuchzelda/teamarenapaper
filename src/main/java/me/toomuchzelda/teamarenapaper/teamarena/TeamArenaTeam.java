@@ -222,6 +222,10 @@ public class TeamArenaTeam
 		}
 	}
 
+	public Location getNextSpawnpoint() {
+		return spawns[spawnsIndex++ % spawns.length];
+	}
+
 	//for the spectator team only
 	public void setNametagVisible() {
 		paperTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.FOR_OWN_TEAM);

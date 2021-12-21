@@ -4,6 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.BlockUtils;
 import me.toomuchzelda.teamarenapaper.core.FileUtils;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
+import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitNone;
@@ -25,7 +26,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.yaml.snakeyaml.Yaml;
-import oshi.util.tuples.Pair;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -68,8 +68,12 @@ public abstract class TeamArena
 	//use Bukkit.getOnlinePlayers() for all players
 	protected Set<Player> players;
 	protected Set<Player> spectators;
-	//for mid-game joiners with whatever amount of time to decide if they wanna join
-	protected LinkedList<Pair<Player, Integer>> respawnTimers;
+	/**
+	 * for mid-game joiners with whatever amount of time to decide if they wanna join and dead players
+	 * -1 value means ready to respawn (magic number moment)
+	 */
+	protected HashMap<Player, Integer> respawnTimers;
+	public static final int RESPAWN_SECONDS = 5;
 
 	protected Kit[] kits;
 	protected ItemStack kitMenuItem;
@@ -180,7 +184,7 @@ public abstract class TeamArena
 
 		players = ConcurrentHashMap.newKeySet();
 		spectators = ConcurrentHashMap.newKeySet();
-		respawnTimers = new LinkedList<>();
+		respawnTimers = new HashMap<>();
 		damageQueue = new ConcurrentLinkedQueue<>();
 
 		for(Player p : Bukkit.getOnlinePlayers()) {
@@ -235,7 +239,7 @@ public abstract class TeamArena
 				setGameState(GameState.PREGAME);
 				for(Player p : Bukkit.getOnlinePlayers()) {
 					if(isSpectator(p))
-						setSpectator(p, false);
+						setSpectator(p, false, false);
 					else
 						noTeamTeam.addMembers(p);
 				}
@@ -254,6 +258,54 @@ public abstract class TeamArena
 	}
 
 	public void liveTick() {
+		//checking team states (win/lose) done in liveTick() per-game
+
+		//process players waiting to respawn if a respawning game
+		if(isRespawningGame()) {
+			Iterator<Map.Entry<Player, Integer>> respawnIter = respawnTimers.entrySet().iterator();
+			while (respawnIter.hasNext()) {
+				Map.Entry<Player, Integer> entry = respawnIter.next();
+				Player p = entry.getKey();
+
+				//player ready to respawn
+				if(entry.getValue() == -1) {
+					respawnPlayer(p);
+					respawnIter.remove();
+					continue;
+				}
+
+				//respawn after five seconds
+				int ticksLeft = getGameTick() - entry.getValue();
+				if(ticksLeft >= RESPAWN_SECONDS * 20) {
+					/*respawnPlayer(p);
+					respawnIter.remove();*/
+					if(ticksLeft % 20 == 0) {
+						TextColor color;
+						if (ticksLeft % 40 == 20)
+							color = TextColor.color(52, 247, 140);
+						else
+							color = MathUtils.randomTextColor();
+
+						p.sendActionBar(Component.text("Ready to respawn! Click [item tbd] or type /respawn")
+								//.color(MathUtils.randomTextColor()));
+								.color(color));
+					}
+				}
+				else {
+					//tell them how long remaining to respawn
+					int seconds = RESPAWN_SECONDS - (ticksLeft / 20);
+					TextColor color;
+					//flash green
+					if(seconds % 2 == 0)
+						color = TextColor.color(0, 255, 0);
+					else
+						color = TextColor.color(0, 190, 0);
+
+					p.sendActionBar(Component.text("Respawning in " + seconds + " seconds").color(color));
+				}
+			}
+		}
+
 
 		//process damage events
 		Iterator<DamageEvent> iter = damageQueue.iterator();
@@ -283,7 +335,7 @@ public abstract class TeamArena
 			event.executeAttack();
 		}
 
-		//checking team states (win/lose) done in liveTick() per-game
+
 	}
 
 	public void prepTeamsDecided() {
@@ -487,7 +539,7 @@ public abstract class TeamArena
 
 	//switch a player between spectator and player
 	// teams stuff only, practical changes happen in makeSpectator(Player)
-	public void setSpectator(Player player, boolean spec) {
+	public void setSpectator(Player player, boolean spec, boolean shame) {
 		if(spec) {
 			players.remove(player);
 			spectators.add(player);
@@ -499,7 +551,8 @@ public abstract class TeamArena
 			} else {
 				//todo: kill the player here (remove from game)
 
-				Bukkit.broadcast(player.displayName().append(Component.text(" has joined the spectators").color(NamedTextColor.GRAY)));
+				if(shame)
+					Bukkit.broadcast(player.displayName().append(Component.text(" has joined the spectators").color(NamedTextColor.GRAY)));
 			}
 			//do after so it gets the correct displayName above
 			spectatorTeam.addMembers(player);
@@ -530,27 +583,59 @@ public abstract class TeamArena
 		//hide all the spectators from everyone else
 		for(Player p : Bukkit.getOnlinePlayers()) {
 			p.hidePlayer(Main.getPlugin(), player);
-			
+
 		}
+	}
+
+	public void respawnPlayer(Player player) {
+		players.add(player);
+		spectators.remove(player);
+
+		player.getInventory().clear();
+		PlayerInfo pinfo = Main.getPlayerInfo(player);
+		player.setAllowFlight(false);
+		pinfo.kit.giveKit(player, true);
+
+		for(Player p : Bukkit.getOnlinePlayers()) {
+			p.showPlayer(Main.getPlugin(), player);
+		}
+
+		player.teleport(pinfo.team.getNextSpawnpoint());
 	}
 
 	public void handleDeath(DamageEvent event) {
 		Bukkit.broadcast(event.getDamageType().getDeathMessage(NamedTextColor.YELLOW, event.getVictim(), event.getFinalAttacker(), null));
 		//if player make them a spectator and put them in queue to respawn if is a respawning game
 		if(event.getVictim() instanceof Player p) {
-			p.showTitle(Title.title(Component.empty(), Component.text("You died!").color(TextColor.color(255, 0, 0))));
+			//p.showTitle(Title.title(Component.empty(), Component.text("You died!").color(TextColor.color(255, 0, 0))));
+			PlayerUtils.sendTitle(p, Component.empty(), Component.text("You died!").color(TextColor.color(255, 0, 0)), 0, 30, 10);
 
-			setSpectator(p, true);
+			//setSpectator(p, true, false);
+
+			players.remove(p);
+			spectators.add(p);
+
 			makeSpectator(p);
+
 			if(this.isRespawningGame()) {
-				Pair<Player, Integer> pair = new Pair<>(p, getGameTick());
-				respawnTimers.add(pair);
+				respawnTimers.put(p, getGameTick());
+				p.getInventory().addItem(kitMenuItem.clone());
 			}
 		}
-
 	}
 
+	//todo: make a settable and changeable option (GameOption maybe)
 	public abstract boolean isRespawningGame();
+
+	public boolean canRespawn(Player player) {
+		Integer timeLeft = respawnTimers.get(player);
+		return timeLeft != null && gameTick - timeLeft >= RESPAWN_SECONDS * 20;
+	}
+
+	//set a player to respawn when the tick loop is next run
+	public void setToRespawn(Player player) {
+		respawnTimers.put(player, -1);
+	}
 
 	public boolean isSpectator(Player player) {
 		//Main.logger().info("spectators contains player: " + spectators.contains(player));
@@ -616,13 +701,13 @@ public abstract class TeamArena
 		}
 		else if(gameState == GameState.LIVE) {
 			if(Main.getPlayerInfo(player).team == spectatorTeam) {
-				setSpectator(player, true);
-				makeSpectator(player);
+				setSpectator(player, true, false);
+				//makeSpectator(player);
 				player.sendMessage(Component.text("If you want to join this game, click the [item tbd] or type \"/ready\"," +
 								" otherwise you can keep spectating.")
 						.color(TextColor.color(0, 255, 0)));
 
-				respawnTimers.add(new Pair<>(player, gameTick));
+				respawnTimers.put(player, gameTick);
 			}
 		}
 	}
