@@ -608,7 +608,7 @@ public abstract class TeamArena
 		//if player make them a spectator and put them in queue to respawn if is a respawning game
 		if(event.getVictim() instanceof Player p) {
 			//p.showTitle(Title.title(Component.empty(), Component.text("You died!").color(TextColor.color(255, 0, 0))));
-			PlayerUtils.sendTitle(p, Component.empty(), Component.text("You died!").color(TextColor.color(255, 0, 0)), 0, 30, 10);
+			PlayerUtils.sendTitle(p, Component.empty(), Component.text("You died!").color(TextColor.color(255, 0, 0)), 0, 30, 20);
 
 			//setSpectator(p, true, false);
 

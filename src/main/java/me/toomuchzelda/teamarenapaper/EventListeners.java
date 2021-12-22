@@ -14,15 +14,11 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
 import net.kyori.adventure.text.Component;
-import net.minecraft.world.entity.Entity;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.craftbukkit.v1_17_R1.entity.CraftEntity;
-import org.bukkit.entity.AbstractArrow;
-import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
@@ -205,19 +201,33 @@ public class EventListeners implements Listener
 		if(event.getEntity() instanceof Player p && Main.getGame().isSpectator(p))
 			return;
 
-		//make arrows have more reliable damage - no inconsistent garbage
-		/*if(event.getCause() == EntityDamageEvent.DamageCause.PROJECTILE &&
-				event instanceof EntityDamageByEntityEvent dEvent && dEvent.getDamager() instanceof AbstractArrow aa) {
-			aa.getDamage()
+
+		if(event instanceof EntityDamageByEntityEvent dEvent) {
+			if(dEvent.getDamager() instanceof Player p && Main.getGame().isSpectator(p))
+				return;
+			else if (dEvent.getCause() == EntityDamageEvent.DamageCause.PROJECTILE && dEvent.getDamager() instanceof AbstractArrow aa) {
+				//Bukkit.broadcastMessage("Critical arrow: " + aa.isCritical());
+				Bukkit.broadcastMessage("speed: " + aa.getVelocity().length());
+				//make arrow damage more consistent - no random crits
+
+				//stop arrows from bouncing off after this event is run
+				//store info about how it's moving now, before the EntityDamageEvent ends and the cancellation
+				// makes the arrow bounce off the damagee, so we can re-set the movement later
+				ArrowPierceManager.addOrUpdateInfo(aa);
+
+				//fix the movement after event is run
+				Bukkit.getScheduler().runTaskLater(Main.getPlugin(), bukkitTask -> {
+					if(aa.isValid())
+						ArrowPierceManager.fixArrowMovement(aa);
+				}, 0L);
+			}
 		}
-		 */
 
 		if(Main.getGame().getGameState() == LIVE) {
 			//Main.getGame().queueDamage(new DamageEvent(event));
 			//will queue itself
 			new DamageEvent(event);
 		}
-		
 	}
 
 	@EventHandler
@@ -233,26 +243,33 @@ public class EventListeners implements Listener
 		event.setRespawnLocation(Main.getPlayerInfo(event.getPlayer()).spawnPoint);
 	}
 
-	//don't
-	@EventHandler
-	public void entityShootBow(EntityShootBowEvent event) {
-
-	}
-
 	//stop projectiles from inheriting thrower's velocity
 	// like moving too up/down when player is jumping/falling/rising
+	@EventHandler
+	public void entityShootBow(EntityShootBowEvent event) {
+		if(event.getProjectile() instanceof AbstractArrow aa)
+			aa.setCritical(false);
+		event.getProjectile().setVelocity(projectileLaunchVector(event.getEntity(), event.getProjectile().getVelocity()));
+	}
+
+	//^^
 	@EventHandler
 	public void playerLaunchProjectile(PlayerLaunchProjectileEvent event) {
 		/*Bukkit.broadcastMessage(event.getItemStack().getType().toString());
 		Bukkit.broadcastMessage(event.getProjectile().getVelocity().toString());*/
 
-		double power = event.getProjectile().getVelocity().length();
+		event.getProjectile().setVelocity(projectileLaunchVector(event.getPlayer(), event.getProjectile().getVelocity()));
+	}
+
+	public static Vector projectileLaunchVector(Entity shooter, Vector original) {
 		//slight randomness in direction
 		double randX = MathUtils.random.nextGaussian() * 0.0075;
 		double randY = MathUtils.random.nextGaussian() * 0.0075;
 		double randZ = MathUtils.random.nextGaussian() * 0.0075;
 
-		Vector direction = event.getPlayer().getLocation().getDirection();
+		Vector direction = shooter.getLocation().getDirection();
+		double power = original.subtract(shooter.getVelocity()).length();
+
 		//probably add to each component?
 		direction.setX(direction.getX() + randX);
 		direction.setY(direction.getY() + randY);
@@ -260,7 +277,9 @@ public class EventListeners implements Listener
 
 		direction.multiply(power);
 
-		event.getProjectile().setVelocity(direction);
+		//Bukkit.broadcastMessage("velocity: " + direction.toString());
+
+		return direction;
 	}
 
 	//stop projectiles from colliding with spectators

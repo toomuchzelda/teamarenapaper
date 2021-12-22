@@ -55,6 +55,8 @@ public class DamageEvent {
     //if the attacker was sprinting, only applicable if the attacker is a Player
     private boolean wasSprinting;
     private boolean isSweep = false;
+
+    private boolean cancelled;
     
     public static final double yVal = 0.4;
     public static final double xzVal = 0.4;
@@ -65,6 +67,7 @@ public class DamageEvent {
         victim = event.getEntity();
         rawDamage = event.getDamage();
         finalDamage = event.getFinalDamage();
+        cancelled = false;
 
         damageType = DamageType.getAttack(event);
         //if it's fire caused by an entity, set the damager
@@ -105,11 +108,11 @@ public class DamageEvent {
                 if(dEvent.getDamager() instanceof AbstractArrow aa) {
                     //knockbackMults.add((double) aa.getKnockbackStrength());
                     kbLevels += aa.getKnockbackStrength();
-                    if(aa.getPierceLevel() > 0) {
+                    /*if(aa.getPierceLevel() > 0) {
                         //store info about how it's moving now, before the EntityDamageEvent ends and the cancellation
                         // makes the arrow bounce off the damagee, so we can re-set the movement later
                         ArrowPierceManager.addOrUpdateInfo(aa);
-                    }
+                    }*/
                 }
 
                 if (projectile.getShooter() instanceof LivingEntity living) {
@@ -190,6 +193,7 @@ public class DamageEvent {
                     }
                 }
             }
+
             isCritical = dEvent.isCritical();
         }
 
@@ -216,11 +220,14 @@ public class DamageEvent {
     
     public void executeAttack() {
 
+        if(cancelled)
+            return;
+
         //if its an arrow check if it can hit this particular damagee
         // also fix it's movement
-        if(attacker instanceof AbstractArrow aa && aa.isValid()) {
+        if(attacker instanceof AbstractArrow aa && aa.isValid() && damageType.isProjectile()) {
             //Bukkit.broadcastMessage("arrow pirece levels: " + aa.getPierceLevel());
-            if(aa.getPierceLevel() > 0) {
+            //if(aa.getPierceLevel() > 0) {
                 ArrowPierceManager.PierceType type = ArrowPierceManager.canPierce(aa, victim);
                 //Bukkit.broadcastMessage(type.toString());
                 if (type == ArrowPierceManager.PierceType.REMOVE_ARROW) {
@@ -228,16 +235,16 @@ public class DamageEvent {
                 } else {
                     //cancelled EntityDamageEvent makes arrows bounce off hit entities.
                     // reset the arrow's direction and velocity at the end of the tick to counter this
-                    ArrowPierceManager.fixArrowMovement(aa);
+                    //ArrowPierceManager.fixArrowMovement(aa);
 
                     //don't do damage to the same entity more than once for piercing enchanted arrows
                     if (type == ArrowPierceManager.PierceType.ALREADY_HIT) {
                         return;
                     }
                 }
-            }
+            /*}
             else
-                aa.remove();
+                aa.remove();*/
         }
 
         //non-livingentitys dont have NDT or health, can't do much
@@ -509,5 +516,9 @@ public class DamageEvent {
 
     public Entity getFinalAttacker() {
         return realAttacker != null ? realAttacker : attacker;
+    }
+
+    public void setCancelled(boolean cancel) {
+        this.cancelled = cancel;
     }
 }
