@@ -207,8 +207,13 @@ public class EventListeners implements Listener
 				return;
 			else if (dEvent.getCause() == EntityDamageEvent.DamageCause.PROJECTILE && dEvent.getDamager() instanceof AbstractArrow aa) {
 				//Bukkit.broadcastMessage("Critical arrow: " + aa.isCritical());
-				Bukkit.broadcastMessage("speed: " + aa.getVelocity().length());
-				//make arrow damage more consistent - no random crits
+				//Bukkit.broadcastMessage("speed: " + aa.getVelocity().length());
+
+				//fix arrow damage - no random crits
+				//  arrow damage is the vanilla formula without the part
+				double damage = Math.ceil(MathUtils.clamp(0, 2.147483647E9d, aa.getDamage() * aa.getVelocity().length()));
+				//this also does all armor re-calculations and stuff
+				dEvent.setDamage(damage);
 
 				//stop arrows from bouncing off after this event is run
 				//store info about how it's moving now, before the EntityDamageEvent ends and the cancellation
@@ -247,8 +252,6 @@ public class EventListeners implements Listener
 	// like moving too up/down when player is jumping/falling/rising
 	@EventHandler
 	public void entityShootBow(EntityShootBowEvent event) {
-		if(event.getProjectile() instanceof AbstractArrow aa)
-			aa.setCritical(false);
 		event.getProjectile().setVelocity(projectileLaunchVector(event.getEntity(), event.getProjectile().getVelocity()));
 	}
 
