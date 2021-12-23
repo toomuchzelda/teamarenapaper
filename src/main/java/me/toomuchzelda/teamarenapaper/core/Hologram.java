@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Hologram
 {
 	
-	public static final ConcurrentHashMap<Integer, Hologram> idTable = new ConcurrentHashMap<>();
+	//public static final ConcurrentHashMap<Integer, Hologram> idTable = new ConcurrentHashMap<>();
 	
 	private final int id;
 	public static final int armorStandID = 1;
@@ -30,14 +30,14 @@ public class Hologram
 	private PacketContainer teleportPacket;
 	
 	//store the fields for metadata so we can easily access and modify
-	WrappedDataWatcher data;
-	WrappedDataWatcher.WrappedDataWatcherObject metadata;
-	WrappedDataWatcher.WrappedDataWatcherObject customNameMetadata;
+	private WrappedDataWatcher data;
+	private WrappedDataWatcher.WrappedDataWatcherObject metadata;
+	private WrappedDataWatcher.WrappedDataWatcherObject customNameMetadata;
 
 	//private ArmorStand armorStand;
 	
 	private final Player player;
-	private Location position;
+	//private Location position;
 	public boolean poseChanged;
 	
 	public static final int metadataIndex = 0;
@@ -55,90 +55,109 @@ public class Hologram
 	// position updated every tick in EventListeners.java
 	public Hologram(Player player) {
 		this.player = player;
-		this.position = calcPosition();
-		
+		//entity ID
+		this.id = Bukkit.getUnsafe().nextEntityId();
+		//this.position = calcPosition();
+
 		//create and cache the spawn packet to send to players
-		{
-			spawnPacket = new PacketContainer(PacketType.Play.Server.SPAWN_ENTITY_LIVING);
-			StructureModifier<Integer> ints = spawnPacket.getIntegers();
-			
-			//entity ID
-			this.id = Bukkit.getUnsafe().nextEntityId();
-			ints.write(0, id);
-			//entity type
-			ints.write(1, armorStandID);
-
-			//coordinates written in getSpawnPacket()
-
-			spawnPacket.getModifier().write(1, UUID.randomUUID());
-		}
+		createSpawn();
 
 		//delete packet
-		{
-			deletePacket = new PacketContainer(PacketType.Play.Server.ENTITY_DESTROY);
-			IntArrayList intList = new IntArrayList(1);
-			intList.add(this.id);
-			deletePacket.getModifier().write(0, intList);
-		}
+		createDelete();
 
 		//create metadata packet
-		{
-			metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
-			metadataPacket.getIntegers().write(0, id);
-			
-			//this shit does not make any sense
-			//https://www.spigotmc.org/threads/simulating-potion-effect-glowing-with-protocollib.218828/#post-2246160
-			// and https://www.spigotmc.org/threads/protocollib-entity-metadata-packet.219146/
-			WrappedDataWatcher data = new WrappedDataWatcher();
-			
-			//metaObject: implies a field with index 0 and type of byte, i think
-			WrappedDataWatcher.WrappedDataWatcherObject metaObject = new WrappedDataWatcher.WrappedDataWatcherObject(
-					metadataIndex, WrappedDataWatcher.Registry.get(Byte.class));
-			
-			//metaObject the field, byte the value
-			// in this case the status bit of the metadata packet. 32 is the bit mask for invis
-			data.setObject(metaObject, invisBitMask);
-			
-			//custom name field
-			WrappedDataWatcher.WrappedDataWatcherObject customName =
-					new WrappedDataWatcher.WrappedDataWatcherObject(customNameIndex,
-					WrappedDataWatcher.Registry.getChatComponentSerializer(true));
-			
-			Optional<?> nameComponent = Optional.of(AdventureComponentConverter.fromComponent(
-					player.playerListName()).getHandle());
+		createMetadata(player.playerListName());
 
-			data.setObject(customName, nameComponent);
-			
-			//custom name visible
-			WrappedDataWatcher.WrappedDataWatcherObject customNameVisible =
-					new WrappedDataWatcher.WrappedDataWatcherObject(customNameVisibleIndex,
-							WrappedDataWatcher.Registry.get(Boolean.class));
-			data.setObject(customNameVisible, true);
-			
-			//marker armorstand (no client side hitbox)
-			WrappedDataWatcher.WrappedDataWatcherObject armorStandMeta =
-					new WrappedDataWatcher.WrappedDataWatcherObject(armorStandMetadataIndex,
-							WrappedDataWatcher.Registry.get(Byte.class));
-			data.setObject(armorStandMeta, armorStandMarkerBitMask);
-			
-			metadataPacket.getWatchableCollectionModifier().write(0, data.getWatchableObjects());
-
-			this.data = data;
-			this.metadata = metaObject;
-			this.customNameMetadata = customName;
-		}
-		
 		//create teleport packet
-		{
-			teleportPacket = new PacketContainer(PacketType.Play.Server.ENTITY_TELEPORT);
-			teleportPacket.getIntegers().write(0, id);
-			
-			//coords initialised in getTeleportPacket()
-		}
-		
+		createTeleport();
+
 		this.isAlive = true;
 		Main.getPlayerInfo(player).nametag = this;
-		idTable.put(id, this);
+		//idTable.put(id, this);
+	}
+
+	/*public Hologram(Component text) {
+		this.player = null;
+		this.id = Bukkit.getUnsafe().nextEntityId();
+
+		createSpawn();
+		createDelete();
+		createMetadata(text);
+		createTeleport();
+
+		this.isAlive = true;
+	}*/
+
+	private void createSpawn() {
+		spawnPacket = new PacketContainer(PacketType.Play.Server.SPAWN_ENTITY_LIVING);
+		StructureModifier<Integer> ints = spawnPacket.getIntegers();
+
+		ints.write(0, this.id);
+		//entity type
+		ints.write(1, armorStandID);
+
+		//coordinates written in getSpawnPacket()
+
+		spawnPacket.getModifier().write(1, UUID.randomUUID());
+	}
+
+	private void createDelete() {
+		deletePacket = new PacketContainer(PacketType.Play.Server.ENTITY_DESTROY);
+		IntArrayList intList = new IntArrayList(1);
+		intList.add(this.id);
+		deletePacket.getModifier().write(0, intList);
+	}
+
+	private void createMetadata(Component customNameComponent) {
+		metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
+		metadataPacket.getIntegers().write(0, id);
+
+		//this shit does not make any sense
+		//https://www.spigotmc.org/threads/simulating-potion-effect-glowing-with-protocollib.218828/#post-2246160
+		// and https://www.spigotmc.org/threads/protocollib-entity-metadata-packet.219146/
+		WrappedDataWatcher data = new WrappedDataWatcher();
+		this.data = data;
+
+		//metaObject: implies a field with index 0 and type of byte, i think
+		WrappedDataWatcher.WrappedDataWatcherObject metaObject = new WrappedDataWatcher.WrappedDataWatcherObject(
+				metadataIndex, WrappedDataWatcher.Registry.get(Byte.class));
+		this.metadata = metaObject;
+
+		//metaObject the field, byte the value
+		// in this case the status bit of the metadata packet. 32 is the bit mask for invis
+		data.setObject(metaObject, invisBitMask);
+
+		//custom name field
+		WrappedDataWatcher.WrappedDataWatcherObject customName =
+				new WrappedDataWatcher.WrappedDataWatcherObject(customNameIndex,
+						WrappedDataWatcher.Registry.getChatComponentSerializer(true));
+		this.customNameMetadata = customName;
+
+		Optional<?> nameComponent = Optional.of(AdventureComponentConverter.fromComponent(
+				customNameComponent).getHandle());
+
+		data.setObject(customName, nameComponent);
+
+		//custom name visible
+		WrappedDataWatcher.WrappedDataWatcherObject customNameVisible =
+				new WrappedDataWatcher.WrappedDataWatcherObject(customNameVisibleIndex,
+						WrappedDataWatcher.Registry.get(Boolean.class));
+		data.setObject(customNameVisible, true);
+
+		//marker armorstand (no client side hitbox)
+		WrappedDataWatcher.WrappedDataWatcherObject armorStandMeta =
+				new WrappedDataWatcher.WrappedDataWatcherObject(armorStandMetadataIndex,
+						WrappedDataWatcher.Registry.get(Byte.class));
+		data.setObject(armorStandMeta, armorStandMarkerBitMask);
+
+		metadataPacket.getWatchableCollectionModifier().write(0, data.getWatchableObjects());
+	}
+
+	public void createTeleport() {
+		teleportPacket = new PacketContainer(PacketType.Play.Server.ENTITY_TELEPORT);
+		teleportPacket.getIntegers().write(0, id);
+
+		//coords initialised in getTeleportPacket()
 	}
 	
 	public Location calcPosition() {
@@ -204,7 +223,7 @@ public class Hologram
 	//this method only use when player disconnect
 	public void remove() {
 		this.isAlive = false;
-		idTable.remove(this.id);
+		//idTable.remove(this.id);
 		for(Player p : player.getTrackedPlayers()) {
 			PlayerUtils.sendPacket(p, deletePacket);
 		}
@@ -214,9 +233,9 @@ public class Hologram
 		return isAlive;
 	}
 	
-	public static Hologram getById(int id) {
+	/*public static Hologram getById(int id) {
 		return idTable.get(id);
-	}
+	}*/
 	
 	public Player getPlayer() {
 		return player;

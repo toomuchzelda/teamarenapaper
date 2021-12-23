@@ -116,7 +116,7 @@ public class EventListeners implements Listener
 		//put them on team after their hologram made
 	}
 
-	//don't show any commands the the player doesn't have permission to use in the tab list
+	//don't show any commands the player doesn't have permission to use in the tab list
 	@EventHandler
 	public void playerCommandSend(PlayerCommandSendEvent event) {
 		@NotNull Collection<String> commands = event.getCommands();

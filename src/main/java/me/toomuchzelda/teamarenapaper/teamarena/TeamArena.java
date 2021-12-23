@@ -301,7 +301,7 @@ public abstract class TeamArena
 					else
 						color = TextColor.color(0, 190, 0);
 
-					p.sendActionBar(Component.text("Respawning in " + seconds + " seconds").color(color));
+					p.sendActionBar(Component.text("You can respawn in " + seconds + " seconds").color(color));
 				}
 			}
 		}

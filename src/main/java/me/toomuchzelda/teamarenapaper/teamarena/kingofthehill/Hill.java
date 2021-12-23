@@ -18,6 +18,7 @@ public class Hill {
     private final BoundingBox border;
     //time in seconds
     private final int time;
+    private boolean done;
 
     public Hill(String name, BoundingBox border, int time) {
         this.name = name;
@@ -26,8 +27,7 @@ public class Hill {
     }
 
     public void playParticles(Color... colors) {
-        //fucking ParticleBuilder doesn't even support coloured SPELL_MOB Particles
-        World world = Main.getGame().getWorld();
+        //fucking ParticleBuilder doesn't support coloured SPELL_MOB Particles
 
         //https://www.spigotmc.org/wiki/colored-particles/
         //get RGB as 0-255 and convert to 0-1
@@ -115,6 +115,18 @@ public class Hill {
 
     public BoundingBox getBorder() {
         return border;
+    }
+
+    public boolean isDone() {
+        return done;
+    }
+
+    public void setDone() {
+        done = true;
+    }
+
+    public int getHillTime() {
+        return time;
     }
 
     public int getTime() {
