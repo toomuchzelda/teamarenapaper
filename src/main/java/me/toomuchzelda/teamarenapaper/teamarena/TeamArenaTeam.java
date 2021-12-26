@@ -197,6 +197,10 @@ public class TeamArenaTeam
 		return entityMembers;
 	}
 
+	public boolean isAlive() {
+		return entityMembers.size() > 0;
+	}
+
 	public void updateNametags() {
 		for(Entity e : entityMembers) {
 			if(e instanceof Player player) {

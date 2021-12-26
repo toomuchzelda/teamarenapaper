@@ -8,9 +8,11 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
 import org.bukkit.util.BoundingBox;
 
 import java.util.*;
@@ -26,13 +28,15 @@ public class KingOfTheHill extends TeamArena
 	protected HashMap<TeamArenaTeam, Float> hillCapProgresses;
 	protected TeamArenaTeam owningTeam;
 	//teams can earn max 1 point per tick
-	public float ticksAndPlayersToCaptureHill;
+	public static final float INITIAL_CAP_TIME = 13 * 20;
+	public float ticksAndPlayersToCaptureHill = INITIAL_CAP_TIME;
 
 	public KingOfTheHill() {
 		super();
 
 		hillCapProgresses = new HashMap<>();
-		hillIndex = 1;
+		hillIndex = 0;
+		lastHillChangeTime = gameTick;
 	}
 
 	@Override
@@ -44,31 +48,49 @@ public class KingOfTheHill extends TeamArena
 
 			hill.playParticles(MathUtils.randomColor());
 		}
-		
-		ticksAndPlayersToCaptureHill = 1.5f;
 	}
 
 	@Override
 	public void liveTick() {
 
+		//count how many players of the hill owning team are on the hill to subtract against other capper's points
+		float numOwningPlayers = 0;
+		if(owningTeam != null) {
+			for(Entity e : owningTeam.getEntityMembers()) {
+				if(e instanceof Player p && isSpectator(p))
+					continue;
+
+				if(activeHill.getBorder().contains(e.getBoundingBox()))
+					numOwningPlayers++;
+			}
+
+			float max = (float) (owningTeam.getEntityMembers().size() * 0.7);
+			if(numOwningPlayers > max)
+				numOwningPlayers = max;
+		}
+
 		//find how many team members of each team are on the active hill and add them to the cap progress
 		// also see if a new team has taken over
 		// also see which teams are on thing to determine which colours the active Hill should play
 		LinkedList<Color> coloursList = new LinkedList<>();
-		TeamArenaTeam newOwningTeam = owningTeam;
+		TeamArenaTeam newOwningTeam = null;
 		float newOwningTeamsPoints = 0;
 		for(TeamArenaTeam team : teams) {
-			if(team != owningTeam) {
+			if(team != owningTeam && team.isAlive()) {
 				float numPlayers = 0;
 				Float points = hillCapProgresses.get(team);
-				if(points == null)
+				if(points == null || points < 0f)
 					points = 0f;
 
 				for (Entity member : team.getEntityMembers()) {
+					if(member instanceof Player p && isSpectator(p))
+						continue;
+
 					if (activeHill.getBorder().contains(member.getBoundingBox()))
 						numPlayers++;
 				}
-				
+
+				float toEarn;
 				if(numPlayers > 0) {
 					coloursList.add(team.getColour());
 					if (team.getSecondColour() != null)
@@ -76,22 +98,40 @@ public class KingOfTheHill extends TeamArena
 					//do it twice for correct ratio of colours
 					else
 						coloursList.add(team.getColour());
-				}
 
-				points += (float) team.getEntityMembers().size() / numPlayers;
+					//70% of the team be on Hill for max points, any more doesn't grant more
+					toEarn = (float) numPlayers / ((float) team.getEntityMembers().size() * 0.7f);
+
+					if(toEarn > 1f)
+						toEarn = 1f;
+				}
+				//slowly decrement if no teammates on the hill
+				else if(points > 0) {
+					toEarn = -0.1f;
+				}
+				else
+					toEarn = 0;
+
+				//decrease gain speed for every owning team player on the hill concurrently
+				toEarn += numOwningPlayers * -0.5;
+
+				points += toEarn;
+
+				//Bukkit.broadcastMessage(team.getName() + " points: " + points + ", toEarn: " + toEarn + "numPlayers: " + numPlayers + " numOwningPlayers: " + numOwningPlayers);
+				//Bukkit.broadcastMessage("entityMembers size: " + team.getEntityMembers().size());
 
 				//a team has capped
 				// do comparisons in case two teams cap in one tick, do the one with more progress over the limit
 				if(points >= ticksAndPlayersToCaptureHill && points > newOwningTeamsPoints) {
 					newOwningTeam = team;
-					newOwningTeamsPoints = numPlayers;
+					newOwningTeamsPoints = points;
 				}
 
 				hillCapProgresses.put(team, points);
 			}
 		}
 		
-		if(owningTeam != newOwningTeam && newOwningTeam != null) {
+		if(newOwningTeam != null) {
 			//change the owning team here
 			Bukkit.broadcast(newOwningTeam.getComponentSimpleName()
 					.append(Component.text(" has captured ").color(NamedTextColor.GOLD)
@@ -100,6 +140,7 @@ public class KingOfTheHill extends TeamArena
 			
 			owningTeam = newOwningTeam;
 			hillCapProgresses.clear();
+			ticksAndPlayersToCaptureHill = INITIAL_CAP_TIME;
 		}
 		
 		if(owningTeam != null) {
@@ -113,25 +154,29 @@ public class KingOfTheHill extends TeamArena
 		}
 		else {
 			coloursList.add(Color.WHITE);
-			coloursList.add(Color.WHITE);
+			//coloursList.add(Color.WHITE);
 		}
 		
 		activeHill.playParticles(coloursList.toArray(new Color[0]));
 		
-		//----------process Hill change
-		
-		
 		//no team owns the hill; do anti-stalling mechanism
 		if(owningTeam == null) {
-			if(gameTick - lastHillChangeTime > (60 * 20)) {
-			
+			//every two minutes
+			if((gameTick - lastHillChangeTime) % (120 * 20) == 0 && lastHillChangeTime != gameTick) {
+				String s = "The time to capture the Hill has been halved";
+				if(ticksAndPlayersToCaptureHill != INITIAL_CAP_TIME)
+					s += " again";
+				
+				s += "! It will reset when one team becomes captures the hill";
+				Bukkit.broadcast(Component.text(s).color(TextColor.color(255, 0, 0)));
+				
+				ticksAndPlayersToCaptureHill /= 2;
 			}
 		}
-		
-		
-		if(score / 20 >= activeHill.getHillTime()) {
+		//process hill change
+		else if(owningTeam.score / 20 >= activeHill.getHillTime()) {
 			activeHill.setDone();
-			
+
 			//no more hills, game is over
 			if(hillIndex == hills.length - 1) {
 				Bukkit.broadcast(owningTeam.getComponentName().append(Component.text(" wins!!!!").color(owningTeam.getRGBTextColor())));
@@ -139,15 +184,13 @@ public class KingOfTheHill extends TeamArena
 				return;
 			}
 			else {
-				Hill nextHill = hills[hillIndex++];
+				Hill nextHill = hills[++hillIndex];
 				Bukkit.broadcast(Component.text("The Hill has moved to " + nextHill.getName()).color(NamedTextColor.GOLD));
 				//play sound, subtitle etc
-				
+
 				activeHill = nextHill;
 			}
 		}
-
-		
 
 		super.liveTick();
 	}

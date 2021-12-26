@@ -381,7 +381,8 @@ public abstract class TeamArena
 	}
 	
 	public void prepEnd() {
-	
+		setGameState(GameState.END);
+		Bukkit.broadcastMessage("Game end");
 	}
 
 	public void prepGameStarting() {
