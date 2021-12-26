@@ -1,14 +1,12 @@
 package me.toomuchzelda.teamarenapaper.core;
 
 import net.kyori.adventure.text.Component;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import org.bukkit.Location;
 import org.bukkit.craftbukkit.v1_17_R1.CraftWorld;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.ListIterator;
 
@@ -18,7 +16,7 @@ import java.util.ListIterator;
  */
 public class RealHologram {
 
-    public static final HashMap<Integer, RealHologram> allHolograms = new HashMap<>();
+    //public static final HashMap<Integer, RealHologram> allHolograms = new HashMap<>();
 
     public LinkedList<HologramLine> lines;
     public Location baseLoc;

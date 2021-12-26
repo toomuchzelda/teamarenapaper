@@ -204,6 +204,10 @@ public abstract class TeamArena
 		{
 			liveTick();
 		}
+		else if(gameState == GameState.END)
+		{
+			endTick();
+		}
 	}
 
 	public void preGameTick() {
@@ -337,6 +341,10 @@ public abstract class TeamArena
 
 
 	}
+	
+	public void endTick() {
+	
+	}
 
 	public void prepTeamsDecided() {
 		//set teams here
@@ -370,6 +378,10 @@ public abstract class TeamArena
 			player.getInventory().clear();
 			kit.giveKit(player, true);
 		}
+	}
+	
+	public void prepEnd() {
+	
 	}
 
 	public void prepGameStarting() {

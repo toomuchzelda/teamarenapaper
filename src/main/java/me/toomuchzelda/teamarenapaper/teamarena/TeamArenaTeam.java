@@ -43,8 +43,7 @@ public class TeamArenaTeam
 	//only used before teams decided
 	public final Stack<Entity> lastIn = new Stack<>();
 
-	//in the rare case a player joins during GAME_STARTING, need to find an unused spawn position
-	// to teleport to
+	//next spawn position to use
 	public int spawnsIndex;
 
 	//abstract score value, game-specific

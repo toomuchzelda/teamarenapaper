@@ -3,7 +3,9 @@ package me.toomuchzelda.teamarenapaper.teamarena.kingofthehill;
 import com.destroystokyo.paper.ParticleBuilder;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
+import me.toomuchzelda.teamarenapaper.core.RealHologram;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Team;
@@ -20,17 +22,21 @@ public class Hill {
     private final int time;
     private boolean done;
 
-    public Hill(String name, BoundingBox border, int time) {
+    private RealHologram hologram;
+
+    public Hill(String name, BoundingBox border, int time, World world) {
         this.name = name;
         this.border = border;
         this.time = time;
+        this.done = false;
+
+        hologram = new RealHologram(border.getCenter().toLocation(world), Component.text("Hill: " + name));
     }
 
     public void playParticles(Color... colors) {
         //fucking ParticleBuilder doesn't support coloured SPELL_MOB Particles
 
         //https://www.spigotmc.org/wiki/colored-particles/
-        //get RGB as 0-255 and convert to 0-1
 
         MathUtils.shuffleArray(colors);
 
@@ -45,6 +51,7 @@ public class Hill {
 
         for(int x = 0; x <= xLength; x++)
         {
+            //get RGB as 0-255 and convert to 0-1
             int index = x % colors.length;
             red = colors[index].getRed();
             green = colors[index].getGreen();
@@ -107,6 +114,10 @@ public class Hill {
                 }
             }
         }
+    }
+
+    public void setHologram(Component... text) {
+        hologram.setText(text);
     }
 
     public String getName() {
