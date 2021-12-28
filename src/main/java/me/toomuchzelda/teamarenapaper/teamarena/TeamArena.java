@@ -7,6 +7,7 @@ import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitArcher;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitNone;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitTrooper;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
@@ -149,7 +150,7 @@ public abstract class TeamArena
 		gameWorld.setGameRule(GameRule.MAX_ENTITY_CRAMMING, 0);
 		gameWorld.setGameRule(GameRule.MOB_GRIEFING, false);
 		//handle ourselves
-		gameWorld.setGameRule(GameRule.NATURAL_REGENERATION, false);
+		//gameWorld.setGameRule(GameRule.NATURAL_REGENERATION, false);
 		gameWorld.setGameRule(GameRule.RANDOM_TICK_SPEED, 0);
 		gameWorld.setGameRule(GameRule.SHOW_DEATH_MESSAGES, false);
 
@@ -175,7 +176,7 @@ public abstract class TeamArena
 		kitItemMeta.displayName(kitMenuName);
 		kitMenuItem.setItemMeta(kitItemMeta);
 
-		kits = new Kit[]{new KitTrooper(), new KitNone()};
+		kits = new Kit[]{new KitTrooper(), new KitArcher(), new KitNone()};
 		for(Kit kit : kits) {
 			for(Ability ability : kit.getAbilities()) {
 				ability.registerAbility();
@@ -252,7 +253,8 @@ public abstract class TeamArena
 				//announce game cancelled
 				// spam sounds lol xddddddd
 				for(int i = 0; i < 10; i++) {
-					gameWorld.playSound(spawnPos, Sound.values()[MathUtils.randomMax(Sound.values().length - 1)],
+					gameWorld.playSound(border.getCenter().toLocation(gameWorld),
+							Sound.values()[MathUtils.randomMax(Sound.values().length - 1)],
 							SoundCategory.AMBIENT, 99999, (float) MathUtils.randomRange(0.5, 2));
 				}
 				Bukkit.broadcast(Component.text("Not enough players to start the game, game cancelled!").color(MathUtils.randomTextColor()));
