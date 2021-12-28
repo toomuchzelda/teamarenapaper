@@ -292,6 +292,12 @@ public class EventListeners implements Listener
 			event.setCancelled(true);
 	}
 
+	//stop hunger
+	@EventHandler
+	public void entityExhaustion(EntityExhaustionEvent event) {
+		event.setCancelled(true);
+	}
+	
 	/*
 	@EventHandler
 	public void entityRemoveFromWorld(EntityRemoveFromWorldEvent event) {
