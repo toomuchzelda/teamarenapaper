@@ -37,6 +37,7 @@ public class DamageEvent {
     private Entity victim;
     //damage before damage-reduction calculations
     private double rawDamage;
+    
     //damage after damage-reduction calculations
     private double finalDamage;
     private DamageType damageType;
@@ -44,7 +45,6 @@ public class DamageEvent {
     //null implies no knockback
     // dont use 0,0,0 vector as that'll stop the player moving for a split moment
     private Vector knockback;
-    private LinkedList<Double> knockbackMults;
     //from 0 to 1, 0 = no knockback received, 1 = all knockback received
     private double knockbackResistance;
 
@@ -70,7 +70,8 @@ public class DamageEvent {
         cancelled = false;
 
         damageType = DamageType.getAttack(event);
-        //if it's fire caused by an entity, set the damager
+        //if it's fire caused by an entity, set the damager from the cached DamageTimes
+        // sort of re-construct this DamageEvent so it's accurate
         if(event.getCause() == EntityDamageEvent.DamageCause.FIRE_TICK) {
 
             //Bukkit.broadcastMessage("instanceof EEBEE: " + (event instanceof EntityDamageByEntityEvent));
@@ -90,13 +91,21 @@ public class DamageEvent {
         /*Bukkit.broadcast(Component.text("DamageCause: " + event.getCause()));
         Bukkit.broadcast(Component.text("DamageType: " + damageType.toString()));*/
 
-        if(damageType.isKnockback())
-            knockbackMults = new LinkedList<>();
+        //if(damageType.isKnockback())
+        //   knockbackMults = new LinkedList<>();
     
         knockbackResistance = 1;
         
         if(victim instanceof LivingEntity living) {
+            //Bukkit.broadcastMessage("Final damage before addition: " + finalDamage);
             knockbackResistance = 1 - living.getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE).getValue();
+            //if the victim has absorption hearts, it subtracts that from the final damage
+            // so do this even though it's deprecated
+            if(event.isApplicable(EntityDamageEvent.DamageModifier.ABSORPTION)) {
+                //Bukkit.broadcastMessage("Absorption reduction modifier: " + event.getDamage(EntityDamageEvent.DamageModifier.ABSORPTION));
+                //subtract as the reduction is a negative number
+                finalDamage -= event.getDamage(EntityDamageEvent.DamageModifier.ABSORPTION);
+            }
         }
 
         boolean doBaseKB = true;
@@ -191,6 +200,11 @@ public class DamageEvent {
                         if(wasSprinting)
                             kbLevels += 1;
                     }
+    
+                    /*Bukkit.broadcastMessage("Raw damage: " + rawDamage);
+                    Bukkit.broadcastMessage("Final damage after addition: " + finalDamage);
+                    Bukkit.broadcastMessage("Armor rating: " + EntityUtils.getArmorPercent(living));
+                    Bukkit.broadcastMessage("Attribute armor: " + living.getAttribute(Attribute.GENERIC_ARMOR).getValue());*/
                 }
             }
 
@@ -202,7 +216,6 @@ public class DamageEvent {
         }
 
         //Bukkit.broadcastMessage("kbresist: " + knockbackResistance);
-        
         
         //queue this damage
         Main.getGame().queueDamage(this);
@@ -315,14 +328,25 @@ public class DamageEvent {
     
             //damage
             boolean deathSound = false;
-            double newHealth = living.getHealth() - finalDamage;
-            if (newHealth <= 0) {
+            double newHealth = (living.getHealth() + living.getAbsorptionAmount())- finalDamage;
+            double maxHealth = living.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+            //they still got absorption hearts
+            if(living.getAbsorptionAmount() > 0 && newHealth <= maxHealth) {
+                living.setAbsorptionAmount(0);
+                // maybe remove the potion effect too?
+            }
+            else if(newHealth > maxHealth) {
+                living.setAbsorptionAmount(newHealth - maxHealth);
+                newHealth -= living.getAbsorptionAmount();
+            }
+            else if (newHealth <= 0) {
                 //todo: handle death here
                 //Bukkit.broadcast(Component.text(living.getName() + " has died"));
                 newHealth = living.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
                 Main.getGame().handleDeath(this);
                 deathSound = true;
             }
+
             living.setHealth(newHealth);
             living.setLastDamage(finalDamage);
             if(doHurtEffect)
