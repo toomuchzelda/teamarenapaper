@@ -1,27 +1,25 @@
 package me.toomuchzelda.teamarenapaper.core;
 
-import com.comphenix.protocol.PacketType;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
-import net.minecraft.network.protocol.game.ClientboundEntityEventPacket;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.damagesource.DamageSource;
-import org.bukkit.EntityEffect;
+import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.item.ItemStack;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.craftbukkit.v1_17_R1.CraftSound;
 import org.bukkit.craftbukkit.v1_17_R1.entity.CraftEntity;
 import org.bukkit.craftbukkit.v1_17_R1.entity.CraftLivingEntity;
-import org.bukkit.craftbukkit.v1_17_R1.entity.CraftPlayer;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Iterator;
 
 public class EntityUtils {
 
@@ -58,6 +56,32 @@ public class EntityUtils {
             entityName = entity.name();
 
         return entityName;
+    }
+    
+    /**
+     * get the armor damage reduction percent without enchantments or other applied
+     * @param wearer
+     * @return percent of damage to be blocked by the armor
+     */
+    public static int getArmorPercent(LivingEntity wearer) {
+        if(wearer.getEquipment() != null) {
+            int armor = 0;
+            
+            net.minecraft.world.entity.LivingEntity nmsLiving = ((CraftLivingEntity) wearer).getHandle();
+            
+            Iterable<ItemStack> iterable = nmsLiving.getArmorSlots();
+            Iterator<ItemStack> iter = iterable.iterator();
+            while(iter.hasNext()) {
+                ItemStack item = iter.next();
+                if(item.getItem() instanceof ArmorItem armorItem) {
+                    armor += armorItem.getDefense();
+                }
+            }
+            
+            return armor;
+        }
+        else
+            return 0;
     }
     
     /**

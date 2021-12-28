@@ -100,6 +100,7 @@ public class DamageEvent {
             //Bukkit.broadcastMessage("Final damage before addition: " + finalDamage);
             knockbackResistance = 1 - living.getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE).getValue();
 
+            //Bukkit.broadcastMessage("DamageType is ignore armor: " + damageType.isIgnoreArmor());
             if(!damageType.isIgnoreArmor() && event.isApplicable(EntityDamageEvent.DamageModifier.ARMOR)) {
                 //get the amount of armor points / "armor bars" above their hotbar
                 double armorPoints;
@@ -115,17 +116,17 @@ public class DamageEvent {
                 armorPoints *= 0.04;
 
                 double reducedDamage = -(rawDamage * armorPoints);
-                Bukkit.broadcastMessage("reducedDamage: " + reducedDamage);
+                //Bukkit.broadcastMessage("reducedDamage: " + reducedDamage);
                 event.setDamage(EntityDamageEvent.DamageModifier.ARMOR, reducedDamage);
 
                 //refresh
                 finalDamage = event.getFinalDamage();
 
-                Bukkit.broadcastMessage("Raw damage: " + rawDamage);
+                /*Bukkit.broadcastMessage("Raw damage: " + rawDamage);
                 double armorMod = event.getDamage(EntityDamageEvent.DamageModifier.ARMOR);
                 Bukkit.broadcastMessage("Armor modifier: " + armorMod);
                 Bukkit.broadcastMessage("Final Damage: " + finalDamage);
-                Bukkit.broadcastMessage("Percentage blocked: " + ((Math.abs(armorMod) / rawDamage) * 100));
+                Bukkit.broadcastMessage("Percentage blocked: " + ((Math.abs(armorMod) / rawDamage) * 100));*/
             }
 
             //if the victim has absorption hearts, it subtracts that from the final damage

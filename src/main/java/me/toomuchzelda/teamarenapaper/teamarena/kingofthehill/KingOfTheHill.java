@@ -113,7 +113,7 @@ public class KingOfTheHill extends TeamArena
 					toEarn = 0;
 
 				//decrease gain speed for every owning team player on the hill concurrently
-				toEarn += numOwningPlayers * -0.5;
+				toEarn += numOwningPlayers * -0.7;
 
 				points += toEarn;
 
