@@ -99,6 +99,35 @@ public class DamageEvent {
         if(victim instanceof LivingEntity living) {
             //Bukkit.broadcastMessage("Final damage before addition: " + finalDamage);
             knockbackResistance = 1 - living.getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE).getValue();
+
+            if(!damageType.isIgnoreArmor() && event.isApplicable(EntityDamageEvent.DamageModifier.ARMOR)) {
+                //get the amount of armor points / "armor bars" above their hotbar
+                double armorPoints;
+                if(living.getAttribute(Attribute.GENERIC_ARMOR) != null)
+                    armorPoints = living.getAttribute(Attribute.GENERIC_ARMOR).getValue();
+                else
+                    armorPoints = 0;
+
+                if(armorPoints > 20)
+                    armorPoints = 20;
+
+                //turn into range 0 to 0.8
+                armorPoints *= 0.04;
+
+                double reducedDamage = -(rawDamage * armorPoints);
+                Bukkit.broadcastMessage("reducedDamage: " + reducedDamage);
+                event.setDamage(EntityDamageEvent.DamageModifier.ARMOR, reducedDamage);
+
+                //refresh
+                finalDamage = event.getFinalDamage();
+
+                Bukkit.broadcastMessage("Raw damage: " + rawDamage);
+                double armorMod = event.getDamage(EntityDamageEvent.DamageModifier.ARMOR);
+                Bukkit.broadcastMessage("Armor modifier: " + armorMod);
+                Bukkit.broadcastMessage("Final Damage: " + finalDamage);
+                Bukkit.broadcastMessage("Percentage blocked: " + ((Math.abs(armorMod) / rawDamage) * 100));
+            }
+
             //if the victim has absorption hearts, it subtracts that from the final damage
             // so do this even though it's deprecated
             if(event.isApplicable(EntityDamageEvent.DamageModifier.ABSORPTION)) {
@@ -337,7 +366,7 @@ public class DamageEvent {
             }
             else if(newHealth > maxHealth) {
                 living.setAbsorptionAmount(newHealth - maxHealth);
-                newHealth -= living.getAbsorptionAmount();
+                newHealth = maxHealth;
             }
             else if (newHealth <= 0) {
                 //todo: handle death here
