@@ -607,15 +607,22 @@ public abstract class TeamArena
 		spectators.remove(player);
 
 		player.getInventory().clear();
-		PlayerInfo pinfo = Main.getPlayerInfo(player);
 		player.setAllowFlight(false);
+
+		PlayerInfo pinfo = Main.getPlayerInfo(player);
+		player.teleport(pinfo.team.getNextSpawnpoint());
 		pinfo.kit.giveKit(player, true);
 
-		for(Player p : Bukkit.getOnlinePlayers()) {
-			p.showPlayer(Main.getPlugin(), player);
-		}
-
-		player.teleport(pinfo.team.getNextSpawnpoint());
+		//do this one tick later
+		// when revealing first then teleporting, the clients interpolate the super fast teleport movement, so players
+		// see them quickly zooming from wherever they were to their spawnpoint.
+		// teleporting first in this method in the same tick creates this awful desync bug with positioning
+		// so try teleport them, then reveal them next tick
+		Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
+			for(Player p : Bukkit.getOnlinePlayers()) {
+				p.showPlayer(Main.getPlugin(), player);
+			}
+		}, 1);
 	}
 
 	public void handleDeath(DamageEvent event) {
