@@ -120,6 +120,10 @@ public class Hill {
         hologram.setText(text);
     }
 
+    public RealHologram getHologram() {
+        return hologram;
+    }
+
     public String getName() {
         return name;
     }

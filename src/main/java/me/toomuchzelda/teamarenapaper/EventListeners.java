@@ -7,12 +7,14 @@ import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import me.toomuchzelda.teamarenapaper.core.Hologram;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
+import me.toomuchzelda.teamarenapaper.teamarena.GameType;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
+import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -33,6 +35,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 
+import static me.toomuchzelda.teamarenapaper.teamarena.GameState.DEAD;
 import static me.toomuchzelda.teamarenapaper.teamarena.GameState.LIVE;
 
 public class EventListeners implements Listener
@@ -57,6 +60,25 @@ public class EventListeners implements Listener
 			}
 		}
 
+		//run this before the game tick so there is a whole tick after prepDead and construction of the next
+		// TeamArena instance
+		if(Main.getGame().getGameState() == DEAD) {
+			
+			//use this opportunity to cleanup
+			Iterator<Map.Entry<Player, PlayerInfo>> pinfoIter = Main.getPlayersIter();
+			while(pinfoIter.hasNext()) {
+				if(!pinfoIter.next().getKey().isOnline()) {
+					pinfoIter.remove();
+				}
+			}
+			DamageTimes.cleanup();
+			Main.playerIdLookup.entrySet().removeIf(idLookupEntry -> !idLookupEntry.getValue().isOnline());
+			
+			if(TeamArena.nextGameType == GameType.KOTH) {
+				Main.setGame(new KingOfTheHill());
+			}
+		}
+
 		try {
 			Main.getGame().tick();
 		}
@@ -77,8 +99,7 @@ public class EventListeners implements Listener
 		}
 
 		//every 3 minutes
-		if(event.getTickNumber() % 3 * 60 * 20 == 0) {
-			DamageTimes.cleanup();
+		if(event.getTickNumber() % (3 * 60 * 20) == 0) {
 			ArrowPierceManager.cleanup();
 		}
 

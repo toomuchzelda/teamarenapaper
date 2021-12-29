@@ -79,7 +79,7 @@ public final class Main extends JavaPlugin
 			Bukkit.unloadWorld(teamArena.getWorld(), false);
 			String name = teamArena.getWorldFile().getName();
 			FileUtils.delete(teamArena.getWorldFile());
-			getLogger().info("Deleted " + name);
+			//getLogger().info("Deleted " + name);
 		}
 	}
 
@@ -125,5 +125,12 @@ public final class Main extends JavaPlugin
 	
 	public static TeamArena getGame() {
 		return teamArena;
+	}
+
+	public static void setGame(TeamArena game) {
+		Bukkit.unloadWorld(teamArena.getWorld(), false);
+		FileUtils.delete(teamArena.getWorldFile());
+
+		teamArena = game;
 	}
 }

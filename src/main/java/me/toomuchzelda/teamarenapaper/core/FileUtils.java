@@ -1,5 +1,7 @@
 package me.toomuchzelda.teamarenapaper.core;
 
+import me.toomuchzelda.teamarenapaper.Main;
+
 import java.io.*;
 
 public class FileUtils
@@ -66,11 +68,17 @@ public class FileUtils
 			}
 		}
 	}
-	
+
 	public static void delete(File file) {
+		deleteRec(file);
+
+		Main.logger().info("Deleted file " + file.getAbsolutePath());
+	}
+
+	private static void deleteRec(File file) {
 		if (file.isDirectory()) {
 			for (File f : file.listFiles()) {
-				delete(f);
+				deleteRec(f);
 			}
 		}
 		

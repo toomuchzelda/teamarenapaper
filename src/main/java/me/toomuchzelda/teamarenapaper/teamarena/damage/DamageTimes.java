@@ -5,6 +5,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -67,10 +68,13 @@ public class DamageTimes {
 
             LivingEntity living = entry.getKey();
 
-            if(!living.isValid()) {
-                Main.logger().info(living.getName() + " has been DamageTime cleaned up");
+            if(living instanceof Player p && !p.isOnline()) {
                 iter.remove();
             }
+            else if(!living.isValid()) {
+                iter.remove();
+            }
+            Main.logger().info(living.getName() + " has been DamageTime cleaned up");
         }
     }
 }

@@ -186,7 +186,24 @@ public class TeamArenaTeam
 	}
 
 	public void removeAllMembers() {
-		removeMembers(entityMembers.toArray(new Entity[0]));
+		//removeMembers(entityMembers.toArray(new Entity[0]));
+		for (Entity entity : entityMembers)
+		{
+			if (entity instanceof Player player)
+			{
+				paperTeam.removeEntry(player.getName());
+				Main.getPlayerInfo(player).team = null;
+				//player.playerListName(Component.text(player.getName()).color(TeamArena.noTeamColour));
+				// name colour should be handled by the team they're put on
+			}
+			else
+			{
+				paperTeam.removeEntry(entity.getUniqueId().toString());
+			}
+			entityMembers.remove(entity);
+			lastIn.remove(entity);
+		}
+		Main.getGame().lastHadLeft = this;
 	}
 
 	public Set<String> getStringMembers() {
@@ -262,6 +279,10 @@ public class TeamArenaTeam
 			component = Component.text(str).color(getRGBTextColor());
 		}
 		return component;
+	}
+
+	public void unregister() {
+		paperTeam.unregister();
 	}
 
 	public static Color parseString(String string) {

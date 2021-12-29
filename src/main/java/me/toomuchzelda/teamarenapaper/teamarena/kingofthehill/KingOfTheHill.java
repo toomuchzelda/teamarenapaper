@@ -113,7 +113,7 @@ public class KingOfTheHill extends TeamArena
 					toEarn = 0;
 
 				//decrease gain speed for every owning team player on the hill concurrently
-				toEarn += numOwningPlayers * -0.7;
+				toEarn += numOwningPlayers * -0.6;
 
 				points += toEarn;
 
@@ -204,7 +204,19 @@ public class KingOfTheHill extends TeamArena
 	
 	@Override
 	public void prepEnd() {
+		
+		for(Hill h : hills) {
+			h.getHologram().remove();
+		}
+		
+		hillCapProgresses.clear();
+		
 		super.prepEnd();
+	}
+
+	@Override
+	public void prepDead() {
+		super.prepDead();
 	}
 
 	@Override

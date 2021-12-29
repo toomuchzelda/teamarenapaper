@@ -38,6 +38,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 //main game class
 public abstract class TeamArena
 {
+	public static GameType nextGameType = GameType.KOTH;
+
 	private final File worldFile;
 	protected World gameWorld;
 
@@ -46,13 +48,14 @@ public abstract class TeamArena
 	protected GameState gameState;
 
 	//ticks of wait time before teams are decided
-	protected static final int preTeamsTime = 25 * 20;
+	protected static final int PRE_TEAMS_TIME = 25 * 20;
 	//ticks of wait time after teams chosen, before game starting phase
-	protected static final int preGameStartingTime = 30 * 20;
+	protected static final int PRE_GAME_STARTING_TIME = 30 * 20;
 	//ticks of game starting time
-	protected static final int gameStartingTime = 10 * 20;
-	protected static final int totalWaitingTime = preTeamsTime + preGameStartingTime + gameStartingTime;
-	protected static final int minPlayersRequired = 2;
+	protected static final int GAME_STARTING_TIME = 10 * 20;
+	protected static final int TOTAL_WAITING_TIME = PRE_TEAMS_TIME + PRE_GAME_STARTING_TIME + GAME_STARTING_TIME;
+	protected static final int END_GAME_TIME = 10 * 20;
+	protected static final int MIN_PLAYERS_REQUIRED = 2;
 
 	protected BoundingBox border;
 	protected Location spawnPos;
@@ -188,9 +191,24 @@ public abstract class TeamArena
 		respawnTimers = new HashMap<>();
 		damageQueue = new ConcurrentLinkedQueue<>();
 
+		//init all the players online at time of construction
 		for(Player p : Bukkit.getOnlinePlayers()) {
-			p.teleport(gameWorld.getSpawnLocation());
+			p.teleport(spawnPos);
+			p.setGameMode(GameMode.SURVIVAL);
 			players.add(p);
+			
+			PlayerInfo pinfo = Main.getPlayerInfo(p);
+			pinfo.spawnPoint = spawnPos;
+			pinfo.kit = findKit(pinfo.defaultKit);
+			pinfo.team = noTeamTeam;
+			if(pinfo.kit == null)
+				pinfo.kit = kits[0];
+			
+			noTeamTeam.addMembers(p);
+		
+			p.getInventory().clear();
+			giveLobbyItems(p);
+			p.setAllowFlight(true);
 		}
 	}
 
@@ -213,20 +231,20 @@ public abstract class TeamArena
 
 	public void preGameTick() {
 		//if countdown is ticking, do announcements
-		if(players.size() >= minPlayersRequired) {
+		if(players.size() >= MIN_PLAYERS_REQUIRED) {
 			//announce Game starting in:
 			// and play sound
 			sendCountdown(false);
 			//teams decided time
-			if(waitingSince + preTeamsTime == gameTick) {
+			if(waitingSince + PRE_TEAMS_TIME == gameTick) {
 				prepTeamsDecided();
 			}
 			//Game starting; teleport everyone to spawns and freeze them
-			else if(waitingSince + preTeamsTime + preGameStartingTime == gameTick) {
+			else if(waitingSince + PRE_TEAMS_TIME + PRE_GAME_STARTING_TIME == gameTick) {
 				prepGameStarting();
 			}
 			//start game
-			else if(waitingSince + totalWaitingTime == gameTick)
+			else if(waitingSince + TOTAL_WAITING_TIME == gameTick)
 			{
 				prepLive();
 			}
@@ -345,7 +363,10 @@ public abstract class TeamArena
 	}
 	
 	public void endTick() {
-	
+		if(gameTick - waitingSince >= END_GAME_TIME) {
+			Bukkit.broadcastMessage("Prepping dead....");
+			prepDead();
+		}
 	}
 
 	public void prepTeamsDecided() {
@@ -383,8 +404,52 @@ public abstract class TeamArena
 	}
 	
 	public void prepEnd() {
+		waitingSince = gameTick;
+		
+		//cleanup everything before dropping the reference to this for garbage collection
+		// everything here may not need to be manually cleared, but better safe than sorry
+		
+		//reveal everyone to everyone just to be safe
+		for(Player p : Bukkit.getOnlinePlayers()) {
+			for(Player pp : Bukkit.getOnlinePlayers()) {
+				p.showPlayer(Main.getPlugin(), pp);
+			}
+			
+			PlayerInfo pinfo = Main.getPlayerInfo(p);
+			pinfo.kit.removeKit(p);
+			pinfo.kit = null;
+			pinfo.team = null;
+			pinfo.spawnPoint = null;
+		}
+		
+		//todo: cleanup kits and abilities
+		for(Kit kit : kits) {
+			for(Ability ability : kit.getAbilities()) {
+				ability.unregisterAbility();
+			}
+		}
+		
+		players.clear();
+		spectators.clear();
+		respawnTimers.clear();
+		damageQueue.clear();
+		
+		Bukkit.getScheduler().runTaskLater(Main.getPlugin(), bukkitTask -> {
+			for (TeamArenaTeam team : teams) {
+				//team.removeAllMembers();
+				team.unregister();
+			}
+			//spectatorTeam.removeAllMembers();
+			spectatorTeam.unregister();
+		}, 1);
+		
 		setGameState(GameState.END);
 		Bukkit.broadcastMessage("Game end");
+	}
+
+	
+	public void prepDead() {
+		setGameState(GameState.DEAD);
 	}
 
 	public void prepGameStarting() {
@@ -808,10 +873,10 @@ public abstract class TeamArena
 			long timeLeft;
 			//how long until teams are chosen
 			if(gameState == GameState.PREGAME) {
-				timeLeft = (waitingSince + preTeamsTime) - gameTick;
+				timeLeft = (waitingSince + PRE_TEAMS_TIME) - gameTick;
 			}
 			else {
-				timeLeft = (waitingSince + totalWaitingTime) - gameTick;
+				timeLeft = (waitingSince + TOTAL_WAITING_TIME) - gameTick;
 			}
 			timeLeft /= 20;
 			//is a multiple of 30, is 15, is between 10 and 1 inclusive , AND is not 0
@@ -847,7 +912,7 @@ public abstract class TeamArena
 		//the element doesn't exist, or spelled incorrectly and recognized by snakeyaml as a String instead of a boolean
 		catch(NullPointerException | ClassCastException e) {
 			mapInfo.doDaylightCycle = false;
-			e.printStackTrace();
+			//e.printStackTrace();
 		}
 
 		try {
@@ -863,7 +928,7 @@ public abstract class TeamArena
 		}
 		catch(NullPointerException | ClassCastException e) {
 			mapInfo.weatherType = 0;
-			e.printStackTrace();
+			//e.printStackTrace();
 		}
 
 		try {
@@ -871,7 +936,7 @@ public abstract class TeamArena
 		}
 		catch(NullPointerException | ClassCastException e) {
 			mapInfo.doWeatherCycle = false;
-			e.printStackTrace();
+			//e.printStackTrace();
 		}
 
 		//Map border
