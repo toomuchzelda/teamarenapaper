@@ -42,11 +42,7 @@ public abstract class TeamArena
 
 	private final File worldFile;
 	protected World gameWorld;
-
-	protected static int gameTick = 0;
-	protected long waitingSince;
-	protected GameState gameState;
-
+	
 	//ticks of wait time before teams are decided
 	protected static final int PRE_TEAMS_TIME = 25 * 20;
 	//ticks of wait time after teams chosen, before game starting phase
@@ -56,6 +52,11 @@ public abstract class TeamArena
 	protected static final int TOTAL_WAITING_TIME = PRE_TEAMS_TIME + PRE_GAME_STARTING_TIME + GAME_STARTING_TIME;
 	protected static final int END_GAME_TIME = 10 * 20;
 	protected static final int MIN_PLAYERS_REQUIRED = 2;
+	
+	//init to this, don't want negative numbers when waitingSince is set to the past in the prepGamestate() methods
+	protected static int gameTick = TOTAL_WAITING_TIME * 3;
+	protected long waitingSince;
+	protected GameState gameState;
 
 	protected BoundingBox border;
 	protected Location spawnPos;
@@ -74,10 +75,13 @@ public abstract class TeamArena
 	protected Set<Player> spectators;
 	/**
 	 * for mid-game joiners with whatever amount of time to decide if they wanna join and dead players
-	 * -1 value means ready to respawn (magic number moment)
+	 * -1 value means ready to respawn when next liveTick runs (magic number moment)
 	 */
 	protected HashMap<Player, Integer> respawnTimers;
+	//for players that have joined mid-game and have 10 or whatever seconds to join
+	protected HashMap<Player, Integer> midJoinTimers;
 	public static final int RESPAWN_SECONDS = 5;
+	public static final int MID_GAME_JOIN_SECONDS = 10;
 
 	protected Kit[] kits;
 	protected ItemStack kitMenuItem;
@@ -153,7 +157,7 @@ public abstract class TeamArena
 		gameWorld.setGameRule(GameRule.MAX_ENTITY_CRAMMING, 0);
 		gameWorld.setGameRule(GameRule.MOB_GRIEFING, false);
 		//handle ourselves
-		//gameWorld.setGameRule(GameRule.NATURAL_REGENERATION, false);
+		gameWorld.setGameRule(GameRule.NATURAL_REGENERATION, false);
 		gameWorld.setGameRule(GameRule.RANDOM_TICK_SPEED, 0);
 		gameWorld.setGameRule(GameRule.SHOW_DEATH_MESSAGES, false);
 
@@ -164,9 +168,9 @@ public abstract class TeamArena
 		else
 			gameWorld.setClearWeatherDuration(6000); //5 minutes
 
-		gameTick = 0;
-		waitingSince = 0;
-		gameState = GameState.PREGAME;
+		waitingSince = gameTick;
+		//gameState = GameState.PREGAME;
+		setGameState(GameState.PREGAME);
 
 		noTeamTeam = new TeamArenaTeam("No Team", "No Team", Color.YELLOW, Color.ORANGE, DyeColor.YELLOW);
 		spectatorTeam = new TeamArenaTeam("Spectators", "Specs", TeamArenaTeam.convert(NamedTextColor.DARK_GRAY), null,
@@ -189,6 +193,7 @@ public abstract class TeamArena
 		players = ConcurrentHashMap.newKeySet();
 		spectators = ConcurrentHashMap.newKeySet();
 		respawnTimers = new HashMap<>();
+		midJoinTimers = new HashMap<>();
 		damageQueue = new ConcurrentLinkedQueue<>();
 
 		//init all the players online at time of construction
@@ -286,6 +291,7 @@ public abstract class TeamArena
 
 		//process players waiting to respawn if a respawning game
 		if(isRespawningGame()) {
+			//todo prob make this a method
 			Iterator<Map.Entry<Player, Integer>> respawnIter = respawnTimers.entrySet().iterator();
 			while (respawnIter.hasNext()) {
 				Map.Entry<Player, Integer> entry = respawnIter.next();
@@ -297,7 +303,7 @@ public abstract class TeamArena
 					respawnIter.remove();
 					continue;
 				}
-
+				
 				//respawn after five seconds
 				int ticksLeft = getGameTick() - entry.getValue();
 				if(ticksLeft >= RESPAWN_SECONDS * 20) {
@@ -330,6 +336,7 @@ public abstract class TeamArena
 			}
 		}
 
+		midJoinerTick();
 
 		//process damage events
 		Iterator<DamageEvent> iter = damageQueue.iterator();
@@ -362,6 +369,45 @@ public abstract class TeamArena
 
 	}
 	
+	public void midJoinerTick() {
+		Iterator<Map.Entry<Player, Integer>> joinerIter = midJoinTimers.entrySet().iterator();
+		while(joinerIter.hasNext()) {
+			
+			Map.Entry<Player, Integer> entry = joinerIter.next();
+			Player p = entry.getKey();
+			
+			//player ready to respawn
+			if(entry.getValue() == -1) {
+				addToLowestTeam(p, true);
+				informOfTeam(p);
+				respawnPlayer(p);
+				joinerIter.remove();
+				continue;
+			}
+			
+			//respawn within MID_GAME_JOIN_SECONDS seconds
+			int ticksLeft = getGameTick() - entry.getValue();
+			if(ticksLeft < MID_GAME_JOIN_SECONDS * 20) {
+				//tell them how long remaining to respawn
+				int seconds = MID_GAME_JOIN_SECONDS - (ticksLeft / 20);
+				TextColor color;
+				//flash green
+				if(seconds % 2 == 0)
+					color = TextColor.color(0, 255, 0);
+				else
+					color = TextColor.color(0, 190, 0);
+				
+				p.sendActionBar(Component.text(seconds).color(color));
+			}
+			//they're out of time
+			else {
+				joinerIter.remove();
+				p.sendActionBar(Component.text("Spectating...").color(NamedTextColor.BLUE));
+			}
+			
+		}
+	}
+	
 	public void endTick() {
 		if(gameTick - waitingSince >= END_GAME_TIME) {
 			Bukkit.broadcastMessage("Prepping dead....");
@@ -381,6 +427,8 @@ public abstract class TeamArena
 		}
 		Main.logger().info("Decided Teams");
 
+		//correct the timer
+		waitingSince = gameTick - PRE_TEAMS_TIME;
 
 		for(Player p : spectators) {
 			makeSpectator(p);
@@ -388,7 +436,29 @@ public abstract class TeamArena
 
 		sendCountdown(true);
 	}
-
+	
+	public void prepGameStarting() {
+		//teleport players to team spawns
+		for(TeamArenaTeam team : teams) {
+			int i = 0;
+			Location[] spawns = team.getSpawns();
+			for(Entity e : team.getEntityMembers()) {
+				if(e instanceof Player p)
+					p.setAllowFlight(false);
+				
+				e.teleport(spawns[i % spawns.length]);
+				team.spawnsIndex++;
+				i++;
+			}
+		}
+		
+		//correct the timer
+		waitingSince = gameTick - PRE_TEAMS_TIME - PRE_GAME_STARTING_TIME;
+		//EventListeners.java should stop them from moving
+		setGameState(GameState.GAME_STARTING);
+	}
+	
+	
 	public void prepLive() {
 		setGameState(GameState.LIVE);
 
@@ -432,6 +502,7 @@ public abstract class TeamArena
 		players.clear();
 		spectators.clear();
 		respawnTimers.clear();
+		midJoinTimers.clear();
 		damageQueue.clear();
 		
 		Bukkit.getScheduler().runTaskLater(Main.getPlugin(), bukkitTask -> {
@@ -441,7 +512,7 @@ public abstract class TeamArena
 			}
 			//spectatorTeam.removeAllMembers();
 			spectatorTeam.unregister();
-		}, 1);
+		}, END_GAME_TIME - 3);
 		
 		setGameState(GameState.END);
 		Bukkit.broadcastMessage("Game end");
@@ -450,25 +521,6 @@ public abstract class TeamArena
 	
 	public void prepDead() {
 		setGameState(GameState.DEAD);
-	}
-
-	public void prepGameStarting() {
-		//teleport players to team spawns
-		for(TeamArenaTeam team : teams) {
-			int i = 0;
-			Location[] spawns = team.getSpawns();
-			for(Entity e : team.getEntityMembers()) {
-				if(e instanceof Player p)
-					p.setAllowFlight(false);
-
-				e.teleport(spawns[i % spawns.length]);
-				team.spawnsIndex++;
-				i++;
-			}
-		}
-
-		//EventListeners.java should stop them from moving
-		setGameState(GameState.GAME_STARTING);
 	}
 
 	public void setupTeams() {
@@ -718,10 +770,23 @@ public abstract class TeamArena
 		Integer timeLeft = respawnTimers.get(player);
 		return timeLeft != null && gameTick - timeLeft >= RESPAWN_SECONDS * 20;
 	}
-
+	
+	public boolean canMidGameJoin(Player player) {
+		Integer timeJoined = midJoinTimers.get(player);
+		return timeJoined != null && gameTick - timeJoined <= MID_GAME_JOIN_SECONDS * 20;
+	}
+	
+	public boolean isMidGameJoinWaiter(Player player) {
+		return midJoinTimers.containsKey(player);
+	}
+	
 	//set a player to respawn when the tick loop is next run
 	public void setToRespawn(Player player) {
 		respawnTimers.put(player, -1);
+	}
+	
+	public void setToMidJoin(Player player) {
+		midJoinTimers.put(player, -1);
 	}
 
 	public boolean isSpectator(Player player) {
@@ -790,11 +855,11 @@ public abstract class TeamArena
 			if(Main.getPlayerInfo(player).team == spectatorTeam) {
 				setSpectator(player, true, false);
 				//makeSpectator(player);
-				player.sendMessage(Component.text("If you want to join this game, click the [item tbd] or type \"/ready\"," +
-								" otherwise you can keep spectating.")
+				player.sendMessage(Component.text("If you want to join this game, click the [item tbd] or type \"/respawn\"," +
+								" within " + MID_GAME_JOIN_SECONDS + " seconds, otherwise you may keep spectating.")
 						.color(TextColor.color(0, 255, 0)));
 
-				respawnTimers.put(player, gameTick);
+				midJoinTimers.put(player, gameTick);
 			}
 		}
 	}
@@ -884,16 +949,16 @@ public abstract class TeamArena
 			if(((timeLeft % 30 == 0 || timeLeft == 15 || timeLeft == 10 ||
 					(timeLeft <= 5 && timeLeft >= 1 && gameState == GameState.GAME_STARTING)) && timeLeft != 0) || force)
 			{
-				for (Player p : Bukkit.getOnlinePlayers())
-				{
-					String s;
-					if(gameState == GameState.PREGAME)
-						s = "Teams will be chosen in ";
-					else
-						s = "Game starting in ";
-
+				String s;
+				if(gameState == GameState.PREGAME)
+					s = "Teams will be chosen in ";
+				else
+					s = "Game starting in ";
+				
+				Bukkit.broadcast(Component.text(s + timeLeft + 's').color(NamedTextColor.RED));
+				
+				for (Player p : Bukkit.getOnlinePlayers()) {
 					p.playSound(p.getLocation(), Sound.ENTITY_CREEPER_DEATH, SoundCategory.AMBIENT, 10, 0);
-					p.sendMessage(Component.text(s + timeLeft + 's').color(NamedTextColor.RED));
 				}
 			}
 		}
@@ -1047,6 +1112,10 @@ public abstract class TeamArena
 
 	public void queueDamage(DamageEvent event) {
 		damageQueue.add(event);
+	}
+	
+	public TeamArenaTeam getSpectatorTeam() {
+		return spectatorTeam;
 	}
 
 	public String mapPath() {

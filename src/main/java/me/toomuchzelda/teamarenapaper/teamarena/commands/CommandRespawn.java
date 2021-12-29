@@ -16,11 +16,17 @@ public class CommandRespawn extends CustomCommand
 
     @Override
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
-        if(sender instanceof Player p && Main.getGame().canRespawn(p)) {
-            Main.getGame().setToRespawn(p);
-            return true;
+        boolean b = false;
+        if(sender instanceof Player p) {
+            if(Main.getGame().isMidGameJoinWaiter(p) && Main.getGame().canMidGameJoin(p)) {
+                Main.getGame().setToMidJoin(p);
+                b = true;
+            }
+            else if(Main.getGame().canRespawn(p)) {
+                Main.getGame().setToRespawn(p);
+                b = true;
+            }
         }
-
-        return false;
+        return b;
     }
 }
