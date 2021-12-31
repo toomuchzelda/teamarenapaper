@@ -4,8 +4,6 @@ import me.toomuchzelda.teamarenapaper.Main;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.DyeColor;
 import org.bukkit.Location;
@@ -46,8 +44,9 @@ public class TeamArenaTeam
 	//next spawn position to use
 	public int spawnsIndex;
 
-	//abstract score value, game-specific
+	//abstract score values, game-specific
 	public int score;
+	public int score2;
 
 	public TeamArenaTeam(String name, String simpleName, Color colour, Color secondColour, DyeColor dyeColor) {
 		this.name = name;
@@ -60,15 +59,17 @@ public class TeamArenaTeam
 
 		spawns = null;
 		score = 0;
+		score2 = 0;
 
-		if(Bukkit.getScoreboardManager().getMainScoreboard().getTeam(name) != null)
-			Bukkit.getScoreboardManager().getMainScoreboard().getTeam(name).unregister();
+		if(SidebarManager.SCOREBOARD.getTeam(name) != null)
+			SidebarManager.SCOREBOARD.getTeam(name).unregister();
 
 		this.componentName = colourWord(this.name);
 		this.componentSimpleName = colourWord(this.simpleName);
 
-		paperTeam = Bukkit.getScoreboardManager().getMainScoreboard().registerNewTeam(name);
+		paperTeam = SidebarManager.SCOREBOARD.registerNewTeam(name);
 		paperTeam.displayName(componentName);
+		paperTeam.prefix(componentSimpleName);
 		paperTeam.setAllowFriendlyFire(true);
 		paperTeam.setCanSeeFriendlyInvisibles(true);
 		paperTeam.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);

@@ -38,8 +38,6 @@ public class RealHologram {
 
     public void setText(Component... newText) {
         int max = Math.max(newText.length, lines.size());
-        //int maxNewTextIndex = newText.length - 1;
-        //int maxLinesIndex = lines.size() - 1;
 
         for(int i = 0; i < max; i++) {
             //replace the HologramLine text

@@ -4,16 +4,20 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.BlockUtils;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
+import me.toomuchzelda.teamarenapaper.teamarena.SidebarManager;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.util.BoundingBox;
+import org.checkerframework.checker.units.qual.C;
 
 import java.util.*;
 
@@ -28,6 +32,10 @@ public class KingOfTheHill extends TeamArena
 	protected HashMap<TeamArenaTeam, Float> hillCapProgresses;
 	protected TeamArenaTeam owningTeam;
 	//teams can earn max 1 point per tick
+	// for every team, field score is used for the score they've earned on the current hill,
+	// and field score2 is used for their total score excluding current hill
+	// every time the hill changes the amount of points they earned on that one is put onto their score2
+	// and score is cleared
 	public static final float INITIAL_CAP_TIME = 13 * 20;
 	public float ticksAndPlayersToCaptureHill = INITIAL_CAP_TIME;
 
@@ -167,7 +175,7 @@ public class KingOfTheHill extends TeamArena
 				if(ticksAndPlayersToCaptureHill != INITIAL_CAP_TIME)
 					s += " again";
 				
-				s += "! It will reset when one team becomes captures the hill";
+				s += "! It will reset when one team captures the hill";
 				Bukkit.broadcast(Component.text(s).color(TextColor.color(255, 0, 0)));
 				
 				ticksAndPlayersToCaptureHill /= 2;
@@ -176,10 +184,40 @@ public class KingOfTheHill extends TeamArena
 		//process hill change
 		else if(owningTeam.score / 20 >= activeHill.getHillTime()) {
 			activeHill.setDone();
+			
+			//add their current hill points to total
+			for(TeamArenaTeam team : teams) {
+				team.score2 += team.score;
+				team.score = 0;
+			}
 
 			//no more hills, game is over
 			if(hillIndex == hills.length - 1) {
-				Bukkit.broadcast(owningTeam.getComponentName().append(Component.text(" wins!!!!").color(owningTeam.getRGBTextColor())));
+				
+				boolean draw = false;
+				TeamArenaTeam winner = null;
+				int highestScore = 0;
+				for(TeamArenaTeam team : teams) {
+					if(team.score2 > highestScore) {
+						winner = team;
+						highestScore = team.score2;
+					}
+					//a draw
+					else if(team.score2 == highestScore) {
+						draw = true;
+						break;
+					}
+				}
+				
+				if(draw) {
+					Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
+					Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
+					Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
+					Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
+				}
+				else
+					Bukkit.broadcast(winner.getComponentName().append(Component.text(" wins!!!!").color(owningTeam.getRGBTextColor())));
+				
 				prepEnd();
 				return;
 			}
@@ -189,8 +227,48 @@ public class KingOfTheHill extends TeamArena
 				//play sound, subtitle etc
 
 				activeHill = nextHill;
+				lastHillChangeTime = gameTick;
+				//clear the owningteam and clear cap progresses
+				owningTeam = null;
+				hillCapProgresses.clear();
+				ticksAndPlayersToCaptureHill = INITIAL_CAP_TIME;
 			}
 		}
+
+		//test holograms
+		LinkedList<Component> list = new LinkedList<>();
+
+		for(Player p : players) {
+			if(activeHill.getBorder().contains(p.getBoundingBox())) {
+				list.add(p.displayName());
+			}
+		}
+
+		Component[] arr = new Component[list.size() + 1];
+		arr[0] = Component.text(activeHill.getName()).color(TextColor.color(31, 88, 180));
+
+		int i = 1;
+		for(Component comp : list) {
+			arr[i++] = comp;
+		}
+
+		activeHill.setHologram(arr);
+
+		//test sidebar
+
+		//3 lines for each team
+		Component[] lines = new Component[2 * teams.length];
+
+		int index = 0;
+		for(TeamArenaTeam team : teams) {
+			lines[index] = team.getComponentSimpleName();
+			lines[index + 1] = Component.text("Score: ")
+					.append(Component.text(team.score + team.score2).color(team.getRGBTextColor()).decorate(TextDecoration.BOLD));
+			//lines[index + 2] = Component.text("asdfasdf").color(MathUtils.randomTextColor());
+
+			index += 2;
+		}
+		SidebarManager.setLines(lines);
 
 		super.liveTick();
 	}

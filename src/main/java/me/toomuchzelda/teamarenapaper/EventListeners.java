@@ -6,10 +6,7 @@ import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import me.toomuchzelda.teamarenapaper.core.Hologram;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
-import me.toomuchzelda.teamarenapaper.teamarena.GameState;
-import me.toomuchzelda.teamarenapaper.teamarena.GameType;
-import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
@@ -132,6 +129,7 @@ public class EventListeners implements Listener
 	public void playerJoin(PlayerJoinEvent event) {
 		//disable yellow "Player has joined the game" messages
 		event.joinMessage(null);
+		event.getPlayer().setScoreboard(SidebarManager.SCOREBOARD);
 		new Hologram(event.getPlayer());
 		Main.getGame().joiningPlayer(event.getPlayer());
 		//put them on team after their hologram made

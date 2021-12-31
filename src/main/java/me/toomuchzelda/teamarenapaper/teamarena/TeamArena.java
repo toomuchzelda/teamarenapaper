@@ -109,6 +109,15 @@ public abstract class TeamArena
 		File dest = new File("TEMPMAP" + source.getName() + System.currentTimeMillis());
 		if(dest.mkdir()) {
 			FileUtils.copyFolder(source, dest);
+			//delete the uid.dat
+			for(File uid : dest.listFiles()) {
+				if(uid.getName().equalsIgnoreCase("uid.dat")) {
+					boolean b = uid.delete();
+					if(b) {
+						Main.logger().info("Attempted delete of uid.dat in copy world, success: " + b);
+					}
+				}
+			}
 		}
 		else {
 			//dae not bothered to try catch
@@ -195,6 +204,9 @@ public abstract class TeamArena
 		respawnTimers = new HashMap<>();
 		midJoinTimers = new HashMap<>();
 		damageQueue = new ConcurrentLinkedQueue<>();
+
+		//list the teams in sidebar
+		SidebarManager.updatePreGameScoreboard(this);
 
 		//init all the players online at time of construction
 		for(Player p : Bukkit.getOnlinePlayers()) {
@@ -434,6 +446,8 @@ public abstract class TeamArena
 			makeSpectator(p);
 		}
 
+		SidebarManager.updateTeamsDecidedScoreboard(this);
+
 		sendCountdown(true);
 	}
 	
@@ -601,6 +615,10 @@ public abstract class TeamArena
 		return teams;
 	}
 
+	public Set<Player> getSpectators() {
+		return spectators;
+	}
+
 	public abstract boolean canSelectKitNow();
 
 	public abstract boolean canSelectTeamNow();
@@ -760,6 +778,9 @@ public abstract class TeamArena
 				respawnTimers.put(p, getGameTick());
 				p.getInventory().addItem(kitMenuItem.clone());
 			}
+		}
+		else {
+			event.getVictim().remove();
 		}
 	}
 
