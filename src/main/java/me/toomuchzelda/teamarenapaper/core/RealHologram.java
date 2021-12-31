@@ -7,6 +7,8 @@ import org.bukkit.craftbukkit.v1_17_R1.CraftWorld;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.ListIterator;
 
@@ -18,11 +20,11 @@ public class RealHologram {
 
     //public static final HashMap<Integer, RealHologram> allHolograms = new HashMap<>();
 
-    public LinkedList<HologramLine> lines;
+    public ArrayList<HologramLine> lines;
     public Location baseLoc;
 
     public RealHologram(Location location, Component... text) {
-        lines = new LinkedList<>();
+        lines = new ArrayList<>();
         baseLoc = location.clone();
 
         for(int i = 0; i < text.length; i++) {
@@ -30,34 +32,37 @@ public class RealHologram {
             double decreaseHeight = (double) i * -0.33;
             lineLoc.setY(lineLoc.getY() + decreaseHeight);
 
-            lines.addLast(new HologramLine(text[i], lineLoc));
+            lines.add(new HologramLine(text[i], lineLoc));
         }
     }
 
     public void setText(Component... newText) {
-        ListIterator<HologramLine> listIter = lines.listIterator();
+        int max = Math.max(newText.length, lines.size());
+        //int maxNewTextIndex = newText.length - 1;
+        //int maxLinesIndex = lines.size() - 1;
 
-        int cap = Math.max(newText.length, lines.size() + 1);
+        for(int i = 0; i < max; i++) {
+            //replace the HologramLine text
+            if(i < newText.length && i < lines.size()) {
+                lines.get(i).setText(newText[i]);
+            }
+            //more existing lines than we now want, so remove existing line
+            else if(i >= newText.length && i < lines.size()) {
+                lines.get(i).kill();
+                //don't remove just yet to not interrupt the for loop?
+                lines.set(i, null);
+            }
+            //we need to add more lines
+            else if(i >= lines.size() && i < newText.length){
+                lines.add(new HologramLine(newText[i], baseLoc.clone().add(0, i * -0.33, 0)));
+            }
+        }
 
-        while(listIter.previousIndex() <= cap) {
-            HologramLine line = listIter.next();
-
-            if(listIter.previousIndex() < newText.length) {
-                line.setText(newText[listIter.previousIndex()]);
-            }
-            //delete unnecessary lines
-            else if(listIter.previousIndex() >= newText.length) {
-                listIter.remove();
-            }
-            //still more lines to add, expand the list
-            else if(newText.length > listIter.previousIndex() && !listIter.hasNext()) {
-                //keep adding to the end of the list here
-                double decHeight;
-                for(int i = listIter.previousIndex(); i < newText.length; i++) {
-                    decHeight = i * -0.33;
-                    listIter.add(new HologramLine(newText[listIter.previousIndex()], baseLoc.clone().add(0, decHeight, 0)));
-                }
-            }
+        //clean up
+        Iterator<HologramLine> iter = lines.iterator();
+        while(iter.hasNext()) {
+            if(iter.next() == null)
+                iter.remove();
         }
     }
 
@@ -98,6 +103,10 @@ public class RealHologram {
 
         public void setText(Component text) {
             bukkitStand.customName(text);
+        }
+
+        public void kill() {
+            bukkitStand.remove();
         }
     }
 }
