@@ -41,17 +41,26 @@ public class SidebarManager {
     public static void setLines(Component... lines) {
         int max = Math.max(lines.length, lineTeams.size());
         //set scores to keep order of entries correct in sidebar
-        int lineNum = lines.length;
+        int lineNum = 0;
+        
+        /*for(int i = 0; i <= lineTeams.size(); i++) {
+            OBJECTIVE.getScore(getUniqueEntryName(i)).resetScore();
+        }*/
 
         for(int i = 0; i < max; i++) {
             //replace the team prefix for that line
             if(i < lines.length && i < lineTeams.size()) {
                 Team team = lineTeams.get(i);
-                team.suffix(lines[i]);
-                OBJECTIVE.getScore(getUniqueEntryName(lineNum)).setScore(lineNum--);
+                if(!team.suffix().contains(lines[i]) && !lines[i].contains(team.suffix()))
+                    team.suffix(lines[i]);
+                String entryName = getUniqueEntryName(i);
+                //will auto remove from other team for me
+                team.addEntry(entryName);
+                OBJECTIVE.getScore(entryName).setScore(lines.length - i);
             }
             //more existing lines than we now want, so remove existing line
             else if(i >= lines.length && i < lineTeams.size()) {
+                OBJECTIVE.getScore(getUniqueEntryName(i)).resetScore();
                 lineTeams.get(i).unregister();
                 //don't remove just yet to not interrupt the for loop?
                 lineTeams.set(i, null);
@@ -60,11 +69,13 @@ public class SidebarManager {
             else if(i >= lineTeams.size() && i < lines.length){
                 Team newLine = SCOREBOARD.registerNewTeam(TEAMS_IDENTIFIER + teamNames++);
                 newLine.suffix(lines[i]);
-                String entry = getUniqueEntryName(lineNum);
+                String entry = getUniqueEntryName(i);
                 newLine.addEntry(entry);
-                OBJECTIVE.getScore(entry).setScore(lineNum--);
+                OBJECTIVE.getScore(entry).setScore(lines.length - i);
                 lineTeams.add(newLine);
             }
+            
+            //lineNum--;
         }
 
         //clean up
@@ -96,7 +107,7 @@ public class SidebarManager {
 
         TeamArenaTeam[] teams = game.getTeams();
 
-        int size = game.getTeams().length;
+        int size = game.getTeams().length * 2;
         //two more lines for spectators, if there are any
         if(game.getSpectators().size() > 0)
             size += 1;
@@ -117,11 +128,12 @@ public class SidebarManager {
     }
 
     public static String getUniqueEntryName(int num) {
-        String s = ENTRY_IDENTIFIER;
+        /*String s = ENTRY_IDENTIFIER;
         for(int i = 0; i < num; i++) {
             s += ENTRY_IDENTIFIER;
         }
 
-        return s;
+        return s;*/
+        return ENTRY_IDENTIFIER + ENTRY_IDENTIFIER.repeat(Math.max(0, num));
     }
 }
