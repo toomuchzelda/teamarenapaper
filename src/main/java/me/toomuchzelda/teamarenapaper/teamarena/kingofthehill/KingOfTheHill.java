@@ -196,7 +196,8 @@ public class KingOfTheHill extends TeamArena
 				
 				boolean draw = false;
 				TeamArenaTeam winner = null;
-				int highestScore = 0;
+				//init to -1 so if a team has 0 score it doesn't call a draw
+				int highestScore = -1;
 				for(TeamArenaTeam team : teams) {
 					if(team.score2 > highestScore) {
 						winner = team;
@@ -219,7 +220,7 @@ public class KingOfTheHill extends TeamArena
 					Bukkit.broadcast(winner.getComponentName().append(Component.text(" wins!!!!").color(owningTeam.getRGBTextColor())));
 				
 				prepEnd();
-				return;
+				//return;
 			}
 			else {
 				Hill nextHill = hills[++hillIndex];
@@ -236,8 +237,7 @@ public class KingOfTheHill extends TeamArena
 		}
 
 		//test holograms
-		LinkedList<Component> list = new LinkedList<>();
-
+		/*LinkedList<Component> list = new LinkedList<>();
 		for(Player p : players) {
 			if(activeHill.getBorder().contains(p.getBoundingBox())) {
 				list.add(p.displayName());
@@ -251,22 +251,32 @@ public class KingOfTheHill extends TeamArena
 		for(Component comp : list) {
 			arr[i++] = comp;
 		}
+		activeHill.setHologram(arr);*/
 
-		activeHill.setHologram(arr);
-
-		//test sidebar
-
+		//sidebar
 		//3 lines for each team
-		Component[] lines = new Component[2 * teams.length];
+		final byte numLines = 3;
+		LinkedList<TeamArenaTeam> aliveTeams = new LinkedList<>();
+		
+		for(TeamArenaTeam team : teams) {
+			if(team.isAlive())
+				aliveTeams.add(team);
+		}
+		
+		Component[] lines = new Component[numLines * aliveTeams.size()];
 
 		int index = 0;
-		for(TeamArenaTeam team : teams) {
+		for(TeamArenaTeam team : aliveTeams) {
 			lines[index] = team.getComponentSimpleName();
 			lines[index + 1] = Component.text("Score: ")
 					.append(Component.text(team.score + team.score2).color(team.getRGBTextColor()).decorate(TextDecoration.BOLD));
-			//lines[index + 2] = Component.text("asdfasdf").color(MathUtils.randomTextColor());
+			
+			if(owningTeam == team)
+				lines[index + 2] = Component.text("KING").decorate(TextDecoration.BOLD);
+			else
+				lines[index + 2] = Component.text("Cap: " + hillCapProgresses.get(team)).decorate(TextDecoration.BOLD);
 
-			index += 2;
+			index += numLines;
 		}
 		SidebarManager.setLines(lines);
 
