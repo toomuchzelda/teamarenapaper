@@ -1,14 +1,20 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Color;
 import org.bukkit.DyeColor;
+import org.bukkit.FireworkEffect;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
+import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
 
@@ -291,10 +297,46 @@ public class TeamArenaTeam
 		int[] ints = new int[3];
 		for(int i = 0; i < strings.length; i++) {
 			ints[i] = Integer.parseInt(strings[i]);
-			if(i < 0 || i > 255) {
+			if(ints[i] < 0 || ints[i] > 255) {
 				throw new IllegalArgumentException("Bad colour info, must be between 0 and 255: " + i + " in " + string);
 			}
 		}
 		return Color.fromRGB(ints[0], ints[1], ints[2]);
+	}
+	
+	public static void playFireworks(TeamArenaTeam team) {
+		for(Entity e : team.entityMembers) {
+			Color colour1;
+			Color colour2;
+			if(team.secondColour != null) {
+				if(MathUtils.random.nextBoolean()) {
+					colour1 = team.secondColour;
+					colour2 = team.colour;
+				}
+				else {
+					colour1 = team.colour;
+					colour2 = team.secondColour;
+				}
+			}
+			else {
+				colour1 = team.colour;
+				colour2 = team.colour;
+			}
+
+			Firework firework = (Firework) e.getWorld().spawnEntity(e.getLocation(), EntityType.FIREWORK, CreatureSpawnEvent.SpawnReason.CUSTOM);
+			FireworkMeta meta = firework.getFireworkMeta();
+			meta.clearEffects();
+			FireworkEffect.Type type = FireworkEffect.Type.values()[MathUtils.randomMax(FireworkEffect.Type.values().length - 1)];
+			boolean flicker = MathUtils.random.nextBoolean();
+			FireworkEffect effect = FireworkEffect.builder().trail(true).with(type).flicker(flicker).withColor(colour1)
+					.withFade(colour2).build();
+			
+			meta.addEffect(effect);
+			meta.setPower(1);
+			firework.setFireworkMeta(meta);
+			firework.setShotAtAngle(true);
+			Vector velocity = new Vector(MathUtils.randomRange(-0.4, 0.4), 1, MathUtils.randomRange(-0.4, 0.4));
+			firework.setVelocity(velocity);
+		}
 	}
 }

@@ -17,6 +17,7 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import org.bukkit.*;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -24,6 +25,7 @@ import org.bukkit.entity.Projectile;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.potion.PotionEffect;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.yaml.snakeyaml.Yaml;
@@ -63,6 +65,7 @@ public abstract class TeamArena
 
 	protected TeamArenaTeam[] teams;
 	protected TeamArenaTeam noTeamTeam;
+	protected TeamArenaTeam winningTeam;
 	//store the last team that a player has left from
 	// to prevent players leaving -> rejoining before game start to try get on another team
 	protected TeamArenaTeam lastHadLeft;
@@ -184,6 +187,7 @@ public abstract class TeamArena
 		noTeamTeam = new TeamArenaTeam("No Team", "No Team", Color.YELLOW, Color.ORANGE, DyeColor.YELLOW);
 		spectatorTeam = new TeamArenaTeam("Spectators", "Specs", TeamArenaTeam.convert(NamedTextColor.DARK_GRAY), null,
 				null);
+		winningTeam = null;
 
 		kitMenuItem = new ItemStack(Material.FEATHER);
 		Component kitMenuName = Component.text("Select a Kit").color(NamedTextColor.BLUE)
@@ -226,6 +230,11 @@ public abstract class TeamArena
 			p.getInventory().clear();
 			giveLobbyItems(p);
 			p.setAllowFlight(true);
+			p.setHealth(p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
+			p.setAbsorptionAmount(0);
+			for(PotionEffect effect : p.getActivePotionEffects()) {
+				p.removePotionEffect(effect.getType());
+			}
 		}
 	}
 
@@ -421,6 +430,10 @@ public abstract class TeamArena
 	}
 	
 	public void endTick() {
+		//fireworks
+		if(winningTeam != null && gameTick % 40 == 0)
+			TeamArenaTeam.playFireworks(winningTeam);
+
 		if(gameTick - waitingSince >= END_GAME_TIME) {
 			Bukkit.broadcastMessage("Prepping dead....");
 			prepDead();
@@ -465,7 +478,7 @@ public abstract class TeamArena
 				i++;
 			}
 		}
-		
+
 		//correct the timer
 		waitingSince = gameTick - PRE_TEAMS_TIME - PRE_GAME_STARTING_TIME;
 		//EventListeners.java should stop them from moving
@@ -484,6 +497,8 @@ public abstract class TeamArena
 
 			player.getInventory().clear();
 			kit.giveKit(player, true);
+
+			player.playSound(player.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.AMBIENT, 2, 1);
 		}
 	}
 	
@@ -498,7 +513,8 @@ public abstract class TeamArena
 			for(Player pp : Bukkit.getOnlinePlayers()) {
 				p.showPlayer(Main.getPlugin(), pp);
 			}
-			
+			p.setAllowFlight(true);
+
 			PlayerInfo pinfo = Main.getPlayerInfo(p);
 			pinfo.kit.removeKit(p);
 			pinfo.kit = null;
@@ -506,7 +522,6 @@ public abstract class TeamArena
 			pinfo.spawnPoint = null;
 		}
 		
-		//todo: cleanup kits and abilities
 		for(Kit kit : kits) {
 			for(Ability ability : kit.getAbilities()) {
 				ability.unregisterAbility();
@@ -552,7 +567,7 @@ public abstract class TeamArena
 		if(shuffledPlayers.size() == 0)
 			return;
 
-		Collections.shuffle(shuffledPlayers);
+		Collections.shuffle(shuffledPlayers, MathUtils.random);
 
 		//not considering remainders/odd players
 		int maxOnTeam = players.size() / teams.length;

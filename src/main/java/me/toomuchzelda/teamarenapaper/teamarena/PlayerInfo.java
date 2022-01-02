@@ -19,6 +19,8 @@ public class PlayerInfo
 	public String defaultKit;
 	//from 1-10. number of ticks in between particle play
 	public byte kothHillParticles;
+	//whether the player wants to see titles during gameplay (they will also get a chat message regardless)
+	public boolean receiveGameTitles;
 
 	public PlayerInfo() {
 		team = null;
@@ -27,6 +29,7 @@ public class PlayerInfo
 		kit = null;
 		defaultKit = "Trooper";
 		kothHillParticles = 1;
+		receiveGameTitles = true;
 
 		permissionLevel = CustomCommand.ALL;
 	}
