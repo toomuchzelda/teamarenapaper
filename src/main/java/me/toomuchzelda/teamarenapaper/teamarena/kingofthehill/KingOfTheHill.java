@@ -3,21 +3,16 @@ package me.toomuchzelda.teamarenapaper.teamarena.kingofthehill;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.BlockUtils;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
-import me.toomuchzelda.teamarenapaper.teamarena.GameState;
-import me.toomuchzelda.teamarenapaper.teamarena.SidebarManager;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.teamarena.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.Bukkit;
-import org.bukkit.Color;
+import org.bukkit.*;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.util.BoundingBox;
-import org.checkerframework.checker.units.qual.C;
 
 import java.util.*;
 
@@ -125,6 +120,9 @@ public class KingOfTheHill extends TeamArena
 
 				points += toEarn;
 
+                if(points < 0f)
+                    points = 0f;
+
 				//Bukkit.broadcastMessage(team.getName() + " points: " + points + ", toEarn: " + toEarn + "numPlayers: " + numPlayers + " numOwningPlayers: " + numOwningPlayers);
 				//Bukkit.broadcastMessage("entityMembers size: " + team.getEntityMembers().size());
 
@@ -138,22 +136,33 @@ public class KingOfTheHill extends TeamArena
 				hillCapProgresses.put(team, points);
 			}
 		}
-		
+
 		if(newOwningTeam != null) {
 			//change the owning team here
-			Bukkit.broadcast(newOwningTeam.getComponentSimpleName()
+			Component capturedMsg = newOwningTeam.getComponentSimpleName()
 					.append(Component.text(" has captured ").color(NamedTextColor.GOLD)
 							.append(Component.text(activeHill.getName()).color(NamedTextColor.GOLD)
-									.append(Component.text('!').color(NamedTextColor.GOLD)))));
-			
+									.append(Component.text('!').color(NamedTextColor.GOLD))));
+			Bukkit.broadcast(capturedMsg);
+
+			Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
+			while(iter.hasNext()) {
+				Map.Entry<Player, PlayerInfo> entry = iter.next();
+				Player p = entry.getKey();
+				p.playSound(p.getLocation(), Sound.ENTITY_HORSE_DEATH, SoundCategory.AMBIENT, 9, 0.5f);
+				if(entry.getValue().receiveGameTitles) {
+					PlayerUtils.sendTitle(p, Component.empty(), capturedMsg, 10, 25, 10);
+				}
+			}
+
 			owningTeam = newOwningTeam;
 			hillCapProgresses.clear();
 			ticksAndPlayersToCaptureHill = INITIAL_CAP_TIME;
 		}
-		
+
 		if(owningTeam != null) {
 			owningTeam.score++;
-			
+
 			coloursList.add(owningTeam.getColour());
 			if(owningTeam.getSecondColour() != null)
 				coloursList.add(owningTeam.getSecondColour());
@@ -164,9 +173,9 @@ public class KingOfTheHill extends TeamArena
 			coloursList.add(Color.WHITE);
 			//coloursList.add(Color.WHITE);
 		}
-		
+
 		activeHill.playParticles(coloursList.toArray(new Color[0]));
-		
+
 		//no team owns the hill; do anti-stalling mechanism
 		if(owningTeam == null) {
 			//every two minutes
@@ -174,17 +183,21 @@ public class KingOfTheHill extends TeamArena
 				String s = "The time to capture the Hill has been halved";
 				if(ticksAndPlayersToCaptureHill != INITIAL_CAP_TIME)
 					s += " again";
-				
+
 				s += "! It will reset when one team captures the hill";
-				Bukkit.broadcast(Component.text(s).color(TextColor.color(255, 0, 0)));
-				
+				Bukkit.broadcast(Component.text(s).color(TextColor.color(255, 10, 10)));
+
 				ticksAndPlayersToCaptureHill /= 2;
+
+				for(Player p : Bukkit.getOnlinePlayers()) {
+					p.playSound(p.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.AMBIENT, 99999, 0.6f);
+				}
 			}
 		}
 		//process hill change
 		else if(owningTeam.score / 20 >= activeHill.getHillTime()) {
 			activeHill.setDone();
-			
+
 			//add their current hill points to total
 			for(TeamArenaTeam team : teams) {
 				team.score2 += team.score;
@@ -193,7 +206,7 @@ public class KingOfTheHill extends TeamArena
 
 			//no more hills, game is over
 			if(hillIndex == hills.length - 1) {
-				
+
 				boolean draw = false;
 				TeamArenaTeam winner = null;
 				//init to -1 so if a team has 0 score it doesn't call a draw
@@ -209,23 +222,53 @@ public class KingOfTheHill extends TeamArena
 						break;
 					}
 				}
-				
+
 				if(draw) {
 					Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
 					Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
 					Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
 					Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
+
+					Bukkit.getOnlinePlayers().forEach(player ->	player.playSound(player.getLocation(),
+							Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.AMBIENT, 2, 0.5f));
 				}
-				else
-					Bukkit.broadcast(winner.getComponentName().append(Component.text(" wins!!!!").color(owningTeam.getRGBTextColor())));
-				
+				else {
+					Component winText = winner.getComponentName().append(Component.text(" wins!!").color(owningTeam.getRGBTextColor()));
+					Bukkit.broadcast(winText);
+
+					Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
+					while(iter.hasNext()) {
+						Map.Entry<Player, PlayerInfo> entry = iter.next();
+						if(entry.getValue().receiveGameTitles) {
+							PlayerUtils.sendTitle(entry.getKey(), winText, Component.empty(), 10, 4 * 20, 10);
+						}
+						if(entry.getValue().team == winner) {
+							entry.getKey().playSound(entry.getKey().getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE,
+									SoundCategory.AMBIENT, 2f, 1f);
+						}
+					}
+
+					winningTeam = winner;
+				}
+
 				prepEnd();
 				//return;
 			}
 			else {
 				Hill nextHill = hills[++hillIndex];
-				Bukkit.broadcast(Component.text("The Hill has moved to " + nextHill.getName()).color(NamedTextColor.GOLD));
-				//play sound, subtitle etc
+				Component hillChangeMsg = Component.text("The Hill has moved to " + nextHill.getName()).color(NamedTextColor.GOLD);
+				Bukkit.broadcast(hillChangeMsg);
+				Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
+				Location soundLoc = nextHill.getBorder().getCenter().toLocation(gameWorld);
+				while(iter.hasNext()) {
+					Map.Entry<Player, PlayerInfo> entry = iter.next();
+					if(entry.getValue().receiveGameTitles) {
+						PlayerUtils.sendTitle(entry.getKey(), Component.empty(), hillChangeMsg, 10, 30, 10);
+					}
+					//and the sound, while we've got this iter anyway
+					entry.getKey().playSound(soundLoc, Sound.ENTITY_PARROT_IMITATE_ENDER_DRAGON,SoundCategory.AMBIENT,
+							9999, 0.5f);
+				}
 
 				activeHill = nextHill;
 				lastHillChangeTime = gameTick;
@@ -254,51 +297,80 @@ public class KingOfTheHill extends TeamArena
 		activeHill.setHologram(arr);*/
 
 		//sidebar
-		//3 lines for each team
-		final byte numLines = 3;
+		// https://www.spigotmc.org/threads/max-amount-of-scoreboard-lines.176280/
+		// sidebar apparently can have max 15 lines excluding objective name
+		// sort through to order them in descending order (winning team at the top)
+		// so have 3 lines per team if there's 5 or less teams,
+		// 2 lines per team for 7 or less
+		// 1 line for more than 7
+		byte numLines;
 		LinkedList<TeamArenaTeam> aliveTeams = new LinkedList<>();
-		
+		Component[] lines;
 		for(TeamArenaTeam team : teams) {
 			if(team.isAlive())
 				aliveTeams.add(team);
 		}
-		
-		Component[] lines = new Component[numLines * aliveTeams.size()];
+
+		Comparator<TeamArenaTeam> byScore = (teamArenaTeam, t1) -> (t1.score + t1.score2) - (teamArenaTeam.score + teamArenaTeam.score2);
+		aliveTeams.sort(byScore);
+
+		if(aliveTeams.size() <= 5)
+			numLines = 3;
+		else if(aliveTeams.size() <= 7)
+			numLines = 2;
+		else
+			numLines = 1;
+
+		lines = new Component[numLines * aliveTeams.size()];
 
 		int index = 0;
-		for(TeamArenaTeam team : aliveTeams) {
-			lines[index] = team.getComponentSimpleName();
-			lines[index + 1] = Component.text("Score: ")
-					.append(Component.text(team.score + team.score2).color(team.getRGBTextColor()).decorate(TextDecoration.BOLD));
-			
-			if(owningTeam == team)
-				lines[index + 2] = Component.text("KING").decorate(TextDecoration.BOLD);
-			else
-				lines[index + 2] = Component.text("Cap: " + hillCapProgresses.get(team)).decorate(TextDecoration.BOLD);
-
+		for (TeamArenaTeam team : aliveTeams) {
+			Component first = team.getComponentSimpleName();
+			if(numLines == 3) {
+				lines[index] = first;
+				lines[index + 1] = Component.text("Score: ")
+						.append(Component.text(team.score + team.score2).color(team.getRGBTextColor()).decorate(TextDecoration.BOLD));
+			}
+			else {
+				first = first.append(Component.text(": " + team.score2 + team.score).decorate(TextDecoration.BOLD))
+						.color(team.getRGBTextColor());
+				lines[index] = first;
+			}
+			//use bossbars for cap progress instead
+			if(numLines != 1) {
+				if (owningTeam == team)
+					lines[index + 2] = Component.text("KING").decorate(TextDecoration.BOLD);
+				else {
+					Float cap = hillCapProgresses.get(team);
+					if (cap == null)
+						cap = 0f;
+					lines[index + 2] = Component.text("Cap: " + cap).decorate(TextDecoration.BOLD);
+				}
+			}
 			index += numLines;
 		}
+
 		SidebarManager.setLines(lines);
 
 		super.liveTick();
 	}
-	
+
 	@Override
 	public void prepLive() {
 		super.prepLive();
-		
+
 		this.lastHillChangeTime = gameTick;
 	}
-	
+
 	@Override
 	public void prepEnd() {
-		
+
 		for(Hill h : hills) {
 			h.getHologram().remove();
 		}
-		
+
 		hillCapProgresses.clear();
-		
+
 		super.prepEnd();
 	}
 
