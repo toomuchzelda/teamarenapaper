@@ -64,6 +64,8 @@ public abstract class TeamArena
 	protected Location spawnPos;
 
 	protected TeamArenaTeam[] teams;
+	//to avoid having to construct a new List on every tabComplete
+	protected LinkedList<String> tabTeamsList;
 	protected TeamArenaTeam noTeamTeam;
 	protected TeamArenaTeam winningTeam;
 	//store the last team that a player has left from
@@ -87,6 +89,7 @@ public abstract class TeamArena
 	public static final int MID_GAME_JOIN_SECONDS = 10;
 
 	protected Kit[] kits;
+	protected LinkedList<String> tabKitList;
 	protected ItemStack kitMenuItem;
 
 	protected MapInfo mapInfo;
@@ -197,10 +200,19 @@ public abstract class TeamArena
 		kitMenuItem.setItemMeta(kitItemMeta);
 
 		kits = new Kit[]{new KitTrooper(), new KitArcher(), new KitNone()};
+		tabKitList = new LinkedList<>();
 		for(Kit kit : kits) {
 			for(Ability ability : kit.getAbilities()) {
 				ability.registerAbility();
 			}
+			
+			tabKitList.add(kit.getName());
+		}
+		
+		//List of team names
+		tabTeamsList = new LinkedList<>();
+		for(TeamArenaTeam team : teams) {
+			tabTeamsList.add(team.getSimpleName());
 		}
 
 		players = ConcurrentHashMap.newKeySet();
@@ -1157,6 +1169,14 @@ public abstract class TeamArena
 	
 	public TeamArenaTeam getSpectatorTeam() {
 		return spectatorTeam;
+	}
+	
+	public LinkedList<String> getTabTeamsList() {
+		return tabTeamsList;
+	}
+	
+	public LinkedList<String> getTabKitList() {
+		return tabKitList;
 	}
 
 	public String mapPath() {

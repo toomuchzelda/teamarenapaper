@@ -7,9 +7,12 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedList;
+import java.util.List;
 
 public class CommandGame extends CustomCommand {
 
@@ -23,6 +26,7 @@ public class CommandGame extends CustomCommand {
         if(args.length > 0) {
             if(args[0].equalsIgnoreCase("start")) {
                 GameState state = Main.getGame().getGameState();
+                Bukkit.broadcast(Component.text(sender.getName() + " skipping " + state.toString()).color(NamedTextColor.BLUE));
                 if(state == GameState.PREGAME)
                     Main.getGame().prepTeamsDecided();
                 else if(state == GameState.TEAMS_CHOSEN)
@@ -30,12 +34,23 @@ public class CommandGame extends CustomCommand {
                 else if(state == GameState.GAME_STARTING)
                     Main.getGame().prepLive();
 
-                Bukkit.broadcast(Component.text(sender.getName() + " skipped " + state.toString()).color(NamedTextColor.BLUE));
             }
             else
                 return false;
         }
 
         return true;
+    }
+    
+    @Override
+    public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
+        LinkedList<String> list = new LinkedList<>();
+        if(args.length == 1) {
+            if ((sender instanceof Player p && Main.getPlayerInfo(p).permissionLevel >= CustomCommand.MOD) || sender instanceof ConsoleCommandSender) {
+                list.add("start");
+            }
+        }
+        
+        return list;
     }
 }

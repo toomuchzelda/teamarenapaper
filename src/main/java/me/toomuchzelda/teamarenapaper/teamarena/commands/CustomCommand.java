@@ -5,6 +5,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.LinkedList;
 import java.util.List;
 
 public class CustomCommand extends Command {
@@ -34,5 +35,10 @@ public class CustomCommand extends Command {
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         Main.logger().warning("Command " + this.getName() + " execute method has not been overriden!");
         return false;
+    }
+    
+    @Override
+    public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
+        return new LinkedList<>();
     }
 }

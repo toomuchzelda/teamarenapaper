@@ -4,6 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.command.Command;
@@ -12,6 +13,7 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedList;
+import java.util.List;
 
 public class CommandTeam extends CustomCommand {
 
@@ -54,5 +56,15 @@ public class CommandTeam extends CustomCommand {
             sender.sendMessage(Component.text("You can't use /team from the console").color(NamedTextColor.RED));
         }
         return true;
+    }
+    
+    @Override
+    public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
+        //they've put a space after the /team
+        if(args.length == 1 && sender instanceof Player) {
+            return Main.getGame().getTabTeamsList();
+        }
+        
+        return new LinkedList<>();
     }
 }

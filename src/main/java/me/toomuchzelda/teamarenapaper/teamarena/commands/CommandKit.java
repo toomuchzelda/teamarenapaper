@@ -42,4 +42,13 @@ public class CommandKit extends CustomCommand {
         }
         return true;
     }
+    
+    @Override
+    public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
+        if(args.length == 1 && sender instanceof Player) {
+            return Main.getGame().getTabKitList();
+        }
+        
+        return new LinkedList<>();
+    }
 }
