@@ -553,6 +553,7 @@ public abstract class TeamArena
 			}
 			//spectatorTeam.removeAllMembers();
 			spectatorTeam.unregister();
+			noTeamTeam.unregister();
 		}, END_GAME_TIME - 3);
 		
 		setGameState(GameState.END);
@@ -770,6 +771,7 @@ public abstract class TeamArena
 
 		player.getInventory().clear();
 		player.setAllowFlight(false);
+		player.setFallDistance(0);
 
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
 		player.teleport(pinfo.team.getNextSpawnpoint());

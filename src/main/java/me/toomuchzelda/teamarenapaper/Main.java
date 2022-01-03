@@ -77,7 +77,6 @@ public final class Main extends JavaPlugin
 		//delete temporarily loaded map if any
 		if(teamArena.getWorld() != null) {
 			Bukkit.unloadWorld(teamArena.getWorld(), false);
-			String name = teamArena.getWorldFile().getName();
 			FileUtils.delete(teamArena.getWorldFile());
 			//getLogger().info("Deleted " + name);
 		}

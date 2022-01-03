@@ -207,23 +207,16 @@ public class KingOfTheHill extends TeamArena
 			//no more hills, game is over
 			if(hillIndex == hills.length - 1) {
 
-				boolean draw = false;
 				TeamArenaTeam winner = null;
-				//init to -1 so if a team has 0 score it doesn't call a draw
-				int highestScore = -1;
+				int highestScore = 0;
 				for(TeamArenaTeam team : teams) {
 					if(team.score2 > highestScore) {
 						winner = team;
 						highestScore = team.score2;
 					}
-					//a draw
-					else if(team.score2 == highestScore) {
-						draw = true;
-						break;
-					}
 				}
 
-				if(draw) {
+				if(winner == null) {
 					Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
 					Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
 					Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
