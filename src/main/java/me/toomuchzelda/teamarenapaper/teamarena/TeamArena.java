@@ -1057,11 +1057,6 @@ public abstract class TeamArena
 		ArrayList<String> borders = (ArrayList<String>) map.get("Border");
 		Vector corner1 = BlockUtils.parseCoordsToVec(borders.get(0), 0, 0, 0);
 		Vector corner2 = BlockUtils.parseCoordsToVec(borders.get(1), 0, 0, 0);
-		//if both Y are 0 then have no ceiling
-		if(corner1.getY() == 0 && corner2.getY() == 0) {
-			corner1.setY(Double.MAX_VALUE);
-			corner2.setY(Double.MIN_VALUE);
-		}
 		border = BoundingBox.of(corner1, corner2);
 		Main.logger().info("MapBorder: " + border.toString());
 
@@ -1075,11 +1070,20 @@ public abstract class TeamArena
 		int y = gameWorld.getHighestBlockYAt(centre.getBlockX(), centre.getBlockZ());
 		if(y > centre.getY())
 			centre.setY(y);
-
+		
 		spawnPos = centre.toLocation(gameWorld, 90, 0);
 		spawnPos.setY(spawnPos.getY() + 2);
 
 		Main.logger().info("spawnPos: " + spawnPos.toString());
+		
+		//if both Y are 0 then have no ceiling
+		// do this after spawnpoint calculation otherwise it's trouble
+		if(corner1.getY() == 0 && corner2.getY() == 0) {
+			corner1.setY(Double.MAX_VALUE);
+			corner2.setY(Double.MIN_VALUE);
+			border = BoundingBox.of(corner1, corner2);
+			Main.logger().info("border has MAX and MIN_VALUE Y limits");
+		}
 
 		//Create the teams
 		Map<String, Map<String, ArrayList<String>>> teamsMap =
