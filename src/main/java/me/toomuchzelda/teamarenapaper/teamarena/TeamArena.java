@@ -6,10 +6,7 @@ import me.toomuchzelda.teamarenapaper.core.FileUtils;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.KitArcher;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.KitNone;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.KitTrooper;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -199,7 +196,7 @@ public abstract class TeamArena
 		kitItemMeta.displayName(kitMenuName);
 		kitMenuItem.setItemMeta(kitItemMeta);
 
-		kits = new Kit[]{new KitTrooper(), new KitArcher(), new KitNone()};
+		kits = new Kit[]{new KitTrooper(this), new KitArcher(this), new KitGhost(this), new KitNone(this)};
 		tabKitList = new LinkedList<>();
 		for(Kit kit : kits) {
 			for(Ability ability : kit.getAbilities()) {
@@ -324,82 +321,60 @@ public abstract class TeamArena
 
 		//process players waiting to respawn if a respawning game
 		if(isRespawningGame()) {
-			//todo prob make this a method
-			Iterator<Map.Entry<Player, Integer>> respawnIter = respawnTimers.entrySet().iterator();
-			while (respawnIter.hasNext()) {
-				Map.Entry<Player, Integer> entry = respawnIter.next();
-				Player p = entry.getKey();
-
-				//player ready to respawn
-				if(entry.getValue() == -1) {
-					respawnPlayer(p);
-					respawnIter.remove();
-					continue;
-				}
-				
-				//respawn after five seconds
-				int ticksLeft = getGameTick() - entry.getValue();
-				if(ticksLeft >= RESPAWN_SECONDS * 20) {
-					/*respawnPlayer(p);
-					respawnIter.remove();*/
-					if(ticksLeft % 20 == 0) {
-						TextColor color;
-						if (ticksLeft % 40 == 20)
-							color = TextColor.color(52, 247, 140);
-						else
-							color = MathUtils.randomTextColor();
-
-						p.sendActionBar(Component.text("Ready to respawn! Click [item tbd] or type /respawn")
-								//.color(MathUtils.randomTextColor()));
-								.color(color));
-					}
-				}
-				else {
-					//tell them how long remaining to respawn
-					int seconds = RESPAWN_SECONDS - (ticksLeft / 20);
-					TextColor color;
-					//flash green
-					if(seconds % 2 == 0)
-						color = TextColor.color(0, 255, 0);
-					else
-						color = TextColor.color(0, 190, 0);
-
-					p.sendActionBar(Component.text("You can respawn in " + seconds + " seconds").color(color));
-				}
-			}
+			respawnerTick();
 		}
 
 		midJoinerTick();
 
 		//process damage events
-		Iterator<DamageEvent> iter = damageQueue.iterator();
-		while(iter.hasNext()) {
-			DamageEvent event = iter.next();
-			iter.remove();
-
-			if(event.hasKnockback()) {
-				//reduce knockback done by axes
-				if (event.getDamageType().isMelee() && event.getFinalAttacker() instanceof LivingEntity living) {
-					if (living.getEquipment() != null) {
-						ItemStack weapon = living.getEquipment().getItemInMainHand();
-						if (weapon.getType().toString().endsWith("AXE")) {
-							event.getKnockback().multiply(0.8);
-							//Bukkit.broadcastMessage("Reduced axe knockback");
-						}
-					}
-				}
-				//reduce knockback done by projectiles
-				else if(event.getDamageType().isProjectile()) {
-					if(event.getAttacker() instanceof Projectile) {
-						event.getKnockback().multiply(0.8);
-					}
+		damageTick();
+		
+	}
+	
+	public void respawnerTick() {
+		//todo prob make this a method
+		Iterator<Map.Entry<Player, Integer>> respawnIter = respawnTimers.entrySet().iterator();
+		while (respawnIter.hasNext()) {
+			Map.Entry<Player, Integer> entry = respawnIter.next();
+			Player p = entry.getKey();
+			
+			//player ready to respawn
+			if(entry.getValue() == -1) {
+				respawnPlayer(p);
+				respawnIter.remove();
+				continue;
+			}
+			
+			//respawn after five seconds
+			int ticksLeft = getGameTick() - entry.getValue();
+			if(ticksLeft >= RESPAWN_SECONDS * 20) {
+					/*respawnPlayer(p);
+					respawnIter.remove();*/
+				if(ticksLeft % 20 == 0) {
+					TextColor color;
+					if (ticksLeft % 40 == 20)
+						color = TextColor.color(52, 247, 140);
+					else
+						color = MathUtils.randomTextColor();
+					
+					p.sendActionBar(Component.text("Ready to respawn! Click [item tbd] or type /respawn")
+							//.color(MathUtils.randomTextColor()));
+							.color(color));
 				}
 			}
-
-			event.executeAttack();
+			else {
+				//tell them how long remaining to respawn
+				int seconds = RESPAWN_SECONDS - (ticksLeft / 20);
+				TextColor color;
+				//flash green
+				if(seconds % 2 == 0)
+					color = TextColor.color(0, 255, 0);
+				else
+					color = TextColor.color(0, 190, 0);
+				
+				p.sendActionBar(Component.text("You can respawn in " + seconds + " seconds").color(color));
+			}
 		}
-
-
 	}
 	
 	public void midJoinerTick() {
@@ -438,6 +413,65 @@ public abstract class TeamArena
 				p.sendActionBar(Component.text("Spectating...").color(NamedTextColor.BLUE));
 			}
 			
+		}
+	}
+	
+	public void damageTick() {
+		Iterator<DamageEvent> iter = damageQueue.iterator();
+		while(iter.hasNext()) {
+			DamageEvent event = iter.next();
+			iter.remove();
+			
+			if(event.hasKnockback()) {
+				//reduce knockback done by axes
+				if (event.getDamageType().isMelee() && event.getFinalAttacker() instanceof LivingEntity living) {
+					if (living.getEquipment() != null) {
+						ItemStack weapon = living.getEquipment().getItemInMainHand();
+						if (weapon.getType().toString().endsWith("AXE")) {
+							event.getKnockback().multiply(0.8);
+							//Bukkit.broadcastMessage("Reduced axe knockback");
+						}
+					}
+				}
+				//reduce knockback done by projectiles
+				else if(event.getDamageType().isProjectile()) {
+					if(event.getAttacker() instanceof Projectile) {
+						event.getKnockback().multiply(0.8);
+					}
+				}
+			}
+			
+			//ability pre-attack events
+			if(event.getFinalAttacker() instanceof Player p) {
+				Ability[] abilities = Main.getPlayerInfo(p).kit.getAbilities();
+				for(Ability ability : abilities) {
+					ability.onAttemptedAttack(event);
+				}
+			}
+			if(event.getVictim() instanceof Player p) {
+				Ability[] abilities = Main.getPlayerInfo(p).kit.getAbilities();
+				for(Ability ability : abilities) {
+					ability.onAttemptedDamage(event);
+				}
+			}
+			
+			//ability on confirmed attacks done in this.confirmedDamageAbilities() called by DamageEvent.executeAttack()
+			event.executeAttack();
+		}
+	}
+	
+	public void confirmedDamageAbilities(DamageEvent event) {
+		if(event.getFinalAttacker() instanceof Player p) {
+			Ability[] abilities = Main.getPlayerInfo(p).kit.getAbilities();
+			for(Ability ability : abilities) {
+				ability.onDealtAttack(event);
+			}
+		}
+		if(event.getVictim() instanceof Player p) {
+			Ability[] abilities = Main.getPlayerInfo(p).kit.getAbilities();
+			for(Ability ability : abilities) {
+				ability.onReceiveDamage(event);
+			}
 		}
 	}
 	
@@ -506,7 +540,7 @@ public abstract class TeamArena
 			Map.Entry<Player, PlayerInfo> entry = iter.next();
 			Kit kit = entry.getValue().kit;
 			Player player = entry.getKey();
-
+			
 			player.getInventory().clear();
 			kit.giveKit(player, true);
 
@@ -797,6 +831,8 @@ public abstract class TeamArena
 			PlayerUtils.sendTitle(p, Component.empty(), Component.text("You died!").color(TextColor.color(255, 0, 0)), 0, 30, 20);
 
 			//setSpectator(p, true, false);
+			Main.getPlayerInfo(p).kit.removeKit(p);
+			p.setArrowsInBody(0);
 
 			players.remove(p);
 			spectators.add(p);

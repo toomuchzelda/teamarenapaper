@@ -9,6 +9,7 @@ import com.comphenix.protocol.reflect.StructureModifier;
 import me.toomuchzelda.teamarenapaper.core.Hologram;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import net.minecraft.network.protocol.Packet;
 import org.bukkit.Location;
 import org.bukkit.Sound;
@@ -44,8 +45,24 @@ public class PacketListeners
 				Player player = Main.playerIdLookup.get(id);
 				//unsure if always will be player or not
 				if(player != null) {
+					PlayerInfo pinfo = Main.getPlayerInfo(player);
 					
-					Hologram hologram = Main.getPlayerInfo(player).nametag;
+					//if player is invis, don't spawn nametag for players on other teams if a game exists
+					// otherwise don't spawn one at all
+					if(player.isInvisible()) {
+						if(Main.getGame() != null) {
+							if(pinfo.team != Main.getPlayerInfo(event.getPlayer()).team)
+								return;
+							//are on same team but team can't see friendly invis
+							else if(!pinfo.team.getPaperTeam().canSeeFriendlyInvisibles())
+								return;
+						}
+						else {
+							return;
+						}
+					}
+					
+					Hologram hologram = pinfo.nametag;
 					PacketContainer spawnPacket = hologram.getSpawnPacket();
 					PacketContainer metaDataPacket = hologram.getMetadataPacket();
 					//send to this spawn packet's recipient

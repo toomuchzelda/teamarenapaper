@@ -1,5 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
+import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -12,6 +14,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class Kit
 {
+    protected final TeamArena teamArena;
+    
     private final String name;
     private final String description;
     private final Material icon;
@@ -22,7 +26,7 @@ public abstract class Kit
 
     private Set<Player> users;
 
-    public Kit(String name, String description, Material icon) {
+    public Kit(String name, String description, Material icon, TeamArena teamArena) {
         this.name = name;
         this.description = description;
         this.icon = icon;
@@ -36,6 +40,8 @@ public abstract class Kit
         this.abilities = new Ability[0];
 
         users = ConcurrentHashMap.newKeySet();
+        
+        this.teamArena = teamArena;
     }
 
     //clearInventory and updateInventory happens outside the following two methods

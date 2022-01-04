@@ -2,6 +2,8 @@ package me.toomuchzelda.teamarenapaper.core;
 
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
+import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
 import net.minecraft.network.protocol.Packet;
@@ -74,5 +76,35 @@ public class PlayerUtils
 		Title fucktitle = Title.title(title, subtitle, times);
 
 		player.showTitle(fucktitle);
+	}
+	
+	/**
+	 * make a player invisible and hide their nametag from appropriate players
+	 * @param player
+	 */
+	public static void setInvisible(Player player, boolean invis) {
+		//hide nametag from everyone not on this guy's team
+		PlayerInfo pinfo = Main.getPlayerInfo(player);
+		PacketContainer packet;
+		if(invis)
+			packet = pinfo.nametag.getDeletePacket();
+		else
+			packet = pinfo.nametag.getSpawnPacket();
+		
+		for (Player p : player.getTrackedPlayers()) {
+			if(invis) {
+				PlayerInfo viewerInfo = Main.getPlayerInfo(p);
+				if(pinfo.team != viewerInfo.team)
+					PlayerUtils.sendPacket(p, packet);
+				//are on same team, send delete packet if can't see invis teamamte
+				else if(!pinfo.team.getPaperTeam().canSeeFriendlyInvisibles())
+					PlayerUtils.sendPacket(p, packet);
+			}
+			else {
+				PlayerUtils.sendPacket(p, packet);
+			}
+		}
+		
+		player.setInvisible(invis);
 	}
 }

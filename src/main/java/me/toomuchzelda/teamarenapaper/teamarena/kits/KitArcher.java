@@ -1,13 +1,14 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 public class KitArcher extends Kit {
-    public KitArcher() {
-        super("Archer", "shoot bow arrows", Material.ARROW);
+    public KitArcher(TeamArena tm) {
+        super("Archer", "shoot bow arrows", Material.ARROW, tm);
 
         ItemStack[] armour = new ItemStack[4];
         armour[3] = new ItemStack(Material.LEATHER_HELMET);

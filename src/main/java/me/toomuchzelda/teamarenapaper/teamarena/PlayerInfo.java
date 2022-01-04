@@ -4,6 +4,7 @@ import me.toomuchzelda.teamarenapaper.core.Hologram;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import org.bukkit.Location;
+import org.bukkit.Sound;
 
 //container class to store per-player info
 public class PlayerInfo
@@ -21,6 +22,8 @@ public class PlayerInfo
 	public byte kothHillParticles;
 	//whether the player wants to see titles during gameplay (they will also get a chat message regardless)
 	public boolean receiveGameTitles;
+	//sound played when hit a bow shot
+	public Sound bowShotHitSound;
 
 	public PlayerInfo() {
 		team = null;
@@ -32,5 +35,6 @@ public class PlayerInfo
 		receiveGameTitles = true;
 
 		permissionLevel = CustomCommand.ALL;
+		bowShotHitSound = Sound.ENTITY_ARROW_HIT_PLAYER;
 	}
 }

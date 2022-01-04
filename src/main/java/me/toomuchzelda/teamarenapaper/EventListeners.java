@@ -1,6 +1,5 @@
 package me.toomuchzelda.teamarenapaper;
 
-import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
@@ -12,11 +11,10 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
 import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
-import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.command.Command;
-import org.bukkit.craftbukkit.v1_17_R1.entity.CraftEntity;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -132,6 +130,7 @@ public class EventListeners implements Listener
 		event.getPlayer().setScoreboard(SidebarManager.SCOREBOARD);
 		new Hologram(event.getPlayer());
 		Main.getGame().joiningPlayer(event.getPlayer());
+		event.getPlayer().getAttribute(Attribute.GENERIC_ATTACK_SPEED).setBaseValue(999999);
 		//put them on team after their hologram made
 	}
 

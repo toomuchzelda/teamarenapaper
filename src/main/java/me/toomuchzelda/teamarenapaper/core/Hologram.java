@@ -274,4 +274,8 @@ public class Hologram
 	public PacketContainer getMetadataPacket() {
 		return metadataPacket;
 	}
+	
+	public PacketContainer getDeletePacket() {
+		return deletePacket;
+	}
 }

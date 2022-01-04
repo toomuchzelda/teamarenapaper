@@ -142,6 +142,7 @@ public class DamageEvent {
         float kbLevels = 0;
 
         if(event instanceof EntityDamageByEntityEvent dEvent) {
+            isCritical = dEvent.isCritical();
             if(dEvent.getDamager() instanceof Projectile projectile) {
 
                 if(dEvent.getDamager() instanceof AbstractArrow aa) {
@@ -238,7 +239,6 @@ public class DamageEvent {
                 }
             }
 
-            isCritical = dEvent.isCritical();
         }
 
         if(damageType.isKnockback()) {
@@ -262,7 +262,6 @@ public class DamageEvent {
     }*/
     
     public void executeAttack() {
-
         if(cancelled)
             return;
 
@@ -307,40 +306,48 @@ public class DamageEvent {
             int ndt;
             
             boolean doHurtEffect = true;
-    
-            if(damageType.isMelee() || damageType.isProjectile())
-            {
-                ndt = TeamArena.getGameTick() - dTimes.lastAttackTime;
+            if(!damageType.isIgnoreRate()) {
+                if (damageType.isMelee() || damageType.isProjectile()) {
+                    ndt = TeamArena.getGameTick() - dTimes.lastAttackTime;
         
-                //they are still in no-damage-time
-                // if they were hit with a stronger attack, only apply
-                // strength of new attack - strength of last attack, as if they were only hit
-                // by the person with the stronger weapon
-                // also do not extra knockback, and don't play the hurt effect again
-                // else if the new attack isn't stronger than the previous attack with this invulnerability period
-                // then don't take damage
-                if(ndt < living.getMaximumNoDamageTicks() / 2) {
-                    if(finalDamage > living.getLastDamage() && dTimes.lastDamager != attacker) {
-                        this.setNoKnockback();
-                        this.finalDamage = this.finalDamage - living.getLastDamage();
-                        doHurtEffect = false;
+                    //they are still in no-damage-time
+                    // if they were hit with a stronger attack, only apply
+                    // strength of new attack - strength of last attack, as if they were only hit
+                    // by the person with the stronger weapon
+                    // also do not extra knockback, and don't play the hurt effect again
+                    // else if the new attack isn't stronger than the previous attack with this invulnerability period
+                    // then don't take damage
+                    if (ndt < living.getMaximumNoDamageTicks() / 2) {
+                        if (finalDamage > living.getLastDamage() && dTimes.lastDamager != attacker) {
+                            this.setNoKnockback();
+                            this.finalDamage = this.finalDamage - living.getLastDamage();
+                            doHurtEffect = false;
+                        }
+                        else {
+                            return;
+                        }
                     }
-                    else {
+                }
+                else {
+                    if (damageType.isFire())
+                        ndt = TeamArena.getGameTick() - dTimes.fireTimes.lastFireTime;
+                    else
+                        ndt = TeamArena.getGameTick() - dTimes.lastMiscDamageTime;
+        
+                    //not do damage if not enough invuln ticks elapsed
+                    if (ndt < living.getMaximumNoDamageTicks() / 2) {
                         return;
                     }
                 }
             }
-            else {
-                if (damageType.isFire())
-                    ndt = TeamArena.getGameTick() - dTimes.fireTimes.lastFireTime;
-                else
-                    ndt = TeamArena.getGameTick() - dTimes.lastMiscDamageTime;
-        
-                //not do damage if not enough invuln ticks elapsed
-                if (ndt < living.getMaximumNoDamageTicks() / 2) {
-                    return;
-                }
+            
+            //run modifications done by confirmed damage ability "Event Handlers"
+            if(Main.getGame() != null) {
+                Main.getGame().confirmedDamageAbilities(this);
             }
+            
+            if(cancelled)
+                return;
             
             updateNDT(dTimes, damageType, this.getFinalAttacker());
             
@@ -384,6 +391,9 @@ public class DamageEvent {
             if(isCritical) {
                 EntityUtils.playCritEffect(living);
             }
+            if(attacker instanceof AbstractArrow aa && aa.getPierceLevel() == 0 && damageType.is(DamageType.PROJECTILE)) {
+                living.setArrowsInBody(living.getArrowsInBody() + 1);
+            }
 
             //need to send this packet for the hearts to flash white when lost, otherwise they just decrease with no
             // effect
@@ -425,45 +435,50 @@ public class DamageEvent {
                     victim.setFireTicks(fireTicks);
                 }
             }
-
-            //melee attack sound
-            if (attacker instanceof Player p && damageType.is(DamageType.MELEE)) {
-                net.minecraft.world.entity.player.Player nmsPlayer = ((CraftPlayer) p).getHandle();
-                if (wasSprinting) {
-                    nmsPlayer.setDeltaMovement(nmsPlayer.getDeltaMovement().multiply(0.6, 1, 0.6));
-                    //3 for sprinting flag
-                    // dont use setSprinting as it sends an attribute packet that may stop the client from sprinting
-                    // server-client desync good? it's 1.8 behaviour anyway, may change later
-                    nmsPlayer.setSharedFlag(3, false);
+    
+            if (livingDamager instanceof Player p) {
+                //melee attack sound
+                if(damageType.is(DamageType.MELEE)) {
+                    net.minecraft.world.entity.player.Player nmsPlayer = ((CraftPlayer) p).getHandle();
+                    if (wasSprinting) {
+                        nmsPlayer.setDeltaMovement(nmsPlayer.getDeltaMovement().multiply(0.6, 1, 0.6));
+                        //3 for sprinting flag
+                        // dont use setSprinting as it sends an attribute packet that may stop the client from sprinting
+                        // server-client desync good? it's 1.8 behaviour anyway, may change later
+                        nmsPlayer.setSharedFlag(3, false);
+                    }
+            
+                    if (isCritical) {
+                        p.getWorld().playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_CRIT, SoundCategory.PLAYERS, 1f, 1f);
+                    }
+                    /*else*/if (isSweep) {
+                        p.getWorld().playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 1f, 1f);
+                        nmsPlayer.sweepAttack();
+                    }
+                    else if (wasSprinting) {
+                        p.getWorld().playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK, SoundCategory.PLAYERS, 1f, 1f);
+                    }
+                    else {
+                        Sound sound;
+                        if (p.getAttackCooldown() > 0.9f)
+                            sound = Sound.ENTITY_PLAYER_ATTACK_STRONG;
+                        else
+                            sound = Sound.ENTITY_PLAYER_ATTACK_WEAK;
+                
+                        p.getWorld().playSound(p.getLocation(), sound, SoundCategory.PLAYERS, 1f, 1f);
+                    }
+            
+                    //reset their attack cooldown
+                    p.resetCooldown();
                 }
-
-                if(isCritical) {
-                    p.getWorld().playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_CRIT, SoundCategory.PLAYERS, 1f, 1f);
+                else if(damageType.is(DamageType.PROJECTILE)) {
+                    Sound sound = Main.getPlayerInfo(p).bowShotHitSound;
+                    p.playSound(p.getLocation(), sound, SoundCategory.PLAYERS, 2f, 1f);
                 }
-
-                if(isSweep) {
-                    p.getWorld().playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 1f, 1f);
-                    nmsPlayer.sweepAttack();
-                }
-                else if(wasSprinting) {
-                    p.getWorld().playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK, SoundCategory.PLAYERS, 1f, 1f);
-                }
-                else {
-                    Sound sound;
-                    if(p.getAttackCooldown() > 0.9f)
-                        sound = Sound.ENTITY_PLAYER_ATTACK_STRONG;
-                    else
-                        sound = Sound.ENTITY_PLAYER_ATTACK_WEAK;
-                    
-                    p.getWorld().playSound(p.getLocation(), sound, SoundCategory.PLAYERS, 1f, 1f);
-                }
-
-                //reset their attack cooldown
-                p.resetCooldown();
             }
         }
     }
-
+    
     //if damagee is a player pinfo must not be null
     // mfw java no primitive pointers
     private static void updateNDT(DamageTimes dTimes, DamageType damageType, Entity lastDamager) {
@@ -481,6 +496,41 @@ public class DamageEvent {
         }
 
         dTimes.lastDamager = lastDamager;
+    }
+    
+    //whether this event will cause damage or not based on victim's no damage ticks
+    // read-only, to be used in 'events', kit abilities and such
+    public boolean willHit() {
+        if(!(victim instanceof LivingEntity living))
+            return true;
+        
+        int ndt;
+        DamageTimes dTimes = DamageTimes.getDamageTimes(living);
+        if (damageType.isMelee() || damageType.isProjectile()) {
+            ndt = TeamArena.getGameTick() - dTimes.lastAttackTime;
+        
+            //they are still in no-damage-time
+            // if they were hit with a stronger attack, only apply
+            // strength of new attack - strength of last attack, as if they were only hit
+            // by the person with the stronger weapon
+            // also do not extra knockback, and don't play the hurt effect again
+            // else if the new attack isn't stronger than the previous attack with this invulnerability period
+            // then don't take damage
+            if (ndt < living.getMaximumNoDamageTicks() / 2) {
+                return finalDamage > living.getLastDamage() && dTimes.lastDamager != attacker;
+            }
+        }
+        else {
+            if (damageType.isFire())
+                ndt = TeamArena.getGameTick() - dTimes.fireTimes.lastFireTime;
+            else
+                ndt = TeamArena.getGameTick() - dTimes.lastMiscDamageTime;
+        
+            //not do damage if not enough invuln ticks elapsed
+            return ndt >= living.getMaximumNoDamageTicks() / 2;
+        }
+        
+        return true;
     }
 
     public Vector calculateKnockback(boolean baseKnockback, float knockbackLevels) {
@@ -559,6 +609,10 @@ public class DamageEvent {
     public Entity getVictim() {
         return victim;
     }
+    
+    public Player getPlayerVictim() {
+        return (Player) victim;
+    }
 
     public void setNoKnockback() {
         this.knockback = null;
@@ -574,5 +628,9 @@ public class DamageEvent {
 
     public void setCancelled(boolean cancel) {
         this.cancelled = cancel;
+    }
+    
+    public boolean isCancelled() {
+        return cancelled;
     }
 }

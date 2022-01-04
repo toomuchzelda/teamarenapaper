@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
@@ -7,9 +8,9 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 public class KitTrooper extends Kit {
 
-    public KitTrooper() {
+    public KitTrooper(TeamArena tm) {
         super("Trooper", "Your standard issue melee fighter, it can handle most 1-on-1 sword fights " +
-                "and can do a little self-healing", Material.IRON_SWORD);
+                "and can do a little self-healing", Material.IRON_SWORD, tm);
 
         ItemStack[] armour = new ItemStack[4];
         armour[3] = new ItemStack(Material.IRON_HELMET);
