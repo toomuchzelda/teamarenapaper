@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.core;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Color;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Random;
 
 public class MathUtils
@@ -63,5 +64,11 @@ public class MathUtils
 		int g = randomMax(255);
 		int b = randomMax(255);
 		return TextColor.color(r, g, b);
+	}
+	
+	//https://stackoverflow.com/questions/8911356/whats-the-best-practice-to-round-a-float-to-2-decimals/45772416#45772416
+	//https://stackoverflow.com/a/35833800
+	public static double round(double value, int scale) {
+		return Math.round(value * Math.pow(10, scale)) / Math.pow(10, scale);
 	}
 }

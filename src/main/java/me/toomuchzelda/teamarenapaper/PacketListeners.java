@@ -7,20 +7,13 @@ import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.reflect.StructureModifier;
 import me.toomuchzelda.teamarenapaper.core.Hologram;
-import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
-import net.minecraft.network.protocol.Packet;
-import org.bukkit.Location;
 import org.bukkit.Sound;
-import org.bukkit.craftbukkit.libs.it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.bukkit.craftbukkit.libs.it.unimi.dsi.fastutil.ints.IntList;
-import org.bukkit.craftbukkit.libs.it.unimi.dsi.fastutil.ints.IntListIterator;
-import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.Iterator;
 import java.util.LinkedList;
 
 public class PacketListeners

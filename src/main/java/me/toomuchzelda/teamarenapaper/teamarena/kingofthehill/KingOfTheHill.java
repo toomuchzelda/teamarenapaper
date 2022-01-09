@@ -77,6 +77,9 @@ public class KingOfTheHill extends TeamArena
 		// also see which teams are on thing to determine which colours the active Hill should play
 		LinkedList<Color> coloursList = new LinkedList<>();
 		TeamArenaTeam newOwningTeam = null;
+		//band-aid, store the rate of earning in here for each team to be accessed later in this liveTick method
+		// to display the rate on th sidebar
+		HashMap<TeamArenaTeam, Float> capRates = new HashMap<>();
 		float newOwningTeamsPoints = 0;
 		for(TeamArenaTeam team : teams) {
 			if(team != owningTeam && team.isAlive()) {
@@ -89,8 +92,13 @@ public class KingOfTheHill extends TeamArena
 					if(member instanceof Player p && isSpectator(p))
 						continue;
 
-					if (activeHill.getBorder().contains(member.getBoundingBox()))
+					if (activeHill.getBorder().contains(member.getBoundingBox())) {
 						numPlayers++;
+						member.setGlowing(true);
+					}
+					else
+						member.setGlowing(false);
+					
 				}
 
 				float toEarn;
@@ -117,7 +125,7 @@ public class KingOfTheHill extends TeamArena
 
 				//decrease gain speed for every owning team player on the hill concurrently
 				toEarn += numOwningPlayers * -0.6;
-
+				capRates.put(team, toEarn);
 				points += toEarn;
 
                 if(points < 0f)
@@ -333,12 +341,34 @@ public class KingOfTheHill extends TeamArena
 			//use bossbars for cap progress instead
 			if(numLines != 1) {
 				if (owningTeam == team)
-					lines[index + 2] = Component.text("KING").decorate(TextDecoration.BOLD);
+					lines[index + 2] = Component.text("KING").decorate(TextDecoration.BOLD).color(NamedTextColor.GOLD);
 				else {
 					Float cap = hillCapProgresses.get(team);
 					if (cap == null)
 						cap = 0f;
-					lines[index + 2] = Component.text("Cap: " + cap).decorate(TextDecoration.BOLD);
+					
+					//make it a neater looking percentage
+					byte percent = (byte) ((cap / ticksAndPlayersToCaptureHill) * 100);
+					// also display earning rate
+					Float rate = capRates.get(team);
+					float fRate;
+					if(rate == null)
+						rate = 0f;
+					
+					fRate = rate;
+					fRate = (fRate / ticksAndPlayersToCaptureHill) * 100;
+					//do this to get 2 decimal point precision
+					// the round and conversion to int will chop off all decimal points
+					// doesn't always work though....
+					fRate *= 100;
+					int capRate = Math.round(fRate);
+					fRate = (float) capRate / 100f;
+					//percent per second
+					fRate *= 20;
+					
+					Component rateComp = Component.text(" @" + MathUtils.round(fRate, 2) + "%/s").decoration(TextDecoration.BOLD, TextDecoration.State.FALSE);
+					lines[index + 2] = Component.text("Cap: " + percent + "%").decorate(TextDecoration.BOLD)
+							.append(rateComp);
 				}
 			}
 			index += numLines;

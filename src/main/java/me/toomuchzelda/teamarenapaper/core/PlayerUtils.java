@@ -102,6 +102,7 @@ public class PlayerUtils
 			}
 			else {
 				PlayerUtils.sendPacket(p, packet);
+				PlayerUtils.sendPacket(p, pinfo.nametag.getMetadataPacket());
 			}
 		}
 		
