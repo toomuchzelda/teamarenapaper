@@ -80,10 +80,12 @@ public class PlayerUtils
 	
 	/**
 	 * make a player invisible and hide their nametag from appropriate players
+	 * temporarily removed as not using hologram nametags
 	 * @param player
 	 */
 	public static void setInvisible(Player player, boolean invis) {
 		//hide nametag from everyone not on this guy's team
+		/*
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
 		PacketContainer packet;
 		if(invis)
@@ -105,7 +107,7 @@ public class PlayerUtils
 				PlayerUtils.sendPacket(p, pinfo.nametag.getMetadataPacket());
 			}
 		}
-		
+		*/
 		player.setInvisible(invis);
 	}
 }

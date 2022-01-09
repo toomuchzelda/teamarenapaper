@@ -26,8 +26,10 @@ public class PacketListeners
 	
 	public PacketListeners(JavaPlugin plugin) {
 		
+		//commented out as not using holograms (keeping in case future versions support more
+		// rgb stuff)
 		//Spawn player's nametag hologram whenever the player is spawned on a client
-		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
+		/*ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.NAMED_ENTITY_SPAWN) //packet for players coming in viewable range
 		{
 			@Override
@@ -64,10 +66,10 @@ public class PacketListeners
 					//Main.logger().info("Spawned hologram along with player");
 				}
 			}
-		});
+		});*/
 		
 		//move the nametag armorstands with every player movement
-		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
+		/*ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.REL_ENTITY_MOVE,
 				PacketType.Play.Server.REL_ENTITY_MOVE_LOOK,
 				PacketType.Play.Server.ENTITY_TELEPORT)
@@ -97,10 +99,10 @@ public class PacketListeners
 					}
 				}
 			}
-		});
+		});*/
 		
 		//despawn hologram clientside when player is despawned (moved out of render distance or other)
-		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
+		/*ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.ENTITY_DESTROY)
 		{
 			@Override
@@ -125,7 +127,7 @@ public class PacketListeners
 					event.getPacket().getModifier().write(0, ids);
 				}
 			}
-		});
+		});*/
 		
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.NAMED_SOUND_EFFECT)

@@ -75,11 +75,13 @@ public class TeamArenaTeam
 
 		paperTeam = SidebarManager.SCOREBOARD.registerNewTeam(name);
 		paperTeam.displayName(componentName);
-		paperTeam.prefix(componentSimpleName);
+		//paperTeam.prefix(componentSimpleName);
 		paperTeam.setAllowFriendlyFire(true);
 		paperTeam.setCanSeeFriendlyInvisibles(true);
 		paperTeam.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
-		paperTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
+		//previously was NEVER for RGB nametags that were armor stands
+		//paperTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
+		paperTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.ALWAYS);
 		paperTeam.color(NamedTextColor.nearestTo(this.RGBColour));
 	}
 
@@ -245,7 +247,7 @@ public class TeamArenaTeam
 		if (!player.playerListName().contains(component)) {
 			//Bukkit.broadcastMessage("Did not contain component");
 			player.playerListName(component);
-			Main.getPlayerInfo(player).nametag.setText(component, true);
+			//Main.getPlayerInfo(player).nametag.setText(component, true);
 		}
 	}
 

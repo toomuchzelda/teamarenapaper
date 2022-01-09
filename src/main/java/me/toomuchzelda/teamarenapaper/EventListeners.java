@@ -81,7 +81,7 @@ public class EventListeners implements Listener
 			e.printStackTrace();
 		}
 		
-		try {
+		/*try {
 			//update nametag positions
 			for (PlayerInfo pinfo : Main.getPlayerInfos()) {
 				if (pinfo.nametag != null) {
@@ -91,7 +91,7 @@ public class EventListeners implements Listener
 		}
 		catch(Exception e) {
 			e.printStackTrace();
-		}
+		}*/
 
 		//every 3 minutes
 		if(event.getTickNumber() % (3 * 60 * 20) == 0) {
@@ -128,7 +128,7 @@ public class EventListeners implements Listener
 		//disable yellow "Player has joined the game" messages
 		event.joinMessage(null);
 		event.getPlayer().setScoreboard(SidebarManager.SCOREBOARD);
-		new Hologram(event.getPlayer());
+		//new Hologram(event.getPlayer());
 		Main.getGame().joiningPlayer(event.getPlayer());
 		event.getPlayer().getAttribute(Attribute.GENERIC_ATTACK_SPEED).setBaseValue(999999);
 		//put them on team after their hologram made
