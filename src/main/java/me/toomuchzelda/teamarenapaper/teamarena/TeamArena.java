@@ -231,10 +231,10 @@ public abstract class TeamArena
 			pinfo.spawnPoint = spawnPos;
 			pinfo.kit = findKit(pinfo.defaultKit);
 			pinfo.team = noTeamTeam;
+			noTeamTeam.addMembers(p);
+			
 			if(pinfo.kit == null)
 				pinfo.kit = kits[0];
-			
-			noTeamTeam.addMembers(p);
 		
 			p.getInventory().clear();
 			giveLobbyItems(p);
@@ -244,6 +244,8 @@ public abstract class TeamArena
 			for(PotionEffect effect : p.getActivePotionEffects()) {
 				p.removePotionEffect(effect.getType());
 			}
+			
+			mapInfo.sendMapInfo(p);
 		}
 	}
 
@@ -588,6 +590,9 @@ public abstract class TeamArena
 			//spectatorTeam.removeAllMembers();
 			spectatorTeam.unregister();
 			noTeamTeam.unregister();
+			
+			//try to prevent visual bug of absorption remaining into next game
+			Bukkit.getOnlinePlayers().forEach(player -> player.setAbsorptionAmount(0));
 		}, END_GAME_TIME - 3);
 		
 		setGameState(GameState.END);
@@ -926,6 +931,7 @@ public abstract class TeamArena
 
 	public void joiningPlayer(Player player) {
 		player.setGameMode(GameMode.SURVIVAL);
+		mapInfo.sendMapInfo(player);
 		if(gameState.isPreGame()) {
 			//decided from loggingInPlayer(Player)
 			Main.getPlayerInfo(player).team.addMembers(player);

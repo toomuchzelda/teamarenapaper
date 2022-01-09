@@ -216,6 +216,7 @@ public class KingOfTheHill extends TeamArena
 					}
 				}
 
+				//maybe pointless, draws only called if all teams have 0 score
 				if(winner == null) {
 					Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
 					Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
