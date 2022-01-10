@@ -827,7 +827,7 @@ public abstract class TeamArena
 		player.teleport(pinfo.team.getNextSpawnpoint());
 		pinfo.kit.giveKit(player, true);
 
-		//do this one tick later
+		//do this one (two?) tick later
 		// when revealing first then teleporting, the clients interpolate the super fast teleport movement, so players
 		// see them quickly zooming from wherever they were to their spawnpoint.
 		// teleporting first in this method in the same tick creates this awful desync bug with positioning
@@ -836,7 +836,7 @@ public abstract class TeamArena
 			for(Player p : Bukkit.getOnlinePlayers()) {
 				p.showPlayer(Main.getPlugin(), player);
 			}
-		}, 1);
+		}, 2);
 	}
 
 	public void handleDeath(DamageEvent event) {

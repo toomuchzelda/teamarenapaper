@@ -11,6 +11,8 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
 import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitGhost;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.attribute.Attribute;
@@ -280,6 +282,13 @@ public class EventListeners implements Listener
 		Bukkit.broadcastMessage(event.getProjectile().getVelocity().toString());*/
 
 		event.getProjectile().setVelocity(projectileLaunchVector(event.getPlayer(), event.getProjectile().getVelocity()));
+		
+		if(Main.getGame() != null && Main.getGame().getGameState() == LIVE) {
+			Ability[] abilites = Main.getPlayerInfo(event.getPlayer()).kit.getAbilities();
+			for(Ability a : abilites) {
+				a.onLaunchProjectile(event);
+			}
+		}
 	}
 
 	public static Vector projectileLaunchVector(Entity shooter, Vector original) {
@@ -314,6 +323,21 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void entityExhaustion(EntityExhaustionEvent event) {
 		event.setCancelled(true);
+	}
+	
+	@EventHandler
+	public void arrowBodyCountChange(ArrowBodyCountChangeEvent event) {
+		if(Main.getGame() != null && Main.getGame().getGameState() == LIVE) {
+			if (event.getEntity() instanceof Player p) {
+				Ability[] abilities = Main.getPlayerInfo(p).kit.getAbilities();
+				for(int i = 0; i < abilities.length; i++) {
+					if(abilities[i] instanceof KitGhost.GhostAbility ghosta) {
+						ghosta.arrowCountDecrease(event);
+						return;
+					}
+				}
+			}
+		}
 	}
 	
 	/*

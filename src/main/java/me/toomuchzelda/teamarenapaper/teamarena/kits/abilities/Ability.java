@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.abilities;
 
+import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
@@ -52,5 +53,12 @@ public abstract class Ability {
      */
     public void onDealtAttack(DamageEvent event) {
     
+    }
+    
+    /**
+     * when the user launches a projectile (not a bow)
+     * @param event
+     */
+    public void onLaunchProjectile(PlayerLaunchProjectileEvent event) {
     }
 }

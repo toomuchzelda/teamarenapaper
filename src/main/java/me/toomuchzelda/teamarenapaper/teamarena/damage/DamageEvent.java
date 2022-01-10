@@ -341,7 +341,6 @@ public class DamageEvent {
             
             //run modifications done by confirmed damage ability "Event Handlers"
             Main.getGame().confirmedDamageAbilities(this);
-            
             if(cancelled)
                 return;
             
@@ -360,7 +359,7 @@ public class DamageEvent {
             }
     
             //damage
-            boolean deathSound = false;
+            boolean isDeath = false;
             double newHealth = (living.getHealth() + living.getAbsorptionAmount())- finalDamage;
             double maxHealth = living.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
             //they still got absorption hearts
@@ -377,17 +376,18 @@ public class DamageEvent {
                 //Bukkit.broadcast(Component.text(living.getName() + " has died"));
                 newHealth = living.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
                 Main.getGame().handleDeath(this);
-                deathSound = true;
+                isDeath = true;
             }
 
             living.setHealth(newHealth);
             living.setLastDamage(finalDamage);
             if(doHurtEffect)
-                EntityUtils.playHurtAnimation(living, damageType, deathSound);
+                EntityUtils.playHurtAnimation(living, damageType, isDeath);
             if(isCritical) {
                 EntityUtils.playCritEffect(living);
             }
-            if(attacker instanceof AbstractArrow aa && aa.getPierceLevel() == 0 && damageType.is(DamageType.PROJECTILE)) {
+            if(!isDeath && attacker instanceof AbstractArrow aa && aa.getPierceLevel() == 0 &&
+                    damageType.is(DamageType.PROJECTILE)) {
                 living.setArrowsInBody(living.getArrowsInBody() + 1);
             }
 

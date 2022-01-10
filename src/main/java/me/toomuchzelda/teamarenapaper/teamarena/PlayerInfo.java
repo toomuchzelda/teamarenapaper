@@ -9,7 +9,7 @@ import org.bukkit.Sound;
 //container class to store per-player info
 public class PlayerInfo
 {
-	public static final byte lowestKothParticles = 10;
+	public static final byte LOWEST_KOTH_PARTICLES = 10;
 
 	public byte permissionLevel;
 	public TeamArenaTeam team;
@@ -24,6 +24,10 @@ public class PlayerInfo
 	public boolean receiveGameTitles;
 	//sound played when hit a bow shot
 	public Sound bowShotHitSound;
+	
+	//for kit related messages; play in chat, action bar, or both
+	public boolean kitActionBarMessages;
+	public boolean kitChatMessages;
 
 	public PlayerInfo() {
 		team = null;
@@ -36,5 +40,8 @@ public class PlayerInfo
 
 		permissionLevel = CustomCommand.ALL;
 		bowShotHitSound = Sound.ENTITY_ARROW_HIT_PLAYER;
+		
+		kitActionBarMessages = true;
+		kitChatMessages = true;
 	}
 }

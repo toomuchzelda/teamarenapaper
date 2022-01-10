@@ -401,7 +401,8 @@ public class KingOfTheHill extends TeamArena
 
 		for(Player p : Bukkit.getOnlinePlayers()) {
 			for(TeamArenaTeam team : teams) {
-				p.showBossBar(team.bossBar);
+				if(team.isAlive())
+					p.showBossBar(team.bossBar);
 			}
 		}
 		
