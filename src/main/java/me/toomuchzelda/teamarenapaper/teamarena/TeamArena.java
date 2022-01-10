@@ -184,9 +184,9 @@ public abstract class TeamArena
 		//gameState = GameState.PREGAME;
 		setGameState(GameState.PREGAME);
 
-		noTeamTeam = new TeamArenaTeam("No Team", "No Team", Color.YELLOW, Color.ORANGE, DyeColor.YELLOW);
+		noTeamTeam = new TeamArenaTeam("No Team", "No Team", Color.YELLOW, Color.ORANGE, DyeColor.YELLOW, null);
 		spectatorTeam = new TeamArenaTeam("Spectators", "Specs", TeamArenaTeam.convert(NamedTextColor.DARK_GRAY), null,
-				null);
+				null, null);
 		winningTeam = null;
 
 		kitMenuItem = new ItemStack(Material.FEATHER);
@@ -241,6 +241,7 @@ public abstract class TeamArena
 			p.setAllowFlight(true);
 			p.setHealth(p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
 			p.setAbsorptionAmount(0);
+			p.setGlowing(false);
 			for(PotionEffect effect : p.getActivePotionEffects()) {
 				p.removePotionEffect(effect.getType());
 			}
@@ -458,6 +459,10 @@ public abstract class TeamArena
 			}
 			
 			//ability on confirmed attacks done in this.confirmedDamageAbilities() called by DamageEvent.executeAttack()
+			if(event.getFinalAttacker() instanceof Player p && event.getVictim() instanceof Player p2) {
+				if(!canAttack(p, p2))
+					continue;
+			}
 			event.executeAttack();
 		}
 	}
@@ -592,7 +597,13 @@ public abstract class TeamArena
 			noTeamTeam.unregister();
 			
 			//try to prevent visual bug of absorption remaining into next game
-			Bukkit.getOnlinePlayers().forEach(player -> player.setAbsorptionAmount(0));
+			for(Player p : Bukkit.getOnlinePlayers()) {
+				p.setAbsorptionAmount(0);
+				p.setGlowing(false);
+				for(TeamArenaTeam team : teams) {
+					p.hideBossBar(team.bossBar);
+				}
+			}
 		}, END_GAME_TIME - 3);
 		
 		setGameState(GameState.END);
@@ -953,6 +964,10 @@ public abstract class TeamArena
 
 				midJoinTimers.put(player, gameTick);
 			}
+			
+			for(TeamArenaTeam team : teams) {
+				player.showBossBar(team.bossBar);
+			}
 		}
 	}
 
@@ -1148,9 +1163,11 @@ public abstract class TeamArena
 			//TeamColours teamColour = TeamColours.valueOf(teamName);
 			TeamArenaTeam teamArenaTeam = LegacyTeams.fromRWF(teamName);
 			if(teamArenaTeam == null) {
+				Main.logger().warning("Bad team in map config!");
+				
 				//it's not a legacy rwf team
 
-				String simpleName = teamName;
+				/*String simpleName = teamName;
 				if(spawnsYaml.containsKey("SimpleName")) {
 					simpleName = spawnsYaml.get("SimpleName").get(0);
 				}
@@ -1166,7 +1183,7 @@ public abstract class TeamArena
 				//probably do later: seperate choosable name and simple names for non-legacy teams
 				// and also choosable hats
 				// and dye color
-				teamArenaTeam = new TeamArenaTeam(teamName, simpleName, first, second, null);
+				teamArenaTeam = new TeamArenaTeam(teamName, simpleName, first, second, null);*/
 			}
 
 			ArrayList<String> spawnsList = spawnsYaml.get("Spawns");

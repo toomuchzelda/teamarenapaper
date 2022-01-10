@@ -207,6 +207,8 @@ public class EventListeners implements Listener
 	public void entityDamage(EntityDamageEvent event) {
 		event.setCancelled(true);
 		//Bukkit.broadcast(Component.text("DamageCause: " + event.getCause()));
+		if(Main.getGame().getGameState() != LIVE)
+			return;
 		
 		//marker armorstands must never be damaged/killed
 		if(event.getEntity() instanceof ArmorStand stand && stand.isMarker())
@@ -245,12 +247,10 @@ public class EventListeners implements Listener
 				}, 0L);
 			}
 		}
-
-		if(Main.getGame().getGameState() == LIVE) {
-			//Main.getGame().queueDamage(new DamageEvent(event));
-			//will queue itself
-			new DamageEvent(event);
-		}
+		
+		//Main.getGame().queueDamage(new DamageEvent(event));
+		//will queue itself
+		new DamageEvent(event);
 	}
 
 	@EventHandler

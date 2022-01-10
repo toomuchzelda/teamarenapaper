@@ -33,6 +33,9 @@ public class KingOfTheHill extends TeamArena
 	// and score is cleared
 	public static final float INITIAL_CAP_TIME = 13 * 20;
 	public float ticksAndPlayersToCaptureHill = INITIAL_CAP_TIME;
+	
+	//the total score u need to get to win
+	public final int TICKS_TO_WIN;
 
 	public KingOfTheHill() {
 		super();
@@ -40,6 +43,12 @@ public class KingOfTheHill extends TeamArena
 		hillCapProgresses = new HashMap<>();
 		hillIndex = 0;
 		lastHillChangeTime = gameTick;
+		
+		int toWin = 0;
+		for(Hill h : hills) {
+			toWin += h.getTime() * 20;
+		}
+		TICKS_TO_WIN = toWin;
 	}
 
 	@Override
@@ -63,8 +72,12 @@ public class KingOfTheHill extends TeamArena
 				if(e instanceof Player p && isSpectator(p))
 					continue;
 
-				if(activeHill.getBorder().contains(e.getBoundingBox()))
+				if(activeHill.getBorder().contains(e.getBoundingBox())) {
 					numOwningPlayers++;
+					e.setGlowing(true);
+				}
+				else
+					e.setGlowing(false);
 			}
 
 			float max = (float) (owningTeam.getEntityMembers().size() * 0.7);
@@ -144,7 +157,7 @@ public class KingOfTheHill extends TeamArena
 				hillCapProgresses.put(team, points);
 			}
 		}
-
+		
 		if(newOwningTeam != null) {
 			//change the owning team here
 			Component capturedMsg = newOwningTeam.getComponentSimpleName()
@@ -360,9 +373,9 @@ public class KingOfTheHill extends TeamArena
 					//do this to get 2 decimal point precision
 					// the round and conversion to int will chop off all decimal points
 					// doesn't always work though....
-					fRate *= 100;
+					/*fRate *= 100;
 					int capRate = Math.round(fRate);
-					fRate = (float) capRate / 100f;
+					fRate = (float) capRate / 100f;*/
 					//percent per second
 					fRate *= 20;
 					
@@ -372,6 +385,9 @@ public class KingOfTheHill extends TeamArena
 				}
 			}
 			index += numLines;
+			
+			//team bossbar
+			team.bossBar.progress((float) team.getTotalScore() / (float) TICKS_TO_WIN);
 		}
 
 		SidebarManager.setLines(lines);
@@ -383,6 +399,12 @@ public class KingOfTheHill extends TeamArena
 	public void prepLive() {
 		super.prepLive();
 
+		for(Player p : Bukkit.getOnlinePlayers()) {
+			for(TeamArenaTeam team : teams) {
+				p.showBossBar(team.bossBar);
+			}
+		}
+		
 		this.lastHillChangeTime = gameTick;
 	}
 

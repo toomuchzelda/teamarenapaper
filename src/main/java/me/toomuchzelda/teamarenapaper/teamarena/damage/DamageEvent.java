@@ -9,7 +9,6 @@ import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.phys.Vec3;
-import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.attribute.Attribute;
@@ -28,7 +27,6 @@ import org.bukkit.util.Vector;
 
 import javax.annotation.Nullable;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 
 //a custom damage event for custom knockback and other customisability bukkit/spigot/paper can't provide
@@ -342,9 +340,7 @@ public class DamageEvent {
             }
             
             //run modifications done by confirmed damage ability "Event Handlers"
-            if(Main.getGame() != null) {
-                Main.getGame().confirmedDamageAbilities(this);
-            }
+            Main.getGame().confirmedDamageAbilities(this);
             
             if(cancelled)
                 return;

@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
+import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -36,6 +37,10 @@ public class TeamArenaTeam
 
 	private final DyeColor dyeColour;
 	private final TextColor RGBColour;
+	
+	//BossBars are sent in prepLive() of each game class extending TeamArena
+	private final BossBar.Color barColor;
+	public final BossBar bossBar;
 
 	//paper good spigot bad
 	private Team paperTeam;
@@ -54,13 +59,13 @@ public class TeamArenaTeam
 	public int score;
 	public int score2;
 
-	public TeamArenaTeam(String name, String simpleName, Color colour, Color secondColour, DyeColor dyeColor) {
+	public TeamArenaTeam(String name, String simpleName, Color colour, Color secondColour, DyeColor dyeColor, BossBar.Color barColor) {
 		this.name = name;
 		this.simpleName = simpleName;
 		this.colour = colour;
 		this.secondColour = secondColour;
 		this.dyeColour = dyeColor;
-
+		
 		this.RGBColour = TextColor.color(colour.asRGB());
 
 		spawns = null;
@@ -72,6 +77,13 @@ public class TeamArenaTeam
 
 		this.componentName = colourWord(this.name);
 		this.componentSimpleName = colourWord(this.simpleName);
+		
+		this.barColor = barColor;
+		if(barColor != null) {
+			bossBar = BossBar.bossBar(componentName, 1, barColor, BossBar.Overlay.NOTCHED_10);
+		}
+		else
+			bossBar = null;
 
 		paperTeam = SidebarManager.SCOREBOARD.registerNewTeam(name);
 		paperTeam.displayName(componentName);
@@ -115,6 +127,14 @@ public class TeamArenaTeam
 
 	public DyeColor getDyeColour() {
 		return dyeColour;
+	}
+	
+	public int getTotalScore() {
+		return score + score2;
+	}
+	
+	public BossBar.Color getBarColor() {
+		return barColor;
 	}
 
 	public TextColor getRGBTextColor() {
@@ -222,7 +242,7 @@ public class TeamArenaTeam
 	public Set<Entity> getEntityMembers() {
 		return entityMembers;
 	}
-
+	
 	public boolean isAlive() {
 		return entityMembers.size() > 0;
 	}
