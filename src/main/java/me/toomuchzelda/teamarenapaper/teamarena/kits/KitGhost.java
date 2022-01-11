@@ -14,6 +14,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
@@ -60,7 +61,10 @@ public class KitGhost extends Kit
 		public void onLaunchProjectile(PlayerLaunchProjectileEvent event) {
 			if(event.getProjectile() instanceof EnderPearl) {
 				event.setShouldConsume(false);
-				event.getPlayer().setCooldown(Material.ENDER_PEARL, 6 * 20);
+				
+				Bukkit.getScheduler().runTaskLater(Main.getPlugin(),
+						bukkitTask -> event.getPlayer().setCooldown(Material.ENDER_PEARL, 6 * 20), 0);
+				
 			}
 		}
 		
