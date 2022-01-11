@@ -167,7 +167,7 @@ public class EventListeners implements Listener
 	public void playerQuit(PlayerQuitEvent event) {
 		event.quitMessage(null);
 		Main.getGame().leavingPlayer(event.getPlayer());
-		Main.getPlayerInfo(event.getPlayer()).nametag.remove();
+		//Main.getPlayerInfo(event.getPlayer()).nametag.remove();
 		Main.removePlayerInfo(event.getPlayer());
 		Main.playerIdLookup.remove(event.getPlayer().getEntityId());
 	}

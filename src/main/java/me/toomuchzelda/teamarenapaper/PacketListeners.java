@@ -3,18 +3,9 @@ package me.toomuchzelda.teamarenapaper;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketAdapter;
-import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
-import com.comphenix.protocol.reflect.StructureModifier;
-import me.toomuchzelda.teamarenapaper.core.Hologram;
-import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
-import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import org.bukkit.Sound;
-import org.bukkit.craftbukkit.libs.it.unimi.dsi.fastutil.ints.IntList;
-import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
-
-import java.util.LinkedList;
 
 public class PacketListeners
 {

@@ -168,8 +168,8 @@ public abstract class TeamArena
 		gameWorld.setGameRule(GameRule.KEEP_INVENTORY, true);
 		gameWorld.setGameRule(GameRule.MAX_ENTITY_CRAMMING, 0);
 		gameWorld.setGameRule(GameRule.MOB_GRIEFING, false);
-		//handled by vanilla
-		//gameWorld.setGameRule(GameRule.NATURAL_REGENERATION, false);
+		//handled ourselves
+		gameWorld.setGameRule(GameRule.NATURAL_REGENERATION, false);
 		gameWorld.setGameRule(GameRule.RANDOM_TICK_SPEED, 0);
 		gameWorld.setGameRule(GameRule.SHOW_DEATH_MESSAGES, false);
 		gameWorld.setDifficulty(Difficulty.NORMAL);
@@ -342,6 +342,8 @@ public abstract class TeamArena
 
 		//process damage events
 		damageTick();
+		
+		regenTick();
 	}
 	
 	public void respawnerTick() {
@@ -492,9 +494,19 @@ public abstract class TeamArena
 		}
 	}
 	
-	/*public void regenTick() {
-	
-	}*/
+	public void regenTick() {
+		if(gameTick % 40 == 0) {
+			for(Player p : Bukkit.getOnlinePlayers()) {
+				double newHealth = p.getHealth() + 1; // half a heart
+				double maxHealth = p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+				if(newHealth > maxHealth)
+					newHealth = maxHealth;
+				
+				p.setHealth(newHealth);
+				PlayerUtils.sendHealth(p, newHealth);
+			}
+		}
+	}
 	
 	public void endTick() {
 		//fireworks

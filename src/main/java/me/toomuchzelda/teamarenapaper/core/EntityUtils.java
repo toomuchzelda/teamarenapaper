@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.core;
 
+import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
@@ -10,9 +11,9 @@ import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ItemStack;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
-import org.bukkit.craftbukkit.v1_17_R1.CraftSound;
-import org.bukkit.craftbukkit.v1_17_R1.entity.CraftEntity;
-import org.bukkit.craftbukkit.v1_17_R1.entity.CraftLivingEntity;
+import org.bukkit.craftbukkit.v1_18_R1.CraftSound;
+import org.bukkit.craftbukkit.v1_18_R1.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_18_R1.entity.CraftLivingEntity;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -24,21 +25,21 @@ import java.util.Iterator;
 public class EntityUtils {
 
     public static Method getHurtSoundMethod;
-    public static Method getSoundVolumeMethod;
-    public static Method getDeathSoundMethod;
+    /*public static Method getSoundVolumeMethod;
+    public static Method getDeathSoundMethod;*/
 
     public static void cacheReflection() {
         try {
             //Mojang Mapping: getHurtSound(), Spigot: getSoundHurt
             getHurtSoundMethod = net.minecraft.world.entity.LivingEntity.class
-                    .getDeclaredMethod("getSoundHurt", DamageSource.class);
+                    .getDeclaredMethod("c", DamageSource.class);
             getHurtSoundMethod.setAccessible(true);
 
-            getSoundVolumeMethod = net.minecraft.world.entity.LivingEntity.class.getDeclaredMethod("getSoundVolume");
-            getSoundVolumeMethod.setAccessible(true);
+            /*getSoundVolumeMethod = net.minecraft.world.entity.LivingEntity.class.getDeclaredMethod("eu");
+            getSoundVolumeMethod.setAccessible(true);*/
 
-            getDeathSoundMethod = net.minecraft.world.entity.LivingEntity.class.getDeclaredMethod("getSoundDeath");
-            getDeathSoundMethod.setAccessible(true);
+            /*getDeathSoundMethod = net.minecraft.world.entity.LivingEntity.class.getDeclaredMethod("getSoundDeath");
+            getDeathSoundMethod.setAccessible(true);*/
         } catch (NoSuchMethodException e) {
             e.printStackTrace();
         }
@@ -140,12 +141,13 @@ public class EntityUtils {
 
         try {
             if(deathSound)
-                nmsSound = (SoundEvent) getDeathSoundMethod.invoke(nmsLivingEntity);
+                nmsSound = nmsLivingEntity.getDeathSound();
+                //nmsSound = (SoundEvent) getDeathSoundMethod.invoke(nmsLivingEntity);
             else
                 nmsSound = (SoundEvent) getHurtSoundMethod.invoke(nmsLivingEntity, damageType.getDamageSource());
 
             pitch = nmsLivingEntity.getVoicePitch();
-            volume = (float) getSoundVolumeMethod.invoke(nmsLivingEntity);
+            volume = nmsLivingEntity.getSoundVolume(); //(float) getSoundVolumeMethod.invoke(nmsLivingEntity);
         } catch (IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace();
 
@@ -159,7 +161,10 @@ public class EntityUtils {
         // and use player sound category for the sound
         SoundCategory category = SoundCategory.NEUTRAL;
         if(entity instanceof Player p) {
-            PlayerUtils.sendPacket(p, packet);
+            //optional tilt the screen
+            if(Main.getPlayerInfo(p).damageTilt)
+                PlayerUtils.sendPacket(p, packet);
+            
             category = SoundCategory.PLAYERS;
             p.playSound(entity.getLocation(), sound, category, volume, pitch);
         }

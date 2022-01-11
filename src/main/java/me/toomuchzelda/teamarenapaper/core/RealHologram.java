@@ -3,7 +3,7 @@ package me.toomuchzelda.teamarenapaper.core;
 import net.kyori.adventure.text.Component;
 import net.minecraft.world.level.Level;
 import org.bukkit.Location;
-import org.bukkit.craftbukkit.v1_17_R1.CraftWorld;
+import org.bukkit.craftbukkit.v1_18_R1.CraftWorld;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 
@@ -96,7 +96,7 @@ public class RealHologram {
             bukkitStand.setCanTick(false);
 
             //spawn it
-            nmsWorld.addEntity(nmsStand, CreatureSpawnEvent.SpawnReason.CUSTOM);
+            nmsWorld.addFreshEntity(nmsStand, CreatureSpawnEvent.SpawnReason.CUSTOM);
         }
 
         public void setText(Component text) {
