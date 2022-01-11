@@ -196,7 +196,8 @@ public abstract class TeamArena
 		kitItemMeta.displayName(kitMenuName);
 		kitMenuItem.setItemMeta(kitItemMeta);
 
-		kits = new Kit[]{new KitTrooper(this), new KitArcher(this), new KitGhost(this), new KitNone(this)};
+		kits = new Kit[]{new KitTrooper(this), new KitArcher(this), new KitGhost(this), new KitDwarf(this),
+				new KitNone(this)};
 		tabKitList = new LinkedList<>();
 		for(Kit kit : kits) {
 			for(Ability ability : kit.getAbilities()) {
@@ -328,10 +329,18 @@ public abstract class TeamArena
 		}
 
 		midJoinerTick();
+		
+		//ability tick 'events'
+		for(Kit kit : kits) {
+			for(Player p : kit.getActiveUsers()) {
+				for(Ability a : kit.getAbilities()) {
+					a.onTick(p);
+				}
+			}
+		}
 
 		//process damage events
 		damageTick();
-		
 	}
 	
 	public void respawnerTick() {
@@ -849,6 +858,8 @@ public abstract class TeamArena
 			//setSpectator(p, true, false);
 			Main.getPlayerInfo(p).kit.removeKit(p);
 			p.setArrowsInBody(0);
+			p.setLevel(0);
+			p.setExp(0);
 
 			players.remove(p);
 			spectators.add(p);

@@ -61,4 +61,10 @@ public abstract class Ability {
      */
     public void onLaunchProjectile(PlayerLaunchProjectileEvent event) {
     }
+    
+    /**
+     * run every tick
+     */
+    public void onTick(Player player) {
+    }
 }

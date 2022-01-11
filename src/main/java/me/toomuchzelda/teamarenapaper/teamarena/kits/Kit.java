@@ -1,6 +1,5 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
-import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import org.bukkit.Material;
@@ -24,7 +23,8 @@ public abstract class Kit
     private ItemStack[] items;
     private Ability[] abilities;
 
-    private Set<Player> users;
+    //active users of a kit ie they are alive and using, not dead and just have the kit selected
+    private final Set<Player> activeUsers;
 
     public Kit(String name, String description, Material icon, TeamArena teamArena) {
         this.name = name;
@@ -39,7 +39,7 @@ public abstract class Kit
         this.items = new ItemStack[0];
         this.abilities = new Ability[0];
 
-        users = ConcurrentHashMap.newKeySet();
+        activeUsers = ConcurrentHashMap.newKeySet();
         
         this.teamArena = teamArena;
     }
@@ -47,7 +47,7 @@ public abstract class Kit
     //clearInventory and updateInventory happens outside the following two methods
     //give kit and it's abilities to player
     public void giveKit(Player player, boolean update) {
-        users.add(player);
+        activeUsers.add(player);
 
         PlayerInventory inventory = player.getInventory();
         inventory.setArmorContents(armour);
@@ -76,7 +76,7 @@ public abstract class Kit
 
     //remove abilities from player
     public void removeKit(Player player) {
-        users.remove(player);
+        activeUsers.remove(player);
 
         for(Ability a : abilities) {
             a.removeAbility(player);
@@ -103,8 +103,8 @@ public abstract class Kit
         return name;
     }
 
-    public Set<Player> getUsers() {
-        return users;
+    public Set<Player> getActiveUsers() {
+        return activeUsers;
     }
 
     public Ability[] getAbilities() {

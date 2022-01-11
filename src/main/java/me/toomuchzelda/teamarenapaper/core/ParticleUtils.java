@@ -3,7 +3,6 @@ package me.toomuchzelda.teamarenapaper.core;
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Particle;
-import org.bukkit.World;
 
 public class ParticleUtils
 {

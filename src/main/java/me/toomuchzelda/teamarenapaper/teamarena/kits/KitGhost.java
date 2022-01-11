@@ -101,7 +101,7 @@ public class KitGhost extends Kit
 			
 			TeamArenaTeam team = Main.getPlayerInfo(event.getPlayerVictim()).team;
 			
-			for(int i = 0; i < 15; i++) {
+			for(int i = 0; i < 20; i++) {
 				baseLoc.setX(x + MathUtils.randomRange(-0.3, 0.3));
 				baseLoc.setY(y + MathUtils.randomRange(0, 1.4));
 				baseLoc.setZ(z + MathUtils.randomRange(-0.3, 0.3));
