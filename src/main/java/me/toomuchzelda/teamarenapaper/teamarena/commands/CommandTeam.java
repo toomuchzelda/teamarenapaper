@@ -62,7 +62,14 @@ public class CommandTeam extends CustomCommand {
     public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
         //they've put a space after the /team
         if(args.length == 1 && sender instanceof Player) {
-            return Main.getGame().getTabTeamsList();
+            LinkedList<String> list = Main.getGame().getTabTeamsList();
+            LinkedList<String> newList = new LinkedList<>();
+            String arg = args[0];
+            for(String team : list) {
+                if(team.toLowerCase().startsWith(arg.toLowerCase()))
+                    newList.add(team);
+            }
+            return newList;
         }
         
         return new LinkedList<>();

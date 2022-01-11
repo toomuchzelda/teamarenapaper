@@ -46,7 +46,14 @@ public class CommandKit extends CustomCommand {
     @Override
     public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
         if(args.length == 1 && sender instanceof Player) {
-            return Main.getGame().getTabKitList();
+            LinkedList<String> list = Main.getGame().getTabKitList();
+            LinkedList<String> newList = new LinkedList<>();
+            String arg = args[0];
+            for(String kit : list) {
+                if(kit.toLowerCase().startsWith(arg.toLowerCase()))
+                    newList.add(kit);
+            }
+            return newList;
         }
         
         return new LinkedList<>();
