@@ -168,10 +168,11 @@ public abstract class TeamArena
 		gameWorld.setGameRule(GameRule.KEEP_INVENTORY, true);
 		gameWorld.setGameRule(GameRule.MAX_ENTITY_CRAMMING, 0);
 		gameWorld.setGameRule(GameRule.MOB_GRIEFING, false);
-		//handle ourselves
-		gameWorld.setGameRule(GameRule.NATURAL_REGENERATION, false);
+		//handled by vanilla
+		//gameWorld.setGameRule(GameRule.NATURAL_REGENERATION, false);
 		gameWorld.setGameRule(GameRule.RANDOM_TICK_SPEED, 0);
 		gameWorld.setGameRule(GameRule.SHOW_DEATH_MESSAGES, false);
+		gameWorld.setDifficulty(Difficulty.NORMAL);
 
 		if(mapInfo.weatherType == 2)
 			gameWorld.setThundering(true);
@@ -491,6 +492,10 @@ public abstract class TeamArena
 		}
 	}
 	
+	/*public void regenTick() {
+	
+	}*/
+	
 	public void endTick() {
 		//fireworks
 		if(winningTeam != null && gameTick % 40 == 0)
@@ -559,6 +564,8 @@ public abstract class TeamArena
 			
 			player.getInventory().clear();
 			kit.giveKit(player, true);
+			player.setSaturatedRegenRate(0);
+			player.setSaturation(0);
 
 			player.playSound(player.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.AMBIENT, 2, 1);
 		}
