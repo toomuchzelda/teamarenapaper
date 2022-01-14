@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.abilities;
 
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
+import io.papermc.paper.event.player.PlayerItemCooldownEvent;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
@@ -66,5 +67,12 @@ public abstract class Ability {
      * run every tick
      */
     public void onTick(Player player) {
+    }
+
+    /**
+     * when the player receieves a cooldown on any of their items (e.g enderpearl after throwing)
+     */
+    public void onItemCooldown(PlayerItemCooldownEvent event) {
+
     }
 }

@@ -237,7 +237,7 @@ public class KingOfTheHill extends TeamArena
 					}
 				}
 
-				//maybe pointless, draws only called if all teams have 0 score
+				//maybe pointless, draws only called if all teams have 0 score whiuch should be impossibe
 				if(winner == null) {
 					Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
 					Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
@@ -270,27 +270,7 @@ public class KingOfTheHill extends TeamArena
 				//return;
 			}
 			else {
-				Hill nextHill = hills[++hillIndex];
-				Component hillChangeMsg = Component.text("The Hill has moved to " + nextHill.getName()).color(NamedTextColor.GOLD);
-				Bukkit.broadcast(hillChangeMsg);
-				Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
-				Location soundLoc = nextHill.getBorder().getCenter().toLocation(gameWorld);
-				while(iter.hasNext()) {
-					Map.Entry<Player, PlayerInfo> entry = iter.next();
-					if(entry.getValue().receiveGameTitles) {
-						PlayerUtils.sendTitle(entry.getKey(), Component.empty(), hillChangeMsg, 10, 30, 10);
-					}
-					//and the sound, while we've got this iter anyway
-					entry.getKey().playSound(soundLoc, Sound.ENTITY_PARROT_IMITATE_ENDER_DRAGON,SoundCategory.AMBIENT,
-							9999, 0.5f);
-				}
-
-				activeHill = nextHill;
-				lastHillChangeTime = gameTick;
-				//clear the owningteam and clear cap progresses
-				owningTeam = null;
-				hillCapProgresses.clear();
-				ticksAndPlayersToCaptureHill = INITIAL_CAP_TIME;
+				nextHill();
 			}
 		}
 
@@ -393,6 +373,30 @@ public class KingOfTheHill extends TeamArena
 		SidebarManager.setLines(lines);
 
 		super.liveTick();
+	}
+
+	public void nextHill() {
+		Hill nextHill = hills[++hillIndex];
+		Component hillChangeMsg = Component.text("The Hill has moved to " + nextHill.getName()).color(NamedTextColor.GOLD);
+		Bukkit.broadcast(hillChangeMsg);
+		Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
+		Location soundLoc = nextHill.getBorder().getCenter().toLocation(gameWorld);
+		while(iter.hasNext()) {
+			Map.Entry<Player, PlayerInfo> entry = iter.next();
+			if(entry.getValue().receiveGameTitles) {
+				PlayerUtils.sendTitle(entry.getKey(), Component.empty(), hillChangeMsg, 10, 30, 10);
+			}
+			//and the sound, while we've got this iter anyway
+			entry.getKey().playSound(soundLoc, Sound.ENTITY_PARROT_IMITATE_ENDER_DRAGON,SoundCategory.AMBIENT,
+					9999, 0.5f);
+		}
+
+		activeHill = nextHill;
+		lastHillChangeTime = gameTick;
+		//clear the owningteam and clear cap progresses
+		owningTeam = null;
+		hillCapProgresses.clear();
+		ticksAndPlayersToCaptureHill = INITIAL_CAP_TIME;
 	}
 
 	@Override

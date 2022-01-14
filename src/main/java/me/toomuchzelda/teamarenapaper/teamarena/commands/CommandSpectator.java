@@ -21,7 +21,8 @@ public class CommandSpectator extends CustomCommand {
     @Override
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         if(sender instanceof Player p) {
-            Main.getGame().setSpectator(p, !Main.getGame().isSpectator(p), true);
+            if(Main.getGame() != null && !Main.getGame().getGameState().isEndGame())
+                Main.getGame().setSpectator(p, !Main.getGame().isSpectator(p), true);
         }
         else {
             sender.sendMessage(Component.text("You can't spectate as console!").color(NamedTextColor.RED));

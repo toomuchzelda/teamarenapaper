@@ -3,6 +3,8 @@ package me.toomuchzelda.teamarenapaper;
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
+import io.papermc.paper.event.entity.EntityDamageItemEvent;
+import io.papermc.paper.event.player.PlayerItemCooldownEvent;
 import me.toomuchzelda.teamarenapaper.core.Hologram;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
@@ -315,7 +317,7 @@ public class EventListeners implements Listener
 	//stop projectiles from colliding with spectators
 	@EventHandler
 	public void projectileCollide(ProjectileCollideEvent event) {
-		if(event.getCollidedWith() instanceof Player p && Main.getGame().isSpectator(p))
+		if(event.getCollidedWith() instanceof Player p && Main.getGame() != null && Main.getGame().isSpectator(p))
 			event.setCancelled(true);
 	}
 
@@ -339,7 +341,28 @@ public class EventListeners implements Listener
 			}
 		}
 	}
-	
+
+	@EventHandler
+	public void playerItemCooldown(PlayerItemCooldownEvent event) {
+		if(Main.getGame() != null && Main.getGame().getGameState() == LIVE) {
+			Ability[] abilities = Main.getPlayerInfo(event.getPlayer()).kit.getAbilities();
+			for(Ability a : abilities) {
+				a.onItemCooldown(event);
+			}
+		}
+	}
+
+	//stop item damage/breaking
+	@EventHandler
+	public void entityDamageItem(EntityDamageItemEvent event) {
+		event.setCancelled(true);
+	}
+
+	@EventHandler
+	public void playerItemDamage(PlayerItemDamageEvent event) {
+		event.setCancelled(true);
+	}
+
 	/*
 	@EventHandler
 	public void entityRemoveFromWorld(EntityRemoveFromWorldEvent event) {

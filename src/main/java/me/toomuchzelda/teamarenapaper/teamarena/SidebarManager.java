@@ -9,6 +9,7 @@ import org.bukkit.scoreboard.*;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Objects;
 
 //could be made into an instantiable object class
 public class SidebarManager {
@@ -79,11 +80,7 @@ public class SidebarManager {
         }
 
         //clean up
-        Iterator<Team> iter = lineTeams.iterator();
-        while(iter.hasNext()) {
-            if(iter.next() == null)
-                iter.remove();
-        }
+        lineTeams.removeIf(Objects::isNull);
     }
 
     public static void updatePreGameScoreboard(TeamArena game) {

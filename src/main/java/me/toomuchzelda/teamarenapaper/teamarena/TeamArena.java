@@ -344,6 +344,25 @@ public abstract class TeamArena
 		damageTick();
 		
 		regenTick();
+
+		//end the game if there are no more players for some reason (everyone left or spectator)
+		byte aliveTeamCount = 0;
+		TeamArenaTeam lastTeam = null;
+		for(TeamArenaTeam team : teams) {
+			if(team.isAlive()) {
+				aliveTeamCount++;
+				lastTeam = team;
+			}
+		}
+		if(aliveTeamCount < 2) {
+			if(lastTeam != null) {
+				Bukkit.broadcast(lastTeam.getComponentName().append(Component.text(" is the last team standing so they win!!")));
+			}
+			else {
+				Bukkit.broadcast(Component.text("Where'd everyone go?"));
+			}
+			prepEnd();
+		}
 	}
 	
 	public void respawnerTick() {
@@ -807,8 +826,16 @@ public abstract class TeamArena
 			} else {
 				//todo: kill the player here (remove from game)
 
-				if(shame)
-					Bukkit.broadcast(player.displayName().append(Component.text(" has joined the spectators").color(NamedTextColor.GRAY)));
+				if(shame) {
+					Component text;
+					if(MathUtils.randomMax(256) == 256) {
+						text = player.displayName().append(Component.text(" baby raged off the game").color(NamedTextColor.GRAY));
+					}
+					else {
+						text = player.displayName().append(Component.text(" has joined the spectators").color(NamedTextColor.GRAY));
+					}
+					Bukkit.broadcast(text);
+				}
 			}
 			//do after so it gets the correct displayName above
 			spectatorTeam.addMembers(player);

@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
+import io.papermc.paper.event.player.PlayerItemCooldownEvent;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.core.ParticleUtils;
@@ -28,7 +29,8 @@ import org.bukkit.inventory.meta.ItemMeta;
 public class KitGhost extends Kit
 {
 	public KitGhost(TeamArena tm) {
-		super("Ghost", "Invisible, sneaky, has ender pearls, and sus O_O", Material.GHAST_TEAR, tm);
+		super("Ghost", "Invisible, sneaky, has ender pearls, and sus O_O! Although it's not very strong, and can't" +
+				" push enemies very far", Material.GHAST_TEAR, tm);
 		
 		//armor is already set to AIR in Kit.java
 		
@@ -49,22 +51,28 @@ public class KitGhost extends Kit
 		@Override
 		public void giveAbility(Player player) {
 			PlayerUtils.setInvisible(player, true);
+			//stop footstep sounds?
+			//player.setSilent(true);
 		}
 		
 		@Override
 		public void removeAbility(Player player) {
 			PlayerUtils.setInvisible(player, false);
+			//player.setSilent(false);
 		}
 		
-		//infinite enderpearls on cooldown
+		//infinite enderpearls on a cooldown
 		@Override
 		public void onLaunchProjectile(PlayerLaunchProjectileEvent event) {
 			if(event.getProjectile() instanceof EnderPearl) {
 				event.setShouldConsume(false);
-				
-				Bukkit.getScheduler().runTaskLater(Main.getPlugin(),
-						bukkitTask -> event.getPlayer().setCooldown(Material.ENDER_PEARL, 6 * 20), 0);
-				
+			}
+		}
+
+		@Override
+		public void onItemCooldown(PlayerItemCooldownEvent event) {
+			if(event.getType() == Material.ENDER_PEARL) {
+				event.setCooldown(6 * 20);
 			}
 		}
 		
@@ -111,6 +119,13 @@ public class KitGhost extends Kit
 				baseLoc.setZ(z + MathUtils.randomRange(-0.3, 0.3));
 				
 				ParticleUtils.colouredRedstone(baseLoc, team.getColour(), 2, 1);
+			}
+		}
+
+		@Override
+		public void onDealtAttack(DamageEvent event) {
+			if(event.hasKnockback()) {
+				event.getKnockback().multiply(0.6);
 			}
 		}
 		

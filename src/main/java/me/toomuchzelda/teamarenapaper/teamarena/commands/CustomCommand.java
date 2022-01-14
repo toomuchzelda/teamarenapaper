@@ -41,4 +41,25 @@ public class CustomCommand extends Command {
     public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
         return new LinkedList<>();
     }
+
+    public static LinkedList<String> doAutocomplete(LinkedList<String> allArgs, String... args) {
+        StringBuilder sBuilder = new StringBuilder();
+        LinkedList<String> toReturn = new LinkedList<>();
+
+        //construct all the arguments into a single string
+        for (String arg : args) {
+            sBuilder.append(arg);
+        }
+
+        //todo: a system for commands that have multiple word arguments ie. /give player item amount etc
+        String s = sBuilder.toString();
+
+        for(String listArg : allArgs) {
+            if(listArg.toLowerCase().startsWith(s.toLowerCase())) {
+                toReturn.add(listArg);
+            }
+        }
+
+        return toReturn;
+    }
 }
