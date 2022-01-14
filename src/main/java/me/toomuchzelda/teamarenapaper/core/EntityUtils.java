@@ -162,7 +162,7 @@ public class EntityUtils {
         SoundCategory category = SoundCategory.NEUTRAL;
         if(entity instanceof Player p) {
             //optional tilt the screen
-            if(Main.getPlayerInfo(p).damageTilt)
+            if(Main.getPlayerInfo(p).damageTilt.getValue().value)
                 PlayerUtils.sendPacket(p, packet);
             
             category = SoundCategory.PLAYERS;

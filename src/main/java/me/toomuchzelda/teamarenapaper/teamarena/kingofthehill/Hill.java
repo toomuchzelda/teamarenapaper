@@ -69,7 +69,7 @@ public class Hill {
                 //if player is within 35 blocks
                 if(p.getLocation().toVector().distanceSquared(border.getCenter()) < VIEW_DISTANCE * VIEW_DISTANCE) {
 
-                    byte num = Main.getPlayerInfo(p).kothHillParticles;
+                    byte num = Main.getPlayerInfo(p).kothParticles.getValue().value;
                     if(TeamArena.getGameTick() % num == 0) {
                         p.spawnParticle(Particle.SPELL_MOB, location.getX(), location.getY(),
                                 location.getZ(), 0, red, green, blue, 1);
@@ -103,7 +103,7 @@ public class Hill {
                 //if player is within 35 blocks
                 if(p.getLocation().toVector().distanceSquared(border.getCenter()) < VIEW_DISTANCE * VIEW_DISTANCE) {
 
-                    byte num = Main.getPlayerInfo(p).kothHillParticles;
+                    byte num = Main.getPlayerInfo(p).kothParticles.getValue().value;
                     if(TeamArena.getGameTick() % num == 0) {
                         p.spawnParticle(Particle.SPELL_MOB, location.getX(), location.getY(),
                                 location.getZ(), 0, red, green, blue, 1);

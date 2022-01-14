@@ -111,11 +111,13 @@ public class EventListeners implements Listener
 		//todo: read from MySQL server or something for stored player data.
 		// or use persistent data containers, or option to use either
 		// and also use the PreLoginEvent
-		PlayerInfo playerInfo = new PlayerInfo();
+		PlayerInfo playerInfo;
 
 		//todo: read perms from db or other
 		if(event.getPlayer().getName().equalsIgnoreCase("toomuchzelda"))
-			playerInfo.permissionLevel = CustomCommand.OWNER;
+			playerInfo = new PlayerInfo(CustomCommand.OWNER);
+		else
+			playerInfo = new PlayerInfo(CustomCommand.ALL);
 
 		Main.addPlayerInfo(event.getPlayer(), playerInfo);
 		Main.getGame().loggingInPlayer(event.getPlayer(), playerInfo);

@@ -1,9 +1,16 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
+import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.ItemUtils;
+import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
-import org.bukkit.*;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextColor;
+import org.bukkit.Color;
+import org.bukkit.Material;
+import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.enchantments.Enchantment;
@@ -12,10 +19,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
-
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.UUID;
 
 
 public class KitDwarf extends Kit
@@ -132,24 +135,39 @@ public class KitDwarf extends Kit
 			player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).addModifier(LEVELS_TO_MODIFIER[player.getLevel()]);
 			
 			PlayerInventory inventory = player.getInventory();
-			for(int i = 0; i < inventory.getSize(); i++) {
+			for (int i = 0; i < inventory.getSize(); i++) {
 				ItemStack item = inventory.getItem(i);
-				if(item == null)
-					continue;;
+				if (item == null)
+					continue;
 				ItemMeta meta = item.getItemMeta();
 				if (ItemUtils.isArmor(item)) {
-					if(enchantLevels == 0)
+					if (enchantLevels == 0)
 						meta.removeEnchant(Enchantment.PROTECTION_ENVIRONMENTAL);
-					else if(enchantLevels <= MAX_PROTECTION)
+					else if (enchantLevels <= MAX_PROTECTION)
 						meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, enchantLevels, true);
 				}
 				else if (ItemUtils.isSword(item)) {
-					if(enchantLevels == 0)
+					if (enchantLevels == 0)
 						meta.removeEnchant(Enchantment.DAMAGE_ALL);
 					else
 						meta.addEnchant(Enchantment.DAMAGE_ALL, enchantLevels, true);
 				}
 				item.setItemMeta(meta);
+			}
+			
+			//enchantment levels have changed
+			if (prevLevel / LEVELS_PER_ENCHANT != enchantLevels) {
+				PlayerInfo pinfo = Main.getPlayerInfo(player);
+				int armorLevel = Math.min(MAX_PROTECTION, enchantLevels);
+				Component text = Component.text("Armor Protection: " + armorLevel + "    Sword Sharpness: "
+						+ enchantLevels).color(TextColor.color(223, 94, 255));
+				
+				if (pinfo.kitActionBar.getValue().value) {
+					player.sendActionBar(text);
+				}
+				if(pinfo.kitChatMessages.getValue().value) {
+					player.sendMessage(text);
+				}
 			}
 		}
 	}

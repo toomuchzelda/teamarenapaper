@@ -366,7 +366,6 @@ public abstract class TeamArena
 	}
 	
 	public void respawnerTick() {
-		//todo prob make this a method
 		Iterator<Map.Entry<Player, Integer>> respawnIter = respawnTimers.entrySet().iterator();
 		while (respawnIter.hasNext()) {
 			Map.Entry<Player, Integer> entry = respawnIter.next();

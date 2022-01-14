@@ -171,7 +171,7 @@ public class KingOfTheHill extends TeamArena
 				Map.Entry<Player, PlayerInfo> entry = iter.next();
 				Player p = entry.getKey();
 				p.playSound(p.getLocation(), Sound.ENTITY_HORSE_DEATH, SoundCategory.AMBIENT, 9, 0.5f);
-				if(entry.getValue().receiveGameTitles) {
+				if(entry.getValue().receiveGameTitles.getValue().value) {
 					PlayerUtils.sendTitle(p, Component.empty(), capturedMsg, 10, 25, 10);
 				}
 			}
@@ -333,7 +333,7 @@ public class KingOfTheHill extends TeamArena
 		Location soundLoc = nextHill.getBorder().getCenter().toLocation(gameWorld);
 		while(iter.hasNext()) {
 			Map.Entry<Player, PlayerInfo> entry = iter.next();
-			if(entry.getValue().receiveGameTitles) {
+			if(entry.getValue().receiveGameTitles.getValue().value) {
 				PlayerUtils.sendTitle(entry.getKey(), Component.empty(), hillChangeMsg, 10, 30, 10);
 			}
 			//and the sound, while we've got this iter anyway
@@ -387,7 +387,7 @@ public class KingOfTheHill extends TeamArena
 				Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
 				while(iter.hasNext()) {
 					Map.Entry<Player, PlayerInfo> entry = iter.next();
-					if(entry.getValue().receiveGameTitles) {
+					if(entry.getValue().receiveGameTitles.getValue().value) {
 						PlayerUtils.sendTitle(entry.getKey(), winText, Component.empty(), 10, 4 * 20, 10);
 					}
 					if(entry.getValue().team == winner) {

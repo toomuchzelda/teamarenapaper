@@ -468,7 +468,7 @@ public class DamageEvent {
                     p.resetCooldown();
                 }
                 else if(damageType.is(DamageType.PROJECTILE)) {
-                    Sound sound = Main.getPlayerInfo(p).bowShotHitSound;
+                    Sound sound = Main.getPlayerInfo(p).bowHitSound.getValue();
                     p.playSound(p.getLocation(), sound, SoundCategory.PLAYERS, 2f, 1f);
                 }
             }
