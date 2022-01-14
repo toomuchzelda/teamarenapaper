@@ -200,7 +200,11 @@ public class KingOfTheHill extends TeamArena
 		//no team owns the hill; do anti-stalling mechanism
 		if(owningTeam == null) {
 			//every two minutes
-			if((gameTick - lastHillChangeTime) % (120 * 20) == 0 && lastHillChangeTime != gameTick) {
+			if(gameTick - lastHillChangeTime >= 5 * 60 * 20) {
+				Bukkit.broadcast(Component.text("Too slow! It's been 5 minutes!!").color(NamedTextColor.RED));
+				nextHillOrEnd();
+			}
+			else if((gameTick - lastHillChangeTime) % (120 * 20) == 0 && lastHillChangeTime != gameTick) {
 				String s = "The time to capture the Hill has been halved";
 				if(ticksAndPlayersToCaptureHill != INITIAL_CAP_TIME)
 					s += " again";
@@ -217,61 +221,7 @@ public class KingOfTheHill extends TeamArena
 		}
 		//process hill change
 		else if(owningTeam.score / 20 >= activeHill.getHillTime()) {
-			activeHill.setDone();
-
-			//add their current hill points to total
-			for(TeamArenaTeam team : teams) {
-				team.score2 += team.score;
-				team.score = 0;
-			}
-
-			//no more hills, game is over
-			if(hillIndex == hills.length - 1) {
-
-				TeamArenaTeam winner = null;
-				int highestScore = 0;
-				for(TeamArenaTeam team : teams) {
-					if(team.score2 > highestScore) {
-						winner = team;
-						highestScore = team.score2;
-					}
-				}
-
-				//maybe pointless, draws only called if all teams have 0 score whiuch should be impossibe
-				if(winner == null) {
-					Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
-					Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
-					Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
-					Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
-
-					Bukkit.getOnlinePlayers().forEach(player ->	player.playSound(player.getLocation(),
-							Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.AMBIENT, 2, 0.5f));
-				}
-				else {
-					Component winText = winner.getComponentName().append(Component.text(" wins!!").color(owningTeam.getRGBTextColor()));
-					Bukkit.broadcast(winText);
-
-					Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
-					while(iter.hasNext()) {
-						Map.Entry<Player, PlayerInfo> entry = iter.next();
-						if(entry.getValue().receiveGameTitles) {
-							PlayerUtils.sendTitle(entry.getKey(), winText, Component.empty(), 10, 4 * 20, 10);
-						}
-						if(entry.getValue().team == winner) {
-							entry.getKey().playSound(entry.getKey().getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE,
-									SoundCategory.AMBIENT, 2f, 1f);
-						}
-					}
-
-					winningTeam = winner;
-				}
-
-				prepEnd();
-				//return;
-			}
-			else {
-				nextHill();
-			}
+			nextHillOrEnd();
 		}
 
 		//test holograms
@@ -397,6 +347,64 @@ public class KingOfTheHill extends TeamArena
 		owningTeam = null;
 		hillCapProgresses.clear();
 		ticksAndPlayersToCaptureHill = INITIAL_CAP_TIME;
+	}
+	
+	public void nextHillOrEnd() {
+		activeHill.setDone();
+		
+		//add their current hill points to total
+		for(TeamArenaTeam team : teams) {
+			team.score2 += team.score;
+			team.score = 0;
+		}
+		
+		//no more hills, game is over
+		if(hillIndex == hills.length - 1) {
+			
+			TeamArenaTeam winner = null;
+			int highestScore = 0;
+			for(TeamArenaTeam team : teams) {
+				if(team.score2 > highestScore) {
+					winner = team;
+					highestScore = team.score2;
+				}
+			}
+			
+			//maybe pointless, draws only called if all teams have 0
+			if(winner == null) {
+				Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
+				Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
+				Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
+				Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
+				
+				Bukkit.getOnlinePlayers().forEach(player ->	player.playSound(player.getLocation(),
+						Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.AMBIENT, 2, 0.5f));
+			}
+			else {
+				Component winText = winner.getComponentName().append(Component.text(" wins!!").color(owningTeam.getRGBTextColor()));
+				Bukkit.broadcast(winText);
+				
+				Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
+				while(iter.hasNext()) {
+					Map.Entry<Player, PlayerInfo> entry = iter.next();
+					if(entry.getValue().receiveGameTitles) {
+						PlayerUtils.sendTitle(entry.getKey(), winText, Component.empty(), 10, 4 * 20, 10);
+					}
+					if(entry.getValue().team == winner) {
+						entry.getKey().playSound(entry.getKey().getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE,
+								SoundCategory.AMBIENT, 2f, 1f);
+					}
+				}
+				
+				winningTeam = winner;
+			}
+			
+			prepEnd();
+			//return;
+		}
+		else {
+			nextHill();
+		}
 	}
 
 	@Override
