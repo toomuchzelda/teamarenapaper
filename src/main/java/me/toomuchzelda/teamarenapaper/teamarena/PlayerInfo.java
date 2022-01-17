@@ -1,12 +1,9 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
 import me.toomuchzelda.teamarenapaper.core.Hologram;
-import me.toomuchzelda.teamarenapaper.core.WrappedBoolean;
-import me.toomuchzelda.teamarenapaper.core.WrappedByte;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.*;
 import org.bukkit.Location;
-import org.bukkit.Sound;
 
 //container class to store per-player info
 public class PlayerInfo
@@ -22,22 +19,24 @@ public class PlayerInfo
 	
 	//from 1-10. number of ticks in between particle play
 	//public byte kothHillParticles;
-	public final PreferenceKothParticles kothParticles;
+	//public final PreferenceKothHillParticles kothParticles;
 	//whether the player wants to see titles during/regarding gameplay (they will also get a chat message regardless)
 	//public boolean receiveGameTitles;
-	public final PreferenceReceiveGameTitles receiveGameTitles;
+	//public final PreferenceReceiveGameTitles receiveGameTitles;
 	//sound played when hit a bow shot
 	//public Sound bowShotHitSound;
-	public final PreferenceBowHitSound bowHitSound;
+	//public final PreferenceBowHitSound bowHitSound;
 	//whether the screen should tilt when taking damage
 	//public boolean damageTilt;
-	public final PreferenceDamageTilt damageTilt;
+	//public final PreferenceDamageTilt damageTilt;
 	
 	//for kit related messages; play in chat, action bar, or both
 	//public boolean kitActionBarMessages;
-	public final PreferenceKitActionBar kitActionBar;
+	//public final PreferenceKitActionBar kitActionBar;
 	//public boolean kitChatMessages;
-	public final PreferenceKitChatMessages kitChatMessages;
+	//public final PreferenceKitChatMessages kitChatMessages;
+	
+	private Object[] preferenceValues;
 
 	public PlayerInfo(byte permissionLevel) {
 		team = null;
@@ -46,19 +45,27 @@ public class PlayerInfo
 		kit = null;
 		defaultKit = "Trooper";
 		//kothHillParticles = 1;
-		kothParticles = new PreferenceKothParticles(new WrappedByte((byte) 1));
+		//kothParticles = new PreferenceKothHillParticles();
 		//receiveGameTitles = true;
-		receiveGameTitles = new PreferenceReceiveGameTitles(new WrappedBoolean(true));
+		//receiveGameTitles = new PreferenceReceiveGameTitles();
 		//damageTilt = true;
-		damageTilt = new PreferenceDamageTilt(new WrappedBoolean(true));
+		//damageTilt = new PreferenceDamageTilt();
 		
 		this.permissionLevel = permissionLevel;
 		//bowShotHitSound = Sound.ENTITY_ARROW_HIT_PLAYER;
-		bowHitSound = new PreferenceBowHitSound(Sound.ENTITY_ARROW_HIT_PLAYER);
+		//bowHitSound = new PreferenceBowHitSound();
 		
 		//kitActionBarMessages = true;
-		kitActionBar = new PreferenceKitActionBar(new WrappedBoolean(true));
+		//kitActionBar = new PreferenceKitActionBar();
 		//kitChatMessages = true;
-		kitChatMessages = new PreferenceKitChatMessages(new WrappedBoolean(true));
+		//kitChatMessages = new PreferenceKitChatMessages();
+	}
+	
+	public void setPreferenceValues(Object[] values) {
+		this.preferenceValues = values;
+	}
+	
+	public Object getPreference(EnumPreference preference) {
+		return preferenceValues[preference.ordinal()];
 	}
 }

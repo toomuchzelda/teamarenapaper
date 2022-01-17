@@ -12,10 +12,10 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.teamarena.preferences.EnumPreference;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
@@ -86,14 +86,14 @@ public class KitGhost extends Kit
 				Component obf = Component.text("as").decorate(TextDecoration.OBFUSCATED);
 				
 				PlayerInfo pinfo = Main.getPlayerInfo(player);
-				if(pinfo.kitChatMessages.getValue().value) {
+				if((Boolean) pinfo.getPreference(EnumPreference.KIT_CHAT_MESSAGES)) {
 					Component chatText = obf.append(Component.text(" You've been slammed by an arrow! You have "
 							+ arrowsInBody + " arrows sticking out of you! ")
 							.decoration(TextDecoration.OBFUSCATED, TextDecoration.State.FALSE)
 							.append(obf)).color(NamedTextColor.AQUA);
 					player.sendMessage(chatText);
 				}
-				if(pinfo.kitActionBar.getValue().value) {
+				if((Boolean) pinfo.getPreference(EnumPreference.KIT_ACTION_BAR)) {
 					Component actionBarText = obf.append(Component.text("Hit by an arrow! " + arrowsInBody +
 							" arrows in you now!").decoration(TextDecoration.BOLD, TextDecoration.State.FALSE)).append(obf);
 					player.sendActionBar(actionBarText);
@@ -125,7 +125,7 @@ public class KitGhost extends Kit
 		@Override
 		public void onDealtAttack(DamageEvent event) {
 			if(event.hasKnockback()) {
-				event.getKnockback().multiply(0.6);
+				event.getKnockback().multiply(0.8);
 			}
 		}
 		
@@ -136,11 +136,11 @@ public class KitGhost extends Kit
 			Player player = (Player) event.getEntity();
 			PlayerInfo pinfo = Main.getPlayerInfo(player);
 			
-			if(pinfo.kitChatMessages.getValue().value) {
+			if((Boolean) pinfo.getPreference(EnumPreference.KIT_CHAT_MESSAGES)) {
 				Component chat = Component.text("An arrow has disappeared... " + amt + " arrows stuck in you.").color(NamedTextColor.AQUA);
 				player.sendMessage(chat);
 			}
-			if(pinfo.kitActionBar.getValue().value) {
+			if((Boolean) pinfo.getPreference(EnumPreference.KIT_ACTION_BAR)) {
 				Component actionBarText = Component.text(amt + " arrows left inside you").color(NamedTextColor.AQUA);
 				player.sendActionBar(actionBarText);
 			}

@@ -15,6 +15,8 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
 import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitGhost;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.teamarena.preferences.EnumPreference;
+import me.toomuchzelda.teamarenapaper.teamarena.preferences.PreferenceManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.attribute.Attribute;
@@ -105,6 +107,23 @@ public class EventListeners implements Listener
 		PacketListeners.cancelDamageSounds = true;
 	}
 
+	//load the player's preferences from db and store temporarily until their PlayerInfo is created
+	@EventHandler
+	public void asyncPlayerPreLogin(AsyncPlayerPreLoginEvent event) {
+		if(event.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED)
+			return;
+		
+		Object[] values = new Object[EnumPreference.SIZE];
+		
+		//todo: read from database or persistent storage
+		EnumPreference[] arr = EnumPreference.values();
+		for(int i = 0; i < arr.length; i++) {
+			values[i] = arr[i].preference.getDefaultValue();
+		}
+		
+		PreferenceManager.putData(event.getUniqueId(), values);
+	}
+	
 	//these three events are called in this order
 	@EventHandler
 	public void playerLogin(PlayerLoginEvent event) {
@@ -118,7 +137,9 @@ public class EventListeners implements Listener
 			playerInfo = new PlayerInfo(CustomCommand.OWNER);
 		else
 			playerInfo = new PlayerInfo(CustomCommand.ALL);
-
+		
+		playerInfo.setPreferenceValues(PreferenceManager.getAndRemoveData(event.getPlayer().getUniqueId()));
+		
 		Main.addPlayerInfo(event.getPlayer(), playerInfo);
 		Main.getGame().loggingInPlayer(event.getPlayer(), playerInfo);
 		Main.playerIdLookup.put(event.getPlayer().getEntityId(), event.getPlayer());

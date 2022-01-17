@@ -5,6 +5,7 @@ import me.toomuchzelda.teamarenapaper.core.EntityUtils;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.preferences.EnumPreference;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
@@ -468,7 +469,7 @@ public class DamageEvent {
                     p.resetCooldown();
                 }
                 else if(damageType.is(DamageType.PROJECTILE)) {
-                    Sound sound = Main.getPlayerInfo(p).bowHitSound.getValue();
+                    Sound sound = (Sound) Main.getPlayerInfo(p).getPreference(EnumPreference.BOW_HIT_SOUND);
                     p.playSound(p.getLocation(), sound, SoundCategory.PLAYERS, 2f, 1f);
                 }
             }

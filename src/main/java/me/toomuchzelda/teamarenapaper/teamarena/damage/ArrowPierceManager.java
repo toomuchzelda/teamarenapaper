@@ -85,7 +85,7 @@ public class ArrowPierceManager {
     {
         ALREADY_HIT,
         PIERCE,
-        REMOVE_ARROW;
+        REMOVE_ARROW
     }
 
     private static class ArrowInfo

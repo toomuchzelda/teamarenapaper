@@ -5,6 +5,7 @@ import me.toomuchzelda.teamarenapaper.core.ItemUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.teamarena.preferences.EnumPreference;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Color;
@@ -89,7 +90,7 @@ public class KitDwarf extends Kit
 				expToGain = -0.02f;
 			}
 			else if (player.isSneaking()) {
-				expToGain = 0.005f;
+				expToGain = 0.055f; // 0.005f
 			}
 			else
 				expToGain = -0.005f;
@@ -162,10 +163,10 @@ public class KitDwarf extends Kit
 				Component text = Component.text("Armor Protection: " + armorLevel + "    Sword Sharpness: "
 						+ enchantLevels).color(TextColor.color(223, 94, 255));
 				
-				if (pinfo.kitActionBar.getValue().value) {
+				if ((Boolean) pinfo.getPreference(EnumPreference.KIT_ACTION_BAR)) {
 					player.sendActionBar(text);
 				}
-				if(pinfo.kitChatMessages.getValue().value) {
+				if((Boolean) pinfo.getPreference(EnumPreference.KIT_CHAT_MESSAGES)) {
 					player.sendMessage(text);
 				}
 			}

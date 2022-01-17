@@ -2,11 +2,11 @@ package me.toomuchzelda.teamarenapaper;
 
 import me.toomuchzelda.teamarenapaper.core.EntityUtils;
 import me.toomuchzelda.teamarenapaper.core.FileUtils;
-import me.toomuchzelda.teamarenapaper.teamarena.commands.*;
-import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.command.CommandMap;
@@ -41,8 +41,7 @@ public final class Main extends JavaPlugin
 
 		//unload all vanilla worlds
 		for(World world : Bukkit.getWorlds()) {
-			logger.info("Unloading world: " + world.getName());
-			Bukkit.unloadWorld(world, false);
+			logger.info("Unloading world: " + world.getName() + ", success: " + Bukkit.unloadWorld(world, false));
 		}
 
 		//delete temp maps that should have been deleted on shutdown, if any
@@ -75,7 +74,7 @@ public final class Main extends JavaPlugin
 		// Plugin shutdown logic
 
 		//delete temporarily loaded map if any
-		if(teamArena.getWorld() != null) {
+		if(teamArena != null && teamArena.getWorld() != null) {
 			Bukkit.unloadWorld(teamArena.getWorld(), false);
 			FileUtils.delete(teamArena.getWorldFile());
 			//getLogger().info("Deleted " + name);
@@ -127,9 +126,26 @@ public final class Main extends JavaPlugin
 	}
 
 	public static void setGame(TeamArena game) {
-		Bukkit.unloadWorld(teamArena.getWorld(), false);
+		//World world = teamArena.getWorld();
+		//File worldFile = teamArena.getWorldFile();
+		
+		//run this one tick later to ensure everyone's out of there
+	//	Bukkit.getScheduler().runTaskLater(getPlugin(), bukkitTask -> {
+			String name = teamArena.getWorld().getName();
+			boolean bool = Bukkit.unloadWorld(teamArena.getWorld(), false);
+			logger().info("World " + name + " successfully unloaded: " + bool);
+			teamArena.gameWorld = null;
+			//delete the file 3 seconds after
+	//		Bukkit.getScheduler().runTaskLater(getPlugin(), bukkitTask2 -> FileUtils.delete(worldFile), 3 * 20);
+	//	}
+	//	, 1);
+		
 		FileUtils.delete(teamArena.getWorldFile());
-
+		
+		/*for(World world : Bukkit.getWorlds()) {
+			logger().info(world.getName());
+		}*/
+		
 		teamArena = game;
 	}
 }

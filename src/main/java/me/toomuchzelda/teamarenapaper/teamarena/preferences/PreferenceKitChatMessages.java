@@ -1,21 +1,8 @@
 package me.toomuchzelda.teamarenapaper.teamarena.preferences;
 
-import me.toomuchzelda.teamarenapaper.core.WrappedBoolean;
-
-public class PreferenceKitChatMessages extends Preference<WrappedBoolean>
+public class PreferenceKitChatMessages extends Preference<Boolean>
 {
-	
-	public PreferenceKitChatMessages(WrappedBoolean value) {
-		super(value);
-	}
-	
-	@Override
-	public String getName() {
-		return "Kit chat messages";
-	}
-	
-	@Override
-	public String getDescription() {
-		return "Receive kit-related messages in chat";
+	public PreferenceKitChatMessages() {
+		super("Kit chat messages", "Receive kit-related messages in chat", true, BOOLEAN_SUGGESTIONS);
 	}
 }

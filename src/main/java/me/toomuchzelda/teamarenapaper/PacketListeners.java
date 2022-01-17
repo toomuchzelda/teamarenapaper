@@ -138,5 +138,16 @@ public class PacketListeners
 				}
 			}
 		});
+		
+		/*ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin, PacketType.Play.Client.USE_ENTITY)
+		{
+			
+			@Override
+			public void onPacketReceiving(PacketEvent event) {
+				ServerboundInteractPacket packet = (ServerboundInteractPacket) event.getPacket().getHandle();
+				
+				Bukkit.broadcastMessage(packet.getActionType() + " Offhand: " + packet.isUsingSecondaryAction());
+			}
+		});*/
 	}
 }

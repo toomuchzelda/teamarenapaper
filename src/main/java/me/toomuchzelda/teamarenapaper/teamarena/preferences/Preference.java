@@ -1,31 +1,82 @@
 package me.toomuchzelda.teamarenapaper.teamarena.preferences;
 
 import java.util.LinkedList;
+import java.util.List;
 
 public abstract class Preference<T>
 {
-	//mfw java can't Override fields
-	/*public static String name;
-	public static String description;*/
-	private T value;
-	
-	public Preference(T value) {
-		setValue(value);
+	public static final LinkedList<String> BOOLEAN_SUGGESTIONS;
+	static {
+		BOOLEAN_SUGGESTIONS = new LinkedList<>();
+		BOOLEAN_SUGGESTIONS.add("true");
+		BOOLEAN_SUGGESTIONS.add("false");
 	}
 	
-	public void setValue(T value) {
-		this.value = value;
+	//protected int id;
+	protected final String name;
+	protected final String description;
+	protected final T defaultValue;
+	protected final List<String> tabSuggestions;
+	
+	public Preference(/*int id, */String name, String description, T defaultValue, List<String> tabSuggestions) {
+		//this.id = id;
+		this.name = name;
+		this.description = description;
+		this.defaultValue = defaultValue;
+		
+		if(defaultValue instanceof Boolean) {
+			this.tabSuggestions = BOOLEAN_SUGGESTIONS;
+		}
+		else {
+			this.tabSuggestions = tabSuggestions;
+		}
 	}
 	
-	public T getValue() {
-		return value;
+	public T getDefaultValue() {
+		return defaultValue;
 	}
 	
-	public abstract String getName();
+	public String getName() {
+		return name;
+	}
 	
-	public abstract String getDescription();
+	public String getDescription() {
+		return description;
+	}
+
+	public List<String> tabCompleteList() {
+		return tabSuggestions;
+	}
 	
-	public LinkedList<String> tabCompleteList() {
-		return new LinkedList<>();
+	//to be overriden in Preferences that need validation
+	public T validateArgument(String arg) throws IllegalArgumentException {
+		if(defaultValue instanceof Boolean) {
+			if(!arg.equalsIgnoreCase("true") && !arg.equalsIgnoreCase("false")) {
+				throw new IllegalArgumentException("Bad boolean, must be true/false");
+			}
+			else {
+				return (T) Boolean.valueOf(arg);
+			}
+		}
+		else if(defaultValue instanceof Integer) {
+			try {
+				Integer i = Integer.parseInt(arg);
+				return (T) i;
+			}
+			catch(NumberFormatException e) {
+				throw new IllegalArgumentException("Bad number, must be a valid integer (no decimals!)");
+			}
+		}
+		else if(defaultValue instanceof Byte) {
+			try {
+				Byte i = Byte.parseByte(arg);
+				return (T) i;
+			}
+			catch(NumberFormatException e) {
+				throw new IllegalArgumentException("Bad number, must be a valid integer (no decimals!)");
+			}
+		}
+		
+		return defaultValue;
 	}
 }

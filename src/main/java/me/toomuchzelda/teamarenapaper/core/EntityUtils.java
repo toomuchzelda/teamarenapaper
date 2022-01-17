@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.core;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.preferences.EnumPreference;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
 import net.minecraft.sounds.SoundEvent;
@@ -162,7 +163,7 @@ public class EntityUtils {
         SoundCategory category = SoundCategory.NEUTRAL;
         if(entity instanceof Player p) {
             //optional tilt the screen
-            if(Main.getPlayerInfo(p).damageTilt.getValue().value)
+            if((Boolean) Main.getPlayerInfo(p).getPreference(EnumPreference.DAMAGE_TILT))
                 PlayerUtils.sendPacket(p, packet);
             
             category = SoundCategory.PLAYERS;
