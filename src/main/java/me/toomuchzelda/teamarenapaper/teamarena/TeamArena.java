@@ -40,14 +40,14 @@ public abstract class TeamArena
 	public static GameType nextGameType = GameType.KOTH;
 
 	private final File worldFile;
-	protected World gameWorld;
+	public World gameWorld;
 	
 	//ticks of wait time before teams are decided
-	protected static final int PRE_TEAMS_TIME = 25 * 20;
+	protected static final int PRE_TEAMS_TIME = 1 * 20;
 	//ticks of wait time after teams chosen, before game starting phase
-	protected static final int PRE_GAME_STARTING_TIME = 30 * 20;
+	protected static final int PRE_GAME_STARTING_TIME = 1 * 20;
 	//ticks of game starting time
-	protected static final int GAME_STARTING_TIME = 10 * 20;
+	protected static final int GAME_STARTING_TIME = 1 * 20;
 	protected static final int TOTAL_WAITING_TIME = PRE_TEAMS_TIME + PRE_GAME_STARTING_TIME + GAME_STARTING_TIME;
 	protected static final int END_GAME_TIME = 10 * 20;
 	protected static final int MIN_PLAYERS_REQUIRED = 2;
@@ -134,19 +134,31 @@ public abstract class TeamArena
 		String filename = chosenMapName + "/config.yml";
 		Yaml yaml = new Yaml();
 		Main.logger().info("Reading config YAML: " + filename);
+		
+		FileInputStream fileStream = null;
 		try
 		{
-			FileInputStream fileStream = new FileInputStream(filename);
+			fileStream = new FileInputStream(filename);
 			Map<String, Object> map = yaml.load(fileStream);
 			Iterator<Map.Entry<String, Object>> iter = map.entrySet().iterator();
 			while(iter.hasNext()) {
 				Main.logger().info(iter.next().toString());
 			}
 			parseConfig(map);
+			
+			fileStream.close();
 		}
 		catch(IOException e)
 		{
 			e.printStackTrace();
+			if(fileStream != null) {
+				try {
+					fileStream.close();
+				}
+				catch (IOException ex) {
+					ex.printStackTrace();
+				}
+			}
 		}
 
 		gameWorld.setSpawnLocation(spawnPos);
@@ -196,7 +208,7 @@ public abstract class TeamArena
 		ItemMeta kitItemMeta = kitMenuItem.getItemMeta();
 		kitItemMeta.displayName(kitMenuName);
 		kitMenuItem.setItemMeta(kitItemMeta);
-
+		
 		kits = new Kit[]{new KitTrooper(this), new KitArcher(this), new KitGhost(this), new KitDwarf(this),
 				new KitNone(this)};
 		tabKitList = new LinkedList<>();
@@ -267,6 +279,7 @@ public abstract class TeamArena
 		{
 			endTick();
 		}
+		
 	}
 
 	public void preGameTick() {
@@ -363,6 +376,8 @@ public abstract class TeamArena
 			}
 			prepEnd();
 		}
+		
+		prepEnd();
 	}
 	
 	public void respawnerTick() {
@@ -865,7 +880,6 @@ public abstract class TeamArena
 		//hide all the spectators from everyone else
 		for(Player p : Bukkit.getOnlinePlayers()) {
 			p.hidePlayer(Main.getPlugin(), player);
-
 		}
 	}
 
