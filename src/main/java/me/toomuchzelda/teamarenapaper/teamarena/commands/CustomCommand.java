@@ -42,7 +42,7 @@ public class CustomCommand extends Command {
         return new LinkedList<>();
     }
 
-    public static LinkedList<String> doAutocomplete(LinkedList<String> allArgs, String... args) {
+    public static LinkedList<String> doAutocomplete(List<String> allArgs, String... args) {
         StringBuilder sBuilder = new StringBuilder();
         LinkedList<String> toReturn = new LinkedList<>();
 

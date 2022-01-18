@@ -8,6 +8,7 @@ import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.teamarena.preferences.EnumPreference;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -43,11 +44,11 @@ public abstract class TeamArena
 	public World gameWorld;
 	
 	//ticks of wait time before teams are decided
-	protected static final int PRE_TEAMS_TIME = 1 * 20;
+	protected static final int PRE_TEAMS_TIME = 25 * 20;
 	//ticks of wait time after teams chosen, before game starting phase
-	protected static final int PRE_GAME_STARTING_TIME = 1 * 20;
+	protected static final int PRE_GAME_STARTING_TIME = 30 * 20;
 	//ticks of game starting time
-	protected static final int GAME_STARTING_TIME = 1 * 20;
+	protected static final int GAME_STARTING_TIME = 10 * 20;
 	protected static final int TOTAL_WAITING_TIME = PRE_TEAMS_TIME + PRE_GAME_STARTING_TIME + GAME_STARTING_TIME;
 	protected static final int END_GAME_TIME = 10 * 20;
 	protected static final int MIN_PLAYERS_REQUIRED = 2;
@@ -377,7 +378,6 @@ public abstract class TeamArena
 			prepEnd();
 		}
 		
-		prepEnd();
 	}
 	
 	public void respawnerTick() {
@@ -528,15 +528,21 @@ public abstract class TeamArena
 	}
 	
 	public void regenTick() {
-		if(gameTick % 40 == 0) {
-			for(Player p : Bukkit.getOnlinePlayers()) {
+		if(gameTick % 60 == 0) {
+			Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
+			while(iter.hasNext()) {
+				Map.Entry<Player, PlayerInfo> entry = iter.next();
+				
+				Player p = entry.getKey();
+				
 				double newHealth = p.getHealth() + 1; // half a heart
 				double maxHealth = p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
-				if(newHealth > maxHealth)
+				if (newHealth > maxHealth)
 					newHealth = maxHealth;
 				
 				p.setHealth(newHealth);
-				PlayerUtils.sendHealth(p, newHealth);
+				if((Boolean) entry.getValue().getPreference(EnumPreference.HEARTS_FLASH_REGEN))
+					PlayerUtils.sendHealth(p, newHealth);
 			}
 		}
 	}

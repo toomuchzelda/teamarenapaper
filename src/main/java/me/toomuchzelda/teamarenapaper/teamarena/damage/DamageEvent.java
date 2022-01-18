@@ -394,7 +394,7 @@ public class DamageEvent {
 
             //need to send this packet for the hearts to flash white when lost, otherwise they just decrease with no
             // effect
-            if (victim instanceof Player player) {
+            if (victim instanceof Player player && (Boolean) Main.getPlayerInfo(player).getPreference(EnumPreference.HEARTS_FLASH_DAMAGE)) {
                 PlayerUtils.sendHealth(player, player.getHealth());
             }
         }

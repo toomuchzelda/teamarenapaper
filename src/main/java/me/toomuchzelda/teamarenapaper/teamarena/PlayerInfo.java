@@ -65,6 +65,10 @@ public class PlayerInfo
 		this.preferenceValues = values;
 	}
 	
+	public void setPreference(EnumPreference preference, Object value) {
+		this.preferenceValues[preference.ordinal()] = value;
+	}
+	
 	public Object getPreference(EnumPreference preference) {
 		return preferenceValues[preference.ordinal()];
 	}

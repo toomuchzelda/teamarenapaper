@@ -1,11 +1,11 @@
 package me.toomuchzelda.teamarenapaper.teamarena.preferences;
 
-import java.util.HashMap;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class PreferenceManager
 {
-	private static final HashMap<UUID, ValuesAndTime> PLAYER_PREFVALUE_MAP = new HashMap<>();
+	private static final ConcurrentHashMap<UUID, ValuesAndTime> PLAYER_PREFVALUE_MAP = new ConcurrentHashMap<>();
 	
 	public record ValuesAndTime(Object[] values, long time) {}
 	

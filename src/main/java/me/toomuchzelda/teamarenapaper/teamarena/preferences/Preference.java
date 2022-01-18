@@ -1,13 +1,14 @@
 package me.toomuchzelda.teamarenapaper.teamarena.preferences;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
 public abstract class Preference<T>
 {
-	public static final LinkedList<String> BOOLEAN_SUGGESTIONS;
+	public static final ArrayList<String> BOOLEAN_SUGGESTIONS;
 	static {
-		BOOLEAN_SUGGESTIONS = new LinkedList<>();
+		BOOLEAN_SUGGESTIONS = new ArrayList<>(2);
 		BOOLEAN_SUGGESTIONS.add("true");
 		BOOLEAN_SUGGESTIONS.add("false");
 	}
@@ -24,12 +25,7 @@ public abstract class Preference<T>
 		this.description = description;
 		this.defaultValue = defaultValue;
 		
-		if(defaultValue instanceof Boolean) {
-			this.tabSuggestions = BOOLEAN_SUGGESTIONS;
-		}
-		else {
-			this.tabSuggestions = tabSuggestions;
-		}
+		this.tabSuggestions = tabSuggestions;
 	}
 	
 	public T getDefaultValue() {

@@ -7,7 +7,7 @@ import java.util.LinkedList;
 public class PreferenceBowHitSound extends Preference<Sound>
 {
 	public PreferenceBowHitSound() {
-		super("BowHitSound", "Sound that plays when you hit a bow shot on an entity", Sound.ENTITY_ARROW_HIT, new LinkedList<>());
+		super("BowHitSound", "Sound that plays when you hit a bow shot on an entity", Sound.ENTITY_ARROW_HIT_PLAYER, new LinkedList<>());
 		for(Sound s : Sound.values()) {
 			tabSuggestions.add(s.name());
 		}
