@@ -360,12 +360,22 @@ public abstract class TeamArena
 		regenTick();
 
 		//end the game if there are no more players for some reason (everyone left or spectator)
+		//also reveal bossbars for any teams that just joined
 		byte aliveTeamCount = 0;
 		TeamArenaTeam lastTeam = null;
 		for(TeamArenaTeam team : teams) {
 			if(team.isAlive()) {
 				aliveTeamCount++;
 				lastTeam = team;
+				
+				for(Player p : Bukkit.getOnlinePlayers()) {
+					p.showBossBar(team.bossBar);
+				}
+			}
+			else {
+				for(Player p : Bukkit.getOnlinePlayers()) {
+					p.hideBossBar(team.bossBar);
+				}
 			}
 		}
 		if(aliveTeamCount < 2) {
@@ -1042,7 +1052,8 @@ public abstract class TeamArena
 			}
 			
 			for(TeamArenaTeam team : teams) {
-				player.showBossBar(team.bossBar);
+				if(team.isAlive())
+					player.showBossBar(team.bossBar);
 			}
 		}
 	}

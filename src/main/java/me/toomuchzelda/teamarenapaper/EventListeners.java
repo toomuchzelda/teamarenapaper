@@ -158,7 +158,6 @@ public class EventListeners implements Listener
 		//new Hologram(event.getPlayer());
 		Main.getGame().joiningPlayer(event.getPlayer());
 		event.getPlayer().getAttribute(Attribute.GENERIC_ATTACK_SPEED).setBaseValue(999999);
-		//put them on team after their hologram made
 	}
 
 	//don't show any commands the player doesn't have permission to use in the tab list
