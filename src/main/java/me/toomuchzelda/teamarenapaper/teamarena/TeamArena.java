@@ -367,15 +367,6 @@ public abstract class TeamArena
 			if(team.isAlive()) {
 				aliveTeamCount++;
 				lastTeam = team;
-				
-				for(Player p : Bukkit.getOnlinePlayers()) {
-					p.showBossBar(team.bossBar);
-				}
-			}
-			else {
-				for(Player p : Bukkit.getOnlinePlayers()) {
-					p.hideBossBar(team.bossBar);
-				}
 			}
 		}
 		if(aliveTeamCount < 2) {
@@ -444,7 +435,15 @@ public abstract class TeamArena
 			
 			//player ready to respawn
 			if(entry.getValue() == -1) {
-				addToLowestTeam(p, true);
+				TeamArenaTeam team = addToLowestTeam(p, false);
+				//if team was dead before, now becoming alive, show their bossbar
+				if(!team.isAlive()) {
+					for(Player viewer : Bukkit.getOnlinePlayers()) {
+						viewer.showBossBar(team.bossBar);
+					}
+				}
+				team.addMembers(p);
+				
 				informOfTeam(p);
 				respawnPlayer(p);
 				joinerIter.remove();
@@ -1072,7 +1071,7 @@ public abstract class TeamArena
 		p.showTitle(Title.title(Component.empty(), text));
 		p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.AMBIENT, 2f, 0.5f);
 	}
-
+	
 	//find an appropriate team to put player on at any point during game
 	// boolean to actually put them on that team or just to get the team they would've been put on
 	public TeamArenaTeam addToLowestTeam(Player player, boolean add) {
@@ -1094,23 +1093,23 @@ public abstract class TeamArena
 		//    else judge on lastLeft
 		if(remainder != teams.length - 1)
 		{
-			//get all teams with that lowest player amount
-			LinkedList<TeamArenaTeam> lowestTeams = new LinkedList<>();
-			for(TeamArenaTeam team : teams) {
-				if(team.getEntityMembers().size() == count) {
-					lowestTeams.add(team);
-				}
-			}
-
-			//shuffle them, and loop through and get the first one in the list that has the lowest score.
 			if(gameState == GameState.LIVE) {
+				//get all teams with that lowest player amount
+				LinkedList<TeamArenaTeam> lowestTeams = new LinkedList<>();
+				for(TeamArenaTeam team : teams) {
+					if(team.getEntityMembers().size() == count) {
+						lowestTeams.add(team);
+					}
+				}
+				
+				//shuffle them, and loop through and get the first one in the list that has the lowest score.
 				Collections.shuffle(lowestTeams);
 				int lowestScore = Integer.MAX_VALUE;
 				for (TeamArenaTeam team : lowestTeams)
 				{
-					if (team.score < lowestScore)
+					if (team.getTotalScore() < lowestScore)
 					{
-						lowestScore = team.score;
+						lowestScore = team.getTotalScore();
 						lowestTeam = team;
 					}
 				}
