@@ -211,7 +211,7 @@ public class TeamArenaTeam
 			entityMembers.remove(entity);
 			lastIn.remove(entity);
 		}
-		Main.getGame().lastHadLeft = this;
+		Main.getGame().setLastHadLeft(this);
 	}
 
 	public void removeAllMembers() {
@@ -232,7 +232,7 @@ public class TeamArenaTeam
 			entityMembers.remove(entity);
 			lastIn.remove(entity);
 		}
-		Main.getGame().lastHadLeft = this;
+		Main.getGame().setLastHadLeft(this);
 	}
 
 	public Set<String> getStringMembers() {

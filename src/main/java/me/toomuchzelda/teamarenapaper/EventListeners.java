@@ -157,7 +157,6 @@ public class EventListeners implements Listener
 		event.getPlayer().setScoreboard(SidebarManager.SCOREBOARD);
 		//new Hologram(event.getPlayer());
 		Main.getGame().joiningPlayer(event.getPlayer());
-		event.getPlayer().getAttribute(Attribute.GENERIC_ATTACK_SPEED).setBaseValue(999999);
 	}
 
 	//don't show any commands the player doesn't have permission to use in the tab list

@@ -986,11 +986,10 @@ public abstract class TeamArena
 				TeamArenaTeam toJoin = addToLowestTeam(player, false);
 				playerInfo.team = toJoin;
 				if(gameState == GameState.GAME_STARTING) {
-					TeamArenaTeam team = Main.getPlayerInfo(player).team;
-					Location[] spawns = team.getSpawns();
+					Location[] spawns = toJoin.getSpawns();
 					//put them in next spawn point
-					toTeleport = spawns[team.spawnsIndex % spawns.length];
-					team.spawnsIndex++;
+					toTeleport = spawns[toJoin.spawnsIndex % spawns.length];
+					toJoin.spawnsIndex++;
 				}
 			}
 			else if (gameState == GameState.PREGAME) {
@@ -1002,8 +1001,6 @@ public abstract class TeamArena
 		else if (gameState == GameState.LIVE){
 			playerInfo.team = spectatorTeam;
 		}
-		//TODO: else if live, put them in spectator, or prepare to respawn
-		// else if dead, put them in spectator
 
 		if(playerInfo.kit == null) {
 			playerInfo.kit = findKit(playerInfo.defaultKit);
@@ -1019,6 +1016,7 @@ public abstract class TeamArena
 
 	public void joiningPlayer(Player player) {
 		player.setGameMode(GameMode.SURVIVAL);
+		player.getAttribute(Attribute.GENERIC_ATTACK_SPEED).setBaseValue(999999);
 		mapInfo.sendMapInfo(player);
 		if(gameState.isPreGame()) {
 			//decided from loggingInPlayer(Player)
@@ -1115,6 +1113,12 @@ public abstract class TeamArena
 			lowestTeam.addMembers(player);
 
 		return lowestTeam;
+	}
+
+	public void setLastHadLeft(TeamArenaTeam team) {
+		if(team != noTeamTeam && team != spectatorTeam) {
+			this.lastHadLeft = team;
+		}
 	}
 
 	public void sendCountdown(boolean force) {
