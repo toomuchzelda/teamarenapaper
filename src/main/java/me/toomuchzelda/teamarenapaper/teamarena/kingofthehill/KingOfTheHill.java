@@ -203,7 +203,8 @@ public class KingOfTheHill extends TeamArena
 			//every two minutes
 			if(gameTick - lastHillChangeTime >= 5 * 60 * 20) {
 				Bukkit.broadcast(Component.text("Too slow! It's been 5 minutes!!").color(NamedTextColor.RED));
-				nextHillOrEnd();
+				//nextHillOrEnd();
+				nextHill();
 			}
 			else if((gameTick - lastHillChangeTime) % (120 * 20) == 0 && lastHillChangeTime != gameTick) {
 				String s = "The time to capture the Hill has been halved";

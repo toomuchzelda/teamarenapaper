@@ -18,9 +18,11 @@ public class DamageTimes {
 
     //tick they last received damage from direct "Fighting" sources i.e melee / projectile
     public int lastAttackTime;
+    //reference to the last direct attack event
+    public DamageEvent lastAttackEvent;
 
     public FireTimes fireTimes;
-    //for all damagetypes not covered
+    //for all damagetypes not explicitly covered
     public int lastMiscDamageTime;
 
     public Entity lastDamager;
@@ -34,6 +36,7 @@ public class DamageTimes {
 
         lastAttackTime = 0;
         lastDamager = null;
+
 
         lastMiscDamageTime = 0;
 

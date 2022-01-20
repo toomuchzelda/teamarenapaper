@@ -71,7 +71,8 @@ public class DamageEvent {
         damageType = DamageType.getAttack(event);
         //if it's fire caused by an entity, set the damager from the cached DamageTimes
         // sort of re-construct this DamageEvent so it's accurate
-        if(event.getCause() == EntityDamageEvent.DamageCause.FIRE_TICK) {
+        EntityDamageEvent.DamageCause cause = event.getCause();
+        if(cause == EntityDamageEvent.DamageCause.FIRE_TICK) {
 
             //Bukkit.broadcastMessage("instanceof EEBEE: " + (event instanceof EntityDamageByEntityEvent));
             if(victim instanceof LivingEntity living) {
@@ -84,6 +85,28 @@ public class DamageEvent {
 
                     damageType = dTimes.fireTimes.fireType;
                 }
+            }
+        }
+        // also attribute fall damage if they were pushed
+        else if((cause == EntityDamageEvent.DamageCause.FALL || cause == EntityDamageEvent.DamageCause.VOID)
+                && victim instanceof LivingEntity living) {
+
+            DamageTimes times = DamageTimes.getDamageTimes(living);
+            if(times.lastDamager != null && TeamArena.getGameTick() - times.lastAttackTime < 10 * 20) { // 10 seconds since last attacked
+                if(times.lastAttackEvent.damageType.is(DamageType.PROJECTILE)) {
+                    if(cause == EntityDamageEvent.DamageCause.FALL)
+                        this.damageType = DamageType.FALL_SHOT;
+                    else
+                        this.damageType = DamageType.VOID_SHOT;
+                }
+                else {
+                    if(cause == EntityDamageEvent.DamageCause.FALL)
+                        this.damageType = DamageType.FALL_PUSHED;
+                    else
+                        this.damageType = DamageType.VOID_PUSHED;
+                }
+
+                this.attacker = times.lastDamager;
             }
         }
         
@@ -245,7 +268,7 @@ public class DamageEvent {
         }
 
         //Bukkit.broadcastMessage("kbresist: " + knockbackResistance);
-        
+
         //queue this damage
         Main.getGame().queueDamage(this);
     }
@@ -345,7 +368,7 @@ public class DamageEvent {
             if(cancelled)
                 return;
             
-            updateNDT(dTimes, damageType, this.getFinalAttacker());
+            updateNDT(dTimes);
             
             //knockback
             if(knockback != null) {
@@ -490,15 +513,15 @@ public class DamageEvent {
         }
     }
     
-    //if damagee is a player pinfo must not be null
     // mfw java no primitive pointers
-    private static void updateNDT(DamageTimes dTimes, DamageType damageType, Entity lastDamager) {
-        if(damageType.isMelee() || damageType.isProjectile())
+    private void updateNDT(DamageTimes dTimes) {
+        if(this.damageType.isMelee() || this.damageType.isProjectile())
         {
             dTimes.lastAttackTime = TeamArena.getGameTick();
+            dTimes.lastAttackEvent = this;
             //Bukkit.broadcast(Component.text("Point 5"));
         }
-        else if(damageType.isFire()) {
+        else if(this.damageType.isFire()) {
             dTimes.fireTimes.lastFireTime = TeamArena.getGameTick();
         }
         else {
@@ -506,7 +529,8 @@ public class DamageEvent {
             //Bukkit.broadcast(Component.text("Point 7"));
         }
 
-        dTimes.lastDamager = lastDamager;
+        if(this.getFinalAttacker() != null)
+            dTimes.lastDamager = this.getFinalAttacker();
     }
     
     //whether this event will cause damage or not based on victim's no damage ticks
