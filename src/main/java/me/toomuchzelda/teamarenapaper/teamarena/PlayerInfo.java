@@ -66,6 +66,7 @@ public class PlayerInfo
 	}
 	
 	public void setPreference(EnumPreference preference, Object value) {
+		//validation done in CommandPreference.java
 		this.preferenceValues[preference.ordinal()] = value;
 	}
 	

@@ -221,7 +221,7 @@ public class KingOfTheHill extends TeamArena
 			}
 		}
 		//process hill change
-		else if(owningTeam.score / 20 >= activeHill.getHillTime()) {
+		else if(owningTeam.score / 20 >= activeHill.getHillTime() || owningTeam.getTotalScore() >= TICKS_TO_WIN) {
 			nextHillOrEnd();
 		}
 
@@ -275,7 +275,7 @@ public class KingOfTheHill extends TeamArena
 			if(numLines == 3) {
 				lines[index] = first;
 				lines[index + 1] = Component.text("Score: ")
-						.append(Component.text(team.score + team.score2).color(team.getRGBTextColor()).decorate(TextDecoration.BOLD));
+						.append(Component.text(team.getTotalScore() / 20).color(team.getRGBTextColor()).decorate(TextDecoration.BOLD));
 			}
 			else {
 				first = first.append(Component.text(": " + team.score2 + team.score).decorate(TextDecoration.BOLD))
@@ -318,7 +318,7 @@ public class KingOfTheHill extends TeamArena
 			index += numLines;
 			
 			//team bossbar
-			team.bossBar.progress((float) team.getTotalScore() / (float) TICKS_TO_WIN);
+			team.bossBar.progress(Math.min(((float) team.getTotalScore() / (float) TICKS_TO_WIN), 1f));
 		}
 
 		SidebarManager.setLines(lines);
@@ -327,7 +327,8 @@ public class KingOfTheHill extends TeamArena
 	}
 
 	public void nextHill() {
-		Hill nextHill = hills[++hillIndex];
+		hillIndex++;
+		Hill nextHill = hills[hillIndex % hills.length];
 		Component hillChangeMsg = Component.text("The Hill has moved to " + nextHill.getName()).color(NamedTextColor.GOLD);
 		Bukkit.broadcast(hillChangeMsg);
 		Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
@@ -348,6 +349,7 @@ public class KingOfTheHill extends TeamArena
 		owningTeam = null;
 		hillCapProgresses.clear();
 		ticksAndPlayersToCaptureHill = INITIAL_CAP_TIME;
+		updateSidebarTitle();
 	}
 	
 	public void nextHillOrEnd() {
@@ -360,7 +362,9 @@ public class KingOfTheHill extends TeamArena
 		}
 		
 		//no more hills, game is over
-		if(hillIndex == hills.length - 1) {
+		//if(hillIndex == hills.length - 1) {
+		//change to if no team has won yet, keep rotating forever
+		if(owningTeam.getTotalScore() >= TICKS_TO_WIN) {
 			
 			TeamArenaTeam winner = null;
 			int highestScore = 0;
@@ -412,14 +416,32 @@ public class KingOfTheHill extends TeamArena
 	public void prepLive() {
 		super.prepLive();
 
-		for(Player p : Bukkit.getOnlinePlayers()) {
+		Component text = Component.text(activeHill.getName() + " is the active Hill!").color(NamedTextColor.GOLD);
+		Bukkit.broadcast(text);
+
+		Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
+		while(iter.hasNext()) {
+			Map.Entry<Player, PlayerInfo> entry = iter.next();
+
+			Player p = entry.getKey();
 			for(TeamArenaTeam team : teams) {
 				if(team.isAlive())
 					p.showBossBar(team.bossBar);
 			}
+
+			if((Boolean) entry.getValue().getPreference(EnumPreference.RECEIVE_GAME_TITLES)) {
+				PlayerUtils.sendTitle(p, Component.empty(), text, 5, 40, 5);
+			}
 		}
-		
+
+		updateSidebarTitle();
+
 		this.lastHillChangeTime = gameTick;
+	}
+
+	public void updateSidebarTitle() {
+		Component hillAndTotalTime = Component.text("ThisHill:" + activeHill.getHillTime() + " | ToWin:" + (TICKS_TO_WIN / 20)).color(NamedTextColor.GOLD);
+		SidebarManager.setTitle(hillAndTotalTime);
 	}
 
 	@Override
