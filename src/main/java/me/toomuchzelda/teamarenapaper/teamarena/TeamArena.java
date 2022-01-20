@@ -239,7 +239,6 @@ public abstract class TeamArena
 		//init all the players online at time of construction
 		for(Player p : Bukkit.getOnlinePlayers()) {
 			p.teleport(spawnPos);
-			p.setGameMode(GameMode.SURVIVAL);
 			players.add(p);
 			
 			PlayerInfo pinfo = Main.getPlayerInfo(p);
@@ -250,17 +249,12 @@ public abstract class TeamArena
 			
 			if(pinfo.kit == null)
 				pinfo.kit = kits[0];
-		
+
+			PlayerUtils.resetState(p);
+
 			p.getInventory().clear();
 			giveLobbyItems(p);
-			p.setAllowFlight(true);
-			p.setHealth(p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
-			p.setAbsorptionAmount(0);
-			p.setGlowing(false);
-			for(PotionEffect effect : p.getActivePotionEffects()) {
-				p.removePotionEffect(effect.getType());
-			}
-			
+
 			mapInfo.sendMapInfo(p);
 		}
 	}
@@ -674,8 +668,7 @@ public abstract class TeamArena
 			
 			//try to prevent visual bug of absorption remaining into next game
 			for(Player p : Bukkit.getOnlinePlayers()) {
-				p.setAbsorptionAmount(0);
-				p.setGlowing(false);
+				PlayerUtils.resetState(p);
 				for(TeamArenaTeam team : teams) {
 					p.hideBossBar(team.bossBar);
 				}
@@ -931,9 +924,8 @@ public abstract class TeamArena
 
 			//setSpectator(p, true, false);
 			Main.getPlayerInfo(p).kit.removeKit(p);
-			p.setArrowsInBody(0);
-			p.setLevel(0);
-			p.setExp(0);
+
+			PlayerUtils.resetState(p);
 
 			players.remove(p);
 			spectators.add(p);

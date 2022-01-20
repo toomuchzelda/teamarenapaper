@@ -80,6 +80,7 @@ public class KitDwarf extends Kit
 		@Override
 		public void removeAbility(Player player) {
 			player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).removeModifier(LEVELS_TO_MODIFIER[player.getLevel()]);
+			player.setExp(0);
 		}
 		
 		@Override

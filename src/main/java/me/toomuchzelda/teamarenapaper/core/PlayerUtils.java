@@ -2,8 +2,6 @@ package me.toomuchzelda.teamarenapaper.core;
 
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
-import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
 import net.minecraft.network.protocol.Packet;
@@ -11,9 +9,12 @@ import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.network.protocol.game.ClientboundSetHealthPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
+import org.bukkit.GameMode;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.craftbukkit.v1_18_R1.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_18_R1.util.CraftVector;
 import org.bukkit.entity.Player;
+import org.bukkit.potion.PotionEffect;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
@@ -77,7 +78,20 @@ public class PlayerUtils
 
 		player.showTitle(fucktitle);
 	}
-	
+
+	public static void resetState(Player player) {
+		player.setArrowsInBody(0);
+		player.setLevel(0);
+		player.setExp(0);
+		player.setGameMode(GameMode.SURVIVAL);
+		player.setHealth(player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
+		player.setAbsorptionAmount(0);
+		player.setGlowing(false);
+		for(PotionEffect effect : player.getActivePotionEffects()) {
+			player.removePotionEffect(effect.getType());
+		}
+	}
+
 	/**
 	 * make a player invisible and hide their nametag from appropriate players
 	 * temporarily removed as not using hologram nametags
