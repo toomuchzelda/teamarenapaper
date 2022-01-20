@@ -273,6 +273,8 @@ public class EventListeners implements Listener
 				}, 0L);
 			}
 		}
+
+		//Bukkit.broadcastMessage("EventFinalDamage: " + event.getFinalDamage());
 		
 		//Main.getGame().queueDamage(new DamageEvent(event));
 		//will queue itself

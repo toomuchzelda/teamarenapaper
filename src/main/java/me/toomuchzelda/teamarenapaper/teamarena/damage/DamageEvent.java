@@ -297,7 +297,7 @@ public class DamageEvent {
         else
         {
             LivingEntity living = (LivingEntity) victim;
-            
+
             net.minecraft.world.entity.LivingEntity nmsLiving = ((CraftLivingEntity) living).getHandle();
             nmsLiving.animationSpeed = 1.5f;
             
@@ -361,7 +361,21 @@ public class DamageEvent {
     
             //damage
             boolean isDeath = false;
-            double newHealth = (living.getHealth() + living.getAbsorptionAmount())- finalDamage;
+            //this should be impossible normally but can happen in some circumstances ie a player is wearing full protection 5
+            if(finalDamage < 0) {
+                Main.logger().warning(getFinalAttacker().getName() + " is doing " + finalDamage + " damage to " + victim.getName() +
+                        " DamageType: " + damageType.toString() + " attacker: " + (attacker != null ? attacker.getName() : "null"));
+                if(getFinalAttacker() instanceof Player p) {
+                    Main.logger().warning("attacker kit: " + Main.getPlayerInfo(p).kit.getName());
+                }
+                if(victim instanceof Player p) {
+                    Main.logger().warning("victim kit: " + Main.getPlayerInfo(p).kit.getName());
+                }
+
+                finalDamage = 0;
+            }
+
+            double newHealth = (living.getHealth() + living.getAbsorptionAmount()) - finalDamage;
             double maxHealth = living.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
             //they still got absorption hearts
             if(living.getAbsorptionAmount() > 0 && newHealth <= maxHealth) {

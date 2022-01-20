@@ -26,7 +26,7 @@ public class KitDwarf extends Kit
 {
 	public static final int MAX_LEVELS = 20;
 	public static final int LEVELS_PER_ENCHANT = 3;
-	public static final int MAX_PROTECTION = 5;
+	public static final int MAX_PROTECTION = 4;
 	
 	private static final AttributeModifier[] LEVELS_TO_MODIFIER = new AttributeModifier[MAX_LEVELS + 1];
 	
@@ -79,7 +79,12 @@ public class KitDwarf extends Kit
 	{
 		@Override
 		public void removeAbility(Player player) {
-			player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).removeModifier(LEVELS_TO_MODIFIER[player.getLevel()]);
+			//they should only have 1 of these attributemodifiers on at a time, but admin abuse does things
+			for(AttributeModifier modifier : player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).getModifiers()) {
+				if(modifier.getName().startsWith("DwarfSlowness")) {
+					player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).removeModifier(modifier);
+				}
+			}
 			player.setExp(0);
 		}
 		
@@ -88,7 +93,7 @@ public class KitDwarf extends Kit
 			float expToGain; //perTick
 			
 			if (player.isSprinting()) {
-				expToGain = -0.02f;
+				expToGain = -0.03f;
 			}
 			else if (player.isSneaking()) {
 				expToGain = 0.055f; // 0.005f
