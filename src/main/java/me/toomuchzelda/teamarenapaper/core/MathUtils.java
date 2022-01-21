@@ -51,7 +51,15 @@ public class MathUtils
 		else
 			return value;
 	}
-
+	public static float clamp(float min, float max, float value) {
+		if(value < min)
+			return min;
+		else if(value > max)
+			return max;
+		else
+			return value;
+	}
+	
 	public static Color randomColor() {
 		int r = randomMax(255);
 		int g = randomMax(255);

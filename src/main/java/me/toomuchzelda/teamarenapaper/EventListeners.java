@@ -8,6 +8,7 @@ import io.papermc.paper.event.player.PlayerItemCooldownEvent;
 import me.toomuchzelda.teamarenapaper.core.Hologram;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
+import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
@@ -77,6 +78,9 @@ public class EventListeners implements Listener
 			
 			if(TeamArena.nextGameType == GameType.KOTH) {
 				Main.setGame(new KingOfTheHill());
+			}
+			else if(TeamArena.nextGameType == GameType.CTF) {
+				Main.setGame(new CaptureTheFlag());
 			}
 		}
 
@@ -352,6 +356,7 @@ public class EventListeners implements Listener
 	
 	@EventHandler
 	public void arrowBodyCountChange(ArrowBodyCountChangeEvent event) {
+		//not worth adding a new method to Ability.java for this one
 		if(Main.getGame() != null && Main.getGame().getGameState() == LIVE) {
 			if (event.getEntity() instanceof Player p) {
 				Ability[] abilities = Main.getPlayerInfo(p).kit.getAbilities();

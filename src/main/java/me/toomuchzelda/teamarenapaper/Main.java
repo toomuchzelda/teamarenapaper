@@ -4,9 +4,9 @@ import me.toomuchzelda.teamarenapaper.core.EntityUtils;
 import me.toomuchzelda.teamarenapaper.core.FileUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
-import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.command.CommandMap;
@@ -60,7 +60,7 @@ public final class Main extends JavaPlugin
 		eventListeners = new EventListeners(this);
 		packetListeners = new PacketListeners(this);
 		
-		teamArena = new KingOfTheHill();
+		teamArena = new CaptureTheFlag(); //new KingOfTheHill();
 
 		EntityUtils.cacheReflection();
 		DamageType.checkDamageTypes();

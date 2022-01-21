@@ -38,7 +38,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 //main game class
 public abstract class TeamArena
 {
-	public static GameType nextGameType = GameType.KOTH;
+	public static GameType nextGameType = GameType.CTF;
 
 	private final File worldFile;
 	public World gameWorld;
@@ -473,24 +473,9 @@ public abstract class TeamArena
 			DamageEvent event = iter.next();
 			iter.remove();
 			
-			if(event.hasKnockback()) {
-				//reduce knockback done by axes
-				if (event.getDamageType().isMelee() && event.getFinalAttacker() instanceof LivingEntity living) {
-					if (living.getEquipment() != null) {
-						ItemStack weapon = living.getEquipment().getItemInMainHand();
-						if (weapon.getType().toString().endsWith("AXE")) {
-							event.getKnockback().multiply(0.8);
-							//Bukkit.broadcastMessage("Reduced axe knockback");
-						}
-					}
-				}
-				//reduce knockback done by projectiles
-				else if(event.getDamageType().isProjectile()) {
-					if(event.getAttacker() instanceof Projectile) {
-						event.getKnockback().multiply(0.8);
-					}
-				}
-			}
+			onDamage(event);
+			if(event.isCancelled())
+				continue;
 			
 			//ability pre-attack events
 			if(event.getFinalAttacker() instanceof Player p) {
@@ -511,6 +496,7 @@ public abstract class TeamArena
 				if(!canAttack(p, p2))
 					continue;
 			}
+			
 			event.executeAttack();
 		}
 	}
@@ -526,6 +512,30 @@ public abstract class TeamArena
 			Ability[] abilities = Main.getPlayerInfo(p).kit.getAbilities();
 			for(Ability ability : abilities) {
 				ability.onReceiveDamage(event);
+			}
+		}
+	}
+	
+	/**
+	 * also for overriding in subclass
+	 */
+	public void onDamage(DamageEvent event) {
+		if(event.hasKnockback()) {
+			//reduce knockback done by axes
+			if (event.getDamageType().isMelee() && event.getFinalAttacker() instanceof LivingEntity living) {
+				if (living.getEquipment() != null) {
+					ItemStack weapon = living.getEquipment().getItemInMainHand();
+					if (weapon.getType().toString().endsWith("AXE")) {
+						event.getKnockback().multiply(0.8);
+						//Bukkit.broadcastMessage("Reduced axe knockback");
+					}
+				}
+			}
+			//reduce knockback done by projectiles
+			else if(event.getDamageType().isProjectile()) {
+				if(event.getAttacker() instanceof Projectile) {
+					event.getKnockback().multiply(0.8);
+				}
 			}
 		}
 	}
@@ -1325,13 +1335,26 @@ public abstract class TeamArena
 	public LinkedList<String> getTabKitList() {
 		return tabKitList;
 	}
-
+	
 	public String mapPath() {
 		return "Maps/";
 	}
 
 	public World getWorld() {
 		return gameWorld;
+	}
+	
+	/**
+	 * for use in configs
+	 */
+	protected TeamArenaTeam getTeamByName(String name) {
+		for(TeamArenaTeam team : teams) {
+			if(team.getName().equalsIgnoreCase(name)) {
+				return team;
+			}
+		}
+		
+		return null;
 	}
 
 	public File getWorldFile() {

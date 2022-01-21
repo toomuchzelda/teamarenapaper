@@ -13,14 +13,14 @@ public abstract class Preference<T>
 		BOOLEAN_SUGGESTIONS.add("false");
 	}
 	
-	//protected int id;
+	private int id;
 	protected final String name;
 	protected final String description;
 	protected final T defaultValue;
 	protected final List<String> tabSuggestions;
 	
-	public Preference(/*int id, */String name, String description, T defaultValue, List<String> tabSuggestions) {
-		//this.id = id;
+	public Preference(int id, String name, String description, T defaultValue, List<String> tabSuggestions) {
+		this.id = id;
 		this.name = name;
 		this.description = description;
 		this.defaultValue = defaultValue;

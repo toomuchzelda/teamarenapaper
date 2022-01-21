@@ -7,7 +7,7 @@ public class PreferenceKothHillParticles extends Preference<Byte>
 	public static final byte LOWEST_KOTH_PARTICLES = 10;
 	
 	public PreferenceKothHillParticles() {
-		super("KoTHHillParticles", "The number of ticks in between each spawning of particles along the Hill border in King of the Hill. Minimum 1, Max " + LOWEST_KOTH_PARTICLES, (byte) 1, new LinkedList<>());
+		super(EnumPreference.getId(), "KoTHHillParticles", "The number of ticks in between each spawning of particles along the Hill border in King of the Hill. Minimum 1, Max " + LOWEST_KOTH_PARTICLES, (byte) 1, new LinkedList<>());
 		tabSuggestions.add("1 - " + LOWEST_KOTH_PARTICLES + " inclusive");
 	}
 	
