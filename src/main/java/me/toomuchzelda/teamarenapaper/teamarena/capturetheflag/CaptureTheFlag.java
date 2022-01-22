@@ -10,10 +10,12 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.EnumPreference;
 import net.kyori.adventure.text.Component;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
+import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.*;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
+import org.bukkit.util.RayTraceResult;
+import org.bukkit.util.Vector;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -39,17 +41,45 @@ public class CaptureTheFlag extends TeamArena
 		//make them spin around and bob around
 		for(Map.Entry<ArmorStand, Flag> entry : flagStands.entrySet()) {
 			ArmorStand stand = entry.getKey();
-			if(!stand.isInsideVehicle()) {
-				Location loc = entry.getValue().baseLoc.clone();
+			if(!stand.isInsideVehicle() && !gameState.isEndGame()) {
+				Flag flag = entry.getValue();
+				Location loc;
+				if(flag.isAtBase)
+					loc = flag.baseLoc.clone();
+				else {
+					RayTraceResult result = flag.currentLoc.getWorld().rayTraceBlocks(flag.currentLoc,
+							new Vector(0, -1, 0), 383, FluidCollisionMode.SOURCE_ONLY, true);
+					
+					if(result != null) {
+						double distance = flag.currentLoc.toVector().distance(result.getHitPosition());
+						//max fall of 0.1 blocks per tick
+						if(distance > 0.1) {
+							distance = 0.1;
+						}
+						flag.currentLoc.subtract(0, distance, 0);
+					}
+					else {
+						Main.logger().warning("Flag has been dropped and left above void, should be impossible!");
+						Thread.dumpStack();
+					}
+					loc = flag.currentLoc;
+				}
 				loc.setY(loc.getY() + (Math.sin((double) System.currentTimeMillis() / 2) / 5));
-				loc.setYaw(((stand.getLocation().getYaw() + 1f) % 360) - 180f);
+				loc.setYaw(((stand.getLocation().getYaw() + 0.0001f) % 360) - 180f);
 				stand.teleport(loc);
 				
-				for (Player p : Bukkit.getOnlinePlayers()) {
-					if (p.getBoundingBox().overlaps(stand.getBoundingBox())) {
-						flagHolders.put(p, entry.getValue());
-						p.addPassenger(stand);
-						break;
+				//check player get it
+				if(gameState == GameState.LIVE) {
+					for (Player p : Bukkit.getOnlinePlayers()) {
+						//skip if on same team
+						if(entry.getValue().team.getEntityMembers().contains(p))
+							continue;
+						
+						//picked up the flag
+						if (p.getBoundingBox().overlaps(stand.getBoundingBox())) {
+							pickUpFlag(p, entry.getValue());
+							break;
+						}
 					}
 				}
 			}
@@ -58,24 +88,64 @@ public class CaptureTheFlag extends TeamArena
 	
 	@Override
 	public void handleDeath(DamageEvent event) {
-		super.handleDeath(event);
-		
 		if(event.getVictim() instanceof Player p) {
-			Flag flag = flagHolders.get(p);
-			if(flag != null) {
-				p.removePassenger(flag.getArmorStand());
-				flag.getArmorStand().teleport(flag.baseLoc);
-				Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
-				while(iter.hasNext()) {
-					Map.Entry<Player, PlayerInfo> entry = iter.next();
-					Component text = p.playerListName().append(Component.text(" has dropped " + flag.team.getSimpleName() + "'s Flag!"));
-					// dae use unsafe type casts because the preference system is so bad
-					if((Boolean) entry.getValue().getPreference(EnumPreference.RECEIVE_GAME_TITLES)) {
-						PlayerUtils.sendTitle(p, Component.empty(), text, 7, 15, 7);
-					}
-				}
+			dropFlag(p);
+		}
+		
+		super.handleDeath(event);
+	}
+	
+	public void pickUpFlag(Player capper, Flag flag) {
+		flagHolders.put(capper, flag);
+		flag.isAtBase = false;
+		capper.addPassenger(flag.getArmorStand());
+		
+		Component text = capper.playerListName().append(Component.text(" has picked up ").color(NamedTextColor.GOLD));
+		Component endText = Component.text("'s flag!").color(NamedTextColor.GOLD);
+		Component chatText = text.append(flag.team.getComponentName()).append(endText);
+		//title uses simple name to make it a bit shorter
+		Component titleText = text.append(flag.team.getComponentSimpleName()).append(endText);
+		
+		Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
+		while(iter.hasNext()) {
+			Map.Entry<Player, PlayerInfo> entry = iter.next();
+			Player p = entry.getKey();
+			if((Boolean) entry.getValue().getPreference(EnumPreference.RECEIVE_GAME_TITLES)) {
+				PlayerUtils.sendTitle(p, Component.empty(), titleText, 7, 15, 7);
 			}
 			
+			//todo maybe a preference for game sounds
+			p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_CLUSTER_BREAK, SoundCategory.AMBIENT, 2, 1f);
+		}
+		
+		Bukkit.broadcast(titleText);
+	}
+	
+	public void dropFlag(Player p) {
+		Flag flag = flagHolders.remove(p);
+		if(flag != null) {
+			p.removePassenger(flag.getArmorStand());
+			flag.currentLoc = p.getLocation();
+			//if there's no floor to land on when it's dropped teleport it back to base
+			if(BlockUtils.getFloor(flag.currentLoc) == null) {
+			}
+			
+			Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
+			// dae use 3 variables because the component system is so bad
+			Component text = p.playerListName();
+			Component hasDropped = Component.text(" has dropped ").color(NamedTextColor.GOLD);
+			Component flagText = Component.text(" flag!").color(NamedTextColor.GOLD);
+			text = text.append(hasDropped).append(flag.team.getComponentSimpleName()).append(flagText);
+			while(iter.hasNext()) {
+				Map.Entry<Player, PlayerInfo> entry = iter.next();
+				// dae use unsafe type casts because the preference system is so bad
+				if((Boolean) entry.getValue().getPreference(EnumPreference.RECEIVE_GAME_TITLES)) {
+					PlayerUtils.sendTitle(p, Component.empty(), text, 7, 15, 7);
+				}
+				
+				p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_CLUSTER_PLACE, SoundCategory.AMBIENT, 2, 1f);
+			}
+			Bukkit.broadcast(text);
 		}
 	}
 	

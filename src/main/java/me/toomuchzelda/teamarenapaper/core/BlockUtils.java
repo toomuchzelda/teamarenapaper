@@ -30,19 +30,14 @@ public class BlockUtils
 	//find the first non-air block below any coordinate
 	// returns null if none
 	public static Location getFloor(Location pos) {
-		int y = (int) pos.getY();
-		for(int yl = y; y >= -1; y--) {
-			//did not find a block if reached here
-			if(y == -1) {
-				return null;
-			}
-			else if(pos.getWorld().getBlockAt((int) pos.getX(), yl, (int) pos.getZ()).isSolid()) {
-				y = yl;
-				break;
+		int min = pos.getWorld().getMinHeight();
+		for(int i = (int) pos.getY(); i >= min; i--) {
+			if(pos.getWorld().getBlockAt(pos.getBlockX(), i, pos.getBlockZ()).isSolid()) {
+				Location loc = pos.clone(); loc.setY(i);
+				return loc;
 			}
 		}
-		Location loc = pos.clone();
-		loc.setY(y);
-		return loc;
+		
+		return null;
 	}
 }

@@ -13,13 +13,16 @@ public class Flag
 {
 	public final TeamArenaTeam team;
 	public final Location baseLoc; // where it spawns/returns to (team's base usually)
+	public Location currentLoc;
 	
 	private ArmorStand stand;
 	public Player holder;
+	public boolean isAtBase;
 	
 	public Flag(CaptureTheFlag game, TeamArenaTeam team, Location baseLoc) {
 		this.team = team;
 		this.baseLoc = baseLoc;
+		this.currentLoc = baseLoc.clone();
 		
 		stand = (ArmorStand) baseLoc.getWorld().spawnEntity(baseLoc, EntityType.ARMOR_STAND);
 		//stand.setMarker(true);
@@ -40,10 +43,21 @@ public class Flag
 		stand.setCanTick(false);
 		stand.setInvulnerable(true);
 		
+		isAtBase = true;
+		
 		game.flagStands.put(stand, this);
+		
+		//add to team so when set glowing it shows the correct color
+		team.addMembers(stand);
 	}
 	
 	public ArmorStand getArmorStand() {
 		return stand;
+	}
+	
+	public void teleportToBase() {
+		stand.teleport(baseLoc);
+		currentLoc = baseLoc.clone();
+		isAtBase = true;
 	}
 }

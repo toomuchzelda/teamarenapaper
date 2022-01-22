@@ -15,7 +15,6 @@ public enum EnumPreference
 	
 	public static final int SIZE = values().length;
 	public static final ArrayList<String> TAB_SUGGESTIONS;
-	private static int id = 0;
 	
 	static {
 		TAB_SUGGESTIONS = new ArrayList<>(SIZE);
@@ -26,9 +25,6 @@ public enum EnumPreference
 	
 	public final Preference<?> preference;
 	
-	public static int getId() {
-		return id++;
-	}
 	
 	private EnumPreference(Preference<?> pref) {
 		this.preference = pref;

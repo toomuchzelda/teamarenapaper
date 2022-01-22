@@ -5,6 +5,6 @@ import java.util.LinkedList;
 public class PreferenceKitActionBar extends Preference<Boolean>
 {
 	public PreferenceKitActionBar() {
-		super(EnumPreference.getId(), "KitActionBar", "Receive kit-related messages in the Action bar slot (the little text space above your hotbar)", true, BOOLEAN_SUGGESTIONS);
+		super("KitActionBar", "Receive kit-related messages in the Action bar slot (the little text space above your hotbar)", true, BOOLEAN_SUGGESTIONS);
 	}
 }

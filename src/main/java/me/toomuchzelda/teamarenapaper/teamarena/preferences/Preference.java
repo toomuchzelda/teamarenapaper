@@ -1,5 +1,9 @@
 package me.toomuchzelda.teamarenapaper.teamarena.preferences;
 
+import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
+import org.bukkit.entity.Player;
+
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -13,14 +17,14 @@ public abstract class Preference<T>
 		BOOLEAN_SUGGESTIONS.add("false");
 	}
 	
-	private int id;
+	//private int id;
 	protected final String name;
 	protected final String description;
 	protected final T defaultValue;
 	protected final List<String> tabSuggestions;
 	
-	public Preference(int id, String name, String description, T defaultValue, List<String> tabSuggestions) {
-		this.id = id;
+	public Preference(/*int id, */String name, String description, T defaultValue, List<String> tabSuggestions) {
+		//this.id = id;
 		this.name = name;
 		this.description = description;
 		this.defaultValue = defaultValue;
@@ -43,7 +47,7 @@ public abstract class Preference<T>
 	public List<String> tabCompleteList() {
 		return tabSuggestions;
 	}
-	
+
 	//to be overriden in Preferences that need validation
 	public T validateArgument(String arg) throws IllegalArgumentException {
 		if(defaultValue instanceof Boolean) {

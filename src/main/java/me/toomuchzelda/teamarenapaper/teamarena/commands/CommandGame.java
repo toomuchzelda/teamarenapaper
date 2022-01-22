@@ -30,6 +30,9 @@ public class CommandGame extends CustomCommand {
 
     @Override
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
+        if(sender instanceof Player p && Main.getPlayerInfo(p).permissionLevel < CustomCommand.MOD)
+            return false;
+        
         if(args.length > 0) {
             if(args[0].equalsIgnoreCase("start")) {
                 GameState state = Main.getGame().getGameState();
