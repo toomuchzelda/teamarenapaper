@@ -10,8 +10,10 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.EnumPreference;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
+import org.bukkit.craftbukkit.v1_18_R1.entity.CraftArmorStand;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
 import org.bukkit.util.RayTraceResult;
@@ -27,6 +29,16 @@ public class CaptureTheFlag extends TeamArena
 	public HashMap<ArmorStand, Flag> flagStands; // this too
 	public HashMap<Player, Flag> flagHolders = new HashMap<>();
 	public int capsToWin;
+	
+	public static final Component PICK_UP_MESSAGE = Component.text("%holdingTeam% has picked up %team%'s flag").color(NamedTextColor.GOLD);
+	public static final Component DROP_MESSAGE = Component.text("%holdingTeam% has dropped %team%'s flag").color(NamedTextColor.GOLD);
+	public static final Component RETURNED_MESSAGE = Component.text("%team%'s flag has been returned to their base").color(NamedTextColor.GOLD);
+	public static final Component CAPTURED_MESSAGE = Component.text("%holdingTeam% has captured %team%'s flag!").color(NamedTextColor.GOLD);;
+	//shorter ones for titles
+	public static final Component PICK_UP_TITLE = Component.text("%holdingTeam% took %team%'s flag").color(NamedTextColor.GOLD);
+	public static final Component DROP_TITLE = Component.text("%holdingTeam% dropped %team%'s flag").color(NamedTextColor.GOLD);
+	public static final Component RETURNED_TITLE = Component.text("%team%'s flag returned").color(NamedTextColor.GOLD);
+	public static final Component CAPTURED_TITLE = Component.text("%holdingTeam% captured %team%'s flag!").color(NamedTextColor.GOLD);;
 	
 	public CaptureTheFlag() {
 		super();
@@ -53,30 +65,32 @@ public class CaptureTheFlag extends TeamArena
 					if(result != null) {
 						double distance = flag.currentLoc.toVector().distance(result.getHitPosition());
 						//max fall of 0.1 blocks per tick
-						if(distance > 0.1) {
+						if(distance > 0.5) {
 							distance = 0.1;
+							flag.currentLoc.subtract(0, distance, 0);
 						}
-						flag.currentLoc.subtract(0, distance, 0);
 					}
 					else {
 						Main.logger().warning("Flag has been dropped and left above void, should be impossible!");
 						Thread.dumpStack();
 					}
-					loc = flag.currentLoc;
+					loc = flag.currentLoc.clone();
 				}
 				loc.setY(loc.getY() + (Math.sin((double) System.currentTimeMillis() / 2) / 5));
-				loc.setYaw(((stand.getLocation().getYaw() + 0.0001f) % 360) - 180f);
+				loc.setYaw(((stand.getLocation().getYaw() + 5f) % 360));//- 180f);
 				stand.teleport(loc);
+				//net.minecraft.world.entity.decoration.ArmorStand nmsStand = ((CraftArmorStand) stand).getHandle();
+				//nmsStand.moveTo(loc.getX(), loc.getY(), loc.getZ(), loc.getYaw(), loc.getPitch());
 				
 				//check player get it
 				if(gameState == GameState.LIVE) {
 					for (Player p : Bukkit.getOnlinePlayers()) {
 						//skip if on same team
-						if(entry.getValue().team.getEntityMembers().contains(p))
+						if(entry.getValue().team.getPlayerMembers().contains(p))
 							continue;
 						
 						//picked up the flag
-						if (p.getBoundingBox().overlaps(stand.getBoundingBox())) {
+						if (!isSpectator(p) && p.getBoundingBox().overlaps(stand.getBoundingBox())) {
 							pickUpFlag(p, entry.getValue());
 							break;
 						}
@@ -95,57 +109,69 @@ public class CaptureTheFlag extends TeamArena
 		super.handleDeath(event);
 	}
 	
-	public void pickUpFlag(Player capper, Flag flag) {
-		flagHolders.put(capper, flag);
+	public void pickUpFlag(Player player, Flag flag) {
+		flagHolders.put(player, flag);
 		flag.isAtBase = false;
-		capper.addPassenger(flag.getArmorStand());
+		player.addPassenger(flag.getArmorStand());
 		
-		Component text = capper.playerListName().append(Component.text(" has picked up ").color(NamedTextColor.GOLD));
-		Component endText = Component.text("'s flag!").color(NamedTextColor.GOLD);
-		Component chatText = text.append(flag.team.getComponentName()).append(endText);
-		//title uses simple name to make it a bit shorter
-		Component titleText = text.append(flag.team.getComponentSimpleName()).append(endText);
+		player.setGlowing(true);
+		
+		final TextReplacementConfig playerConfig = TextReplacementConfig.builder().match("%holdingTeam%")
+				.replacement(player.playerListName()).build();
+		final TextReplacementConfig flagTeamConfig = TextReplacementConfig.builder().match("%team%")
+				.replacement(flag.team.getComponentSimpleName()).build();
+		
+		Component pickupChat = PICK_UP_MESSAGE.replaceText(playerConfig).replaceText(flagTeamConfig);
+		Component pickupTitle = PICK_UP_TITLE.replaceText(playerConfig).replaceText(flagTeamConfig);
 		
 		Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
 		while(iter.hasNext()) {
 			Map.Entry<Player, PlayerInfo> entry = iter.next();
 			Player p = entry.getKey();
 			if((Boolean) entry.getValue().getPreference(EnumPreference.RECEIVE_GAME_TITLES)) {
-				PlayerUtils.sendTitle(p, Component.empty(), titleText, 7, 15, 7);
+				PlayerUtils.sendTitle(p, Component.empty(), pickupTitle, 7, 30, 7);
 			}
 			
 			//todo maybe a preference for game sounds
 			p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_CLUSTER_BREAK, SoundCategory.AMBIENT, 2, 1f);
 		}
 		
-		Bukkit.broadcast(titleText);
+		Bukkit.broadcast(pickupChat);
 	}
 	
-	public void dropFlag(Player p) {
-		Flag flag = flagHolders.remove(p);
+	public void dropFlag(Player player) {
+		Flag flag = flagHolders.remove(player);
 		if(flag != null) {
-			p.removePassenger(flag.getArmorStand());
-			flag.currentLoc = p.getLocation();
+			player.removePassenger(flag.getArmorStand());
+			flag.currentLoc = player.getLocation();
+			player.setGlowing(false);
+			
 			//if there's no floor to land on when it's dropped teleport it back to base
 			if(BlockUtils.getFloor(flag.currentLoc) == null) {
+				flag.teleportToBase();
 			}
 			
 			Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
-			// dae use 3 variables because the component system is so bad
-			Component text = p.playerListName();
-			Component hasDropped = Component.text(" has dropped ").color(NamedTextColor.GOLD);
-			Component flagText = Component.text(" flag!").color(NamedTextColor.GOLD);
-			text = text.append(hasDropped).append(flag.team.getComponentSimpleName()).append(flagText);
+			
+			final TextReplacementConfig playerConfig = TextReplacementConfig.builder().match("%holdingTeam%")
+					.replacement(player.playerListName()).build();
+			final TextReplacementConfig teamConfig = TextReplacementConfig.builder().match("%team%")
+					.replacement(flag.team.getComponentSimpleName()).build();
+			
+			Component titleText = DROP_TITLE.replaceText(playerConfig).replaceText(teamConfig);
+			Component chatText = DROP_MESSAGE.replaceText(playerConfig).replaceText(teamConfig);
+			
 			while(iter.hasNext()) {
 				Map.Entry<Player, PlayerInfo> entry = iter.next();
+				Player p = entry.getKey();
 				// dae use unsafe type casts because the preference system is so bad
 				if((Boolean) entry.getValue().getPreference(EnumPreference.RECEIVE_GAME_TITLES)) {
-					PlayerUtils.sendTitle(p, Component.empty(), text, 7, 15, 7);
+					PlayerUtils.sendTitle(p, Component.empty(), titleText, 7, 30, 7);
 				}
 				
 				p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_CLUSTER_PLACE, SoundCategory.AMBIENT, 2, 1f);
 			}
-			Bukkit.broadcast(text);
+			Bukkit.broadcast(chatText);
 		}
 	}
 	

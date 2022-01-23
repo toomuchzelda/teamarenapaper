@@ -69,7 +69,7 @@ public class KingOfTheHill extends TeamArena
 		//count how many players of the hill owning team are on the hill to subtract against other capper's points
 		float numOwningPlayers = 0;
 		if(owningTeam != null) {
-			for(Entity e : owningTeam.getEntityMembers()) {
+			for(Entity e : owningTeam.getPlayerMembers()) {
 				if(e instanceof Player p && isSpectator(p))
 					continue;
 
@@ -81,7 +81,7 @@ public class KingOfTheHill extends TeamArena
 					e.setGlowing(false);
 			}
 
-			float max = (float) (owningTeam.getEntityMembers().size() * 0.7);
+			float max = (float) (owningTeam.getPlayerMembers().size() * 0.7);
 			if(numOwningPlayers > max)
 				numOwningPlayers = max;
 		}
@@ -102,7 +102,7 @@ public class KingOfTheHill extends TeamArena
 				if(points == null || points < 0f)
 					points = 0f;
 
-				for (Entity member : team.getEntityMembers()) {
+				for (Entity member : team.getPlayerMembers()) {
 					if(member instanceof Player p && isSpectator(p))
 						continue;
 
@@ -125,7 +125,7 @@ public class KingOfTheHill extends TeamArena
 						coloursList.add(team.getColour());
 
 					//70% of the team be on Hill for max points, any more doesn't grant more
-					toEarn = (float) numPlayers / ((float) team.getEntityMembers().size() * 0.7f);
+					toEarn = (float) numPlayers / ((float) team.getPlayerMembers().size() * 0.7f);
 
 					if(toEarn > 1f)
 						toEarn = 1f;

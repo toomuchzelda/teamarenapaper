@@ -46,11 +46,11 @@ public class TeamArenaTeam
 	private Team paperTeam;
 
 	private Location[] spawns;
-	private Set<Entity> entityMembers = ConcurrentHashMap.newKeySet();
+	private final Set<Player> playerMembers = ConcurrentHashMap.newKeySet();
 
 	//if someone needs to be booted out when a player leaves before game start
 	//only used before teams decided
-	public final Stack<Entity> lastIn = new Stack<>();
+	public final Stack<Player> lastIn = new Stack<>();
 
 	//next spawn position to use
 	public int spawnsIndex;
@@ -168,7 +168,7 @@ public class TeamArenaTeam
 				//if they're already on this team
 				// check both their reference and this Set as having the reference point here doesn't always mean
 				// being in the team yet i.e when player logging in
-				if(team == this && entityMembers.contains(player)) {
+				if(team == this && playerMembers.contains(player)) {
 					updateNametag(player);
 					continue;
 				}
@@ -184,13 +184,14 @@ public class TeamArenaTeam
 				updateNametag(player);
 
 				paperTeam.addEntry(player.getName());
+				
+				playerMembers.add(player);
+				lastIn.push(player);
 			}
 			else
 			{
 				paperTeam.addEntry(entity.getUniqueId().toString());
 			}
-			entityMembers.add(entity);
-			lastIn.push(entity);
 		}
 	}
 
@@ -208,7 +209,7 @@ public class TeamArenaTeam
 			{
 				paperTeam.removeEntry(entity.getUniqueId().toString());
 			}
-			entityMembers.remove(entity);
+			playerMembers.remove(entity);
 			lastIn.remove(entity);
 		}
 		Main.getGame().setLastHadLeft(this);
@@ -216,21 +217,26 @@ public class TeamArenaTeam
 
 	public void removeAllMembers() {
 		//removeMembers(entityMembers.toArray(new Entity[0]));
-		for (Entity entity : entityMembers)
+		for (Player player : playerMembers)
 		{
-			if (entity instanceof Player player)
-			{
+			//if (entity instanceof Player player)
+			//{
 				paperTeam.removeEntry(player.getName());
 				Main.getPlayerInfo(player).team = null;
 				//player.playerListName(Component.text(player.getName()).color(TeamArena.noTeamColour));
 				// name colour should be handled by the team they're put on
-			}
-			else
-			{
-				paperTeam.removeEntry(entity.getUniqueId().toString());
-			}
-			entityMembers.remove(entity);
-			lastIn.remove(entity);
+			//}
+			//else
+			//{
+			//	paperTeam.removeEntry(entity.getUniqueId().toString());
+			//}
+			playerMembers.remove(player);
+			lastIn.remove(player);
+		}
+		
+		//clear any non player entities in the paper team
+		for(String entry : paperTeam.getEntries()) {
+			paperTeam.removeEntry(entry);
 		}
 		Main.getGame().setLastHadLeft(this);
 	}
@@ -239,16 +245,16 @@ public class TeamArenaTeam
 		return paperTeam.getEntries();
 	}
 
-	public Set<Entity> getEntityMembers() {
-		return entityMembers;
+	public Set<Player> getPlayerMembers() {
+		return playerMembers;
 	}
 	
 	public boolean isAlive() {
-		return entityMembers.size() > 0;
+		return playerMembers.size() > 0;
 	}
 
 	public void updateNametags() {
-		for(Entity e : entityMembers) {
+		for(Entity e : playerMembers) {
 			if(e instanceof Player player) {
 				updateNametag(player);
 			}
@@ -327,7 +333,7 @@ public class TeamArenaTeam
 	}
 	
 	public static void playFireworks(TeamArenaTeam team) {
-		for(Entity e : team.entityMembers) {
+		for(Entity e : team.playerMembers) {
 			Color colour1;
 			Color colour2;
 			if(team.secondColour != null) {

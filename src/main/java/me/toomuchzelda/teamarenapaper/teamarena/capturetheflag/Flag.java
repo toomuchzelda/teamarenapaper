@@ -8,6 +8,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
+import org.bukkit.util.EulerAngle;
 
 public class Flag
 {
@@ -18,6 +19,8 @@ public class Flag
 	private ArmorStand stand;
 	public Player holder;
 	public boolean isAtBase;
+	
+	public static final EulerAngle LEG_ANGLE = new EulerAngle(Math.PI, 0, 0);
 	
 	public Flag(CaptureTheFlag game, TeamArenaTeam team, Location baseLoc) {
 		this.team = team;
@@ -42,12 +45,15 @@ public class Flag
 		
 		stand.setCanTick(false);
 		stand.setInvulnerable(true);
+		stand.setGlowing(true);
+		stand.setLeftLegPose(LEG_ANGLE);
+		stand.setRightLegPose(LEG_ANGLE);
 		
 		isAtBase = true;
 		
 		game.flagStands.put(stand, this);
 		
-		//add to team so when set glowing it shows the correct color
+		//add to bukkit team so when set glowing it shows the correct color
 		team.addMembers(stand);
 	}
 	

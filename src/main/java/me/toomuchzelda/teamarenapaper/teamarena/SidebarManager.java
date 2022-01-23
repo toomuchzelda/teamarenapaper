@@ -113,7 +113,7 @@ public class SidebarManager {
         int index = 0;
         for(TeamArenaTeam team : teams) {
             lines[index] = team.getComponentName();
-            lines[index + 1] = Component.text("Players: " + team.getEntityMembers().size());
+            lines[index + 1] = Component.text("Players: " + team.getPlayerMembers().size());
 
             index += 2;
         }

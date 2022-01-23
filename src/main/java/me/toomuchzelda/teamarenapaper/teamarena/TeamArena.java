@@ -23,7 +23,6 @@ import org.bukkit.entity.Projectile;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.potion.PotionEffect;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.yaml.snakeyaml.Yaml;
@@ -202,6 +201,7 @@ public abstract class TeamArena
 		spectatorTeam = new TeamArenaTeam("Spectators", "Specs", TeamArenaTeam.convert(NamedTextColor.DARK_GRAY), null,
 				null, null);
 		winningTeam = null;
+		lastHadLeft = null;
 
 		kitMenuItem = new ItemStack(Material.FEATHER);
 		Component kitMenuName = Component.text("Select a Kit").color(NamedTextColor.BLUE)
@@ -600,7 +600,7 @@ public abstract class TeamArena
 		for(TeamArenaTeam team : teams) {
 			int i = 0;
 			Location[] spawns = team.getSpawns();
-			for(Entity e : team.getEntityMembers()) {
+			for(Entity e : team.getPlayerMembers()) {
 				if(e instanceof Player p)
 					p.setAllowFlight(false);
 				
@@ -717,7 +717,7 @@ public abstract class TeamArena
 		//theoretically playerIdx shouldn't become larger than the number of players so i don't need to modulus
 		int playerIdx = 0;
 		for(TeamArenaTeam team : shuffledTeams) {
-			while(team.getEntityMembers().size() < maxOnTeam) {
+			while(team.getPlayerMembers().size() < maxOnTeam) {
 				team.addMembers(shuffledPlayers.get(playerIdx));
 				playerIdx++;
 			}
@@ -744,7 +744,7 @@ public abstract class TeamArena
 			int maxTeamSize = players.size() / teams.length;
 			for (TeamArenaTeam team : teams)
 			{
-				if (team.getEntityMembers().size() > maxTeamSize)
+				if (team.getPlayerMembers().size() > maxTeamSize)
 				{
 					//peek not pop, since removeMembers will remove them from the Stack
 					Entity removed = team.lastIn.peek();
@@ -833,7 +833,7 @@ public abstract class TeamArena
 		if (numPlayers % teams.length > 0)
 			maxOnTeam++;
 
-		if (requestedTeam.getEntityMembers().size() >= maxOnTeam) {
+		if (requestedTeam.getPlayerMembers().size() >= maxOnTeam) {
 			player.sendMessage(Component.text("This team is already full!").color(NamedTextColor.RED));
 		} else {
 			requestedTeam.addMembers(player);
@@ -1081,27 +1081,28 @@ public abstract class TeamArena
 		TeamArenaTeam lowestTeam = null;
 		int count = Integer.MAX_VALUE;
 		for(TeamArenaTeam team : teams) {
-			if(team.getEntityMembers().size() < count) {
+			if(team.getPlayerMembers().size() < count) {
 				lowestTeam = team;
-				count = team.getEntityMembers().size();
+				count = team.getPlayerMembers().size();
 			}
 		}
 
 		//if theres only 1 team that has 1 less player than the others
 		// put them on that team
 		// else, more than 1 team with the same low player count, judge them based on score if game is live
-		//    else judge on lastLeft
+		//    else judge on lastLeft, or pick randomly if no lastLeft
 		if(remainder != teams.length - 1)
 		{
-			if(gameState == GameState.LIVE) {
-				//get all teams with that lowest player amount
-				LinkedList<TeamArenaTeam> lowestTeams = new LinkedList<>();
-				for(TeamArenaTeam team : teams) {
-					if(team.getEntityMembers().size() == count) {
-						lowestTeams.add(team);
-					}
+			
+			//get all teams with that lowest player amount
+			ArrayList<TeamArenaTeam> lowestTeams = new ArrayList<>(teams.length);
+			for(TeamArenaTeam team : teams) {
+				if(team.getPlayerMembers().size() == count) {
+					lowestTeams.add(team);
 				}
-				
+			}
+			
+			if(gameState == GameState.LIVE) {
 				//shuffle them, and loop through and get the first one in the list that has the lowest score.
 				Collections.shuffle(lowestTeams);
 				int lowestScore = Integer.MAX_VALUE;
@@ -1113,6 +1114,9 @@ public abstract class TeamArena
 						lowestTeam = team;
 					}
 				}
+			}
+			else if(lastHadLeft == null){
+				lowestTeam = lowestTeams.get(MathUtils.randomMax(lowestTeams.size() - 1));
 			}
 			else {
 				lowestTeam = lastHadLeft;
@@ -1314,7 +1318,7 @@ public abstract class TeamArena
 	public boolean canAttack(Player one, Player two) {
 		TeamArenaTeam team = Main.getPlayerInfo(one).team;
 		//if two is on the same team as one
-		if(team.getEntityMembers().contains(two)) {
+		if(team.getPlayerMembers().contains(two)) {
 			return false;
 		}
 		return true;
