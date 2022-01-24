@@ -630,7 +630,14 @@ public abstract class TeamArena
 			kit.giveKit(player, true);
 			player.setSaturatedRegenRate(0);
 			player.setSaturation(0);
-
+			
+			for(TeamArenaTeam team : teams) {
+				if(team.isAlive())
+					player.showBossBar(team.bossBar);
+				
+				team.bossBar.progress(0); //init to 0, normally is 1
+			}
+			
 			player.playSound(player.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.AMBIENT, 2, 1);
 		}
 	}

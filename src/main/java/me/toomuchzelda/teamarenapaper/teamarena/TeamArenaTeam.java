@@ -252,6 +252,15 @@ public class TeamArenaTeam
 	public boolean isAlive() {
 		return playerMembers.size() > 0;
 	}
+	
+	/**
+	 * if a non-player entity is on this team
+	 * @param entity
+	 * @return
+	 */
+	public boolean hasEntityMember(Entity entity) {
+		return paperTeam.hasEntity(entity);
+	}
 
 	public void updateNametags() {
 		for(Entity e : playerMembers) {

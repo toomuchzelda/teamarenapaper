@@ -425,10 +425,11 @@ public class KingOfTheHill extends TeamArena
 			Map.Entry<Player, PlayerInfo> entry = iter.next();
 
 			Player p = entry.getKey();
+			/* moved to super.prepLive()
 			for(TeamArenaTeam team : teams) {
 				if(team.isAlive())
 					p.showBossBar(team.bossBar);
-			}
+			}*/
 
 			if((Boolean) entry.getValue().getPreference(EnumPreference.RECEIVE_GAME_TITLES)) {
 				PlayerUtils.sendTitle(p, Component.empty(), text, 5, 40, 5);

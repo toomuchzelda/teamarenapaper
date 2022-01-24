@@ -13,7 +13,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
-import org.bukkit.craftbukkit.v1_18_R1.entity.CraftArmorStand;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
 import org.bukkit.util.RayTraceResult;
@@ -50,51 +49,53 @@ public class CaptureTheFlag extends TeamArena
 	public void tick() {
 		super.tick();
 		
-		//make them spin around and bob around
+		//tick flags
 		for(Map.Entry<ArmorStand, Flag> entry : flagStands.entrySet()) {
 			ArmorStand stand = entry.getKey();
-			if(!stand.isInsideVehicle() && !gameState.isEndGame()) {
-				Flag flag = entry.getValue();
-				Location loc;
-				if(flag.isAtBase)
-					loc = flag.baseLoc.clone();
-				else {
-					RayTraceResult result = flag.currentLoc.getWorld().rayTraceBlocks(flag.currentLoc,
-							new Vector(0, -1, 0), 383, FluidCollisionMode.SOURCE_ONLY, true);
+			Flag flag = entry.getValue();
+			if(!gameState.isEndGame()) {
+				if(!flag.isBeingCarried()) {
+					//spin and bob around if not being carried
+					flagPositionTick(flag);
 					
-					if(result != null) {
-						double distance = flag.currentLoc.toVector().distance(result.getHitPosition());
-						//max fall of 0.1 blocks per tick
-						if(distance > 0.5) {
-							distance = 0.1;
-							flag.currentLoc.subtract(0, distance, 0);
+					//check player get it
+					if(gameState == GameState.LIVE) {
+						for (Player p : players) {
+							//if(isSpectator(p))
+							//	continue;
+							
+							if(p.getBoundingBox().overlaps(stand.getBoundingBox())) {
+								//return flag to base if teammate touches it and not at base
+								if(flag.team.getPlayerMembers().contains(p)) {
+									if(!flag.isAtBase) {
+										returnFlagToBase(flag);
+										break;
+									}
+								}
+								//enemy picked up the flag
+								else {
+									pickUpFlag(p, flag);
+									break;
+								}
+							}
 						}
 					}
-					else {
-						Main.logger().warning("Flag has been dropped and left above void, should be impossible!");
-						Thread.dumpStack();
-					}
-					loc = flag.currentLoc.clone();
 				}
-				loc.setY(loc.getY() + (Math.sin((double) System.currentTimeMillis() / 2) / 5));
-				loc.setYaw(((stand.getLocation().getYaw() + 5f) % 360));//- 180f);
-				stand.teleport(loc);
-				//net.minecraft.world.entity.decoration.ArmorStand nmsStand = ((CraftArmorStand) stand).getHandle();
-				//nmsStand.moveTo(loc.getX(), loc.getY(), loc.getZ(), loc.getYaw(), loc.getPitch());
-				
-				//check player get it
-				if(gameState == GameState.LIVE) {
-					for (Player p : Bukkit.getOnlinePlayers()) {
-						//skip if on same team
-						if(entry.getValue().team.getPlayerMembers().contains(p))
-							continue;
-						
-						//picked up the flag
-						if (!isSpectator(p) && p.getBoundingBox().overlaps(stand.getBoundingBox())) {
-							pickUpFlag(p, entry.getValue());
-							break;
+				//flag is being carried, check for capture
+				else if(gameState == GameState.LIVE) {
+					Player holder = flag.holder;
+					//check if this player's team's flag is taken
+					// if not taken, check if this player is touching their flag base thing and capture if they are
+					TeamArenaTeam team = Main.getPlayerInfo(holder).team;
+					Flag teamsFlag = teamToFlags.get(team);
+					if(holder.getBoundingBox().overlaps(teamsFlag.baseBox)) {
+						if(teamsFlag.isAtBase) //capture the flag!!
+							captureTheFlag(holder, team, flag);
+						else {
+							//TODO: send them message they can't cap if flag not at base
 						}
 					}
+					
 				}
 			}
 		}
@@ -112,6 +113,7 @@ public class CaptureTheFlag extends TeamArena
 	public void pickUpFlag(Player player, Flag flag) {
 		flagHolders.put(player, flag);
 		flag.isAtBase = false;
+		flag.holder = player;
 		player.addPassenger(flag.getArmorStand());
 		
 		player.setGlowing(true);
@@ -144,6 +146,7 @@ public class CaptureTheFlag extends TeamArena
 		if(flag != null) {
 			player.removePassenger(flag.getArmorStand());
 			flag.currentLoc = player.getLocation();
+			flag.holder = null;
 			player.setGlowing(false);
 			
 			//if there's no floor to land on when it's dropped teleport it back to base
@@ -175,6 +178,99 @@ public class CaptureTheFlag extends TeamArena
 		}
 	}
 	
+	public void returnFlagToBase(Flag flag) {
+		
+		flag.teleportToBase();
+		
+		final TextReplacementConfig returnConfig = TextReplacementConfig.builder().match("%team%").replacement(flag.team.getComponentSimpleName()).build();
+		
+		Component chatText = RETURNED_MESSAGE.replaceText(returnConfig);
+		Component titleText = RETURNED_TITLE.replaceText(returnConfig);
+		
+		var iter = Main.getPlayersIter();
+		while(iter.hasNext()) {
+			Map.Entry<Player, PlayerInfo> entry = iter.next();
+			Player p = entry.getKey();
+			
+			if((Boolean) entry.getValue().getPreference(EnumPreference.RECEIVE_GAME_TITLES)) {
+				PlayerUtils.sendTitle(p, Component.empty(), titleText, 7, 30, 7);
+			}
+			
+			//TODO: play a sound probably
+		}
+		
+		Bukkit.broadcast(chatText);
+	}
+	
+	public void captureTheFlag(Player player, TeamArenaTeam capturingTeam, Flag capturedFlag) {
+		
+		capturedFlag.teleportToBase();
+		capturingTeam.score++;
+		player.setGlowing(false);
+		
+		updateBossBars();
+		
+		final TextReplacementConfig holdingConfig = TextReplacementConfig.builder().match("%holdingTeam%")
+				.replacement(player.playerListName()).build();
+		final TextReplacementConfig victimConfig = TextReplacementConfig.builder().match("%team%").replacement(capturedFlag.team.getComponentSimpleName()).build();
+		
+		Component chatText = CAPTURED_MESSAGE.replaceText(holdingConfig).replaceText(victimConfig);
+		Component titleText = CAPTURED_TITLE.replaceText(holdingConfig).replaceText(victimConfig);
+		
+		var iter = Main.getPlayersIter();
+		while(iter.hasNext()) {
+			Map.Entry<Player, PlayerInfo> entry = iter.next();
+			Player p = entry.getKey();
+			
+			if((Boolean) entry.getValue().getPreference(EnumPreference.RECEIVE_GAME_TITLES)) {
+				PlayerUtils.sendTitle(p, Component.empty(), titleText, 7, 30, 7);
+			}
+			
+			//TODO: play a sound
+		}
+		
+		Bukkit.broadcast(chatText);
+	}
+	
+	public void updateBossBars() {
+		for(TeamArenaTeam team : teams) {
+			float progress = (float) team.score / (float) capsToWin;
+			if(progress > 1)
+				progress = 1; //floating point moment
+			team.bossBar.progress(progress);
+		}
+	}
+	
+	public void flagPositionTick(Flag flag) {
+		ArmorStand stand = flag.getArmorStand();
+		Location loc;
+		if(flag.isAtBase)
+			loc = flag.baseLoc.clone();
+		else {
+			RayTraceResult result = flag.currentLoc.getWorld().rayTraceBlocks(flag.currentLoc,
+					new Vector(0, -1, 0), 383, FluidCollisionMode.SOURCE_ONLY, true);
+			
+			if(result != null) {
+				double distance = flag.currentLoc.toVector().distance(result.getHitPosition());
+				//max fall of 0.1 blocks per tick
+				if(distance > 0.5) {
+					distance = 0.1;
+					flag.currentLoc.subtract(0, distance, 0);
+				}
+			}
+			else {
+				Main.logger().warning("Flag has been dropped and left above void, should be impossible!");
+				Thread.dumpStack();
+			}
+			loc = flag.currentLoc.clone();
+		}
+		loc.setY(loc.getY() + (Math.sin((double) System.currentTimeMillis() / 2) / 5));
+		loc.setYaw(((stand.getLocation().getYaw() + 5f) % 360));//- 180f);
+		stand.teleport(loc);
+		//net.minecraft.world.entity.decoration.ArmorStand nmsStand = ((CraftArmorStand) stand).getHandle();
+		//nmsStand.moveTo(loc.getX(), loc.getY(), loc.getZ(), loc.getYaw(), loc.getPitch());
+	}
+	
 	@Override
 	public void onDamage(DamageEvent event) {
 		super.onDamage(event);
@@ -188,9 +284,14 @@ public class CaptureTheFlag extends TeamArena
 	public void prepEnd() {
 		super.prepEnd();
 		
-		for(ArmorStand stand : flagStands.keySet()) {
-			stand.remove();
-		}
+		Bukkit.getScheduler().runTaskLater(Main.getPlugin(), bukkitTask -> {
+			
+			for(Flag flag : flagStands.values()) {
+				flag.getArmorStand().remove();
+				flag.unregisterTeam();
+			}
+		
+		}, END_GAME_TIME - 4); //one tick before the scheduled tasks in super
 	}
 	
 	

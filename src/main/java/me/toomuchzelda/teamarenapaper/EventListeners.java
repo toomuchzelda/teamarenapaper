@@ -342,10 +342,16 @@ public class EventListeners implements Listener
 	}
 
 	//stop projectiles from colliding with spectators
+	// and the flags in CTF
 	@EventHandler
 	public void projectileCollide(ProjectileCollideEvent event) {
-		if(event.getCollidedWith() instanceof Player p && Main.getGame() != null && Main.getGame().isSpectator(p))
-			event.setCancelled(true);
+		if(Main.getGame() != null) {
+			if(event.getCollidedWith() instanceof Player p && Main.getGame().isSpectator(p))
+				event.setCancelled(true);
+			else if(event.getCollidedWith() instanceof ArmorStand stand && Main.getGame() instanceof CaptureTheFlag ctf 
+					&& ctf.flagStands.containsKey(stand))
+				event.setCancelled(true);
+		}
 	}
 
 	//stop hunger

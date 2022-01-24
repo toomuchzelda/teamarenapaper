@@ -10,6 +10,8 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.command.CommandMap;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -40,8 +42,10 @@ public final class Main extends JavaPlugin
 		logger.info("Starting TMA");
 
 		//unload all vanilla worlds
+		// stop mob AI in vanilla worlds to try save performance?
 		for(World world : Bukkit.getWorlds()) {
-			logger.info("Unloading world: " + world.getName() + ", success: " + Bukkit.unloadWorld(world, false));
+			//i think unloading the main world is not allowed
+			//logger.info("Unloading world: " + world.getName() + ", success: " + Bukkit.unloadWorld(world, false));
 		}
 
 		//delete temp maps that should have been deleted on shutdown, if any
