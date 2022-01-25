@@ -3,24 +3,20 @@ package me.toomuchzelda.teamarenapaper.teamarena.capturetheflag;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.BlockUtils;
 import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
-import me.toomuchzelda.teamarenapaper.teamarena.GameState;
-import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 
 public class CaptureTheFlag extends TeamArena
 {
@@ -28,6 +24,9 @@ public class CaptureTheFlag extends TeamArena
 	public HashMap<ArmorStand, Flag> flagStands; // this too
 	public HashMap<Player, Flag> flagHolders = new HashMap<>();
 	public int capsToWin;
+	public static final int DROPPED_FLAG_RETURN_TIME = 30 * 20;
+	public static final int DROPPED_PROGRESS_BAR_LENGTH = 10;
+	public static final String DROPPED_PROGRESS_STRING;
 	
 	public static final Component PICK_UP_MESSAGE = Component.text("%holdingTeam% has picked up %team%'s flag").color(NamedTextColor.GOLD);
 	public static final Component DROP_MESSAGE = Component.text("%holdingTeam% has dropped %team%'s flag").color(NamedTextColor.GOLD);
@@ -39,10 +38,115 @@ public class CaptureTheFlag extends TeamArena
 	public static final Component RETURNED_TITLE = Component.text("%team%'s flag returned").color(NamedTextColor.GOLD);
 	public static final Component CAPTURED_TITLE = Component.text("%holdingTeam% captured %team%'s flag!").color(NamedTextColor.GOLD);;
 	
+	public static final Component CANT_CAPTURE_YOUR_FLAG_NOT_AT_BASE = Component.text("You can't capture until your flag is safely at your base!").color(TextColor.color(255, 20, 20));
+	
+	static {
+		StringBuilder builder = new StringBuilder(DROPPED_PROGRESS_BAR_LENGTH);
+		for(int i = 0; i < DROPPED_PROGRESS_BAR_LENGTH; i++) {
+			builder.append('█');
+		}
+		DROPPED_PROGRESS_STRING = builder.toString();
+	}
+	
 	public CaptureTheFlag() {
 		super();
 		
 		
+	}
+	
+	@Override
+	public void liveTick() {
+		
+		//check if dropped flags have been left long enough to be returned
+		// use their nametag for time left to return
+		for(Flag flag : teamToFlags.values()) {
+			if(!flag.isAtBase && !flag.isBeingCarried()) {
+				int timePassed = gameTick - flag.timeSinceDropped;
+				if(timePassed >= DROPPED_FLAG_RETURN_TIME) {
+					returnFlagToBase(flag);
+				}
+				else {
+					float percentage = (float) timePassed / (float) DROPPED_FLAG_RETURN_TIME;
+					percentage += 0.05;
+					if(percentage > 1)
+						percentage = 1;
+					else if (percentage < 0)
+						percentage = 0;
+					
+					int splitIndex = (int) ((float) DROPPED_PROGRESS_BAR_LENGTH * percentage);
+					
+					Component firstComponent = Component.text()
+							.content(DROPPED_PROGRESS_STRING.substring(0, splitIndex))
+							.color(flag.team.getRGBTextColor())
+							.append(Component.text().content(DROPPED_PROGRESS_STRING.substring(splitIndex))
+									.color(NamedTextColor.DARK_RED)
+									.build()).build();
+					
+					flag.getArmorStand().customName(firstComponent);
+				}
+			}
+		}
+		
+		updateLiveSidebar();
+		
+		super.liveTick();
+	}
+	
+	public void updateLiveSidebar() {
+		//update the sidebar every tick
+				byte numLines;
+				LinkedList<Flag> aliveFlags = new LinkedList<>();
+				
+				Component[] lines;
+				for(Flag flag : teamToFlags.values()) {
+					if(flag.team.isAlive())
+						aliveFlags.add(flag);
+				}
+
+				Comparator<Flag> byScore = (teamArenaTeam, t1) -> (t1.team.getTotalScore()) - (teamArenaTeam.team.getTotalScore());
+				aliveFlags.sort(byScore);
+
+				if(aliveFlags.size() <= 7)
+					numLines = 2;
+				else
+					numLines = 1;
+
+				lines = new Component[numLines * aliveFlags.size()];
+
+				int index = 0;
+				for (Flag flag : aliveFlags) {
+					Component first = flag.team.getComponentSimpleName();
+					if(numLines == 2) {
+						Component flagStatus = Component.text("Flag ").color(NamedTextColor.WHITE);
+						if(flag.isAtBase)
+							flagStatus = flagStatus.append(Component.text("Safe").color(NamedTextColor.GREEN));
+						else if(flag.holdingTeam != null) {
+							flagStatus = flagStatus.append(Component.text("Held by ")).append(flag.holdingTeam.getComponentSimpleName());
+						}
+						else {
+							flagStatus = flagStatus.append(Component.text("Unsafe").color(TextColor.color(255, 85, 0)));
+						}
+						
+						lines[index] = first.append(Component.text(": " + flag.team.getTotalScore()).color(NamedTextColor.WHITE));
+						lines[index + 1] = flagStatus;
+					}
+					else {
+						Component flagStatus;
+						if(flag.isAtBase)
+							flagStatus = Component.text("Safe").color(NamedTextColor.GREEN);
+						else if(flag.holdingTeam != null) {
+							flagStatus = Component.text("Held").color(flag.holdingTeam.getRGBTextColor());
+						}
+						else {
+							flagStatus = Component.text("Unsafe").color(TextColor.color(255, 85, 0));
+						}
+						lines[index] = first.append(Component.text(": " + flag.team.getTotalScore() + ' ').color(NamedTextColor.WHITE).append(flagStatus));
+					}
+					
+					index += numLines;
+				}
+
+				SidebarManager.setLines(lines);
 	}
 	
 	@Override
@@ -92,10 +196,9 @@ public class CaptureTheFlag extends TeamArena
 						if(teamsFlag.isAtBase) //capture the flag!!
 							captureTheFlag(holder, team, flag);
 						else {
-							//TODO: send them message they can't cap if flag not at base
+							holder.sendMessage(CANT_CAPTURE_YOUR_FLAG_NOT_AT_BASE);
 						}
 					}
-					
 				}
 			}
 		}
@@ -114,6 +217,8 @@ public class CaptureTheFlag extends TeamArena
 		flagHolders.put(player, flag);
 		flag.isAtBase = false;
 		flag.holder = player;
+		flag.holdingTeam = Main.getPlayerInfo(player).team;
+		flag.getArmorStand().setMarker(true);
 		player.addPassenger(flag.getArmorStand());
 		
 		player.setGlowing(true);
@@ -147,6 +252,9 @@ public class CaptureTheFlag extends TeamArena
 			player.removePassenger(flag.getArmorStand());
 			flag.currentLoc = player.getLocation();
 			flag.holder = null;
+			flag.holdingTeam = null;
+			flag.timeSinceDropped = gameTick;
+			flag.getArmorStand().setMarker(false);
 			player.setGlowing(false);
 			
 			//if there's no floor to land on when it's dropped teleport it back to base
@@ -196,7 +304,7 @@ public class CaptureTheFlag extends TeamArena
 				PlayerUtils.sendTitle(p, Component.empty(), titleText, 7, 30, 7);
 			}
 			
-			//TODO: play a sound probably
+			p.playSound(p.getLocation(), Sound.BLOCK_LARGE_AMETHYST_BUD_PLACE, SoundCategory.AMBIENT, 2, 1);
 		}
 		
 		Bukkit.broadcast(chatText);
@@ -207,6 +315,7 @@ public class CaptureTheFlag extends TeamArena
 		capturedFlag.teleportToBase();
 		capturingTeam.score++;
 		player.setGlowing(false);
+		capturedFlag.getArmorStand().setMarker(false);
 		
 		updateBossBars();
 		
@@ -226,10 +335,16 @@ public class CaptureTheFlag extends TeamArena
 				PlayerUtils.sendTitle(p, Component.empty(), titleText, 7, 30, 7);
 			}
 			
-			//TODO: play a sound
+			p.playSound(p.getLocation(), Sound.BLOCK_LARGE_AMETHYST_BUD_BREAK, SoundCategory.AMBIENT, 2f, 1f);
 		}
 		
 		Bukkit.broadcast(chatText);
+		
+		//end the game if win
+		if(capturingTeam.score >= capsToWin) {
+			winningTeam = capturingTeam;
+			prepEnd();
+		}
 	}
 	
 	public void updateBossBars() {

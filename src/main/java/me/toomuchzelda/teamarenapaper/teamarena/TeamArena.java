@@ -626,10 +626,11 @@ public abstract class TeamArena
 			Kit kit = entry.getValue().kit;
 			Player player = entry.getKey();
 			
+			PlayerUtils.resetState(player);
 			player.getInventory().clear();
 			kit.giveKit(player, true);
 			player.setSaturatedRegenRate(0);
-			player.setSaturation(0);
+			player.setSaturation(1);
 			
 			for(TeamArenaTeam team : teams) {
 				if(team.isAlive())
@@ -644,6 +645,33 @@ public abstract class TeamArena
 	
 	public void prepEnd() {
 		waitingSince = gameTick;
+		
+		if(winningTeam != null) {
+			Component winText = winningTeam.getComponentName().append(Component.text(" wins!!").color(winningTeam.getRGBTextColor()));
+			Bukkit.broadcast(winText);
+			
+			Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
+			while(iter.hasNext()) {
+				Map.Entry<Player, PlayerInfo> entry = iter.next();
+				if(entry.getValue().getPreference(Preferences.RECEIVE_GAME_TITLES)) {
+					PlayerUtils.sendTitle(entry.getKey(), winText, Component.empty(), 10, 4 * 20, 10);
+				}
+				if(entry.getValue().team == winningTeam) {
+					entry.getKey().playSound(entry.getKey().getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE,
+							SoundCategory.AMBIENT, 2f, 1f);
+				}
+			}
+		}
+		else {
+			Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
+			Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
+			Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
+			Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
+			
+			Bukkit.getOnlinePlayers().forEach(player ->	player.playSound(player.getLocation(),
+					Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.AMBIENT, 2, 0.5f));
+		}
+		
 		
 		//cleanup everything before dropping the reference to this for garbage collection
 		// everything here may not need to be manually cleared, but better safe than sorry

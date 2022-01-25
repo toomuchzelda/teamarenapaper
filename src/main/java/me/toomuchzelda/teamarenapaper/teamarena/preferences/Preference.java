@@ -5,6 +5,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -42,6 +43,9 @@ public abstract class Preference<T> {
 	 */
 	@Nullable
 	public abstract Collection<? extends T> getValues();
+	
+	@Nullable
+	public abstract List<String> getTabSuggestions();
 
 	public abstract String serialize(T value);
 

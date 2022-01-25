@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.capturetheflag;
 
 import me.toomuchzelda.teamarenapaper.teamarena.SidebarManager;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -33,7 +34,9 @@ public class Flag
 	
 	private ArmorStand stand;
 	public Player holder;
+	public TeamArenaTeam holdingTeam;
 	public boolean isAtBase;
+	public int timeSinceDropped;
 	
 	public static final EulerAngle LEG_ANGLE = new EulerAngle(Math.PI, 0, 0);
 	
@@ -69,6 +72,7 @@ public class Flag
 		this.baseBox = stand.getBoundingBox().clone();
 		
 		isAtBase = true;
+		timeSinceDropped = TeamArena.getGameTick();
 		
 		game.flagStands.put(stand, this);
 		
@@ -96,6 +100,9 @@ public class Flag
 		currentLoc = baseLoc.clone();
 		isAtBase = true;
 		holder = null;
+		holdingTeam = null;
+		stand.customName(team.getComponentName().append(Component.text("'s Flag")));
+		stand.setMarker(false);
 	}
 	
 	public void unregisterTeam() {

@@ -61,11 +61,24 @@ public class PlayerInfo
 		//kitChatMessages = true;
 		//kitChatMessages = new PreferenceKitChatMessages();
 	}
-
-	private HashMap<Preference<?>, Object> preferences = new HashMap<>();
+	
+	//todo make array
+	private HashMap<Preference<?>, Object> preferences = new HashMap<>(); //todo make array
+	//todo make array
+	//todo make array
+	//todo make array
+	//todo make array
+	//todo make array
+	//todo make array
+	//todo make array
+	//todo make array
+	//todo make array
+	//todo make array
+	//todo make array
+	
 
 	public void setPreferenceValues(Map<Preference<?>, ?> values) {
-		preferences = new HashMap<>(values);
+		preferences = new HashMap<>(values); // disgusting and slow
 	}
 	
 	public <T> void setPreference(Preference<T> preference, T value) {

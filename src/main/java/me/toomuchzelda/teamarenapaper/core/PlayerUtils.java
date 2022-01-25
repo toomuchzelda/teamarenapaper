@@ -81,6 +81,7 @@ public class PlayerUtils
 
 	public static void resetState(Player player) {
 		player.setArrowsInBody(0);
+		player.setFallDistance(0);
 		player.setLevel(0);
 		player.setExp(0);
 		player.setGameMode(GameMode.SURVIVAL);

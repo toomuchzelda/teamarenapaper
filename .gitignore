@@ -120,3 +120,4 @@ buildNumber.properties
 run/
 /bin/
 /.classpath
+/.project

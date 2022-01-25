@@ -5,6 +5,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -17,6 +18,7 @@ public class SimplePreference<T> extends Preference<T> {
     public final T defaultValue;
     @Nullable
     public final Collection<? extends T> values;
+    public final ArrayList<String> tabSugguestions;
     public final Function<T, String> toStringFunction;
     public final Function<String, T> fromStringFunction;
     public SimplePreference(String name, String description, Class<T> clazz,
@@ -27,6 +29,15 @@ public class SimplePreference<T> extends Preference<T> {
         this.clazz = clazz;
         this.defaultValue = defaultValue;
         this.values = values;
+        if(values != null) {
+            this.tabSugguestions = new ArrayList<>(values.size());
+            for (T value : values) {
+                tabSugguestions.add(toStringFunction.apply(value));
+            }
+        }
+        else {
+            this.tabSugguestions = null;
+        }
         this.toStringFunction = toStringFunction;
         this.fromStringFunction = fromStringFunction;
     }
@@ -43,7 +54,8 @@ public class SimplePreference<T> extends Preference<T> {
     /**
      * @param predicate Predicate to indicate whether the enum value is allowed
      */
-    public static <T extends Enum<T>> SimplePreference<T> of(String name, String description, Class<T> clazz, T defaultValue, Predicate<T> predicate) {
+    public static <T extends Enum<T>> SimplePreference<T> of(String name, String description, Class<T> clazz, T defaultValue,
+                                                             Predicate<T> predicate) {
         return new SimplePreference<>(name, description, clazz, defaultValue,
                 Arrays.stream(clazz.getEnumConstants()).filter(predicate).collect(Collectors.toList()),
                 Enum::name, arg -> {
@@ -90,6 +102,11 @@ public class SimplePreference<T> extends Preference<T> {
     @Override
     public @Nullable Collection<? extends T> getValues() {
         return values;
+    }
+    
+    @Override
+    public @Nullable ArrayList<String> getTabSuggestions() {
+        return tabSugguestions;
     }
 
     @Override

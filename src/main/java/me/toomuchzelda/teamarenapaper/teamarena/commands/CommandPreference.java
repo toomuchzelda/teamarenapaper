@@ -13,7 +13,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class CommandPreference extends CustomCommand {
@@ -98,9 +97,7 @@ public class CommandPreference extends CustomCommand {
 						// try listing possible values
 						Collection<?> values = pref.getValues();
 						if (values != null) {
-							return CustomCommand.doAutocomplete(values.stream()
-											.map(obj -> ((Preference) pref).serialize(obj))
-											.collect(Collectors.toList()), args[2]);
+							return CustomCommand.doAutocomplete(pref.getTabSuggestions(), args[2]);
 						}
 					}
 				}

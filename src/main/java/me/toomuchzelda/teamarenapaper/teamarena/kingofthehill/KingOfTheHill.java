@@ -279,11 +279,11 @@ public class KingOfTheHill extends TeamArena
 						.append(Component.text(team.getTotalScore() / 20).color(team.getRGBTextColor()).decorate(TextDecoration.BOLD));
 			}
 			else {
-				first = first.append(Component.text(": " + team.score2 + team.score).decorate(TextDecoration.BOLD))
+				first = first.append(Component.text(": " + (team.getTotalScore() / 20)).decorate(TextDecoration.BOLD))
 						.color(team.getRGBTextColor());
 				lines[index] = first;
 			}
-			//use bossbars for cap progress instead
+			
 			if(numLines != 1) {
 				if (owningTeam == team)
 					lines[index + 2] = Component.text("KING").decorate(TextDecoration.BOLD).color(NamedTextColor.GOLD);
@@ -376,34 +376,7 @@ public class KingOfTheHill extends TeamArena
 				}
 			}
 			
-			//maybe pointless, draws only called if all teams have 0
-			if(winner == null) {
-				Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
-				Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
-				Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
-				Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
-				
-				Bukkit.getOnlinePlayers().forEach(player ->	player.playSound(player.getLocation(),
-						Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.AMBIENT, 2, 0.5f));
-			}
-			else {
-				Component winText = winner.getComponentName().append(Component.text(" wins!!").color(owningTeam.getRGBTextColor()));
-				Bukkit.broadcast(winText);
-				
-				Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
-				while(iter.hasNext()) {
-					Map.Entry<Player, PlayerInfo> entry = iter.next();
-					if(entry.getValue().getPreference(Preferences.RECEIVE_GAME_TITLES)) {
-						PlayerUtils.sendTitle(entry.getKey(), winText, Component.empty(), 10, 4 * 20, 10);
-					}
-					if(entry.getValue().team == winner) {
-						entry.getKey().playSound(entry.getKey().getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE,
-								SoundCategory.AMBIENT, 2f, 1f);
-					}
-				}
-				
-				winningTeam = winner;
-			}
+			winningTeam = winner;
 			
 			prepEnd();
 			//return;
@@ -412,6 +385,7 @@ public class KingOfTheHill extends TeamArena
 			nextHill();
 		}
 	}
+
 
 	@Override
 	public void prepLive() {
