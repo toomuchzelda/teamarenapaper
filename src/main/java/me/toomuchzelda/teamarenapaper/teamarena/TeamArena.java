@@ -8,7 +8,7 @@ import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
-import me.toomuchzelda.teamarenapaper.teamarena.preferences.EnumPreference;
+import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -554,7 +554,7 @@ public abstract class TeamArena
 					newHealth = maxHealth;
 				
 				p.setHealth(newHealth);
-				if((Boolean) entry.getValue().getPreference(EnumPreference.HEARTS_FLASH_REGEN))
+				if(entry.getValue().getPreference(Preferences.HEARTS_FLASH_REGEN))
 					PlayerUtils.sendHealth(p, newHealth);
 			}
 		}

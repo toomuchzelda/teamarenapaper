@@ -5,6 +5,9 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.*;
 import org.bukkit.Location;
 
+import java.util.HashMap;
+import java.util.Map;
+
 //container class to store per-player info
 public class PlayerInfo
 {
@@ -16,7 +19,7 @@ public class PlayerInfo
 	//todo: read from DB or other persistent storage
 	public String defaultKit;
 	
-	
+	// cringe
 	//from 1-10. number of ticks in between particle play
 	//public byte kothHillParticles;
 	//public final PreferenceKothHillParticles kothParticles;
@@ -35,8 +38,6 @@ public class PlayerInfo
 	//public final PreferenceKitActionBar kitActionBar;
 	//public boolean kitChatMessages;
 	//public final PreferenceKitChatMessages kitChatMessages;
-	
-	private Object[] preferenceValues;
 
 	public PlayerInfo(byte permissionLevel) {
 		team = null;
@@ -60,17 +61,19 @@ public class PlayerInfo
 		//kitChatMessages = true;
 		//kitChatMessages = new PreferenceKitChatMessages();
 	}
-	
-	public void setPreferenceValues(Object[] values) {
-		this.preferenceValues = values;
+
+	private HashMap<Preference<?>, Object> preferences = new HashMap<>();
+
+	public void setPreferenceValues(Map<Preference<?>, ?> values) {
+		preferences = new HashMap<>(values);
 	}
 	
-	public void setPreference(EnumPreference preference, Object value) {
-		//validation done in CommandPreference.java
-		this.preferenceValues[preference.ordinal()] = value;
+	public <T> void setPreference(Preference<T> preference, T value) {
+		preferences.put(preference, value);
 	}
-	
-	public Object getPreference(EnumPreference preference) {
-		return preferenceValues[preference.ordinal()];
+
+	@SuppressWarnings("unchecked")
+	public <T> T getPreference(Preference<T> preference) {
+		return (T) preferences.getOrDefault(preference, preference.getDefaultValue());
 	}
 }

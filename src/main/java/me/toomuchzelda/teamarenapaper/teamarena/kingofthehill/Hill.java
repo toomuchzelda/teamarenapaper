@@ -4,7 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.core.RealHologram;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.preferences.EnumPreference;
+import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
@@ -68,7 +68,7 @@ public class Hill {
                 //if player is within 35 blocks
                 if(p.getLocation().toVector().distanceSquared(border.getCenter()) < VIEW_DISTANCE * VIEW_DISTANCE) {
 
-                    byte num = (Byte) Main.getPlayerInfo(p).getPreference(EnumPreference.KOTH_HILL_PARTICLES);
+                    int num = Main.getPlayerInfo(p).getPreference(Preferences.KOTH_HILL_PARTICLES);
                     if(TeamArena.getGameTick() % num == 0) {
                         p.spawnParticle(Particle.SPELL_MOB, location.getX(), location.getY(),
                                 location.getZ(), 0, red, green, blue, 1);
@@ -102,7 +102,7 @@ public class Hill {
                 //if player is within 35 blocks
                 if(p.getLocation().toVector().distanceSquared(border.getCenter()) < VIEW_DISTANCE * VIEW_DISTANCE) {
     
-                    byte num = (Byte) Main.getPlayerInfo(p).getPreference(EnumPreference.KOTH_HILL_PARTICLES);
+                    int num = Main.getPlayerInfo(p).getPreference(Preferences.KOTH_HILL_PARTICLES);
                     if(TeamArena.getGameTick() % num == 0) {
                         p.spawnParticle(Particle.SPELL_MOB, location.getX(), location.getY(),
                                 location.getZ(), 0, red, green, blue, 1);

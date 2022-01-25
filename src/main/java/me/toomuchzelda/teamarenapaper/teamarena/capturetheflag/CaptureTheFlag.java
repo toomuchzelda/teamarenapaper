@@ -8,7 +8,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
-import me.toomuchzelda.teamarenapaper.teamarena.preferences.EnumPreference;
+import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -130,7 +130,7 @@ public class CaptureTheFlag extends TeamArena
 		while(iter.hasNext()) {
 			Map.Entry<Player, PlayerInfo> entry = iter.next();
 			Player p = entry.getKey();
-			if((Boolean) entry.getValue().getPreference(EnumPreference.RECEIVE_GAME_TITLES)) {
+			if(entry.getValue().getPreference(Preferences.RECEIVE_GAME_TITLES)) {
 				PlayerUtils.sendTitle(p, Component.empty(), pickupTitle, 7, 30, 7);
 			}
 			
@@ -168,7 +168,7 @@ public class CaptureTheFlag extends TeamArena
 				Map.Entry<Player, PlayerInfo> entry = iter.next();
 				Player p = entry.getKey();
 				// dae use unsafe type casts because the preference system is so bad
-				if((Boolean) entry.getValue().getPreference(EnumPreference.RECEIVE_GAME_TITLES)) {
+				if(entry.getValue().getPreference(Preferences.RECEIVE_GAME_TITLES)) {
 					PlayerUtils.sendTitle(p, Component.empty(), titleText, 7, 30, 7);
 				}
 				
@@ -192,7 +192,7 @@ public class CaptureTheFlag extends TeamArena
 			Map.Entry<Player, PlayerInfo> entry = iter.next();
 			Player p = entry.getKey();
 			
-			if((Boolean) entry.getValue().getPreference(EnumPreference.RECEIVE_GAME_TITLES)) {
+			if(entry.getValue().getPreference(Preferences.RECEIVE_GAME_TITLES)) {
 				PlayerUtils.sendTitle(p, Component.empty(), titleText, 7, 30, 7);
 			}
 			
@@ -222,7 +222,7 @@ public class CaptureTheFlag extends TeamArena
 			Map.Entry<Player, PlayerInfo> entry = iter.next();
 			Player p = entry.getKey();
 			
-			if((Boolean) entry.getValue().getPreference(EnumPreference.RECEIVE_GAME_TITLES)) {
+			if(entry.getValue().getPreference(Preferences.RECEIVE_GAME_TITLES)) {
 				PlayerUtils.sendTitle(p, Component.empty(), titleText, 7, 30, 7);
 			}
 			
