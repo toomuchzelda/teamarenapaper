@@ -5,7 +5,7 @@ import me.toomuchzelda.teamarenapaper.core.ItemUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
-import me.toomuchzelda.teamarenapaper.teamarena.preferences.EnumPreference;
+import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Color;
@@ -169,10 +169,10 @@ public class KitDwarf extends Kit
 				Component text = Component.text("Armor Protection: " + armorLevel + "    Sword Sharpness: "
 						+ enchantLevels).color(TextColor.color(223, 94, 255));
 				
-				if ((Boolean) pinfo.getPreference(EnumPreference.KIT_ACTION_BAR)) {
+				if (pinfo.getPreference(Preferences.KIT_ACTION_BAR)) {
 					player.sendActionBar(text);
 				}
-				if((Boolean) pinfo.getPreference(EnumPreference.KIT_CHAT_MESSAGES)) {
+				if(pinfo.getPreference(Preferences.KIT_CHAT_MESSAGES)) {
 					player.sendMessage(text);
 				}
 			}

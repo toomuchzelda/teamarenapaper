@@ -1,39 +1,28 @@
 package me.toomuchzelda.teamarenapaper.teamarena.preferences;
 
-import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
-import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.regex.Pattern;
 
-public abstract class Preference<T>
-{
-	public static final ArrayList<String> BOOLEAN_SUGGESTIONS;
-	static {
-		BOOLEAN_SUGGESTIONS = new ArrayList<>(2);
-		BOOLEAN_SUGGESTIONS.add("true");
-		BOOLEAN_SUGGESTIONS.add("false");
-	}
-	
-	//private int id;
+/**
+ * @author jacky
+ */
+public abstract class Preference<T> {
 	protected final String name;
 	protected final String description;
-	protected final T defaultValue;
-	protected final List<String> tabSuggestions;
-	
-	public Preference(/*int id, */String name, String description, T defaultValue, List<String> tabSuggestions) {
-		//this.id = id;
+
+	private static final Pattern VALID_NAME = Pattern.compile("[a-z0-9_:]+");
+	public static final LinkedHashMap<String, Preference<?>> PREFERENCES = new LinkedHashMap<>();
+	public Preference(String name, String description) {
+		if (!VALID_NAME.matcher(name).matches())
+			throw new IllegalArgumentException("Invalid preference key " + name);
 		this.name = name;
 		this.description = description;
-		this.defaultValue = defaultValue;
-		
-		this.tabSuggestions = tabSuggestions;
-	}
-	
-	public T getDefaultValue() {
-		return defaultValue;
+
+		PREFERENCES.put(name, this);
 	}
 	
 	public String getName() {
@@ -44,39 +33,32 @@ public abstract class Preference<T>
 		return description;
 	}
 
-	public List<String> tabCompleteList() {
-		return tabSuggestions;
+	@NotNull
+	public abstract T getDefaultValue();
+
+	/**
+	 * May be null
+	 * @return A list of possible values this preference may be set to
+	 */
+	@Nullable
+	public abstract Collection<? extends T> getValues();
+
+	public abstract String unmarshal(T value);
+
+	public abstract T marshal(String arg) throws IllegalArgumentException;
+
+	@Override
+	public int hashCode() {
+		return name.hashCode();
 	}
 
-	//to be overriden in Preferences that need validation
-	public T validateArgument(String arg) throws IllegalArgumentException {
-		if(defaultValue instanceof Boolean) {
-			if(!arg.equalsIgnoreCase("true") && !arg.equalsIgnoreCase("false")) {
-				throw new IllegalArgumentException("Bad boolean, must be true/false");
-			}
-			else {
-				return (T) Boolean.valueOf(arg);
-			}
-		}
-		else if(defaultValue instanceof Integer) {
-			try {
-				Integer i = Integer.parseInt(arg);
-				return (T) i;
-			}
-			catch(NumberFormatException e) {
-				throw new IllegalArgumentException("Bad number, must be a valid integer (no decimals!)");
-			}
-		}
-		else if(defaultValue instanceof Byte) {
-			try {
-				Byte i = Byte.parseByte(arg);
-				return (T) i;
-			}
-			catch(NumberFormatException e) {
-				throw new IllegalArgumentException("Bad number, must be a valid integer (no decimals!)");
-			}
-		}
-		
-		return defaultValue;
+	@Override
+	public boolean equals(Object obj) {
+		return obj instanceof Preference<?> pref && pref.name.equals(name) && pref.description.equals(description);
+	}
+
+	@Override
+	public String toString() {
+		return "Preference{name=" + name + "}";
 	}
 }

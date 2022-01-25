@@ -5,7 +5,7 @@ import me.toomuchzelda.teamarenapaper.core.EntityUtils;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.preferences.EnumPreference;
+import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
@@ -431,7 +431,7 @@ public class DamageEvent {
 
             //need to send this packet for the hearts to flash white when lost, otherwise they just decrease with no
             // effect
-            if (victim instanceof Player player && (Boolean) Main.getPlayerInfo(player).getPreference(EnumPreference.HEARTS_FLASH_DAMAGE)) {
+            if (victim instanceof Player player && Main.getPlayerInfo(player).getPreference(Preferences.HEARTS_FLASH_DAMAGE)) {
                 PlayerUtils.sendHealth(player, player.getHealth());
             }
         }
@@ -506,7 +506,7 @@ public class DamageEvent {
                     p.resetCooldown();
                 }
                 else if(damageType.is(DamageType.PROJECTILE)) {
-                    Sound sound = (Sound) Main.getPlayerInfo(p).getPreference(EnumPreference.BOW_HIT_SOUND);
+                    Sound sound = Main.getPlayerInfo(p).getPreference(Preferences.BOW_HIT_SOUND);
                     p.playSound(p.getLocation(), sound, SoundCategory.PLAYERS, 2f, 1f);
                 }
             }

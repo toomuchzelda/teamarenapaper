@@ -16,26 +16,33 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
 import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitGhost;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
-import me.toomuchzelda.teamarenapaper.teamarena.preferences.EnumPreference;
+import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.PreferenceManager;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.attribute.Attribute;
 import org.bukkit.command.Command;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.player.*;
+import org.bukkit.event.player.PlayerLoginEvent.Result;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 import static me.toomuchzelda.teamarenapaper.teamarena.GameState.DEAD;
 import static me.toomuchzelda.teamarenapaper.teamarena.GameState.LIVE;
@@ -110,27 +117,22 @@ public class EventListeners implements Listener
 
 		PacketListeners.cancelDamageSounds = true;
 	}
-
-	//load the player's preferences from db and store temporarily until their PlayerInfo is created
-	@EventHandler
-	public void asyncPlayerPreLogin(AsyncPlayerPreLoginEvent event) {
-		if(event.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED)
+	
+	private HashMap<UUID, CompletableFuture<Map<Preference<?>, ?>>> preferenceFutureMap = new HashMap<>();
+	@EventHandler(priority = EventPriority.MONITOR)
+	public void asynchronousPlayerPreLoginEventHandler(AsyncPlayerPreLoginEvent e) {
+		if (e.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED)
 			return;
-		
-		Object[] values = new Object[EnumPreference.SIZE];
-		
-		//todo: read from database or persistent storage
-		EnumPreference[] arr = EnumPreference.values();
-		for(int i = 0; i < arr.length; i++) {
-			values[i] = arr[i].preference.getDefaultValue();
+		synchronized (preferenceFutureMap) {
+			preferenceFutureMap.put(e.getUniqueId(), PreferenceManager.fetchPreferences(e.getUniqueId()));
 		}
-		
-		PreferenceManager.putData(event.getUniqueId(), values);
 	}
+	
 	
 	//these three events are called in this order
 	@EventHandler
 	public void playerLogin(PlayerLoginEvent event) {
+		UUID uuid = event.getPlayer().getUniqueId();
 		//todo: read from MySQL server or something for stored player data.
 		// or use persistent data containers, or option to use either
 		// and also use the PreLoginEvent
@@ -142,7 +144,15 @@ public class EventListeners implements Listener
 		else
 			playerInfo = new PlayerInfo(CustomCommand.ALL);
 		
-		playerInfo.setPreferenceValues(PreferenceManager.getAndRemoveData(event.getPlayer().getUniqueId()));
+		synchronized (preferenceFutureMap) {
+			CompletableFuture<Map<Preference<?>, ?>> future = preferenceFutureMap.remove(uuid);
+			if (future == null) {
+				event.disallow(Result.KICK_OTHER, Component.text("Failed to load preferences!")
+						.color(NamedTextColor.DARK_RED));
+				return;
+			}
+			playerInfo.setPreferenceValues(future.join());
+		}
 		
 		Main.addPlayerInfo(event.getPlayer(), playerInfo);
 		Main.getGame().loggingInPlayer(event.getPlayer(), playerInfo);
