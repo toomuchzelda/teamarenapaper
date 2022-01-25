@@ -93,12 +93,12 @@ public class SimplePreference<T> extends Preference<T> {
     }
 
     @Override
-    public String unmarshal(T value) {
+    public String serialize(T value) {
         return toStringFunction.apply(value);
     }
 
     @Override
-    public T marshal(String arg) throws IllegalArgumentException {
+    public T deserialize(String arg) throws IllegalArgumentException {
         return fromStringFunction.apply(arg);
     }
 }

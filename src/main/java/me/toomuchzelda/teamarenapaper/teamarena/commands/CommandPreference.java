@@ -48,7 +48,7 @@ public class CommandPreference extends CustomCommand {
 				Object value = Main.getPlayerInfo(p).getPreference(pref);
 				Component name = Component.text(pref.getName() + ": ").color(HEADINGS);
 				Component desc = Component.text(pref.getDescription()).color(TEXT).append(Component.newline());
-				Component currentValue = Component.text("Currently set to: " + pref.unmarshal(value)).color(NamedTextColor.GOLD).append(Component.newline());
+				Component currentValue = Component.text("Currently set to: " + pref.serialize(value)).color(NamedTextColor.GOLD).append(Component.newline());
 				Component defaultValue = Component.text("Default value: " + pref.getDefaultValue()).color(NamedTextColor.YELLOW);
 				
 				p.sendMessage(name.append(desc).append(currentValue).append(defaultValue));
@@ -59,7 +59,7 @@ public class CommandPreference extends CustomCommand {
 					return true;
 				Object newValue;
 				try {
-					newValue = pref.marshal(args[2]);
+					newValue = pref.deserialize(args[2]);
 				} catch(IllegalArgumentException e) {
 					Component arg = Component.text(args[2] + " invalid: ").color(HEADINGS);
 					Component error = Component.text(e.getMessage()).color(TEXT);
@@ -99,7 +99,7 @@ public class CommandPreference extends CustomCommand {
 						Collection<?> values = pref.getValues();
 						if (values != null) {
 							return CustomCommand.doAutocomplete(values.stream()
-											.map(obj -> ((Preference) pref).unmarshal(obj))
+											.map(obj -> ((Preference) pref).serialize(obj))
 											.collect(Collectors.toList()), args[2]);
 						}
 					}

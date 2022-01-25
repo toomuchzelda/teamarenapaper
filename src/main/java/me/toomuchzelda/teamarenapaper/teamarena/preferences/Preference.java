@@ -43,9 +43,9 @@ public abstract class Preference<T> {
 	@Nullable
 	public abstract Collection<? extends T> getValues();
 
-	public abstract String unmarshal(T value);
+	public abstract String serialize(T value);
 
-	public abstract T marshal(String arg) throws IllegalArgumentException;
+	public abstract T deserialize(String arg) throws IllegalArgumentException;
 
 	@Override
 	public int hashCode() {
