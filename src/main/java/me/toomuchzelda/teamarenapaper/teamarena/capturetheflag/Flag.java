@@ -1,5 +1,9 @@
 package me.toomuchzelda.teamarenapaper.teamarena.capturetheflag;
 
+import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.events.PacketContainer;
+import com.comphenix.protocol.wrappers.WrappedDataWatcher;
+import me.toomuchzelda.teamarenapaper.core.Hologram;
 import me.toomuchzelda.teamarenapaper.teamarena.SidebarManager;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
@@ -22,6 +26,8 @@ public class Flag
 	public final Location baseLoc; // where it spawns/returns to (team's base usually)
 	public final BoundingBox baseBox; // boundingbox at the team's base a player has to touch to capture an enemy's flag 
 	public Location currentLoc;
+	public final PacketContainer markerMetadataPacket;
+	public final PacketContainer normalMetadataPacket;
 	
 	/**
 	 * have a seperate bukkit team to put on.
@@ -85,6 +91,9 @@ public class Flag
 		bukkitTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.ALWAYS);
 		
 		bukkitTeam.addEntity(stand);
+		
+		markerMetadataPacket = constructMarkerMetadataPacket();
+		normalMetadataPacket = contructNormalMetadataPacket();
 	}
 	
 	public ArmorStand getArmorStand() {
@@ -102,7 +111,40 @@ public class Flag
 		holder = null;
 		holdingTeam = null;
 		stand.customName(team.getComponentName().append(Component.text("'s Flag")));
-		stand.setMarker(false);
+	}
+	
+	private PacketContainer constructMarkerMetadataPacket() {
+		PacketContainer metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
+		//entity id
+		metadataPacket.getIntegers().write(0, stand.getEntityId());
+		
+		WrappedDataWatcher data = WrappedDataWatcher.getEntityWatcher(stand).deepClone();
+		
+		WrappedDataWatcher.WrappedDataWatcherObject armorStandMeta =
+				new WrappedDataWatcher.WrappedDataWatcherObject(Hologram.ARMOR_STAND_METADATA_INDEX,
+						WrappedDataWatcher.Registry.get(Byte.class));
+		data.setObject(armorStandMeta, Hologram.ARMOR_STAND_MARKER_BIT_MASK);
+		
+		metadataPacket.getWatchableCollectionModifier().write(0, data.getWatchableObjects());
+		
+		return metadataPacket;
+	}
+	
+	private PacketContainer contructNormalMetadataPacket() {
+		PacketContainer metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
+		metadataPacket.getIntegers().write(0, stand.getEntityId());
+		metadataPacket.getWatchableCollectionModifier().write(0,
+				WrappedDataWatcher.getEntityWatcher(stand).getWatchableObjects());
+		
+		return metadataPacket;
+	}
+	
+	public PacketContainer getMarkerMetadataPacket() {
+		return markerMetadataPacket;
+	}
+	
+	public PacketContainer getNormalMetadataPacket() {
+		return normalMetadataPacket;
 	}
 	
 	public void unregisterTeam() {

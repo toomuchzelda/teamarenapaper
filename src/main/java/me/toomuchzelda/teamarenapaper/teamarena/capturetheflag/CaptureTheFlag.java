@@ -94,59 +94,59 @@ public class CaptureTheFlag extends TeamArena
 	
 	public void updateLiveSidebar() {
 		//update the sidebar every tick
-				byte numLines;
-				LinkedList<Flag> aliveFlags = new LinkedList<>();
+		byte numLines;
+		LinkedList<Flag> aliveFlags = new LinkedList<>();
+		
+		Component[] lines;
+		for(Flag flag : teamToFlags.values()) {
+			if(flag.team.isAlive())
+				aliveFlags.add(flag);
+		}
+		
+		Comparator<Flag> byScore = (teamArenaTeam, t1) -> (t1.team.getTotalScore()) - (teamArenaTeam.team.getTotalScore());
+		aliveFlags.sort(byScore);
+		
+		if(aliveFlags.size() <= 7)
+			numLines = 2;
+		else
+			numLines = 1;
+		
+		lines = new Component[numLines * aliveFlags.size()];
+		
+		int index = 0;
+		for (Flag flag : aliveFlags) {
+			Component first = flag.team.getComponentSimpleName();
+			if(numLines == 2) {
+				Component flagStatus = Component.text("Flag ").color(NamedTextColor.WHITE);
+				if(flag.isAtBase)
+					flagStatus = flagStatus.append(Component.text("Safe").color(NamedTextColor.GREEN));
+				else if(flag.holdingTeam != null) {
+					flagStatus = flagStatus.append(Component.text("Held by ")).append(flag.holdingTeam.getComponentSimpleName());
+				}
+				else {
+					flagStatus = flagStatus.append(Component.text("Unsafe").color(TextColor.color(255, 85, 0)));
+				}
 				
-				Component[] lines;
-				for(Flag flag : teamToFlags.values()) {
-					if(flag.team.isAlive())
-						aliveFlags.add(flag);
+				lines[index] = first.append(Component.text(": " + flag.team.getTotalScore()).color(NamedTextColor.WHITE));
+				lines[index + 1] = flagStatus;
+			}
+			else {
+				Component flagStatus;
+				if(flag.isAtBase)
+					flagStatus = Component.text("Safe").color(NamedTextColor.GREEN);
+				else if(flag.holdingTeam != null) {
+					flagStatus = Component.text("Held").color(flag.holdingTeam.getRGBTextColor());
 				}
-
-				Comparator<Flag> byScore = (teamArenaTeam, t1) -> (t1.team.getTotalScore()) - (teamArenaTeam.team.getTotalScore());
-				aliveFlags.sort(byScore);
-
-				if(aliveFlags.size() <= 7)
-					numLines = 2;
-				else
-					numLines = 1;
-
-				lines = new Component[numLines * aliveFlags.size()];
-
-				int index = 0;
-				for (Flag flag : aliveFlags) {
-					Component first = flag.team.getComponentSimpleName();
-					if(numLines == 2) {
-						Component flagStatus = Component.text("Flag ").color(NamedTextColor.WHITE);
-						if(flag.isAtBase)
-							flagStatus = flagStatus.append(Component.text("Safe").color(NamedTextColor.GREEN));
-						else if(flag.holdingTeam != null) {
-							flagStatus = flagStatus.append(Component.text("Held by ")).append(flag.holdingTeam.getComponentSimpleName());
-						}
-						else {
-							flagStatus = flagStatus.append(Component.text("Unsafe").color(TextColor.color(255, 85, 0)));
-						}
-						
-						lines[index] = first.append(Component.text(": " + flag.team.getTotalScore()).color(NamedTextColor.WHITE));
-						lines[index + 1] = flagStatus;
-					}
-					else {
-						Component flagStatus;
-						if(flag.isAtBase)
-							flagStatus = Component.text("Safe").color(NamedTextColor.GREEN);
-						else if(flag.holdingTeam != null) {
-							flagStatus = Component.text("Held").color(flag.holdingTeam.getRGBTextColor());
-						}
-						else {
-							flagStatus = Component.text("Unsafe").color(TextColor.color(255, 85, 0));
-						}
-						lines[index] = first.append(Component.text(": " + flag.team.getTotalScore() + ' ').color(NamedTextColor.WHITE).append(flagStatus));
-					}
-					
-					index += numLines;
+				else {
+					flagStatus = Component.text("Unsafe").color(TextColor.color(255, 85, 0));
 				}
-
-				SidebarManager.setLines(lines);
+				lines[index] = first.append(Component.text(": " + flag.team.getTotalScore() + ' ').color(NamedTextColor.WHITE).append(flagStatus));
+			}
+			
+			index += numLines;
+		}
+		
+		SidebarManager.setLines(lines);
 	}
 	
 	@Override
@@ -218,10 +218,11 @@ public class CaptureTheFlag extends TeamArena
 		flag.isAtBase = false;
 		flag.holder = player;
 		flag.holdingTeam = Main.getPlayerInfo(player).team;
-		flag.getArmorStand().setMarker(true);
 		player.addPassenger(flag.getArmorStand());
-		
 		player.setGlowing(true);
+		//send a metadata packet that has the marker armor stand option on so they can still interact with the outside
+		// world
+		PlayerUtils.sendPacket(player, flag.markerMetadataPacket);
 		
 		final TextReplacementConfig playerConfig = TextReplacementConfig.builder().match("%holdingTeam%")
 				.replacement(player.playerListName()).build();
@@ -254,9 +255,9 @@ public class CaptureTheFlag extends TeamArena
 			flag.holder = null;
 			flag.holdingTeam = null;
 			flag.timeSinceDropped = gameTick;
-			flag.getArmorStand().setMarker(false);
 			player.setGlowing(false);
-			
+			//resend normal non-marker status
+			PlayerUtils.sendPacket(player, flag.normalMetadataPacket);
 			//if there's no floor to land on when it's dropped teleport it back to base
 			if(BlockUtils.getFloor(flag.currentLoc) == null) {
 				flag.teleportToBase();
@@ -315,7 +316,7 @@ public class CaptureTheFlag extends TeamArena
 		capturedFlag.teleportToBase();
 		capturingTeam.score++;
 		player.setGlowing(false);
-		capturedFlag.getArmorStand().setMarker(false);
+		PlayerUtils.sendPacket(player, capturedFlag.normalMetadataPacket);
 		
 		updateBossBars();
 		

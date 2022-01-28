@@ -45,8 +45,8 @@ public class Hologram
 	public static final byte invisBitMask = 0x20;
 	public static final int customNameIndex = 2;
 	public static final int customNameVisibleIndex = 3;
-	public static final int armorStandMetadataIndex = 15;
-	public static final byte armorStandMarkerBitMask = 0x10;
+	public static final int ARMOR_STAND_METADATA_INDEX = 15;
+	public static final byte ARMOR_STAND_MARKER_BIT_MASK = 0x10;
 
 	//marker for if this nametag should exist
 	private boolean isAlive;
@@ -146,9 +146,9 @@ public class Hologram
 
 		//marker armorstand (no client side hitbox)
 		WrappedDataWatcher.WrappedDataWatcherObject armorStandMeta =
-				new WrappedDataWatcher.WrappedDataWatcherObject(armorStandMetadataIndex,
+				new WrappedDataWatcher.WrappedDataWatcherObject(ARMOR_STAND_METADATA_INDEX,
 						WrappedDataWatcher.Registry.get(Byte.class));
-		data.setObject(armorStandMeta, armorStandMarkerBitMask);
+		data.setObject(armorStandMeta, ARMOR_STAND_MARKER_BIT_MASK);
 
 		metadataPacket.getWatchableCollectionModifier().write(0, data.getWatchableObjects());
 	}

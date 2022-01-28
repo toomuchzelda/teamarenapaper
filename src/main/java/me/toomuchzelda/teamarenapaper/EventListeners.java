@@ -407,6 +407,14 @@ public class EventListeners implements Listener
 		event.setCancelled(true);
 	}
 
+	
+	//stop players from messing with the armor of CTF Flags
+	@EventHandler
+	public void playerArmorStandManipulate(PlayerArmorStandManipulateEvent event) {
+		if(Main.getGame() instanceof CaptureTheFlag ctf && ctf.flagStands.containsKey(event.getRightClicked())) {
+			event.setCancelled(true);
+		}
+	}
 	/*
 	@EventHandler
 	public void entityRemoveFromWorld(EntityRemoveFromWorldEvent event) {
