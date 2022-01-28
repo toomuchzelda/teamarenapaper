@@ -5,6 +5,7 @@ import me.toomuchzelda.teamarenapaper.core.BlockUtils;
 import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
@@ -24,7 +25,7 @@ public class CaptureTheFlag extends TeamArena
 	public HashMap<ArmorStand, Flag> flagStands; // this too
 	public HashMap<Player, Flag> flagHolders = new HashMap<>();
 	public int capsToWin;
-	public static final int DROPPED_FLAG_RETURN_TIME = 30 * 20;
+	public static final int TAKEN_FLAG_RETURN_TIME = 5 * 60 * 20;
 	public static final int DROPPED_PROGRESS_BAR_LENGTH = 10;
 	public static final String DROPPED_PROGRESS_STRING;
 	
@@ -39,6 +40,9 @@ public class CaptureTheFlag extends TeamArena
 	public static final Component CAPTURED_TITLE = Component.text("%holdingTeam% captured %team%'s flag!").color(NamedTextColor.GOLD);;
 	
 	public static final Component CANT_CAPTURE_YOUR_FLAG_NOT_AT_BASE = Component.text("You can't capture until your flag is safely at your base!").color(TextColor.color(255, 20, 20));
+	public static final String CANT_CAPTURE_KEY = "yrflagnotatbase";
+	public static final Component ALREADY_HELD_THIS_FLAG = Component.text("You can't hold this flag twice until it's returned!").color(TextColor.color(255, 20, 20));
+	public static final String ALREADY_HELD_KEY = "alrheldthisflag";
 	
 	static {
 		StringBuilder builder = new StringBuilder(DROPPED_PROGRESS_BAR_LENGTH);
@@ -60,13 +64,21 @@ public class CaptureTheFlag extends TeamArena
 		//check if dropped flags have been left long enough to be returned
 		// use their nametag for time left to return
 		for(Flag flag : teamToFlags.values()) {
-			if(!flag.isAtBase && !flag.isBeingCarried()) {
-				int timePassed = gameTick - flag.timeSinceDropped;
-				if(timePassed >= DROPPED_FLAG_RETURN_TIME) {
+			if(!flag.isAtBase) {// && !flag.isBeingCarried()) {
+				int returnSpeed;
+				if(flag.isBeingCarried())
+					returnSpeed = 1;
+				else
+					returnSpeed = 10;
+				
+				flag.ticksUntilReturn = flag.ticksUntilReturn - returnSpeed;
+				
+				//int timePassed = TAKEN_FLAG_RETURN_TIME - flag.ticksUntilReturn;
+				if(flag.ticksUntilReturn <= 0) {
 					returnFlagToBase(flag);
 				}
 				else {
-					float percentage = (float) timePassed / (float) DROPPED_FLAG_RETURN_TIME;
+					float percentage = (float) flag.ticksUntilReturn / (float) TAKEN_FLAG_RETURN_TIME;
 					percentage += 0.05;
 					if(percentage > 1)
 						percentage = 1;
@@ -196,7 +208,12 @@ public class CaptureTheFlag extends TeamArena
 						if(teamsFlag.isAtBase) //capture the flag!!
 							captureTheFlag(holder, team, flag);
 						else {
-							holder.sendMessage(CANT_CAPTURE_YOUR_FLAG_NOT_AT_BASE);
+							PlayerInfo pinfo = Main.getPlayerInfo(holder);
+							if(pinfo.messageHasCooldowned(CANT_CAPTURE_KEY, 3 * 20)) {
+								holder.sendMessage(CANT_CAPTURE_YOUR_FLAG_NOT_AT_BASE);
+								PlayerUtils.sendTitle(holder, Component.empty(), CANT_CAPTURE_YOUR_FLAG_NOT_AT_BASE,
+										0, 25, 10);
+							}
 						}
 					}
 				}
@@ -212,9 +229,12 @@ public class CaptureTheFlag extends TeamArena
 		
 		super.handleDeath(event);
 	}
-	
+
 	public void pickUpFlag(Player player, Flag flag) {
 		flagHolders.put(player, flag);
+		if(flag.isAtBase)
+			flag.ticksUntilReturn = TAKEN_FLAG_RETURN_TIME;
+		
 		flag.isAtBase = false;
 		flag.holder = player;
 		flag.holdingTeam = Main.getPlayerInfo(player).team;
@@ -223,15 +243,15 @@ public class CaptureTheFlag extends TeamArena
 		//send a metadata packet that has the marker armor stand option on so they can still interact with the outside
 		// world
 		PlayerUtils.sendPacket(player, flag.markerMetadataPacket);
-		
+
 		final TextReplacementConfig playerConfig = TextReplacementConfig.builder().match("%holdingTeam%")
 				.replacement(player.playerListName()).build();
 		final TextReplacementConfig flagTeamConfig = TextReplacementConfig.builder().match("%team%")
 				.replacement(flag.team.getComponentSimpleName()).build();
-		
+
 		Component pickupChat = PICK_UP_MESSAGE.replaceText(playerConfig).replaceText(flagTeamConfig);
 		Component pickupTitle = PICK_UP_TITLE.replaceText(playerConfig).replaceText(flagTeamConfig);
-		
+
 		Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
 		while(iter.hasNext()) {
 			Map.Entry<Player, PlayerInfo> entry = iter.next();
@@ -239,14 +259,14 @@ public class CaptureTheFlag extends TeamArena
 			if(entry.getValue().getPreference(Preferences.RECEIVE_GAME_TITLES)) {
 				PlayerUtils.sendTitle(p, Component.empty(), pickupTitle, 7, 30, 7);
 			}
-			
+
 			//todo maybe a preference for game sounds
 			p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_CLUSTER_BREAK, SoundCategory.AMBIENT, 2, 1f);
 		}
-		
+
 		Bukkit.broadcast(pickupChat);
 	}
-	
+
 	public void dropFlag(Player player) {
 		Flag flag = flagHolders.remove(player);
 		if(flag != null) {
@@ -254,7 +274,6 @@ public class CaptureTheFlag extends TeamArena
 			flag.currentLoc = player.getLocation();
 			flag.holder = null;
 			flag.holdingTeam = null;
-			flag.timeSinceDropped = gameTick;
 			player.setGlowing(false);
 			//resend normal non-marker status
 			PlayerUtils.sendPacket(player, flag.normalMetadataPacket);

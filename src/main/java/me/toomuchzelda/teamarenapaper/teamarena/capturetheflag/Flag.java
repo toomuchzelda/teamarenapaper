@@ -9,6 +9,9 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+
+import java.util.HashSet;
+
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.ArmorStand;
@@ -42,7 +45,7 @@ public class Flag
 	public Player holder;
 	public TeamArenaTeam holdingTeam;
 	public boolean isAtBase;
-	public int timeSinceDropped;
+	public int ticksUntilReturn;
 	
 	public static final EulerAngle LEG_ANGLE = new EulerAngle(Math.PI, 0, 0);
 	
@@ -78,7 +81,7 @@ public class Flag
 		this.baseBox = stand.getBoundingBox().clone();
 		
 		isAtBase = true;
-		timeSinceDropped = TeamArena.getGameTick();
+		ticksUntilReturn = 0;
 		
 		game.flagStands.put(stand, this);
 		

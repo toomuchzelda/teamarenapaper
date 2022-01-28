@@ -41,6 +41,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -76,8 +77,13 @@ public class EventListeners implements Listener
 			//use this opportunity to cleanup
 			Iterator<Map.Entry<Player, PlayerInfo>> pinfoIter = Main.getPlayersIter();
 			while(pinfoIter.hasNext()) {
-				if(!pinfoIter.next().getKey().isOnline()) {
+				Entry<Player, PlayerInfo> entry = pinfoIter.next();
+				
+				if(!entry.getKey().isOnline()) {
 					pinfoIter.remove();
+				}
+				else {
+					entry.getValue().clearMessageCooldowns();
 				}
 			}
 			DamageTimes.cleanup();
