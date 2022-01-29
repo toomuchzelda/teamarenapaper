@@ -86,6 +86,8 @@ public class PlayerUtils
 		player.setExp(0);
 		player.setGameMode(GameMode.SURVIVAL);
 		player.setHealth(player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
+		player.setSaturation(5f);
+		player.setFoodLevel(20);
 		player.setAbsorptionAmount(0);
 		player.setGlowing(false);
 		for(PotionEffect effect : player.getActivePotionEffects()) {

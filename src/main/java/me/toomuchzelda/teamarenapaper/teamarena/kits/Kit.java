@@ -1,5 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
+import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import org.bukkit.Material;
@@ -13,6 +15,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class Kit
 {
+    private static final Ability[] EMPTY_ABILITIES = new Ability[0];
+    
     protected final TeamArena teamArena;
     
     private final String name;
@@ -47,11 +51,15 @@ public abstract class Kit
     //clearInventory and updateInventory happens outside the following two methods
     //give kit and it's abilities to player
     public void giveKit(Player player, boolean update) {
+        giveKit(player, update, Main.getPlayerInfo(player));
+    }
+    
+    public void giveKit(Player player, boolean update, PlayerInfo pinfo) {
         activeUsers.add(player);
-
+    
         PlayerInventory inventory = player.getInventory();
         inventory.setArmorContents(armour);
-
+    
         //only give items if there are items
         if(items.length > 0) {
             //fill up from empty slots only
@@ -65,22 +73,30 @@ public abstract class Kit
                 }
             }
         }
-
+    
         for(Ability ability : abilities) {
             ability.giveAbility(player);
         }
-
+        
+        pinfo.activeKit = this;
+    
         if(update)
             player.updateInventory();
     }
 
     //remove abilities from player
     public void removeKit(Player player) {
+        removeKit(player, Main.getPlayerInfo(player));
+    }
+    
+    public void removeKit(Player player, PlayerInfo pinfo) {
         activeUsers.remove(player);
-
+    
         for(Ability a : abilities) {
             a.removeAbility(player);
         }
+        
+        pinfo.activeKit = null;
     }
 
     public void setArmour(ItemStack[] armour) {
@@ -110,5 +126,19 @@ public abstract class Kit
     public Ability[] getAbilities() {
         return abilities;
     }
-
+    
+    /**
+     * get abilities of the kit the player is actively using
+     * @param player
+     * @return
+     */
+    public static Ability[] getAbilities(Player player) {
+        PlayerInfo pinfo = Main.getPlayerInfo(player);
+        if(pinfo.activeKit != null) {
+            return pinfo.activeKit.getAbilities();
+        }
+        else {
+            return EMPTY_ABILITIES;
+        }
+    }
 }

@@ -211,7 +211,7 @@ public abstract class TeamArena
 		kitMenuItem.setItemMeta(kitItemMeta);
 		
 		kits = new Kit[]{new KitTrooper(this), new KitArcher(this), new KitGhost(this), new KitDwarf(this),
-				new KitNone(this)};
+				/*new KitReach(this),*/new KitBurst(this), new KitNone(this)};
 		tabKitList = new LinkedList<>();
 		for(Kit kit : kits) {
 			for(Ability ability : kit.getAbilities()) {
@@ -479,13 +479,13 @@ public abstract class TeamArena
 			
 			//ability pre-attack events
 			if(event.getFinalAttacker() instanceof Player p) {
-				Ability[] abilities = Main.getPlayerInfo(p).kit.getAbilities();
+				Ability[] abilities = Kit.getAbilities(p);
 				for(Ability ability : abilities) {
 					ability.onAttemptedAttack(event);
 				}
 			}
 			if(event.getVictim() instanceof Player p) {
-				Ability[] abilities = Main.getPlayerInfo(p).kit.getAbilities();
+				Ability[] abilities = Kit.getAbilities(p);
 				for(Ability ability : abilities) {
 					ability.onAttemptedDamage(event);
 				}
@@ -503,13 +503,13 @@ public abstract class TeamArena
 	
 	public void confirmedDamageAbilities(DamageEvent event) {
 		if(event.getFinalAttacker() instanceof Player p) {
-			Ability[] abilities = Main.getPlayerInfo(p).kit.getAbilities();
+			Ability[] abilities = Kit.getAbilities(p);
 			for(Ability ability : abilities) {
 				ability.onDealtAttack(event);
 			}
 		}
 		if(event.getVictim() instanceof Player p) {
-			Ability[] abilities = Main.getPlayerInfo(p).kit.getAbilities();
+			Ability[] abilities = Kit.getAbilities(p);
 			for(Ability ability : abilities) {
 				ability.onReceiveDamage(event);
 			}
@@ -628,9 +628,9 @@ public abstract class TeamArena
 			
 			PlayerUtils.resetState(player);
 			player.getInventory().clear();
-			kit.giveKit(player, true);
 			player.setSaturatedRegenRate(0);
-			player.setSaturation(1);
+			
+			kit.giveKit(player, true, entry.getValue());
 			
 			for(TeamArenaTeam team : teams) {
 				if(team.isAlive())
@@ -684,7 +684,7 @@ public abstract class TeamArena
 			p.setAllowFlight(true);
 
 			PlayerInfo pinfo = Main.getPlayerInfo(p);
-			pinfo.kit.removeKit(p);
+			pinfo.activeKit.removeKit(p, pinfo);
 			pinfo.kit = null;
 			pinfo.team = null;
 			pinfo.spawnPoint = null;
@@ -943,10 +943,10 @@ public abstract class TeamArena
 		player.getInventory().clear();
 		player.setAllowFlight(false);
 		player.setFallDistance(0);
-
+		
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
 		player.teleport(pinfo.team.getNextSpawnpoint());
-		pinfo.kit.giveKit(player, true);
+		pinfo.kit.giveKit(player, true, pinfo);
 
 		//do this one (two?) tick later
 		// when revealing first then teleporting, the clients interpolate the super fast teleport movement, so players
@@ -968,7 +968,8 @@ public abstract class TeamArena
 			PlayerUtils.sendTitle(p, Component.empty(), Component.text("You died!").color(TextColor.color(255, 0, 0)), 0, 30, 20);
 
 			//setSpectator(p, true, false);
-			Main.getPlayerInfo(p).kit.removeKit(p);
+			PlayerInfo pinfo = Main.getPlayerInfo(p);
+			pinfo.activeKit.removeKit(p, pinfo);
 
 			PlayerUtils.resetState(p);
 

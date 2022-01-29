@@ -4,6 +4,7 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import me.toomuchzelda.teamarenapaper.core.Hologram;
+import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.SidebarManager;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
@@ -12,11 +13,17 @@ import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.util.HashSet;
 
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientboundAddMobPacket;
+import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
+import net.minecraft.world.entity.LivingEntity;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.craftbukkit.v1_18_R1.entity.CraftLivingEntity;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.scoreboard.Team;
@@ -31,6 +38,7 @@ public class Flag
 	public Location currentLoc;
 	public final PacketContainer markerMetadataPacket;
 	public final PacketContainer normalMetadataPacket;
+	public final ClientboundRemoveEntitiesPacket removePacket;
 	
 	/**
 	 * have a seperate bukkit team to put on.
@@ -97,6 +105,7 @@ public class Flag
 		
 		markerMetadataPacket = constructMarkerMetadataPacket();
 		normalMetadataPacket = contructNormalMetadataPacket();
+		removePacket = new ClientboundRemoveEntitiesPacket(stand.getEntityId());
 	}
 	
 	public ArmorStand getArmorStand() {
@@ -111,7 +120,10 @@ public class Flag
 		stand.teleport(baseLoc);
 		currentLoc = baseLoc.clone();
 		isAtBase = true;
-		holder = null;
+		if(holder != null) {
+			PlayerUtils.sendPacket(holder, getSpawnPacket());
+			holder = null;
+		}
 		holdingTeam = null;
 		stand.customName(team.getComponentName().append(Component.text("'s Flag")));
 	}
@@ -148,6 +160,24 @@ public class Flag
 	
 	public PacketContainer getNormalMetadataPacket() {
 		return normalMetadataPacket;
+	}
+	
+	public ClientboundAddMobPacket getSpawnPacket() {
+		LivingEntity nmsLivingStand = ((CraftLivingEntity) stand).getHandle();
+		return new ClientboundAddMobPacket(nmsLivingStand);
+	}
+	
+	public ClientboundRemoveEntitiesPacket getRemovePacket() {
+		return removePacket;
+	}
+	
+	public void sendRecreatePackets(Player player) {
+		PlayerUtils.sendPacket(player, getSpawnPacket());
+		PlayerUtils.sendPacket(player, normalMetadataPacket);
+		ItemStack helmet = stand.getEquipment().getHelmet();
+		ItemStack chestplate = stand.getEquipment().getChestplate();
+		player.sendEquipmentChange(stand, EquipmentSlot.HEAD, helmet);
+		player.sendEquipmentChange(stand, EquipmentSlot.CHEST, chestplate);
 	}
 	
 	public void unregisterTeam() {

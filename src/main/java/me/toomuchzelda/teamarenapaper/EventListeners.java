@@ -14,7 +14,9 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
 import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitGhost;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitReach;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.PreferenceManager;
@@ -30,6 +32,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.*;
+import org.bukkit.event.inventory.InventoryCreativeEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.event.player.PlayerLoginEvent.Result;
 import org.bukkit.plugin.Plugin;
@@ -88,6 +91,12 @@ public class EventListeners implements Listener
 			}
 			DamageTimes.cleanup();
 			Main.playerIdLookup.entrySet().removeIf(idLookupEntry -> !idLookupEntry.getValue().isOnline());
+			
+			if(MathUtils.randomMax(3) < 3) {
+				TeamArena.nextGameType = GameType.KOTH;
+			}
+			else
+				TeamArena.nextGameType = GameType.CTF;
 			
 			if(TeamArena.nextGameType == GameType.KOTH) {
 				Main.setGame(new KingOfTheHill());
@@ -234,6 +243,19 @@ public class EventListeners implements Listener
 	}
 	
 	@EventHandler
+	public void inventoryCreative(InventoryCreativeEvent event) {
+		if(Main.getGame() != null && event.getWhoClicked() instanceof Player p) {
+			Ability[] abilities = Kit.getAbilities(p);
+			for(Ability a : abilities) {
+				if(a instanceof KitReach.ReachAbility) {
+					event.setCancelled(true);
+					return;
+				}
+			}
+		}
+	}
+	
+	/*@EventHandler
 	public void entityPoseChange(EntityPoseChangeEvent event) {
 		if(event.getEntity() instanceof  Player p) {
 			Hologram hologram = Main.getPlayerInfo(p).nametag;
@@ -245,7 +267,7 @@ public class EventListeners implements Listener
 				hologram.poseChanged = true;
 			}
 		}
-	}
+	}*/
 
 	//create and cache damage events
 	@EventHandler
@@ -315,12 +337,21 @@ public class EventListeners implements Listener
 
 	//stop projectiles from inheriting thrower's velocity
 	// like moving too up/down when player is jumping/falling/rising
+	//this event is fired for shooting bows including by players
 	@EventHandler
 	public void entityShootBow(EntityShootBowEvent event) {
 		event.getProjectile().setVelocity(projectileLaunchVector(event.getEntity(), event.getProjectile().getVelocity()));
+		
+		if(event.getEntity() instanceof Player p) {
+			Ability[] abilities = Kit.getAbilities(p);
+			for(Ability a : abilities) {
+				a.onShootBow(event);
+			}
+		}
 	}
 
 	//^^
+	//this event fired by players throwing projectiles (not bows!!)
 	@EventHandler
 	public void playerLaunchProjectile(PlayerLaunchProjectileEvent event) {
 		/*Bukkit.broadcastMessage(event.getItemStack().getType().toString());
@@ -329,7 +360,7 @@ public class EventListeners implements Listener
 		event.getProjectile().setVelocity(projectileLaunchVector(event.getPlayer(), event.getProjectile().getVelocity()));
 		
 		if(Main.getGame() != null && Main.getGame().getGameState() == LIVE) {
-			Ability[] abilites = Main.getPlayerInfo(event.getPlayer()).kit.getAbilities();
+			Ability[] abilites = Kit.getAbilities(event.getPlayer());
 			for(Ability a : abilites) {
 				a.onLaunchProjectile(event);
 			}
@@ -381,7 +412,7 @@ public class EventListeners implements Listener
 		//not worth adding a new method to Ability.java for this one
 		if(Main.getGame() != null && Main.getGame().getGameState() == LIVE) {
 			if (event.getEntity() instanceof Player p) {
-				Ability[] abilities = Main.getPlayerInfo(p).kit.getAbilities();
+				Ability[] abilities = Kit.getAbilities(p);
 				for(int i = 0; i < abilities.length; i++) {
 					if(abilities[i] instanceof KitGhost.GhostAbility ghosta) {
 						ghosta.arrowCountDecrease(event);
@@ -395,7 +426,7 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void playerItemCooldown(PlayerItemCooldownEvent event) {
 		if(Main.getGame() != null && Main.getGame().getGameState() == LIVE) {
-			Ability[] abilities = Main.getPlayerInfo(event.getPlayer()).kit.getAbilities();
+			Ability[] abilities = Kit.getAbilities(event.getPlayer());
 			for(Ability a : abilities) {
 				a.onItemCooldown(event);
 			}

@@ -25,7 +25,8 @@ public class CaptureTheFlag extends TeamArena
 	public HashMap<ArmorStand, Flag> flagStands; // this too
 	public HashMap<Player, Flag> flagHolders = new HashMap<>();
 	public int capsToWin;
-	public static final int TAKEN_FLAG_RETURN_TIME = 5 * 60 * 20;
+	public static final int TAKEN_FLAG_RETURN_TIME = 3 * 60 * 20;
+	public static final int DROPPED_TIME_PER_TICK = TAKEN_FLAG_RETURN_TIME / (5 * 20);
 	public static final int DROPPED_PROGRESS_BAR_LENGTH = 10;
 	public static final String DROPPED_PROGRESS_STRING;
 	
@@ -69,7 +70,7 @@ public class CaptureTheFlag extends TeamArena
 				if(flag.isBeingCarried())
 					returnSpeed = 1;
 				else
-					returnSpeed = 10;
+					returnSpeed = DROPPED_TIME_PER_TICK;
 				
 				flag.ticksUntilReturn = flag.ticksUntilReturn - returnSpeed;
 				
@@ -242,7 +243,8 @@ public class CaptureTheFlag extends TeamArena
 		player.setGlowing(true);
 		//send a metadata packet that has the marker armor stand option on so they can still interact with the outside
 		// world
-		PlayerUtils.sendPacket(player, flag.markerMetadataPacket);
+		//PlayerUtils.sendPacket(player, flag.markerMetadataPacket);
+		PlayerUtils.sendPacket(player, flag.getRemovePacket());
 
 		final TextReplacementConfig playerConfig = TextReplacementConfig.builder().match("%holdingTeam%")
 				.replacement(player.playerListName()).build();
@@ -275,8 +277,8 @@ public class CaptureTheFlag extends TeamArena
 			flag.holder = null;
 			flag.holdingTeam = null;
 			player.setGlowing(false);
-			//resend normal non-marker status
-			PlayerUtils.sendPacket(player, flag.normalMetadataPacket);
+			flag.sendRecreatePackets(player);
+			
 			//if there's no floor to land on when it's dropped teleport it back to base
 			if(BlockUtils.getFloor(flag.currentLoc) == null) {
 				flag.teleportToBase();
@@ -335,7 +337,7 @@ public class CaptureTheFlag extends TeamArena
 		capturedFlag.teleportToBase();
 		capturingTeam.score++;
 		player.setGlowing(false);
-		PlayerUtils.sendPacket(player, capturedFlag.normalMetadataPacket);
+		capturedFlag.sendRecreatePackets(player);
 		
 		updateBossBars();
 		
@@ -396,6 +398,8 @@ public class CaptureTheFlag extends TeamArena
 			else {
 				Main.logger().warning("Flag has been dropped and left above void, should be impossible!");
 				Thread.dumpStack();
+				flag.teleportToBase();
+				return;
 			}
 			loc = flag.currentLoc.clone();
 		}

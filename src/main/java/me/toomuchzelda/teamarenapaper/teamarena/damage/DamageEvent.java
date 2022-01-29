@@ -389,10 +389,10 @@ public class DamageEvent {
                 Main.logger().warning(getFinalAttacker().getName() + " is doing " + finalDamage + " damage to " + victim.getName() +
                         " DamageType: " + damageType.toString() + " attacker: " + (attacker != null ? attacker.getName() : "null"));
                 if(getFinalAttacker() instanceof Player p) {
-                    Main.logger().warning("attacker kit: " + Main.getPlayerInfo(p).kit.getName());
+                    Main.logger().warning("attacker kit: " + Main.getPlayerInfo(p).activeKit.getName());
                 }
                 if(victim instanceof Player p) {
-                    Main.logger().warning("victim kit: " + Main.getPlayerInfo(p).kit.getName());
+                    Main.logger().warning("victim kit: " + Main.getPlayerInfo(p).activeKit.getName());
                 }
 
                 finalDamage = 0;

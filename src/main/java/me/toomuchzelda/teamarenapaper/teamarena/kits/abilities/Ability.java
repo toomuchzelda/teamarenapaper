@@ -6,6 +6,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import org.bukkit.entity.Player;
+import org.bukkit.event.entity.EntityShootBowEvent;
 
 //methods aren't abstract as kit abilities may not need to override them
 public abstract class Ability {
@@ -61,6 +62,14 @@ public abstract class Ability {
      * @param event
      */
     public void onLaunchProjectile(PlayerLaunchProjectileEvent event) {
+    }
+    
+    /**
+     * when user shoots a bow
+     * @param event
+     */
+    public void onShootBow(EntityShootBowEvent event) {
+    
     }
     
     /**
