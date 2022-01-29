@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.abilities;
 
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
+import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
@@ -69,7 +70,12 @@ public abstract class Ability {
      * @param event
      */
     public void onShootBow(EntityShootBowEvent event) {
+    }
     
+    /**
+     * when user loads a crossbow
+     */
+    public void onLoadCrossbow(EntityLoadCrossbowEvent event) {
     }
     
     /**

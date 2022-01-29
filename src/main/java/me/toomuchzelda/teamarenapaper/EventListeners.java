@@ -4,6 +4,7 @@ import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
+import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
 import me.toomuchzelda.teamarenapaper.core.Hologram;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
@@ -346,6 +347,16 @@ public class EventListeners implements Listener
 			Ability[] abilities = Kit.getAbilities(p);
 			for(Ability a : abilities) {
 				a.onShootBow(event);
+			}
+		}
+	}
+	
+	@EventHandler
+	public void entityLoadCrossbow(EntityLoadCrossbowEvent event) {
+		if(event.getEntity() instanceof Player p) {
+			Ability[] abilities = Kit.getAbilities(p);
+			for(Ability a : abilities) {
+				a.onLoadCrossbow(event);
 			}
 		}
 	}

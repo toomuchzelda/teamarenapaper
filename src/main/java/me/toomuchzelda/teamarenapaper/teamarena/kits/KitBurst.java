@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
+import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
@@ -11,7 +12,9 @@ import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
+import org.bukkit.entity.Player;
 import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkEffectMeta;
 import org.bukkit.inventory.meta.FireworkMeta;
@@ -44,22 +47,25 @@ public class KitBurst extends Kit
 	public static class BurstAbility extends Ability
 	{
 		@Override
-		public void onLaunchProjectile(PlayerLaunchProjectileEvent event) {
-			if(event.getProjectile() instanceof Firework firework) {
-				TeamArenaTeam team = Main.getPlayerInfo(event.getPlayer()).team;
+		public void onShootBow(EntityShootBowEvent event) {
+			if(event.getProjectile() instanceof Firework firework && event.getEntity() instanceof Player p) {
+				TeamArenaTeam team = Main.getPlayerInfo(p).team;
 				
 				FireworkMeta meta = firework.getFireworkMeta();
 				meta.clearEffects();
-				boolean flicker = MathUtils.random.nextBoolean();
-				FireworkEffect effect = FireworkEffect.builder().trail(true).with(FireworkEffect.Type.BURST)
-						.flicker(flicker).withColor(team.getColour()).build();
+				FireworkEffect effect = FireworkEffect.builder().trail(true).with(FireworkEffect.Type.BALL)
+						.flicker(true).withColor(team.getColour()).build();
 				
 				meta.addEffect(effect);
 				//meta.setPower(1);
 				firework.setFireworkMeta(meta);
-				
-				event.setShouldConsume(false);
 			}
+		}
+		
+		@Override
+		public void onLoadCrossbow(EntityLoadCrossbowEvent event) {
+			event.setConsumeItem(false);
+			((Player) event.getEntity()).updateInventory();
 		}
 	}
 }
