@@ -1,24 +1,19 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
-import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import org.bukkit.FireworkEffect;
 import org.bukkit.Material;
-import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
-import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.Event;
 import org.bukkit.event.entity.EntityShootBowEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.FireworkEffectMeta;
 import org.bukkit.inventory.meta.FireworkMeta;
-import org.bukkit.inventory.meta.ItemMeta;
 
 public class KitBurst extends Kit
 {
@@ -66,6 +61,14 @@ public class KitBurst extends Kit
 		public void onLoadCrossbow(EntityLoadCrossbowEvent event) {
 			event.setConsumeItem(false);
 			((Player) event.getEntity()).updateInventory();
+		}
+		
+		//stop them from accidentally placing the firework down and using it
+		@Override
+		public void onInteract(PlayerInteractEvent event) {
+			if(event.getMaterial() == Material.FIREWORK_ROCKET) {
+				event.setUseItemInHand(Event.Result.DENY);
+			}
 		}
 	}
 }

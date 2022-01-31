@@ -10,6 +10,7 @@ import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.phys.Vec3;
+import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.attribute.Attribute;
@@ -452,9 +453,10 @@ public class DamageEvent {
                     type = DamageType.FIRE_ASPECT;
                 }
                 else if(damageType.isProjectile() && attacker instanceof Projectile proj) {
-                    if(proj.getFireTicks() > 0)
-                    fireTicks = 5 * 20;
-                    type = DamageType.FIRE_BOW;
+                    if(proj.getFireTicks() > 0) {
+                        fireTicks = 5 * 20;
+                        type = DamageType.FIRE_BOW;
+                    }
                     //Bukkit.broadcastMessage("isProjectile, fireTicks: " + fireTicks);
                 }
 

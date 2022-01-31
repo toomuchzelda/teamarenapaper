@@ -19,7 +19,7 @@ public class ArrowPierceManager {
         ArrowInfo info = piercedEntitiesMap.get(arrow);
         if(info == null) {
             info = new ArrowInfo();
-            info.piercedEntities = new LinkedList<>();
+            info.piercedEntities = new ArrayList<>(arrow.getPierceLevel());
             info.velocity = arrow.getVelocity();
             info.pitch = arrow.getLocation().getPitch();
             info.yaw = arrow.getLocation().getYaw();
@@ -61,7 +61,7 @@ public class ArrowPierceManager {
         //memory address
         //Bukkit.broadcastMessage(info.toString());
 
-        LinkedList<Entity> hitList = info.piercedEntities;
+        ArrayList<Entity> hitList = info.piercedEntities;
 
         //Bukkit.broadcastMessage(hitList.toString());
 
@@ -90,7 +90,7 @@ public class ArrowPierceManager {
 
     private static class ArrowInfo
     {
-        public LinkedList<Entity> piercedEntities;
+        public ArrayList<Entity> piercedEntities;
         public Vector velocity;
         public float yaw;
         public float pitch;

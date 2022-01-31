@@ -6,8 +6,8 @@ import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
-import me.toomuchzelda.teamarenapaper.core.Hologram;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
+import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
@@ -21,11 +21,13 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.KitReach;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.PreferenceManager;
+import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
 import org.bukkit.command.Command;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
@@ -41,12 +43,8 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import static me.toomuchzelda.teamarenapaper.teamarena.GameState.DEAD;
@@ -370,11 +368,44 @@ public class EventListeners implements Listener
 
 		event.getProjectile().setVelocity(projectileLaunchVector(event.getPlayer(), event.getProjectile().getVelocity()));
 		
-		if(Main.getGame() != null && Main.getGame().getGameState() == LIVE) {
-			Ability[] abilites = Kit.getAbilities(event.getPlayer());
-			for(Ability a : abilites) {
-				a.onLaunchProjectile(event);
+		if(Main.getGame() != null) {
+			Player p = event.getPlayer();
+			if(Main.getGame().getGameState() == LIVE) {
+				if (Main.getGame() instanceof CaptureTheFlag ctf && ctf.isFlagCarrier(p)) {
+					event.setCancelled(true);
+					PlayerInfo pinfo = Main.getPlayerInfo(p);
+					if (pinfo.getPreference(Preferences.RECEIVE_GAME_TITLES)) {
+						PlayerUtils.sendTitle(p, Component.empty(), CaptureTheFlag.CANT_TELEPORT_HOLDING_FLAG_TITLE, 10, 25, 10);
+					}
+					p.sendMessage(CaptureTheFlag.CANT_TELEPORT_HOLDING_FLAG_MESSAGE);
+					p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.AMBIENT, 2, 0.5f);
+				}
+			
+				if(!event.isCancelled()) {
+					Ability[] abilites = Kit.getAbilities(p);
+					for (Ability a : abilites) {
+						a.onLaunchProjectile(event);
+					}
+				}
 			}
+		}
+	}
+	
+	@EventHandler
+	public void playerTeleport(PlayerTeleportEvent event) {
+		if(event.getCause() == PlayerTeleportEvent.TeleportCause.COMMAND ||
+			event.getCause() == PlayerTeleportEvent.TeleportCause.PLUGIN)
+			return;
+		
+		if(Main.getGame() instanceof CaptureTheFlag ctf && ctf.isFlagCarrier(event.getPlayer())) {
+			Player p = event.getPlayer();
+			event.setCancelled(true);
+			PlayerInfo pinfo = Main.getPlayerInfo(p);
+			if(pinfo.getPreference(Preferences.RECEIVE_GAME_TITLES)) {
+				PlayerUtils.sendTitle(p, Component.empty(), CaptureTheFlag.CANT_TELEPORT_HOLDING_FLAG_TITLE, 10, 25, 10);
+			}
+			p.sendMessage(CaptureTheFlag.CANT_TELEPORT_HOLDING_FLAG_MESSAGE);
+			p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.AMBIENT, 2, 0.5f);
 		}
 	}
 
@@ -463,6 +494,15 @@ public class EventListeners implements Listener
 			event.setCancelled(true);
 		}
 	}
+	
+	@EventHandler
+	public void playerInteract(PlayerInteractEvent event) {
+		Ability[] abilities = Kit.getAbilities(event.getPlayer());
+		for(Ability a : abilities) {
+			a.onInteract(event);
+		}
+	}
+	
 	/*
 	@EventHandler
 	public void entityRemoveFromWorld(EntityRemoveFromWorldEvent event) {

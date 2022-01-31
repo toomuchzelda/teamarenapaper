@@ -329,6 +329,10 @@ public class KingOfTheHill extends TeamArena
 
 	public void nextHill() {
 		hillIndex++;
+		//if all the hills have been played once and it's random hill order, shuffle the hills again
+		if(hillIndex % hills.length == 0) {
+			MathUtils.shuffleArray(hills);
+		}
 		Hill nextHill = hills[hillIndex % hills.length];
 		Component hillChangeMsg = Component.text("The Hill has moved to " + nextHill.getName()).color(NamedTextColor.GOLD);
 		Bukkit.broadcast(hillChangeMsg);

@@ -42,8 +42,9 @@ public class CaptureTheFlag extends TeamArena
 	
 	public static final Component CANT_CAPTURE_YOUR_FLAG_NOT_AT_BASE = Component.text("You can't capture until your flag is safely at your base!").color(TextColor.color(255, 20, 20));
 	public static final String CANT_CAPTURE_KEY = "yrflagnotatbase";
-	public static final Component ALREADY_HELD_THIS_FLAG = Component.text("You can't hold this flag twice until it's returned!").color(TextColor.color(255, 20, 20));
-	public static final String ALREADY_HELD_KEY = "alrheldthisflag";
+	
+	public static final Component CANT_TELEPORT_HOLDING_FLAG_MESSAGE = Component.text("You can't teleport while holding the flag!").color(TextColor.color(255, 20, 20));
+	public static final Component CANT_TELEPORT_HOLDING_FLAG_TITLE = Component.text("Can't teleport with the flag!").color(TextColor.color(255, 20, 20));
 	
 	static {
 		StringBuilder builder = new StringBuilder(DROPPED_PROGRESS_BAR_LENGTH);
@@ -276,6 +277,7 @@ public class CaptureTheFlag extends TeamArena
 			flag.currentLoc = player.getLocation();
 			flag.holder = null;
 			flag.holdingTeam = null;
+			flagHolders.remove(player);
 			player.setGlowing(false);
 			flag.sendRecreatePackets(player);
 			
@@ -337,6 +339,7 @@ public class CaptureTheFlag extends TeamArena
 		capturedFlag.teleportToBase();
 		capturingTeam.score++;
 		player.setGlowing(false);
+		flagHolders.remove(player);
 		capturedFlag.sendRecreatePackets(player);
 		
 		updateBossBars();
@@ -448,6 +451,10 @@ public class CaptureTheFlag extends TeamArena
 	@Override
 	public boolean isRespawningGame() {
 		return true;
+	}
+	
+	public boolean isFlagCarrier(Player p) {
+		return flagHolders.containsKey(p);
 	}
 	
 	@Override
