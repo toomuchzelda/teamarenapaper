@@ -20,6 +20,8 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -538,6 +540,12 @@ public abstract class TeamArena
 				}
 			}
 		}
+	}
+
+	public void onInteract(PlayerInteractEvent event) {
+	}
+
+	public void onInteractEntity(PlayerInteractEntityEvent event) {
 	}
 	
 	public void regenTick() {

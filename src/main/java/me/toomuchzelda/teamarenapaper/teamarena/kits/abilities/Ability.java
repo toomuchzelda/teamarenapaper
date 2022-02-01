@@ -8,6 +8,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityShootBowEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 
 //methods aren't abstract as kit abilities may not need to override them
@@ -93,6 +94,8 @@ public abstract class Ability {
     }
     
     public void onInteract(PlayerInteractEvent event) {
-    
+    }
+
+    public void onInteractEntity(PlayerInteractEntityEvent event) {
     }
 }

@@ -5,7 +5,6 @@ import me.toomuchzelda.teamarenapaper.core.BlockUtils;
 import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
-import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
@@ -13,7 +12,10 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
 import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
@@ -23,9 +25,9 @@ public class CaptureTheFlag extends TeamArena
 {
 	public HashMap<TeamArenaTeam, Flag> teamToFlags; //initialized in parseConfig
 	public HashMap<ArmorStand, Flag> flagStands; // this too
-	public HashMap<Player, Flag> flagHolders = new HashMap<>();
+	public HashMap<Player, Set<Flag>> flagHolders = new HashMap<>();
 	public int capsToWin;
-	public static final int TAKEN_FLAG_RETURN_TIME = 3 * 60 * 20;
+	public static final int TAKEN_FLAG_RETURN_TIME = 15 * 20;//3 * 60 * 20;
 	public static final int DROPPED_TIME_PER_TICK = TAKEN_FLAG_RETURN_TIME / (5 * 20);
 	public static final int DROPPED_PROGRESS_BAR_LENGTH = 10;
 	public static final String DROPPED_PROGRESS_STRING;
@@ -34,6 +36,7 @@ public class CaptureTheFlag extends TeamArena
 	public static final Component DROP_MESSAGE = Component.text("%holdingTeam% has dropped %team%'s flag").color(NamedTextColor.GOLD);
 	public static final Component RETURNED_MESSAGE = Component.text("%team%'s flag has been returned to their base").color(NamedTextColor.GOLD);
 	public static final Component CAPTURED_MESSAGE = Component.text("%holdingTeam% has captured %team%'s flag!").color(NamedTextColor.GOLD);;
+	public static final Component CAPTURED_FOR_OTHER_TEAM_MESSAGE = Component.text("%holdingTeam% has captured %team%'s flag for %otherTeam%??!!?!!").color(NamedTextColor.GOLD);
 	//shorter ones for titles
 	public static final Component PICK_UP_TITLE = Component.text("%holdingTeam% took %team%'s flag").color(NamedTextColor.GOLD);
 	public static final Component DROP_TITLE = Component.text("%holdingTeam% dropped %team%'s flag").color(NamedTextColor.GOLD);
@@ -53,11 +56,55 @@ public class CaptureTheFlag extends TeamArena
 		}
 		DROPPED_PROGRESS_STRING = builder.toString();
 	}
+
+	private Set<Flag> getFlagsHeld(Player player) {
+		return flagHolders.get(player);
+	}
+
+	private void addFlagHeld(Player player, Flag flag) {
+		Set<Flag> flags = flagHolders.computeIfAbsent(player, k -> new HashSet<>()); //put new HashSet if no value and also return it
+		flags.add(flag);
+
+		//mount onto their head, on top of other flags if they have any
+		// make a sort of vehicle chain, rather than mount all of them on the one player coz they'll just overlap each other
+		Entity toBeVehicle = player;
+		List<Entity> passengers;
+		while(true) {
+			passengers = toBeVehicle.getPassengers();
+			if(passengers.size() > 0) {
+				toBeVehicle = passengers.get(0);
+			}
+			else {
+				break;
+			}
+		}
+
+		toBeVehicle.addPassenger(flag.getArmorStand());
+	}
+
+	private void removeFlags(Player player) {
+		flagHolders.remove(player);
+	}
+
+	private void removeFlag(Player player, Flag flag) {
+		Set<Flag> flags = flagHolders.get(player);
+		flags.remove(flag);
+
+		Entity flagSittingOn = flag.getArmorStand().getVehicle(); //entity this Flag is sitting on
+		flagSittingOn.eject();
+
+		List<Entity> flagsPassengers = flag.getArmorStand().getPassengers();
+		if(flagsPassengers.size() > 0) {
+			flag.getArmorStand().eject(); //eject stands sitting on the flag
+			flagSittingOn.addPassenger(flagsPassengers.get(0));
+		}
+
+		if(flags.size() == 0)
+			flagHolders.remove(player);
+	}
 	
 	public CaptureTheFlag() {
 		super();
-		
-		
 	}
 	
 	@Override
@@ -95,6 +142,8 @@ public class CaptureTheFlag extends TeamArena
 							.append(Component.text().content(DROPPED_PROGRESS_STRING.substring(splitIndex))
 									.color(NamedTextColor.DARK_RED)
 									.build()).build();
+
+					flag.progressBarComponent = firstComponent;
 					
 					flag.getArmorStand().customName(firstComponent);
 				}
@@ -138,7 +187,7 @@ public class CaptureTheFlag extends TeamArena
 					flagStatus = flagStatus.append(Component.text("Held by ")).append(flag.holdingTeam.getComponentSimpleName());
 				}
 				else {
-					flagStatus = flagStatus.append(Component.text("Unsafe").color(TextColor.color(255, 85, 0)));
+					flagStatus = flagStatus.append(flag.progressBarComponent);//Component.text("Unsafe").color(TextColor.color(255, 85, 0)));
 				}
 				
 				lines[index] = first.append(Component.text(": " + flag.team.getTotalScore()).color(NamedTextColor.WHITE));
@@ -152,7 +201,7 @@ public class CaptureTheFlag extends TeamArena
 					flagStatus = Component.text("Held").color(flag.holdingTeam.getRGBTextColor());
 				}
 				else {
-					flagStatus = Component.text("Unsafe").color(TextColor.color(255, 85, 0));
+					flagStatus = flag.progressBarComponent;//Component.text("Unsafe").color(TextColor.color(255, 85, 0));
 				}
 				lines[index] = first.append(Component.text(": " + flag.team.getTotalScore() + ' ').color(NamedTextColor.WHITE).append(flagStatus));
 			}
@@ -204,10 +253,10 @@ public class CaptureTheFlag extends TeamArena
 					Player holder = flag.holder;
 					//check if this player's team's flag is taken
 					// if not taken, check if this player is touching their flag base thing and capture if they are
-					TeamArenaTeam team = Main.getPlayerInfo(holder).team;
-					Flag teamsFlag = teamToFlags.get(team);
-					if(holder.getBoundingBox().overlaps(teamsFlag.baseBox)) {
-						if(teamsFlag.isAtBase) //capture the flag!!
+					TeamArenaTeam team = flag.holdingTeam;//Main.getPlayerInfo(holder).team;
+					Flag holderTeamsFlag = teamToFlags.get(team);
+					if(holder.getBoundingBox().overlaps(holderTeamsFlag.baseBox)) {
+						if(holderTeamsFlag.isAtBase) //capture the flag!!
 							captureTheFlag(holder, team, flag);
 						else {
 							PlayerInfo pinfo = Main.getPlayerInfo(holder);
@@ -226,26 +275,39 @@ public class CaptureTheFlag extends TeamArena
 	@Override
 	public void handleDeath(DamageEvent event) {
 		if(event.getVictim() instanceof Player p) {
-			dropFlag(p);
+			dropFlags(p);
 		}
 		
 		super.handleDeath(event);
 	}
 
 	public void pickUpFlag(Player player, Flag flag) {
-		flagHolders.put(player, flag);
+		/*if(flagHolders.containsKey(player)) {
+			player.sendMessage("ur already hold flag ");
+			return;
+		}*/
+		if(!flag.team.isAlive()) {
+			final Component text = Component.text("Taking the flag of a dead team? Talk about cheap!").color(TextColor.color(255, 20 ,20));
+			player.sendMessage(text);
+			player.playSound(player.getLocation(), Sound.ENTITY_HORSE_DEATH, SoundCategory.AMBIENT, 2f, 0.5f);
+			return;
+		}
+
+		//flagHolders.put(player, flag);
+		addFlagHeld(player, flag);
 		if(flag.isAtBase)
 			flag.ticksUntilReturn = TAKEN_FLAG_RETURN_TIME;
 		
 		flag.isAtBase = false;
 		flag.holder = player;
 		flag.holdingTeam = Main.getPlayerInfo(player).team;
-		player.addPassenger(flag.getArmorStand());
+		//player.addPassenger(flag.getArmorStand());
 		player.setGlowing(true);
-		//send a metadata packet that has the marker armor stand option on so they can still interact with the outside
-		// world
-		//PlayerUtils.sendPacket(player, flag.markerMetadataPacket);
+		//send a packet to remove the armor stand so it doesn't obstruct their view
 		PlayerUtils.sendPacket(player, flag.getRemovePacket());
+
+		//give them the inventory item
+		player.getInventory().addItem(flag.item);
 
 		final TextReplacementConfig playerConfig = TextReplacementConfig.builder().match("%holdingTeam%")
 				.replacement(player.playerListName()).build();
@@ -270,48 +332,63 @@ public class CaptureTheFlag extends TeamArena
 		Bukkit.broadcast(pickupChat);
 	}
 
-	public void dropFlag(Player player) {
-		Flag flag = flagHolders.remove(player);
-		if(flag != null) {
-			player.removePassenger(flag.getArmorStand());
-			flag.currentLoc = player.getLocation();
-			flag.holder = null;
-			flag.holdingTeam = null;
-			flagHolders.remove(player);
-			player.setGlowing(false);
-			flag.sendRecreatePackets(player);
-			
-			//if there's no floor to land on when it's dropped teleport it back to base
-			if(BlockUtils.getFloor(flag.currentLoc) == null) {
-				flag.teleportToBase();
+	public void dropFlags(Player player) {
+		Set<Flag> mapFlags = flagHolders.get(player);
+		if(mapFlags != null) {
+			Set<Flag> flags = new HashSet<>(flagHolders.get(player)); //avoid concurrentmodification
+			for (Flag flag : flags) {
+				dropFlag(player, flag);
 			}
-			
-			Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
-			
-			final TextReplacementConfig playerConfig = TextReplacementConfig.builder().match("%holdingTeam%")
-					.replacement(player.playerListName()).build();
-			final TextReplacementConfig teamConfig = TextReplacementConfig.builder().match("%team%")
-					.replacement(flag.team.getComponentSimpleName()).build();
-			
-			Component titleText = DROP_TITLE.replaceText(playerConfig).replaceText(teamConfig);
-			Component chatText = DROP_MESSAGE.replaceText(playerConfig).replaceText(teamConfig);
-			
-			while(iter.hasNext()) {
-				Map.Entry<Player, PlayerInfo> entry = iter.next();
-				Player p = entry.getKey();
-				// dae use unsafe type casts because the preference system is so bad
-				if(entry.getValue().getPreference(Preferences.RECEIVE_GAME_TITLES)) {
-					PlayerUtils.sendTitle(p, Component.empty(), titleText, 7, 30, 7);
-				}
-				
-				p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_CLUSTER_PLACE, SoundCategory.AMBIENT, 2, 1f);
-			}
-			Bukkit.broadcast(chatText);
 		}
 	}
-	
+
+	public void dropFlag(Player player, Flag flag) {
+		//player.removePassenger(flag.getArmorStand()); todo: manage this in removeFlag(Player, Flag)
+		flag.currentLoc = player.getLocation();
+		flag.holder = null;
+		flag.holdingTeam = null;
+		//flagHolders.remove(player);
+		removeFlag(player, flag);
+		player.setGlowing(false);
+		flag.sendRecreatePackets(player);
+		player.getInventory().remove(flag.item);
+
+		//if there's no floor to land on when it's dropped teleport it back to base
+		if(BlockUtils.getFloor(flag.currentLoc) == null) {
+			flag.teleportToBase();
+		}
+
+		Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
+
+		final TextReplacementConfig playerConfig = TextReplacementConfig.builder().match("%holdingTeam%")
+				.replacement(player.playerListName()).build();
+		final TextReplacementConfig teamConfig = TextReplacementConfig.builder().match("%team%")
+				.replacement(flag.team.getComponentSimpleName()).build();
+
+		Component titleText = DROP_TITLE.replaceText(playerConfig).replaceText(teamConfig);
+		Component chatText = DROP_MESSAGE.replaceText(playerConfig).replaceText(teamConfig);
+
+		while(iter.hasNext()) {
+			Map.Entry<Player, PlayerInfo> entry = iter.next();
+			Player p = entry.getKey();
+			// dae use unsafe type casts because the preference system is so bad
+			if(entry.getValue().getPreference(Preferences.RECEIVE_GAME_TITLES)) {
+				PlayerUtils.sendTitle(p, Component.empty(), titleText, 7, 30, 7);
+			}
+
+			p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_CLUSTER_PLACE, SoundCategory.AMBIENT, 2, 1f);
+		}
+		Bukkit.broadcast(chatText);
+	}
+
 	public void returnFlagToBase(Flag flag) {
-		
+
+		if(flag.holder != null) {
+			flag.holder.setGlowing(false);
+			removeFlag(flag.holder, flag);
+			flag.sendRecreatePackets(flag.holder);
+			flag.holder.getInventory().remove(flag.item);
+		}
 		flag.teleportToBase();
 		
 		final TextReplacementConfig returnConfig = TextReplacementConfig.builder().match("%team%").replacement(flag.team.getComponentSimpleName()).build();
@@ -335,19 +412,20 @@ public class CaptureTheFlag extends TeamArena
 	}
 	
 	public void captureTheFlag(Player player, TeamArenaTeam capturingTeam, Flag capturedFlag) {
-		
-		capturedFlag.teleportToBase();
 		capturingTeam.score++;
 		player.setGlowing(false);
-		flagHolders.remove(player);
+		//flagHolders.remove(player);
+		removeFlag(player, capturedFlag);
+		capturedFlag.teleportToBase();
 		capturedFlag.sendRecreatePackets(player);
+		player.getInventory().remove(capturedFlag.item);
 		
 		updateBossBars();
-		
+
 		final TextReplacementConfig holdingConfig = TextReplacementConfig.builder().match("%holdingTeam%")
 				.replacement(player.playerListName()).build();
 		final TextReplacementConfig victimConfig = TextReplacementConfig.builder().match("%team%").replacement(capturedFlag.team.getComponentSimpleName()).build();
-		
+
 		Component chatText = CAPTURED_MESSAGE.replaceText(holdingConfig).replaceText(victimConfig);
 		Component titleText = CAPTURED_TITLE.replaceText(holdingConfig).replaceText(victimConfig);
 		
@@ -421,7 +499,25 @@ public class CaptureTheFlag extends TeamArena
 			event.setCancelled(true);
 		}
 	}
-	
+
+	//passing the flag from one player to another
+	@Override
+	public void onInteractEntity(PlayerInteractEntityEvent event) {
+
+		if(event.getRightClicked() instanceof Player receiver) {
+			ItemStack usedItem = event.getPlayer().getEquipment().getItem(event.getHand());
+
+		}
+	}
+
+
+	@Override
+	public void prepLive() {
+		super.prepLive();
+
+		SidebarManager.setTitle(Component.text("CapsToWin: " + capsToWin).color(NamedTextColor.GOLD));
+	}
+
 	@Override
 	public void prepEnd() {
 		super.prepEnd();

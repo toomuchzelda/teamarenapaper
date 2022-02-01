@@ -22,7 +22,7 @@ public class LegacyTeams
 						null, DyeColor.RED, BossBar.Color.RED);
 				break;
 			case "GREEN":
-				team = new TeamArenaTeam("Green Team", "Green", TeamArenaTeam.convert(NamedTextColor.DARK_GREEN),
+				team = new TeamArenaTeam("Green Team", "Green", TeamArenaTeam.convert(NamedTextColor.GREEN),
 						null, DyeColor.GREEN, BossBar.Color.GREEN);
 				break;
 			case "PURPLE": // DARK_PURPLE
@@ -74,7 +74,7 @@ public class LegacyTeams
 						null, DyeColor.GRAY, BossBar.Color.WHITE);
 				break;
 			case "AQUA":
-				team = new TeamArenaTeam("Aqua Team", "Aqya", TeamArenaTeam.convert(NamedTextColor.AQUA),
+				team = new TeamArenaTeam("Aqua Team", "Aqua", TeamArenaTeam.convert(NamedTextColor.AQUA),
 						null, DyeColor.LIGHT_BLUE, BossBar.Color.BLUE);
 				break;
 		}

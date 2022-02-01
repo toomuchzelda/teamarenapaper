@@ -13,6 +13,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.util.HashSet;
 
+import net.kyori.adventure.text.format.TextDecoration;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundAddMobPacket;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
@@ -20,11 +21,13 @@ import net.minecraft.world.entity.LivingEntity;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.craftbukkit.v1_18_R1.entity.CraftLivingEntity;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.BoundingBox;
@@ -52,8 +55,11 @@ public class Flag
 	private ArmorStand stand;
 	public Player holder;
 	public TeamArenaTeam holdingTeam;
+	public ItemStack item; //item in inventory representing the flag
 	public boolean isAtBase;
 	public int ticksUntilReturn;
+
+	public Component progressBarComponent; //band aid; pass the progress bar from stand custom name calculation to sidebar
 	
 	public static final EulerAngle LEG_ANGLE = new EulerAngle(Math.PI, 0, 0);
 	
@@ -77,7 +83,7 @@ public class Flag
 		
 		stand.getEquipment().setHelmet(items[0]);
 		stand.getEquipment().setChestplate(items[1]);
-		
+
 		stand.setCanTick(false);
 		stand.setInvulnerable(true);
 		stand.setGlowing(true);
@@ -95,17 +101,24 @@ public class Flag
 		
 		if(SidebarManager.SCOREBOARD.getTeam(team.getName() + "Flag") != null)
 			SidebarManager.SCOREBOARD.getTeam(team.getName() + "Flag").unregister();
-		
+
+		//use a seperate team so noone sees the partially invis armor stand bones
 		bukkitTeam = SidebarManager.SCOREBOARD.registerNewTeam(team.getName() + "Flag");
 		bukkitTeam.color(NamedTextColor.nearestTo(team.getRGBTextColor()));
 		bukkitTeam.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
 		bukkitTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.ALWAYS);
-		
 		bukkitTeam.addEntity(stand);
 		
 		markerMetadataPacket = constructMarkerMetadataPacket();
 		normalMetadataPacket = contructNormalMetadataPacket();
 		removePacket = new ClientboundRemoveEntitiesPacket(stand.getEntityId());
+
+		//inventory item of whoever grabs it
+		item = items[1].clone();
+		ItemMeta meta = item.getItemMeta();
+		meta.addEnchant(Enchantment.DURABILITY, 10, true);
+		meta.displayName(team.getComponentName().append(Component.text("'s Flag")).decoration(TextDecoration.ITALIC, false));
+		item.setItemMeta(meta);
 	}
 	
 	public ArmorStand getArmorStand() {
@@ -120,10 +133,12 @@ public class Flag
 		stand.teleport(baseLoc);
 		currentLoc = baseLoc.clone();
 		isAtBase = true;
-		if(holder != null) {
-			PlayerUtils.sendPacket(holder, getSpawnPacket());
+		/*if(holder != null) {
+			//PlayerUtils.sendPacket(holder, getSpawnPacket());
+			sendRecreatePackets(holder);
 			holder = null;
-		}
+		}*/
+		holder = null;
 		holdingTeam = null;
 		stand.customName(team.getComponentName().append(Component.text("'s Flag")));
 	}

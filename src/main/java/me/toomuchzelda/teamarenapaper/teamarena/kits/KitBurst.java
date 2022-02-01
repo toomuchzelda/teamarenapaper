@@ -60,13 +60,13 @@ public class KitBurst extends Kit
 		@Override
 		public void onLoadCrossbow(EntityLoadCrossbowEvent event) {
 			event.setConsumeItem(false);
-			((Player) event.getEntity()).updateInventory();
+			((Player) event.getEntity()).updateInventory(); //do this to undo client prediction of using the firework
 		}
 		
 		//stop them from accidentally placing the firework down and using it
 		@Override
 		public void onInteract(PlayerInteractEvent event) {
-			if(event.getMaterial() == Material.FIREWORK_ROCKET) {
+			if(event.useItemInHand() != Event.Result.DENY && event.getMaterial() == Material.FIREWORK_ROCKET) {
 				event.setUseItemInHand(Event.Result.DENY);
 			}
 		}

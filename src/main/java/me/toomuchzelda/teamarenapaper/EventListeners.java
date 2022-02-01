@@ -24,10 +24,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.preferences.PreferenceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Sound;
-import org.bukkit.SoundCategory;
+import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
@@ -36,6 +33,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.InventoryCreativeEvent;
+import org.bukkit.event.inventory.InventoryMoveItemEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.event.player.PlayerLoginEvent.Result;
 import org.bukkit.plugin.Plugin;
@@ -91,10 +89,10 @@ public class EventListeners implements Listener
 			DamageTimes.cleanup();
 			Main.playerIdLookup.entrySet().removeIf(idLookupEntry -> !idLookupEntry.getValue().isOnline());
 			
-			if(MathUtils.randomMax(3) < 3) {
+			/*if(MathUtils.randomMax(3) < 3) {
 				TeamArena.nextGameType = GameType.KOTH;
 			}
-			else
+			else*/
 				TeamArena.nextGameType = GameType.CTF;
 			
 			if(TeamArena.nextGameType == GameType.KOTH) {
@@ -486,7 +484,18 @@ public class EventListeners implements Listener
 		event.setCancelled(true);
 	}
 
-	
+	@EventHandler
+	public void playerDropItem(PlayerDropItemEvent event) {
+		if(event.getPlayer().getGameMode() != GameMode.CREATIVE)
+			event.setCancelled(true);
+	}
+
+	//stop items being moved from one inventory to another (chests etc)
+	@EventHandler
+	public void inventoryMoveItem(InventoryMoveItemEvent event) {
+		event.setCancelled(true);
+	}
+
 	//stop players from messing with the armor of CTF Flags
 	@EventHandler
 	public void playerArmorStandManipulate(PlayerArmorStandManipulateEvent event) {
@@ -497,9 +506,25 @@ public class EventListeners implements Listener
 	
 	@EventHandler
 	public void playerInteract(PlayerInteractEvent event) {
-		Ability[] abilities = Kit.getAbilities(event.getPlayer());
-		for(Ability a : abilities) {
-			a.onInteract(event);
+		if(Main.getGame() != null) {
+			Main.getGame().onInteract(event);
+
+			Ability[] abilities = Kit.getAbilities(event.getPlayer());
+			for (Ability a : abilities) {
+				a.onInteract(event);
+			}
+		}
+	}
+
+	@EventHandler
+	public void playerInteractEntity(PlayerInteractEntityEvent event) {
+		if(Main.getGame() != null) {
+			Main.getGame().onInteractEntity(event);
+
+			Ability[] abilities = Kit.getAbilities(event.getPlayer());
+			for(Ability a : abilities) {
+				a.onInteractEntity(event);
+			}
 		}
 	}
 	
