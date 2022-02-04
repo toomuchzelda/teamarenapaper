@@ -8,6 +8,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.Set;
@@ -99,11 +100,24 @@ public abstract class Kit
         pinfo.activeKit = null;
     }
 
+    @Deprecated(forRemoval = true)
     public void setArmour(ItemStack[] armour) {
         this.armour = armour;
     }
 
-    public void setItems(ItemStack[] items) {
+    /**
+     * Sets the armor pieces given by this kit
+     * @param head The item in the head slot
+     * @param chest The item in the chest slot
+     * @param legs The item in the legs slot
+     * @param feet The item in the feet slot
+     */
+    public void setArmor(@Nullable ItemStack head, @Nullable ItemStack chest,
+                         @Nullable ItemStack legs, @Nullable ItemStack feet) {
+        this.armour = new ItemStack[] {feet, legs, chest, head};
+    }
+
+    public void setItems(ItemStack... items) {
         this.items = items;
     }
 
