@@ -253,6 +253,7 @@ public abstract class TeamArena
 				pinfo.kit = kits[0];
 
 			PlayerUtils.resetState(p);
+			p.setAllowFlight(true);
 
 			p.getInventory().clear();
 			giveLobbyItems(p);
@@ -690,9 +691,11 @@ public abstract class TeamArena
 				p.showPlayer(Main.getPlugin(), pp);
 			}
 			p.setAllowFlight(true);
-
+			
 			PlayerInfo pinfo = Main.getPlayerInfo(p);
-			pinfo.activeKit.removeKit(p, pinfo);
+			if(!isSpectator(p)) {
+				pinfo.activeKit.removeKit(p, pinfo);
+			}
 			pinfo.kit = null;
 			pinfo.team = null;
 			pinfo.spawnPoint = null;
@@ -1000,6 +1003,9 @@ public abstract class TeamArena
 	public abstract boolean isRespawningGame();
 
 	public boolean canRespawn(Player player) {
+		if(gameState != GameState.LIVE)
+			return false;
+		
 		Integer timeLeft = respawnTimers.get(player);
 		return timeLeft != null && gameTick - timeLeft >= RESPAWN_SECONDS * 20;
 	}

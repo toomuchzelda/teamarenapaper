@@ -100,7 +100,6 @@ public abstract class Kit
         pinfo.activeKit = null;
     }
 
-    @Deprecated(forRemoval = true)
     public void setArmour(ItemStack[] armour) {
         this.armour = armour;
     }

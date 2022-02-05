@@ -14,7 +14,10 @@ import org.bukkit.*;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
@@ -26,6 +29,7 @@ public class CaptureTheFlag extends TeamArena
 	public HashMap<TeamArenaTeam, Flag> teamToFlags; //initialized in parseConfig
 	public HashMap<ArmorStand, Flag> flagStands; // this too
 	public HashMap<Player, Set<Flag>> flagHolders = new HashMap<>();
+	public HashSet<Component> flagItems;
 	public int capsToWin;
 	public static final int TAKEN_FLAG_RETURN_TIME = 15 * 20;//3 * 60 * 20;
 	public static final int DROPPED_TIME_PER_TICK = TAKEN_FLAG_RETURN_TIME / (5 * 20);
@@ -36,12 +40,13 @@ public class CaptureTheFlag extends TeamArena
 	public static final Component DROP_MESSAGE = Component.text("%holdingTeam% has dropped %team%'s flag").color(NamedTextColor.GOLD);
 	public static final Component RETURNED_MESSAGE = Component.text("%team%'s flag has been returned to their base").color(NamedTextColor.GOLD);
 	public static final Component CAPTURED_MESSAGE = Component.text("%holdingTeam% has captured %team%'s flag!").color(NamedTextColor.GOLD);;
-	public static final Component CAPTURED_FOR_OTHER_TEAM_MESSAGE = Component.text("%holdingTeam% has captured %team%'s flag for %otherTeam%??!!?!!").color(NamedTextColor.GOLD);
+	public static final Component PASSED_MESSAGE = Component.text("%holdingTeam% has passed %team%'s flag to %otherTeam%").color(NamedTextColor.GOLD);
 	//shorter ones for titles
 	public static final Component PICK_UP_TITLE = Component.text("%holdingTeam% took %team%'s flag").color(NamedTextColor.GOLD);
 	public static final Component DROP_TITLE = Component.text("%holdingTeam% dropped %team%'s flag").color(NamedTextColor.GOLD);
 	public static final Component RETURNED_TITLE = Component.text("%team%'s flag returned").color(NamedTextColor.GOLD);
-	public static final Component CAPTURED_TITLE = Component.text("%holdingTeam% captured %team%'s flag!").color(NamedTextColor.GOLD);;
+	public static final Component CAPTURED_TITLE = Component.text("%holdingTeam% captured %team%'s flag!").color(NamedTextColor.GOLD);
+	public static final Component PASSED_TITLE = Component.text("%holdingTeam% gave %team%'s flag to %otherTeam%").color(NamedTextColor.GOLD);
 	
 	public static final Component CANT_CAPTURE_YOUR_FLAG_NOT_AT_BASE = Component.text("You can't capture until your flag is safely at your base!").color(TextColor.color(255, 20, 20));
 	public static final String CANT_CAPTURE_KEY = "yrflagnotatbase";
@@ -241,7 +246,7 @@ public class CaptureTheFlag extends TeamArena
 								}
 								//enemy picked up the flag
 								else {
-									pickUpFlag(p, flag);
+									pickUpFlag(p, flag, true);
 									break;
 								}
 							}
@@ -281,7 +286,7 @@ public class CaptureTheFlag extends TeamArena
 		super.handleDeath(event);
 	}
 
-	public void pickUpFlag(Player player, Flag flag) {
+	public void pickUpFlag(Player player, Flag flag, boolean broadcast) {
 		/*if(flagHolders.containsKey(player)) {
 			player.sendMessage("ur already hold flag ");
 			return;
@@ -290,6 +295,12 @@ public class CaptureTheFlag extends TeamArena
 			final Component text = Component.text("Taking the flag of a dead team? Talk about cheap!").color(TextColor.color(255, 20 ,20));
 			player.sendMessage(text);
 			player.playSound(player.getLocation(), Sound.ENTITY_HORSE_DEATH, SoundCategory.AMBIENT, 2f, 0.5f);
+			return;
+		}
+
+		//the player is picking up their own flag (possible if someone else gives it to them)
+		if(flag.team.getPlayerMembers().contains(player)) {
+			returnFlagToBase(flag);
 			return;
 		}
 
@@ -309,27 +320,29 @@ public class CaptureTheFlag extends TeamArena
 		//give them the inventory item
 		player.getInventory().addItem(flag.item);
 
-		final TextReplacementConfig playerConfig = TextReplacementConfig.builder().match("%holdingTeam%")
-				.replacement(player.playerListName()).build();
-		final TextReplacementConfig flagTeamConfig = TextReplacementConfig.builder().match("%team%")
-				.replacement(flag.team.getComponentSimpleName()).build();
+		if(broadcast) {
+			final TextReplacementConfig playerConfig = TextReplacementConfig.builder().match("%holdingTeam%")
+					.replacement(player.playerListName()).build();
+			final TextReplacementConfig flagTeamConfig = TextReplacementConfig.builder().match("%team%")
+					.replacement(flag.team.getComponentSimpleName()).build();
 
-		Component pickupChat = PICK_UP_MESSAGE.replaceText(playerConfig).replaceText(flagTeamConfig);
-		Component pickupTitle = PICK_UP_TITLE.replaceText(playerConfig).replaceText(flagTeamConfig);
+			Component pickupChat = PICK_UP_MESSAGE.replaceText(playerConfig).replaceText(flagTeamConfig);
+			Component pickupTitle = PICK_UP_TITLE.replaceText(playerConfig).replaceText(flagTeamConfig);
 
-		Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
-		while(iter.hasNext()) {
-			Map.Entry<Player, PlayerInfo> entry = iter.next();
-			Player p = entry.getKey();
-			if(entry.getValue().getPreference(Preferences.RECEIVE_GAME_TITLES)) {
-				PlayerUtils.sendTitle(p, Component.empty(), pickupTitle, 7, 30, 7);
+			Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
+			while (iter.hasNext()) {
+				Map.Entry<Player, PlayerInfo> entry = iter.next();
+				Player p = entry.getKey();
+				if (entry.getValue().getPreference(Preferences.RECEIVE_GAME_TITLES)) {
+					PlayerUtils.sendTitle(p, Component.empty(), pickupTitle, 7, 30, 7);
+				}
+
+				//todo maybe a preference for game sounds
+				p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_CLUSTER_BREAK, SoundCategory.AMBIENT, 2, 1f);
 			}
 
-			//todo maybe a preference for game sounds
-			p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_CLUSTER_BREAK, SoundCategory.AMBIENT, 2, 1f);
+			Bukkit.broadcast(pickupChat);
 		}
-
-		Bukkit.broadcast(pickupChat);
 	}
 
 	public void dropFlags(Player player) {
@@ -337,12 +350,12 @@ public class CaptureTheFlag extends TeamArena
 		if(mapFlags != null) {
 			Set<Flag> flags = new HashSet<>(flagHolders.get(player)); //avoid concurrentmodification
 			for (Flag flag : flags) {
-				dropFlag(player, flag);
+				dropFlag(player, flag, true);
 			}
 		}
 	}
 
-	public void dropFlag(Player player, Flag flag) {
+	public void dropFlag(Player player, Flag flag, boolean broadcast) {
 		//player.removePassenger(flag.getArmorStand()); todo: manage this in removeFlag(Player, Flag)
 		flag.currentLoc = player.getLocation();
 		flag.holder = null;
@@ -358,27 +371,29 @@ public class CaptureTheFlag extends TeamArena
 			flag.teleportToBase();
 		}
 
-		Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
+		if(broadcast) {
+			Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
 
-		final TextReplacementConfig playerConfig = TextReplacementConfig.builder().match("%holdingTeam%")
-				.replacement(player.playerListName()).build();
-		final TextReplacementConfig teamConfig = TextReplacementConfig.builder().match("%team%")
-				.replacement(flag.team.getComponentSimpleName()).build();
+			final TextReplacementConfig playerConfig = TextReplacementConfig.builder().match("%holdingTeam%")
+					.replacement(player.playerListName()).build();
+			final TextReplacementConfig teamConfig = TextReplacementConfig.builder().match("%team%")
+					.replacement(flag.team.getComponentSimpleName()).build();
 
-		Component titleText = DROP_TITLE.replaceText(playerConfig).replaceText(teamConfig);
-		Component chatText = DROP_MESSAGE.replaceText(playerConfig).replaceText(teamConfig);
+			Component titleText = DROP_TITLE.replaceText(playerConfig).replaceText(teamConfig);
+			Component chatText = DROP_MESSAGE.replaceText(playerConfig).replaceText(teamConfig);
 
-		while(iter.hasNext()) {
-			Map.Entry<Player, PlayerInfo> entry = iter.next();
-			Player p = entry.getKey();
-			// dae use unsafe type casts because the preference system is so bad
-			if(entry.getValue().getPreference(Preferences.RECEIVE_GAME_TITLES)) {
-				PlayerUtils.sendTitle(p, Component.empty(), titleText, 7, 30, 7);
+			while (iter.hasNext()) {
+				Map.Entry<Player, PlayerInfo> entry = iter.next();
+				Player p = entry.getKey();
+				// dae use unsafe type casts because the preference system is so bad
+				if (entry.getValue().getPreference(Preferences.RECEIVE_GAME_TITLES)) {
+					PlayerUtils.sendTitle(p, Component.empty(), titleText, 7, 30, 7);
+				}
+
+				p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_CLUSTER_PLACE, SoundCategory.AMBIENT, 2, 1f);
 			}
-
-			p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_CLUSTER_PLACE, SoundCategory.AMBIENT, 2, 1f);
+			Bukkit.broadcast(chatText);
 		}
-		Bukkit.broadcast(chatText);
 	}
 
 	public void returnFlagToBase(Flag flag) {
@@ -506,10 +521,55 @@ public class CaptureTheFlag extends TeamArena
 
 		if(event.getRightClicked() instanceof Player receiver) {
 			ItemStack usedItem = event.getPlayer().getEquipment().getItem(event.getHand());
+			Set<Flag> flagsHeld = flagHolders.get(event.getPlayer());
+			if(flagsHeld != null) {
+				for(Flag flag : flagsHeld) {
+					if(flag.item.isSimilar(usedItem)) {
+						final TextReplacementConfig dropperConfig = TextReplacementConfig.builder().match("%holdingTeam%").replacement(event.getPlayer().playerListName()).build();
+						final TextReplacementConfig teamMessageConfig = TextReplacementConfig.builder().match("%team%").replacement(flag.team.getComponentName()).build();
+						final TextReplacementConfig teamTitleConfig = TextReplacementConfig.builder().match("%team%").replacement(flag.team.getComponentSimpleName()).build();
+						final TextReplacementConfig newHolderConfig = TextReplacementConfig.builder().match("%otherTeam%").replacement(receiver.playerListName()).build();
 
+						Component chatMessage = PASSED_MESSAGE.replaceText(dropperConfig).replaceText(teamMessageConfig).replaceText(newHolderConfig);
+						Component titleMessage = PASSED_TITLE.replaceText(dropperConfig).replaceText(teamTitleConfig).replaceText(newHolderConfig);
+
+						var iter = Main.getPlayersIter();
+						while(iter.hasNext()) {
+							var entry = iter.next();
+							Player p = entry.getKey();
+
+							if(entry.getValue().getPreference(Preferences.RECEIVE_GAME_TITLES)) {
+								PlayerUtils.sendTitle(p, Component.empty(), titleMessage, 7, 30 ,7);
+							}
+
+							p.playSound(p.getLocation(), Sound.BLOCK_SMALL_AMETHYST_BUD_BREAK, SoundCategory.AMBIENT, 2f, 1f);
+						}
+
+						Bukkit.broadcast(chatMessage);
+
+						//pass the flag on to who was clicked
+						dropFlag(event.getPlayer(), flag, false);
+						pickUpFlag(receiver, flag, false);
+
+						break;
+					}
+				}
+			}
 		}
 	}
 
+	public boolean isFlagItem(ItemStack item) {
+		if(item == null) return false;
+		return flagItems.contains(item.displayName());
+	}
+
+	@Override
+	public void onInteract(PlayerInteractEvent event) {
+		if((event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK)
+				&& isFlagItem(event.getItem())) {
+			event.setUseItemInHand(Event.Result.DENY);
+		}
+	}
 
 	@Override
 	public void prepLive() {
@@ -564,7 +624,8 @@ public class CaptureTheFlag extends TeamArena
 		
 		Main.logger().info("Custom Info: ");
 		Main.logger().info(customFlags.toString());
-		
+
+		flagItems = new HashSet<>();
 		for (Map.Entry<String, Object> entry : customFlags.entrySet()) {
 			if (entry.getKey().equalsIgnoreCase("CapsToWin")) {
 				try {

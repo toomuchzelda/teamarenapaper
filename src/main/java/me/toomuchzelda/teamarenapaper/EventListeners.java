@@ -32,10 +32,10 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.*;
-import org.bukkit.event.inventory.InventoryCreativeEvent;
-import org.bukkit.event.inventory.InventoryMoveItemEvent;
+import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.*;
 import org.bukkit.event.player.PlayerLoginEvent.Result;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
@@ -236,7 +236,8 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void blockBreak(BlockBreakEvent event) {
-		event.setCancelled(true);
+		if(event.getPlayer().getGameMode() != GameMode.CREATIVE)
+			event.setCancelled(true);
 	}
 	
 	@EventHandler
@@ -321,7 +322,8 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void playerDeath(PlayerDeathEvent event) {
-		//todo
+		Main.logger().warning("PlayerDeathEvent called! not good");
+		Thread.dumpStack();
 		event.setCancelled(true);
 	}
 
@@ -504,6 +506,37 @@ public class EventListeners implements Listener
 		}
 	}
 	
+	@EventHandler(ignoreCancelled = true)
+	public void onPlayerArmorChange(InventoryClickEvent e) {
+		if (!(Main.getGame() instanceof CaptureTheFlag ctf))
+			return;
+		Player player = (Player) e.getWhoClicked();
+//		player.sendMessage(MessageFormat.format("click: {0}, slot type: {1}, action: {2}", e.getClick(), e.getSlotType(), e.getAction()));
+		ItemStack toCheck = null;
+		InventoryAction action = e.getAction();
+		// these two actions move the current item so check the current item
+		if (action == InventoryAction.MOVE_TO_OTHER_INVENTORY || action == InventoryAction.HOTBAR_SWAP) {
+			toCheck = e.getCurrentItem();
+		} else if (e.getSlotType() == InventoryType.SlotType.ARMOR) {
+			toCheck = e.getCursor();
+		}
+//		player.sendMessage("ItemStack to check: " + toCheck);
+		
+		if (toCheck != null && ctf.isFlagItem(toCheck)) {
+			e.setCancelled(true);
+		}
+	}
+	
+	@EventHandler(ignoreCancelled = true)
+	public void onPlayerArmorDrag(InventoryDragEvent e) {
+		if (!(Main.getGame() instanceof CaptureTheFlag ctf))
+			return;
+		
+		if (ctf.isFlagItem(e.getOldCursor())) {
+			e.setCancelled(true);
+		}
+	}
+
 	@EventHandler
 	public void playerInteract(PlayerInteractEvent event) {
 		if(Main.getGame() != null) {

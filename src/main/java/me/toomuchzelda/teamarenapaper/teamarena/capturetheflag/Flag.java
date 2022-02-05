@@ -116,9 +116,13 @@ public class Flag
 		//inventory item of whoever grabs it
 		item = items[1].clone();
 		ItemMeta meta = item.getItemMeta();
-		meta.addEnchant(Enchantment.DURABILITY, 10, true);
+		//meta.addEnchant(Enchantment.DURABILITY, 10, true);
 		meta.displayName(team.getComponentName().append(Component.text("'s Flag")).decoration(TextDecoration.ITALIC, false));
 		item.setItemMeta(meta);
+
+		//use displayName Component for hash as ItemStack uses durability in hashCode
+		// and we change the durability often
+		game.flagItems.add(item.displayName());
 	}
 	
 	public ArmorStand getArmorStand() {
