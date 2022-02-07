@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.capturetheflag;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.BlockUtils;
+import me.toomuchzelda.teamarenapaper.core.ItemUtils;
 import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
@@ -10,7 +11,9 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
+import net.minecraft.world.item.ArmorItem;
 import org.bukkit.*;
+import org.bukkit.craftbukkit.v1_18_R1.entity.CraftItem;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -18,7 +21,11 @@ import org.bukkit.event.Event;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.Damageable;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
@@ -151,6 +158,20 @@ public class CaptureTheFlag extends TeamArena
 					flag.progressBarComponent = firstComponent;
 					
 					flag.getArmorStand().customName(firstComponent);
+					
+					//set the flag item's durability so the holder can see it too
+					if(flag.holder != null) {
+						ItemStack invFlag = getFlagInInventory(flag, flag.holder);
+						
+						if(invFlag == null || invFlag.getType().isAir())
+							throw new IllegalStateException("Flag " + flag.team.getName() +
+									" holder field is not null but the player does not have the item in their inventory!");
+						
+						Damageable meta = (Damageable) invFlag.getItemMeta();
+						short durability = (short) (invFlag.getType().getMaxDurability() * (1 - percentage));
+						meta.setDamage(durability);
+						invFlag.setItemMeta(meta);
+					}
 				}
 			}
 		}
@@ -364,7 +385,8 @@ public class CaptureTheFlag extends TeamArena
 		removeFlag(player, flag);
 		player.setGlowing(false);
 		flag.sendRecreatePackets(player);
-		player.getInventory().remove(flag.item);
+		//player.getInventory().remove(flag.item);
+		ItemUtils.removeFromPlayerInventory(getFlagInInventory(flag, player), player);
 
 		//if there's no floor to land on when it's dropped teleport it back to base
 		if(BlockUtils.getFloor(flag.currentLoc) == null) {
@@ -402,7 +424,8 @@ public class CaptureTheFlag extends TeamArena
 			flag.holder.setGlowing(false);
 			removeFlag(flag.holder, flag);
 			flag.sendRecreatePackets(flag.holder);
-			flag.holder.getInventory().remove(flag.item);
+			//flag.holder.getInventory().remove(flag.item);
+			ItemUtils.removeFromPlayerInventory(getFlagInInventory(flag, flag.holder), flag.holder);
 		}
 		flag.teleportToBase();
 		
@@ -434,6 +457,7 @@ public class CaptureTheFlag extends TeamArena
 		capturedFlag.teleportToBase();
 		capturedFlag.sendRecreatePackets(player);
 		player.getInventory().remove(capturedFlag.item);
+		ItemUtils.removeFromPlayerInventory(getFlagInInventory(capturedFlag, player), player);
 		
 		updateBossBars();
 
@@ -562,7 +586,39 @@ public class CaptureTheFlag extends TeamArena
 		if(item == null) return false;
 		return flagItems.contains(item.displayName());
 	}
-
+	
+	/**
+	 * Get the copy of a flag item in a players inventory e.g the specific flag item in the inventory of a player holding the flag
+	 */
+	public ItemStack getFlagInInventory(Flag flag, Player player) {
+		Iterator<ItemStack> iter = player.getInventory().iterator();
+		ItemStack invFlag = null;
+		while(iter.hasNext()) {
+			ItemStack item = iter.next();
+			if(item == null)
+				continue;
+			
+			if(item.getType() == Material.LEATHER_CHESTPLATE) {
+				ItemStack cloneItem = item.clone();
+				Damageable meta = (Damageable) cloneItem.getItemMeta();
+				meta.setDamage(0);
+				cloneItem.setItemMeta(meta);
+				
+				if (flag.item.isSimilar(cloneItem)) {
+					invFlag = item;
+					break;
+				}
+			}
+		}
+		
+		if(invFlag == null) {
+			//they may be holding it on their mouse in their inventory
+			invFlag = player.getItemOnCursor();
+		}
+		
+		return invFlag;
+	}
+	
 	@Override
 	public void onInteract(PlayerInteractEvent event) {
 		if((event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK)

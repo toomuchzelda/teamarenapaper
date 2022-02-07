@@ -128,10 +128,6 @@ public class EntityUtils {
         }
         entity.playEffect(effect);*/
 
-        //byte argument from wiki.vg
-        // https://wiki.vg/Protocol#Entity_Status
-        // https://wiki.vg/Entity_statuses
-
         net.minecraft.world.entity.LivingEntity nmsLivingEntity = ((CraftLivingEntity) entity).getHandle();
         ClientboundAnimatePacket packet = new ClientboundAnimatePacket(nmsLivingEntity, ClientboundAnimatePacket.HURT);
 

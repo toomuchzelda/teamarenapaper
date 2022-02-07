@@ -16,10 +16,8 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.Projectile;
+import org.bukkit.craftbukkit.v1_18_R1.entity.CraftEntity;
+import org.bukkit.entity.*;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
@@ -973,8 +971,9 @@ public abstract class TeamArena
 
 	public void handleDeath(DamageEvent event) {
 		Bukkit.broadcast(event.getDamageType().getDeathMessage(NamedTextColor.YELLOW, event.getVictim(), event.getFinalAttacker(), null));
+		Entity e = event.getVictim();
 		//if player make them a spectator and put them in queue to respawn if is a respawning game
-		if(event.getVictim() instanceof Player p) {
+		if(e instanceof Player p) {
 			//p.showTitle(Title.title(Component.empty(), Component.text("You died!").color(TextColor.color(255, 0, 0))));
 			PlayerUtils.sendTitle(p, Component.empty(), Component.text("You died!").color(TextColor.color(255, 0, 0)), 0, 30, 20);
 
@@ -995,7 +994,12 @@ public abstract class TeamArena
 			}
 		}
 		else {
-			event.getVictim().remove();
+			if(e instanceof Damageable dam) {
+				dam.setHealth(0);
+			}
+			else {
+				e.remove();
+			}
 		}
 	}
 

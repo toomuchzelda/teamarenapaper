@@ -270,6 +270,7 @@ public class EventListeners implements Listener
 	//create and cache damage events
 	@EventHandler
 	public void entityDamage(EntityDamageEvent event) {
+		
 		event.setCancelled(true);
 		//Bukkit.broadcast(Component.text("DamageCause: " + event.getCause()));
 		if(Main.getGame().getGameState() != LIVE)

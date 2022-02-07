@@ -2,8 +2,13 @@ package me.toomuchzelda.teamarenapaper.core;
 
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.SwordItem;
+import org.bukkit.Material;
 import org.bukkit.craftbukkit.v1_18_R1.inventory.CraftItemStack;
-import org.bukkit.inventory.ItemStack;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.*;
+import org.bukkit.inventory.meta.Damageable;
+
+import java.util.Iterator;
 
 public class ItemUtils
 {
@@ -13,5 +18,23 @@ public class ItemUtils
 	
 	public static boolean isSword(ItemStack item) {
 		return (CraftItemStack.asNMSCopy(item).getItem() instanceof SwordItem);
+	}
+	
+	/**
+	 * also get rid of item from armor slots, and offhand
+	 * @param item item to remove
+	 * @param player player to remove from
+	 */
+	public static void removeFromPlayerInventory(ItemStack item, Player player) {
+		PlayerInventory inv = player.getInventory();
+		inv.remove(item);
+		EntityEquipment equipment = player.getEquipment();
+		for(EquipmentSlot slot : EquipmentSlot.values()) {
+			ItemStack slotItem = equipment.getItem(slot);
+			if(slotItem == null) continue;
+			if(slotItem.isSimilar(item)) {
+				equipment.setItem(slot, null, true);
+			}
+		}
 	}
 }

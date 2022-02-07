@@ -414,18 +414,21 @@ public class DamageEvent {
                 //todo: handle death here
                 //Bukkit.broadcast(Component.text(living.getName() + " has died"));
                 newHealth = living.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
-                Main.getGame().handleDeath(this);
                 isDeath = true;
             }
 
             living.setHealth(newHealth);
             living.setLastDamage(finalDamage);
+            
             if(doHurtEffect)
                 EntityUtils.playHurtAnimation(living, damageType, isDeath);
-            if(isCritical) {
+    
+            if(isCritical)
                 EntityUtils.playCritEffect(living);
-            }
-            if(!isDeath && attacker instanceof AbstractArrow aa && aa.getPierceLevel() == 0 &&
+            
+            if(isDeath)
+                Main.getGame().handleDeath(this); // run this after to ensure the animations are seen by viewers
+            else if(attacker instanceof AbstractArrow aa && aa.getPierceLevel() == 0 &&
                     damageType.is(DamageType.PROJECTILE)) {
                 living.setArrowsInBody(living.getArrowsInBody() + 1);
             }
