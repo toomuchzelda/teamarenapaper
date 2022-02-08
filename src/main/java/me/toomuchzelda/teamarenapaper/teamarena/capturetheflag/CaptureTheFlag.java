@@ -23,7 +23,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
-import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -581,7 +580,7 @@ public class CaptureTheFlag extends TeamArena
 
 	public boolean isFlagItem(ItemStack item) {
 		if(item == null) return false;
-		return flagItems.contains(item.getI18NDisplayName());
+		return flagItems.contains(item.getItemMeta().getDisplayName());
 	}
 	
 	/**
@@ -589,7 +588,6 @@ public class CaptureTheFlag extends TeamArena
 	 */
 	public @Nullable ItemStack getFlagInInventory(Flag flag, Player player) {
 		Iterator<ItemStack> iter = player.getInventory().iterator();
-		ItemStack invFlag = null;
 		while(iter.hasNext()) {
 			ItemStack item = iter.next();
 			
@@ -639,6 +637,9 @@ public class CaptureTheFlag extends TeamArena
 	@Override
 	public void prepEnd() {
 		super.prepEnd();
+		
+		flagItems.clear();
+		
 		
 		Bukkit.getScheduler().runTaskLater(Main.getPlugin(), bukkitTask -> {
 			

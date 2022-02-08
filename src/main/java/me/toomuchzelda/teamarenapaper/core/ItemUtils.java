@@ -2,13 +2,12 @@ package me.toomuchzelda.teamarenapaper.core;
 
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.SwordItem;
-import org.bukkit.Material;
 import org.bukkit.craftbukkit.v1_18_R1.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.*;
-import org.bukkit.inventory.meta.Damageable;
-
-import java.util.Iterator;
+import org.bukkit.inventory.EntityEquipment;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 
 public class ItemUtils
 {
@@ -36,5 +35,7 @@ public class ItemUtils
 				equipment.setItem(slot, null, true);
 			}
 		}
+		if(player.getItemOnCursor().isSimilar(item))
+			player.setItemOnCursor(null);
 	}
 }

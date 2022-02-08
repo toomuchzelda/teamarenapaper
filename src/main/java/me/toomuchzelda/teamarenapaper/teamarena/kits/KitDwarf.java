@@ -4,14 +4,12 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.ItemUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
-import org.bukkit.Color;
-import org.bukkit.Material;
-import org.bukkit.Sound;
-import org.bukkit.SoundCategory;
+import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.enchantments.Enchantment;
@@ -71,8 +69,6 @@ public class KitDwarf extends Kit
 		this.setItems(items);
 		
 		setAbilities(new DwarfAbility());
-		
-		
 	}
 	
 	public static class DwarfAbility extends Ability
@@ -146,6 +142,15 @@ public class KitDwarf extends Kit
 				ItemStack item = inventory.getItem(i);
 				if (item == null)
 					continue;
+				
+				if(Main.getGame() instanceof CaptureTheFlag ctf && ctf.isFlagItem(item)) {
+					Bukkit.broadcastMessage("Was flag item");
+					continue;
+				}
+				else {
+					Bukkit.broadcastMessage("not flag item");
+				}
+				
 				ItemMeta meta = item.getItemMeta();
 				if (ItemUtils.isArmor(item)) {
 					if (enchantLevels == 0)

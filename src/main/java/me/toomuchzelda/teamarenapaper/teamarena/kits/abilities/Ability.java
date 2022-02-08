@@ -3,8 +3,6 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.abilities;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
-import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityShootBowEvent;
@@ -14,10 +12,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 //methods aren't abstract as kit abilities may not need to override them
 public abstract class Ability {
 
-    protected final TeamArena teamArena;
-    
     protected Ability() {
-        teamArena = Main.getGame();
     }
     
     //register all one-time-registered things for this ability
