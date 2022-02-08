@@ -90,6 +90,7 @@ public class PlayerUtils
 		player.setFoodLevel(20);
 		player.setAbsorptionAmount(0);
 		player.setGlowing(false);
+		player.setFireTicks(0);
 		for(PotionEffect effect : player.getActivePotionEffects()) {
 			player.removePotionEffect(effect.getType());
 		}

@@ -45,7 +45,7 @@ public class CommandKit extends CustomCommand {
     
     @Override
     public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
-        if(args.length == 1 && sender instanceof Player) {
+        if(args.length == 1 && sender instanceof Player p) {
             /*LinkedList<String> list = Main.getGame().getTabKitList();
             LinkedList<String> newList = new LinkedList<>();
             String arg = args[0];
@@ -55,6 +55,9 @@ public class CommandKit extends CustomCommand {
             }
             return newList;*/
 
+            //if they are waiting to respwan, interrupt their respawn timer
+            Main.getGame().interruptRespawn(p);
+            
             return CustomCommand.doAutocomplete(Main.getGame().getTabKitList(), args[0]);
         }
         

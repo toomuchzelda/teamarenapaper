@@ -62,7 +62,7 @@ public abstract class TeamArena
 
 	protected TeamArenaTeam[] teams;
 	//to avoid having to construct a new List on every tabComplete
-	protected LinkedList<String> tabTeamsList;
+	protected ArrayList<String> tabTeamsList;
 	protected TeamArenaTeam noTeamTeam;
 	protected TeamArenaTeam winningTeam;
 	//store the last team that a player has left from
@@ -79,14 +79,14 @@ public abstract class TeamArena
 	 * for mid-game joiners with whatever amount of time to decide if they wanna join and dead players
 	 * -1 value means ready to respawn when next liveTick runs (magic number moment)
 	 */
-	protected HashMap<Player, Integer> respawnTimers;
+	protected HashMap<Player, RespawnInfo> respawnTimers;
 	//for players that have joined mid-game and have 10 or whatever seconds to join
 	protected HashMap<Player, Integer> midJoinTimers;
 	public static final int RESPAWN_SECONDS = 5;
 	public static final int MID_GAME_JOIN_SECONDS = 10;
 
 	protected Kit[] kits;
-	protected LinkedList<String> tabKitList;
+	protected ArrayList<String> tabKitList;
 	protected ItemStack kitMenuItem;
 
 	protected MapInfo mapInfo;
@@ -116,9 +116,9 @@ public abstract class TeamArena
 			for(File uid : dest.listFiles()) {
 				if(uid.getName().equalsIgnoreCase("uid.dat")) {
 					boolean b = uid.delete();
-					if(b) {
+					//if(b) {
 						Main.logger().info("Attempted delete of uid.dat in copy world, success: " + b);
-					}
+					//}
 				}
 			}
 		}
@@ -212,7 +212,7 @@ public abstract class TeamArena
 		
 		kits = new Kit[]{new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
 				/*new KitReach(this),*/new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitNone()};
-		tabKitList = new LinkedList<>();
+		tabKitList = new ArrayList<>(kits.length);
 		for(Kit kit : kits) {
 			for(Ability ability : kit.getAbilities()) {
 				ability.registerAbility();
@@ -222,7 +222,7 @@ public abstract class TeamArena
 		}
 		
 		//List of team names
-		tabTeamsList = new LinkedList<>();
+		tabTeamsList = new ArrayList<>(teams.length);
 		for(TeamArenaTeam team : teams) {
 			tabTeamsList.add(team.getSimpleName());
 		}
@@ -377,33 +377,42 @@ public abstract class TeamArena
 	}
 	
 	public void respawnerTick() {
-		Iterator<Map.Entry<Player, Integer>> respawnIter = respawnTimers.entrySet().iterator();
+		Iterator<Map.Entry<Player, RespawnInfo>> respawnIter = respawnTimers.entrySet().iterator();
 		while (respawnIter.hasNext()) {
-			Map.Entry<Player, Integer> entry = respawnIter.next();
+			Map.Entry<Player, RespawnInfo> entry = respawnIter.next();
 			Player p = entry.getKey();
+			RespawnInfo rinfo = entry.getValue();
 			
-			//player ready to respawn
-			if(entry.getValue() == -1) {
+			//player interrupted respawning, ready to respawn
+			// now handled with the interrupted boolean
+			/*if(rinfo.deathTime == -1) {
+				
+				
 				respawnPlayer(p);
 				respawnIter.remove();
 				continue;
-			}
+			}*/
 			
 			//respawn after five seconds
-			int ticksLeft = getGameTick() - entry.getValue();
-			if(ticksLeft >= RESPAWN_SECONDS * 20) {
-					/*respawnPlayer(p);
-					respawnIter.remove();*/
-				if(ticksLeft % 20 == 0) {
-					TextColor color;
-					if (ticksLeft % 40 == 20)
-						color = TextColor.color(52, 247, 140);
-					else
-						color = MathUtils.randomTextColor();
-					
-					p.sendActionBar(Component.text("Ready to respawn! Click [item tbd] or type /respawn")
-							//.color(MathUtils.randomTextColor()));
-							.color(color));
+			int ticksLeft = getGameTick() - rinfo.deathTime;
+			if (ticksLeft >= RESPAWN_SECONDS * 20) {
+				if(rinfo.interrupted) {
+					if(ticksLeft % 20 == 0) {
+						TextColor color;
+						if (ticksLeft % 40 == 20)
+							color = TextColor.color(52, 247, 140);
+						else
+							color = MathUtils.randomTextColor();
+						
+						p.sendActionBar(Component.text("Ready to respawn! Click [item tbd] or type /respawn")
+								//.color(MathUtils.randomTextColor()));
+								.color(color));
+					}
+				}
+				else {
+					respawnPlayer(p);
+					respawnIter.remove();
+					p.sendActionBar(Component.text("Respawned!").color(TextColor.color(0, 255, 0)));
 				}
 			}
 			else {
@@ -411,12 +420,12 @@ public abstract class TeamArena
 				int seconds = RESPAWN_SECONDS - (ticksLeft / 20);
 				TextColor color;
 				//flash green
-				if(seconds % 2 == 0)
+				if (seconds % 2 == 0)
 					color = TextColor.color(0, 255, 0);
 				else
 					color = TextColor.color(0, 190, 0);
 				
-				p.sendActionBar(Component.text("You can respawn in " + seconds + " seconds").color(color));
+				p.sendActionBar(Component.text("Respawning in " + seconds + " seconds").color(color));
 			}
 		}
 	}
@@ -989,7 +998,7 @@ public abstract class TeamArena
 			makeSpectator(p);
 
 			if(this.isRespawningGame()) {
-				respawnTimers.put(p, getGameTick());
+				respawnTimers.put(p, new RespawnInfo(gameTick));
 				p.getInventory().addItem(kitMenuItem.clone());
 			}
 		}
@@ -1010,8 +1019,25 @@ public abstract class TeamArena
 		if(gameState != GameState.LIVE)
 			return false;
 		
-		Integer timeLeft = respawnTimers.get(player);
-		return timeLeft != null && gameTick - timeLeft >= RESPAWN_SECONDS * 20;
+		RespawnInfo rinfo = respawnTimers.get(player);
+		if(rinfo == null)
+			return false;
+		
+		int timeLeft = rinfo.deathTime;
+		return gameTick - timeLeft >= RESPAWN_SECONDS * 20;
+	}
+	
+	public void interruptRespawn(Player player) {
+		//todo: make async
+		if(gameState != GameState.LIVE)
+			return;
+		
+		RespawnInfo rinfo = respawnTimers.get(player);
+		if(rinfo != null && !rinfo.interrupted) {
+			rinfo.interrupted = true;
+			player.sendMessage(Component.text("Cancelled auto-respawn as you are choosing a new kit").color(TextColor.color(52, 247, 140)));
+			player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.AMBIENT, 2f, 0.5f);
+		}
 	}
 	
 	public boolean canMidGameJoin(Player player) {
@@ -1023,9 +1049,12 @@ public abstract class TeamArena
 		return midJoinTimers.containsKey(player);
 	}
 	
-	//set a player to respawn when the tick loop is next run
+	//set a player to respawn when their respawn time is up, only really needed if the respawn was interrupted
 	public void setToRespawn(Player player) {
-		respawnTimers.put(player, -1);
+		RespawnInfo rinfo = respawnTimers.get(player);
+		if(rinfo != null) {
+			rinfo.interrupted = false;
+		}
 	}
 	
 	public void setToMidJoin(Player player) {
@@ -1062,7 +1091,7 @@ public abstract class TeamArena
 			}
 			players.add(player);
 		}
-		else if (gameState == GameState.LIVE){
+		else {// if (gameState == GameState.LIVE){
 			playerInfo.team = spectatorTeam;
 		}
 
@@ -1386,11 +1415,11 @@ public abstract class TeamArena
 		return spectatorTeam;
 	}
 	
-	public LinkedList<String> getTabTeamsList() {
+	public ArrayList<String> getTabTeamsList() {
 		return tabTeamsList;
 	}
 	
-	public LinkedList<String> getTabKitList() {
+	public ArrayList<String> getTabKitList() {
 		return tabKitList;
 	}
 	

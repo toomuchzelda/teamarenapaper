@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper;
 
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
+import com.destroystokyo.paper.event.server.AsyncTabCompleteEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
@@ -212,6 +213,47 @@ public class EventListeners implements Listener
 		}
 	}
 	
+	//public static int i = 0;
+	
+	//handle tab-completes asynchronously
+	/*@EventHandler
+	public void asyncTabComplete(AsyncTabCompleteEvent event) {
+		//parse if it's a command first
+		
+		Bukkit.broadcastMessage(event.getBuffer());
+		Bukkit.broadcastMessage("----------" + i++);
+		/*for(AsyncTabCompleteEvent.Completion completion : event.completions()) {
+			Bukkit.broadcast(Component.text(completion.suggestion() + " + ").append(completion.tooltip() == null ? Component.empty() : completion.tooltip()));
+		}
+		Bukkit.broadcastMessage("============");
+		
+		String typed = event.getBuffer();
+		if(typed.startsWith("/")) {
+			int firstSpaceIdx = typed.indexOf(' ');
+			String commandName = typed.substring(1, firstSpaceIdx);
+			CustomCommand typedCommand = CustomCommand.getFromName(commandName);
+			//if it's null it may be a vanilla or other plugin command so just let the normal process happen for that
+			if(typedCommand != null) {
+				event.setHandled(true);
+				String argsString = typed.substring(firstSpaceIdx + 1); //get all the arguments
+				String[] args = argsString.split(" ");
+				// if the typed args ends with " " we need to manually add the space to the args array
+				if(argsString.endsWith(" ")) {
+					args = Arrays.copyOf(args, args.length + 1);
+					args[args.length - 1] = " ";
+				}
+				List<String> stringSuggestions = typedCommand.tabComplete(event.getSender(), commandName, args);
+				LinkedList<AsyncTabCompleteEvent.Completion> completionSuggestions = new LinkedList<>();
+				for(final String s : stringSuggestions) {
+					AsyncTabCompleteEvent.Completion completion = AsyncTabCompleteEvent.Completion.completion(s);
+					completionSuggestions.add(completion);
+				}
+				
+				event.completions(completionSuggestions);
+			}
+		}
+	}*/
+	
 	@EventHandler
 	public void playerQuit(PlayerQuitEvent event) {
 		event.quitMessage(null);
@@ -395,7 +437,8 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void playerTeleport(PlayerTeleportEvent event) {
 		if(event.getCause() == PlayerTeleportEvent.TeleportCause.COMMAND ||
-			event.getCause() == PlayerTeleportEvent.TeleportCause.PLUGIN)
+			event.getCause() == PlayerTeleportEvent.TeleportCause.PLUGIN ||
+			event.getCause() == PlayerTeleportEvent.TeleportCause.UNKNOWN)
 			return;
 		
 		if(Main.getGame() instanceof CaptureTheFlag ctf && ctf.isFlagCarrier(event.getPlayer())) {

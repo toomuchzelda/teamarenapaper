@@ -5,6 +5,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -19,16 +20,24 @@ public class CustomCommand extends Command {
     public static final byte OWNER = 100;
     public static final byte MOD = 50;
     public static final byte ALL = 0;
-
-    protected CustomCommand(@NotNull String name, byte permissionLevel) {
+    
+    //to get the Command from AsyncTabCompleteEvent which only provides String that was typed
+    private static final HashMap<String, CustomCommand> NAME_TO_COMMAND_MAP = new HashMap<>(13, 0.6f);
+    
+    /*protected CustomCommand(@NotNull String name, byte permissionLevel) {
         super(name);
         this.permissionLevel = permissionLevel;
-    }
+    }*/
 
     protected CustomCommand(@NotNull String name, @NotNull String description, @NotNull String usageMessage,
                             @NotNull List<String> aliases, byte permissionLevel) {
         super(name, description, usageMessage, aliases);
         this.permissionLevel = permissionLevel;
+        
+        NAME_TO_COMMAND_MAP.put(name, this);
+        for(String alias : aliases) {
+            NAME_TO_COMMAND_MAP.put(alias, this);
+        }
     }
 
     @Override
@@ -61,5 +70,9 @@ public class CustomCommand extends Command {
         }
 
         return toReturn;
+    }
+    
+    public static CustomCommand getFromName(String name) {
+        return NAME_TO_COMMAND_MAP.get(name);
     }
 }
