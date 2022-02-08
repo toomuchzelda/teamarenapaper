@@ -11,9 +11,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
-import net.minecraft.world.item.ArmorItem;
 import org.bukkit.*;
-import org.bukkit.craftbukkit.v1_18_R1.entity.CraftItem;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -21,11 +19,8 @@ import org.bukkit.event.Event;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.Damageable;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
@@ -36,7 +31,7 @@ public class CaptureTheFlag extends TeamArena
 	public HashMap<TeamArenaTeam, Flag> teamToFlags; //initialized in parseConfig
 	public HashMap<ArmorStand, Flag> flagStands; // this too
 	public HashMap<Player, Set<Flag>> flagHolders = new HashMap<>();
-	public HashSet<Component> flagItems;
+	public HashSet<String> flagItems;
 	public int capsToWin;
 	public static final int TAKEN_FLAG_RETURN_TIME = 15 * 20;//3 * 60 * 20;
 	public static final int DROPPED_TIME_PER_TICK = TAKEN_FLAG_RETURN_TIME / (5 * 20);
@@ -584,7 +579,7 @@ public class CaptureTheFlag extends TeamArena
 
 	public boolean isFlagItem(ItemStack item) {
 		if(item == null) return false;
-		return flagItems.contains(item.displayName());
+		return flagItems.contains(item.getI18NDisplayName());
 	}
 	
 	/**

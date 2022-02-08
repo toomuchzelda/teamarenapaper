@@ -122,7 +122,7 @@ public class Flag
 
 		//use displayName Component for hash as ItemStack uses durability in hashCode
 		// and we change the durability often
-		game.flagItems.add(item.displayName());
+		game.flagItems.add(item.getI18NDisplayName());
 	}
 	
 	public ArmorStand getArmorStand() {
