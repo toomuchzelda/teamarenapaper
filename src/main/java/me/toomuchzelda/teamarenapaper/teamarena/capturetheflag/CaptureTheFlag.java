@@ -23,7 +23,9 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 
+import javax.annotation.Nullable;
 import java.util.*;
 
 public class CaptureTheFlag extends TeamArena
@@ -33,7 +35,7 @@ public class CaptureTheFlag extends TeamArena
 	public HashMap<Player, Set<Flag>> flagHolders = new HashMap<>();
 	public HashSet<String> flagItems;
 	public int capsToWin;
-	public static final int TAKEN_FLAG_RETURN_TIME = 15 * 20;//3 * 60 * 20;
+	public static final int TAKEN_FLAG_RETURN_TIME = 3 * 60 * 20;
 	public static final int DROPPED_TIME_PER_TICK = TAKEN_FLAG_RETURN_TIME / (5 * 20);
 	public static final int DROPPED_PROGRESS_BAR_LENGTH = 10;
 	public static final String DROPPED_PROGRESS_STRING;
@@ -543,7 +545,7 @@ public class CaptureTheFlag extends TeamArena
 			Set<Flag> flagsHeld = flagHolders.get(event.getPlayer());
 			if(flagsHeld != null) {
 				for(Flag flag : flagsHeld) {
-					if(flag.item.isSimilar(usedItem)) {
+					if(itemIsThisFlagsItem(flag, usedItem)) {
 						final TextReplacementConfig dropperConfig = TextReplacementConfig.builder().match("%holdingTeam%").replacement(event.getPlayer().playerListName()).build();
 						final TextReplacementConfig teamMessageConfig = TextReplacementConfig.builder().match("%team%").replacement(flag.team.getComponentName()).build();
 						final TextReplacementConfig teamTitleConfig = TextReplacementConfig.builder().match("%team%").replacement(flag.team.getComponentSimpleName()).build();
@@ -585,33 +587,38 @@ public class CaptureTheFlag extends TeamArena
 	/**
 	 * Get the copy of a flag item in a players inventory e.g the specific flag item in the inventory of a player holding the flag
 	 */
-	public ItemStack getFlagInInventory(Flag flag, Player player) {
+	public @Nullable ItemStack getFlagInInventory(Flag flag, Player player) {
 		Iterator<ItemStack> iter = player.getInventory().iterator();
 		ItemStack invFlag = null;
 		while(iter.hasNext()) {
 			ItemStack item = iter.next();
-			if(item == null)
-				continue;
 			
-			if(item.getType() == Material.LEATHER_CHESTPLATE) {
-				ItemStack cloneItem = item.clone();
-				Damageable meta = (Damageable) cloneItem.getItemMeta();
-				meta.setDamage(0);
-				cloneItem.setItemMeta(meta);
-				
-				if (flag.item.isSimilar(cloneItem)) {
-					invFlag = item;
-					break;
-				}
-			}
+			if(itemIsThisFlagsItem(flag, item))
+				return item;
 		}
 		
-		if(invFlag == null) {
-			//they may be holding it on their mouse in their inventory
-			invFlag = player.getItemOnCursor();
+		//they may be holding it on their mouse in their inventory
+		ItemStack cursor = player.getItemOnCursor();
+		if(itemIsThisFlagsItem(flag, cursor))
+			return cursor;
+		
+		return null;
+	}
+	
+	public boolean itemIsThisFlagsItem(Flag flag, ItemStack item) {
+		if(item == null)
+			return false;
+		
+		if(item.getType() == Material.LEATHER_CHESTPLATE) {
+			ItemStack cloneItem = item.clone();
+			Damageable meta = (Damageable) cloneItem.getItemMeta();
+			meta.setDamage(0);
+			cloneItem.setItemMeta(meta);
+			
+			return flag.item.isSimilar(cloneItem);
 		}
 		
-		return invFlag;
+		return false;
 	}
 	
 	@Override
