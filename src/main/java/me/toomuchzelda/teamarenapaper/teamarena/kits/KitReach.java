@@ -10,7 +10,7 @@ public class KitReach extends Kit
 {
 	
 	public KitReach(TeamArena game) {
-		super("reach", "reach hacks", Material.CARROT_ON_A_STICK, game);
+		super("reach", "reach hacks", Material.CARROT_ON_A_STICK);
 		
 		setAbilities(new ReachAbility());
 	}

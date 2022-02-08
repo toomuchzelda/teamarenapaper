@@ -210,8 +210,8 @@ public abstract class TeamArena
 		kitItemMeta.displayName(kitMenuName);
 		kitMenuItem.setItemMeta(kitItemMeta);
 		
-		kits = new Kit[]{new KitTrooper(this), new KitArcher(this), new KitGhost(this), new KitDwarf(this),
-				/*new KitReach(this),*/new KitBurst(this), new KitJuggernaut(this), new KitNone(this)};
+		kits = new Kit[]{new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
+				/*new KitReach(this),*/new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitNone()};
 		tabKitList = new LinkedList<>();
 		for(Kit kit : kits) {
 			for(Ability ability : kit.getAbilities()) {

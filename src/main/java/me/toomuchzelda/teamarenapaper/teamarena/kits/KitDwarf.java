@@ -45,10 +45,10 @@ public class KitDwarf extends Kit
 		}
 	}
 	
-	public KitDwarf(TeamArena teamArena) {
+	public KitDwarf() {
 		super("Dwarf", "Starting off very weak, It slowly gains power by sneaking, eventually reaching God-like levels." +
 						" The stronger it gets though, the slower it becomes.",
-				Material.EXPERIENCE_BOTTLE, teamArena);
+				Material.EXPERIENCE_BOTTLE);
 		
 		ItemStack[] armour = new ItemStack[4];
 		
@@ -143,13 +143,8 @@ public class KitDwarf extends Kit
 				if (item == null)
 					continue;
 				
-				if(Main.getGame() instanceof CaptureTheFlag ctf && ctf.isFlagItem(item)) {
-					Bukkit.broadcastMessage("Was flag item");
+				if(Main.getGame() instanceof CaptureTheFlag ctf && ctf.isFlagItem(item))
 					continue;
-				}
-				else {
-					Bukkit.broadcastMessage("not flag item");
-				}
 				
 				ItemMeta meta = item.getItemMeta();
 				if (ItemUtils.isArmor(item)) {

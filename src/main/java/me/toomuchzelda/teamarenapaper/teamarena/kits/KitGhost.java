@@ -28,9 +28,9 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 public class KitGhost extends Kit
 {
-	public KitGhost(TeamArena tm) {
+	public KitGhost() {
 		super("Ghost", "Invisible, sneaky, has ender pearls, and sus O_O! Although it's not very strong, and can't" +
-				" push enemies very far", Material.GHAST_TEAR, tm);
+				" push enemies very far", Material.GHAST_TEAR);
 		
 		//armor is already set to AIR in Kit.java
 		

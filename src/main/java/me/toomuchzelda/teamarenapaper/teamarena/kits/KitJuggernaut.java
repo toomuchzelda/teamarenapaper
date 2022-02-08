@@ -9,8 +9,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 public class KitJuggernaut extends Kit {
-    public KitJuggernaut(TeamArena teamArena) {
-        super("Juggernaut", "The most beloved kit", Material.DIAMOND_CHESTPLATE, teamArena);
+    public KitJuggernaut() {
+        super("Juggernaut", "The most beloved kit", Material.DIAMOND_CHESTPLATE);
         setArmor(new ItemStack(Material.DIAMOND_HELMET),
                 new ItemStack(Material.NETHERITE_CHESTPLATE),
                 new ItemStack(Material.NETHERITE_LEGGINGS),

@@ -8,9 +8,9 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 public class KitTrooper extends Kit {
 
-    public KitTrooper(TeamArena tm) {
+    public KitTrooper() {
         super("Trooper", "Your standard issue melee fighter, it can handle most 1-on-1 sword fights " +
-                "and can do a little self-healing", Material.IRON_SWORD, tm);
+                "and can do a little self-healing", Material.IRON_SWORD);
 
         ItemStack[] armour = new ItemStack[4];
         armour[3] = new ItemStack(Material.IRON_HELMET);

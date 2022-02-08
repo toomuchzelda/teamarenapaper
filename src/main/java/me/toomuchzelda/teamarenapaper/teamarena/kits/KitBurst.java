@@ -17,8 +17,8 @@ import org.bukkit.inventory.meta.FireworkMeta;
 
 public class KitBurst extends Kit
 {
-	public KitBurst(TeamArena teamArena) {
-		super("Burst", "firework shooty shooty", Material.FIREWORK_ROCKET, teamArena);
+	public KitBurst() {
+		super("Burst", "firework shooty shooty", Material.FIREWORK_ROCKET);
 		
 		ItemStack[] armour = new ItemStack[4];
 		armour[3] = new ItemStack(Material.CHAINMAIL_HELMET);
