@@ -85,7 +85,7 @@ public class KitDwarf extends Kit
 		}
 		
 		@Override
-		public void onTick(Player player) {
+		public void onPlayerTick(Player player) {
 			float expToGain; //perTick
 			
 			if (player.isSprinting()) {

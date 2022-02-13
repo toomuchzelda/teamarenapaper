@@ -22,7 +22,11 @@ import java.util.Arrays;
 //partially from RedWarfare's AttackType class - credit libraryaddict
 // https://github.com/libraryaddict/RedWarfare/blob/master/redwarfare-core/src/me/libraryaddict/core/damage/AttackType.java
 public class DamageType {
-
+    
+    /******************************************************************************************
+     *                                  GENERAL DAMAGETYPES
+     ******************************************************************************************/
+    
     public static final DamageType BERRY_BUSH = new DamageType(DamageTypeEnum.BERRY_BUSH, "Berry Bush", "%Killed% ate one too many sweet berries").setNoKnockback()
             .setDamageSource(DamageSource.SWEET_BERRY_BUSH);
 
@@ -136,6 +140,13 @@ public class DamageType {
 
     public static final DamageType WITHER_POISON = new DamageType(DamageTypeEnum.WITHER_POISON, "Wither Poison", "%Killed% drank a vial of wither poison")
             .setNoKnockback().setDamageSource(DamageSource.WITHER);
+    
+    /******************************************************************************************
+     *                                  KIT DAMAGETYPES
+     ******************************************************************************************/
+    
+    public static final DamageType PYRO_MOLOTOV = new DamageType(DamageTypeEnum.PYRO_MOLOTOV, "Pyro Incendiary", "%Killed% thought %Killer%'s fire was a safe place to stand")
+            .setFire().setIgnoreArmor().setNoKnockback().setDamageSource(DamageSource.ON_FIRE);
 
     //a constant identifier for same types, to compare for same types across separate instances of this class
     // without evaluating a String
@@ -511,6 +522,9 @@ public class DamageType {
         VOID,
         VOID_PUSHED,
         VOID_SHOT,
-        WITHER_POISON
+        WITHER_POISON,
+        
+        //Kit Stuff
+        PYRO_MOLOTOV
     }
 }

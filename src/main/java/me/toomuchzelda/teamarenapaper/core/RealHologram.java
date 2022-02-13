@@ -71,6 +71,10 @@ public class RealHologram {
             iter.remove();
         }
     }
+    
+    public int getAge() {
+        return lines.get(0).bukkitStand.getTicksLived();
+    }
 
     private static class HologramLine
     {
@@ -94,7 +98,7 @@ public class RealHologram {
             bukkitStand.setCustomNameVisible(true);
             bukkitStand.customName(text);
             bukkitStand.setCanTick(false);
-
+            
             //spawn it
             nmsWorld.addFreshEntity(nmsStand, CreatureSpawnEvent.SpawnReason.CUSTOM);
         }

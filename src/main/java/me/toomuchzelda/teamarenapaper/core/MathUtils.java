@@ -2,8 +2,10 @@ package me.toomuchzelda.teamarenapaper.core;
 
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Color;
+import org.bukkit.util.Vector;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 import java.util.Random;
 
 public class MathUtils
@@ -32,6 +34,16 @@ public class MathUtils
 			array[rand] = array[i];
 			array[i] = temp;
 		}
+	}
+	
+	public static boolean arrayContains(Object[] array, Object object) {
+		for(Object obj : array) {
+			if(Objects.equals(obj, object)) {
+				return true;
+			}
+		}
+		
+		return false;
 	}
 	
 	public static int clamp(int min, int max, int value) {
@@ -78,5 +90,15 @@ public class MathUtils
 	//https://stackoverflow.com/a/35833800
 	public static double round(double value, int scale) {
 		return Math.round(value * Math.pow(10, scale)) / Math.pow(10, scale);
+	}
+	
+	/**
+	 * mostly for kit pyro, to multiply this against the arrow's momentum to slide along a wall
+	 * @param vector
+	 * @return
+	 */
+	public static Vector flipZerosAndOnes(Vector vector) {
+		vector.subtract(new Vector(1, 1, 1));
+		return vector;
 	}
 }

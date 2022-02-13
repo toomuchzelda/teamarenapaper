@@ -31,6 +31,8 @@ import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.List;
 
+import static me.toomuchzelda.teamarenapaper.teamarena.GameState.LIVE;
+
 //a custom damage event for custom knockback and other customisability bukkit/spigot/paper can't provide
 public class DamageEvent {
 
@@ -62,8 +64,61 @@ public class DamageEvent {
     public static final double xzVal = 0.4;
     public static final double yMult = 0.1;
     public static final double xzMult = 1;
-
-    public DamageEvent(EntityDamageEvent event) {
+    
+    //EntityDamageEvent does all the damage calculations for us!
+    public static @Nullable DamageEvent createDamageEvent(EntityDamageEvent event) {
+    
+        event.setCancelled(true);
+        //Bukkit.broadcast(Component.text("DamageCause: " + event.getCause()));
+        if(Main.getGame().getGameState() != LIVE)
+            return null;
+    
+        //marker armorstands must never be damaged/killed
+        if(event.getEntity() instanceof ArmorStand stand && stand.isMarker())
+            return null;
+    
+        if(event.getEntity().getWorld() != Main.getGame().getWorld())
+            return null;
+    
+        //prevent spectators from getting hurt
+        if(event.getEntity() instanceof Player p && Main.getGame().isSpectator(p))
+            return null;
+    
+    
+        if(event instanceof EntityDamageByEntityEvent dEvent) {
+            if(dEvent.getDamager() instanceof Player p && Main.getGame().isSpectator(p))
+                return null;
+            else if (dEvent.getCause() == EntityDamageEvent.DamageCause.PROJECTILE && dEvent.getDamager() instanceof AbstractArrow aa) {
+                //Bukkit.broadcastMessage("Critical arrow: " + aa.isCritical());
+                //Bukkit.broadcastMessage("speed: " + aa.getVelocity().length());
+            
+                //fix arrow damage - no random crits
+                //  arrow damage is the vanilla formula without the part
+                double damage = Math.ceil(MathUtils.clamp(0, 2.147483647E9d, aa.getDamage() * aa.getVelocity().length()));
+                //this also does all armor re-calculations and stuff
+                dEvent.setDamage(damage);
+            
+                //stop arrows from bouncing off after this event is run
+                //store info about how it's moving now, before the EntityDamageEvent ends and the cancellation
+                // makes the arrow bounce off the damagee, so we can re-set the movement later
+                ArrowPierceManager.addOrUpdateInfo(aa);
+            
+                //fix the movement after event is run
+                Bukkit.getScheduler().runTaskLater(Main.getPlugin(), bukkitTask -> {
+                    if(aa.isValid())
+                        ArrowPierceManager.fixArrowMovement(aa);
+                }, 0L);
+            }
+        }
+    
+        //Bukkit.broadcastMessage("EventFinalDamage: " + event.getFinalDamage());
+    
+        //Main.getGame().queueDamage(new DamageEvent(event));
+        //will queue itself
+        return new DamageEvent(event);
+    }
+    
+    private DamageEvent(EntityDamageEvent event) {
         victim = event.getEntity();
         rawDamage = event.getDamage();
         finalDamage = event.getFinalDamage();
@@ -365,7 +420,7 @@ public class DamageEvent {
             }
             
             //run modifications done by confirmed damage ability "Event Handlers"
-            Main.getGame().confirmedDamageAbilities(this);
+            Main.getGame().onConfirmedDamage(this);
             if(cancelled)
                 return;
             
@@ -628,7 +683,19 @@ public class DamageEvent {
 
         return knockback;
     }
-
+    
+    public void setRealAttacker(Entity attacker) {
+        if(damageType.isProjectile() && attacker instanceof Projectile proj) {
+            this.attacker = proj;
+            if(proj.getShooter() instanceof Entity e) {
+                this.realAttacker = e;
+            }
+        }
+        else {
+            this.attacker = attacker;
+        }
+    }
+    
     public boolean hasKnockback() {
         return knockback != null;
     }
@@ -665,7 +732,15 @@ public class DamageEvent {
     public Entity getFinalAttacker() {
         return realAttacker != null ? realAttacker : attacker;
     }
-
+    
+    public double getFinalDamage() {
+        return finalDamage;
+    }
+    
+    public void setDamageType(DamageType damageType) {
+        this.damageType = damageType;
+    }
+    
     public void setCancelled(boolean cancel) {
         this.cancelled = cancel;
     }

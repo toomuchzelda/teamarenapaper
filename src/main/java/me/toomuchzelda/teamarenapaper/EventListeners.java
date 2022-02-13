@@ -18,6 +18,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
 import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitGhost;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitPyro;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitReach;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
@@ -90,10 +91,10 @@ public class EventListeners implements Listener
 			DamageTimes.cleanup();
 			Main.playerIdLookup.entrySet().removeIf(idLookupEntry -> !idLookupEntry.getValue().isOnline());
 			
-			/*if(MathUtils.randomMax(3) < 3) {
+			if(MathUtils.random.nextBoolean()) {//MathUtils.randomMax(3) < 3) {
 				TeamArena.nextGameType = GameType.KOTH;
 			}
-			else*/
+			else
 				TeamArena.nextGameType = GameType.CTF;
 			
 			if(TeamArena.nextGameType == GameType.KOTH) {
@@ -312,57 +313,9 @@ public class EventListeners implements Listener
 	//create and cache damage events
 	@EventHandler
 	public void entityDamage(EntityDamageEvent event) {
-		
-		event.setCancelled(true);
-		//Bukkit.broadcast(Component.text("DamageCause: " + event.getCause()));
-		if(Main.getGame().getGameState() != LIVE)
-			return;
-		
-		//marker armorstands must never be damaged/killed
-		if(event.getEntity() instanceof ArmorStand stand && stand.isMarker())
-			return;
-
-		if(event.getEntity().getWorld() != Main.getGame().getWorld())
-			return;
-
-		//prevent spectators from getting hurt
-		if(event.getEntity() instanceof Player p && Main.getGame().isSpectator(p))
-			return;
-
-
-		if(event instanceof EntityDamageByEntityEvent dEvent) {
-			if(dEvent.getDamager() instanceof Player p && Main.getGame().isSpectator(p))
-				return;
-			else if (dEvent.getCause() == EntityDamageEvent.DamageCause.PROJECTILE && dEvent.getDamager() instanceof AbstractArrow aa) {
-				//Bukkit.broadcastMessage("Critical arrow: " + aa.isCritical());
-				//Bukkit.broadcastMessage("speed: " + aa.getVelocity().length());
-
-				//fix arrow damage - no random crits
-				//  arrow damage is the vanilla formula without the part
-				double damage = Math.ceil(MathUtils.clamp(0, 2.147483647E9d, aa.getDamage() * aa.getVelocity().length()));
-				//this also does all armor re-calculations and stuff
-				dEvent.setDamage(damage);
-
-				//stop arrows from bouncing off after this event is run
-				//store info about how it's moving now, before the EntityDamageEvent ends and the cancellation
-				// makes the arrow bounce off the damagee, so we can re-set the movement later
-				ArrowPierceManager.addOrUpdateInfo(aa);
-
-				//fix the movement after event is run
-				Bukkit.getScheduler().runTaskLater(Main.getPlugin(), bukkitTask -> {
-					if(aa.isValid())
-						ArrowPierceManager.fixArrowMovement(aa);
-				}, 0L);
-			}
-		}
-
-		//Bukkit.broadcastMessage("EventFinalDamage: " + event.getFinalDamage());
-		
-		//Main.getGame().queueDamage(new DamageEvent(event));
-		//will queue itself
-		new DamageEvent(event);
+		DamageEvent.createDamageEvent(event);
 	}
-
+	
 	@EventHandler
 	public void playerDeath(PlayerDeathEvent event) {
 		Main.logger().warning("PlayerDeathEvent called! not good");
@@ -383,6 +336,8 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void entityShootBow(EntityShootBowEvent event) {
 		event.getProjectile().setVelocity(projectileLaunchVector(event.getEntity(), event.getProjectile().getVelocity()));
+		
+		((AbstractArrow) event.getProjectile()).setPickupStatus(AbstractArrow.PickupStatus.CREATIVE_ONLY);
 		
 		if(event.getEntity() instanceof Player p) {
 			Ability[] abilities = Kit.getAbilities(p);
@@ -484,6 +439,21 @@ public class EventListeners implements Listener
 			else if(event.getCollidedWith() instanceof ArmorStand stand && Main.getGame() instanceof CaptureTheFlag ctf 
 					&& ctf.flagStands.containsKey(stand))
 				event.setCancelled(true);
+		}
+	}
+	
+	@EventHandler
+	public void projectileHit(ProjectileHitEvent event) {
+		if(Main.getGame() != null) {
+			if(event.getHitBlock() != null && event.getEntity().getShooter() instanceof Player p) {
+				Ability[] abilities = Kit.getAbilities(p);
+				for(Ability a : abilities) {
+					if(a instanceof KitPyro.PyroAbility pyroAbility) {
+						pyroAbility.onProjectileHit(event);
+						return;
+					}
+				}
+			}
 		}
 	}
 

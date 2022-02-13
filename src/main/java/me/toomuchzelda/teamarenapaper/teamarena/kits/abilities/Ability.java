@@ -76,10 +76,15 @@ public abstract class Ability {
     }
     
     /**
-     * run every tick
+     * run every tick for an individual player
      */
-    public void onTick(Player player) {
+    public void onPlayerTick(Player player) {
     }
+    
+    /**
+     * run every tick for this ability globally (once per ability per tick)
+     */
+    public void onTick() {}
 
     /**
      * when the player receieves a cooldown on any of their items (e.g enderpearl after throwing)

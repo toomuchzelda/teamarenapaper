@@ -21,6 +21,7 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
@@ -580,7 +581,8 @@ public class CaptureTheFlag extends TeamArena
 
 	public boolean isFlagItem(ItemStack item) {
 		if(item == null) return false;
-		return flagItems.contains(item.getItemMeta().getDisplayName());
+		ItemMeta meta = item.getItemMeta();
+		return meta != null && flagItems.contains(meta.getDisplayName());
 	}
 	
 	/**

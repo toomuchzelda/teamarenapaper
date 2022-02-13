@@ -1,10 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.core.BlockUtils;
-import me.toomuchzelda.teamarenapaper.core.FileUtils;
-import me.toomuchzelda.teamarenapaper.core.MathUtils;
-import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.core.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
@@ -16,7 +13,6 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
-import org.bukkit.craftbukkit.v1_18_R1.entity.CraftEntity;
 import org.bukkit.entity.*;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -211,7 +207,7 @@ public abstract class TeamArena
 		kitMenuItem.setItemMeta(kitItemMeta);
 		
 		kits = new Kit[]{new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
-				/*new KitReach(this),*/new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitNone()};
+				/*new KitReach(this),*/new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitNone()};
 		tabKitList = new ArrayList<>(kits.length);
 		for(Kit kit : kits) {
 			for(Ability ability : kit.getAbilities()) {
@@ -342,9 +338,13 @@ public abstract class TeamArena
 		
 		//ability tick 'events'
 		for(Kit kit : kits) {
+			for(Ability ability : kit.getAbilities()) {
+				ability.onTick();
+			}
+			
 			for(Player p : kit.getActiveUsers()) {
 				for(Ability a : kit.getAbilities()) {
-					a.onTick(p);
+					a.onPlayerTick(p);
 				}
 			}
 		}
@@ -509,9 +509,22 @@ public abstract class TeamArena
 			
 			event.executeAttack();
 		}
+		
+		var indiIter = activeDamageIndicators.iterator();
+		while(indiIter.hasNext()) {
+			RealHologram h = indiIter.next();
+			if(h.getAge() >= 1.5 * 20) {
+				h.remove();
+				indiIter.remove();
+			}
+		}
 	}
 	
-	public void confirmedDamageAbilities(DamageEvent event) {
+	//todo: use packet holograms to be able to have them as an optional preference
+	private final LinkedList<RealHologram> activeDamageIndicators = new LinkedList<>();
+	
+	public void onConfirmedDamage(DamageEvent event) {
+		
 		if(event.getFinalAttacker() instanceof Player p) {
 			Ability[] abilities = Kit.getAbilities(p);
 			for(Ability ability : abilities) {
@@ -523,6 +536,10 @@ public abstract class TeamArena
 			for(Ability ability : abilities) {
 				ability.onReceiveDamage(event);
 			}
+			
+			RealHologram damageIndicator = new RealHologram(p.getEyeLocation().add(0, 0.5, 0),
+					Component.text(MathUtils.round((event.getFinalDamage() / 2), 1)).color(TextColor.color(255, 0, 0)));
+			activeDamageIndicators.add(damageIndicator);
 		}
 	}
 	

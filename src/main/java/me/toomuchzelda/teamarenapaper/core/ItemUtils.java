@@ -2,12 +2,14 @@ package me.toomuchzelda.teamarenapaper.core;
 
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.SwordItem;
+import org.bukkit.Color;
 import org.bukkit.craftbukkit.v1_18_R1.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.LeatherArmorMeta;
 
 public class ItemUtils
 {
@@ -37,5 +39,11 @@ public class ItemUtils
 		}
 		if(player.getItemOnCursor().isSimilar(item))
 			player.setItemOnCursor(null);
+	}
+	
+	public static void colourLeatherArmor(Color color, ItemStack armorPiece) {
+		LeatherArmorMeta meta = (LeatherArmorMeta) armorPiece.getItemMeta();
+		meta.setColor(color);
+		armorPiece.setItemMeta(meta);
 	}
 }

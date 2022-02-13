@@ -38,7 +38,7 @@ public class KitJuggernaut extends Kit {
         }
 
         @Override
-        public void onTick(Player player) {
+        public void onPlayerTick(Player player) {
             player.setFoodLevel(6);
         }
     }
