@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
+import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.ItemUtils;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
@@ -15,22 +16,18 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.craftbukkit.v1_18_R1.entity.CraftArrow;
 import org.bukkit.craftbukkit.v1_18_R1.util.CraftVector;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.AbstractArrow;
-import org.bukkit.entity.Arrow;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.*;
 
 public class KitPyro extends Kit
 {
@@ -83,7 +80,7 @@ public class KitPyro extends Kit
 	public static class PyroAbility extends Ability
 	{
 		public final HashMap<Player, Integer> MOLOTOV_RECHARGES = new HashMap<>();
-		public final HashSet<MolotovInfo> ACTIVE_MOLOTOVS = new HashSet<>();
+		public final LinkedList<MolotovInfo> ACTIVE_MOLOTOVS = new LinkedList<>();
 		public static final int MOLOTOV_RECHARGE_TIME = 10 * 20;
 		public static final int MOLOTOV_ACTIVE_TIME = 5 * 20;
 		public static final int BOX_RADIUS = 2;
@@ -155,7 +152,16 @@ public class KitPyro extends Kit
 		// spawn the molotov effect
 		public void onProjectileHit(ProjectileHitEvent event) {
 			Arrow arrow = (Arrow) event.getEntity();
-			if (arrow.getColor().equals(MOLOTOV_ARROW_COLOR)) {
+			boolean hasColour = false;
+			//arrow.getColour() throws an exception if the arrow has no colour for some reason
+			try{
+				hasColour = arrow.getColor().equals(MOLOTOV_ARROW_COLOR);
+			}
+			catch(IllegalArgumentException e) {
+				//ignore
+			}
+			
+			if (hasColour) {
 				if(event.getHitBlock() != null) {
 					if(event.getHitBlockFace() == BlockFace.UP) {
 						//use the colour to know if it's a molotov arrow
@@ -168,29 +174,57 @@ public class KitPyro extends Kit
 						Vector corner2 = loc.toVector().add(new Vector(-BOX_RADIUS, 0.5, -BOX_RADIUS));
 						
 						BoundingBox box = BoundingBox.of(corner1, corner2);
-						
+						//shooter will always be a player because this method will only be called if the projectile of a pyro hits smth
 						ACTIVE_MOLOTOVS.add(new MolotovInfo(box, (Player) arrow.getShooter(), arrow, TeamArena.getGameTick()));
+						
+						loc.getWorld().playSound(loc, Sound.ENTITY_PLAYER_ATTACK_STRONG, 2, 2f);
+						loc.getWorld().playSound(loc, Sound.BLOCK_FIRE_AMBIENT, 2, 0.5f);
+						
 					}
 					else { //it hit a wall, make it not stick in the wall
 						event.setCancelled(true);
-						Vector direction = event.getHitBlockFace()/*.getOppositeFace()*/.getDirection();
-						// if the direction towards the Block was 0,0,1 (towards Z) it should flip to 1,1,0
-						// multiplying the arrows velocity by this should give 0 Z velocity which should make it slide
-						// along the wall
-						MathUtils.flipZerosAndOnes(direction);
 						
-						//move it back a little bit to pull it out of the wall
-						net.minecraft.world.entity.projectile.AbstractArrow nmsArrow = ((CraftArrow) arrow).getHandle();
-						nmsArrow.moveTo(nmsArrow.position().add(CraftVector.toNMS(arrow.getLocation().getDirection()).multiply(-1, -1, -1)));
+						//credit jacky8399 for the following
+						BlockFace hitFace = event.getHitBlockFace();
+						Vector dirVector = hitFace.getDirection();
+						if (hitFace != BlockFace.DOWN) { // ignore Y component
+							dirVector.setY(0).normalize();
+						}
+						Vector velocity = event.getEntity().getVelocity();
 						
-						arrow.setVelocity(arrow.getVelocity().multiply(direction));
-						
-						Bukkit.broadcastMessage("Reached here");
+						// https://math.stackexchange.com/questions/13261/how-to-get-a-reflection-vector
+						Vector newVelocity = velocity.subtract(dirVector.multiply(2 * velocity.dot(dirVector)));
+						newVelocity.multiply(0.2);
+						arrow.getWorld().spawn(arrow.getLocation(), arrow.getClass(), newProjectile -> {
+							newProjectile.setShooter(arrow.getShooter());
+							newProjectile.setVelocity(newVelocity);
+							newProjectile.setColor(arrow.getColor());
+							newProjectile.setDamage(arrow.getDamage());
+							newProjectile.setKnockbackStrength(arrow.getKnockbackStrength());
+							newProjectile.setShotFromCrossbow(arrow.isShotFromCrossbow());
+							newProjectile.setPickupStatus(arrow.getPickupStatus());
+						});
+						arrow.remove();
 					}
 				}
-				else if(event.getHitEntity() != null) {
+			}
+		}
+		
+		@Override
+		public void projectileHitEntity(ProjectileCollideEvent event) {
+			if(event.getEntity() instanceof Arrow a) {
+				boolean isColor = false;
+				try {
+					isColor = a.getColor().equals(MOLOTOV_ARROW_COLOR);
+				}
+				catch(IllegalArgumentException e) {
+				}
+				if(isColor) {
 					event.setCancelled(true);
-					arrow.setVelocity(new Vector(0, -0.1, 0));
+					Vector vel = a.getVelocity();
+					vel.setX(vel.getX() * 0.4);
+					vel.setZ(vel.getZ() * 0.4);
+					a.setVelocity(vel);
 				}
 			}
 		}

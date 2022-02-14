@@ -98,7 +98,6 @@ public class MathUtils
 	 * @return
 	 */
 	public static Vector flipZerosAndOnes(Vector vector) {
-		vector.subtract(new Vector(1, 1, 1));
-		return vector;
+		return new Vector(1, 1, 1).subtract(vector);
 	}
 }

@@ -439,6 +439,12 @@ public class EventListeners implements Listener
 			else if(event.getCollidedWith() instanceof ArmorStand stand && Main.getGame() instanceof CaptureTheFlag ctf 
 					&& ctf.flagStands.containsKey(stand))
 				event.setCancelled(true);
+			
+			if(!event.isCancelled() && event.getEntity().getShooter() instanceof Player p) {
+				for(Ability a : Kit.getAbilities(p)) {
+					a.projectileHitEntity(event);
+				}
+			}
 		}
 	}
 	
