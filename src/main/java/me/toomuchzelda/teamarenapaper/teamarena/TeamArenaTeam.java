@@ -183,16 +183,17 @@ public class TeamArenaTeam
 				// and armor stand nametag
 				updateNametag(player);
 
-				paperTeam.addEntry(player.getName());
+				//paperTeam.addEntry(player.getName());
 				
 				playerMembers.add(player);
 				lastIn.push(player);
 			}
 			else
 			{
-				paperTeam.addEntry(entity.getUniqueId().toString());
+				//paperTeam.addEntry(entity.getUniqueId().toString());
 			}
 		}
+		paperTeam.addEntities(entities);
 	}
 
 	public void removeMembers(Entity... entities) {

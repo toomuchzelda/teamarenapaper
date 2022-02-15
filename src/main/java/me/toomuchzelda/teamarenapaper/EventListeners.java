@@ -275,6 +275,22 @@ public class EventListeners implements Listener
 				event.setCancelled(true);
 			}
 		}
+		
+		//prevent them from moving outside the game border
+		if(!event.isCancelled()) {
+			Vector to = event.getTo().toVector();
+			if(!game.getBorder().contains(to)) {
+				event.setCancelled(true);
+				//if they're hitting the bottom border call it falling into the void
+				if(to.getY() < game.getBorder().getMinY()) {
+					if(game.getGameState() == LIVE) {
+						event.setCancelled(false);
+						EntityDamageEvent dEvent = new EntityDamageEvent(event.getPlayer(), EntityDamageEvent.DamageCause.VOID, 999);
+						DamageEvent.createDamageEvent(dEvent);
+					}
+				}
+			}
+		}
 	}
 
 	@EventHandler

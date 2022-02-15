@@ -14,6 +14,7 @@ import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
+import org.bukkit.event.Event;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
@@ -78,6 +79,7 @@ public abstract class TeamArena
 	protected HashMap<Player, RespawnInfo> respawnTimers;
 	//for players that have joined mid-game and have 10 or whatever seconds to join
 	protected HashMap<Player, Integer> midJoinTimers;
+	protected ItemStack respawnItem;
 	public static final int RESPAWN_SECONDS = 5;
 	public static final int MID_GAME_JOIN_SECONDS = 10;
 
@@ -205,6 +207,12 @@ public abstract class TeamArena
 		ItemMeta kitItemMeta = kitMenuItem.getItemMeta();
 		kitItemMeta.displayName(kitMenuName);
 		kitMenuItem.setItemMeta(kitItemMeta);
+		
+		respawnItem = new ItemStack(Material.RED_DYE);
+		Component respawnItemName = Component.text("Right click to respawn").color(NamedTextColor.RED);
+		ItemMeta respawnItemMeta = respawnItem.getItemMeta();
+		respawnItemMeta.displayName(respawnItemName);
+		respawnItem.setItemMeta(respawnItemMeta);
 		
 		kits = new Kit[]{new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
 				/*new KitReach(this),*/new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitNone()};
@@ -404,7 +412,7 @@ public abstract class TeamArena
 						else
 							color = MathUtils.randomTextColor();
 						
-						p.sendActionBar(Component.text("Ready to respawn! Click [item tbd] or type /respawn")
+						p.sendActionBar(Component.text("Ready to respawn! Click the Red Dye or type /respawn")
 								//.color(MathUtils.randomTextColor()));
 								.color(color));
 					}
@@ -566,8 +574,15 @@ public abstract class TeamArena
 			}
 		}
 	}
-
+	
 	public void onInteract(PlayerInteractEvent event) {
+		if(event.getMaterial() == respawnItem.getType()) {
+			event.setUseItemInHand(Event.Result.DENY);
+			if(canRespawn(event.getPlayer()))
+				setToRespawn(event.getPlayer());
+			else
+				event.getPlayer().sendMessage(Component.text("You can't respawn right now").color(NamedTextColor.RED));
+		}
 	}
 
 	public void onInteractEntity(PlayerInteractEntityEvent event) {
@@ -1017,6 +1032,7 @@ public abstract class TeamArena
 			if(this.isRespawningGame()) {
 				respawnTimers.put(p, new RespawnInfo(gameTick));
 				p.getInventory().addItem(kitMenuItem.clone());
+				
 			}
 		}
 		else {
@@ -1054,6 +1070,7 @@ public abstract class TeamArena
 			rinfo.interrupted = true;
 			player.sendMessage(Component.text("Cancelled auto-respawn as you are choosing a new kit").color(TextColor.color(52, 247, 140)));
 			player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.AMBIENT, 2f, 0.5f);
+			player.getInventory().addItem(respawnItem);
 		}
 	}
 	
@@ -1446,6 +1463,10 @@ public abstract class TeamArena
 
 	public World getWorld() {
 		return gameWorld;
+	}
+	
+	public BoundingBox getBorder() {
+		return border;
 	}
 	
 	/**

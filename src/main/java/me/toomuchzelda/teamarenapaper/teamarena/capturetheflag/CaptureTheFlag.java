@@ -627,6 +627,8 @@ public class CaptureTheFlag extends TeamArena
 				&& isFlagItem(event.getItem())) {
 			event.setUseItemInHand(Event.Result.DENY);
 		}
+		
+		super.onInteract(event);
 	}
 
 	@Override
