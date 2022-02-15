@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageIndicatorHologram;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
@@ -522,16 +523,19 @@ public abstract class TeamArena
 		
 		var indiIter = activeDamageIndicators.iterator();
 		while(indiIter.hasNext()) {
-			RealHologram h = indiIter.next();
-			if(h.getAge() >= 1.5 * 20) {
+			DamageIndicatorHologram h = indiIter.next();
+			if(h.age >= 10) {
 				h.remove();
 				indiIter.remove();
+			}
+			else {
+				h.tick();
 			}
 		}
 	}
 	
 	//todo: use packet holograms to be able to have them as an optional preference
-	private final LinkedList<RealHologram> activeDamageIndicators = new LinkedList<>();
+	private final LinkedList<DamageIndicatorHologram> activeDamageIndicators = new LinkedList<>();
 	
 	public void onConfirmedDamage(DamageEvent event) {
 		
@@ -548,11 +552,14 @@ public abstract class TeamArena
 			}
 
 			if(!event.isCancelled()) {
-				RealHologram damageIndicator = new RealHologram(p.getEyeLocation().add(0, 0.5, 0),
-						Component.text(MathUtils.round((event.getFinalDamage() / 2), 1)).color(TextColor.color(255, 0, 0)));
-				activeDamageIndicators.add(damageIndicator);
+				PlayerInfo pinfo = Main.getPlayerInfo(p);
+				Component damageText = Component.text(MathUtils.round(event.getFinalDamage(), 2)).color(pinfo.team.getRGBTextColor());
+				Location spawnLoc = p.getLocation();
+				spawnLoc.add(0, MathUtils.randomRange(0.4, 1.9), 0);
+				DamageIndicatorHologram hologram = new DamageIndicatorHologram(spawnLoc, PlayerUtils.getViewersInRadius(p, 15d), damageText);
+				activeDamageIndicators.add(hologram);
 
-				Main.getPlayerInfo(p).addDamage(p, event.getDamageType(), event.getFinalDamage(), event.getFinalAttacker(), gameTick);
+				pinfo.addDamage(p, event.getDamageType(), event.getFinalDamage(), event.getFinalAttacker(), gameTick);
 			}
 		}
 	}

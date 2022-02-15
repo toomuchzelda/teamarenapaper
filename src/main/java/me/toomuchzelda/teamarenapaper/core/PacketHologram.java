@@ -8,19 +8,20 @@ import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import me.toomuchzelda.teamarenapaper.Main;
 import net.kyori.adventure.text.Component;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
-import java.util.Optional;
-import java.util.UUID;
+import java.sql.Struct;
+import java.util.*;
 
 //class for holograms made with marker armor stands
 // primarily made for player nametags using Components
-public class Hologram
+// not using those anymore so adapted to be an independent packet hologram thing
+public class PacketHologram
 {
-	
-	//public static final ConcurrentHashMap<Integer, Hologram> idTable = new ConcurrentHashMap<>();
 	
 	private final int id;
 	public static final int armorStandID = 1;
@@ -28,6 +29,8 @@ public class Hologram
 	private PacketContainer deletePacket;
 	private PacketContainer metadataPacket;
 	private PacketContainer teleportPacket;
+
+	protected Location location;
 	
 	//store the fields for metadata so we can easily access and modify
 	private WrappedDataWatcher data;
@@ -35,10 +38,6 @@ public class Hologram
 	private WrappedDataWatcher.WrappedDataWatcherObject customNameMetadata;
 
 	//private ArmorStand armorStand;
-	
-	private final Player player;
-	//private Location position;
-	public boolean poseChanged;
 	
 	public static final int metadataIndex = 0;
 	public static final byte sneakingBitMask = 2;
@@ -51,12 +50,14 @@ public class Hologram
 	//marker for if this nametag should exist
 	private boolean isAlive;
 
+	protected Set<Player> viewers = new HashSet<>();
+
 	//constructor for player nametag
 	// position updated every tick in EventListeners.java
-	public Hologram(Player player) {
-		this.player = player;
+	public PacketHologram(Location location, Component text) {
 		//entity ID
 		this.id = Bukkit.getUnsafe().nextEntityId();
+		this.location = location;
 		//this.position = calcPosition();
 
 		//create and cache the spawn packet to send to players
@@ -66,13 +67,12 @@ public class Hologram
 		createDelete();
 
 		//create metadata packet
-		createMetadata(player.playerListName());
+		createMetadata(text);
 
 		//create teleport packet
 		createTeleport();
 
 		this.isAlive = true;
-		Main.getPlayerInfo(player).nametag = this;
 		//idTable.put(id, this);
 	}
 
@@ -95,8 +95,10 @@ public class Hologram
 		ints.write(0, this.id);
 		//entity type
 		ints.write(1, armorStandID);
-
-		//coordinates written in getSpawnPacket()
+		StructureModifier<Double> doubles = spawnPacket.getDoubles();
+		doubles.write(0, location.getX());
+		doubles.write(1, location.getY());
+		doubles.write(2, location.getZ());
 
 		spawnPacket.getModifier().write(1, UUID.randomUUID());
 	}
@@ -153,38 +155,63 @@ public class Hologram
 		metadataPacket.getWatchableCollectionModifier().write(0, data.getWatchableObjects());
 	}
 
-	public void createTeleport() {
+	private void createTeleport() {
 		teleportPacket = new PacketContainer(PacketType.Play.Server.ENTITY_TELEPORT);
 		teleportPacket.getIntegers().write(0, id);
 
-		//coords initialised in getTeleportPacket()
+		StructureModifier<Double> doubles = teleportPacket.getDoubles();
+		doubles.write(0, location.getX());
+		doubles.write(1, location.getY());
+		doubles.write(2, location.getZ());
 	}
-	
-	public Location calcPosition() {
-		Location pos = player.getLocation();
-		double height = calcHeight();
-		
-		pos.add(0, height, 0);
-		return pos;
+
+	//cannot move more than 8 blocks, use teleport for that one
+	private ClientboundMoveEntityPacket.Pos getRelativePosPacket(double xMovement, double yMovement, double zMovement) {
+		short x = (short) (xMovement * 32 * 128);
+		short y = (short) (yMovement * 32 * 128);
+		short z = (short) (zMovement * 32 * 128);
+		return new ClientboundMoveEntityPacket.Pos(id, x, y, z, false);
 	}
-	
-	public double calcHeight() {
-		double height = player.getHeight();
-		
-		if(player.isSneaking())
-			height -= 0.12;
-		
-		return height;
+
+	private void updateTeleportPacket(Location newLocation) {
+		StructureModifier<Double> doubles = teleportPacket.getDoubles();
+		doubles.write(0, newLocation.getX());
+		doubles.write(1, newLocation.getY());
+		doubles.write(2, newLocation.getZ());
 	}
-	
-	//called every tick
-	public void updatePosition() {
-		if(poseChanged) {
-			updatePose();
-			poseChanged = false;
+
+	private void updateSpawnPacket(Location newLocation) {
+		StructureModifier<Double> doubles = spawnPacket.getDoubles();
+		doubles.write(0, newLocation.getX());
+		doubles.write(1, newLocation.getY());
+		doubles.write(2, newLocation.getZ());
+	}
+
+	/**
+	 * does not support moving between worlds
+	 * @param newLocation
+	 */
+	public void move(Location newLocation) {
+		double distanceSqr = location.distanceSquared(newLocation);
+		if(distanceSqr <= 64) { //8 blocks
+			double xDiff = newLocation.getX() - location.getX();
+			double yDiff = newLocation.getY() - location.getY();
+			double zDiff = newLocation.getZ() - location.getZ();
+			ClientboundMoveEntityPacket.Pos movePacket = getRelativePosPacket(xDiff, yDiff, zDiff);
+			for(Player p : viewers) {
+				PlayerUtils.sendPacket(p, movePacket);
+			}
 		}
+		else {
+			updateTeleportPacket(newLocation);
+			for(Player p : viewers) {
+				PlayerUtils.sendPacket(p, teleportPacket);
+			}
+		}
+		updateSpawnPacket(newLocation);
+		location = newLocation;
 	}
-	
+
 	public void setText(Component component, boolean sendPacket) {
 		Optional<?> nameComponent = Optional.of(AdventureComponentConverter.fromComponent(
 				component).getHandle());
@@ -193,38 +220,15 @@ public class Hologram
 		this.data.setObject(customNameMetadata, nameComponent);
 
 		if(sendPacket) {
-			for (Player p : player.getTrackedPlayers()) {
+			for (Player p : viewers) {
 				PlayerUtils.sendPacket(p, metadataPacket);
 			}
 		}
 	}
 	
-	//used for changes in armorstand Y position: sneaking, swimming etc.
-	// they wouldn't be caught in the entity relative move packets so send another teleport packet for these changes
-	public void updatePose() {
-		byte metadata = 0x20;
-		
-		if(player.isSneaking()) {
-			//set sneaking to partially hide the nametag behind blocks
-			metadata = (byte) (metadata | sneakingBitMask);
-		}
-		
-		//list.get(0).setValue(metadata, false);
-		this.data.setObject(this.metadata, metadata);
-		
-		updateTeleportPacket();
-		if(isAlive) {
-			for (Player p : player.getTrackedPlayers()) {
-				PlayerUtils.sendPacket(p, teleportPacket, metadataPacket); //send teleport to update position (put slightly lower)
-			}
-		}
-	}
-
-	//this method only use when player disconnect
 	public void remove() {
 		this.isAlive = false;
-		//idTable.remove(this.id);
-		for(Player p : player.getTrackedPlayers()) {
+		for(Player p : viewers) {
 			PlayerUtils.sendPacket(p, deletePacket);
 		}
 	}
@@ -233,42 +237,21 @@ public class Hologram
 		return isAlive;
 	}
 	
-	/*public static Hologram getById(int id) {
-		return idTable.get(id);
-	}*/
-	
-	public Player getPlayer() {
-		return player;
+	public void setViewers(Collection<Player> players) {
+		viewers.clear();
+		viewers.addAll(players);
+
+		for(Player p : viewers) {
+			PlayerUtils.sendPacket(p, spawnPacket, metadataPacket);
+		}
 	}
-	
+
+	public Set<Player> getViewers() {
+		return viewers;
+	}
+
 	public int getId() {
 		return id;
-	}
-	
-	//make sure spawn location is correct each time
-	public PacketContainer getSpawnPacket() {
-		Location loc = calcPosition();
-		
-		StructureModifier<Double> coords = spawnPacket.getDoubles();
-		coords.write(0, loc.getX());
-		coords.write(1, loc.getY());
-		coords.write(2, loc.getZ());
-		
-		return spawnPacket;
-	}
-	
-	public PacketContainer getTeleportPacket() {
-		updateTeleportPacket();
-		return teleportPacket;
-	}
-	
-	private void updateTeleportPacket() {
-		Location loc = calcPosition();
-		
-		StructureModifier<Double> coords = teleportPacket.getDoubles();
-		coords.write(0, loc.getX());
-		coords.write(1, loc.getY());
-		coords.write(2, loc.getZ());
 	}
 	
 	public PacketContainer getMetadataPacket() {

@@ -1,6 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
-import me.toomuchzelda.teamarenapaper.core.Hologram;
+import me.toomuchzelda.teamarenapaper.core.PacketHologram;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
@@ -21,7 +21,7 @@ public class PlayerInfo
 	public final byte permissionLevel;
 	public TeamArenaTeam team;
 	public Location spawnPoint;
-	public Hologram nametag;
+	public PacketHologram nametag;
 	public Kit kit;
 	public Kit activeKit; // kit they've selected vs the kit they're currently using
 	//todo: read from DB or other persistent storage

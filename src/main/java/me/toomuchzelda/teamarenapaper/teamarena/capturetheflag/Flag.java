@@ -3,7 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.capturetheflag;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
-import me.toomuchzelda.teamarenapaper.core.Hologram;
+import me.toomuchzelda.teamarenapaper.core.PacketHologram;
 import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.SidebarManager;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
@@ -149,9 +149,9 @@ public class Flag
 		WrappedDataWatcher data = WrappedDataWatcher.getEntityWatcher(stand).deepClone();
 		
 		WrappedDataWatcher.WrappedDataWatcherObject armorStandMeta =
-				new WrappedDataWatcher.WrappedDataWatcherObject(Hologram.ARMOR_STAND_METADATA_INDEX,
+				new WrappedDataWatcher.WrappedDataWatcherObject(PacketHologram.ARMOR_STAND_METADATA_INDEX,
 						WrappedDataWatcher.Registry.get(Byte.class));
-		data.setObject(armorStandMeta, Hologram.ARMOR_STAND_MARKER_BIT_MASK);
+		data.setObject(armorStandMeta, PacketHologram.ARMOR_STAND_MARKER_BIT_MASK);
 		
 		metadataPacket.getWatchableCollectionModifier().write(0, data.getWatchableObjects());
 		

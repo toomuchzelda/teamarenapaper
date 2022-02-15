@@ -20,6 +20,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.InvocationTargetException;
 import java.time.Duration;
+import java.util.HashSet;
+import java.util.Set;
 
 public class PlayerUtils
 {
@@ -55,6 +57,17 @@ public class PlayerUtils
 		Vec3 vec = CraftVector.toNMS(velocity);
 		ClientboundSetEntityMotionPacket packet = new ClientboundSetEntityMotionPacket(player.getEntityId(), vec);
 		nmsPlayer.connection.send(packet);
+	}
+
+	public static Set<Player> getViewersInRadius(Player player, double distance) {
+		double distSqr = distance * distance;
+		Set<Player> set = new HashSet<>();
+		for(Player p : player.getTrackedPlayers()) {
+			if(p.getLocation().distanceSquared(player.getLocation()) <= distSqr) {
+				set.add(p);
+			}
+		}
+		return set;
 	}
 
 	public static void sendHealth(Player player, double newHealth) {
