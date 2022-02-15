@@ -201,18 +201,19 @@ public class TeamArenaTeam
 		{
 			if (entity instanceof Player player)
 			{
-				paperTeam.removeEntry(player.getName());
+				//paperTeam.removeEntry(player.getName());
 				Main.getPlayerInfo(player).team = null;
 				//player.playerListName(Component.text(player.getName()).color(TeamArena.noTeamColour));
 				// name colour should be handled by the team they're put on
 			}
 			else
 			{
-				paperTeam.removeEntry(entity.getUniqueId().toString());
+				//paperTeam.removeEntry(entity.getUniqueId().toString());
 			}
 			playerMembers.remove(entity);
 			lastIn.remove(entity);
 		}
+		paperTeam.removeEntities(entities);
 		Main.getGame().setLastHadLeft(this);
 	}
 
@@ -236,9 +237,10 @@ public class TeamArenaTeam
 		}
 		
 		//clear any non player entities in the paper team
-		for(String entry : paperTeam.getEntries()) {
+		/*for(String entry : paperTeam.getEntries()) {
 			paperTeam.removeEntry(entry);
-		}
+		}*/
+		paperTeam.removeEntries(paperTeam.getEntries());
 		Main.getGame().setLastHadLeft(this);
 	}
 

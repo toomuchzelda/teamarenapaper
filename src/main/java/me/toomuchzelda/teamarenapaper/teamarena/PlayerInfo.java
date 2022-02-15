@@ -1,11 +1,18 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
 import me.toomuchzelda.teamarenapaper.core.Hologram;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageInfo;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.*;
 import org.bukkit.Location;
+import org.bukkit.entity.Damageable;
+import org.bukkit.entity.Entity;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 //container class to store per-player info
@@ -36,26 +43,7 @@ public class PlayerInfo
 	//todo make array
 	
 	private final HashMap<String, Integer> messageCooldowns = new HashMap<String, Integer>(); 
-
-	// cringe
-	//from 1-10. number of ticks in between particle play
-	//public byte kothHillParticles;
-	//public final PreferenceKothHillParticles kothParticles;
-	//whether the player wants to see titles during/regarding gameplay (they will also get a chat message regardless)
-	//public boolean receiveGameTitles;
-	//public final PreferenceReceiveGameTitles receiveGameTitles;
-	//sound played when hit a bow shot
-	//public Sound bowShotHitSound;
-	//public final PreferenceBowHitSound bowHitSound;
-	//whether the screen should tilt when taking damage
-	//public boolean damageTilt;
-	//public final PreferenceDamageTilt damageTilt;
-	
-	//for kit related messages; play in chat, action bar, or both
-	//public boolean kitActionBarMessages;
-	//public final PreferenceKitActionBar kitActionBar;
-	//public boolean kitChatMessages;
-	//public final PreferenceKitChatMessages kitChatMessages;
+	private LinkedList<DamageInfo> damageInfos;
 
 	public PlayerInfo(byte permissionLevel) {
 		team = null;
@@ -72,6 +60,7 @@ public class PlayerInfo
 		//damageTilt = new PreferenceDamageTilt();
 		
 		this.permissionLevel = permissionLevel;
+		damageInfos = new LinkedList<>();
 		//bowShotHitSound = Sound.ENTITY_ARROW_HIT_PLAYER;
 		//bowHitSound = new PreferenceBowHitSound();
 		
@@ -119,5 +108,18 @@ public class PlayerInfo
 	
 	public void clearMessageCooldowns() {
 		messageCooldowns.clear();
+	}
+
+	public void addDamage(Damageable damaged, DamageType damageType, double damage, @Nullable Entity damager, int time) {
+		DamageInfo dinfo = new DamageInfo(damageType, damage, damager, time);
+		damageInfos.add(dinfo);
+	}
+
+	public void clearDamageInfos() {
+		damageInfos.clear();
+	}
+
+	public List<DamageInfo> getDamageInfos() {
+		return damageInfos;
 	}
 }

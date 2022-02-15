@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
@@ -249,6 +250,7 @@ public abstract class TeamArena
 			pinfo.spawnPoint = spawnPos;
 			pinfo.kit = findKit(pinfo.defaultKit);
 			pinfo.team = noTeamTeam;
+			pinfo.clearDamageInfos();
 			noTeamTeam.addMembers(p);
 			
 			if(pinfo.kit == null)
@@ -544,10 +546,14 @@ public abstract class TeamArena
 			for(Ability ability : abilities) {
 				ability.onReceiveDamage(event);
 			}
-			
-			RealHologram damageIndicator = new RealHologram(p.getEyeLocation().add(0, 0.5, 0),
-					Component.text(MathUtils.round((event.getFinalDamage() / 2), 1)).color(TextColor.color(255, 0, 0)));
-			activeDamageIndicators.add(damageIndicator);
+
+			if(!event.isCancelled()) {
+				RealHologram damageIndicator = new RealHologram(p.getEyeLocation().add(0, 0.5, 0),
+						Component.text(MathUtils.round((event.getFinalDamage() / 2), 1)).color(TextColor.color(255, 0, 0)));
+				activeDamageIndicators.add(damageIndicator);
+
+				Main.getPlayerInfo(p).addDamage(p, event.getDamageType(), event.getFinalDamage(), event.getFinalAttacker(), gameTick);
+			}
 		}
 	}
 	
@@ -1028,6 +1034,8 @@ public abstract class TeamArena
 			spectators.add(p);
 
 			makeSpectator(p);
+
+			DamageInfo.sendDamageList(p, true);
 
 			if(this.isRespawningGame()) {
 				respawnTimers.put(p, new RespawnInfo(gameTick));
