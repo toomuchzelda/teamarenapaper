@@ -43,7 +43,7 @@ public class PlayerInfo
 	//todo make array
 	
 	private final HashMap<String, Integer> messageCooldowns = new HashMap<String, Integer>(); 
-	private LinkedList<DamageInfo> damageInfos;
+	private LinkedList<DamageInfo> damageReceivedLog;
 
 	public PlayerInfo(byte permissionLevel) {
 		team = null;
@@ -52,22 +52,9 @@ public class PlayerInfo
 		kit = null;
 		activeKit = null;
 		defaultKit = "Trooper";
-		//kothHillParticles = 1;
-		//kothParticles = new PreferenceKothHillParticles();
-		//receiveGameTitles = true;
-		//receiveGameTitles = new PreferenceReceiveGameTitles();
-		//damageTilt = true;
-		//damageTilt = new PreferenceDamageTilt();
-		
+
 		this.permissionLevel = permissionLevel;
-		damageInfos = new LinkedList<>();
-		//bowShotHitSound = Sound.ENTITY_ARROW_HIT_PLAYER;
-		//bowHitSound = new PreferenceBowHitSound();
-		
-		//kitActionBarMessages = true;
-		//kitActionBar = new PreferenceKitActionBar();
-		//kitChatMessages = true;
-		//kitChatMessages = new PreferenceKitChatMessages();
+		damageReceivedLog = new LinkedList<>();
 	}
 	
 	public void setPreferenceValues(Map<Preference<?>, ?> values) {
@@ -110,16 +97,16 @@ public class PlayerInfo
 		messageCooldowns.clear();
 	}
 
-	public void addDamage(Damageable damaged, DamageType damageType, double damage, @Nullable Entity damager, int time) {
+	public void logDamageReceived(Damageable damaged, DamageType damageType, double damage, @Nullable Entity damager, int time) {
 		DamageInfo dinfo = new DamageInfo(damageType, damage, damager, time);
-		damageInfos.add(dinfo);
+		damageReceivedLog.add(dinfo);
 	}
 
-	public void clearDamageInfos() {
-		damageInfos.clear();
+	public void clearDamageReceivedLog() {
+		damageReceivedLog.clear();
 	}
 
-	public List<DamageInfo> getDamageInfos() {
-		return damageInfos;
+	public List<DamageInfo> getDamageReceivedLog() {
+		return damageReceivedLog;
 	}
 }

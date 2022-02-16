@@ -2,6 +2,9 @@ package me.toomuchzelda.teamarenapaper.core;
 
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
+import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
+import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
 import net.minecraft.network.protocol.Packet;
@@ -21,6 +24,7 @@ import org.jetbrains.annotations.NotNull;
 import java.lang.reflect.InvocationTargetException;
 import java.time.Duration;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 public class PlayerUtils
@@ -59,11 +63,23 @@ public class PlayerUtils
 		nmsPlayer.connection.send(packet);
 	}
 
-	public static Set<Player> getViewersInRadius(Player player, double distance) {
-		double distSqr = distance * distance;
+	public static Set<Player> getDamageIndicatorViewers(Player takingDamage, Player attacker) {
 		Set<Player> set = new HashSet<>();
-		for(Player p : player.getTrackedPlayers()) {
-			if(p.getLocation().distanceSquared(player.getLocation()) <= distSqr) {
+		var iter = Main.getPlayersIter();
+		PlayerInfo pinfo;
+		Player p;
+		while(iter.hasNext()) {
+			Map.Entry<Player, PlayerInfo> entry = iter.next();
+			pinfo = entry.getValue();
+			p = entry.getKey();
+
+			if(p == attacker) {
+				if(pinfo.getPreference(Preferences.VIEW_OWN_DAMAGE_DISPLAYERS)) {
+					set.add(p);
+				}
+			}
+			else if(pinfo.getPreference(Preferences.VIEW_OTHER_DAMAGE_DISPLAYERS) &&
+					p.getLocation().distanceSquared(takingDamage.getLocation()) <= 15 * 15) {
 				set.add(p);
 			}
 		}

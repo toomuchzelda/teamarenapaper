@@ -22,4 +22,12 @@ public class Preferences {
     public static final Preference<Boolean> RECEIVE_GAME_TITLES = SimplePreference.of("receive_game_titles",
             "Receive titles that cover up part of your screen during gameplay (you will also get a chat message regardless)", true);
 
+    public static final Preference<Boolean> VIEW_OWN_DAMAGE_DISPLAYERS = SimplePreference.of("damage_hologram_own",
+            "See damage displayers for damage that was caused by you", true);
+
+    public static final Preference<Boolean> VIEW_OTHER_DAMAGE_DISPLAYERS = SimplePreference.of("damage_hologram_others",
+            "See damage displayers for damage caused by other players", true);
+
+    public static final Preference<Boolean> RECEIVE_DAMAGE_RECEIVED_LIST = SimplePreference.of("damage_received_list",
+            "Get a list of everything that killed you when you die", false);
 }

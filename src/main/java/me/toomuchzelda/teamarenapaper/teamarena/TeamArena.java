@@ -93,6 +93,8 @@ public abstract class TeamArena
 
 	protected ConcurrentLinkedQueue<DamageEvent> damageQueue;
 
+	private final LinkedList<DamageIndicatorHologram> activeDamageIndicators = new LinkedList<>();
+
 	public TeamArena() {
 		Main.logger().info("Reading info from " + mapPath() + ':');
 		File[] maps = new File(mapPath()).listFiles();
@@ -251,7 +253,7 @@ public abstract class TeamArena
 			pinfo.spawnPoint = spawnPos;
 			pinfo.kit = findKit(pinfo.defaultKit);
 			pinfo.team = noTeamTeam;
-			pinfo.clearDamageInfos();
+			pinfo.clearDamageReceivedLog();
 			noTeamTeam.addMembers(p);
 			
 			if(pinfo.kit == null)
@@ -524,7 +526,7 @@ public abstract class TeamArena
 		var indiIter = activeDamageIndicators.iterator();
 		while(indiIter.hasNext()) {
 			DamageIndicatorHologram h = indiIter.next();
-			if(h.age >= 10) {
+			if(h.age >= 15) {
 				h.remove();
 				indiIter.remove();
 			}
@@ -534,16 +536,15 @@ public abstract class TeamArena
 		}
 	}
 	
-	//todo: use packet holograms to be able to have them as an optional preference
-	private final LinkedList<DamageIndicatorHologram> activeDamageIndicators = new LinkedList<>();
-	
 	public void onConfirmedDamage(DamageEvent event) {
-		
+
+		Player playerCause = null; //for hologram
 		if(event.getFinalAttacker() instanceof Player p) {
 			Ability[] abilities = Kit.getAbilities(p);
 			for(Ability ability : abilities) {
 				ability.onDealtAttack(event);
 			}
+			playerCause = p;
 		}
 		if(event.getVictim() instanceof Player p) {
 			Ability[] abilities = Kit.getAbilities(p);
@@ -553,13 +554,14 @@ public abstract class TeamArena
 
 			if(!event.isCancelled()) {
 				PlayerInfo pinfo = Main.getPlayerInfo(p);
+				//spawn damage indicator hologram
 				Component damageText = Component.text(MathUtils.round(event.getFinalDamage(), 2)).color(pinfo.team.getRGBTextColor());
 				Location spawnLoc = p.getLocation();
-				spawnLoc.add(0, MathUtils.randomRange(0.4, 1.9), 0);
-				DamageIndicatorHologram hologram = new DamageIndicatorHologram(spawnLoc, PlayerUtils.getViewersInRadius(p, 15d), damageText);
+				spawnLoc.add(0, MathUtils.randomRange(0.5, 2), 0);
+				DamageIndicatorHologram hologram = new DamageIndicatorHologram(spawnLoc, PlayerUtils.getDamageIndicatorViewers(p, playerCause), damageText);
 				activeDamageIndicators.add(hologram);
 
-				pinfo.addDamage(p, event.getDamageType(), event.getFinalDamage(), event.getFinalAttacker(), gameTick);
+				pinfo.logDamageReceived(p, event.getDamageType(), event.getFinalDamage(), event.getFinalAttacker(), gameTick);
 			}
 		}
 	}
@@ -1042,7 +1044,10 @@ public abstract class TeamArena
 
 			makeSpectator(p);
 
-			DamageInfo.sendDamageList(p, true);
+			if(pinfo.getPreference(Preferences.RECEIVE_DAMAGE_RECEIVED_LIST))
+				DamageInfo.sendDamageLog(p, true);
+			else
+				pinfo.clearDamageReceivedLog();
 
 			if(this.isRespawningGame()) {
 				respawnTimers.put(p, new RespawnInfo(gameTick));

@@ -6,8 +6,6 @@ import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.ComponentBuilder;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
@@ -15,7 +13,6 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
 import javax.annotation.Nullable;
-import java.time.Duration;
 import java.util.List;
 
 public class DamageInfo {
@@ -35,12 +32,12 @@ public class DamageInfo {
         this.time = time;
     }
 
-    public static void sendDamageList(Player player, boolean clear) {
+    public static void sendDamageLog(Player player, boolean clear) {
 
         Component text = Component.text("Here's how you died (L):").color(NamedTextColor.DARK_PURPLE).append(Component.newline());
 
         PlayerInfo pinfo = Main.getPlayerInfo(player);
-        List<DamageInfo> list = pinfo.getDamageInfos();
+        List<DamageInfo> list = pinfo.getDamageReceivedLog();
         var iter = list.iterator();
         while(iter.hasNext()) {
             DamageInfo dinfo = iter.next();
