@@ -154,9 +154,9 @@ public class EventListeners implements Listener
 
 		//todo: read perms from db or other
 		if(event.getPlayer().getName().equalsIgnoreCase("toomuchzelda"))
-			playerInfo = new PlayerInfo(CustomCommand.OWNER);
+			playerInfo = new PlayerInfo(CustomCommand.OWNER, event.getPlayer());
 		else
-			playerInfo = new PlayerInfo(CustomCommand.ALL);
+			playerInfo = new PlayerInfo(CustomCommand.ALL, event.getPlayer());
 		
 		synchronized (preferenceFutureMap) {
 			CompletableFuture<Map<Preference<?>, ?>> future = preferenceFutureMap.remove(uuid);
@@ -484,7 +484,14 @@ public class EventListeners implements Listener
 	public void entityExhaustion(EntityExhaustionEvent event) {
 		event.setCancelled(true);
 	}
-	
+
+	@EventHandler
+	public void entityRegainHealth(EntityRegainHealthEvent event) {
+		if(event.getEntity() instanceof Player p) {
+			Main.getPlayerInfo(p).getKillAssistTracker().heal(event.getAmount());
+		}
+	}
+
 	@EventHandler
 	public void arrowBodyCountChange(ArrowBodyCountChangeEvent event) {
 		//not worth adding a new method to Ability.java for this one

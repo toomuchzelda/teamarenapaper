@@ -1,13 +1,15 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
 import me.toomuchzelda.teamarenapaper.core.PacketHologram;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageInfo;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.KillAssistTracker;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.*;
 import org.bukkit.Location;
 import org.bukkit.entity.Damageable;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;
@@ -43,9 +45,12 @@ public class PlayerInfo
 	//todo make array
 	
 	private final HashMap<String, Integer> messageCooldowns = new HashMap<String, Integer>(); 
-	private LinkedList<DamageInfo> damageReceivedLog;
+	private final LinkedList<DamageLogEntry> damageReceivedLog;
+	private final KillAssistTracker killAssistTracker;
 
-	public PlayerInfo(byte permissionLevel) {
+	public double kills;
+
+	public PlayerInfo(byte permissionLevel, Player player) {
 		team = null;
 		spawnPoint = null;
 		nametag = null;
@@ -55,6 +60,10 @@ public class PlayerInfo
 
 		this.permissionLevel = permissionLevel;
 		damageReceivedLog = new LinkedList<>();
+
+		killAssistTracker = new KillAssistTracker(player);
+
+		kills = 0;
 	}
 	
 	public void setPreferenceValues(Map<Preference<?>, ?> values) {
@@ -98,7 +107,7 @@ public class PlayerInfo
 	}
 
 	public void logDamageReceived(Damageable damaged, DamageType damageType, double damage, @Nullable Entity damager, int time) {
-		DamageInfo dinfo = new DamageInfo(damageType, damage, damager, time);
+		DamageLogEntry dinfo = new DamageLogEntry(damageType, damage, damager, time);
 		damageReceivedLog.add(dinfo);
 	}
 
@@ -106,7 +115,11 @@ public class PlayerInfo
 		damageReceivedLog.clear();
 	}
 
-	public List<DamageInfo> getDamageReceivedLog() {
+	public KillAssistTracker getKillAssistTracker() {
+		return killAssistTracker;
+	}
+
+	public List<DamageLogEntry> getDamageReceivedLog() {
 		return damageReceivedLog;
 	}
 }

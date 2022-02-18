@@ -12,11 +12,13 @@ import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.network.protocol.game.ClientboundSetHealthPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
+import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.craftbukkit.v1_18_R1.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_18_R1.util.CraftVector;
 import org.bukkit.entity.Player;
+import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
@@ -86,7 +88,32 @@ public class PlayerUtils
 		return set;
 	}
 
-	public static void sendHealth(Player player, double newHealth) {
+	/**
+	 * use instead of player.setHealth() as that does not call the EntityRegainHealthEvent
+	 * We need to call this event for the player percent damage kill assist thing
+	 * @param player
+	 * @param amount
+	 */
+	public static void heal(Player player, double amount, EntityRegainHealthEvent.RegainReason reason) {
+		double maxHealth = player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+		double oldHealth = player.getHealth();
+		double newHealth = oldHealth + amount;
+		if(newHealth > maxHealth) {
+			newHealth = maxHealth;
+			amount = newHealth - oldHealth;
+		}
+
+		EntityRegainHealthEvent event = new EntityRegainHealthEvent(player, amount, reason);
+		Bukkit.getPluginManager().callEvent(event);
+
+		if(!event.isCancelled()) {
+			player.setHealth(newHealth);
+			if (Main.getPlayerInfo(player).getPreference(Preferences.HEARTS_FLASH_REGEN))
+				sendHealth(player);
+		}
+	}
+
+	public static void sendHealth(Player player) {
 		float health = (float) player.getHealth();
 		int food = player.getFoodLevel();
 		float saturation = player.getSaturation();

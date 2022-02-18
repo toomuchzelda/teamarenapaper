@@ -4,7 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageIndicatorHologram;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageInfo;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
@@ -17,6 +17,7 @@ import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
+import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
@@ -254,6 +255,7 @@ public abstract class TeamArena
 			pinfo.kit = findKit(pinfo.defaultKit);
 			pinfo.team = noTeamTeam;
 			pinfo.clearDamageReceivedLog();
+			pinfo.kills = 0;
 			noTeamTeam.addMembers(p);
 			
 			if(pinfo.kit == null)
@@ -610,15 +612,17 @@ public abstract class TeamArena
 				Map.Entry<Player, PlayerInfo> entry = iter.next();
 				
 				Player p = entry.getKey();
+
+				PlayerUtils.heal(p, 1, EntityRegainHealthEvent.RegainReason.SATIATED); // half a heart
 				
-				double newHealth = p.getHealth() + 1; // half a heart
+				/*double newHealth = p.getHealth() + 1; // half a heart
 				double maxHealth = p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
 				if (newHealth > maxHealth)
 					newHealth = maxHealth;
 				
 				p.setHealth(newHealth);
 				if(entry.getValue().getPreference(Preferences.HEARTS_FLASH_REGEN))
-					PlayerUtils.sendHealth(p, newHealth);
+					PlayerUtils.sendHealth(p);*/
 			}
 		}
 	}
@@ -960,7 +964,7 @@ public abstract class TeamArena
 
 				if(shame) {
 					Component text;
-					if(MathUtils.randomMax(256) == 256) {
+					if(MathUtils.randomMax(128) == 128) {
 						text = player.displayName().append(Component.text(" baby raged off the game").color(NamedTextColor.GRAY));
 					}
 					else {
@@ -1017,7 +1021,7 @@ public abstract class TeamArena
 		// when revealing first then teleporting, the clients interpolate the super fast teleport movement, so players
 		// see them quickly zooming from wherever they were to their spawnpoint.
 		// teleporting first in this method in the same tick creates this awful desync bug with positioning
-		// so try teleport them, then reveal them next tick
+		// so try teleport them, then reveal them 2 ticks later
 		Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
 			for(Player p : Bukkit.getOnlinePlayers()) {
 				p.showPlayer(Main.getPlugin(), player);
@@ -1036,6 +1040,7 @@ public abstract class TeamArena
 			//setSpectator(p, true, false);
 			PlayerInfo pinfo = Main.getPlayerInfo(p);
 			pinfo.activeKit.removeKit(p, pinfo);
+			pinfo.kills = 0;
 
 			PlayerUtils.resetState(p);
 
@@ -1045,7 +1050,7 @@ public abstract class TeamArena
 			makeSpectator(p);
 
 			if(pinfo.getPreference(Preferences.RECEIVE_DAMAGE_RECEIVED_LIST))
-				DamageInfo.sendDamageLog(p, true);
+				DamageLogEntry.sendDamageLog(p, true);
 			else
 				pinfo.clearDamageReceivedLog();
 
@@ -1371,10 +1376,10 @@ public abstract class TeamArena
 		//if both Y are 0 then have no ceiling
 		// do this after spawnpoint calculation otherwise it's trouble
 		if(corner1.getY() == 0 && corner2.getY() == 0) {
-			corner1.setY(Double.MAX_VALUE);
-			corner2.setY(Double.MIN_VALUE);
+			corner1.setY(1000d);
+			corner2.setY(-1000d);
 			border = BoundingBox.of(corner1, corner2);
-			Main.logger().info("border has MAX and MIN_VALUE Y limits");
+			Main.logger().info("border has 1000 and -1000 Y limits");
 		}
 
 		//Create the teams

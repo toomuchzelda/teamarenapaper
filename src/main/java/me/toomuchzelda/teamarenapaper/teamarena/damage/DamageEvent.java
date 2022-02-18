@@ -57,6 +57,7 @@ public class DamageEvent {
     //if the attacker was sprinting, only applicable if the attacker is a Player
     private boolean wasSprinting;
     private boolean isSweep = false;
+    private boolean ignoreInvulnerability = false;
 
     private boolean cancelled;
     
@@ -384,7 +385,7 @@ public class DamageEvent {
             int ndt;
             
             boolean doHurtEffect = true;
-            if(!damageType.isIgnoreRate()) {
+            if(!damageType.isIgnoreRate() && !ignoreInvulnerability) {
                 if (damageType.isMelee() || damageType.isProjectile()) {
                     ndt = TeamArena.getGameTick() - dTimes.lastAttackTime;
         
@@ -421,6 +422,7 @@ public class DamageEvent {
             
             //run modifications done by confirmed damage ability "Event Handlers"
             Main.getGame().onConfirmedDamage(this);
+
             if(cancelled)
                 return;
             
@@ -491,7 +493,7 @@ public class DamageEvent {
             //need to send this packet for the hearts to flash white when lost, otherwise they just decrease with no
             // effect
             if (victim instanceof Player player && Main.getPlayerInfo(player).getPreference(Preferences.HEARTS_FLASH_DAMAGE)) {
-                PlayerUtils.sendHealth(player, player.getHealth());
+                PlayerUtils.sendHealth(player);
             }
         }
         net.minecraft.world.entity.Entity nmsEntity = ((CraftEntity) victim).getHandle();
@@ -737,12 +739,24 @@ public class DamageEvent {
         return finalDamage;
     }
     
+    public void setFinalDamage(double damage) {
+        this.finalDamage = damage;
+    }
+    
     public void setDamageType(DamageType damageType) {
         this.damageType = damageType;
     }
     
     public void setCancelled(boolean cancel) {
         this.cancelled = cancel;
+    }
+    
+    public boolean isIgnoreInvulnerability() {
+        return ignoreInvulnerability;
+    }
+    
+    public void setIgnoreInvulnerability(boolean ignore) {
+        this.ignoreInvulnerability = ignore;
     }
     
     public boolean isCancelled() {

@@ -15,14 +15,14 @@ import org.bukkit.entity.Player;
 import javax.annotation.Nullable;
 import java.util.List;
 
-public class DamageInfo {
+public class DamageLogEntry {
     public DamageType damageType;
     public double damage;
     public @Nullable
     Component damager;
     public int time;
 
-    public DamageInfo(DamageType type, double damage, @Nullable Entity damager, int time) {
+    public DamageLogEntry(DamageType type, double damage, @Nullable Entity damager, int time) {
         this.damageType = type;
         this.damage = damage;
         if(damager != null)
@@ -34,13 +34,13 @@ public class DamageInfo {
 
     public static void sendDamageLog(Player player, boolean clear) {
 
-        Component text = Component.text("Here's how you died (L):").color(NamedTextColor.DARK_PURPLE).append(Component.newline());
+        Component text = Component.text("Here's how you died:").color(NamedTextColor.DARK_PURPLE).append(Component.newline());
 
         PlayerInfo pinfo = Main.getPlayerInfo(player);
-        List<DamageInfo> list = pinfo.getDamageReceivedLog();
+        List<DamageLogEntry> list = pinfo.getDamageReceivedLog();
         var iter = list.iterator();
         while(iter.hasNext()) {
-            DamageInfo dinfo = iter.next();
+            DamageLogEntry dinfo = iter.next();
             text = text.append(Component.text(MathUtils.round((dinfo.damage / 2), 2) + " ♥").color(TextColor.color(217, 45, 2)));
             text = text.append(Component.text(", Cause: " + dinfo.damageType.getName()).color(TextColor.color(255, 247, 0)));
             if(dinfo.damager != null) {
