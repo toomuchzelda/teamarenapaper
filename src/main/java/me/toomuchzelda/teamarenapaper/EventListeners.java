@@ -353,7 +353,8 @@ public class EventListeners implements Listener
 	public void entityShootBow(EntityShootBowEvent event) {
 		event.getProjectile().setVelocity(projectileLaunchVector(event.getEntity(), event.getProjectile().getVelocity()));
 		
-		((AbstractArrow) event.getProjectile()).setPickupStatus(AbstractArrow.PickupStatus.CREATIVE_ONLY);
+		if(event.getProjectile() instanceof AbstractArrow aa)
+			aa.setPickupStatus(AbstractArrow.PickupStatus.CREATIVE_ONLY);
 		
 		if(event.getEntity() instanceof Player p) {
 			Ability[] abilities = Kit.getAbilities(p);

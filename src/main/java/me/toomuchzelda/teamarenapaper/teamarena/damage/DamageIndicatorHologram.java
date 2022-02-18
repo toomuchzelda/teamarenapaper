@@ -21,7 +21,7 @@ public class DamageIndicatorHologram extends PacketHologram {
         this.age = 0;
         startLoc = location.clone();
 
-        horizontalDirection = new Vector(MathUtils.random.nextDouble() - 0.5, 0, MathUtils.random.nextDouble() - 0.5).normalize();
+        horizontalDirection = new Vector(MathUtils.randomRange(-0.6d, 0.6d), 0, MathUtils.randomRange(-0.6d, 0.6d)).normalize();
     }
 
     public void tick() {

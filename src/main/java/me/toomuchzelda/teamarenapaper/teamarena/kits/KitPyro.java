@@ -83,7 +83,7 @@ public class KitPyro extends Kit
 		public final LinkedList<MolotovInfo> ACTIVE_MOLOTOVS = new LinkedList<>();
 		public static final int MOLOTOV_RECHARGE_TIME = 10 * 20;
 		public static final int MOLOTOV_ACTIVE_TIME = 5 * 20;
-		public static final int BOX_RADIUS = 2;
+		public static final double BOX_RADIUS = 2.5;
 		
 		@Override
 		public void onShootBow(EntityShootBowEvent event) {
@@ -184,7 +184,7 @@ public class KitPyro extends Kit
 					else { //it hit a wall, make it not stick in the wall
 						event.setCancelled(true);
 						
-						//credit jacky8399 for the following
+						//credit jacky8399 for bouncing arrow code
 						BlockFace hitFace = event.getHitBlockFace();
 						Vector dirVector = hitFace.getDirection();
 						if (hitFace != BlockFace.DOWN) { // ignore Y component

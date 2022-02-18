@@ -42,6 +42,13 @@ public class DamageTimes {
 
         entityDamageTimes.put(living, this);
     }
+    
+    public void clearAttackers() {
+        lastDamager = null;
+        lastAttackEvent = null;
+        fireTimes.fireGiver = null;
+        fireTimes.fireType = null;
+    }
 
     public static DamageTimes getDamageTimes(LivingEntity living) {
         DamageTimes times = entityDamageTimes.get(living);

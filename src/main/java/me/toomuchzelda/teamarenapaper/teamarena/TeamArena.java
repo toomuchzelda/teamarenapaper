@@ -2,9 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.*;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageIndicatorHologram;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
@@ -13,6 +11,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
+import net.minecraft.server.players.PlayerList;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
@@ -27,6 +26,7 @@ import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.yaml.snakeyaml.Yaml;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -244,6 +244,7 @@ public abstract class TeamArena
 
 		//list the teams in sidebar
 		SidebarManager.updatePreGameScoreboard(this);
+		PlayerListScoreManager.removeScores();
 
 		//init all the players online at time of construction
 		for(Player p : Bukkit.getOnlinePlayers()) {
@@ -557,13 +558,19 @@ public abstract class TeamArena
 			if(!event.isCancelled()) {
 				PlayerInfo pinfo = Main.getPlayerInfo(p);
 				//spawn damage indicator hologram
-				Component damageText = Component.text(MathUtils.round(event.getFinalDamage(), 2)).color(pinfo.team.getRGBTextColor());
+				// divide by two to display as hearts
+				Component damageText = Component.text(MathUtils.round(event.getFinalDamage() / 2, 2)).color(pinfo.team.getRGBTextColor());
 				Location spawnLoc = p.getLocation();
-				spawnLoc.add(0, MathUtils.randomRange(0.5, 2), 0);
+				spawnLoc.add(0, MathUtils.randomRange(1.4, 2), 0);
 				DamageIndicatorHologram hologram = new DamageIndicatorHologram(spawnLoc, PlayerUtils.getDamageIndicatorViewers(p, playerCause), damageText);
 				activeDamageIndicators.add(hologram);
 
+				//add to their damage log
 				pinfo.logDamageReceived(p, event.getDamageType(), event.getFinalDamage(), event.getFinalAttacker(), gameTick);
+			
+				if(event.getFinalAttacker() instanceof Player attacker) {
+					pinfo.getKillAssistTracker().addDamage(attacker, event.getFinalDamage());
+				}
 			}
 		}
 	}
@@ -696,6 +703,7 @@ public abstract class TeamArena
 			PlayerUtils.resetState(player);
 			player.getInventory().clear();
 			player.setSaturatedRegenRate(0);
+			PlayerListScoreManager.setKills(player, 0);
 			
 			kit.giveKit(player, true, entry.getValue());
 			
@@ -1011,7 +1019,7 @@ public abstract class TeamArena
 
 		player.getInventory().clear();
 		player.setAllowFlight(false);
-		player.setFallDistance(0);
+		PlayerUtils.resetState(player);
 		
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
 		player.teleport(pinfo.team.getNextSpawnpoint());
@@ -1041,6 +1049,7 @@ public abstract class TeamArena
 			PlayerInfo pinfo = Main.getPlayerInfo(p);
 			pinfo.activeKit.removeKit(p, pinfo);
 			pinfo.kills = 0;
+			PlayerListScoreManager.setKills(p, 0);
 
 			PlayerUtils.resetState(p);
 
@@ -1053,7 +1062,23 @@ public abstract class TeamArena
 				DamageLogEntry.sendDamageLog(p, true);
 			else
 				pinfo.clearDamageReceivedLog();
-
+			
+			
+			//Give out kill assists on the victim
+			Player killer = null;
+			DamageTimes dTimes = DamageTimes.getDamageTimes(p);
+			if(event.getFinalAttacker() instanceof Player finalAttacker) {
+				killer = finalAttacker;
+			}
+			else {
+				if(dTimes.lastDamager instanceof Player finalAttacker)
+					killer = finalAttacker;
+			}
+			attributeKillAndAssists(pinfo, killer);
+			
+			//clear attack givers so they don't get falsely attributed on this next player's death
+			dTimes.clearAttackers();
+			
 			if(this.isRespawningGame()) {
 				respawnTimers.put(p, new RespawnInfo(gameTick));
 				p.getInventory().addItem(kitMenuItem.clone());
@@ -1066,6 +1091,47 @@ public abstract class TeamArena
 			}
 			else {
 				e.remove();
+			}
+		}
+	}
+	
+	private void attributeKillAndAssists(PlayerInfo victimInfo, @Nullable Player finalDamager) {
+		
+		//the finalDamager always gets 1 kill no matter what
+		if(finalDamager != null) {
+			addKillAmount(finalDamager, 1);
+			victimInfo.getKillAssistTracker().removeAssist(finalDamager);
+		}
+		
+		var iter = victimInfo.getKillAssistTracker().getIterator();
+		while(iter.hasNext()) {
+			Map.Entry<Player, Double> entry = iter.next();
+			addKillAmount(entry.getKey(), entry.getValue());
+			iter.remove();
+		}
+	}
+	
+	/**
+	 * give a player some kill assist amount or kill(s)
+	 * relies on being called one at a time for each kill/death, and relies on amount not being greater than 1
+	 */
+	protected void addKillAmount(Player player, double amount) {
+		
+		if(amount != 1)
+			player.sendMessage(Component.text("Scored a kill assist of " + amount + "!").color(NamedTextColor.RED));
+		
+		PlayerInfo pinfo = Main.getPlayerInfo(player);
+		int killsBefore = (int) pinfo.kills;
+		pinfo.kills += amount;
+		int killsAfter = (int) pinfo.kills;
+		
+		PlayerListScoreManager.setKills(player, killsAfter);
+		
+		if(killsAfter != killsBefore) { //if their number of kills increased to the next whole number
+			//todo: check for and give killstreaks here
+			final double someKillStreakAmount = 5;
+			if(killsAfter == someKillStreakAmount) {
+				//give them killstreak item(s)
 			}
 		}
 	}
@@ -1204,6 +1270,7 @@ public abstract class TeamArena
 		balancePlayerLeave();
 		players.remove(player);
 		spectators.remove(player);
+		PlayerListScoreManager.removeScore(player);
 	}
 
 	public void informOfTeam(Player p) {

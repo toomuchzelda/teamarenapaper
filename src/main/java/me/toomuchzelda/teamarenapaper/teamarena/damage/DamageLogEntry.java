@@ -57,8 +57,6 @@ public class DamageLogEntry {
                 iter.remove();
         }
 
-        Bukkit.broadcastMessage("size of list: " + list.size());
-
         player.sendMessage(text);
 
         /*if(clear) {

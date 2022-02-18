@@ -4,6 +4,7 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 public class KillAssistTracker {
@@ -16,7 +17,8 @@ public class KillAssistTracker {
     }
 
     public void addDamage(Player cause, double damage) {
-        playerDamageAmounts.put(cause, damage);
+        //add this to the previous value if it exists
+        playerDamageAmounts.merge(cause, damage, Double::sum);
     }
 
     //reduce all damage amounts done by other players by uniform amount when healing
@@ -36,7 +38,7 @@ public class KillAssistTracker {
             Map.Entry<Player, Double> entry = iter.next();
 
             double newValue = entry.getValue() * percent;
-            if(newValue < 0.001) { // this will lead to some discrepancy/gaps but shouldn't be a huge problem
+            if(newValue < 0.05) { // this will lead to some discrepancy/gaps but shouldn't be a huge problem
                 iter.remove();
             }
             else {
@@ -48,7 +50,15 @@ public class KillAssistTracker {
     public double getAssistAmount(Player player) {
         return playerDamageAmounts.getOrDefault(player, 0d);
     }
-
+    
+    public void removeAssist(Player player) {
+        playerDamageAmounts.remove(player);
+    }
+    
+    public Iterator<Map.Entry<Player, Double>> getIterator() {
+        return playerDamageAmounts.entrySet().iterator();
+    }
+    
     public void clear() {
         playerDamageAmounts.clear();
     }
