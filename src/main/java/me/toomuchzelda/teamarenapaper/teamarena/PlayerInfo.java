@@ -1,6 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
-import me.toomuchzelda.teamarenapaper.core.PacketHologram;
+import me.toomuchzelda.teamarenapaper.utils.PacketHologram;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.KillAssistTracker;

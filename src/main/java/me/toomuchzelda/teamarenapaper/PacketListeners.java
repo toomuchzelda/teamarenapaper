@@ -3,9 +3,18 @@ package me.toomuchzelda.teamarenapaper;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketAdapter;
+import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.reflect.StructureModifier;
+import it.unimi.dsi.fastutil.ints.IntList;
+import me.toomuchzelda.teamarenapaper.teamarena.DisguiseManager;
+import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import org.bukkit.Sound;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import java.util.LinkedList;
 
 public class PacketListeners
 {
@@ -20,7 +29,7 @@ public class PacketListeners
 		//commented out as not using holograms (keeping in case future versions support more
 		// rgb stuff)
 		//Spawn player's nametag hologram whenever the player is spawned on a client
-		/*ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.NAMED_ENTITY_SPAWN) //packet for players coming in viewable range
 		{
 			@Override
@@ -28,7 +37,18 @@ public class PacketListeners
 				
 				int id = event.getPacket().getIntegers().read(0);
 				
-				Player player = Main.playerIdLookup.get(id);
+				//if the receiver of this packet is supposed to view a disguise instead of the actual player
+				DisguiseManager.Disguise disguise = DisguiseManager.getDisguiseSeeing(id, event.getPlayer());
+				if(disguise != null) {
+					event.getPacket().getIntegers().write(0, disguise.id);
+					event.getPacket().getUUIDs().write(0, disguise.uuid);
+					//send player info first
+					PlayerUtils.sendPacket(event.getPlayer(), disguise.playerInfoPacket);
+				}
+				
+				//old hologram nametags code
+				
+				/*Player player = Main.playerIdLookup.get(id);
 				//unsure if always will be player or not
 				if(player != null) {
 					PlayerInfo pinfo = Main.getPlayerInfo(player);
@@ -55,20 +75,28 @@ public class PacketListeners
 					PlayerUtils.sendPacket(event.getPlayer(), spawnPacket, metaDataPacket);
 					
 					//Main.logger().info("Spawned hologram along with player");
-				}
+				}*/
 			}
-		});*/
+		});
 		
 		//move the nametag armorstands with every player movement
-		/*ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
+		// and disguises
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.REL_ENTITY_MOVE,
 				PacketType.Play.Server.REL_ENTITY_MOVE_LOOK,
 				PacketType.Play.Server.ENTITY_TELEPORT)
 		{
 			@Override
 			public void onPacketSending(PacketEvent event) {
-				int id = event.getPacket().getIntegers().read(0);
+				StructureModifier<Integer> ints = event.getPacket().getIntegers();
+				int id = ints.read(0);
 				
+				//use entity id of the disguised player if they're seeing one
+				ints.write(0, DisguiseManager.getDisguiseToSeeId(id, event.getPlayer()));
+				
+				//old hologram nametag code
+				
+				/*
 				Player player = Main.playerIdLookup.get(id);
 				if(player != null) {
 					Hologram hologram = Main.getPlayerInfo(player).nametag;
@@ -88,12 +116,12 @@ public class PacketListeners
 
 						PlayerUtils.sendPacket(event.getPlayer(), movePacket);
 					}
-				}
+				}*/
 			}
-		});*/
+		});
 		
 		//despawn hologram clientside when player is despawned (moved out of render distance or other)
-		/*ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.ENTITY_DESTROY)
 		{
 			@Override
@@ -101,24 +129,29 @@ public class PacketListeners
 				//check if a player is among the ones being removed
 				// for every player also add their nametag hologram to be removed as well
 				IntList ids = (IntList) event.getPacket().getModifier().read(0);
-				LinkedList<Integer> armorStands = new LinkedList<>();
+				LinkedList<Integer> toAlsoRemove = new LinkedList<>();
 				
 				for(int i : ids) {
-					Player removedPlayer = Main.playerIdLookup.get(i);
+					/*Player removedPlayer = Main.playerIdLookup.get(i);
 					if(removedPlayer != null) {
 						int armorStandId = Main.getPlayerInfo(removedPlayer).nametag.getId();
-						armorStands.add(armorStandId);
+						toAlsoRemove.add(armorStandId);
+					}*/
+					
+					DisguiseManager.Disguise disg = DisguiseManager.getDisguiseSeeing(i, event.getPlayer());
+					if(disg != null) {
+						toAlsoRemove.add(disg.id);
 					}
 				}
 				
-				if(armorStands.size() > 0) {
-					for(int i : armorStands) {
+				if(toAlsoRemove.size() > 0) {
+					for(int i : toAlsoRemove) {
 						ids.add(i);
 					}
 					event.getPacket().getModifier().write(0, ids);
 				}
 			}
-		});*/
+		});
 		
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.NAMED_SOUND_EFFECT)

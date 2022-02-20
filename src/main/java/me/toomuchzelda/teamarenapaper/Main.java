@@ -1,7 +1,10 @@
 package me.toomuchzelda.teamarenapaper;
 
-import me.toomuchzelda.teamarenapaper.core.EntityUtils;
-import me.toomuchzelda.teamarenapaper.core.FileUtils;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
+import me.toomuchzelda.teamarenapaper.utils.FileUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
@@ -30,7 +33,7 @@ public final class Main extends JavaPlugin
 	private static JavaPlugin plugin;
 
 	private static final ConcurrentHashMap<Player, PlayerInfo> playerInfo = new ConcurrentHashMap<>();
-	public static final ConcurrentHashMap<Integer, Player> playerIdLookup = new ConcurrentHashMap<>();
+	public static final Int2ObjectMap<Player> playerIdLookup = Int2ObjectMaps.synchronize(new Int2ObjectOpenHashMap<>(1000));
 
 	@Override
 	public void onEnable()
@@ -46,10 +49,10 @@ public final class Main extends JavaPlugin
 
 		//unload all vanilla worlds
 		// stop mob AI in vanilla worlds to try save performance?
-		for(World world : Bukkit.getWorlds()) {
+		//for(World world : Bukkit.getWorlds()) {
 			//i think unloading the main world is not allowed
 			//logger.info("Unloading world: " + world.getName() + ", success: " + Bukkit.unloadWorld(world, false));
-		}
+		//}
 
 		//delete temp maps that should have been deleted on shutdown, if any
 		// may be bad for running multiple servers from the same directory

@@ -1,4 +1,4 @@
-package me.toomuchzelda.teamarenapaper.core;
+package me.toomuchzelda.teamarenapaper.utils;
 
 import org.bukkit.Color;
 import org.bukkit.Location;

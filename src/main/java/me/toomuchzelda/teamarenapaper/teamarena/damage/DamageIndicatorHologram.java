@@ -1,7 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
-import me.toomuchzelda.teamarenapaper.core.MathUtils;
-import me.toomuchzelda.teamarenapaper.core.PacketHologram;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.PacketHologram;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;

@@ -1,10 +1,9 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.core.EntityUtils;
-import me.toomuchzelda.teamarenapaper.core.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.TextColor;
 import net.minecraft.world.damagesource.DamageSource;
@@ -14,10 +13,6 @@ import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageByBlockEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
-
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Arrays;
 
 //partially from RedWarfare's AttackType class - credit libraryaddict
 // https://github.com/libraryaddict/RedWarfare/blob/master/redwarfare-core/src/me/libraryaddict/core/damage/AttackType.java

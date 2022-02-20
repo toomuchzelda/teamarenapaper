@@ -1,4 +1,4 @@
-package me.toomuchzelda.teamarenapaper.core;
+package me.toomuchzelda.teamarenapaper.utils;
 
 import net.kyori.adventure.text.Component;
 import net.minecraft.world.level.Level;
@@ -9,7 +9,6 @@ import org.bukkit.event.entity.CreatureSpawnEvent;
 
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.ListIterator;
 
 /**

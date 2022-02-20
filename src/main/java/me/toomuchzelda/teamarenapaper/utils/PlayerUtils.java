@@ -1,4 +1,4 @@
-package me.toomuchzelda.teamarenapaper.core;
+package me.toomuchzelda.teamarenapaper.utils;
 
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;

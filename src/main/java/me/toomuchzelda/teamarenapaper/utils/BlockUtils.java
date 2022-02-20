@@ -1,9 +1,7 @@
-package me.toomuchzelda.teamarenapaper.core;
+package me.toomuchzelda.teamarenapaper.utils;
 
 import org.bukkit.Location;
 import org.bukkit.util.Vector;
-
-import java.util.concurrent.CompletableFuture;
 
 public class BlockUtils
 {

@@ -1,9 +1,9 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.core.EntityUtils;
-import me.toomuchzelda.teamarenapaper.core.MathUtils;
-import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;

@@ -1,8 +1,8 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kingofthehill;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.core.MathUtils;
-import me.toomuchzelda.teamarenapaper.core.RealHologram;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.RealHologram;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.kyori.adventure.text.Component;
