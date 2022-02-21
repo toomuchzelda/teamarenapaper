@@ -219,7 +219,8 @@ public abstract class TeamArena
 		respawnItem.setItemMeta(respawnItemMeta);
 		
 		kits = new Kit[]{new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
-				/*new KitReach(this),*/new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitNone()};
+				/*new KitReach(this),*/new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(),
+				new KitNone()};
 		tabKitList = new ArrayList<>(kits.length);
 		for(Kit kit : kits) {
 			for(Ability ability : kit.getAbilities()) {
@@ -1023,6 +1024,8 @@ public abstract class TeamArena
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
 		player.teleport(pinfo.team.getNextSpawnpoint());
 		pinfo.kit.giveKit(player, true, pinfo);
+		pinfo.kills = 0;
+		PlayerListScoreManager.setKills(player, 0);
 
 		//do this one (two?) tick later
 		// when revealing first then teleporting, the clients interpolate the super fast teleport movement, so players
@@ -1046,9 +1049,10 @@ public abstract class TeamArena
 
 			//setSpectator(p, true, false);
 			PlayerInfo pinfo = Main.getPlayerInfo(p);
+			for(Ability a : pinfo.activeKit.getAbilities()) {
+				a.onDeath(event);
+			}
 			pinfo.activeKit.removeKit(p, pinfo);
-			pinfo.kills = 0;
-			PlayerListScoreManager.setKills(p, 0);
 
 			PlayerUtils.resetState(p);
 

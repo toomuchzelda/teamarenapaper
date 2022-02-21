@@ -4,6 +4,7 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
 import com.mojang.authlib.GameProfile;
+import io.papermc.paper.adventure.PaperAdventure;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -15,6 +16,7 @@ import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import net.minecraft.world.level.GameType;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.craftbukkit.v1_18_R1.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 
 import java.util.*;
@@ -30,13 +32,10 @@ public class DisguiseManager
 	private static final Int2ObjectMap<ObjectOpenHashSet<Disguise>> PLAYER_ID_TO_DISGUISE_LOOKUP = Int2ObjectMaps.synchronize(new Int2ObjectOpenHashMap<>(2000));
 	
 	
-	public static void createDisguise(Player toDisguise, GameProfile disguiseAs, Collection<Player> viewers) {
-		Disguise disguise = new Disguise();
-		disguise.disguisedPlayer = toDisguise;
-		disguise.id = Bukkit.getUnsafe().nextEntityId();
-		disguise.uuid = UUID.randomUUID();
-		disguise.viewers = new HashSet<>(viewers);
+	public static void createDisguise(Player toDisguise, Player toDisguiseAs, Collection<Player> viewers) {
+		Disguise disguise = new Disguise(toDisguise, UUID.randomUUID(), viewers);
 		
+		GameProfile disguiseAs = ((CraftPlayer) toDisguiseAs).getHandle().getGameProfile();
 		disguise.gameProfile = new GameProfile(disguise.uuid, disguiseAs.getName());
 		
 		disguise.gameProfile.getProperties().removeAll("textures");
@@ -50,7 +49,7 @@ public class DisguiseManager
 		PacketContainer fakeInfoPacket = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);
 		StructureModifier<Object> modifier = fakeInfoPacket.getModifier();
 		ClientboundPlayerInfoPacket.PlayerUpdate fakePlayerUpdate = new ClientboundPlayerInfoPacket.PlayerUpdate(
-				disguise.gameProfile,  latency, GameType.SURVIVAL, null);
+				disguise.gameProfile,  latency, GameType.SURVIVAL, null);//PaperAdventure.asVanilla(toDisguiseAs.displayName()));
 		modifier.write(0, ClientboundPlayerInfoPacket.Action.ADD_PLAYER);
 		modifier.write(1, Collections.singletonList(fakePlayerUpdate));
 		
@@ -104,10 +103,12 @@ public class DisguiseManager
 	public static Disguise getDisguiseSeeing(int disguisedPlayer, Player viewer) {
 		Disguise toReturn = null;
 		Set<Disguise> disguises = PLAYER_ID_TO_DISGUISE_LOOKUP.get(disguisedPlayer);
-		for(Disguise d : disguises) {
-			if(d.viewers.contains(viewer)) {
-				toReturn = d;
-				break;
+		if(disguises != null) {
+			for (Disguise d : disguises) {
+				if (d.viewers.contains(viewer)) {
+					toReturn = d;
+					break;
+				}
 			}
 		}
 		
@@ -131,17 +132,25 @@ public class DisguiseManager
 		public GameProfile gameProfile;
 		public Set<Player> viewers;
 		
-		public ClientboundRemoveEntitiesPacket removePacket = new ClientboundRemoveEntitiesPacket(id);
-		public ClientboundRemoveEntitiesPacket removePlayerPacket = new ClientboundRemoveEntitiesPacket(disguisedPlayer.getEntityId());
+		public ClientboundRemoveEntitiesPacket removePacket;
+		public ClientboundRemoveEntitiesPacket removePlayerPacket;
 		private PacketContainer spawnPacket;
 		public PacketContainer playerInfoPacket;
 		
-		public Disguise() {
+		public Disguise(Player player, UUID uuid, Collection<Player> viewers) {
+			this.disguisedPlayer = player;
+			this.id = Bukkit.getUnsafe().nextEntityId();
+			this.uuid = uuid;
+			this.viewers = new ObjectOpenHashSet<>();
+			
 			spawnPacket = new PacketContainer(PacketType.Play.Server.NAMED_ENTITY_SPAWN);
 			StructureModifier<Object> modifier = spawnPacket.getModifier();
 			
 			modifier.write(0, id);
 			modifier.write(1, uuid);
+			
+			removePacket = new ClientboundRemoveEntitiesPacket(id);
+			removePlayerPacket = new ClientboundRemoveEntitiesPacket(disguisedPlayer.getEntityId());
 		}
 		
 		public PacketContainer getSpawnPacket() {

@@ -57,6 +57,14 @@ public abstract class Ability {
     }
     
     /**
+     * when user dies from a DamageEvent
+     * not cancellable
+     */
+    public void onDeath(DamageEvent event) {
+    
+    }
+    
+    /**
      * when the user launches a projectile (not a bow)
      * @param event
      */

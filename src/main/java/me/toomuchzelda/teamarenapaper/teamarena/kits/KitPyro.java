@@ -20,6 +20,7 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
@@ -40,12 +41,14 @@ public class KitPyro extends Kit
 		molotovMeta.displayName(Component.text("Incendiary Projectile").color(TextColor.color(255, 84, 10)));
 		MOLOTOV_ARROW.setItemMeta(molotovMeta);
 		
-		FIRE_ARROW = new ItemStack(Material.TIPPED_ARROW);
+		/*FIRE_ARROW = new ItemStack(Material.TIPPED_ARROW);
 		PotionMeta fireMeta = (PotionMeta) FIRE_ARROW.getItemMeta();
 		fireMeta.clearCustomEffects();
 		fireMeta.setColor(Color.fromRGB(255, 130, 77));
 		fireMeta.displayName(Component.text("Fire Arrow").color(TextColor.color(255, 130, 77)));
-		FIRE_ARROW.setItemMeta(fireMeta);
+		FIRE_ARROW.setItemMeta(fireMeta);*/
+		
+		FIRE_ARROW = new ItemStack(Material.ARROW);
 	}
 	
 	public KitPyro() {
@@ -68,8 +71,11 @@ public class KitPyro extends Kit
 		sword.addEnchantment(Enchantment.FIRE_ASPECT, 1);
 		
 		ItemStack bow = new ItemStack(Material.BOW);
+		ItemMeta bowMeta = bow.getItemMeta();
+		bowMeta.addEnchant(Enchantment.ARROW_FIRE, 1, true);
+		bow.setItemMeta(bowMeta);
 		
-		this.setItems(sword, bow, MOLOTOV_ARROW, FIRE_ARROW);
+		this.setItems(sword, bow, FIRE_ARROW, MOLOTOV_ARROW);
 		
 		this.setAbilities(new PyroAbility());
 	}
@@ -84,13 +90,15 @@ public class KitPyro extends Kit
 		
 		@Override
 		public void onShootBow(EntityShootBowEvent event) {
-			if(event.getConsumable().equals(FIRE_ARROW)) {
-				event.setConsumeItem(false);
-				event.getProjectile().setFireTicks(2000);
-			}
-			else if(event.getConsumable().equals(MOLOTOV_ARROW)) {
-				((AbstractArrow) event.getProjectile()).setBounce(true);
-				MOLOTOV_RECHARGES.put((Player) event.getEntity(), TeamArena.getGameTick());
+			if(event.getConsumable() != null) {
+				if (event.getConsumable().equals(FIRE_ARROW)) {
+					event.setConsumeItem(false);
+					event.getProjectile().setFireTicks(2000);
+				}
+				else if (event.getConsumable().equals(MOLOTOV_ARROW)) {
+					event.getProjectile().setFireTicks(0);
+					MOLOTOV_RECHARGES.put((Player) event.getEntity(), TeamArena.getGameTick());
+				}
 			}
 		}
 		
@@ -114,16 +122,17 @@ public class KitPyro extends Kit
 					minfo.arrow.remove();
 				}
 				else {
+					Color color = Main.getPlayerInfo(minfo.thrower).team.getColour();
 					for(int i = 0; i < 2; i++) {
 						Location randomLoc = minfo.box.getCenter().toLocation(minfo.thrower.getWorld());
 						
-						randomLoc.add(MathUtils.randomRange((double) -BOX_RADIUS, (double) BOX_RADIUS),
-								MathUtils.randomRange(-0.1, 0.5), MathUtils.randomRange((double) -BOX_RADIUS, (double) BOX_RADIUS));
+						randomLoc.add(MathUtils.randomRange(-BOX_RADIUS, BOX_RADIUS),
+								MathUtils.randomRange(-0.1, 0.5), MathUtils.randomRange(-BOX_RADIUS, BOX_RADIUS));
 						
 						randomLoc.getWorld().spawnParticle(Particle.FLAME,
 								randomLoc.getX(), randomLoc.getY(), randomLoc.getZ(), 1, 0, 0, 0, 0);
 						
-						ParticleUtils.colouredRedstone(randomLoc, Main.getPlayerInfo(minfo.thrower).team.getColour(), 1, 2);
+						ParticleUtils.colouredRedstone(randomLoc, color, 1, 2);
 					}
 					
 					for(LivingEntity living : minfo.thrower.getWorld().getLivingEntities()) {
@@ -168,7 +177,7 @@ public class KitPyro extends Kit
 						Location loc = event.getEntity().getLocation();
 						loc.setY(event.getHitBlock().getY() + 1); //set it to floor level of hit floor
 						Vector corner1 = loc.toVector().add(new Vector(BOX_RADIUS, -0.1, BOX_RADIUS));
-						Vector corner2 = loc.toVector().add(new Vector(-BOX_RADIUS, 0.5, -BOX_RADIUS));
+						Vector corner2 = loc.toVector().add(new Vector(-BOX_RADIUS, 0.6, -BOX_RADIUS));
 						
 						BoundingBox box = BoundingBox.of(corner1, corner2);
 						//shooter will always be a player because this method will only be called if the projectile of a pyro hits smth
@@ -224,6 +233,11 @@ public class KitPyro extends Kit
 					a.setVelocity(vel);
 				}
 			}
+		}
+		
+		@Override
+		public void onDeath(DamageEvent event) {
+			MOLOTOV_RECHARGES.remove(event.getPlayerVictim());
 		}
 	}
 	

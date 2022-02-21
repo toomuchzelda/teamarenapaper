@@ -81,7 +81,7 @@ public class PacketListeners
 		
 		//move the nametag armorstands with every player movement
 		// and disguises
-		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
+		/*ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.REL_ENTITY_MOVE,
 				PacketType.Play.Server.REL_ENTITY_MOVE_LOOK,
 				PacketType.Play.Server.ENTITY_TELEPORT)
@@ -116,9 +116,9 @@ public class PacketListeners
 
 						PlayerUtils.sendPacket(event.getPlayer(), movePacket);
 					}
-				}*/
+				}
 			}
-		});
+		});*/
 		
 		//despawn hologram clientside when player is despawned (moved out of render distance or other)
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
