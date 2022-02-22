@@ -40,19 +40,13 @@ public class DisguiseManager
 		addDisguise(toDisguise, disguise);
 		
 		for(Player viewer : disguise.viewers) {
-			//unregister the real player, remove them. register disguised one, add them
-			/*if(viewer.canSee(disguise.disguisedPlayer)) {
-				PlayerUtils.sendPacket(viewer, disguise.removeDisguisedPlayerPacket);
-				PlayerUtils.sendPacket(viewer, disguise.removePlayerInfoPacket, disguise.addDisguisedPlayerInfoPacket,
-						disguise.addTabListPlayerInfoPacket);
-				PlayerUtils.sendPacket(viewer, disguise.getSpawnDisguisedPlayerPacket());
-			}*/
-			//only spawn the fake player if viewer could currently see the real player
-			// else the packet listener for spawning the player will handle it
-			/*if(viewer.canSee(disguise.disguisedPlayer)) {
-				PlayerUtils.sendPacket(viewer, disguise.removeDisguisedPlayerPacket); //'hide' the real player
-				PlayerUtils.sendPacket(viewer, spawnPacket);
-			}*/
+			if(viewer.canSee(toDisguise)) {
+				viewer.hidePlayer(Main.getPlugin(), toDisguise); //packet listeners will handle the stuff
+				/*Bukkit.getScheduler().runTaskLater(Main.getPlugin(),
+						bukkitTask -> viewer.showPlayer(Main.getPlugin(), toDisguise), 1);*/
+				
+				viewer.showPlayer(Main.getPlugin(), toDisguise);
+			}
 		}
 	}
 	
@@ -64,21 +58,27 @@ public class DisguiseManager
 	
 	public static void removeDisguises(Player disguisedPlayer) {
 		Set<Disguise> set = PLAYER_ID_TO_DISGUISE_LOOKUP.get(disguisedPlayer.getEntityId());
-		set = new ObjectOpenHashSet<>(set);
-		for(Disguise disg : set) {
-			removeDisguise(disguisedPlayer.getEntityId(), disg);
+		var iter = set.iterator();
+		while(iter.hasNext()) {
+			Disguise disg = iter.next();
+			iter.remove();
+			for(Player viewer : disg.viewers) {
+				if(viewer.canSee(disg.disguisedPlayer)) {
+					viewer.hidePlayer(Main.getPlugin(), disg.disguisedPlayer);
+					viewer.showPlayer(Main.getPlugin(), disg.disguisedPlayer);
+				}
+			}
 		}
 	}
 	
 	public static void removeDisguise(int disguisedPlayer, Disguise disguise) {
+		Set<Disguise> set = PLAYER_ID_TO_DISGUISE_LOOKUP.get(disguisedPlayer);
+		set.remove(disguise);
 		for(Player viewer : disguise.viewers) {
-			/*if(viewer.canSee(disguise.disguisedPlayer)) {
-				PlayerUtils.sendPacket(viewer, disguise.removeDisguisedPlayerPacket);
-				PlayerUtils.sendPacket(viewer, disguise.removePlayerInfoPacket,
-						disguise.addRealPlayerInfoPacket, disguise.getSpawnDisguisedPlayerPacket());
-				//PlayerUtils.sendPacket(viewer, disguise.removePlayerPacket); should be removed already to get them off tab list
+			if(viewer.canSee(disguise.disguisedPlayer)) {
+				viewer.hidePlayer(Main.getPlugin(), disguise.disguisedPlayer);
+				viewer.showPlayer(Main.getPlugin(), disguise.disguisedPlayer);
 			}
-			PlayerUtils.sendPacket(viewer, disguise.removeTabListPlayerInfoPacket);*/
 		}
 	}
 	
@@ -155,7 +155,7 @@ public class DisguiseManager
 			PacketContainer fakeInfoPacket = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);
 			StructureModifier<Object> disguisedInfoModifier = fakeInfoPacket.getModifier();
 			ClientboundPlayerInfoPacket.PlayerUpdate fakePlayerUpdate = new ClientboundPlayerInfoPacket.PlayerUpdate(
-					disguisedGameProfile,  latency, GameType.SURVIVAL, PaperAdventure.asVanilla(toDisguiseAs.displayName()));
+					disguisedGameProfile,  latency, GameType.SURVIVAL, null);//PaperAdventure.asVanilla(toDisguiseAs.displayName()));
 			disguisedInfoModifier.write(0, ClientboundPlayerInfoPacket.Action.ADD_PLAYER);
 			disguisedInfoModifier.write(1, Collections.singletonList(fakePlayerUpdate));
 			addDisguisedPlayerInfoPacket = fakeInfoPacket;
@@ -185,7 +185,7 @@ public class DisguiseManager
 			
 			ClientboundPlayerInfoPacket.PlayerUpdate tabListUpdate =
 					new ClientboundPlayerInfoPacket.PlayerUpdate(tabListGameProfile, disguisedPlayer.getPing(),
-							GameType.SURVIVAL, null);
+							GameType.SURVIVAL, PaperAdventure.asVanilla(disguisedPlayer.displayName()));
 			
 			StructureModifier<Object> modifier3 = addTabListPlayerInfoPacket.getModifier();
 			modifier3.write(0, ClientboundPlayerInfoPacket.Action.ADD_PLAYER);

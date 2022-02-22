@@ -29,7 +29,7 @@ public class PacketListeners
 		//commented out as not using holograms (keeping in case future versions support more
 		// rgb stuff)
 		//Spawn player's nametag hologram whenever the player is spawned on a client
-		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
+		/*ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.NAMED_ENTITY_SPAWN) //packet for players coming in viewable range
 		{
 			@Override
@@ -75,44 +75,76 @@ public class PacketListeners
 					PlayerUtils.sendPacket(event.getPlayer(), spawnPacket, metaDataPacket);
 					
 					//Main.logger().info("Spawned hologram along with player");
-				}*/
+				}
 			}
-		});
+		});*/
 
 		//intercept player info packets and replace with disguise if needed
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin, PacketType.Play.Server.PLAYER_INFO) {
 			@Override
 			public void onPacketSending(PacketEvent event) {
 				ClientboundPlayerInfoPacket nmsPacket = (ClientboundPlayerInfoPacket) event.getPacket().getHandle();
-
-				if(nmsPacket.getAction() == ClientboundPlayerInfoPacket.Action.ADD_PLAYER) {
-					for(ClientboundPlayerInfoPacket.PlayerUpdate update : nmsPacket.getEntries()) {
+				
+				ClientboundPlayerInfoPacket.Action action = nmsPacket.getAction();
+				if(action == ClientboundPlayerInfoPacket.Action.ADD_PLAYER ||
+						action == ClientboundPlayerInfoPacket.Action.REMOVE_PLAYER) {
+					
+					//LinkedList<ClientboundPlayerInfoPacket.PlayerUpdate> clonedList = new LinkedList<>(nmsPacket.getEntries());
+					var iter = nmsPacket.getEntries().listIterator();//clonedList.listIterator(0);
+					while(iter.hasNext()) {
+						ClientboundPlayerInfoPacket.PlayerUpdate update = iter.next();
+						
 						GameProfile profile = update.getProfile();
 						Player player = Bukkit.getPlayer(profile.getId());
 
 						DisguiseManager.Disguise disguise = DisguiseManager.getDisguiseSeeing(player, event.getPlayer());
 						if(disguise != null) {
-							//event.setCancelled(true);
-							event.setPacket(disguise.addDisguisedPlayerInfoPacket); //set packet don't resend as resend schedules it for too late
-							Bukkit.broadcastMessage("sendingpackets to " + event.getPlayer().getName());
-							//PlayerUtils.sendPacket(event.getPlayer(), disguise.addDisguisedPlayerInfoPacket);
-							//Bukkit.broadcastMessage("sent packet 1");
-							PlayerUtils.sendPacket(event.getPlayer(), disguise.addTabListPlayerInfoPacket);
-							Bukkit.broadcastMessage("sent packet 2");
+							if(action == ClientboundPlayerInfoPacket.Action.ADD_PLAYER) {
+								
+								ClientboundPlayerInfoPacket.PlayerUpdate replacementUpdate =
+										new ClientboundPlayerInfoPacket.PlayerUpdate(disguise.disguisedGameProfile,
+												update.getLatency(), update.getGameMode(), update.getDisplayName());
+								
+								iter.set(replacementUpdate);
+								
+								ClientboundPlayerInfoPacket.PlayerUpdate tabListUpdate =
+										new ClientboundPlayerInfoPacket.PlayerUpdate(disguise.tabListGameProfile,
+												update.getLatency(), update.getGameMode(), update.getDisplayName());
+								
+								iter.add(tabListUpdate);
+							}
+							else {
+								
+								ClientboundPlayerInfoPacket.PlayerUpdate tabListUpdate =
+										new ClientboundPlayerInfoPacket.PlayerUpdate(disguise.tabListGameProfile,
+												update.getLatency(), update.getGameMode(), update.getDisplayName());
+								
+								iter.add(tabListUpdate);
+								Bukkit.broadcastMessage("added to remove");
+								
+								/*Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
+									//PlayerUtils.sendPacket(event.getPlayer(), disguise.removeDisguisedPlayerPacket);
+									PlayerUtils.sendPacket(event.getPlayer(), disguise.removeTabListPlayerInfoPacket);
+								});*/
+							}
 						}
 					}
 				}
-				else if(nmsPacket.getAction() == ClientboundPlayerInfoPacket.Action.REMOVE_PLAYER) {
+				/*else if(nmsPacket.getAction() == ClientboundPlayerInfoPacket.Action.REMOVE_PLAYER) {
 					for(ClientboundPlayerInfoPacket.PlayerUpdate update : nmsPacket.getEntries()) {
 						GameProfile profile = update.getProfile();
 						Player player = Bukkit.getPlayer(profile.getId());
-
+						
 						DisguiseManager.Disguise disguise = DisguiseManager.getDisguiseSeeing(player, event.getPlayer());
 						if(disguise != null) {
-							PlayerUtils.sendPacket(event.getPlayer(), disguise.removeTabListPlayerInfoPacket);
+							Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
+								//PlayerUtils.sendPacket(event.getPlayer(), disguise.removeDisguisedPlayerPacket);
+								PlayerUtils.sendPacket(event.getPlayer(), disguise.removeTabListPlayerInfoPacket);
+							});
+							
 						}
 					}
-				}
+				}*/
 			}
 		});
 		
