@@ -3,13 +3,13 @@ package me.toomuchzelda.teamarenapaper;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketAdapter;
-import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
-import com.comphenix.protocol.reflect.StructureModifier;
+import com.mojang.authlib.GameProfile;
 import it.unimi.dsi.fastutil.ints.IntList;
 import me.toomuchzelda.teamarenapaper.teamarena.DisguiseManager;
-import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoPacket;
+import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -35,16 +35,16 @@ public class PacketListeners
 			@Override
 			public void onPacketSending(PacketEvent event) {
 				
-				int id = event.getPacket().getIntegers().read(0);
+				/*int id = event.getPacket().getIntegers().read(0);
 				
 				//if the receiver of this packet is supposed to view a disguise instead of the actual player
 				DisguiseManager.Disguise disguise = DisguiseManager.getDisguiseSeeing(id, event.getPlayer());
 				if(disguise != null) {
-					event.getPacket().getIntegers().write(0, disguise.id);
-					event.getPacket().getUUIDs().write(0, disguise.uuid);
+					event.getPacket().getIntegers().write(0, disguise.tabListPlayerId);
+					event.getPacket().getUUIDs().write(0, disguise.tabListPlayerUuid);
 					//send player info first
-					PlayerUtils.sendPacket(event.getPlayer(), disguise.playerInfoPacket);
-				}
+					PlayerUtils.sendPacket(event.getPlayer(), disguise.addDisguisedPlayerInfoPacket);
+				}*/
 				
 				//old hologram nametags code
 				
@@ -76,6 +76,43 @@ public class PacketListeners
 					
 					//Main.logger().info("Spawned hologram along with player");
 				}*/
+			}
+		});
+
+		//intercept player info packets and replace with disguise if needed
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin, PacketType.Play.Server.PLAYER_INFO) {
+			@Override
+			public void onPacketSending(PacketEvent event) {
+				ClientboundPlayerInfoPacket nmsPacket = (ClientboundPlayerInfoPacket) event.getPacket().getHandle();
+
+				if(nmsPacket.getAction() == ClientboundPlayerInfoPacket.Action.ADD_PLAYER) {
+					for(ClientboundPlayerInfoPacket.PlayerUpdate update : nmsPacket.getEntries()) {
+						GameProfile profile = update.getProfile();
+						Player player = Bukkit.getPlayer(profile.getId());
+
+						DisguiseManager.Disguise disguise = DisguiseManager.getDisguiseSeeing(player, event.getPlayer());
+						if(disguise != null) {
+							//event.setCancelled(true);
+							event.setPacket(disguise.addDisguisedPlayerInfoPacket); //set packet don't resend as resend schedules it for too late
+							Bukkit.broadcastMessage("sendingpackets to " + event.getPlayer().getName());
+							//PlayerUtils.sendPacket(event.getPlayer(), disguise.addDisguisedPlayerInfoPacket);
+							//Bukkit.broadcastMessage("sent packet 1");
+							PlayerUtils.sendPacket(event.getPlayer(), disguise.addTabListPlayerInfoPacket);
+							Bukkit.broadcastMessage("sent packet 2");
+						}
+					}
+				}
+				else if(nmsPacket.getAction() == ClientboundPlayerInfoPacket.Action.REMOVE_PLAYER) {
+					for(ClientboundPlayerInfoPacket.PlayerUpdate update : nmsPacket.getEntries()) {
+						GameProfile profile = update.getProfile();
+						Player player = Bukkit.getPlayer(profile.getId());
+
+						DisguiseManager.Disguise disguise = DisguiseManager.getDisguiseSeeing(player, event.getPlayer());
+						if(disguise != null) {
+							PlayerUtils.sendPacket(event.getPlayer(), disguise.removeTabListPlayerInfoPacket);
+						}
+					}
+				}
 			}
 		});
 		
@@ -121,7 +158,7 @@ public class PacketListeners
 		});*/
 		
 		//despawn hologram clientside when player is despawned (moved out of render distance or other)
-		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
+		/*ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.ENTITY_DESTROY)
 		{
 			@Override
@@ -136,11 +173,11 @@ public class PacketListeners
 					if(removedPlayer != null) {
 						int armorStandId = Main.getPlayerInfo(removedPlayer).nametag.getId();
 						toAlsoRemove.add(armorStandId);
-					}*/
+					}
 					
 					DisguiseManager.Disguise disg = DisguiseManager.getDisguiseSeeing(i, event.getPlayer());
 					if(disg != null) {
-						toAlsoRemove.add(disg.id);
+						toAlsoRemove.add(disg.tabListPlayerId);
 					}
 				}
 				
@@ -151,7 +188,7 @@ public class PacketListeners
 					event.getPacket().getModifier().write(0, ids);
 				}
 			}
-		});
+		});*/
 		
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.NAMED_SOUND_EFFECT)
