@@ -33,7 +33,9 @@ public class CommandPreference extends CustomCommand {
 	}
 	
 	public CommandPreference() {
-		super("preference", "Change or view player preferences", "/preference [change/info] preference (your new setting if changing)", new LinkedList<>(), CustomCommand.ALL);
+		super("preference", "Change or view player preferences",
+				"/preference [change/info] preference (your new setting if changing)",
+				Collections.emptyList(), CustomCommand.ALL);
 	}
 
 	@Override
@@ -85,25 +87,25 @@ public class CommandPreference extends CustomCommand {
 	public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
 		if(sender instanceof Player) {
 			if(args.length == 1) {
-				return CustomCommand.doAutocomplete(TAB_SUGGESTIONS, args[0]);
+				return CustomCommand.filterCompletions(TAB_SUGGESTIONS, args[0]);
 			}
 			else if (args.length > 1 && args[0].equalsIgnoreCase("change")) {
 				Player p = (Player) sender;
 				if(args.length == 2)
-					return CustomCommand.doAutocomplete(new ArrayList<>(Preference.PREFERENCES.keySet()), args[1]);
+					return CustomCommand.filterCompletions(new ArrayList<>(Preference.PREFERENCES.keySet()), args[1]);
 				else {
 					Preference<?> pref = getPreference(p, args[1], false);
 					if(pref != null) {
 						// try listing possible values
 						Collection<?> values = pref.getValues();
 						if (values != null) {
-							return CustomCommand.doAutocomplete(pref.getTabSuggestions(), args[2]);
+							return CustomCommand.filterCompletions(pref.getTabSuggestions(), args[2]);
 						}
 					}
 				}
 			}
 			else if (args.length == 2 && args[0].equalsIgnoreCase("info")) {
-				return CustomCommand.doAutocomplete(new ArrayList<>(Preference.PREFERENCES.keySet()), args[1]);
+				return CustomCommand.filterCompletions(new ArrayList<>(Preference.PREFERENCES.keySet()), args[1]);
 			}
 		}
 		

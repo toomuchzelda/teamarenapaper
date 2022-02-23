@@ -4,14 +4,13 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
-import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -19,7 +18,7 @@ public class CommandTeam extends CustomCommand {
 
     public CommandTeam() {
         super("team", "Select team to play on", "\"/team\" to list teams, \"/team <team name>\" to pick that team.",
-                new LinkedList<String>(), CustomCommand.ALL);
+                Collections.emptyList(), CustomCommand.ALL);
     }
 
     @Override
@@ -70,7 +69,7 @@ public class CommandTeam extends CustomCommand {
                     newList.add(team);
             }
             return newList;*/
-            return CustomCommand.doAutocomplete(Main.getGame().getTabTeamsList(), args[0]);
+            return CustomCommand.filterCompletions(Main.getGame().getTabTeamsList(), args[0]);
         }
         
         return new LinkedList<>();

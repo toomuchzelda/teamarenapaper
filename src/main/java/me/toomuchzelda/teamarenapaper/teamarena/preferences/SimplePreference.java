@@ -34,8 +34,7 @@ public class SimplePreference<T> extends Preference<T> {
             for (T value : values) {
                 tabSugguestions.add(toStringFunction.apply(value));
             }
-        }
-        else {
+        } else {
             this.tabSugguestions = null;
         }
         this.toStringFunction = toStringFunction;

@@ -7,7 +7,6 @@ import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import me.toomuchzelda.teamarenapaper.core.ParticleUtils;
 import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
@@ -41,7 +40,7 @@ public class KitGhost extends Kit
 		
 		ItemStack pearls = new ItemStack(Material.ENDER_PEARL);
 		
-		setItems(new ItemStack[]{sword, new ItemStack(Material.AIR), pearls});
+		setItems(sword, new ItemStack(Material.AIR), pearls);
 		
 		setAbilities(new GhostAbility());
 	}

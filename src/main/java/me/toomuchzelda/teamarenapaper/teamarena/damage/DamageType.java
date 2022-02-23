@@ -4,7 +4,6 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.core.EntityUtils;
 import me.toomuchzelda.teamarenapaper.core.MathUtils;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.TextColor;
 import net.minecraft.world.damagesource.DamageSource;
@@ -15,9 +14,7 @@ import org.bukkit.event.entity.EntityDamageByBlockEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.regex.Pattern;
 
 //partially from RedWarfare's AttackType class - credit libraryaddict
 // https://github.com/libraryaddict/RedWarfare/blob/master/redwarfare-core/src/me/libraryaddict/core/damage/AttackType.java
@@ -225,7 +222,6 @@ public class DamageType {
             case DROWNING:
                 return DROWNED;
             case BLOCK_EXPLOSION:
-                return EXPLOSION;
             case ENTITY_EXPLOSION:
                 return EXPLOSION;
             case VOID:
@@ -267,32 +263,25 @@ public class DamageType {
         return getDeathMessage(color, EntityUtils.getName(victim), EntityUtils.getName(killer), EntityUtils.getName(cause));
     }
 
+    // precompile regular expressions
+    public static final Pattern KILLED_REGEX = Pattern.compile("%Killed%");
+    public static final Pattern KILLER_REGEX = Pattern.compile("%Killer%");
+    public static final Pattern CAUSE_REGEX = Pattern.compile("%Cause%");
     public Component getDeathMessage(TextColor color, Component victim, Component killer, Component cause) {
         String message = getDeathMessage();
 
         Component component = Component.text(message).color(color);
 
-        //sigh
         if(victim != null) {
-            final TextReplacementConfig victimConfig = TextReplacementConfig.builder().match("%Killed%").replacement(victim).build();
-            component = component.replaceText(victimConfig);
+            component = component.replaceText(TextReplacementConfig.builder().match(KILLED_REGEX).replacement(victim).build());
         }
         //%Cause% is never used, but eh
         if(cause != null) {
-            final TextReplacementConfig causeConfig = TextReplacementConfig.builder().match("%Cause%").replacement(cause).build();
-            component = component.replaceText(causeConfig);
+            component = component.replaceText(TextReplacementConfig.builder().match(CAUSE_REGEX).replacement(cause).build());
         }
         if(killer != null) {
-            final TextReplacementConfig killerConfig = TextReplacementConfig.builder().match("%Killer%").replacement(killer).build();
-            component = component.replaceText(killerConfig);
+            component = component.replaceText(TextReplacementConfig.builder().match(KILLER_REGEX).replacement(killer).build());
         }
-        
-        /*message = replace(message, "%Killed%", victim);
-        message = replace(message, "%Killed%", victim);
-        message = replace(message, "%Cause%", cause);
-        message = replace(message, "%Cause%", cause);
-        message = replace(message, "%Killer%", killer);
-        message = replace(message, "%Killer%", killer);*/
 
         return component;
     }

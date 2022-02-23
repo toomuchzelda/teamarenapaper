@@ -2,9 +2,7 @@ package me.toomuchzelda.teamarenapaper.core;
 
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Color;
-import org.bukkit.util.Vector;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.Random;
 
@@ -47,29 +45,15 @@ public class MathUtils
 	}
 	
 	public static int clamp(int min, int max, int value) {
-		if(value < min)
-			return min;
-		else if(value > max)
-			return max;
-		else
-			return value;
+		return Math.max(Math.min(value, max), min);
 	}
 	
 	public static double clamp(double min, double max, double value) {
-		if(value < min)
-			return min;
-		else if(value > max)
-			return max;
-		else
-			return value;
+		return Math.max(Math.min(value, max), min);
 	}
+
 	public static float clamp(float min, float max, float value) {
-		if(value < min)
-			return min;
-		else if(value > max)
-			return max;
-		else
-			return value;
+		return Math.max(Math.min(value, max), min);
 	}
 	
 	public static Color randomColor() {
@@ -91,13 +75,5 @@ public class MathUtils
 	public static double round(double value, int scale) {
 		return Math.round(value * Math.pow(10, scale)) / Math.pow(10, scale);
 	}
-	
-	/**
-	 * mostly for kit pyro, to multiply this against the arrow's momentum to slide along a wall
-	 * @param vector
-	 * @return
-	 */
-	public static Vector flipZerosAndOnes(Vector vector) {
-		return new Vector(1, 1, 1).subtract(vector);
-	}
+
 }

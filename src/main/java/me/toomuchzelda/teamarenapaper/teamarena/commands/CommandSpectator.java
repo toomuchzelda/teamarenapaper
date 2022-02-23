@@ -3,19 +3,18 @@ package me.toomuchzelda.teamarenapaper.teamarena.commands;
 import me.toomuchzelda.teamarenapaper.Main;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.LinkedList;
+import java.util.Collections;
 
 public class CommandSpectator extends CustomCommand {
 
     public CommandSpectator() {
         super("spectate", "Toggle participation or spectating of this game",
-                "\"/spectate\" to toggle whether you'll spectate for this game or play in it", new LinkedList<String>(),
-                CustomCommand.ALL);
+                "\"/spectate\" to toggle whether you'll spectate for this game or play in it",
+                Collections.emptyList(), CustomCommand.ALL);
     }
 
     @Override

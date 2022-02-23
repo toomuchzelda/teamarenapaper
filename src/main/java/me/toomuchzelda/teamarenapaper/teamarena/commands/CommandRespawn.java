@@ -7,13 +7,13 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.LinkedList;
+import java.util.Collections;
 
 public class CommandRespawn extends CustomCommand
 {
     public CommandRespawn() {
         super("respawn", "Respawn after waiting while dead", "\"respawn\" after waiting 5 seconds as a dead player to " +
-                "respawn", new LinkedList<String>(), CustomCommand.ALL);
+                "respawn", Collections.emptyList(), CustomCommand.ALL);
     }
 
     @Override

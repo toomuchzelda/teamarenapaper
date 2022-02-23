@@ -4,12 +4,11 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -17,7 +16,7 @@ public class CommandKit extends CustomCommand {
 
     public CommandKit() {
         super("kit", "Select or view kits", "\"/kit\" to view all kits, \"/kit <kit name>\" to select that kit.",
-                new LinkedList<String>(), CustomCommand.ALL);
+                Collections.emptyList(), CustomCommand.ALL);
     }
 
     @Override
@@ -58,7 +57,7 @@ public class CommandKit extends CustomCommand {
             //if they are waiting to respwan, interrupt their respawn timer
             Main.getGame().interruptRespawn(p);
             
-            return CustomCommand.doAutocomplete(Main.getGame().getTabKitList(), args[0]);
+            return CustomCommand.filterCompletions(Main.getGame().getTabKitList(), args[0]);
         }
         
         return new LinkedList<>();

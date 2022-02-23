@@ -5,9 +5,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 public class CustomCommand extends Command {
 
@@ -48,28 +46,24 @@ public class CustomCommand extends Command {
     
     @Override
     public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
-        return new LinkedList<>();
+        return Collections.emptyList();
     }
 
-    public static LinkedList<String> doAutocomplete(List<String> allArgs, String... args) {
-        StringBuilder sBuilder = new StringBuilder();
-        LinkedList<String> toReturn = new LinkedList<>();
-
-        //construct all the arguments into a single string
-        for (String arg : args) {
-            sBuilder.append(arg);
-        }
-
-        //todo: a system for commands that have multiple word arguments ie. /give player item amount etc
-        String s = sBuilder.toString();
-
-        for(String listArg : allArgs) {
-            if(listArg.toLowerCase().startsWith(s.toLowerCase())) {
-                toReturn.add(listArg);
+    public static List<String> filterCompletions(List<String> completions, String input) {
+        List<String> list = new ArrayList<>();
+        for (String completion : completions) {
+            if (completion.regionMatches(true, 0, input, 0, input.length())) {
+                list.add(completion);
             }
         }
+        return list;
+    }
 
-        return toReturn;
+    @Deprecated
+    public static List<String> filterCompletions(List<String> allArgs, String... args) {
+        //todo: a system for commands that have multiple word arguments ie. /give player item amount etc
+        // whatever that means
+        return Collections.emptyList();
     }
     
     public static CustomCommand getFromName(String name) {
