@@ -4,9 +4,11 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.events.ScheduledPacket;
 import com.mojang.authlib.GameProfile;
 import it.unimi.dsi.fastutil.ints.IntList;
 import me.toomuchzelda.teamarenapaper.teamarena.DisguiseManager;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoPacket;
 import org.bukkit.Bukkit;
@@ -29,22 +31,35 @@ public class PacketListeners
 		//commented out as not using holograms (keeping in case future versions support more
 		// rgb stuff)
 		//Spawn player's nametag hologram whenever the player is spawned on a client
-		/*ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.NAMED_ENTITY_SPAWN) //packet for players coming in viewable range
 		{
 			@Override
 			public void onPacketSending(PacketEvent event) {
 				
-				/*int id = event.getPacket().getIntegers().read(0);
+				int id = event.getPacket().getIntegers().read(0);
 				
 				//if the receiver of this packet is supposed to view a disguise instead of the actual player
+				// re-send the player info packet before spawning them into render distance as we removed it before,
+				// for the sake of not appearing in the tab list
 				DisguiseManager.Disguise disguise = DisguiseManager.getDisguiseSeeing(id, event.getPlayer());
-				if(disguise != null) {
-					event.getPacket().getIntegers().write(0, disguise.tabListPlayerId);
-					event.getPacket().getUUIDs().write(0, disguise.tabListPlayerUuid);
-					//send player info first
-					PlayerUtils.sendPacket(event.getPlayer(), disguise.addDisguisedPlayerInfoPacket);
-				}*/
+				if(disguise != null && disguise.viewers.get(event.getPlayer()) < TeamArena.getGameTick()) {
+					//order of packets is important
+					/*Player recipient = event.getPlayer();
+					event.schedule(ScheduledPacket.fromSilent(event.getPacket(), recipient));
+					event.setPacket(disguise.addDisguisedPlayerInfoPacket); //cancelling the event also cancels scheduled packets, so do this*/
+
+					//Bukkit.broadcastMessage("async event: " + event.isAsync());
+
+					Player player = event.getPlayer();
+					player.hidePlayer(Main.getPlugin(), disguise.disguisedPlayer); //just do this to handle the player infos stuff
+					player.showPlayer(Main.getPlugin(), disguise.disguisedPlayer); //also spawns them for us so we can cancel this event
+					event.setCancelled(true);
+
+					//event.schedule(ScheduledPacket.fromSilent(disguise.addDisguisedPlayerInfoPacket, recipient));
+
+					//event.schedule(ScheduledPacket.fromSilent(disguise.removePlayerInfoPacket, recipient));
+				}
 				
 				//old hologram nametags code
 				
@@ -75,9 +90,9 @@ public class PacketListeners
 					PlayerUtils.sendPacket(event.getPlayer(), spawnPacket, metaDataPacket);
 					
 					//Main.logger().info("Spawned hologram along with player");
-				}
+				}*/
 			}
-		});*/
+		});
 
 		//intercept player info packets and replace with disguise if needed
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin, PacketType.Play.Server.PLAYER_INFO) {
@@ -110,8 +125,15 @@ public class PacketListeners
 								ClientboundPlayerInfoPacket.PlayerUpdate tabListUpdate =
 										new ClientboundPlayerInfoPacket.PlayerUpdate(disguise.tabListGameProfile,
 												update.getLatency(), update.getGameMode(), update.getDisplayName());
-								
+
+								//i think this will run after this packet listener
+								// remove the player info of the disguised player so they don't appear in tab list
+								Bukkit.getScheduler().runTaskLater(Main.getPlugin(),
+										() -> PlayerUtils.sendPacket(event.getPlayer(), disguise.removePlayerInfoPacket), 0);
+
 								iter.add(tabListUpdate);
+
+								disguise.viewers.put(event.getPlayer(), TeamArena.getGameTick());
 							}
 							else {
 								
@@ -120,8 +142,7 @@ public class PacketListeners
 												update.getLatency(), update.getGameMode(), update.getDisplayName());
 								
 								iter.add(tabListUpdate);
-								Bukkit.broadcastMessage("added to remove");
-								
+
 								/*Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
 									//PlayerUtils.sendPacket(event.getPlayer(), disguise.removeDisguisedPlayerPacket);
 									PlayerUtils.sendPacket(event.getPlayer(), disguise.removeTabListPlayerInfoPacket);

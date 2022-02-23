@@ -8,6 +8,7 @@ import io.papermc.paper.adventure.PaperAdventure;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
@@ -35,16 +36,18 @@ public class DisguiseManager
 	
 	public static void createDisguise(Player toDisguise, Player toDisguiseAs, Collection<Player> viewers) {
 		Disguise disguise = new Disguise(toDisguise, viewers, toDisguiseAs);
-		
+
+		for(Player viewer : disguise.viewers.keySet()) {
+			if(viewer.canSee(toDisguise)) {
+				viewer.hidePlayer(Main.getPlugin(), toDisguise);
+			}
+		}
+
 		FAKE_ID_TO_DISGUISE_LOOKUP.put(disguise.tabListPlayerId, disguise);
 		addDisguise(toDisguise, disguise);
 		
-		for(Player viewer : disguise.viewers) {
+		for(Player viewer : disguise.viewers.keySet()) {
 			if(viewer.canSee(toDisguise)) {
-				viewer.hidePlayer(Main.getPlugin(), toDisguise); //packet listeners will handle the stuff
-				/*Bukkit.getScheduler().runTaskLater(Main.getPlugin(),
-						bukkitTask -> viewer.showPlayer(Main.getPlugin(), toDisguise), 1);*/
-				
 				viewer.showPlayer(Main.getPlugin(), toDisguise);
 			}
 		}
@@ -61,10 +64,19 @@ public class DisguiseManager
 		var iter = set.iterator();
 		while(iter.hasNext()) {
 			Disguise disg = iter.next();
-			iter.remove();
-			for(Player viewer : disg.viewers) {
+
+			for(Player viewer : disg.viewers.keySet()) {
 				if(viewer.canSee(disg.disguisedPlayer)) {
 					viewer.hidePlayer(Main.getPlugin(), disg.disguisedPlayer);
+			//		viewer.showPlayer(Main.getPlugin(), disg.disguisedPlayer);
+				}
+			}
+
+			iter.remove();
+
+			for(Player viewer : disg.viewers.keySet()) {
+				if(viewer.canSee(disg.disguisedPlayer)) {
+			//		viewer.hidePlayer(Main.getPlugin(), disg.disguisedPlayer);
 					viewer.showPlayer(Main.getPlugin(), disg.disguisedPlayer);
 				}
 			}
@@ -74,7 +86,7 @@ public class DisguiseManager
 	public static void removeDisguise(int disguisedPlayer, Disguise disguise) {
 		Set<Disguise> set = PLAYER_ID_TO_DISGUISE_LOOKUP.get(disguisedPlayer);
 		set.remove(disguise);
-		for(Player viewer : disguise.viewers) {
+		for(Player viewer : disguise.viewers.keySet()) {
 			if(viewer.canSee(disguise.disguisedPlayer)) {
 				viewer.hidePlayer(Main.getPlugin(), disguise.disguisedPlayer);
 				viewer.showPlayer(Main.getPlugin(), disguise.disguisedPlayer);
@@ -100,7 +112,7 @@ public class DisguiseManager
 		Set<Disguise> disguises = PLAYER_ID_TO_DISGUISE_LOOKUP.get(disguisedPlayer);
 		if(disguises != null) {
 			for (Disguise d : disguises) {
-				if (d.viewers.contains(viewer)) {
+				if (d.viewers.keySet().contains(viewer)) {
 					toReturn = d;
 					break;
 				}
@@ -126,7 +138,7 @@ public class DisguiseManager
 		public UUID tabListPlayerUuid;
 		public GameProfile disguisedGameProfile;
 		public GameProfile tabListGameProfile;
-		public Set<Player> viewers;
+		public Map<Player, Integer> viewers;
 		
 		//remove and spawn disguise can be used for real player too
 		public ClientboundRemoveEntitiesPacket removeDisguisedPlayerPacket;
@@ -144,7 +156,11 @@ public class DisguiseManager
 			this.disguisedPlayer = player;
 			this.tabListPlayerId = Bukkit.getUnsafe().nextEntityId();
 			this.tabListPlayerUuid = UUID.randomUUID();
-			this.viewers = new ObjectOpenHashSet<>(viewers);
+			this.viewers = new Object2IntOpenHashMap<>(viewers.size());
+
+			for(Player viewer : viewers) {
+				this.viewers.put(viewer, 0);
+			}
 			
 			GameProfile disguiseAs = ((CraftPlayer) toDisguiseAs).getHandle().getGameProfile();
 			this.disguisedGameProfile = new GameProfile(disguisedPlayer.getUniqueId(), disguiseAs.getName());
