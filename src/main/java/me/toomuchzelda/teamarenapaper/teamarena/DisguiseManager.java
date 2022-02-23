@@ -8,6 +8,7 @@ import io.papermc.paper.adventure.PaperAdventure;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2BooleanOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import me.toomuchzelda.teamarenapaper.Main;
@@ -37,19 +38,20 @@ public class DisguiseManager
 	public static void createDisguise(Player toDisguise, Player toDisguiseAs, Collection<Player> viewers) {
 		Disguise disguise = new Disguise(toDisguise, viewers, toDisguiseAs);
 
+		//keep track of viewers that had the player registered so as to not reveal to anyone that had them hidden
+		List<Player> couldSee = new ArrayList<>(viewers.size());
+
 		for(Player viewer : disguise.viewers.keySet()) {
 			if(viewer.canSee(toDisguise)) {
 				viewer.hidePlayer(Main.getPlugin(), toDisguise);
+				couldSee.add(viewer);
 			}
 		}
 
-		FAKE_ID_TO_DISGUISE_LOOKUP.put(disguise.tabListPlayerId, disguise);
 		addDisguise(toDisguise, disguise);
 		
-		for(Player viewer : disguise.viewers.keySet()) {
-			if(viewer.canSee(toDisguise)) {
-				viewer.showPlayer(Main.getPlugin(), toDisguise);
-			}
+		for(Player viewer : couldSee) {
+			viewer.showPlayer(Main.getPlugin(), toDisguise);
 		}
 	}
 	
@@ -85,10 +87,18 @@ public class DisguiseManager
 	
 	public static void removeDisguise(int disguisedPlayer, Disguise disguise) {
 		Set<Disguise> set = PLAYER_ID_TO_DISGUISE_LOOKUP.get(disguisedPlayer);
-		set.remove(disguise);
 		for(Player viewer : disguise.viewers.keySet()) {
 			if(viewer.canSee(disguise.disguisedPlayer)) {
 				viewer.hidePlayer(Main.getPlugin(), disguise.disguisedPlayer);
+				//viewer.showPlayer(Main.getPlugin(), disguise.disguisedPlayer);
+			}
+		}
+
+		set.remove(disguise);
+
+		for(Player viewer : disguise.viewers.keySet()) {
+			if(viewer.canSee(disguise.disguisedPlayer)) {
+				//viewer.hidePlayer(Main.getPlugin(), disguise.disguisedPlayer);
 				viewer.showPlayer(Main.getPlugin(), disguise.disguisedPlayer);
 			}
 		}

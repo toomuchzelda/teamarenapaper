@@ -33,7 +33,6 @@ public class KitSpy extends Kit
 		@Override
 		public void giveAbility(Player player) {
 			//for each team show a different disguise
-			
 			TeamArenaTeam[] teams = Main.getGame().getTeams();
 			TeamArenaTeam ownTeam = Main.getPlayerInfo(player).team;
 			for(TeamArenaTeam team : teams) {
