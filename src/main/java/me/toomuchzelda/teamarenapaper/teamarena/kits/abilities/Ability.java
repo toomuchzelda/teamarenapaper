@@ -61,9 +61,15 @@ public abstract class Ability {
      * not cancellable
      */
     public void onDeath(DamageEvent event) {
-    
     }
-    
+
+    /**
+     * when the user gets a kill
+     * not cancellable
+     */
+    public void onKill(DamageEvent event) {
+    }
+
     /**
      * when the user launches a projectile (not a bow)
      * @param event
@@ -85,7 +91,7 @@ public abstract class Ability {
     }
     
     /**
-     * run every tick for an individual player
+     * run every tick for an individual ability user
      */
     public void onPlayerTick(Player player) {
     }
