@@ -1,4 +1,4 @@
-package me.toomuchzelda.teamarenapaper.core;
+package me.toomuchzelda.teamarenapaper.utils;
 
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.SwordItem;

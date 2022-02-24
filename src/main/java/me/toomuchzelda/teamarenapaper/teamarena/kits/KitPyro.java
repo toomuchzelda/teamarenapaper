@@ -2,9 +2,9 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.core.ItemUtils;
-import me.toomuchzelda.teamarenapaper.core.MathUtils;
-import me.toomuchzelda.teamarenapaper.core.ParticleUtils;
+import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
@@ -23,6 +23,7 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
@@ -45,12 +46,14 @@ public class KitPyro extends Kit
 		molotovMeta.displayName(Component.text("Incendiary Projectile").color(TextColor.color(255, 84, 10)));
 		MOLOTOV_ARROW.setItemMeta(molotovMeta);
 		
-		FIRE_ARROW = new ItemStack(Material.TIPPED_ARROW);
+		/*FIRE_ARROW = new ItemStack(Material.TIPPED_ARROW);
 		PotionMeta fireMeta = (PotionMeta) FIRE_ARROW.getItemMeta();
 		fireMeta.clearCustomEffects();
 		fireMeta.setColor(Color.fromRGB(255, 130, 77));
 		fireMeta.displayName(Component.text("Fire Arrow").color(TextColor.color(255, 130, 77)));
-		FIRE_ARROW.setItemMeta(fireMeta);
+		FIRE_ARROW.setItemMeta(fireMeta);*/
+
+		FIRE_ARROW = new ItemStack(Material.ARROW);
 	}
 	
 	public KitPyro() {
@@ -73,8 +76,11 @@ public class KitPyro extends Kit
 		sword.addEnchantment(Enchantment.FIRE_ASPECT, 1);
 		
 		ItemStack bow = new ItemStack(Material.BOW);
-		
-		this.setItems(sword, bow, MOLOTOV_ARROW, FIRE_ARROW);
+		ItemMeta bowMeta = bow.getItemMeta();
+		bowMeta.addEnchant(Enchantment.ARROW_FIRE, 1, true);
+		bow.setItemMeta(bowMeta);
+
+		this.setItems(sword, bow, FIRE_ARROW, MOLOTOV_ARROW);
 		
 		this.setAbilities(new PyroAbility());
 	}
@@ -89,28 +95,30 @@ public class KitPyro extends Kit
 		
 		@Override
 		public void onShootBow(EntityShootBowEvent event) {
-			if(FIRE_ARROW.equals(event.getConsumable())) {
-				event.setConsumeItem(false);
-				event.getProjectile().setFireTicks(2000);
-			} else if(MOLOTOV_ARROW.equals(event.getConsumable())) {
-				MOLOTOV_RECHARGES.put((Player) event.getEntity(), TeamArena.getGameTick());
-			}
+				if (FIRE_ARROW.equals(event.getConsumable())) {
+					event.setConsumeItem(false);
+					event.getProjectile().setFireTicks(2000);
+				}
+				else if (MOLOTOV_ARROW.equals(event.getConsumable())) {
+					event.getProjectile().setFireTicks(0);
+					MOLOTOV_RECHARGES.put((Player) event.getEntity(), TeamArena.getGameTick());
+				}
 		}
 		
 		@Override
 		public void onTick() {
 			int currentTick = TeamArena.getGameTick();
 			var itemIter = MOLOTOV_RECHARGES.entrySet().iterator();
-			while (itemIter.hasNext()) {
+			while(itemIter.hasNext()) {
 				Map.Entry<Player, Integer> entry = itemIter.next();
 				if (currentTick - entry.getValue() >= MOLOTOV_RECHARGE_TIME) {
 					entry.getKey().getInventory().addItem(MOLOTOV_ARROW);
 					itemIter.remove();
 				}
 			}
-
+			
 			var iter = ACTIVE_MOLOTOVS.iterator();
-			while (iter.hasNext()) {
+			while(iter.hasNext()) {
 				MolotovInfo minfo = iter.next();
 				if (currentTick - minfo.spawnTime >= MOLOTOV_ACTIVE_TIME) {
 					minfo.arrow.remove();
@@ -226,6 +234,11 @@ public class KitPyro extends Kit
 					a.setVelocity(vel);
 				}
 			}
+		}
+
+		@Override
+		public void onDeath(DamageEvent event) {
+			MOLOTOV_RECHARGES.remove(event.getPlayerVictim());
 		}
 	}
 

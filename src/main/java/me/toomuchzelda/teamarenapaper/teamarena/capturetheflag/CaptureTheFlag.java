@@ -1,9 +1,9 @@
 package me.toomuchzelda.teamarenapaper.teamarena.capturetheflag;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.core.BlockUtils;
-import me.toomuchzelda.teamarenapaper.core.ItemUtils;
-import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
+import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;

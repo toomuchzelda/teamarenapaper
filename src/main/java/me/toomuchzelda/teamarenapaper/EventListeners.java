@@ -2,13 +2,12 @@ package me.toomuchzelda.teamarenapaper;
 
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
-import com.destroystokyo.paper.event.server.AsyncTabCompleteEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
-import me.toomuchzelda.teamarenapaper.core.MathUtils;
-import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
@@ -89,7 +88,7 @@ public class EventListeners implements Listener
 				}
 			}
 			DamageTimes.cleanup();
-			Main.playerIdLookup.entrySet().removeIf(idLookupEntry -> !idLookupEntry.getValue().isOnline());
+			Main.playerIdLookup.int2ObjectEntrySet().removeIf(idLookupEntry -> !idLookupEntry.getValue().isOnline());
 			
 			if(MathUtils.random.nextBoolean()) {//MathUtils.randomMax(3) < 3) {
 				TeamArena.nextGameType = GameType.KOTH;

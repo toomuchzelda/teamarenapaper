@@ -1,7 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.core.*;
+import me.toomuchzelda.teamarenapaper.utils.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
@@ -11,7 +11,6 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
-import net.minecraft.server.players.PlayerList;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
@@ -220,7 +219,8 @@ public abstract class TeamArena
 		respawnItem.setItemMeta(respawnItemMeta);
 		
 		kits = new Kit[]{new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
-				/*new KitReach(this),*/new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitNone()};
+				/*new KitReach(this),*/new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(),
+				new KitNone()};
 		tabKitList = new ArrayList<>(kits.length);
 		for(Kit kit : kits) {
 			for(Ability ability : kit.getAbilities()) {
@@ -1024,6 +1024,8 @@ public abstract class TeamArena
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
 		player.teleport(pinfo.team.getNextSpawnpoint());
 		pinfo.kit.giveKit(player, true, pinfo);
+		pinfo.kills = 0;
+		PlayerListScoreManager.setKills(player, 0);
 
 		//do this one (two?) tick later
 		// when revealing first then teleporting, the clients interpolate the super fast teleport movement, so players
@@ -1047,9 +1049,10 @@ public abstract class TeamArena
 
 			//setSpectator(p, true, false);
 			PlayerInfo pinfo = Main.getPlayerInfo(p);
+			for(Ability a : pinfo.activeKit.getAbilities()) {
+				a.onDeath(event);
+			}
 			pinfo.activeKit.removeKit(p, pinfo);
-			pinfo.kills = 0;
-			PlayerListScoreManager.setKills(p, 0);
 
 			PlayerUtils.resetState(p);
 
@@ -1074,6 +1077,11 @@ public abstract class TeamArena
 				if(dTimes.lastDamager instanceof Player finalAttacker)
 					killer = finalAttacker;
 			}
+
+			for(Ability a : Kit.getAbilities(killer)) {
+				a.onKill(event);
+			}
+
 			attributeKillAndAssists(pinfo, killer);
 			
 			//clear attack givers so they don't get falsely attributed on this next player's death

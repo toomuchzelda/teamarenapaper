@@ -1,8 +1,8 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.core.EntityUtils;
-import me.toomuchzelda.teamarenapaper.core.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.TextColor;
@@ -142,7 +142,7 @@ public class DamageType {
      *                                  KIT DAMAGETYPES
      ******************************************************************************************/
     
-    public static final DamageType PYRO_MOLOTOV = new DamageType(DamageTypeEnum.PYRO_MOLOTOV, "Pyro Incendiary", "%Killed% thought %Killer%'s fire was a safe place to stand")
+    public static final DamageType PYRO_MOLOTOV = new DamageType(DamageTypeEnum.PYRO_MOLOTOV, "Pyro Incendiary", "%Killed% was burned to death by %Killer%'s incendiary")
             .setFire().setIgnoreArmor().setNoKnockback().setDamageSource(DamageSource.ON_FIRE);
 
     //a constant identifier for same types, to compare for same types across separate instances of this class
