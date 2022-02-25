@@ -39,7 +39,7 @@ public class DisguiseManager
 		Disguise disguise = new Disguise(toDisguise, viewers, toDisguiseAs);
 
 		//keep track of viewers that had the player registered so as to not reveal to anyone that had them hidden
-		List<Player> couldSee = new ArrayList<>(viewers.size());
+		List<Player> couldSee = new LinkedList<>();
 
 		for(Player viewer : disguise.viewers.keySet()) {
 			if(viewer.canSee(toDisguise)) {
@@ -67,40 +67,40 @@ public class DisguiseManager
 		while(iter.hasNext()) {
 			Disguise disg = iter.next();
 
+			List<Player> couldSee = new LinkedList<>();
+
 			for(Player viewer : disg.viewers.keySet()) {
 				if(viewer.canSee(disg.disguisedPlayer)) {
 					viewer.hidePlayer(Main.getPlugin(), disg.disguisedPlayer);
-			//		viewer.showPlayer(Main.getPlugin(), disg.disguisedPlayer);
+					couldSee.add(viewer);
 				}
 			}
 
 			iter.remove();
 
-			for(Player viewer : disg.viewers.keySet()) {
-				if(viewer.canSee(disg.disguisedPlayer)) {
-			//		viewer.hidePlayer(Main.getPlugin(), disg.disguisedPlayer);
-					viewer.showPlayer(Main.getPlugin(), disg.disguisedPlayer);
-				}
+			for(Player viewer : couldSee) {
+				viewer.showPlayer(Main.getPlugin(), disg.disguisedPlayer);
 			}
 		}
 	}
-	
+
+
+	//TODO: fix
 	public static void removeDisguise(int disguisedPlayer, Disguise disguise) {
 		Set<Disguise> set = PLAYER_ID_TO_DISGUISE_LOOKUP.get(disguisedPlayer);
+
+		List<Player> couldSee = new LinkedList<>();
 		for(Player viewer : disguise.viewers.keySet()) {
 			if(viewer.canSee(disguise.disguisedPlayer)) {
 				viewer.hidePlayer(Main.getPlugin(), disguise.disguisedPlayer);
-				//viewer.showPlayer(Main.getPlugin(), disguise.disguisedPlayer);
+				couldSee.add(viewer);
 			}
 		}
 
 		set.remove(disguise);
 
-		for(Player viewer : disguise.viewers.keySet()) {
-			if(viewer.canSee(disguise.disguisedPlayer)) {
-				//viewer.hidePlayer(Main.getPlugin(), disguise.disguisedPlayer);
-				viewer.showPlayer(Main.getPlugin(), disguise.disguisedPlayer);
-			}
+		for(Player viewer : couldSee) {
+			viewer.showPlayer(Main.getPlugin(), disguise.disguisedPlayer);
 		}
 	}
 	
