@@ -5,14 +5,7 @@ import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
 import com.mojang.authlib.GameProfile;
 import io.papermc.paper.adventure.PaperAdventure;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.objects.Object2BooleanOpenHashMap;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoPacket;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import net.minecraft.server.level.ServerPlayer;
@@ -31,8 +24,8 @@ import java.util.*;
 public class DisguiseManager
 {
 	//get the real player from disguise's entity id
-	private static final Int2ObjectMap<Disguise> FAKE_ID_TO_DISGUISE_LOOKUP = Int2ObjectMaps.synchronize(new Int2ObjectOpenHashMap<>(2000));
-	private static final Int2ObjectMap<ObjectOpenHashSet<Disguise>> PLAYER_ID_TO_DISGUISE_LOOKUP = Int2ObjectMaps.synchronize(new Int2ObjectOpenHashMap<>(2000));
+	//private static final Map<Integer, Disguise> FAKE_ID_TO_DISGUISE_LOOKUP = Collections.synchronizedMap(new HashMap<>());
+	private static final Map<Integer, Set<Disguise>> PLAYER_ID_TO_DISGUISE_LOOKUP = Collections.synchronizedMap(new HashMap<>());
 	
 	
 	public static void createDisguise(Player toDisguise, Player toDisguiseAs, Collection<Player> viewers) {
@@ -57,7 +50,7 @@ public class DisguiseManager
 	
 	private static void addDisguise(Player player, Disguise disguise) {
 		Set<Disguise> set = PLAYER_ID_TO_DISGUISE_LOOKUP.computeIfAbsent(player.getEntityId(), value ->
-				new ObjectOpenHashSet<>());
+				new HashSet<>());
 		set.add(disguise);
 	}
 	
@@ -104,9 +97,9 @@ public class DisguiseManager
 		}
 	}
 	
-	public static Disguise getById(int id) {
+	/*public static Disguise getById(int id) {
 		return FAKE_ID_TO_DISGUISE_LOOKUP.get(id);
-	}
+	}*/
 
 	public static Disguise getDisguiseSeeing(Player disguisedPlayer, Player viewer) {
 		return getDisguiseSeeing(disguisedPlayer.getEntityId(), viewer);
@@ -122,7 +115,7 @@ public class DisguiseManager
 		Set<Disguise> disguises = PLAYER_ID_TO_DISGUISE_LOOKUP.get(disguisedPlayer);
 		if(disguises != null) {
 			for (Disguise d : disguises) {
-				if (d.viewers.keySet().contains(viewer)) {
+				if (d.viewers.containsKey(viewer)) {
 					toReturn = d;
 					break;
 				}
@@ -166,7 +159,7 @@ public class DisguiseManager
 			this.disguisedPlayer = player;
 			this.tabListPlayerId = Bukkit.getUnsafe().nextEntityId();
 			this.tabListPlayerUuid = UUID.randomUUID();
-			this.viewers = new Object2IntOpenHashMap<>(viewers.size());
+			this.viewers = new HashMap<>(viewers.size());
 
 			for(Player viewer : viewers) {
 				this.viewers.put(viewer, 0);
