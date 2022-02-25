@@ -1078,8 +1078,10 @@ public abstract class TeamArena
 					killer = finalAttacker;
 			}
 
-			for(Ability a : Kit.getAbilities(killer)) {
-				a.onKill(event);
+			if(killer != null) {
+				for (Ability a : Kit.getAbilities(killer)) {
+					a.onKill(event);
+				}
 			}
 
 			attributeKillAndAssists(pinfo, killer);

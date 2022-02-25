@@ -26,8 +26,7 @@ public class DisguiseManager
 	//get the real player from disguise's entity id
 	//private static final Map<Integer, Disguise> FAKE_ID_TO_DISGUISE_LOOKUP = Collections.synchronizedMap(new HashMap<>());
 	private static final Map<Integer, Set<Disguise>> PLAYER_ID_TO_DISGUISE_LOOKUP = Collections.synchronizedMap(new HashMap<>());
-	
-	
+
 	public static void createDisguise(Player toDisguise, Player toDisguiseAs, Collection<Player> viewers) {
 		Disguise disguise = new Disguise(toDisguise, viewers, toDisguiseAs);
 

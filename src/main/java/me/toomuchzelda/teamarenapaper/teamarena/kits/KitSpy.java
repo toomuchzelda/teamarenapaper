@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
-import com.mojang.authlib.GameProfile;
+import me.libraryaddict.core.inventory.PageInventory;
+import me.libraryaddict.core.inventory.utils.IButton;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.DisguiseManager;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
@@ -9,15 +10,19 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.Pair;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
-import org.bukkit.craftbukkit.v1_18_R1.entity.CraftPlayer;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.Collections;
+import java.util.ArrayList;
 
 public class KitSpy extends Kit
 {
@@ -76,7 +81,7 @@ public class KitSpy extends Kit
 
 					PlayerInfo pinfo = Main.getPlayerInfo(player);
 
-
+					new SpyInventory(player).openInventory();
 
 					if(pinfo.getPreference(Preferences.KIT_ACTION_BAR)) {
 
@@ -85,10 +90,45 @@ public class KitSpy extends Kit
 					for(int i = 0; i < 3; i++) {
 						Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () ->
 								player.playSound(player.getLocation(), Sound.ITEM_AXE_STRIP, SoundCategory.PLAYERS,
-								2f, 0f), i * 15);
+								3f, 0f), i * 15);
 					}
 			}
 			player.setExp(newExp);
+		}
+	}
+
+	public static class SpyInventory extends PageInventory
+	{
+
+		public SpyInventory(Player player) {
+			super(player, "Spy Inventory");
+
+			ItemStack clickable = new ItemStack(Material.CHAIN);
+			ItemMeta meta = clickable.getItemMeta();
+			meta.displayName(Component.text("click Me!").color(TextColor.color(123, 231, 50)));
+			clickable.setItemMeta(meta);
+
+			IButton button = new IButton() {
+				@Override
+				public boolean onClick(ClickType clickType) {
+					if(clickType.isLeftClick()) {
+						player.sendMessage("You've clicked me!");
+						closeInventory();
+						return true;
+					}
+					else {
+						player.sendMessage("Criminal right clicker!");
+						closeInventory();
+						return false;
+					}
+				}
+			};
+
+			ArrayList<Pair<ItemStack, IButton>> list = new ArrayList<>();
+
+			list.add(new Pair<>(clickable, button));
+
+			setPages(list);
 		}
 	}
 }

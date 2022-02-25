@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import me.libraryaddict.core.inventory.InventoryManager;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.FileUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
@@ -28,6 +29,7 @@ public final class Main extends JavaPlugin
 	private static TeamArena teamArena;
 	private static EventListeners eventListeners;
 	private static PacketListeners packetListeners;
+	private static InventoryManager inventoryManager;
 	private static Logger logger;
 
 	private static JavaPlugin plugin;
@@ -69,6 +71,7 @@ public final class Main extends JavaPlugin
 		
 		eventListeners = new EventListeners(this);
 		packetListeners = new PacketListeners(this);
+		inventoryManager = new InventoryManager(this);
 		
 		teamArena = new CaptureTheFlag(); //new KingOfTheHill();
 
