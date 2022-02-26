@@ -6,16 +6,16 @@ import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
-import org.bukkit.Color;
-import org.bukkit.DyeColor;
-import org.bukkit.FireworkEffect;
-import org.bukkit.Location;
+import net.kyori.adventure.text.format.TextDecoration;
+import org.bukkit.*;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
 
@@ -41,6 +41,9 @@ public class TeamArenaTeam
 	//BossBars are sent in prepLive() of each game class extending TeamArena
 	private final BossBar.Color barColor;
 	public final BossBar bossBar;
+	
+	public final Material iconMaterial;
+	private final ItemStack iconItem;
 
 	//paper good spigot bad
 	private Team paperTeam;
@@ -59,7 +62,8 @@ public class TeamArenaTeam
 	public int score;
 	public int score2;
 
-	public TeamArenaTeam(String name, String simpleName, Color colour, Color secondColour, DyeColor dyeColor, BossBar.Color barColor) {
+	public TeamArenaTeam(String name, String simpleName, Color colour, Color secondColour, DyeColor dyeColor,
+						 BossBar.Color barColor, Material icon) {
 		this.name = name;
 		this.simpleName = simpleName;
 		this.colour = colour;
@@ -84,10 +88,16 @@ public class TeamArenaTeam
 		}
 		else
 			bossBar = null;
+		
+		this.iconMaterial = icon;
+		this.iconItem = new ItemStack(iconMaterial);
+		ItemMeta meta = iconItem.getItemMeta();
+		meta.displayName(componentName.decoration(TextDecoration.ITALIC, false));
+		iconItem.setItemMeta(meta);
 
 		paperTeam = SidebarManager.SCOREBOARD.registerNewTeam(name);
 		paperTeam.displayName(componentName);
-		//paperTeam.prefix(componentSimpleName);
+		//paperTeam.prefix(componentSimpleName.decorate(TextDecoration.BOLD));
 		paperTeam.setAllowFriendlyFire(true);
 		paperTeam.setCanSeeFriendlyInvisibles(true);
 		paperTeam.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
@@ -139,6 +149,10 @@ public class TeamArenaTeam
 
 	public TextColor getRGBTextColor() {
 		return RGBColour;
+	}
+	
+	public ItemStack getIconItem() {
+		return this.iconItem.clone();
 	}
 
 	public static Color convert(NamedTextColor textColor) {

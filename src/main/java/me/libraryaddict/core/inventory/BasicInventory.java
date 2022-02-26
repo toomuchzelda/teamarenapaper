@@ -71,7 +71,8 @@ public abstract class BasicInventory implements InventoryHolder, Listener {
     }
 
     public void closeInventory(boolean forceClose) {
-        HandlerList.unregisterAll(this);
+        //HandlerList.unregisterAll(this);
+        InventoryManager.Manager.unregisterInventory(this);
 
         if (forceClose && isInventory(getPlayer())) {
             getPlayer().closeInventory();
@@ -183,6 +184,10 @@ public abstract class BasicInventory implements InventoryHolder, Listener {
             return;
 
         closeInventory(false);
+    }
+
+    public void onTick() {
+
     }
 
     public void openInventory() {

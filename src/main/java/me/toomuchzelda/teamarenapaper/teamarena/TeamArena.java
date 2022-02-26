@@ -199,9 +199,9 @@ public abstract class TeamArena
 		//gameState = GameState.PREGAME;
 		setGameState(GameState.PREGAME);
 
-		noTeamTeam = new TeamArenaTeam("No Team", "No Team", Color.YELLOW, Color.ORANGE, DyeColor.YELLOW, null);
+		noTeamTeam = new TeamArenaTeam("No Team", "No Team", Color.YELLOW, Color.ORANGE, DyeColor.YELLOW, null, Material.GRASS_BLOCK);
 		spectatorTeam = new TeamArenaTeam("Spectators", "Specs", TeamArenaTeam.convert(NamedTextColor.DARK_GRAY), null,
-				null, null);
+				null, null, Material.GLASS);
 		winningTeam = null;
 		lastHadLeft = null;
 
@@ -1002,7 +1002,7 @@ public abstract class TeamArena
 		}
 	}
 
-	public void makeSpectator(Player player) {
+	private void makeSpectator(Player player) {
 		player.getInventory().clear();
 		giveSpectatorItems(player);
 		player.setAllowFlight(true);

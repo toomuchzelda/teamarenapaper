@@ -1,5 +1,7 @@
 package me.toomuchzelda.teamarenapaper.utils;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.SwordItem;
 import org.bukkit.ChatColor;
@@ -15,7 +17,17 @@ import org.bukkit.inventory.meta.LeatherArmorMeta;
 public class ItemUtils
 {
 	public static int _uniqueName = 0;
-
+	
+	/**
+	 * used to explicity set italics state of components to false
+	 * useful coz setting displayname/lore on ItemMetas defaults to making them italic
+	 * @param component
+	 * @return
+	 */
+	public static Component noItalics(Component component) {
+		return component.decoration(TextDecoration.ITALIC, false);
+	}
+	
 	public static boolean isArmor(ItemStack item) {
 		return (CraftItemStack.asNMSCopy(item).getItem() instanceof ArmorItem);
 	}

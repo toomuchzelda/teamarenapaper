@@ -226,6 +226,7 @@ public class KitPyro extends Kit
 				}
 				catch(IllegalArgumentException ignored) {
 				}
+
 				if(isColor) {
 					event.setCancelled(true);
 					Vector vel = a.getVelocity();

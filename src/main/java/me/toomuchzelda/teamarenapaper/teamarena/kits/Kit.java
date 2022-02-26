@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -122,7 +123,24 @@ public abstract class Kit
     public Material getIcon() {
         return icon;
     }
-
+    
+    public static @Nullable Kit getActiveKit(Player player, boolean hideSpies) {
+        Kit kit = Main.getPlayerInfo(player).activeKit;
+        if(kit == null)
+            return null;
+        
+        if(hideSpies && kit instanceof KitSpy) {
+            return getRandomKit();
+        }
+        
+        return kit;
+    }
+    
+    public static Kit getRandomKit() {
+        Kit[] kits = Main.getGame().getKits();
+        return kits[MathUtils.randomMax(kits.length - 1)];
+    }
+    
     public String getName() {
         return name;
     }

@@ -55,23 +55,25 @@ public class DisguiseManager
 	
 	public static void removeDisguises(Player disguisedPlayer) {
 		Set<Disguise> set = PLAYER_ID_TO_DISGUISE_LOOKUP.get(disguisedPlayer.getEntityId());
-		var iter = set.iterator();
-		while(iter.hasNext()) {
-			Disguise disg = iter.next();
-
-			List<Player> couldSee = new LinkedList<>();
-
-			for(Player viewer : disg.viewers.keySet()) {
-				if(viewer.canSee(disg.disguisedPlayer)) {
-					viewer.hidePlayer(Main.getPlugin(), disg.disguisedPlayer);
-					couldSee.add(viewer);
+		if(set != null) {
+			var iter = set.iterator();
+			while(iter.hasNext()) {
+				Disguise disg = iter.next();
+				
+				List<Player> couldSee = new LinkedList<>();
+				
+				for(Player viewer : disg.viewers.keySet()) {
+					if(viewer.canSee(disg.disguisedPlayer)) {
+						viewer.hidePlayer(Main.getPlugin(), disg.disguisedPlayer);
+						couldSee.add(viewer);
+					}
 				}
-			}
-
-			iter.remove();
-
-			for(Player viewer : couldSee) {
-				viewer.showPlayer(Main.getPlugin(), disg.disguisedPlayer);
+				
+				iter.remove();
+				
+				for(Player viewer : couldSee) {
+					viewer.showPlayer(Main.getPlugin(), disg.disguisedPlayer);
+				}
 			}
 		}
 	}
@@ -80,19 +82,20 @@ public class DisguiseManager
 	//TODO: fix
 	public static void removeDisguise(int disguisedPlayer, Disguise disguise) {
 		Set<Disguise> set = PLAYER_ID_TO_DISGUISE_LOOKUP.get(disguisedPlayer);
-
-		List<Player> couldSee = new LinkedList<>();
-		for(Player viewer : disguise.viewers.keySet()) {
-			if(viewer.canSee(disguise.disguisedPlayer)) {
-				viewer.hidePlayer(Main.getPlugin(), disguise.disguisedPlayer);
-				couldSee.add(viewer);
+		if(set != null) {
+			List<Player> couldSee = new LinkedList<>();
+			for (Player viewer : disguise.viewers.keySet()) {
+				if (viewer.canSee(disguise.disguisedPlayer)) {
+					viewer.hidePlayer(Main.getPlugin(), disguise.disguisedPlayer);
+					couldSee.add(viewer);
+				}
 			}
-		}
-
-		set.remove(disguise);
-
-		for(Player viewer : couldSee) {
-			viewer.showPlayer(Main.getPlugin(), disguise.disguisedPlayer);
+			
+			set.remove(disguise);
+			
+			for (Player viewer : couldSee) {
+				viewer.showPlayer(Main.getPlugin(), disguise.disguisedPlayer);
+			}
 		}
 	}
 	

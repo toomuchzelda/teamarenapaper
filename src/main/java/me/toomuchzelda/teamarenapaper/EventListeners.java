@@ -6,6 +6,8 @@ import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
+import me.libraryaddict.core.inventory.BasicInventory;
+import me.libraryaddict.core.inventory.InventoryManager;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
@@ -106,6 +108,16 @@ public class EventListeners implements Listener
 
 		try {
 			Main.getGame().tick();
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+
+		//run the tick method for all inventory GUIs
+		try {
+			for(BasicInventory inv : InventoryManager.Manager.registeredInventories) {
+				inv.onTick();
+			}
 		}
 		catch(Exception e) {
 			e.printStackTrace();
