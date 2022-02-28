@@ -4,16 +4,15 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import me.libraryaddict.core.inventory.InventoryManager;
-import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
-import me.toomuchzelda.teamarenapaper.utils.FileUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
+import me.toomuchzelda.teamarenapaper.utils.FileUtils;
 import org.bukkit.Bukkit;
-import org.bukkit.World;
 import org.bukkit.command.CommandMap;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -32,7 +31,7 @@ public final class Main extends JavaPlugin
 	private static InventoryManager inventoryManager;
 	private static Logger logger;
 
-	private static JavaPlugin plugin;
+	private static Main plugin;
 
 	private static final ConcurrentHashMap<Player, PlayerInfo> playerInfo = new ConcurrentHashMap<>();
 	public static final Int2ObjectMap<Player> playerIdLookup = Int2ObjectMaps.synchronize(new Int2ObjectOpenHashMap<>(1000));
@@ -132,7 +131,7 @@ public final class Main extends JavaPlugin
 		return logger;
 	}
 
-	public static JavaPlugin getPlugin() {
+	public static Main getPlugin() {
 		return plugin;
 	}
 	
