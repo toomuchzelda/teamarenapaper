@@ -53,7 +53,7 @@ public final class ItemBuilder {
         return lore(Arrays.asList(components));
     }
 
-    public ItemBuilder lore(List<ComponentLike> components) {
+    public ItemBuilder lore(List<? extends ComponentLike> components) {
         List<Component> actualComponents = new ArrayList<>(components.size());
         for (ComponentLike componentLike : components) {
             actualComponents.add(componentLike.asComponent());

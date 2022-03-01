@@ -1,6 +1,8 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.inventory.Inventories;
+import me.toomuchzelda.teamarenapaper.inventory.KitInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageIndicatorHologram;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
@@ -585,12 +587,15 @@ public abstract class TeamArena
 	}
 	
 	public void onInteract(PlayerInteractEvent event) {
-		if(event.getMaterial() == respawnItem.getType()) {
+		if (respawnItem.isSimilar(event.getItem())) {
 			event.setUseItemInHand(Event.Result.DENY);
-			if(canRespawn(event.getPlayer()))
+			if (canRespawn(event.getPlayer()))
 				setToRespawn(event.getPlayer());
 			else
 				event.getPlayer().sendMessage(Component.text("You can't respawn right now").color(NamedTextColor.RED));
+		} else if (kitMenuItem.isSimilar(event.getItem())) {
+			event.setUseItemInHand(Event.Result.DENY);
+			Inventories.openInventory(event.getPlayer(), new KitInventory());
 		}
 	}
 
@@ -878,11 +883,11 @@ public abstract class TeamArena
 	public abstract boolean canSelectTeamNow();
 
 	public void selectKit(Player player, String kitName) {
-		if(canSelectKitNow()) {
+		if (canSelectKitNow()) {
 			boolean found = false;
-			for (int i = 0; i < kits.length; i++) {
-				if (kits[i].getName().equalsIgnoreCase(kitName)) {
-					Main.getPlayerInfo(player).kit = kits[i];
+			for (Kit kit : kits) {
+				if (kit.getName().equalsIgnoreCase(kitName)) {
+					Main.getPlayerInfo(player).kit = kit;
 					found = true;
 					player.sendMessage(Component.text("Using kit " + kitName).color(NamedTextColor.BLUE));
 					player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.PLAYERS, 1f, 2f);
@@ -890,10 +895,9 @@ public abstract class TeamArena
 				}
 			}
 
-			if(!found)
+			if (!found)
 				player.sendMessage(Component.text("Kit " + kitName + " doesn't exist").color(NamedTextColor.RED));
-		}
-		else {
+		} else {
 			player.sendMessage(Component.text("You can't choose a kit right now").color(NamedTextColor.RED));
 		}
 	}

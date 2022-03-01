@@ -145,6 +145,10 @@ public abstract class Kit
         return name;
     }
 
+    public String getDescription() {
+        return description;
+    }
+
     public Set<Player> getActiveUsers() {
         return activeUsers;
     }
