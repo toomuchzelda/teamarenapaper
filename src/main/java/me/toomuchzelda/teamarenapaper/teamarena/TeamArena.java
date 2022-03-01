@@ -1,11 +1,17 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.utils.*;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageIndicatorHologram;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
+import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
+import me.toomuchzelda.teamarenapaper.utils.FileUtils;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -111,56 +117,35 @@ public abstract class TeamArena
 		//copy the map to another directory and load from there to avoid any accidental modifying of the original
 		// map
 		File source = maps[rand];
-		File dest = new File("TEMPMAP" + source.getName() + System.currentTimeMillis());
-		if(dest.mkdir()) {
+		File dest = new File("temp_" + source.getName().toLowerCase(Locale.ENGLISH) + "_" + System.currentTimeMillis());
+		if (dest.mkdir()) {
 			FileUtils.copyFolder(source, dest);
 			//delete the uid.dat
-			for(File uid : dest.listFiles()) {
-				if(uid.getName().equalsIgnoreCase("uid.dat")) {
+			for (File uid : dest.listFiles()) {
+				if (uid.getName().equalsIgnoreCase("uid.dat")) {
 					boolean b = uid.delete();
-					//if(b) {
-						Main.logger().info("Attempted delete of uid.dat in copy world, success: " + b);
-					//}
+					Main.logger().info("Attempted delete of uid.dat in copy world, success: " + b);
 				}
 			}
-		}
-		else {
+		} else {
 			//dae not bothered to try catch
 			throw new IllegalArgumentException("Couldn't create new directory for temp map " + dest.getAbsolutePath());
 		}
 		worldFile = dest;
-		WorldCreator worldCreator = new WorldCreator(dest.getAbsolutePath());
+		WorldCreator worldCreator = new WorldCreator(dest.getName());
 		gameWorld = worldCreator.createWorld();
 
 		//parse config before world gamerules to know world options
-		String filename = chosenMapName + "/config.yml";
+		File configFile = new File(chosenMapName, "config.yml");
 		Yaml yaml = new Yaml();
-		Main.logger().info("Reading config YAML: " + filename);
-		
-		FileInputStream fileStream = null;
-		try
-		{
-			fileStream = new FileInputStream(filename);
+		Main.logger().info("Reading config YAML: " + configFile);
+
+
+		try (var fileStream = new FileInputStream(configFile)) {
 			Map<String, Object> map = yaml.load(fileStream);
-			Iterator<Map.Entry<String, Object>> iter = map.entrySet().iterator();
-			while(iter.hasNext()) {
-				Main.logger().info(iter.next().toString());
-			}
 			parseConfig(map);
-			
-			fileStream.close();
-		}
-		catch(IOException e)
-		{
+		} catch (IOException e) {
 			e.printStackTrace();
-			if(fileStream != null) {
-				try {
-					fileStream.close();
-				}
-				catch (IOException ex) {
-					ex.printStackTrace();
-				}
-			}
 		}
 
 		gameWorld.setSpawnLocation(spawnPos);
@@ -188,9 +173,9 @@ public abstract class TeamArena
 		gameWorld.setGameRule(GameRule.SHOW_DEATH_MESSAGES, false);
 		gameWorld.setDifficulty(Difficulty.NORMAL);
 
-		if(mapInfo.weatherType == 2)
+		if (mapInfo.weatherType == 2)
 			gameWorld.setThundering(true);
-		else if(mapInfo.weatherType == 1)
+		else if (mapInfo.weatherType == 1)
 			gameWorld.setStorm(true);
 		else
 			gameWorld.setClearWeatherDuration(6000); //5 minutes
@@ -247,7 +232,7 @@ public abstract class TeamArena
 		PlayerListScoreManager.removeScores();
 
 		//init all the players online at time of construction
-		for(Player p : Bukkit.getOnlinePlayers()) {
+		for (Player p : Bukkit.getOnlinePlayers()) {
 			p.teleport(spawnPos);
 			players.add(p);
 			
