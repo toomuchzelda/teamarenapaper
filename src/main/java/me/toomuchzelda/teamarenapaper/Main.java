@@ -3,7 +3,6 @@ package me.toomuchzelda.teamarenapaper;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import me.libraryaddict.core.inventory.InventoryManager;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
@@ -29,7 +28,6 @@ public final class Main extends JavaPlugin
 	private static TeamArena teamArena;
 	private static EventListeners eventListeners;
 	private static PacketListeners packetListeners;
-	private static InventoryManager inventoryManager;
 	private static Logger logger;
 
 	private static Main plugin;
@@ -71,7 +69,6 @@ public final class Main extends JavaPlugin
 		
 		eventListeners = new EventListeners(this);
 		packetListeners = new PacketListeners(this);
-		inventoryManager = new InventoryManager(this);
 		Bukkit.getPluginManager().registerEvents(Inventories.INSTANCE, this);
 		
 		teamArena = new CaptureTheFlag(); //new KingOfTheHill();
