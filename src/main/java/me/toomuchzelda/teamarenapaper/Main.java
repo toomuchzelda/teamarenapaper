@@ -4,6 +4,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import me.libraryaddict.core.inventory.InventoryManager;
+import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
@@ -71,6 +72,7 @@ public final class Main extends JavaPlugin
 		eventListeners = new EventListeners(this);
 		packetListeners = new PacketListeners(this);
 		inventoryManager = new InventoryManager(this);
+		Bukkit.getPluginManager().registerEvents(Inventories.INSTANCE, this);
 		
 		teamArena = new CaptureTheFlag(); //new KingOfTheHill();
 
@@ -104,7 +106,7 @@ public final class Main extends JavaPlugin
 		commandMap.register(fallbackPrefix, new CommandGame());
 		commandMap.register(fallbackPrefix, new CommandRespawn());
 		commandMap.register(fallbackPrefix, new CommandPreference());
-		commandMap.register(fallbackPrefix, new CommandHide());
+		commandMap.register(fallbackPrefix, new CommandDebug());
 	}
 	
 	public static PlayerInfo getPlayerInfo(Player player) {

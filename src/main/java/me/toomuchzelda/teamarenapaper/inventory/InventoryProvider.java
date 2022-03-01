@@ -18,7 +18,9 @@ public interface InventoryProvider {
 
     int getRows();
 
-    void populate(Player player, InventoryAccessor inventory);
+    void init(Player player, InventoryAccessor inventory);
+    default void update(Player player, InventoryAccessor inventory) {}
+
     default void close(Player player) {}
 
     interface InventoryAccessor {
@@ -34,7 +36,7 @@ public interface InventoryProvider {
 
         ClickableItem get(int slot);
 
-        void requestRefresh(Player player);
+        void invalidate();
 
         @NotNull
         Inventory getInventory();

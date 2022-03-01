@@ -27,6 +27,16 @@ import java.util.function.Consumer;
 public class Inventories implements Listener {
     private static final WeakHashMap<Player, Inventory> playerInventories = new WeakHashMap<>();
     private static final WeakHashMap<Inventory, InventoryData> pluginInventories = new WeakHashMap<>();
+    public static Inventories INSTANCE = new Inventories();
+
+    private Inventories() {
+        Bukkit.getScheduler().runTaskTimer(Main.getPlugin(), () -> {
+            pluginInventories.forEach((inv, data) -> {
+                Player player = (Player) inv.getHolder();
+                data.provider.update(player, data);
+            });
+        }, 1, 1);
+    }
 
     public static void openInventory(Player player, InventoryProvider provider) {
         Component title = provider.getTitle(player);
@@ -35,7 +45,7 @@ public class Inventories implements Listener {
         InventoryData data = new InventoryData(inv, provider);
         pluginInventories.put(inv, data);
         playerInventories.put(player, inv);
-        provider.populate(player, data);
+        provider.init(player, data);
         // just to be safe
         Bukkit.getScheduler().runTask(Main.getPlugin(), () -> player.openInventory(inv));
     }
@@ -114,9 +124,10 @@ public class Inventories implements Listener {
         }
 
         @Override
-        public void requestRefresh(Player player) {
+        public void invalidate() {
             Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
-                provider.populate(player, this);
+                inv.clear();
+                provider.init((Player) inv.getHolder(), this);
             });
         }
 

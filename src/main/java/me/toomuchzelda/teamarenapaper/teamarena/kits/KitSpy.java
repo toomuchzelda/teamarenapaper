@@ -135,10 +135,10 @@ public class KitSpy extends Kit
 		}
 
 		@Override
-		public void populate(Player player, InventoryAccessor inventory) {
+		public void init(Player player, InventoryAccessor inventory) {
 			// set prev page/next page items first
-			inventory.set(45, PREVIOUS_PAGE_ITEM);
-			inventory.set(53, NEXT_PAGE_ITEM);
+			inventory.set(45, getPreviousPageItem(inventory));
+			inventory.set(53, getNextPageItem(inventory));
 
 
 			ArrayList<ClickableItem> items = new ArrayList<>();

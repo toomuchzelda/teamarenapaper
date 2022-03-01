@@ -164,7 +164,8 @@ public class EventListeners implements Listener
 		PlayerInfo playerInfo;
 
 		//todo: read perms from db or other
-		if(event.getPlayer().getName().equalsIgnoreCase("toomuchzelda"))
+		String playerName = event.getPlayer().getName();
+		if ("toomuchzelda".equalsIgnoreCase(playerName) || "jacky8399".equalsIgnoreCase(playerName))
 			playerInfo = new PlayerInfo(CustomCommand.OWNER, event.getPlayer());
 		else
 			playerInfo = new PlayerInfo(CustomCommand.ALL, event.getPlayer());
