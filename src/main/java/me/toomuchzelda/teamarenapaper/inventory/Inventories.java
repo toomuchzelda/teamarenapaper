@@ -50,6 +50,20 @@ public class Inventories implements Listener {
         Bukkit.getScheduler().runTask(Main.getPlugin(), () -> player.openInventory(inv));
     }
 
+    public static void closeInventory(Player player) {
+        Bukkit.getScheduler().runTask(Main.getPlugin(), () -> player.closeInventory(InventoryCloseEvent.Reason.PLUGIN));
+    }
+
+    public static void closeInventory(Player player, Class<? extends InventoryProvider> clazz) {
+        Inventory inv = playerInventories.get(player);
+        if (inv != null) {
+            InventoryData data = pluginInventories.get(inv);
+            if (clazz.isInstance(data.provider)) {
+                closeInventory(player);
+            }
+        }
+    }
+
     @EventHandler
     public void onCleanUp(PluginDisableEvent e) {
         if (e.getPlugin() instanceof Main) {
@@ -113,7 +127,7 @@ public class Inventories implements Listener {
         private ArrayList<Consumer<InventoryClickEvent>> eventHandlers;
 
         @Override
-        public void set(int slot, ItemStack stack, @Nullable Consumer<InventoryClickEvent> eventHandler) {
+        public void set(int slot, @Nullable ItemStack stack, @Nullable Consumer<InventoryClickEvent> eventHandler) {
             inv.setItem(slot, stack);
             eventHandlers.set(slot, eventHandler);
         }

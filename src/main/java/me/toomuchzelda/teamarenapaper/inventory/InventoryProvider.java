@@ -18,24 +18,35 @@ public interface InventoryProvider {
 
     int getRows();
 
+    // Called once before the inventory is opened
     void init(Player player, InventoryAccessor inventory);
+
+    // Called every tick after the inventory is opened
     default void update(Player player, InventoryAccessor inventory) {}
 
+    // Called when the inventory is closed
     default void close(Player player) {}
 
     interface InventoryAccessor {
-        void set(int slot, ItemStack stack, @Nullable Consumer<InventoryClickEvent> eventHandler);
+        void set(int slot, @Nullable ItemStack stack, @Nullable Consumer<InventoryClickEvent> eventHandler);
 
-        default void set(int slot, ItemStack stack) {
+        default void set(int slot, @Nullable ItemStack stack) {
             set(slot, stack, null);
         }
 
-        default void set(int slot, ClickableItem item) {
-            set(slot, item.stack(), item.eventHandler());
+        default void set(int slot, @Nullable ClickableItem item) {
+            if (item != null)
+                set(slot, item.stack(), item.eventHandler());
+            else
+                set(slot, null, null);
         }
 
+        @Nullable
         ClickableItem get(int slot);
 
+        /**
+         * Clears the inventory. {@link #init(Player, InventoryAccessor)} will be called again.
+         */
         void invalidate();
 
         @NotNull
