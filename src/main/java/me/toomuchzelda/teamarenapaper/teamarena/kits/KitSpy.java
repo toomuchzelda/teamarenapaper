@@ -33,6 +33,7 @@ import java.util.List;
 
 public class KitSpy extends Kit
 {
+	public static final Material DISGUISE_MENU_ITEM = Material.CARVED_PUMPKIN;
 	
 	public KitSpy() {
 		super("Spy", "sus", Material.SPYGLASS);
@@ -40,7 +41,7 @@ public class KitSpy extends Kit
 		setArmor(new ItemStack(Material.IRON_HELMET), new ItemStack(Material.IRON_CHESTPLATE),
 				new ItemStack(Material.IRON_LEGGINGS), new ItemStack(Material.IRON_BOOTS));
 		
-		setItems(new ItemStack(Material.IRON_SWORD), new ItemStack(Material.LEATHER_CHESTPLATE));
+		setItems(new ItemStack(Material.IRON_SWORD), new ItemStack(DISGUISE_MENU_ITEM));
 		
 		
 		setAbilities(new SpyAbility());
@@ -80,7 +81,7 @@ public class KitSpy extends Kit
 		@Override
 		public void onInteract(PlayerInteractEvent event) {
 			if(event.useItemInHand() != Event.Result.DENY &&
-					event.getAction() != Action.PHYSICAL && event.getMaterial() == Material.LEATHER_CHESTPLATE) {
+					event.getAction() != Action.PHYSICAL && event.getMaterial() == DISGUISE_MENU_ITEM) {
 
 				event.setUseItemInHand(Event.Result.DENY);
 				Inventories.openInventory(event.getPlayer(), new SpyInventory());
@@ -118,12 +119,6 @@ public class KitSpy extends Kit
 		public static final Component CLICK_TO_DISGUISE = Component.text("Click to disguise as this player")
 				.color(NamedTextColor.LIGHT_PURPLE).decoration(TextDecoration.ITALIC, false);
 
-//		public void onTick() {
-//			if(TeamArena.getGameTick() % 10 == 0) { //every half second
-//				fillInventory();
-//			}
-//		}
-
 		@Override
 		public Component getTitle(Player player) {
 			return Component.text("Spy Inventory");
@@ -147,6 +142,7 @@ public class KitSpy extends Kit
 			TeamArenaTeam[] gameTeams = teamArena.getTeams();
 			TeamArenaTeam ownTeam = Main.getPlayerInfo(player).team;
 
+			//sort teams so own team is last
 			TeamArenaTeam[] sortedTeams = Arrays.copyOf(gameTeams, gameTeams.length);
 			Arrays.sort(sortedTeams, Comparator.<TeamArenaTeam, Integer>comparing(team -> team == ownTeam ? 1 : 0)
 					.thenComparing(TeamArenaTeam::getSimpleName));
