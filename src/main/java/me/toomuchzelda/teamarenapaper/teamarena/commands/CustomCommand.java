@@ -1,11 +1,17 @@
 package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.Style;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
 
 public class CustomCommand extends Command {
 
@@ -68,5 +74,10 @@ public class CustomCommand extends Command {
     
     public static CustomCommand getFromName(String name) {
         return NAME_TO_COMMAND_MAP.get(name);
+    }
+
+    private static final Style USAGE_STYLE = Style.style(NamedTextColor.RED);
+    protected static void showUsage(CommandSender sender, String usage) {
+        sender.sendMessage(Component.text("Usage: " + usage, USAGE_STYLE));
     }
 }
