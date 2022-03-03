@@ -113,6 +113,18 @@ public class KitSpy extends Kit
 			}
 			player.setExp(newExp);
 		}
+		
+		public static void disguisePlayer(Player player, TeamArenaTeam ownTeam, Player otherPlayer) {
+			for(TeamArenaTeam team : Main.getGame().getTeams()) {
+				if(team == ownTeam)
+					continue;
+			
+				DisguiseManager.createDisguise(player, otherPlayer, team.getPlayerMembers());
+			}
+			
+			//copy invisibility of kit
+			player.setInvisible(otherPlayer.isInvisible());
+		}
 	}
 
 	public static class SpyInventory extends PagedInventory {
@@ -151,9 +163,6 @@ public class KitSpy extends Kit
 				items.add(ClickableItem.empty(team.getIconItem()));
 
 				for (Player otherPlayer : team.getPlayerMembers()) {
-					if (otherPlayer == player)
-						continue;
-
 					if (!teamArena.isSpectator(otherPlayer)) {
 						Kit othersKit = Kit.getActiveKit(otherPlayer, team != ownTeam); //hide kit spies in the menu
 
@@ -171,16 +180,22 @@ public class KitSpy extends Kit
 						lore.add(CLICK_TO_DISGUISE);
 						meta.lore(lore);
 						kitIcon.setItemMeta(meta);
-
-						items.add(ClickableItem.of(kitIcon, e -> Bukkit.getScheduler().runTask(Main.getPlugin(),
-								() -> {
-									player.sendMessage("disguising as " + otherPlayer.getName());
-									player.closeInventory();
-								})
+						
+						items.add(ClickableItem.of(kitIcon, e -> {
+									player.sendMessage("Disguising as " + otherPlayer.getName());
+									DisguiseManager.removeDisguises(player);
+									if(otherPlayer != player)
+										SpyAbility.disguisePlayer(player, ownTeam, otherPlayer);
+									
+									Bukkit.getScheduler().runTask(Main.getPlugin(),
+											() -> {
+												player.closeInventory();
+											});
+								}
 						));
 					}
 				}
-
+				
 				//make new line if needed and not at the end of the page
 				while (team != sortedTeams[sortedTeams.length - 1] && items.size() % 9 != 0)
 					items.add(null);

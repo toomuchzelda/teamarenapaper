@@ -6,6 +6,7 @@ import com.comphenix.protocol.reflect.StructureModifier;
 import com.mojang.authlib.GameProfile;
 import io.papermc.paper.adventure.PaperAdventure;
 import me.toomuchzelda.teamarenapaper.Main;
+import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoPacket;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import net.minecraft.server.level.ServerPlayer;
@@ -176,7 +177,7 @@ public class DisguiseManager
 			PacketContainer fakeInfoPacket = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);
 			StructureModifier<Object> disguisedInfoModifier = fakeInfoPacket.getModifier();
 			ClientboundPlayerInfoPacket.PlayerUpdate fakePlayerUpdate = new ClientboundPlayerInfoPacket.PlayerUpdate(
-					disguisedGameProfile,  latency, GameType.SURVIVAL, null);//PaperAdventure.asVanilla(toDisguiseAs.displayName()));
+					disguisedGameProfile,  latency, GameType.SURVIVAL, PaperAdventure.asVanilla(Component.text(" ")));//PaperAdventure.asVanilla(toDisguiseAs.displayName()));
 			disguisedInfoModifier.write(0, ClientboundPlayerInfoPacket.Action.ADD_PLAYER);
 			disguisedInfoModifier.write(1, Collections.singletonList(fakePlayerUpdate));
 			addDisguisedPlayerInfoPacket = fakeInfoPacket;

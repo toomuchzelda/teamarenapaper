@@ -128,12 +128,13 @@ public class PacketListeners
 
 								//i think this will run after this packet listener
 								// remove the player info of the disguised player so they don't appear in tab list
+								// do it 2 ticks later as too quick will not make the skin appear correctly
 								Bukkit.getScheduler().runTaskLater(Main.getPlugin(),
-										() -> PlayerUtils.sendPacket(event.getPlayer(), disguise.removePlayerInfoPacket), 0);
+										() -> PlayerUtils.sendPacket(event.getPlayer(), disguise.removePlayerInfoPacket), 2);
 
 								iter.add(tabListUpdate);
 
-								disguise.viewers.put(event.getPlayer(), TeamArena.getGameTick());
+								disguise.viewers.put(event.getPlayer(), TeamArena.getGameTick()); //record time so don't send packet twice in spawn player listener
 							}
 							else {
 								
