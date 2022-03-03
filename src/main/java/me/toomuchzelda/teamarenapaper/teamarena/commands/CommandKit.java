@@ -8,53 +8,41 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
 public class CommandKit extends CustomCommand {
 
     public CommandKit() {
-        super("kit", "Select or view kits", "\"/kit\" to view all kits, \"/kit <kit name>\" to select that kit.",
-                Collections.emptyList(), CustomCommand.ALL);
+        super("kit", "Select or view kits", "\"/kit\" to view all kits, " +
+                "\"/kit <kit name>\" to select that kit.", PermissionLevel.ALL);
     }
 
     @Override
-    public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
-        if(sender instanceof Player p) {
-            if(args.length > 0) {
-                Main.getGame().selectKit(p, args[0]);
-            }
-            else {
-                p.sendMessage(Component.text("Usage: /kit <kit name>").color(NamedTextColor.RED));
-                Component kitList = Component.text("Available kits: ").color(NamedTextColor.BLUE);
-
-                Kit[] kits = Main.getGame().getKits();
-                for(Kit kit : kits) {
-                    kitList = kitList.append(Component.text(kit.getName() + ", ")).color(NamedTextColor.BLUE);
-                }
-                p.sendMessage(kitList);
-            }
-        }
-        else {
+    public void run(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
+        if (!(sender instanceof Player p)) {
             sender.sendMessage(Component.text("You can't use this command from the console!").color(NamedTextColor.RED));
+            return;
         }
-        return true;
+        if(args.length > 0) {
+            Main.getGame().selectKit(p, args[0]);
+        } else {
+            p.sendMessage(Component.text("Usage: /kit <kit name>").color(NamedTextColor.RED));
+            Component kitList = Component.text("Available kits: ").color(NamedTextColor.BLUE);
+
+            Kit[] kits = Main.getGame().getKits();
+            for(Kit kit : kits) {
+                kitList = kitList.append(Component.text(kit.getName() + ", ")).color(NamedTextColor.BLUE);
+            }
+            p.sendMessage(kitList);
+        }
     }
     
     @Override
-    public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
+    public @NotNull List<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
         if(args.length == 1 && sender instanceof Player p) {
-            /*LinkedList<String> list = Main.getGame().getTabKitList();
-            LinkedList<String> newList = new LinkedList<>();
-            String arg = args[0];
-            for(String kit : list) {
-                if(kit.toLowerCase().startsWith(arg.toLowerCase()))
-                    newList.add(kit);
-            }
-            return newList;*/
-
             //if they are waiting to respwan, interrupt their respawn timer
+            // absolutely disgusting
             Main.getGame().interruptRespawn(p);
             
             return CustomCommand.filterCompletions(Main.getGame().getTabKitList(), args[0]);

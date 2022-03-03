@@ -153,9 +153,9 @@ public class EventListeners implements Listener
 
 		//todo: read perms from db or other
 		if(event.getPlayer().getName().equalsIgnoreCase("toomuchzelda"))
-			playerInfo = new PlayerInfo(CustomCommand.OWNER, event.getPlayer());
+			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.OWNER, event.getPlayer());
 		else
-			playerInfo = new PlayerInfo(CustomCommand.ALL, event.getPlayer());
+			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.ALL, event.getPlayer());
 		
 		synchronized (preferenceFutureMap) {
 			CompletableFuture<Map<Preference<?>, ?>> future = preferenceFutureMap.remove(uuid);
@@ -200,7 +200,7 @@ public class EventListeners implements Listener
 				//if it's custom command check for my own permission level otherwise use
 				// bukkit ones or whatever
 				if (command instanceof CustomCommand customCmd) {
-					if (pinfo.permissionLevel < customCmd.permissionLevel) {
+					if (pinfo.permissionLevel.compareTo(customCmd.permissionLevel) < 0) {
 						iter.remove();
 					}
 				}
