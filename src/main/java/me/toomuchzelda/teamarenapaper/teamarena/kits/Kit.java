@@ -11,11 +11,13 @@ import org.bukkit.inventory.PlayerInventory;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-public abstract class Kit
-{
+public abstract class Kit {
+    public static final Comparator<Kit> COMPARATOR = Comparator.comparing(Kit::getName);
+
     private static final Ability[] EMPTY_ABILITIES = new Ability[0];
     
     private final String name;
