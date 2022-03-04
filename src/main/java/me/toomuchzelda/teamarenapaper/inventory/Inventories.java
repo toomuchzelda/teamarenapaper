@@ -6,7 +6,9 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
@@ -24,18 +26,20 @@ import java.util.function.Consumer;
 /**
  * @author jacky8399
  */
-public class Inventories implements Listener {
+public final class Inventories implements Listener {
     private static final WeakHashMap<Player, Inventory> playerInventories = new WeakHashMap<>();
     private static final WeakHashMap<Inventory, InventoryData> pluginInventories = new WeakHashMap<>();
     public static Inventories INSTANCE = new Inventories();
 
     private Inventories() {
-        Bukkit.getScheduler().runTaskTimer(Main.getPlugin(), () -> {
-            pluginInventories.forEach((inv, data) -> {
-                Player player = (Player) inv.getHolder();
-                data.provider.update(player, data);
-            });
-        }, 1, 1);
+        Bukkit.getScheduler().runTaskTimer(Main.getPlugin(), Inventories::tick, 1, 1);
+    }
+
+    public static void tick() {
+        pluginInventories.forEach((inv, data) -> {
+            Player player = (Player) inv.getHolder();
+            data.provider.update(player, data);
+        });
     }
 
     public static void openInventory(Player player, InventoryProvider provider) {
@@ -83,35 +87,44 @@ public class Inventories implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOW)
     public void onInventoryClick(InventoryClickEvent e) {
-        if (pluginInventories.containsKey(e.getInventory())) {
-            Inventory inv = e.getInventory();
-            if (inv != e.getClickedInventory()) {
-                if (e.getClick().isKeyboardClick() || e.getClick().isShiftClick()) {
-                    // clicking into the inventory
-                    e.setResult(Event.Result.DENY);
-                }
-                return;
-            }
-            e.setResult(Event.Result.DENY);
+        Inventory inv = e.getInventory();
+        InventoryData data = pluginInventories.get(inv);
+        if (data == null) // not our inventory
+            return;
+        if (inv != e.getClickedInventory()) {
+            InventoryAction action = e.getAction();
+            // actions that might influence our inventory
+            if (action == InventoryAction.MOVE_TO_OTHER_INVENTORY || action == InventoryAction.COLLECT_TO_CURSOR ||
+                    action == InventoryAction.NOTHING || action == InventoryAction.UNKNOWN)
+                e.setResult(Event.Result.DENY);
+            return;
+        }
+        e.setResult(Event.Result.DENY);
 
-            InventoryData data = pluginInventories.get(inv);
-            Consumer<InventoryClickEvent> eventHandler = data.eventHandlers.get(e.getSlot());
-            if (eventHandler != null) {
-                try {
-                    eventHandler.accept(e);
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
+        Consumer<InventoryClickEvent> eventHandler = data.eventHandlers.get(e.getSlot());
+        if (eventHandler != null) {
+            try {
+                eventHandler.accept(e);
+            } catch (Exception ex) {
+                ex.printStackTrace();
             }
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOW)
     public void onInventoryDrag(InventoryDragEvent e) {
-        if (pluginInventories.containsKey(e.getInventory())) {
-            e.setResult(Event.Result.DENY);
+        Inventory inventory = e.getInventory();
+        if (!pluginInventories.containsKey(e.getInventory()))
+            return;
+        int size = inventory.getSize();
+        // check if any of the slots involved is in the top inventory
+        for (int slotID : e.getRawSlots()) {
+            if (slotID < size) {
+                e.setResult(Event.Result.DENY);
+                return;
+            }
         }
     }
 
@@ -122,9 +135,9 @@ public class Inventories implements Listener {
             this.eventHandlers = new ArrayList<>(Collections.nCopies(inv.getSize(), null));
         }
 
-        private Inventory inv;
-        private InventoryProvider provider;
-        private ArrayList<Consumer<InventoryClickEvent>> eventHandlers;
+        private final Inventory inv;
+        private final InventoryProvider provider;
+        private final ArrayList<Consumer<InventoryClickEvent>> eventHandlers;
 
         @Override
         public void set(int slot, @Nullable ItemStack stack, @Nullable Consumer<InventoryClickEvent> eventHandler) {
