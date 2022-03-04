@@ -57,7 +57,7 @@ public class KitPyro extends Kit
 	}
 	
 	public KitPyro() {
-		super("Pyro", "fire burn burn fire!", Material.FIRE);
+		super("Pyro", "fire burn burn fire!", Material.FLINT_AND_STEEL);
 		
 		ItemStack boots = new ItemStack(Material.CHAINMAIL_BOOTS);
 		boots.addEnchantment(Enchantment.PROTECTION_FIRE, 4);
