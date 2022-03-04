@@ -157,6 +157,10 @@ public abstract class Kit
         return abilities;
     }
     
+    public boolean isInvisKit() {
+        return false;
+    }
+    
     /**
      * get abilities of the kit the player is actively using
      * @param player

@@ -45,6 +45,11 @@ public class KitGhost extends Kit
 		setAbilities(new GhostAbility());
 	}
 	
+	@Override
+	public boolean isInvisKit() {
+		return true;
+	}
+	
 	public static class GhostAbility extends Ability
 	{
 		@Override

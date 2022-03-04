@@ -151,7 +151,20 @@ public class PlayerUtils
 			player.removePotionEffect(effect.getType());
 		}
 	}
-
+	
+	public static void sendKitMessage(Player player, Component chat, Component actionBar) {
+		sendKitMessage(player, chat, actionBar, Main.getPlayerInfo(player));
+	}
+	
+	public static void sendKitMessage(Player player, Component chat, Component actionBar, PlayerInfo pinfo) {
+		if(pinfo.getPreference(Preferences.KIT_CHAT_MESSAGES)) {
+			player.sendMessage(chat);
+		}
+		if(pinfo.getPreference(Preferences.KIT_ACTION_BAR)) {
+			player.sendActionBar(actionBar);
+		}
+	}
+	
 	/**
 	 * make a player invisible and hide their nametag from appropriate players
 	 * temporarily removed as not using hologram nametags

@@ -28,19 +28,27 @@ public class DisguiseManager
 	//private static final Map<Integer, Disguise> FAKE_ID_TO_DISGUISE_LOOKUP = Collections.synchronizedMap(new HashMap<>());
 	private static final Map<Integer, Set<Disguise>> PLAYER_ID_TO_DISGUISE_LOOKUP = Collections.synchronizedMap(new HashMap<>());
 
-	public static void createDisguise(Player toDisguise, Player toDisguiseAs, Collection<Player> viewers) {
+	public static Disguise createDisguise(Player toDisguise, Player toDisguiseAs, Collection<Player> viewers, boolean start) {
 		Disguise disguise = new Disguise(toDisguise, viewers, toDisguiseAs);
 
+		if(start)
+			startDisgusie(disguise);
+		
+		return disguise;
+	}
+	
+	public static void startDisgusie(Disguise disguise) {
+		Player toDisguise = disguise.disguisedPlayer;
 		//keep track of viewers that had the player registered so as to not reveal to anyone that had them hidden
 		List<Player> couldSee = new LinkedList<>();
-
+		
 		for(Player viewer : disguise.viewers.keySet()) {
 			if(viewer.canSee(toDisguise)) {
 				viewer.hidePlayer(Main.getPlugin(), toDisguise);
 				couldSee.add(viewer);
 			}
 		}
-
+		
 		addDisguise(toDisguise, disguise);
 		
 		for(Player viewer : couldSee) {

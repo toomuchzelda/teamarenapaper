@@ -1035,7 +1035,24 @@ public abstract class TeamArena
 		if(e instanceof Player p) {
 			//p.showTitle(Title.title(Component.empty(), Component.text("You died!").color(TextColor.color(255, 0, 0))));
 			PlayerUtils.sendTitle(p, Component.empty(), Component.text("You died!").color(TextColor.color(255, 0, 0)), 0, 30, 20);
-
+			
+			//Give out kill assists on the victim
+			Player killer = null;
+			DamageTimes dTimes = DamageTimes.getDamageTimes(p);
+			if(event.getFinalAttacker() instanceof Player finalAttacker) {
+				killer = finalAttacker;
+			}
+			else {
+				if(dTimes.lastDamager instanceof Player finalAttacker)
+					killer = finalAttacker;
+			}
+			//killer's onKill ability
+			if(killer != null) {
+				for (Ability a : Kit.getAbilities(killer)) {
+					a.onKill(event);
+				}
+			}
+			
 			//setSpectator(p, true, false);
 			PlayerInfo pinfo = Main.getPlayerInfo(p);
 			for(Ability a : pinfo.activeKit.getAbilities()) {
@@ -1056,23 +1073,6 @@ public abstract class TeamArena
 				pinfo.clearDamageReceivedLog();
 			
 			
-			//Give out kill assists on the victim
-			Player killer = null;
-			DamageTimes dTimes = DamageTimes.getDamageTimes(p);
-			if(event.getFinalAttacker() instanceof Player finalAttacker) {
-				killer = finalAttacker;
-			}
-			else {
-				if(dTimes.lastDamager instanceof Player finalAttacker)
-					killer = finalAttacker;
-			}
-
-			if(killer != null) {
-				for (Ability a : Kit.getAbilities(killer)) {
-					a.onKill(event);
-				}
-			}
-
 			attributeKillAndAssists(pinfo, killer);
 			
 			//clear attack givers so they don't get falsely attributed on this next player's death
