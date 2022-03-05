@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.utils.PacketHologram;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
@@ -20,7 +21,7 @@ import java.util.Map;
 //container class to store per-player info
 public class PlayerInfo
 {
-	public final byte permissionLevel;
+	public final CustomCommand.PermissionLevel permissionLevel;
 	public TeamArenaTeam team;
 	public Location spawnPoint;
 	public PacketHologram nametag;
@@ -29,28 +30,15 @@ public class PlayerInfo
 	//todo: read from DB or other persistent storage
 	public String defaultKit;
 
-	//todo make array
-	private HashMap<Preference<?>, Object> preferences = new HashMap<>(); //todo make array
-	//todo make array
-	//todo make array
-	//todo make array
-	//todo make array
-	//todo make array
-	//todo make array
-	//todo make array
-	//todo make array
-	//todo make array
-	//todo make array
-	//todo make array
-	//todo make array
+	private HashMap<Preference<?>, Object> preferences = new HashMap<>();
 	
-	private final HashMap<String, Integer> messageCooldowns = new HashMap<String, Integer>(); 
+	private final HashMap<String, Integer> messageCooldowns = new HashMap<>();
 	private final LinkedList<DamageLogEntry> damageReceivedLog;
 	private final KillAssistTracker killAssistTracker;
 
 	public double kills;
 
-	public PlayerInfo(byte permissionLevel, Player player) {
+	public PlayerInfo(CustomCommand.PermissionLevel permissionLevel, Player player) {
 		team = null;
 		spawnPoint = null;
 		nametag = null;

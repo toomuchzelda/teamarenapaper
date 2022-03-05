@@ -8,30 +8,30 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
+import java.util.List;
 
 public class CommandRespawn extends CustomCommand
 {
     public CommandRespawn() {
         super("respawn", "Respawn after waiting while dead", "\"respawn\" after waiting 5 seconds as a dead player to " +
-                "respawn", Collections.emptyList(), CustomCommand.ALL);
+                "respawn", PermissionLevel.ALL);
     }
 
     @Override
-    public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
+    public void run(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) {
         if(sender instanceof Player p) {
-            if(/*Main.getGame().isMidGameJoinWaiter(p) && */Main.getGame().canMidGameJoin(p)) {
+            if (/*Main.getGame().isMidGameJoinWaiter(p) && */Main.getGame().canMidGameJoin(p)) {
                 Main.getGame().setToMidJoin(p);
-            }
-            else if(Main.getGame().canRespawn(p)) {
+            } else if (Main.getGame().canRespawn(p)) {
                 Main.getGame().setToRespawn(p);
-            }
-            else {
+            } else {
                 sender.sendMessage(Component.text("You can't respawn right now").color(NamedTextColor.RED));
             }
         }
-        else
-            return false;
-        
-        return true;
+    }
+
+    @Override
+    public @NotNull List<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
+        return Collections.emptyList();
     }
 }

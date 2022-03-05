@@ -6,6 +6,8 @@ import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
@@ -21,8 +23,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.PreferenceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
@@ -154,9 +154,9 @@ public class EventListeners implements Listener
 		//todo: read perms from db or other
 		String playerName = event.getPlayer().getName();
 		if ("toomuchzelda".equalsIgnoreCase(playerName) || "jacky8399".equalsIgnoreCase(playerName))
-			playerInfo = new PlayerInfo(CustomCommand.OWNER, event.getPlayer());
+			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.OWNER, event.getPlayer());
 		else
-			playerInfo = new PlayerInfo(CustomCommand.ALL, event.getPlayer());
+			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.ALL, event.getPlayer());
 		
 		synchronized (preferenceFutureMap) {
 			CompletableFuture<Map<Preference<?>, ?>> future = preferenceFutureMap.remove(uuid);

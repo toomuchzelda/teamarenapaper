@@ -13,23 +13,22 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class CommandKit extends CustomCommand {
 
     public CommandKit() {
-        super("kit", "Manage kits", "/kit <selector/gui/set/list>", Collections.emptyList(), CustomCommand.ALL);
+        super("kit", "Manage kits", "/kit <selector/gui/set/list>", PermissionLevel.ALL);
     }
 
     @Override
-    public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
+    public void run(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         if (args.length == 0) {
-            showUsage(sender, getUsage());
-            return true;
+            showUsage(sender);
+            return;
         }
         if (!(sender instanceof Player player)) {
             sender.sendMessage(Component.text("You can't use this command from the console!").color(NamedTextColor.RED));
-            return true;
+            return;
         }
 
         switch (args[0]) {
@@ -37,7 +36,7 @@ public class CommandKit extends CustomCommand {
             case "set" -> {
                 if (args.length != 2) {
                     showUsage(sender, "/kit set <kit>");
-                    return true;
+                    return;
                 }
                 Main.getGame().selectKit(player, args[1]);
             }
@@ -50,21 +49,21 @@ public class CommandKit extends CustomCommand {
                 }
                 player.sendMessage(kitList);
             }
-            default -> showUsage(sender, getUsage());
+            default -> showUsage(sender);
         }
-        return true;
     }
-
+    
     @Override
-    public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
-        if (sender instanceof Player player) {
-            // cringe
-            Main.getGame().interruptRespawn(player);
+    public @NotNull List<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
+        if (sender instanceof Player p) {
+            //if they are waiting to respawn, interrupt their respawn timer
+            // absolutely disgusting
+            Main.getGame().interruptRespawn(p);
         }
         if (args.length == 1) {
             return Arrays.asList("list", "set", "selector", "gui");
-        } else if (args.length == 2 && "set".equalsIgnoreCase(args[0])) {
-            return Arrays.stream(Main.getGame().getKits()).map(Kit::getName).collect(Collectors.toList());
+        } else if (args.length == 2) {
+            return Main.getGame().getTabKitList();
         }
 
         return Collections.emptyList();

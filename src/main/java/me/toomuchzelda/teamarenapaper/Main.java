@@ -70,7 +70,7 @@ public final class Main extends JavaPlugin
 		eventListeners = new EventListeners(this);
 		packetListeners = new PacketListeners(this);
 		Bukkit.getPluginManager().registerEvents(Inventories.INSTANCE, this);
-		
+
 		teamArena = new CaptureTheFlag(); //new KingOfTheHill();
 
 		EntityUtils.cacheReflection();
