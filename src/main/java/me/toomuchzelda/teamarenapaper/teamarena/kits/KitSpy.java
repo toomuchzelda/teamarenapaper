@@ -29,6 +29,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
+import org.bukkit.inventory.meta.SkullMeta;
 
 import java.util.*;
 
@@ -168,7 +169,7 @@ public class KitSpy extends Kit
 			
 			if(toDisguiseAs == player) {
 				currentlyDisguised.remove(player);
-				Component yourselfText = Component.text("Removed disguise, you now look like yourself").color(NamedTextColor.DARK_PURPLE);
+				Component yourselfText = Component.text("Removed disguise, you now look like yourself").color(NamedTextColor.LIGHT_PURPLE);
 				PlayerUtils.sendKitMessage(player, yourselfText, yourselfText);
 				return;
 			}
@@ -232,31 +233,23 @@ public class KitSpy extends Kit
 
 				for (Player otherPlayer : team.getPlayerMembers()) {
 					if (!teamArena.isSpectator(otherPlayer)) {
-						Kit othersKit = Kit.getActiveKit(otherPlayer, team != ownTeam); //hide kit spies in the menu
-
-						ItemStack kitIcon = new ItemStack(othersKit.getIcon());
-						/**
-						 *  |------|  playerName
-						 *  |(icon)|  Kit: player's kit
-						 *  |      |  Click to disguise as this player
-						 *  |------|
-						 */
-						ItemMeta meta = kitIcon.getItemMeta();
-						meta.displayName(otherPlayer.displayName());
-						List<Component> lore = new ArrayList<>(2);
-						lore.add(ItemUtils.noItalics(Component.text("Kit: " + othersKit.getName())));
-						lore.add(CLICK_TO_DISGUISE);
-						meta.lore(lore);
-						kitIcon.setItemMeta(meta);
 						
-						items.add(ClickableItem.of(kitIcon, e -> {
-							//todo better message
-									SpyAbility.disguisePlayer(player, ownTeam, otherPlayer);
-									
-									Bukkit.getScheduler().runTask(Main.getPlugin(),
-											() -> {
-												player.closeInventory();
-											});
+						ItemStack playerHead = new ItemStack(Material.PLAYER_HEAD);
+						SkullMeta meta = (SkullMeta) playerHead.getItemMeta();
+						meta.setPlayerProfile(otherPlayer.getPlayerProfile());
+						meta.displayName(otherPlayer.playerListName());
+						meta.lore(Collections.singletonList(CLICK_TO_DISGUISE));
+						playerHead.setItemMeta(meta);
+						
+						items.add(ClickableItem.of(playerHead, e -> {
+									if(!Main.getGame().isSpectator(otherPlayer)) {
+										
+										SpyAbility.disguisePlayer(player, ownTeam, otherPlayer);
+										
+										Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
+											player.closeInventory();
+										});
+									}
 								}
 						));
 					}

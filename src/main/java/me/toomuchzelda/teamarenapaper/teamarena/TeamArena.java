@@ -243,6 +243,7 @@ public abstract class TeamArena
 			pinfo.kit = findKit(pinfo.defaultKit);
 			pinfo.team = noTeamTeam;
 			pinfo.clearDamageReceivedLog();
+			pinfo.getKillAssistTracker().clear();
 			pinfo.kills = 0;
 			noTeamTeam.addMembers(p);
 			
@@ -504,7 +505,7 @@ public abstract class TeamArena
 				}
 			}
 			
-			//ability on confirmed attacks done in this.confirmedDamageAbilities() called by DamageEvent.executeAttack()
+			//ability on confirmed attacks done in this.onConfirmedDamage() called by DamageEvent.executeAttack()
 			if(event.getFinalAttacker() instanceof Player p && event.getVictim() instanceof Player p2) {
 				if(!canAttack(p, p2))
 					continue;
@@ -1053,8 +1054,10 @@ public abstract class TeamArena
 				}
 			}
 			
-			//setSpectator(p, true, false);
 			PlayerInfo pinfo = Main.getPlayerInfo(p);
+			
+			attributeKillAndAssists(pinfo, killer);
+			
 			for(Ability a : pinfo.activeKit.getAbilities()) {
 				a.onDeath(event);
 			}
@@ -1072,8 +1075,6 @@ public abstract class TeamArena
 			else
 				pinfo.clearDamageReceivedLog();
 			
-			
-			attributeKillAndAssists(pinfo, killer);
 			
 			//clear attack givers so they don't get falsely attributed on this next player's death
 			dTimes.clearAttackers();
@@ -1105,7 +1106,11 @@ public abstract class TeamArena
 		var iter = victimInfo.getKillAssistTracker().getIterator();
 		while(iter.hasNext()) {
 			Map.Entry<Player, Double> entry = iter.next();
-			addKillAmount(entry.getKey(), entry.getValue());
+			//convert the raw damage into decimal range 0 to 1
+			// eg 10 damage (on player with 20 max health) = 0.5 kills
+			double damageAmount = entry.getValue();
+			damageAmount /= victimInfo.player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+			addKillAmount(entry.getKey(), damageAmount);
 			iter.remove();
 		}
 	}
@@ -1117,7 +1122,7 @@ public abstract class TeamArena
 	protected void addKillAmount(Player player, double amount) {
 		
 		if(amount != 1)
-			player.sendMessage(Component.text("Scored a kill assist of " + amount + "!").color(NamedTextColor.RED));
+			player.sendMessage(Component.text("Scored a kill assist of " + MathUtils.round(amount, 2) + "!").color(NamedTextColor.RED));
 		
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
 		int killsBefore = (int) pinfo.kills;
@@ -1130,6 +1135,7 @@ public abstract class TeamArena
 			//todo: check for and give killstreaks here
 			final double someKillStreakAmount = 5;
 			if(killsAfter == someKillStreakAmount) {
+				player.sendMessage("5 killstreak");
 				//give them killstreak item(s)
 			}
 		}

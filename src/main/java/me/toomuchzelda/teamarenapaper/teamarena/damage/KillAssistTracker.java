@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
+import me.toomuchzelda.teamarenapaper.Main;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
 
@@ -10,6 +11,8 @@ import java.util.Map;
 public class KillAssistTracker {
 
     private final Player player;
+    //double is the raw amount of damage done
+    // gets divided by 10 in TeamArena
     private final HashMap<Player, Double> playerDamageAmounts = new HashMap<>();
 
     public KillAssistTracker(Player player) {
@@ -17,7 +20,7 @@ public class KillAssistTracker {
     }
 
     public void addDamage(Player cause, double damage) {
-        //add this to the previous value if it exists
+        //add this to the previous value if it exists, else just make it the value
         playerDamageAmounts.merge(cause, damage, Double::sum);
     }
 
@@ -32,7 +35,7 @@ public class KillAssistTracker {
 
         double percent = newRemainderHealth / oldRemainderHealth;
 
-        //multiply all the damage credits they've received by this percent: reduce them uniformly
+        //multiply all the damage credits they've received by this percent; reduce them uniformly
         var iter = playerDamageAmounts.entrySet().iterator();
         while(iter.hasNext()) {
             Map.Entry<Player, Double> entry = iter.next();
@@ -45,10 +48,18 @@ public class KillAssistTracker {
                 entry.setValue(newValue);
             }
         }
+        
+        if(player.getName().equalsIgnoreCase("EnemyCircle901")) {
+            Main.logger().info(playerDamageAmounts.toString());
+        }
     }
 
     public double getAssistAmount(Player player) {
         return playerDamageAmounts.getOrDefault(player, 0d);
+    }
+    
+    public Player getPlayer() {
+        return this.player;
     }
     
     public void removeAssist(Player player) {
