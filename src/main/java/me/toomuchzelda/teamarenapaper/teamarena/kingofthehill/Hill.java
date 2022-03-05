@@ -33,7 +33,7 @@ public class Hill {
     }
 
     public void playParticles(Color... colors) {
-        //fucking ParticleBuilder doesn't support coloured SPELL_MOB Particles
+        //ParticleBuilder doesn't support coloured SPELL_MOB Particles
 
         //https://www.spigotmc.org/wiki/colored-particles/
 

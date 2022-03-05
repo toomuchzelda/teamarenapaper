@@ -69,6 +69,12 @@ public abstract class Ability {
      */
     public void onKill(DamageEvent event) {
     }
+    
+    /**
+     * when user is awarded a kill or kill assist on someone when they die
+     */
+    public void onAssist(Player player, double assist, Player victim) {
+    }
 
     /**
      * when the user launches a projectile (not a bow)

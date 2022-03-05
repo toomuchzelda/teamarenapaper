@@ -28,7 +28,6 @@ public class PlayerInfo
 	public Kit activeKit; // kit they've selected vs the kit they're currently using
 	//todo: read from DB or other persistent storage
 	public String defaultKit;
-	public final Player player;
 
 	//todo make array
 	private HashMap<Preference<?>, Object> preferences = new HashMap<>(); //todo make array
@@ -65,7 +64,6 @@ public class PlayerInfo
 		killAssistTracker = new KillAssistTracker(player);
 
 		kills = 0;
-		this.player = player;
 	}
 	
 	public void setPreferenceValues(Map<Preference<?>, ?> values) {

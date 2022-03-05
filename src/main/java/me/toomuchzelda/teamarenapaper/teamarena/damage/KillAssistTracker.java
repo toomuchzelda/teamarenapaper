@@ -11,8 +11,8 @@ import java.util.Map;
 public class KillAssistTracker {
 
     private final Player player;
-    //double is the raw amount of damage done
-    // gets divided by 10 in TeamArena
+    //double value is the real amount of damage done
+    // gets divided by player max health in TeamArena
     private final HashMap<Player, Double> playerDamageAmounts = new HashMap<>();
 
     public KillAssistTracker(Player player) {
@@ -47,10 +47,6 @@ public class KillAssistTracker {
             else {
                 entry.setValue(newValue);
             }
-        }
-        
-        if(player.getName().equalsIgnoreCase("EnemyCircle901")) {
-            Main.logger().info(playerDamageAmounts.toString());
         }
     }
 

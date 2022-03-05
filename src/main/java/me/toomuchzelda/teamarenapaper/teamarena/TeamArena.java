@@ -1056,7 +1056,7 @@ public abstract class TeamArena
 			
 			PlayerInfo pinfo = Main.getPlayerInfo(p);
 			
-			attributeKillAndAssists(pinfo, killer);
+			attributeKillAndAssists(p, pinfo, killer);
 			
 			for(Ability a : pinfo.activeKit.getAbilities()) {
 				a.onDeath(event);
@@ -1095,11 +1095,11 @@ public abstract class TeamArena
 		}
 	}
 	
-	private void attributeKillAndAssists(PlayerInfo victimInfo, @Nullable Player finalDamager) {
+	private void attributeKillAndAssists(Player victim, PlayerInfo victimInfo, @Nullable Player finalDamager) {
 		
 		//the finalDamager always gets 1 kill no matter what
 		if(finalDamager != null) {
-			addKillAmount(finalDamager, 1);
+			addKillAmount(finalDamager, 1, victim);
 			victimInfo.getKillAssistTracker().removeAssist(finalDamager);
 		}
 		
@@ -1109,8 +1109,8 @@ public abstract class TeamArena
 			//convert the raw damage into decimal range 0 to 1
 			// eg 10 damage (on player with 20 max health) = 0.5 kills
 			double damageAmount = entry.getValue();
-			damageAmount /= victimInfo.player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
-			addKillAmount(entry.getKey(), damageAmount);
+			damageAmount /= victim.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+			addKillAmount(entry.getKey(), damageAmount, victim);
 			iter.remove();
 		}
 	}
@@ -1119,7 +1119,7 @@ public abstract class TeamArena
 	 * give a player some kill assist amount or kill(s)
 	 * relies on being called one at a time for each kill/death, and relies on amount not being greater than 1
 	 */
-	protected void addKillAmount(Player player, double amount) {
+	protected void addKillAmount(Player player, double amount, Player victim) {
 		
 		if(amount != 1)
 			player.sendMessage(Component.text("Scored a kill assist of " + MathUtils.round(amount, 2) + "!").color(NamedTextColor.RED));
@@ -1130,6 +1130,12 @@ public abstract class TeamArena
 		int killsAfter = (int) pinfo.kills;
 		
 		PlayerListScoreManager.setKills(player, killsAfter);
+		
+		//player kill Assist abilities
+		Ability[] abilities = Kit.getAbilities(player);
+		for(Ability a : abilities) {
+			a.onAssist(player, amount, victim);
+		}
 		
 		if(killsAfter != killsBefore) { //if their number of kills increased to the next whole number
 			//todo: check for and give killstreaks here
