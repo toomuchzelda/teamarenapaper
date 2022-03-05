@@ -8,6 +8,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.DisguiseManager;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
@@ -31,14 +32,21 @@ public class KitSpy extends Kit
 {
 	public static final Material DISGUISE_MENU_MATERIAL = Material.CARVED_PUMPKIN;
 	public static final float DISGUISE_MENU_COOLDOWN = 12; //in seconds
+	
 	public static final int TIME_TO_DISGUISE_MENU = 3 * 20;
 	public static final int TIME_TO_DISGUISE_HEAD = 20;
+	
 	public static final Component COOLDOWN_MESSAGE = Component.text("Disguise pumpkin is still recharging!").color(TextUtils.ERROR_RED);
 	public static final Component CLICK_TO_DISGUISE = Component.text("Click to disguise as this player")
 			.color(NamedTextColor.LIGHT_PURPLE).decoration(TextDecoration.ITALIC, false);
-	public static final Component HEAD_TIME_MESSAGE = ItemUtils.noItalics(Component.text((TIME_TO_DISGUISE_HEAD / 20) + "s disguise time").color(NamedTextColor.LIGHT_PURPLE));
+	
+	public static final Component HEAD_TIME_MESSAGE = ItemUtils.noItalics(Component.text((TIME_TO_DISGUISE_HEAD / 20) + "sec disguise time").color(NamedTextColor.LIGHT_PURPLE));
+	public static final Component ATTACKED_MESSAGE = Component.text("Lost your disguise because you attacked someone!").color(NamedTextColor.LIGHT_PURPLE);
+	
+	
 	//preferably wouldnt be static, but this is becoming really messy
 	public static HashMap<Player, SpyDisguiseInfo> currentlyDisguised;
+	
 	//need to store Kit and Player, player should be inside the skull's PlayerProfile already
 	public final HashMap<ItemStack, Kit> skullItemDisguises = new HashMap<>();
 	
@@ -90,6 +98,15 @@ public class KitSpy extends Kit
 			
 			player.setLevel(0);
 			player.setExp(0);
+		}
+		
+		@Override
+		public void onDealtAttack(DamageEvent event) {
+			Player spy = (Player) event.getFinalAttacker();
+			if(currentlyDisguised.remove(spy) != null) {
+				DisguiseManager.removeDisguises(spy);
+				PlayerUtils.sendKitMessage(spy, ATTACKED_MESSAGE, ATTACKED_MESSAGE);
+			}
 		}
 
 		@Override
@@ -177,7 +194,7 @@ public class KitSpy extends Kit
 							Location three = player.getEyeLocation().add(MathUtils.randomRange(-0.3, 0.3), 0, MathUtils.randomRange(-0.3, 0.3));
 							BlockData blockData = Material.REDSTONE_BLOCK.createBlockData();
 							World world = loc.getWorld();
-							for(byte i = 0; i < 3; i++) {
+							for(byte i = 0; i < 4; i++) {
 								world.spawnParticle(Particle.BLOCK_CRACK, loc, 2, blockData);
 								world.spawnParticle(Particle.BLOCK_CRACK, two, 2, blockData);
 								world.spawnParticle(Particle.BLOCK_CRACK, three, 2, blockData);
