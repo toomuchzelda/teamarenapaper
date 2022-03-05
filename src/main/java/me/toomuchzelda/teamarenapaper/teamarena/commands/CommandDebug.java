@@ -14,24 +14,22 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class CommandDebug extends CustomCommand {
     public CommandDebug() {
-        super("debug", "", "/debug <gui/hide> ...",
-                Collections.emptyList(), CustomCommand.OWNER);
+        super("debug", "", "/debug <gui/hide> ...", PermissionLevel.OWNER);
     }
 
     @Override
-    public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
+    public void run(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage(Component.text("You can't use this command from the console!").color(NamedTextColor.RED));
-            return true;
+            return;
         }
         if (args.length == 0) {
-            return false;
+            showUsage(sender);
+            return;
         }
 
         switch (args[0]) {
@@ -45,11 +43,13 @@ public class CommandDebug extends CustomCommand {
                 }
             }
             case "gui" -> Inventories.openInventory(player, new TestGUI());
-            default -> {
-                return false;
-            }
+            default -> showUsage(sender);
         }
-        return true;
+    }
+
+    @Override
+    public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
+        return Arrays.asList("hide", "gui");
     }
 
     private static class TestGUI extends PagedInventory {

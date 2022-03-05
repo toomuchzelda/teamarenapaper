@@ -192,26 +192,20 @@ public class EventListeners implements Listener
 	public void playerCommandSend(PlayerCommandSendEvent event) {
 		@NotNull Collection<String> commands = event.getCommands();
 
-		Iterator<String> iter = commands.iterator();
-		PlayerInfo pinfo = Main.getPlayerInfo(event.getPlayer());
-		while(iter.hasNext()) {
-			String strCommand = iter.next();
-			Command command = Bukkit.getCommandMap().getCommand(strCommand);
-			if(command != null) {
-				//if it's custom command check for my own permission level otherwise use
-				// bukkit ones or whatever
-				if (command instanceof CustomCommand customCmd) {
-					if (pinfo.permissionLevel < customCmd.permissionLevel) {
-						iter.remove();
-					}
-				}
-				else if (command.getPermission() != null){
-					if (!event.getPlayer().hasPermission(command.getPermission())) {
-						iter.remove();
-					}
-				}
+		Player player = event.getPlayer();
+		PlayerInfo pinfo = Main.getPlayerInfo(player);
+
+		commands.removeIf(commandStr -> {
+			Command command = Bukkit.getCommandMap().getCommand(commandStr);
+			if (command == null) // command not found
+				return true;
+			if (command instanceof CustomCommand customCommand) {
+				return pinfo.permissionLevel.compareTo(customCommand.permissionLevel) < 0;
+			} else if (command.getPermission() != null) {
+				return !player.hasPermission(command.getPermission());
 			}
-		}
+			return false;
+		});
 	}
 	
 	//public static int i = 0;

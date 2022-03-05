@@ -56,6 +56,8 @@ public abstract class PagedInventory implements InventoryProvider {
             if (stack == null || stack.getType().isAir())
                 emptySlots.add(index);
         }
+        if (emptySlots.size() == 0)
+            return;
         maxPage = items.size() / emptySlots.size() + 1;
         int page = MathUtils.clamp(1, maxPage, this.page) - 1;
         int startIndex = page * emptySlots.size(), endIndex = Math.min(start + emptySlots.size(), items.size());
