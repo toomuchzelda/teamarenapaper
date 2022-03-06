@@ -29,7 +29,7 @@ repositories {
 dependencies {
     implementation("org.yaml:snakeyaml:1.29")
     paperDevBundle("1.18.1-R0.1-SNAPSHOT")
-    compileOnly("com.comphenix.protocol:ProtocolLib:4.8.0-SNAPSHOT")
+    compileOnly("com.comphenix.protocol:ProtocolLib:4.8.0")
 }
 
 group = "me.toomuchzelda"

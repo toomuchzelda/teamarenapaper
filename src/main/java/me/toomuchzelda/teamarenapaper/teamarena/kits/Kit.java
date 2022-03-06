@@ -114,6 +114,10 @@ public abstract class Kit {
         this.armour = new ItemStack[] {feet, legs, chest, head};
     }
 
+    public ItemStack[] getArmour() {
+        return armour;
+    }
+    
     public void setItems(ItemStack... items) {
         this.items = items;
     }
@@ -165,8 +169,6 @@ public abstract class Kit {
     
     /**
      * get abilities of the kit the player is actively using
-     * @param player
-     * @return
      */
     public static Ability[] getAbilities(Player player) {
         PlayerInfo pinfo = Main.getPlayerInfo(player);
@@ -176,5 +178,21 @@ public abstract class Kit {
         else {
             return EMPTY_ABILITIES;
         }
+    }
+    
+    public static boolean hasAbility(Player player, Class<? extends Ability> ability) {
+        Kit kit = getActiveKit(player, false);
+        return hasAbility(kit, ability);
+    }
+    
+    public static boolean hasAbility(Kit kit, Class<? extends Ability> ability) {
+        if(kit != null) {
+            for (Ability a : kit.getAbilities()) {
+                if (ability.isInstance(a))
+                    return true;
+            }
+        }
+        
+        return false;
     }
 }

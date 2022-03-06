@@ -88,7 +88,7 @@ public class EventListeners implements Listener
 				}
 			}
 			DamageTimes.cleanup();
-			Main.playerIdLookup.int2ObjectEntrySet().removeIf(idLookupEntry -> !idLookupEntry.getValue().isOnline());
+			Main.playerIdLookup.entrySet().removeIf(idLookupEntry -> !idLookupEntry.getValue().isOnline());
 			
 			if(MathUtils.random.nextBoolean()) {//MathUtils.randomMax(3) < 3) {
 				TeamArena.nextGameType = GameType.KOTH;

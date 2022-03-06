@@ -17,9 +17,7 @@ import org.bukkit.command.CommandMap;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
@@ -32,8 +30,8 @@ public final class Main extends JavaPlugin
 
 	private static Main plugin;
 
-	private static final ConcurrentHashMap<Player, PlayerInfo> playerInfo = new ConcurrentHashMap<>();
-	public static final Int2ObjectMap<Player> playerIdLookup = Int2ObjectMaps.synchronize(new Int2ObjectOpenHashMap<>(1000));
+	private static final ConcurrentHashMap<Player, PlayerInfo> playerInfo = new ConcurrentHashMap<>(1000);
+	public static final Map<Integer, Player> playerIdLookup = Collections.synchronizedMap(new HashMap<>(1000));
 
 	@Override
 	public void onEnable()

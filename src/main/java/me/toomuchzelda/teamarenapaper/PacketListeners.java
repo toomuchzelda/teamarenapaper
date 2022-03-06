@@ -1,19 +1,31 @@
 package me.toomuchzelda.teamarenapaper;
 
 import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.ProtocolLib;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.events.ScheduledPacket;
 import com.mojang.authlib.GameProfile;
+import com.mojang.datafixers.util.Pair;
 import it.unimi.dsi.fastutil.ints.IntList;
 import me.toomuchzelda.teamarenapaper.teamarena.DisguiseManager;
+import me.toomuchzelda.teamarenapaper.teamarena.GameState;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSpy;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoPacket;
+import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
+import org.bukkit.craftbukkit.v1_18_R1.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_18_R1.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.LinkedList;
@@ -152,21 +164,6 @@ public class PacketListeners
 						}
 					}
 				}
-				/*else if(nmsPacket.getAction() == ClientboundPlayerInfoPacket.Action.REMOVE_PLAYER) {
-					for(ClientboundPlayerInfoPacket.PlayerUpdate update : nmsPacket.getEntries()) {
-						GameProfile profile = update.getProfile();
-						Player player = Bukkit.getPlayer(profile.getId());
-						
-						DisguiseManager.Disguise disguise = DisguiseManager.getDisguiseSeeing(player, event.getPlayer());
-						if(disguise != null) {
-							Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
-								//PlayerUtils.sendPacket(event.getPlayer(), disguise.removeDisguisedPlayerPacket);
-								PlayerUtils.sendPacket(event.getPlayer(), disguise.removeTabListPlayerInfoPacket);
-							});
-							
-						}
-					}
-				}*/
 			}
 		});
 		
@@ -263,15 +260,48 @@ public class PacketListeners
 			}
 		});
 		
-		/*ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin, PacketType.Play.Client.USE_ENTITY)
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
+				PacketType.Play.Server.ENTITY_EQUIPMENT)
 		{
-			
 			@Override
-			public void onPacketReceiving(PacketEvent event) {
-				ServerboundInteractPacket packet = (ServerboundInteractPacket) event.getPacket().getHandle();
+			public void onPacketSending(PacketEvent event) {
+				TeamArena teamArena = Main.getGame();
+				if(teamArena != null && teamArena.getGameState() == GameState.LIVE) {
+					ClientboundSetEquipmentPacket packet = (ClientboundSetEquipmentPacket) event.getPacket().getHandle();
+					Player equippingPlayer = Main.playerIdLookup.get(packet.getEntity());
 				
-				Bukkit.broadcastMessage(packet.getActionType() + " Offhand: " + packet.isUsingSecondaryAction());
+					if(equippingPlayer == null) //may not be a player, zombies/skeletons can wear armour
+						return;
+					
+					//if they have spy ability manipulate their armour to viewers
+					if(Kit.hasAbility(equippingPlayer, KitSpy.SpyAbility.class)) {
+						KitSpy.SpyDisguiseInfo spyInfo = KitSpy.getInfo(equippingPlayer);
+						DisguiseManager.Disguise disg = DisguiseManager.getDisguiseSeeing(packet.getEntity(), event.getPlayer());
+					
+						if(disg != null) { //the viewer is indeed viewing a disguise of this player
+							ItemStack[] kitArmour = spyInfo.disguisingAsKit.getArmour();
+							
+							//replace the items in the packet accordingly
+							var iter = packet.getSlots().listIterator();
+							LivingEntity nmsLiving = ((CraftPlayer) equippingPlayer).getHandle();
+							while(iter.hasNext()) {
+								Pair<EquipmentSlot, net.minecraft.world.item.ItemStack> pair = iter.next();
+								
+								//don't touch the hand slots, and don't change it if it's air (taking an armor piece off)
+								if(pair.getFirst().getType() == EquipmentSlot.Type.ARMOR && !pair.getSecond().isEmpty()) {
+									ItemStack armorPiece = kitArmour[pair.getFirst().getIndex()];
+									net.minecraft.world.item.ItemStack nmsArmor = CraftItemStack.asNMSCopy(armorPiece);
+									// paper avoids sending unnecessary metadata in NMS, so do that here too
+									nmsArmor = nmsLiving.stripMeta(nmsArmor, false);
+									
+									Pair<EquipmentSlot, net.minecraft.world.item.ItemStack> newPair = Pair.of(pair.getFirst(), nmsArmor);
+									iter.set(newPair);
+								}
+							}
+						}
+					}
+				}
 			}
-		});*/
+		});
 	}
 }

@@ -70,6 +70,13 @@ public class KitSpy extends Kit
 		currentlyDisguised = new HashMap<>();
 	}
 	
+	/**
+	 * for packet listener
+	 */
+	public static SpyDisguiseInfo getInfo(Player player) {
+		return currentlyDisguised.get(player);
+	}
+	
 	public class SpyAbility extends Ability
 	{
 		@Override

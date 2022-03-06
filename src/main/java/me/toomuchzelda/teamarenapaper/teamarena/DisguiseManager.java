@@ -19,7 +19,7 @@ import org.bukkit.entity.Player;
 import java.util.*;
 
 /**
- * create and keep track of fake player entities used for disguises
+ * create and keep track of fake players infos and whos seeing them
  * most of the getter methods here are made primarily for use in packet listeners
  */
 public class DisguiseManager
