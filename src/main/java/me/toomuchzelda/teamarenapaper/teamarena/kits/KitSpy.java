@@ -23,6 +23,7 @@ import org.bukkit.event.Event;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
@@ -30,17 +31,25 @@ import java.util.*;
 
 public class KitSpy extends Kit
 {
-	public static final Material DISGUISE_MENU_MATERIAL = Material.CARVED_PUMPKIN;
-	public static final float DISGUISE_MENU_COOLDOWN = 12; //in seconds
-	
 	public static final int TIME_TO_DISGUISE_MENU = 3 * 20;
 	public static final int TIME_TO_DISGUISE_HEAD = 20;
+	public static final float DISGUISE_MENU_COOLDOWN = 12; //in seconds
+	
+	public static final Material DISGUISE_MENU_MATERIAL = Material.CARVED_PUMPKIN;
+	public static final Component DISGUISE_MENU_NAME = ItemUtils.noItalics(Component.text("sussy mask")
+			.color(TextUtils.ERROR_RED));
+	public static final Component DISGUISE_MENU_DESC = ItemUtils.noItalics(Component.text("Click to disguise!"));
+	public static final Component DISGUISE_MENU_DESC2 = ItemUtils.noItalics(Component.text(DISGUISE_MENU_COOLDOWN + "sec recharge. "
+			+ (TIME_TO_DISGUISE_MENU / 20) + "sec disguise time"));
+	
+	public static final List<Component> DISGUISE_MENU_LORE_LIST;
 	
 	public static final Component COOLDOWN_MESSAGE = Component.text("Disguise pumpkin is still recharging!").color(TextUtils.ERROR_RED);
 	public static final Component CLICK_TO_DISGUISE = Component.text("Click to disguise as this player")
 			.color(NamedTextColor.LIGHT_PURPLE).decoration(TextDecoration.ITALIC, false);
 	
-	public static final Component HEAD_TIME_MESSAGE = ItemUtils.noItalics(Component.text((TIME_TO_DISGUISE_HEAD / 20) + "sec disguise time").color(NamedTextColor.LIGHT_PURPLE));
+	public static final Component HEAD_TIME_MESSAGE = ItemUtils.noItalics(Component.text((TIME_TO_DISGUISE_HEAD / 20)
+			+ "sec disguise time").color(NamedTextColor.LIGHT_PURPLE));
 	public static final Component ATTACKED_MESSAGE = Component.text("Lost your disguise because you attacked someone!").color(NamedTextColor.LIGHT_PURPLE);
 	
 	
@@ -49,6 +58,13 @@ public class KitSpy extends Kit
 	
 	//need to store Kit and Player, player should be inside the skull's PlayerProfile already
 	public final HashMap<ItemStack, Kit> skullItemDisguises = new HashMap<>();
+	
+	static {
+		ArrayList<Component> lore = new ArrayList<>(2);
+		lore.add(DISGUISE_MENU_DESC);
+		lore.add(DISGUISE_MENU_DESC2);
+		DISGUISE_MENU_LORE_LIST = Collections.unmodifiableList(lore);
+	}
 	
 	public KitSpy() {
 		super("Spy", "sus", Material.SPYGLASS);
@@ -63,7 +79,14 @@ public class KitSpy extends Kit
 		
 		ItemStack sword = new ItemStack(Material.IRON_SWORD);
 		sword.addEnchantment(Enchantment.DAMAGE_ALL, 1);
-		setItems(sword, new ItemStack(DISGUISE_MENU_MATERIAL));
+		
+		ItemStack menu = new ItemStack(DISGUISE_MENU_MATERIAL);
+		ItemMeta menuMeta = menu.getItemMeta();
+		menuMeta.displayName(DISGUISE_MENU_NAME);
+		menuMeta.lore(DISGUISE_MENU_LORE_LIST);
+		menu.setItemMeta(menuMeta);
+		
+		setItems(sword, menu);
 		
 		setAbilities(new SpyAbility());
 		
@@ -113,13 +136,15 @@ public class KitSpy extends Kit
 			if(currentlyDisguised.remove(spy) != null) {
 				DisguiseManager.removeDisguises(spy);
 				PlayerUtils.sendKitMessage(spy, ATTACKED_MESSAGE, ATTACKED_MESSAGE);
+				for(int i = 0; i < 10; i++)
+					spy.playSound(spy.getLocation(), Sound.ITEM_ARMOR_EQUIP_LEATHER, SoundCategory.PLAYERS, 99999f, ((float) ((i - 5) * 0.2)));
 			}
 		}
 
 		@Override
 		public void onAssist(Player player, double amount, Player victim) {
 			if(amount >= 0.7) {
-				Kit victimsKit = Kit.getActiveKit(victim, false);
+				Kit victimsKit = Kit.getActiveKitHideInvis(victim);
 				
 				ItemStack victimsHead = new ItemStack(Material.PLAYER_HEAD);
 				SkullMeta meta = (SkullMeta) victimsHead.getItemMeta();
@@ -128,6 +153,7 @@ public class KitSpy extends Kit
 				List<Component> lore = new ArrayList<>(2);
 				lore.add(ItemUtils.noItalics(Component.text("Kit: " + victimsKit.getName()).color(NamedTextColor.LIGHT_PURPLE)));
 				lore.add(HEAD_TIME_MESSAGE);
+				lore.add(Component.text(ItemUtils.getUniqueId()));
 				meta.lore(lore);
 				victimsHead.setItemMeta(meta);
 				
@@ -266,7 +292,8 @@ public class KitSpy extends Kit
 			}
 			
 			if(theirKit == null) {
-				theirKit = Kit.getActiveKit(toDisguiseAs, false);
+				//theirKit = Kit.getActiveKit(toDisguiseAs, false);
+				theirKit = Kit.getActiveKitHideInvis(toDisguiseAs);
 			}
 			
 			SpyDisguiseInfo info = new SpyDisguiseInfo(disguises, theirKit, toDisguiseAs,

@@ -130,15 +130,24 @@ public abstract class Kit {
         return icon;
     }
     
-    public static @Nullable Kit getActiveKit(Player player, boolean hideSpies) {
+    public static @Nullable Kit getActiveKit(Player player) {
         Kit kit = Main.getPlayerInfo(player).activeKit;
+        return kit;
+    }
+    
+    /**
+     * for spy
+     * @return
+     */
+    public static Kit getActiveKitHideInvis(Player player) {
+        Kit kit = getActiveKit(player);
         if(kit == null)
             return null;
         
-        if(hideSpies && kit instanceof KitSpy) {
-            return getRandomKit();
+        while(kit.isInvisKit()) {
+            kit = getRandomKit();
         }
-        
+    
         return kit;
     }
     
@@ -181,7 +190,7 @@ public abstract class Kit {
     }
     
     public static boolean hasAbility(Player player, Class<? extends Ability> ability) {
-        Kit kit = getActiveKit(player, false);
+        Kit kit = getActiveKit(player);
         return hasAbility(kit, ability);
     }
     

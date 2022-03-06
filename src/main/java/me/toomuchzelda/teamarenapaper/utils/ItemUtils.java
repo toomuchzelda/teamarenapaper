@@ -63,8 +63,8 @@ public class ItemUtils
 	}
 
 	/**
-	 * return a bunch of color chars to append to the end of item name to make it unique?
-	 * use only in libraryaddict's inventory code
+	 * return a bunch of color chars to append to the end of item name/lore to make it unique?
+	 * used to stop identical item stacking
 	 * credit libraryaddict - https://github.com/libraryaddict/RedWarfare/blob/master/redwarfare-core/src/me/libraryaddict/core/utils/UtilInv.java
 	 */
 	public static String getUniqueId() {
