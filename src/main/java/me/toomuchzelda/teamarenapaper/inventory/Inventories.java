@@ -12,6 +12,7 @@ import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.server.PluginDisableEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -31,6 +32,8 @@ public final class Inventories implements Listener {
     private static final WeakHashMap<Inventory, InventoryData> pluginInventories = new WeakHashMap<>();
     public static Inventories INSTANCE = new Inventories();
 
+    public static boolean debug = false;
+
     private Inventories() {
         Bukkit.getScheduler().runTaskTimer(Main.getPlugin(), Inventories::tick, 1, 1);
     }
@@ -43,11 +46,22 @@ public final class Inventories implements Listener {
     }
 
     public static void openInventory(Player player, InventoryProvider provider) {
+        if (debug) {
+            Main.logger().info("[GUI] Opening GUI " + provider + " for " + player.getName());
+        }
+
         Component title = provider.getTitle(player);
         int size = 9 * provider.getRows();
         Inventory inv = Bukkit.createInventory(player, size, title);
         InventoryData data = new InventoryData(inv, provider);
-        pluginInventories.put(inv, data);
+        InventoryData old = pluginInventories.put(inv, data);
+        if (old != null) {
+            // clean up old inventory
+            if (debug) {
+                Main.logger().info("[GUI] Cleaning up GUI " + old + " for " + player.getName());
+            }
+            old.provider.close(player);
+        }
         playerInventories.put(player, inv);
         provider.init(player, data);
         // just to be safe
@@ -77,13 +91,32 @@ public final class Inventories implements Listener {
         }
     }
 
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onPlayerQuit(PlayerQuitEvent e) {
+        Inventory inv = playerInventories.get(e.getPlayer());
+        if (inv != null) {
+            inv.close();
+        }
+    }
+
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent e) {
+        if (debug) {
+            Main.logger().info("[GUI] Player closing GUI, reason: " + e.getReason());
+        }
         Player player = (Player) e.getPlayer();
         Inventory inv = playerInventories.remove(player);
-        if (inv != null) {
+        if (inv == e.getInventory()) {
             InventoryData data = pluginInventories.remove(inv);
+            if (debug) {
+                Main.logger().info("[GUI] Closed GUI has provider " + data.provider);
+            }
             data.provider.close(player);
+        } else {
+            InventoryData data = pluginInventories.remove(inv);
+            if (debug) {
+                Main.logger().info("[GUI] Error: orphaned inventory? Expected " + inv + " (from " + data.provider + "), got " + e.getInventory());
+            }
         }
     }
 
@@ -91,6 +124,9 @@ public final class Inventories implements Listener {
     public void onInventoryClick(InventoryClickEvent e) {
         Inventory inv = e.getInventory();
         InventoryData data = pluginInventories.get(inv);
+        if (debug) {
+            Main.logger().info("[GUI] Player " + e.getWhoClicked().getName() + " clicked " + data.provider);
+        }
         if (data == null) // not our inventory
             return;
         if (inv != e.getClickedInventory()) {

@@ -11,7 +11,10 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.*;
+import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -125,6 +128,9 @@ public class KitSpy extends Kit
 				if(item.getType() == Material.PLAYER_HEAD) //not every head may be a spy disguise item but meh
 					skullItemDisguises.remove(item);
 			}
+
+			// close GUI
+			Inventories.closeInventory(player, SpyInventory.class);
 			
 			player.setLevel(0);
 			player.setExp(0);
@@ -307,7 +313,7 @@ public class KitSpy extends Kit
 	}
 
 	public class SpyInventory extends PagedInventory {
-		
+
 		@Override
 		public Component getTitle(Player player) {
 			return Component.text("Spy Inventory");
@@ -322,66 +328,60 @@ public class KitSpy extends Kit
 		public void init(Player player, InventoryAccessor inventory) {
 			buildPages(player, inventory);
 		}
-		
+
 		@Override
 		public void update(Player player, InventoryAccessor inventory) {
-			if(TeamArena.getGameTick() % 10 == 0) {
+			if (TeamArena.getGameTick() % 10 == 0) {
 				inventory.invalidate();
 			}
 		}
-		
+
 		public void buildPages(Player player, InventoryAccessor inventory) {
-			// set prev page/next page items first
-			inventory.set(45, getPreviousPageItem(inventory));
-			inventory.set(53, getNextPageItem(inventory));
-			
-			
 			ArrayList<ClickableItem> items = new ArrayList<>();
 			TeamArena teamArena = Main.getGame();
-			
+
 			TeamArenaTeam[] gameTeams = teamArena.getTeams();
 			TeamArenaTeam ownTeam = Main.getPlayerInfo(player).team;
-			
+
 			//sort teams so own team is last
 			TeamArenaTeam[] sortedTeams = Arrays.copyOf(gameTeams, gameTeams.length);
 			Arrays.sort(sortedTeams, Comparator.<TeamArenaTeam, Integer>comparing(team -> team == ownTeam ? 1 : 0)
 					.thenComparing(TeamArenaTeam::getSimpleName));
-			
+
 			for (TeamArenaTeam team : sortedTeams) {
 				items.add(ClickableItem.empty(team.getIconItem()));
-				
+
 				for (Player otherPlayer : team.getPlayerMembers()) {
 					if (!teamArena.isSpectator(otherPlayer)) {
-						
 						ItemStack playerHead = new ItemStack(Material.PLAYER_HEAD);
 						SkullMeta meta = (SkullMeta) playerHead.getItemMeta();
 						meta.setPlayerProfile(otherPlayer.getPlayerProfile());
-						meta.displayName(otherPlayer.playerListName());
+						meta.displayName(otherPlayer.playerListName().decoration(TextDecoration.ITALIC, false));
 						meta.lore(Collections.singletonList(CLICK_TO_DISGUISE));
 						playerHead.setItemMeta(meta);
-						
+
 						items.add(ClickableItem.of(playerHead, e -> {
-									if(!Main.getGame().isSpectator(otherPlayer)) {
-										
-										SpyAbility.disguisePlayer(player, ownTeam, otherPlayer, null,
-												TIME_TO_DISGUISE_MENU, true);
-										
-										Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
-											player.closeInventory();
-										});
-									}
-								}
-						));
+							if (!Main.getGame().isSpectator(otherPlayer)) {
+
+								SpyAbility.disguisePlayer(player, ownTeam, otherPlayer, null,
+										TIME_TO_DISGUISE_MENU, true);
+								Inventories.closeInventory(player);
+							}
+						}));
 					}
 				}
-				
+
 				//make new line if needed and not at the end of the page
 				while (team != sortedTeams[sortedTeams.length - 1] && items.size() % 9 != 0)
 					items.add(null);
 			}
-			
-			
-			setPageItems(items, inventory);
+
+			setPageItems(items, inventory, 0, 45);
+			if (getMaxPage() != 1) {
+				// set prev page/next page items first
+				inventory.set(45, getPreviousPageItem(inventory));
+				inventory.set(53, getNextPageItem(inventory));
+			}
 		}
 	}
 	
