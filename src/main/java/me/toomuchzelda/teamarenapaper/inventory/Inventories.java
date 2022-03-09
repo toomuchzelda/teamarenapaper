@@ -114,7 +114,7 @@ public final class Inventories implements Listener {
             data.provider.close(player);
         } else {
             InventoryData data = pluginInventories.remove(inv);
-            if (debug) {
+            if (debug && data != null) {
                 Main.logger().info("[GUI] Error: orphaned inventory? Expected " + inv + " (from " + data.provider + "), got " + e.getInventory());
             }
         }

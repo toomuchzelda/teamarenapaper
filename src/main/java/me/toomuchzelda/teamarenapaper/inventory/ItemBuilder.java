@@ -2,9 +2,12 @@ package me.toomuchzelda.teamarenapaper.inventory;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.ComponentLike;
+import org.bukkit.Color;
 import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.LeatherArmorMeta;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,8 +15,8 @@ import java.util.List;
 import java.util.function.Consumer;
 
 public final class ItemBuilder {
-    private ItemStack stack;
-    private ItemMeta meta;
+    private final ItemStack stack;
+    private final ItemMeta meta;
     private ItemBuilder(Material material) {
         this(new ItemStack(material));
     }
@@ -59,6 +62,16 @@ public final class ItemBuilder {
             actualComponents.add(componentLike.asComponent());
         }
         meta.lore(actualComponents);
+        return this;
+    }
+
+    public ItemBuilder enchant(Enchantment enchantment, int level) {
+        meta.addEnchant(enchantment, level, true);
+        return this;
+    }
+
+    public ItemBuilder color(Color color) {
+        meta(LeatherArmorMeta.class, armorMeta -> armorMeta.setColor(color));
         return this;
     }
 

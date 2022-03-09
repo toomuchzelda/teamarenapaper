@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
+import me.toomuchzelda.teamarenapaper.inventory.TicTacToe;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
@@ -15,7 +16,7 @@ import java.util.Collections;
 
 public class CommandDebug extends CustomCommand {
     public CommandDebug() {
-        super("debug", "", "/debug <gui/hide> ...", PermissionLevel.OWNER);
+        super("debug", "", "/debug <gui/hide/tictactoe> ...", PermissionLevel.OWNER);
     }
 
     @Override
@@ -47,12 +48,30 @@ public class CommandDebug extends CustomCommand {
                 }
                 sender.sendMessage(Component.text("GUI DEBUG: " + Inventories.debug).color(NamedTextColor.DARK_GREEN));
             }
+            case "tictactoe" -> {
+                if (args.length != 2) {
+                    showUsage(sender, "/debug tictactoe <player/bot>");
+                    return;
+                }
+                if (args[1].equalsIgnoreCase("bot")) {
+                    TicTacToe game = new TicTacToe(TicTacToe.getPlayer(player), TicTacToe.getBot());
+                    Bukkit.getScheduler().runTask(Main.getPlugin(), game::run);
+                } else {
+                    Player otherPlayer = Bukkit.getPlayer(args[1]);
+                    if (otherPlayer == null || otherPlayer == player) {
+                        sender.sendMessage(Component.text("Player not found!").color(NamedTextColor.RED));
+                        return;
+                    }
+                    TicTacToe game = new TicTacToe(TicTacToe.getPlayer(player), TicTacToe.getPlayer(otherPlayer));
+                    Bukkit.getScheduler().runTask(Main.getPlugin(), game::run);
+                }
+            }
             default -> showUsage(sender);
         }
     }
 
     @Override
     public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
-        return args.length == 1 ? Arrays.asList("hide", "gui") : Collections.emptyList();
+        return args.length == 1 ? Arrays.asList("hide", "gui", "tictactoe") : Collections.emptyList();
     }
 }
