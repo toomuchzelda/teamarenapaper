@@ -5,6 +5,7 @@ import net.kyori.adventure.text.ComponentLike;
 import org.bukkit.Color;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
@@ -72,6 +73,11 @@ public final class ItemBuilder {
 
     public ItemBuilder color(Color color) {
         meta(LeatherArmorMeta.class, armorMeta -> armorMeta.setColor(color));
+        return this;
+    }
+
+    public ItemBuilder hide(ItemFlag... flags) {
+        meta.addItemFlags(flags);
         return this;
     }
 

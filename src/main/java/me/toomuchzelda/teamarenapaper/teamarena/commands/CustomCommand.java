@@ -34,7 +34,8 @@ public abstract class CustomCommand extends Command {
         this(name, description, usage, Collections.emptyList(), permissionLevel);
     }
 
-    public static final Component NO_PERMISSION = Component.text("No abuse for non-admins!").color(NamedTextColor.DARK_RED);
+    public static final Component NO_PERMISSION = Component.text("You do not have permission to run this command!").color(NamedTextColor.DARK_RED);
+    public static final Component PLAYER_ONLY = Component.text("You can't run this command from the console!").color(NamedTextColor.RED);
     @Override
     public final boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         if (sender instanceof Player player) {
@@ -44,7 +45,13 @@ public abstract class CustomCommand extends Command {
                 return true;
             }
         }
-        run(sender, commandLabel, args);
+        try {
+            run(sender, commandLabel, args);
+        } catch (Throwable e) {
+            Main.logger().severe("Command " + getClass().getSimpleName() + " finished execution exceptionally " +
+                    "for input /" + commandLabel + " " + String.join(" ", args));
+            e.printStackTrace();
+        }
         return true;
     }
 
@@ -58,13 +65,20 @@ public abstract class CustomCommand extends Command {
                 return Collections.emptyList();
             }
         }
-        return filterCompletions(onTabComplete(sender, alias, args), args[args.length - 1]);
+        Collection<String> completions = Collections.emptyList();
+        try {
+            completions = onTabComplete(sender, alias, args);
+        } catch (Throwable e) {
+            Main.logger().severe("Command " + getClass().getSimpleName() + " failed to provide valid completions " +
+                    "for input /" + alias + " " + String.join(" ", args));
+        }
+        return filterCompletions(completions, args[args.length - 1]);
     }
 
     @NotNull
     public abstract Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args);
 
-    public static List<String> filterCompletions(Collection<String> completions, String input) {
+    public static List<String> filterCompletions(@NotNull Collection<String> completions, @NotNull String input) {
         List<String> list = new ArrayList<>();
         for (String completion : completions) {
             if (completion.regionMatches(true, 0, input, 0, input.length())) {
@@ -80,6 +94,10 @@ public abstract class CustomCommand extends Command {
 
     protected void showUsage(CommandSender sender) {
         showUsage(sender, getUsage());
+    }
+
+    protected boolean hasPermission(CommandSender sender, PermissionLevel level) {
+        return !(sender instanceof Player player) || Main.getPlayerInfo(player).permissionLevel.compareTo(level) >= 0;
     }
 
     //todo: a system for commands that have multiple word arguments ie. /give player item amount etc

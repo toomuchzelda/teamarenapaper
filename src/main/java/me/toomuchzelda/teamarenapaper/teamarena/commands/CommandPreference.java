@@ -75,7 +75,7 @@ public class CommandPreference extends CustomCommand {
             } else if (args.length > 1 && args[0].equalsIgnoreCase("change")) {
                 Player p = (Player) sender;
                 if (args.length == 2)
-                    return CustomCommand.filterCompletions(new ArrayList<>(Preference.PREFERENCES.keySet()), args[1]);
+                    return Preference.PREFERENCES.keySet();
                 else {
                     Preference<?> pref = getPreference(p, args[1], false);
                     if (pref != null) {

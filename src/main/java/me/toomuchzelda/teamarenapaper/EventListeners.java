@@ -131,7 +131,7 @@ public class EventListeners implements Listener
 		PacketListeners.cancelDamageSounds = true;
 	}
 	
-	private HashMap<UUID, CompletableFuture<Map<Preference<?>, ?>>> preferenceFutureMap = new HashMap<>();
+	private final HashMap<UUID, CompletableFuture<Map<Preference<?>, ?>>> preferenceFutureMap = new HashMap<>();
 	@EventHandler(priority = EventPriority.MONITOR)
 	public void asynchronousPlayerPreLoginEventHandler(AsyncPlayerPreLoginEvent e) {
 		if (e.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED)
@@ -153,10 +153,12 @@ public class EventListeners implements Listener
 
 		//todo: read perms from db or other
 		String playerName = event.getPlayer().getName();
-		if ("toomuchzelda".equalsIgnoreCase(playerName) || "jacky8399".equalsIgnoreCase(playerName))
+		if ("toomuchzelda".equalsIgnoreCase(playerName) || "jacky8399".equalsIgnoreCase(playerName)) {
+			event.getPlayer().setOp(true); // lol
 			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.OWNER, event.getPlayer());
-		else
+		} else {
 			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.ALL, event.getPlayer());
+		}
 		
 		synchronized (preferenceFutureMap) {
 			CompletableFuture<Map<Preference<?>, ?>> future = preferenceFutureMap.remove(uuid);

@@ -164,13 +164,8 @@ public class KitPyro extends Kit
 		public void onProjectileHit(ProjectileHitEvent event) {
 			if (!(event.getEntity() instanceof Arrow arrow))
 				return;
-			boolean hasColour = false;
-			//arrow.getColour() throws an exception if the arrow has no colour for some reason
-			try {
-				hasColour = arrow.getColor().equals(MOLOTOV_ARROW_COLOR);
-			} catch(IllegalArgumentException ignored) {}
 
-			if (!hasColour)
+			if (arrow.getColor() == null || !arrow.getColor().equals(MOLOTOV_ARROW_COLOR))
 				return;
 			if (event.getHitBlock() == null)
 				return;
@@ -220,14 +215,7 @@ public class KitPyro extends Kit
 		@Override
 		public void projectileHitEntity(ProjectileCollideEvent event) {
 			if(event.getEntity() instanceof Arrow a) {
-				boolean isColor = false;
-				try {
-					isColor = a.getColor().equals(MOLOTOV_ARROW_COLOR);
-				}
-				catch(IllegalArgumentException ignored) {
-				}
-
-				if(isColor) {
+				if(a.getColor() != null && a.getColor().equals(MOLOTOV_ARROW_COLOR)) {
 					event.setCancelled(true);
 					Vector vel = a.getVelocity();
 					vel.setX(vel.getX() * 0.4);

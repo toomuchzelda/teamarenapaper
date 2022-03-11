@@ -152,7 +152,7 @@ public abstract class Kit {
     }
     
     public static Kit getRandomKit() {
-        Kit[] kits = Main.getGame().getKits();
+        Kit[] kits = Main.getGame().getKits().toArray(new Kit[0]);
         return kits[MathUtils.randomMax(kits.length - 1)];
     }
     

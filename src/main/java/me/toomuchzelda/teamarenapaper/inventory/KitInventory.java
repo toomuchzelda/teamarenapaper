@@ -6,26 +6,23 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.Bukkit;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
+import org.bukkit.map.MinecraftFont;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 public class KitInventory extends PagedInventory {
 
-    private ArrayList<Kit> kits;
+    private final ArrayList<Kit> kits;
     public KitInventory(Collection<? extends Kit> kits) {
         this.kits = new ArrayList<>(kits);
         this.kits.sort(Kit.COMPARATOR);
     }
 
     public KitInventory() {
-        this(Arrays.asList(Main.getGame().getKits()));
+        this(Main.getGame().getKits());
     }
 
     @Override
@@ -38,9 +35,26 @@ public class KitInventory extends PagedInventory {
         return Math.min(6, kits.size() / 9 + 1);
     }
 
-    private static Style LORE_STYLE = Style.style(NamedTextColor.YELLOW, TextDecoration.ITALIC);
+    private static final Style LORE_STYLE = Style.style(NamedTextColor.YELLOW).decoration(TextDecoration.ITALIC, false);
     public static ClickableItem getKitItem(Kit kit, boolean glow) {
-        List<? extends Component> loreLines = Arrays.stream(kit.getDescription().split("\\n"))
+        String desc = kit.getDescription();
+        // word wrapping because some command-loving idiot didn't add line breaks in kit descriptions
+        List<String> lines = new ArrayList<>();
+        StringJoiner line = new StringJoiner(" ");
+        for (String word : desc.split("\\s|\\n")) {
+            // arbitrary width
+            if (MinecraftFont.Font.getWidth(line.toString()) < 200) {
+                line.add(word);
+            } else {
+                lines.add(line.toString());
+                line = new StringJoiner(" ");
+                line.add(word);
+            }
+        }
+        // final line
+        lines.add(line.toString());
+
+        List<? extends Component> loreLines = lines.stream()
                 .map(str -> Component.text(str).style(LORE_STYLE))
                 .toList();
 
@@ -49,6 +63,7 @@ public class KitInventory extends PagedInventory {
                         .displayName(Component.text(kit.getName())
                                 .style(Style.style(NamedTextColor.BLUE).decoration(TextDecoration.ITALIC, false)))
                         .lore(loreLines)
+                        .hide(ItemFlag.values())
                         .meta(meta -> {
                             if (glow) {
                                 meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
@@ -58,16 +73,15 @@ public class KitInventory extends PagedInventory {
                         .build(),
                 e -> {
                     Player player = (Player) e.getWhoClicked();
-                    Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
-                        Main.getGame().selectKit(player, kit.getName());
-                        player.closeInventory();
-                    });
+                    Main.getGame().selectKit(player, kit);
+                    Inventories.closeInventory(player);
                 }
         );
     }
 
     @Override
     public void init(Player player, InventoryAccessor inventory) {
+        Main.getGame().interruptRespawn(player);
         Kit selected = Main.getPlayerInfo(player).kit;
         if (kits.size() > 45) { // 6 rows
             // set page items

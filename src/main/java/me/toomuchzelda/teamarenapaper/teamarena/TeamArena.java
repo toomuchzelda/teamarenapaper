@@ -31,6 +31,7 @@ import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 import org.yaml.snakeyaml.Yaml;
 
 import javax.annotation.Nullable;
@@ -93,8 +94,7 @@ public abstract class TeamArena
 	public static final int RESPAWN_SECONDS = 5;
 	public static final int MID_GAME_JOIN_SECONDS = 10;
 
-	protected Kit[] kits;
-	protected ArrayList<String> tabKitList;
+	protected Map<String, Kit> kits;
 	protected ItemStack kitMenuItem;
 
 	protected MapInfo mapInfo;
@@ -204,18 +204,9 @@ public abstract class TeamArena
 		ItemMeta respawnItemMeta = respawnItem.getItemMeta();
 		respawnItemMeta.displayName(respawnItemName);
 		respawnItem.setItemMeta(respawnItemMeta);
-		
-		kits = new Kit[]{new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
-				/*new KitReach(this),*/new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(),
-				new KitNone()};
-		tabKitList = new ArrayList<>(kits.length);
-		for(Kit kit : kits) {
-			for(Ability ability : kit.getAbilities()) {
-				ability.registerAbility();
-			}
-			
-			tabKitList.add(kit.getName());
-		}
+
+		kits = new LinkedHashMap<>();
+		registerKits();
 		
 		//List of team names
 		tabTeamsList = new ArrayList<>(teams.length);
@@ -248,7 +239,7 @@ public abstract class TeamArena
 			noTeamTeam.addMembers(p);
 			
 			if(pinfo.kit == null)
-				pinfo.kit = kits[0];
+				pinfo.kit = kits.values().iterator().next();
 
 			PlayerUtils.resetState(p);
 			p.setAllowFlight(true);
@@ -257,6 +248,19 @@ public abstract class TeamArena
 			giveLobbyItems(p);
 
 			mapInfo.sendMapInfo(p);
+		}
+	}
+
+	protected final List<Kit> defaultKits = List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
+			new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitNone());
+	protected void registerKits() {
+		defaultKits.forEach(this::registerKit);
+	}
+
+	protected void registerKit(Kit kit) {
+		kits.put(kit.getName().toLowerCase(Locale.ENGLISH), kit);
+		for (Ability ability : kit.getAbilities()) {
+			ability.registerAbility();
 		}
 	}
 
@@ -339,15 +343,15 @@ public abstract class TeamArena
 		}
 
 		midJoinerTick();
-		
+
 		//ability tick 'events'
-		for(Kit kit : kits) {
-			for(Ability ability : kit.getAbilities()) {
+		for (Kit kit : kits.values()) {
+			for (Ability ability : kit.getAbilities()) {
 				ability.onTick();
 			}
-			
-			for(Player p : kit.getActiveUsers()) {
-				for(Ability a : kit.getAbilities()) {
+
+			for (Player p : kit.getActiveUsers()) {
+				for (Ability a : kit.getAbilities()) {
 					a.onPlayerTick(p);
 				}
 			}
@@ -758,7 +762,7 @@ public abstract class TeamArena
 			pinfo.spawnPoint = null;
 		}
 		
-		for(Kit kit : kits) {
+		for(Kit kit : kits.values()) {
 			for(Ability ability : kit.getAbilities()) {
 				ability.unregisterAbility();
 			}
@@ -867,8 +871,8 @@ public abstract class TeamArena
 		inventory.setItem(0, kitMenuItem.clone());
 	}
 
-	public Kit[] getKits() {
-		return kits;
+	public Collection<Kit> getKits() {
+		return kits.values();
 	}
 
 	public TeamArenaTeam[] getTeams() {
@@ -883,35 +887,19 @@ public abstract class TeamArena
 
 	public abstract boolean canSelectTeamNow();
 
-	public void selectKit(Player player, String kitName) {
-		if (canSelectKitNow()) {
-			boolean found = false;
-			for (Kit kit : kits) {
-				if (kit.getName().equalsIgnoreCase(kitName)) {
-					Main.getPlayerInfo(player).kit = kit;
-					found = true;
-					player.sendMessage(Component.text("Using kit " + kitName).color(NamedTextColor.BLUE));
-					player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.PLAYERS, 1f, 2f);
-					break;
-				}
-			}
-
-			if (!found)
-				player.sendMessage(Component.text("Kit " + kitName + " doesn't exist").color(NamedTextColor.RED));
-		} else {
+	public void selectKit(@NotNull Player player, @NotNull Kit kit) {
+		if (!canSelectKitNow()) {
 			player.sendMessage(Component.text("You can't choose a kit right now").color(NamedTextColor.RED));
+			return;
 		}
+		Main.getPlayerInfo(player).kit = kit;
+		player.sendMessage(Component.text("Using kit " + kit.getName()).color(NamedTextColor.BLUE));
+		player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.PLAYERS, 1f, 2f);
 	}
 
+	@Nullable
 	public Kit findKit(String name) {
-		Kit kit = null;
-		for (int i = 0; i < kits.length; i++) {
-			if (kits[i].getName().equalsIgnoreCase(name)) {
-				kit = kits[i];
-				break;
-			}
-		}
-		return kit;
+		return kits.get(name.toLowerCase(Locale.ENGLISH));
 	}
 
 	public void selectTeam(Player player, String teamName) {
@@ -1235,7 +1223,7 @@ public abstract class TeamArena
 			playerInfo.kit = findKit(playerInfo.defaultKit);
 			//default kit somehow invalid; maybe a kit was removed
 			if(playerInfo.kit == null) {
-				playerInfo.kit = kits[0];
+				playerInfo.kit = kits.values().iterator().next();
 			}
 		}
 
@@ -1556,8 +1544,8 @@ public abstract class TeamArena
 		return tabTeamsList;
 	}
 	
-	public ArrayList<String> getTabKitList() {
-		return tabKitList;
+	public Collection<String> getTabKitList() {
+		return kits.keySet();
 	}
 	
 	public String mapPath() {

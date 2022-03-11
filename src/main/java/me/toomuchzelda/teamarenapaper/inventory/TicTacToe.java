@@ -166,8 +166,10 @@ public class TicTacToe {
         int animation = 0;
         @Override
         public void update(Player player, InventoryAccessor inventory) {
-            if (game == null)
+            if (game == null) {
+                drawBoard(player, inventory);
                 return;
+            }
 
             if (game.winner != null) {
                 // schedule ending the game
@@ -201,7 +203,7 @@ public class TicTacToe {
         public void drawBoard(Player player, InventoryAccessor inventory) {
             for (int i = 0; i < 9; i++) {
                 int slot = getSlot(i);
-                State cell = game.board[i];
+                State cell = game != null ? game.board[i] : null;
                 if (cell == null) {
                     final int finalI = i;
                     inventory.set(slot, EMPTY_ITEM, e -> {
