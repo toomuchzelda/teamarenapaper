@@ -59,7 +59,7 @@ public class DamageType {
             .setNoKnockback().setDamageSource(DamageSource.FALLING_BLOCK);
 
     public static final DamageType FALLING_STALACTITE = new DamageType(DamageTypeEnum.FALLING_STALACTITE, "Falling Stalactite", "%Killed% was impaled by a " +
-            "gravity-propelled stalactite").setNoKnockback().setDamageSource(DamageSource.FALLING_STALACTITE);
+            "falling stalactite").setNoKnockback().setDamageSource(DamageSource.FALLING_STALACTITE);
 
     /**
      * Direct exposure to fire
@@ -114,9 +114,9 @@ public class DamageType {
 
     public static final DamageType SUICIDE_ASSISTED = new DamageType(DamageTypeEnum.SUICIDE_ASSISTED, "Assisted Suicide",
             "%Killed% saw T_0_E_D's face and died", "%Killed% caught a whiff " +
-            "of their own armpits", "%Killed% thought Mineplex was better than Red Warfare", "%Killed% kicked a stray " +
-            "cat because they thought it was funny", "%Killed% had negative social credit score", "%Killed% lost at " +
-            "russian roulette", "%Killed% lost against themselves in a 1v1").setInstantDeath().setNoKnockback();
+            "of their own body odour", "%Killed% thought Mineplex was better than Red Warfare", "%Killed% kicked a stray " +
+            "cat because they thought it was funny", "%Killed% had negative social credit score", "%Killed% played " +
+            "russian roulette, and lost", "%Killed% lost against themselves in a 1v1").setInstantDeath().setNoKnockback();
     
     public static final DamageType SWEEP_ATTACK = new DamageType(DamageTypeEnum.SWEEP_ATTACK, "Sweep Attack", "%Killed% was killed by %Killer%'s sweeping attack")
             .setMelee();
@@ -184,11 +184,6 @@ public class DamageType {
         _name = copyOf._name;
         _projectile = copyOf._projectile;
         nmsDamageSource = copyOf.nmsDamageSource;
-    }
-
-    //declare all the attack types
-    public static void initSpecialDamageSources() {
-
     }
 
     public static DamageType getAttack(EntityDamageEvent event) {

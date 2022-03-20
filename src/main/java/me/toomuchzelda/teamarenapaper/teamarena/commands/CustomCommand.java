@@ -6,6 +6,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
@@ -97,7 +98,11 @@ public abstract class CustomCommand extends Command {
     }
 
     protected boolean hasPermission(CommandSender sender, PermissionLevel level) {
-        return !(sender instanceof Player player) || Main.getPlayerInfo(player).permissionLevel.compareTo(level) >= 0;
+        //return !(sender instanceof Player player) || Main.getPlayerInfo(player).permissionLevel.compareTo(level) >= 0;
+        if(sender instanceof Player player)
+            return Main.getPlayerInfo(player).permissionLevel.compareTo(level) >= 0;
+        else
+            return sender instanceof ConsoleCommandSender;
     }
 
     //todo: a system for commands that have multiple word arguments ie. /give player item amount etc

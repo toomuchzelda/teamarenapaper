@@ -14,6 +14,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.craftbukkit.v1_18_R2.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_18_R2.util.CraftVector;
@@ -83,6 +84,20 @@ public class PlayerUtils {
             }
         }
         return set;
+    }
+    
+    /**
+     * untested
+     * @param player
+     * @return
+     */
+    public static boolean isDrawingBow(Player player) {
+        if(player.getActiveItem() != null) {
+            Material mat = player.getActiveItem().getType();
+            return mat == Material.BOW || mat == Material.CROSSBOW;
+        }
+        
+        return false;
     }
 
     /**

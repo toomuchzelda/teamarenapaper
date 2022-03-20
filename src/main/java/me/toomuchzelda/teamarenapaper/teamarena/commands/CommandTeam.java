@@ -37,7 +37,7 @@ public class CommandTeam extends CustomCommand {
             sender.sendMessage(teamsList);
         } else {
             if (Main.getGame().canSelectTeamNow()) {
-                // for idiotic team names
+                // for team names with spaces
                 String chosen = String.join(" ", Arrays.copyOf(args, args.length));
                 Main.getGame().selectTeam(p, chosen);
             } else {

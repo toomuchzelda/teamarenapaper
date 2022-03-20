@@ -1,7 +1,13 @@
 package me.toomuchzelda.teamarenapaper.utils;
 
+import org.bukkit.Color;
 import org.bukkit.Location;
+import org.bukkit.block.Block;
+import org.bukkit.craftbukkit.v1_18_R2.block.CraftBlock;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
+
+import java.util.Collection;
 
 public class BlockUtils
 {
@@ -15,6 +21,27 @@ public class BlockUtils
 		coords[1] = Double.parseDouble(split[1]) + yOffset;
 		coords[2] = Double.parseDouble(split[2]) + zOffset;
 		return coords;
+	}
+	
+	public static int getBlockColor(Block block) {
+		return (((CraftBlock) block).getNMS().getBlock().defaultMaterialColor().col);
+	}
+	
+	public static Color getBlockBukkitColor(Block block) {
+		int col = getBlockColor(block);
+		return Color.fromRGB(col);
+	}
+	
+	//get the highest point of a block from it's base, also considering fancy block shapes
+	public static double getBlockHeight(Block block) {
+		Collection<BoundingBox> list = block.getCollisionShape().getBoundingBoxes();
+		double highest = 0;
+		for (BoundingBox box : list)
+		{
+			if (box.getMaxY() > highest)
+				highest = box.getMaxY();
+		}
+		return highest;
 	}
 	
 	public static Vector parseCoordsToVec(String string, double xOffset, double yOffset, double zOffset) {

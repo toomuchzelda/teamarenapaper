@@ -93,7 +93,10 @@ public abstract class TeamArena
 	protected ItemStack respawnItem;
 	public static final int RESPAWN_SECONDS = 5;
 	public static final int MID_GAME_JOIN_SECONDS = 10;
-
+	
+	protected final List<Kit> defaultKits = List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
+			new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(),
+			new KitNone());
 	protected Map<String, Kit> kits;
 	protected ItemStack kitMenuItem;
 
@@ -251,8 +254,6 @@ public abstract class TeamArena
 		}
 	}
 
-	protected final List<Kit> defaultKits = List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
-			new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitNone());
 	protected void registerKits() {
 		defaultKits.forEach(this::registerKit);
 	}

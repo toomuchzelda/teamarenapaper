@@ -6,6 +6,7 @@ import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
@@ -347,7 +348,8 @@ public class EventListeners implements Listener
 	//this event is fired for shooting bows including by players
 	@EventHandler
 	public void entityShootBow(EntityShootBowEvent event) {
-		event.getProjectile().setVelocity(projectileLaunchVector(event.getEntity(), event.getProjectile().getVelocity()));
+		event.getProjectile().setVelocity(EntityUtils.projectileLaunchVector(event.getEntity(),
+				event.getProjectile().getVelocity(), EntityUtils.VANILLA_PROJECTILE_SPRAY));
 		
 		if(event.getProjectile() instanceof AbstractArrow aa)
 			aa.setPickupStatus(AbstractArrow.PickupStatus.CREATIVE_ONLY);
@@ -377,7 +379,8 @@ public class EventListeners implements Listener
 		/*Bukkit.broadcastMessage(event.getItemStack().getType().toString());
 		Bukkit.broadcastMessage(event.getProjectile().getVelocity().toString());*/
 
-		event.getProjectile().setVelocity(projectileLaunchVector(event.getPlayer(), event.getProjectile().getVelocity()));
+		event.getProjectile().setVelocity(EntityUtils.projectileLaunchVector(event.getPlayer(),
+				event.getProjectile().getVelocity(), EntityUtils.VANILLA_PROJECTILE_SPRAY));
 		
 		if(Main.getGame() != null) {
 			Player p = event.getPlayer();
@@ -421,26 +424,6 @@ public class EventListeners implements Listener
 		}
 	}
 
-	public static Vector projectileLaunchVector(Entity shooter, Vector original) {
-		//slight randomness in direction
-		double randX = MathUtils.random.nextGaussian() * 0.0075;
-		double randY = MathUtils.random.nextGaussian() * 0.0075;
-		double randZ = MathUtils.random.nextGaussian() * 0.0075;
-
-		Vector direction = shooter.getLocation().getDirection();
-		double power = original.subtract(shooter.getVelocity()).length();
-
-		//probably add to each component?
-		direction.setX(direction.getX() + randX);
-		direction.setY(direction.getY() + randY);
-		direction.setZ(direction.getZ() + randZ);
-
-		direction.multiply(power);
-
-		//Bukkit.broadcastMessage("velocity: " + direction.toString());
-
-		return direction;
-	}
 
 	//stop projectiles from colliding with spectators
 	// and the flags in CTF

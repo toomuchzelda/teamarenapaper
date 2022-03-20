@@ -16,6 +16,7 @@ import org.bukkit.craftbukkit.v1_18_R2.entity.CraftLivingEntity;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.util.Vector;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -23,6 +24,7 @@ import java.lang.reflect.Method;
 public class EntityUtils {
 
     public static Method getHurtSoundMethod;
+    public static final double VANILLA_PROJECTILE_SPRAY = 0.0075d;
 
     public static void cacheReflection() {
         try {
@@ -46,6 +48,27 @@ public class EntityUtils {
             entityName = entity.name();
 
         return entityName;
+    }
+    
+    public static Vector projectileLaunchVector(Entity shooter, Vector original, double spray) {
+        //slight randomness in direction
+        double randX = MathUtils.random.nextGaussian() * spray;
+        double randY = MathUtils.random.nextGaussian() * spray;
+        double randZ = MathUtils.random.nextGaussian() * spray;
+        
+        Vector direction = shooter.getLocation().getDirection();
+        double power = original.subtract(shooter.getVelocity()).length();
+        
+        //probably add to each component?
+        direction.setX(direction.getX() + randX);
+        direction.setY(direction.getY() + randY);
+        direction.setZ(direction.getZ() + randZ);
+        
+        direction.multiply(power);
+        
+        //Bukkit.broadcastMessage("velocity: " + direction.toString());
+        
+        return direction;
     }
 
     /**

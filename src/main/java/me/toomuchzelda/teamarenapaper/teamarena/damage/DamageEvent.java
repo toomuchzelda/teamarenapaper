@@ -65,7 +65,15 @@ public class DamageEvent {
     public static final double yMult = 0.1;
     public static final double xzMult = 1;
     
-    //EntityDamageEvent does all the damage calculations for us!
+    public static @Nullable DamageEvent createDamageEvent(EntityDamageEvent event, DamageType damageType) {
+        DamageEvent newEvent = createDamageEvent(event);
+        if(newEvent != null)
+            newEvent.setDamageType(damageType);
+        
+        return newEvent;
+    }
+    
+    //EntityDamageEvent does all the damage calculations for us! does it?
     public static @Nullable DamageEvent createDamageEvent(EntityDamageEvent event) {
     
         event.setCancelled(true);
