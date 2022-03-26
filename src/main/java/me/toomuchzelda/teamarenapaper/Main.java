@@ -6,11 +6,11 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
-import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.FileUtils;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.bukkit.command.CommandMap;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -38,10 +38,6 @@ public final class Main extends JavaPlugin
 		
 		logger = this.getLogger();
 		logger.info("Starting TMA");
-		
-		// ensure the static initializers of Preferences.class is called
-		// unideal
-		Preferences.DAMAGE_TILT.getName();
 		
 		//unload all vanilla worlds
 		// stop mob AI in vanilla worlds to try save performance?
@@ -76,15 +72,24 @@ public final class Main extends JavaPlugin
 	}
 	
 	@Override
-	public void onDisable()
-	{
+	public void onDisable() {
 		// Plugin shutdown logic
-		
-		//delete temporarily loaded map if any
-		if(teamArena != null && teamArena.getWorld() != null) {
-			Bukkit.unloadWorld(teamArena.getWorld(), false);
-			FileUtils.delete(teamArena.getWorldFile());
-			//getLogger().info("Deleted " + name);
+
+		// delete temporarily loaded map if any
+		if (teamArena != null && teamArena.getWorld() != null) {
+			// evacuate the world first, then unload
+			World tempWorld = teamArena.getWorld();
+			if (tempWorld.getPlayerCount() != 0) {
+				World mainWorld = Bukkit.getWorlds().get(0);
+				for (Player player : tempWorld.getPlayers()) {
+					player.teleport(mainWorld.getSpawnLocation());
+				}
+			}
+			if (Bukkit.unloadWorld(tempWorld, false)) {
+				FileUtils.delete(teamArena.getWorldFile());
+			} else {
+				logger.severe("Failed to unload world " + tempWorld.getName());
+			}
 		}
 	}
 	

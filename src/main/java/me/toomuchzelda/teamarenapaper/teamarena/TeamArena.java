@@ -1435,7 +1435,6 @@ public abstract class TeamArena
 		Vector corner1 = BlockUtils.parseCoordsToVec(borders.get(0), 0, 0, 0);
 		Vector corner2 = BlockUtils.parseCoordsToVec(borders.get(1), 0, 0, 0);
 		border = BoundingBox.of(corner1, corner2);
-		Main.logger().info("MapBorder: " + border.toString());
 
 		//calculate spawnpoint based on map border
 		Vector centre = border.getCenter();
@@ -1451,7 +1450,6 @@ public abstract class TeamArena
 		spawnPos = centre.toLocation(gameWorld, 90, 0);
 		spawnPos.setY(spawnPos.getY() + 2);
 
-		Main.logger().info("spawnPos: " + spawnPos.toString());
 		
 		//if both Y are 0 then have no ceiling
 		// do this after spawnpoint calculation otherwise it's trouble
@@ -1470,9 +1468,7 @@ public abstract class TeamArena
 		teams = new TeamArenaTeam[numOfTeams];
 		int teamsArrIndex = 0;
 
-		Iterator<Map.Entry<String, Map<String, ArrayList<String>>>> teamsIter = teamsMap.entrySet().iterator();
-		while(teamsIter.hasNext()) {
-			Map.Entry<String, Map<String, ArrayList<String>>> entry = teamsIter.next();
+		for (Map.Entry<String, Map<String, ArrayList<String>>> entry : teamsMap.entrySet()) {
 			String teamName = entry.getKey();
 
 			Map<String, ArrayList<String>> spawnsYaml = entry.getValue();
@@ -1480,9 +1476,11 @@ public abstract class TeamArena
 			//if it's a legacy RWF team
 			//TeamColours teamColour = TeamColours.valueOf(teamName);
 			TeamArenaTeam teamArenaTeam = LegacyTeams.fromRWF(teamName);
-			if(teamArenaTeam == null) {
-				Main.logger().warning("Bad team in map config!");
-				
+			if (teamArenaTeam == null) {
+				Main.logger().severe("RGB teams are dead!");
+				return;
+
+				// RGB teams are finally dead
 				//it's not a legacy rwf team
 
 				/*String simpleName = teamName;
@@ -1508,7 +1506,7 @@ public abstract class TeamArena
 			Location[] locArray = new Location[spawnsList.size()];
 
 			int index = 0;
-			for(String loc : spawnsList) {
+			for (String loc : spawnsList) {
 				Vector coords = BlockUtils.parseCoordsToVec(loc, 0.5, 0, 0.5);
 				Location location = coords.toLocation(gameWorld);
 				Vector direction = centre.clone().setY(0).subtract(location.toVector().setY(0));
@@ -1516,10 +1514,10 @@ public abstract class TeamArena
 				direction.normalize();
 				location.setDirection(direction);
 				//in case location is same as map centre
-				if(!Float.isFinite(location.getPitch())) {
+				if (!Float.isFinite(location.getPitch())) {
 					location.setPitch(90f);
 				}
-				if(!Float.isFinite(location.getYaw())) {
+				if (!Float.isFinite(location.getYaw())) {
 					location.setYaw(0f);
 				}
 
