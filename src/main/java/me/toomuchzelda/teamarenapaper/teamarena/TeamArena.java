@@ -3,10 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.KitInventory;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageIndicatorHologram;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
@@ -23,6 +20,7 @@ import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -330,6 +328,7 @@ public abstract class TeamArena
 							SoundCategory.AMBIENT, 99999, (float) MathUtils.randomRange(0.5, 2));
 				}
 				Bukkit.broadcast(Component.text("Not enough players to start the game, game cancelled!").color(MathUtils.randomTextColor()));
+				SidebarManager.updatePreGameScoreboard(this);
 			}
 			//setGameState(GameState.PREGAME);
 		}
@@ -542,28 +541,33 @@ public abstract class TeamArena
 			}
 			playerCause = p;
 		}
-		if(event.getVictim() instanceof Player p) {
-			Ability[] abilities = Kit.getAbilities(p);
-			for(Ability ability : abilities) {
-				ability.onReceiveDamage(event);
-			}
-
-			if(!event.isCancelled()) {
-				PlayerInfo pinfo = Main.getPlayerInfo(p);
-				//spawn damage indicator hologram
-				// divide by two to display as hearts
-				Component damageText = Component.text(MathUtils.round(event.getFinalDamage() / 2, 2)).color(pinfo.team.getRGBTextColor());
-				Location spawnLoc = p.getLocation();
-				spawnLoc.add(0, MathUtils.randomRange(1.4, 2), 0);
-				DamageIndicatorHologram hologram = new DamageIndicatorHologram(spawnLoc, PlayerUtils.getDamageIndicatorViewers(p, playerCause), damageText);
-				activeDamageIndicators.add(hologram);
-
-				//add to their damage log
-				pinfo.logDamageReceived(p, event.getDamageType(), event.getFinalDamage(), event.getFinalAttacker(), gameTick);
-			
-				if(event.getFinalAttacker() instanceof Player attacker) {
-					pinfo.getKillAssistTracker().addDamage(attacker, event.getFinalDamage());
+		if(!event.isCancelled()) {
+			if (event.getVictim() instanceof Player p) {
+				Ability[] abilities = Kit.getAbilities(p);
+				for (Ability ability : abilities) {
+					ability.onReceiveDamage(event);
 				}
+				
+				if (!event.isCancelled()) {
+					PlayerInfo pinfo = Main.getPlayerInfo(p);
+					//spawn damage indicator hologram
+					// divide by two to display as hearts
+					Component damageText = Component.text(MathUtils.round(event.getFinalDamage() / 2, 2)).color(pinfo.team.getRGBTextColor());
+					Location spawnLoc = p.getLocation();
+					spawnLoc.add(0, MathUtils.randomRange(1.4, 2), 0);
+					DamageIndicatorHologram hologram = new DamageIndicatorHologram(spawnLoc, PlayerUtils.getDamageIndicatorViewers(p, playerCause), damageText);
+					activeDamageIndicators.add(hologram);
+					
+					//add to their damage log
+					pinfo.logDamageReceived(p, event.getDamageType(), event.getFinalDamage(), event.getFinalAttacker(), gameTick);
+					
+					if (event.getFinalAttacker() instanceof Player attacker) {
+						pinfo.getKillAssistTracker().addDamage(attacker, event.getFinalDamage());
+					}
+				}
+			}
+			else if(event.getVictim() instanceof Axolotl) {
+				KitDemolitions.DemolitionsAbility.handleAxolotlDamage(event);
 			}
 		}
 	}
@@ -589,6 +593,10 @@ public abstract class TeamArena
 					event.getKnockback().multiply(0.8);
 				}
 			}
+		}
+		
+		if(event.getVictim() instanceof Axolotl) {
+			KitDemolitions.DemolitionsAbility.handleAxolotlAttemptDamage(event);
 		}
 	}
 	
@@ -755,7 +763,7 @@ public abstract class TeamArena
 			p.setAllowFlight(true);
 			
 			PlayerInfo pinfo = Main.getPlayerInfo(p);
-			if(!isSpectator(p)) {
+			if(pinfo.activeKit != null) { //!isSpectator(p)) {
 				pinfo.activeKit.removeKit(p, pinfo);
 			}
 			pinfo.kit = null;
@@ -948,6 +956,13 @@ public abstract class TeamArena
 				player.sendMessage(text);
 			} else {
 				//todo: kill the player here (remove from game)
+				EntityDamageEvent event = new EntityDamageEvent(player, EntityDamageEvent.DamageCause.VOID, 9999d);
+				DamageEvent dEvent = DamageEvent.createDamageEvent(event, DamageType.SUICIDE);
+				
+				if(isRespawningGame()) {
+					respawnTimers.remove(player); //if respawning game remove them from respawn queue
+					makeSpectator(player);
+				}
 
 				if(shame) {
 					Component text;
@@ -962,7 +977,6 @@ public abstract class TeamArena
 			}
 			//do after so it gets the correct displayName above
 			spectatorTeam.addMembers(player);
-			makeSpectator(player);
 		}
 		//else they are (or set to be) a spectator
 		// only re-set them as a player if the game hasn't started
@@ -1071,7 +1085,6 @@ public abstract class TeamArena
 			if(this.isRespawningGame()) {
 				respawnTimers.put(p, new RespawnInfo(gameTick));
 				p.getInventory().addItem(kitMenuItem.clone());
-				
 			}
 		}
 		else {
@@ -1539,6 +1552,10 @@ public abstract class TeamArena
 	
 	public TeamArenaTeam getSpectatorTeam() {
 		return spectatorTeam;
+	}
+	
+	public Set<Player> getPlayers() {
+		return players;
 	}
 	
 	public ArrayList<String> getTabTeamsList() {

@@ -6,6 +6,7 @@ import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
@@ -16,14 +17,11 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
 import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.KitGhost;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.KitPyro;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.KitReach;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.PreferenceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
@@ -364,10 +362,12 @@ public class EventListeners implements Listener
 	
 	@EventHandler
 	public void entityLoadCrossbow(EntityLoadCrossbowEvent event) {
-		if(event.getEntity() instanceof Player p) {
-			Ability[] abilities = Kit.getAbilities(p);
-			for(Ability a : abilities) {
-				a.onLoadCrossbow(event);
+		if(Main.getGame().getGameState() == LIVE) {
+			if (event.getEntity() instanceof Player p) {
+				Ability[] abilities = Kit.getAbilities(p);
+				for (Ability a : abilities) {
+					a.onLoadCrossbow(event);
+				}
 			}
 		}
 	}
@@ -407,20 +407,45 @@ public class EventListeners implements Listener
 	
 	@EventHandler
 	public void playerTeleport(PlayerTeleportEvent event) {
-		if(event.getCause() == PlayerTeleportEvent.TeleportCause.COMMAND ||
-			event.getCause() == PlayerTeleportEvent.TeleportCause.PLUGIN ||
-			event.getCause() == PlayerTeleportEvent.TeleportCause.UNKNOWN)
+		PlayerTeleportEvent.TeleportCause cause = event.getCause();
+		if(cause == PlayerTeleportEvent.TeleportCause.COMMAND ||
+			cause == PlayerTeleportEvent.TeleportCause.PLUGIN ||
+			cause == PlayerTeleportEvent.TeleportCause.UNKNOWN) //unkown is often rubber-bands and lagbacks
 			return;
 		
-		if(Main.getGame() instanceof CaptureTheFlag ctf && ctf.isFlagCarrier(event.getPlayer())) {
-			Player p = event.getPlayer();
-			event.setCancelled(true);
-			PlayerInfo pinfo = Main.getPlayerInfo(p);
-			if(pinfo.getPreference(Preferences.RECEIVE_GAME_TITLES)) {
-				PlayerUtils.sendTitle(p, Component.empty(), CaptureTheFlag.CANT_TELEPORT_HOLDING_FLAG_TITLE, 10, 25, 10);
+		if(Main.getGame() != null) {
+			
+			if(cause == PlayerTeleportEvent.TeleportCause.NETHER_PORTAL ||
+				cause == PlayerTeleportEvent.TeleportCause.END_PORTAL ||
+				cause == PlayerTeleportEvent.TeleportCause.END_GATEWAY) {
+				event.setCancelled(true);
 			}
-			p.sendMessage(CaptureTheFlag.CANT_TELEPORT_HOLDING_FLAG_MESSAGE);
-			p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.AMBIENT, 2, 0.5f);
+			else if(!Main.getGame().getBorder().contains(event.getTo().toVector())) {
+				event.setCancelled(true);
+				
+				if (cause == PlayerTeleportEvent.TeleportCause.ENDER_PEARL) {
+					event.getPlayer().sendMessage(Component.text("One of your ender pearls landed outside the border. " +
+							"Aim better!").color(TextUtils.ERROR_RED));
+				}
+				else if(cause == PlayerTeleportEvent.TeleportCause.CHORUS_FRUIT) {
+					event.getPlayer().sendMessage(Component.text("This fruit tried to take you outside the border, " +
+									"so now you just go nowhere because I have deemed finding a safe alternative position" +
+									" to be too much trouble (i am lazy). Here's a free diamond! - toomuchzelda")
+							.color(TextUtils.ERROR_RED));
+					event.getPlayer().getInventory().addItem(new ItemStack(Material.DIAMOND));
+				}
+			}
+			
+			if(Main.getGame() instanceof CaptureTheFlag ctf && ctf.isFlagCarrier(event.getPlayer())) {
+				Player p = event.getPlayer();
+				event.setCancelled(true);
+				PlayerInfo pinfo = Main.getPlayerInfo(p);
+				if(pinfo.getPreference(Preferences.RECEIVE_GAME_TITLES)) {
+					PlayerUtils.sendTitle(p, Component.empty(), CaptureTheFlag.CANT_TELEPORT_HOLDING_FLAG_TITLE, 10, 25, 10);
+				}
+				p.sendMessage(CaptureTheFlag.CANT_TELEPORT_HOLDING_FLAG_MESSAGE);
+				p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.AMBIENT, 2, 0.5f);
+			}
 		}
 	}
 
@@ -565,9 +590,11 @@ public class EventListeners implements Listener
 		if(Main.getGame() != null) {
 			Main.getGame().onInteract(event);
 
-			Ability[] abilities = Kit.getAbilities(event.getPlayer());
-			for (Ability a : abilities) {
-				a.onInteract(event);
+			if(Main.getGame().getGameState() == LIVE) {
+				Ability[] abilities = Kit.getAbilities(event.getPlayer());
+				for (Ability a : abilities) {
+					a.onInteract(event);
+				}
 			}
 		}
 	}
@@ -577,9 +604,11 @@ public class EventListeners implements Listener
 		if(Main.getGame() != null) {
 			Main.getGame().onInteractEntity(event);
 
-			Ability[] abilities = Kit.getAbilities(event.getPlayer());
-			for(Ability a : abilities) {
-				a.onInteractEntity(event);
+			if(Main.getGame().getGameState() == LIVE) {
+				Ability[] abilities = Kit.getAbilities(event.getPlayer());
+				for (Ability a : abilities) {
+					a.onInteractEntity(event);
+				}
 			}
 		}
 	}

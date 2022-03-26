@@ -100,28 +100,34 @@ public class EntityUtils {
         net.minecraft.world.entity.LivingEntity nmsLivingEntity = ((CraftLivingEntity) entity).getHandle();
         ClientboundAnimatePacket packet = new ClientboundAnimatePacket(nmsLivingEntity, ClientboundAnimatePacket.HURT);
 
+        boolean isSilent = entity.isSilent();
+        
         //get and construct sound
         SoundEvent nmsSound;
-        float pitch;
-        float volume;
-
-        try {
-            if (deathSound)
-                nmsSound = nmsLivingEntity.getDeathSound();
-                //nmsSound = (SoundEvent) getDeathSoundMethod.invoke(nmsLivingEntity);
-            else
-                nmsSound = (SoundEvent) getHurtSoundMethod.invoke(nmsLivingEntity, damageType.getDamageSource());
-
-            pitch = nmsLivingEntity.getVoicePitch();
-            volume = nmsLivingEntity.getSoundVolume(); //(float) getSoundVolumeMethod.invoke(nmsLivingEntity);
-        } catch (IllegalAccessException | InvocationTargetException e) {
-            e.printStackTrace();
-
-            nmsSound = SoundEvents.GOAT_SCREAMING_HURT;
-            pitch = 0.5f;
-            volume = 9999f;
+        float pitch = 0f;
+        float volume = 0f;
+        Sound sound = null;
+        
+        if(!isSilent) {
+            try {
+                if (deathSound)
+                    nmsSound = nmsLivingEntity.getDeathSound();
+                    //nmsSound = (SoundEvent) getDeathSoundMethod.invoke(nmsLivingEntity);
+                else
+                    nmsSound = (SoundEvent) getHurtSoundMethod.invoke(nmsLivingEntity, damageType.getDamageSource());
+        
+                pitch = nmsLivingEntity.getVoicePitch();
+                volume = nmsLivingEntity.getSoundVolume(); //(float) getSoundVolumeMethod.invoke(nmsLivingEntity);
+            }
+            catch (IllegalAccessException | InvocationTargetException e) {
+                e.printStackTrace();
+        
+                nmsSound = SoundEvents.GOAT_SCREAMING_HURT;
+                pitch = 0.5f;
+                volume = 9999f;
+            }
+            sound = CraftSound.getBukkit(nmsSound);
         }
-        Sound sound = CraftSound.getBukkit(nmsSound);
 
         //if a player send the packet to self as well
         // and use player sound category for the sound
@@ -132,12 +138,14 @@ public class EntityUtils {
                 PlayerUtils.sendPacket(p, packet);
 
             category = SoundCategory.PLAYERS;
-            p.playSound(entity.getLocation(), sound, category, volume, pitch);
+            if(!isSilent)
+                p.playSound(entity.getLocation(), sound, category, volume, pitch);
         }
 
         for (Player p : entity.getTrackedPlayers()) {
             PlayerUtils.sendPacket(p, packet);
-            p.playSound(entity.getLocation(), sound, category, volume, pitch);
+            if(!isSilent)
+                p.playSound(entity.getLocation(), sound, category, volume, pitch);
         }
     }
 }

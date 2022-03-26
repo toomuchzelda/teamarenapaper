@@ -106,6 +106,11 @@ public class KitSpy extends Kit
 	public class SpyAbility extends Ability
 	{
 		@Override
+		public void unregisterAbility() {
+			skullItemDisguises.clear();
+		}
+		
+		@Override
 		public void giveAbility(Player player) {
 			//use exp for skin cooldowns
 			player.setLevel(0);

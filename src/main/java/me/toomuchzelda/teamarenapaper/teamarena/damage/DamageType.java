@@ -307,8 +307,8 @@ public class DamageType {
         if(event instanceof EntityDamageByEntityEvent dEvent) {
             Entity damager = dEvent.getDamager();
             LivingEntity shooter = null;
-            if(damager instanceof Projectile projectile) {
-                shooter = (LivingEntity) projectile.getShooter();
+            if(damager instanceof Projectile projectile && projectile.getShooter() instanceof LivingEntity livingShooter) {
+                shooter = livingShooter;
             }
 
             return new DamageType(PROJECTILE).setDamageSource(DamageSourceCreator.getProjectile(damager, shooter));

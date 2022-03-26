@@ -226,6 +226,12 @@ public class KitPyro extends Kit
 		}
 
 		@Override
+		public void unregisterAbility() {
+			MOLOTOV_RECHARGES.clear();
+			ACTIVE_MOLOTOVS.clear();
+		}
+		
+		@Override
 		public void onDeath(DamageEvent event) {
 			MOLOTOV_RECHARGES.remove(event.getPlayerVictim());
 		}

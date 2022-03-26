@@ -289,7 +289,8 @@ public class TeamArenaTeam
 
 	public void updateNametag(Player player) {
 		Component component;
-		if (Main.getGame().showTeamColours)
+		//show spectators always
+		if (Main.getGame().showTeamColours || this == Main.getGame().spectatorTeam)
 			component = colourWord(player.getName());
 		else
 			component = Main.getGame().noTeamTeam.colourWord(player.getName());
