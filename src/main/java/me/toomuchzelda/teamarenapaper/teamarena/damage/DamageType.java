@@ -30,6 +30,9 @@ public class DamageType {
     public static final DamageType CACTUS = new DamageType(DamageTypeEnum.CACTUS, "Cactus", "%Killed% hugged a cactus").setNoKnockback()
             .setDamageSource(DamageSource.CACTUS);
 
+    public static final DamageType CRAMMING = new DamageType(DamageTypeEnum.CRAMMING, "Cramming", "%Killer% was crammed to death").setIgnoreArmor()
+            .setNoKnockback().setDamageSource(DamageSource.CRAMMING);
+
     public static final DamageType CUSTOM = new DamageType(DamageTypeEnum.CUSTOM, "Custom", "%Killed% fell over and died").setNoKnockback()
             .setDamageSource(DamageSource.GENERIC);
 
@@ -42,6 +45,9 @@ public class DamageType {
 
     public static final DamageType DROWNED = new DamageType(DamageTypeEnum.DROWNED, "Drowned", "%Killed% is swimming with the fishes").setIgnoreArmor()
             .setNoKnockback().setDamageSource(DamageSource.DROWN);
+
+    public static final DamageType DRYOUT = new DamageType(DamageTypeEnum.DRYOUT, "Dryout", "%Killed% died of dehydration")
+            .setNoKnockback().setDamageSource(DamageSource.DRY_OUT);
 
     public static final DamageType EXPLOSION = new DamageType(DamageTypeEnum.EXPLOSION, "Explosion", "%Killed% was caught in an explosion")
             .setDamageSource(DamageSource.explosion((net.minecraft.world.entity.LivingEntity) null));
@@ -83,6 +89,9 @@ public class DamageType {
 
     public static final DamageType FLY_INTO_WALL = new DamageType(DamageTypeEnum.FLY_INTO_WALL, "Flew into Wall", "%Killed% still hadn't gotten the hang of flying")
             .setNoKnockback().setDamageSource(DamageSource.FLY_INTO_WALL);
+
+    public static final DamageType FREEZE = new DamageType(DamageTypeEnum.FREEZE, "Freeze", "%Killed% froze to death")
+            .setIgnoreArmor().setDamageSource(DamageSource.FREEZE);
 
     public static final DamageType LAVA = new DamageType(DamageTypeEnum.LAVA, "Lava", "%Killed% tried to swim in lava").setNoKnockback().setBurn()
             .setDamageSource(DamageSource.LAVA);
@@ -269,6 +278,12 @@ public class DamageType {
                 return FLY_INTO_WALL;
             case HOT_FLOOR:
                 return MAGMA;
+            case CRAMMING:
+                return CRAMMING;
+            case DRYOUT:
+                return DRYOUT;
+            case FREEZE:
+                return FREEZE;
             default:
                 return UNKNOWN;
         }
@@ -496,10 +511,12 @@ public class DamageType {
     private enum DamageTypeEnum {
         BERRY_BUSH,
         CACTUS,
+        CRAMMING,
         CUSTOM,
         DAMAGE_POTION,
         DRAGON_BREATH,
         DROWNED,
+        DRYOUT,
         EXPLOSION,
         FALL,
         FALL_PUSHED,
@@ -512,6 +529,7 @@ public class DamageType {
         FIRE_TICK,
         FISHING_HOOK,
         FLY_INTO_WALL,
+        FREEZE,
         LAVA,
         LIGHTNING,
         MAGMA,
@@ -531,7 +549,7 @@ public class DamageType {
         VOID_PUSHED,
         VOID_SHOT,
         WITHER_POISON,
-        
+
         //Kit Stuff
         PYRO_MOLOTOV,
         DEMO_TNTMINE,

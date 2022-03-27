@@ -18,35 +18,35 @@ import java.util.List;
 public class CommandRespawn extends CustomCommand
 {
 	public CommandRespawn() {
-		super("respawn", "Respawn after waiting while dead", "\"respawn\" after waiting 5 seconds as a dead player to " +
-				"respawn", Arrays.asList("suicide", "kill"), PermissionLevel.ALL);
+		super("respawn", "Respawn after waiting while dead",
+				"/respawn [player]", Arrays.asList("suicide", "kill"), PermissionLevel.ALL);
 	}
 	
 	@Override
 	public void run(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) {
-		if(args.length > 0 && hasPermission(sender, PermissionLevel.OWNER)) {
+		if (args.length > 0 && hasPermission(sender, PermissionLevel.OWNER)) {
 			Player toKill = Bukkit.getPlayer(args[0]);
-			if(toKill != null) {
-				//killed by admin
+			if (toKill != null) {
+				// admin abuse
 				DamageEvent.createDamageEvent(new EntityDamageEvent(toKill, EntityDamageEvent.DamageCause.VOID,
 						Integer.MAX_VALUE), DamageType.SUICIDE_ASSISTED);
-			}
-			else {
+			} else {
 				sender.sendMessage(Component.text("Invalid player").color(NamedTextColor.RED));
 			}
-		}
-		else if(sender instanceof Player p) {
-			if (/*Main.getGame().isMidGameJoinWaiter(p) && */Main.getGame().canMidGameJoin(p)) {
+		} else if (sender instanceof Player p) {
+			if (Main.getGame().canMidGameJoin(p)) {
+				// the player can join the game as a spectator
 				Main.getGame().setToMidJoin(p);
-			}
-			else if (Main.getGame().canRespawn(p)) {
+			} else if (Main.getGame().canRespawn(p)) {
+				// the player is dead and the respawn timer has expired
 				Main.getGame().setToRespawn(p);
-			}
-			else {
+			} else {
 				// suicide
 				DamageEvent.createDamageEvent(new EntityDamageEvent(p, EntityDamageEvent.DamageCause.VOID,
 						Integer.MAX_VALUE), DamageType.SUICIDE);
 			}
+		} else {
+			showUsage(sender, "/respawn <player>");
 		}
 	}
 	
