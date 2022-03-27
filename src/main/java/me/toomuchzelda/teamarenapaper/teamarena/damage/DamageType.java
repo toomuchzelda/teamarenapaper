@@ -144,6 +144,13 @@ public class DamageType {
     
     public static final DamageType PYRO_MOLOTOV = new DamageType(DamageTypeEnum.PYRO_MOLOTOV, "Pyro Incendiary", "%Killed% was burned to death by %Killer%'s incendiary")
             .setFire().setIgnoreArmor().setNoKnockback().setDamageSource(DamageSource.ON_FIRE);
+    
+    public static final DamageType DEMO_TNTMINE = new DamageType(DamageTypeEnum.DEMO_TNTMINE, "Demolitions TNT Mine",
+            "%Killed% stepped on %Killer%'s TNT Mine and blew up")
+            .setDamageSource(DamageSource.explosion((net.minecraft.world.entity.LivingEntity) null))
+            .setIgnoreRate();
+    
+    
 
     //a constant identifier for same types, to compare for same types across separate instances of this class
     // without evaluating a String
@@ -163,7 +170,7 @@ public class DamageType {
     //mainly for getting correct damage sound from nms in EntityUtils.playHurtAnimation
     private DamageSource nmsDamageSource;
 
-    public DamageType(DamageTypeEnum id, String name, String... deathMessages) {
+    private DamageType(DamageTypeEnum id, String name, String... deathMessages) {
         this.id = id;
         _name = name;
         _deathMessages = deathMessages;
@@ -173,6 +180,23 @@ public class DamageType {
         id = copyOf.id;
         _burn = copyOf._burn;
         _deathMessages = copyOf._deathMessages;
+        _explosion = copyOf._explosion;
+        _fall = copyOf._fall;
+        _fire = copyOf._fire;
+        _ignoreArmor = copyOf._ignoreArmor;
+        _ignoreRate = copyOf._ignoreRate;
+        _instantDeath = copyOf._instantDeath;
+        _isntKnockback = copyOf._isntKnockback;
+        _melee = copyOf._melee;
+        _name = copyOf._name;
+        _projectile = copyOf._projectile;
+        nmsDamageSource = copyOf.nmsDamageSource;
+    }
+    
+    public DamageType(DamageType copyOf, String... deathMessages) {
+        id = copyOf.id;
+        _burn = copyOf._burn;
+        _deathMessages = deathMessages;
         _explosion = copyOf._explosion;
         _fall = copyOf._fall;
         _fire = copyOf._fire;
@@ -509,6 +533,7 @@ public class DamageType {
         WITHER_POISON,
         
         //Kit Stuff
-        PYRO_MOLOTOV
+        PYRO_MOLOTOV,
+        DEMO_TNTMINE,
     }
 }

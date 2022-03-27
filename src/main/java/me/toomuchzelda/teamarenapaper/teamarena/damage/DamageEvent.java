@@ -42,6 +42,7 @@ public class DamageEvent {
     //damage after damage-reduction calculations
     private double finalDamage;
     private DamageType damageType;
+    private Entity damageTypeCause; // for %Cause% in DamageType deathmessages
 
     //null implies no knockback
     // dont use 0,0,0 vector as that'll stop the player moving for a split moment
@@ -249,6 +250,12 @@ public class DamageEvent {
             else {
                 attacker = dEvent.getDamager();
                 realAttacker = null;
+                if(attacker instanceof TNTPrimed tnt) {
+                    Entity tntSource = tnt.getSource();
+                    if(tntSource != null) {
+                        realAttacker = tntSource;
+                    }
+                }
 
                 if(dEvent.getDamager() instanceof LivingEntity living) {
                     if(living.getEquipment() != null) {
@@ -763,6 +770,10 @@ public class DamageEvent {
     
     public void setIgnoreInvulnerability(boolean ignore) {
         this.ignoreInvulnerability = ignore;
+    }
+    
+    public void setDamageTypeCause(Entity cause) {
+        this.damageTypeCause = cause;
     }
     
     public boolean isCancelled() {

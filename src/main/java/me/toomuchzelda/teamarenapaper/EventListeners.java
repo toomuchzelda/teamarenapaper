@@ -31,6 +31,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.*;
@@ -292,6 +293,19 @@ public class EventListeners implements Listener
 	public void blockBreak(BlockBreakEvent event) {
 		if(event.getPlayer().getGameMode() != GameMode.CREATIVE)
 			event.setCancelled(true);
+	}
+	
+	/**
+	 * prevent explosions from breaking blocks
+	 */
+	@EventHandler
+	public void entityExplodeEvent(EntityExplodeEvent event) {
+		event.blockList().clear();
+	}
+	
+	@EventHandler
+	public void blockExplodeEvent(BlockExplodeEvent event) {
+		event.blockList().clear();
 	}
 	
 	@EventHandler

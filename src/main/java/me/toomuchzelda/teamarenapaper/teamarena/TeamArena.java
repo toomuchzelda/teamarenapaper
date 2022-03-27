@@ -576,6 +576,14 @@ public abstract class TeamArena
 	 * also for overriding in subclass
 	 */
 	public void onDamage(DamageEvent event) {
+		//multiple DamageEvents can exist in same tick for 1 victim, causes errors if a previous one killed them and
+		// another runs
+		if(isDead(event.getVictim())) {
+			event.setCancelled(true);
+			//don't bother passing it to event handlers?
+			return;
+		}
+		
 		if(event.hasKnockback()) {
 			//reduce knockback done by axes
 			if (event.getDamageType().isMelee() && event.getFinalAttacker() instanceof LivingEntity living) {
@@ -598,6 +606,14 @@ public abstract class TeamArena
 		if(event.getVictim() instanceof Axolotl) {
 			KitDemolitions.DemolitionsAbility.handleAxolotlAttemptDamage(event);
 		}
+	}
+	
+	public boolean isDead(Entity victim) {
+		if(victim instanceof Player p) {
+			return !players.contains(p);
+		}
+		
+		return victim.isDead() || !victim.isValid();
 	}
 	
 	public void onInteract(PlayerInteractEvent event) {
