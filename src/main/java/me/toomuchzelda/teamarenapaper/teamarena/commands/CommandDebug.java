@@ -54,8 +54,8 @@ public class CommandDebug extends CustomCommand {
                     return;
                 }
                 if (args[1].equalsIgnoreCase("bot")) {
-                    TicTacToe game = new TicTacToe(TicTacToe.getPlayer(player), TicTacToe.getBot());
-                    Bukkit.getScheduler().runTask(Main.getPlugin(), game::run);
+                    TicTacToe game = new TicTacToe(TicTacToe.getPlayer(player), TicTacToe.getBot(TicTacToe.BotDifficulty.EASY));
+                    game.schedule();
                 } else {
                     Player otherPlayer = Bukkit.getPlayer(args[1]);
                     if (otherPlayer == null || otherPlayer == player) {
@@ -63,7 +63,7 @@ public class CommandDebug extends CustomCommand {
                         return;
                     }
                     TicTacToe game = new TicTacToe(TicTacToe.getPlayer(player), TicTacToe.getPlayer(otherPlayer));
-                    Bukkit.getScheduler().runTask(Main.getPlugin(), game::run);
+                    game.schedule();
                 }
             }
             default -> showUsage(sender);
