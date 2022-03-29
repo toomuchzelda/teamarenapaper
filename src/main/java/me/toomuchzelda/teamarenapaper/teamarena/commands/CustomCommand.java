@@ -102,7 +102,7 @@ public abstract class CustomCommand extends Command {
         if (sender instanceof Player player)
             return Main.getPlayerInfo(player).permissionLevel.compareTo(level) >= 0;
         else
-            return sender instanceof ConsoleCommandSender || sender instanceof BlockCommandSender;
+            return sender instanceof ConsoleCommandSender;
     }
 
     //todo: a system for commands that have multiple word arguments ie. /give player item amount etc
