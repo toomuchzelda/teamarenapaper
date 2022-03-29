@@ -34,8 +34,6 @@ public class PacketHologram
 	private WrappedDataWatcher.WrappedDataWatcherObject metadata;
 	private WrappedDataWatcher.WrappedDataWatcherObject customNameMetadata;
 
-	//private ArmorStand armorStand;
-	
 	public static final int metadataIndex = 0;
 	public static final byte sneakingBitMask = 2;
 	public static final byte invisBitMask = 0x20;

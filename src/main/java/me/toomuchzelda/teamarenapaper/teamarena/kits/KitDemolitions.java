@@ -1,12 +1,15 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.SidebarManager;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
@@ -15,6 +18,7 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.scoreboard.Team;
 import org.bukkit.util.EulerAngle;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
@@ -33,9 +37,9 @@ public class KitDemolitions extends Kit
 		ItemStack sword = new ItemStack(Material.IRON_SWORD);
 		sword.addEnchantment(Enchantment.FIRE_ASPECT, 1);
 		
-		ItemStack minePlacer = new ItemStack(Material.STICK);
+		ItemStack tntMinePlacer = new ItemStack(Material.STICK);
 		
-		setItems(sword, minePlacer);
+		setItems(sword, tntMinePlacer, new ItemStack(Material.BLAZE_ROD));
 		
 		this.setAbilities(new DemolitionsAbility());
 	}
@@ -51,10 +55,12 @@ public class KitDemolitions extends Kit
 		public static final DamageType DEMO_TNTMINE_REMOTE = new DamageType(DamageType.DEMO_TNTMINE,
 				"%Killed% was blown up %Killer%'s TNT Mine remotely");
 		
+		
 		@Override
 		public void unregisterAbility() {
 			PLAYER_MINES.clear();
 			AXOLOTL_TO_DEMO_MINE.clear();
+			DemoMine.clearMap();
 		}
 		
 		@Override
@@ -70,11 +76,15 @@ public class KitDemolitions extends Kit
 		
 		@Override
 		public void onInteract(PlayerInteractEvent event) {
-			if(event.getMaterial() == Material.STICK) {
-				Block block = event.getClickedBlock();
-				if(block != null) {
+			Block block = event.getClickedBlock();
+			if (block != null) {
+				if (event.getMaterial() == Material.STICK) {
 					// create a mine
 					DemoMine mine = new DemoMine(event.getPlayer(), block, MineType.TNTMINE);
+					addMine(mine);
+				}
+				else if(event.getMaterial() == Material.BLAZE_ROD) {
+					DemoMine mine = new DemoMine(event.getPlayer(), block, MineType.PUSHMINE);
 					addMine(mine);
 				}
 			}
@@ -118,6 +128,7 @@ public class KitDemolitions extends Kit
 		@Override
 		public void onTick() {
 			TeamArena tma = Main.getGame();
+			int gameTick = TeamArena.getGameTick();
 			
 			var axIter = AXOLOTL_TO_DEMO_MINE.entrySet().iterator();
 			while(axIter.hasNext()) {
@@ -139,10 +150,23 @@ public class KitDemolitions extends Kit
 				else if(mine.type == MineType.TNTMINE && mine.tnt != null && !mine.tnt.isValid()) {
 					mine.removeNextTick = true;
 				}
-				//if it hasn't been stepped on
+				//if it hasn't been armed yet
+				else if(gameTick <= mine.creationTime + DemoMine.TIME_TO_ARM) {
+					//indicate its armed
+					if(gameTick == mine.creationTime + DemoMine.TIME_TO_ARM) {
+						World world = mine.axolotl.getWorld();
+						world.playSound(mine.axolotl.getLocation(), Sound.BLOCK_STONE_BUTTON_CLICK_OFF, 1f, 1f);
+						world.spawnParticle(Particle.CRIT, mine.axolotl.getLocation().add(0, 0.4, 0), 2, 0, 0, 0,0);
+						
+						Component message = Component.text("Your " + mine.type.name + " is now armed").color(NamedTextColor.GREEN);
+						PlayerUtils.sendKitMessage(mine.owner, message, message);
+					}
+					// else do nothing and don't enter the control statement below that checks for collision
+				}
+				//if it hasn't been stepped on already check if anyone's standing on it
 				else if(mine.triggerer == null) {
 					for (Player stepper : Main.getGame().getPlayers()) {
-						if (!tma.canAttack(stepper, mine.owner))
+						if (mine.team.getPlayerMembers().contains(stepper))
 							continue;
 						
 						Axolotl axolotl = entry.getKey();
@@ -168,7 +192,7 @@ public class KitDemolitions extends Kit
 				event.setCancelled(true);
 				if(event.getDamageType().isMelee()) {
 					if (event.getFinalAttacker() instanceof Player breaker) {
-						if (Main.getGame().canAttack(breaker, mine.owner)) {
+						if (!mine.team.getPlayerMembers().contains(breaker)) {
 							event.setFinalDamage(0d);
 							event.setCancelled(false);
 						}
@@ -229,8 +253,26 @@ public class KitDemolitions extends Kit
 		public static final EulerAngle LEG_ANGLE = new EulerAngle(1.5708d, 0 ,0); //angle for legs so boots r horizontal
 		public static final int MINE_DAMAGE_TO_DIE = 3;
 		public static final int TNT_TIME_TO_DETONATE = 20;
+		public static final int TIME_TO_ARM = 30;
+		
+		//used to set the colour of the glowing effect on the mine armor stand's armor
+		// actual game teams don't matter, just need for the colour
+		private static final HashMap<NamedTextColor, Team> GLOWING_COLOUR_TEAMS = new HashMap<>(16);
+		private static final HashMap<Integer, DemoMine> ARMOR_STAND_ID_TO_DEMO_MINE = new HashMap<>(20);
+		
+		static {
+			for(NamedTextColor color : NamedTextColor.NAMES.values()) {
+				Team bukkitTeam = SidebarManager.SCOREBOARD.registerNewTeam("DemoMine" + color.value());
+				bukkitTeam.color(color);
+				bukkitTeam.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
+				
+				GLOWING_COLOUR_TEAMS.put(color, bukkitTeam);
+			}
+		}
 		
 		public final Player owner;
+		public final TeamArenaTeam team;
+		public final Team glowingTeam;
 		private final ArmorStand[] stands;
 		private final Axolotl axolotl; //the mine's interactable hitbox
 		private TNTPrimed tnt; //the tnt
@@ -241,12 +283,15 @@ public class KitDemolitions extends Kit
 		// whether it needs to be removed from hashmaps is checked every tick, and we can't remove it on the same tick
 		// as the damage events are processed after the ability tick, so we need to 'schedule' it for removal next tick
 		public boolean removeNextTick = false;
+		public int creationTime; //store for knowing when it gets 'armed' after placing
 		
 		public final MineType type;
 		
 		public DemoMine(Player demo, Block block, MineType type) {
 			owner = demo;
+			this.team = Main.getPlayerInfo(owner).team;
 			this.type = type;
+			this.creationTime = TeamArena.getGameTick();
 			
 			Color blockColor = BlockUtils.getBlockBukkitColor(block);
 			ItemStack leatherBoots = new ItemStack(Material.LEATHER_BOOTS);
@@ -267,6 +312,9 @@ public class KitDemolitions extends Kit
 			stands[0] = (ArmorStand) world.spawnEntity(spawnLoc1, EntityType.ARMOR_STAND);
 			stands[1] = (ArmorStand) world.spawnEntity(spawnLoc2, EntityType.ARMOR_STAND);
 			
+			Team glowTeam = GLOWING_COLOUR_TEAMS.get((NamedTextColor) team.getPaperTeam().color());
+			this.glowingTeam = glowTeam;
+			
 			for (ArmorStand stand : stands) {
 				stand.setSilent(true);
 				stand.setMarker(true);
@@ -278,6 +326,10 @@ public class KitDemolitions extends Kit
 				stand.setLeftLegPose(LEG_ANGLE);
 				stand.setRightLegPose(LEG_ANGLE);
 				stand.getEquipment().setBoots(leatherBoots, true);
+				
+				glowTeam.addEntity(stand);
+				
+				ARMOR_STAND_ID_TO_DEMO_MINE.put(stand.getEntityId(), this);
 			}
 			
 			this.axolotl = (Axolotl) world.spawnEntity(baseLoc.clone().add(0, 0.65, 0), EntityType.AXOLOTL);
@@ -287,7 +339,9 @@ public class KitDemolitions extends Kit
 		}
 		
 		public void removeEntites() {
+			glowingTeam.removeEntities(stands);
 			for (ArmorStand stand : stands) {
+				ARMOR_STAND_ID_TO_DEMO_MINE.remove(stand.getEntityId());
 				stand.remove();
 			}
 			axolotl.remove();
@@ -331,6 +385,10 @@ public class KitDemolitions extends Kit
 			else {
 			
 			}
+		}
+		
+		private static void clearMap() {
+			ARMOR_STAND_ID_TO_DEMO_MINE.clear();
 		}
 	}
 	

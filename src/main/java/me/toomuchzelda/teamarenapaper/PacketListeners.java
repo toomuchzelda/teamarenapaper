@@ -3,7 +3,9 @@ package me.toomuchzelda.teamarenapaper;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketAdapter;
+import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Pair;
 import me.toomuchzelda.teamarenapaper.teamarena.DisguiseManager;
@@ -23,6 +25,8 @@ import org.bukkit.craftbukkit.v1_18_R2.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import java.util.List;
 
 public class PacketListeners
 {
@@ -294,6 +298,21 @@ public class PacketListeners
 							}
 						}
 					}
+				}
+			}
+		});
+		
+		
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(Main.getPlugin(),
+				PacketType.Play.Server.ENTITY_METADATA)
+		{
+			@Override
+			public void onPacketSending(PacketEvent event) {
+				PacketContainer packet = event.getPacket();
+				List<WrappedWatchableObject> objects = packet.getWatchableCollectionModifier().read(0);
+				
+				if(objects != null) { //dunno if can be null or not
+				
 				}
 			}
 		});
