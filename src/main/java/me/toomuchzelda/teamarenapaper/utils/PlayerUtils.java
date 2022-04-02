@@ -31,16 +31,22 @@ import java.util.Map;
 import java.util.Set;
 
 public class PlayerUtils {
+    
+    
     public static void sendPacket(Player player, PacketContainer... packets) {
-		for (PacketContainer packet : packets) {
-			try {
-				ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet, false);
-			} catch (InvocationTargetException e) {
-				e.printStackTrace();
-			}
-		}
+		sendPacket(player, false, packets);
     }
-
+    
+    public static void sendPacket(Player player, boolean triggerPacketListeners, PacketContainer... packets) {
+        for (PacketContainer packet : packets) {
+            try {
+                ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet, triggerPacketListeners);
+            } catch (InvocationTargetException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
     public static void sendPacket(Player player, Packet<?>... packets) {
         ServerPlayer nmsPlayer = ((CraftPlayer) player).getHandle();
         for (Packet<?> p : packets) {

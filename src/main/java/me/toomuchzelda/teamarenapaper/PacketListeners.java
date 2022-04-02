@@ -5,6 +5,7 @@ import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Pair;
@@ -12,6 +13,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.DisguiseManager;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitDemolitions;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSpy;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoPacket;
@@ -22,11 +24,13 @@ import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.craftbukkit.v1_18_R2.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_18_R2.inventory.CraftItemStack;
+import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.List;
+import java.util.ListIterator;
 
 public class PacketListeners
 {
@@ -309,10 +313,49 @@ public class PacketListeners
 			@Override
 			public void onPacketSending(PacketEvent event) {
 				PacketContainer packet = event.getPacket();
-				List<WrappedWatchableObject> objects = packet.getWatchableCollectionModifier().read(0);
+				int id = packet.getIntegers().read(0);
 				
-				if(objects != null) { //dunno if can be null or not
-				
+				KitDemolitions.DemoMine mine = KitDemolitions.DemoMine.getStandMine(id);
+				if(mine != null) {
+					ArmorStand stand = null;
+					for(ArmorStand istand : mine.stands) {
+						if(istand.getEntityId() == id)
+							stand = istand;
+					}
+					
+					if(stand == null) {
+						Main.logger().warning("Null stand in mine metadata packe tlistere?!?");
+						Thread.dumpStack();
+						return;
+					}
+					
+					
+					boolean shouldSeeGlowing = mine.team.getPlayerMembers().contains(event.getPlayer());
+					
+					StructureModifier<List<WrappedWatchableObject>> modifier = packet.getWatchableCollectionModifier();
+					List<WrappedWatchableObject> objects = modifier.read(0);
+					
+					ListIterator<WrappedWatchableObject> iter = objects.listIterator();
+					WrappedWatchableObject obj;
+					
+					while(iter.hasNext()) {
+						obj = iter.next();
+						if(obj.getIndex() == 0) {
+							byte meta = (Byte) obj.getValue();
+							if(shouldSeeGlowing)
+								// add glowing status to outgoing metadata
+								meta |= (byte) 0x40; //https://wiki.vg/Entity_metadata#Entity_Metadata_Format
+							else {
+								meta = (byte) (meta & ~(1 << 6)); //MUST explicity set to 0
+							}
+							Byte b = meta;
+							obj.setValue(b);
+							
+							break;
+						}
+					}
+					
+					modifier.write(0, objects);
 				}
 			}
 		});

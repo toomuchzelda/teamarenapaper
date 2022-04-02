@@ -201,6 +201,8 @@ public class KitDemolitions extends Kit
 						else if(event.getDamageType().is(DamageType.MELEE)){
 							breaker.sendMessage(Component.text("This is ").color(NamedTextColor.AQUA).append(
 									mine.owner.playerListName()).append(Component.text("'s " + mine.type.name)));
+							
+							breaker.sendMessage("glowing? " + mine.stands[0].isGlowing());
 						}
 					}
 				}
@@ -258,7 +260,7 @@ public class KitDemolitions extends Kit
 		//used to set the colour of the glowing effect on the mine armor stand's armor
 		// actual game teams don't matter, just need for the colour
 		private static final HashMap<NamedTextColor, Team> GLOWING_COLOUR_TEAMS = new HashMap<>(16);
-		private static final HashMap<Integer, DemoMine> ARMOR_STAND_ID_TO_DEMO_MINE = new HashMap<>(20);
+		private static final HashMap<Integer, DemoMine> ARMOR_STAND_ID_TO_DEMO_MINE = new HashMap<>(20, 0.4f);
 		
 		static {
 			for(NamedTextColor color : NamedTextColor.NAMES.values()) {
@@ -273,7 +275,7 @@ public class KitDemolitions extends Kit
 		public final Player owner;
 		public final TeamArenaTeam team;
 		public final Team glowingTeam;
-		private final ArmorStand[] stands;
+		public final ArmorStand[] stands;
 		private final Axolotl axolotl; //the mine's interactable hitbox
 		private TNTPrimed tnt; //the tnt
 		private Player triggerer; //store the player that stepped on it for shaming OR the demo if remote detonate
@@ -316,6 +318,11 @@ public class KitDemolitions extends Kit
 			this.glowingTeam = glowTeam;
 			
 			for (ArmorStand stand : stands) {
+				//make sure it's in hashmap first as the packet listener for glowing will fire on the following
+				// methods
+				ARMOR_STAND_ID_TO_DEMO_MINE.put(stand.getEntityId(), this);
+				
+				stand.setGlowing(false);
 				stand.setSilent(true);
 				stand.setMarker(true);
 				stand.setCanMove(false);
@@ -329,7 +336,22 @@ public class KitDemolitions extends Kit
 				
 				glowTeam.addEntity(stand);
 				
-				ARMOR_STAND_ID_TO_DEMO_MINE.put(stand.getEntityId(), this);
+				//There is a bug with the glowing metadata, I don't know what it is but for some reason
+				// players not on the team of this mine see the armorstand as glowing for some reason.
+				// so what i'll try is not modify the packet if it's the same tick as this mine's creation,
+				// and manually re-send the metadata packet on the next tick, firing the packet listener and
+				// hopefully doing the right thing.
+				/*Bukkit.getScheduler().runTaskLater(Main.getPlugin(), bukkitTask -> {
+					WrappedDataWatcher watcher = WrappedDataWatcher.getEntityWatcher(stand);
+					
+					PacketContainer metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
+					metadataPacket.getIntegers().write(0, stand.getEntityId());
+					metadataPacket.getWatchableCollectionModifier().write(0, watcher.getWatchableObjects());
+					
+					for(Player p : stand.getTrackedPlayers()) {
+						PlayerUtils.sendPacket(p, true, metadataPacket);
+					}
+				}, 2);*/
 			}
 			
 			this.axolotl = (Axolotl) world.spawnEntity(baseLoc.clone().add(0, 0.65, 0), EntityType.AXOLOTL);
@@ -385,6 +407,27 @@ public class KitDemolitions extends Kit
 			else {
 			
 			}
+		}
+		
+		public static boolean isMineStand(int id) {
+			return ARMOR_STAND_ID_TO_DEMO_MINE.containsKey(id);
+		}
+		
+		public static DemoMine getStandMine(int id) {
+			return ARMOR_STAND_ID_TO_DEMO_MINE.get(id);
+		}
+		
+		public static ArmorStand getMineStand(int id) {
+			DemoMine mine = getStandMine(id);
+			if(mine != null) {
+				ArmorStand[] stands = mine.stands;
+				for (ArmorStand stand : stands) {
+					if (stand.getEntityId() == id)
+						return stand;
+				}
+			}
+			
+			return null;
 		}
 		
 		private static void clearMap() {
