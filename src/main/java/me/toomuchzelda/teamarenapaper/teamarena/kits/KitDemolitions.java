@@ -180,10 +180,6 @@ public class KitDemolitions extends Kit
 						Axolotl axolotl = entry.getKey();
 						if (stepper.getBoundingBox().overlaps(axolotl.getBoundingBox())) {
 							//they stepped on mine, trigger explosion
-							World world = stepper.getWorld();
-							world.playSound(axolotl.getLocation(), Sound.ENTITY_CREEPER_HURT, 1f, 0f);
-							world.playSound(axolotl.getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 1f, 0f);
-							
 							mine.trigger(stepper);
 							
 							mine.removeEntites();
@@ -388,6 +384,10 @@ public class KitDemolitions extends Kit
 		public void trigger(Player triggerer) {
 			this.triggerer = triggerer;
 			World world = axolotl.getWorld();
+			
+			world.playSound(axolotl.getLocation(), Sound.ENTITY_CREEPER_HURT, 1f, 0f);
+			world.playSound(axolotl.getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 1f, 0f);
+			
 			if(type == MineType.TNTMINE) {
 				TNTPrimed tnt = (TNTPrimed) world.spawnEntity(axolotl.getLocation(), EntityType.PRIMED_TNT);
 				tnt.setFuseTicks(TNT_TIME_TO_DETONATE);
@@ -396,7 +396,10 @@ public class KitDemolitions extends Kit
 				this.tnt = tnt;
 			}
 			else {
-			
+				for(ArmorStand stand : stands) {
+					stand.teleport(stand.getLocation().add(0d, 1d, 0d));
+					ItemUtils.colourLeatherArmor(Color.RED, stand.getEquipment().getBoots());
+				}
 			}
 		}
 		
