@@ -1,5 +1,8 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
+import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.events.PacketContainer;
+import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.SidebarManager;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
@@ -12,6 +15,12 @@ import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.minecraft.network.protocol.game.ClientboundEntityEventPacket;
+import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
+import net.minecraft.network.protocol.game.ClientboundUpdateMobEffectPacket;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.enchantments.Enchantment;
@@ -127,7 +136,6 @@ public class KitDemolitions extends Kit
 		
 		@Override
 		public void onTick() {
-			TeamArena tma = Main.getGame();
 			int gameTick = TeamArena.getGameTick();
 			
 			var axIter = AXOLOTL_TO_DEMO_MINE.entrySet().iterator();
@@ -202,7 +210,6 @@ public class KitDemolitions extends Kit
 							breaker.sendMessage(Component.text("This is ").color(NamedTextColor.AQUA).append(
 									mine.owner.playerListName()).append(Component.text("'s " + mine.type.name)));
 							
-							breaker.sendMessage("glowing? " + mine.stands[0].isGlowing());
 						}
 					}
 				}
@@ -256,6 +263,8 @@ public class KitDemolitions extends Kit
 		public static final int MINE_DAMAGE_TO_DIE = 3;
 		public static final int TNT_TIME_TO_DETONATE = 20;
 		public static final int TIME_TO_ARM = 30;
+		public static final MobEffectInstance GLOWING_MOB_EFFECT = new MobEffectInstance(MobEffects.GLOWING, 1000, 0,
+				false, false, false, null);
 		
 		//used to set the colour of the glowing effect on the mine armor stand's armor
 		// actual game teams don't matter, just need for the colour
@@ -321,6 +330,7 @@ public class KitDemolitions extends Kit
 				//make sure it's in hashmap first as the packet listener for glowing will fire on the following
 				// methods
 				ARMOR_STAND_ID_TO_DEMO_MINE.put(stand.getEntityId(), this);
+				glowTeam.addEntity(stand);
 				
 				stand.setGlowing(false);
 				stand.setSilent(true);
@@ -333,25 +343,6 @@ public class KitDemolitions extends Kit
 				stand.setLeftLegPose(LEG_ANGLE);
 				stand.setRightLegPose(LEG_ANGLE);
 				stand.getEquipment().setBoots(leatherBoots, true);
-				
-				glowTeam.addEntity(stand);
-				
-				//There is a bug with the glowing metadata, I don't know what it is but for some reason
-				// players not on the team of this mine see the armorstand as glowing for some reason.
-				// so what i'll try is not modify the packet if it's the same tick as this mine's creation,
-				// and manually re-send the metadata packet on the next tick, firing the packet listener and
-				// hopefully doing the right thing.
-				/*Bukkit.getScheduler().runTaskLater(Main.getPlugin(), bukkitTask -> {
-					WrappedDataWatcher watcher = WrappedDataWatcher.getEntityWatcher(stand);
-					
-					PacketContainer metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
-					metadataPacket.getIntegers().write(0, stand.getEntityId());
-					metadataPacket.getWatchableCollectionModifier().write(0, watcher.getWatchableObjects());
-					
-					for(Player p : stand.getTrackedPlayers()) {
-						PlayerUtils.sendPacket(p, true, metadataPacket);
-					}
-				}, 2);*/
 			}
 			
 			this.axolotl = (Axolotl) world.spawnEntity(baseLoc.clone().add(0, 0.65, 0), EntityType.AXOLOTL);

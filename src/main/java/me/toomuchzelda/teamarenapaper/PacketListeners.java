@@ -6,6 +6,7 @@ import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.reflect.StructureModifier;
+import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Pair;
@@ -15,6 +16,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitDemolitions;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSpy;
+import me.toomuchzelda.teamarenapaper.utils.MetadataUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
@@ -307,6 +309,9 @@ public class PacketListeners
 		});
 		
 		
+		/**
+		 * could optimise by caching WrappedDataWatchers inside DemoMine object
+		 */
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(Main.getPlugin(),
 				PacketType.Play.Server.ENTITY_METADATA)
 		{
@@ -317,45 +322,42 @@ public class PacketListeners
 				
 				KitDemolitions.DemoMine mine = KitDemolitions.DemoMine.getStandMine(id);
 				if(mine != null) {
-					ArmorStand stand = null;
-					for(ArmorStand istand : mine.stands) {
-						if(istand.getEntityId() == id)
-							stand = istand;
-					}
-					
-					if(stand == null) {
-						Main.logger().warning("Null stand in mine metadata packe tlistere?!?");
-						Thread.dumpStack();
-						return;
-					}
-					
-					
 					boolean shouldSeeGlowing = mine.team.getPlayerMembers().contains(event.getPlayer());
 					
 					StructureModifier<List<WrappedWatchableObject>> modifier = packet.getWatchableCollectionModifier();
 					List<WrappedWatchableObject> objects = modifier.read(0);
 					
-					ListIterator<WrappedWatchableObject> iter = objects.listIterator();
-					WrappedWatchableObject obj;
+					WrappedDataWatcher watcher = new WrappedDataWatcher();
 					
+					ListIterator<WrappedWatchableObject> iter = objects.listIterator();
+					
+					WrappedWatchableObject obj;
 					while(iter.hasNext()) {
+						
 						obj = iter.next();
+						
+						WrappedDataWatcher.WrappedDataWatcherObject watcherObj =
+								new WrappedDataWatcher.WrappedDataWatcherObject(
+										obj.getIndex(), obj.getWatcherObject().getSerializer());
+						
 						if(obj.getIndex() == 0) {
 							byte meta = (Byte) obj.getValue();
 							if(shouldSeeGlowing)
 								// add glowing status to outgoing metadata
 								meta |= (byte) 0x40; //https://wiki.vg/Entity_metadata#Entity_Metadata_Format
-							else {
+							else
 								meta = (byte) (meta & ~(1 << 6)); //MUST explicity set to 0
-							}
-							Byte b = meta;
-							obj.setValue(b);
 							
-							break;
+							Byte b = meta;
+							
+							watcher.setObject(watcherObj, b);
+						}
+						else {
+							watcher.setObject(watcherObj, obj.getValue());
 						}
 					}
 					
-					modifier.write(0, objects);
+					modifier.write(0, watcher.getWatchableObjects());
 				}
 			}
 		});
