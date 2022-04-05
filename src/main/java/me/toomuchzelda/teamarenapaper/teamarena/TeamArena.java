@@ -190,6 +190,10 @@ public abstract class TeamArena
 		noTeamTeam = new TeamArenaTeam("No Team", "No Team", Color.YELLOW, Color.ORANGE, DyeColor.YELLOW, null, Material.GRASS_BLOCK);
 		spectatorTeam = new TeamArenaTeam("Spectators", "Specs", TeamArenaTeam.convert(NamedTextColor.DARK_GRAY), null,
 				null, null, Material.GLASS);
+		
+		PlayerScoreboard.addGlobalTeam(noTeamTeam.getPaperTeam());
+		PlayerScoreboard.addGlobalTeam(spectatorTeam.getPaperTeam());
+		
 		winningTeam = null;
 		lastHadLeft = null;
 
@@ -1295,7 +1299,11 @@ public abstract class TeamArena
 	}
 
 	public void leavingPlayer(Player player) {
-		Main.getPlayerInfo(player).team.removeMembers(player);
+		PlayerInfo pinfo = Main.getPlayerInfo(player);
+		pinfo.team.removeMembers(player);
+		if(pinfo.activeKit != null) {
+			pinfo.activeKit.removeKit(player, pinfo);
+		}
 		balancePlayerLeave();
 		players.remove(player);
 		spectators.remove(player);

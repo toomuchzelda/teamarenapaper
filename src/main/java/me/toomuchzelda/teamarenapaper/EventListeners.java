@@ -184,7 +184,8 @@ public class EventListeners implements Listener
 	public void playerJoin(PlayerJoinEvent event) {
 		//disable yellow "Player has joined the game" messages
 		event.joinMessage(null);
-		event.getPlayer().setScoreboard(SidebarManager.SCOREBOARD);
+		//event.getPlayer().setScoreboard(SidebarManager.SCOREBOARD);
+		Main.getPlayerInfo(event.getPlayer()).getScoreboard().set();
 		//new Hologram(event.getPlayer());
 		Main.getGame().joiningPlayer(event.getPlayer());
 	}

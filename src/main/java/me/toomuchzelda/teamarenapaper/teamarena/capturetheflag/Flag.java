@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.capturetheflag;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
+import me.toomuchzelda.teamarenapaper.teamarena.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.SidebarManager;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.utils.PacketHologram;
@@ -103,6 +104,8 @@ public class Flag
 		bukkitTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.ALWAYS);
 		bukkitTeam.addEntity(stand);
 		
+		PlayerScoreboard.addGlobalTeam(bukkitTeam);
+		
 		markerMetadataPacket = constructMarkerMetadataPacket();
 		normalMetadataPacket = contructNormalMetadataPacket();
 		removePacket = new ClientboundRemoveEntitiesPacket(stand.getEntityId());
@@ -110,7 +113,6 @@ public class Flag
 		//inventory item of whoever grabs it
 		item = items[1].clone();
 		ItemMeta meta = item.getItemMeta();
-		//meta.addEnchant(Enchantment.DURABILITY, 10, true);
 		meta.displayName(team.getComponentName().append(Component.text("'s Flag")).decoration(TextDecoration.ITALIC, false));
 		item.setItemMeta(meta);
 
@@ -194,6 +196,7 @@ public class Flag
 	}
 	
 	public void unregisterTeam() {
+		PlayerScoreboard.removeGlobalTeam(bukkitTeam);
 		bukkitTeam.unregister();
 	}
 }

@@ -105,6 +105,8 @@ public class TeamArenaTeam
 		//paperTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
 		paperTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.ALWAYS);
 		paperTeam.color(NamedTextColor.nearestTo(this.RGBColour));
+		
+		PlayerScoreboard.addGlobalTeam(paperTeam);
 	}
 
 	public String getName() {
@@ -177,7 +179,8 @@ public class TeamArenaTeam
 		{
 			if (entity instanceof Player player)
 			{
-				TeamArenaTeam team = Main.getPlayerInfo(player).team;
+				PlayerInfo pinfo = Main.getPlayerInfo(player);
+				TeamArenaTeam team = pinfo.team;
 
 				//if they're already on this team
 				// check both their reference and this Set as having the reference point here doesn't always mean
@@ -187,12 +190,9 @@ public class TeamArenaTeam
 					continue;
 				}
 
-				//if (team != null)
-				//{
-					team.removeMembers(player);
-				//}
-				Main.getPlayerInfo(player).team = this;
-
+				team.removeMembers(player);
+				pinfo.team = this;
+				
 				//change tab list name to colour for RGB colours
 				// and armor stand nametag
 				updateNametag(player);
@@ -207,7 +207,8 @@ public class TeamArenaTeam
 				//paperTeam.addEntry(entity.getUniqueId().toString());
 			}
 		}
-		paperTeam.addEntities(entities);
+		//paperTeam.addEntities(entities);
+		PlayerScoreboard.addMembersAll(paperTeam, entities);
 	}
 
 	public void removeMembers(Entity... entities) {
@@ -227,7 +228,8 @@ public class TeamArenaTeam
 			playerMembers.remove(entity);
 			lastIn.remove(entity);
 		}
-		paperTeam.removeEntities(entities);
+		//paperTeam.removeEntities(entities);
+		PlayerScoreboard.removeMembersAll(paperTeam, entities);
 		Main.getGame().setLastHadLeft(this);
 	}
 
@@ -237,7 +239,7 @@ public class TeamArenaTeam
 		{
 			//if (entity instanceof Player player)
 			//{
-				paperTeam.removeEntry(player.getName());
+				//paperTeam.removeEntry(player.getName());
 				Main.getPlayerInfo(player).team = null;
 				//player.playerListName(Component.text(player.getName()).color(TeamArena.noTeamColour));
 				// name colour should be handled by the team they're put on
@@ -254,7 +256,8 @@ public class TeamArenaTeam
 		/*for(String entry : paperTeam.getEntries()) {
 			paperTeam.removeEntry(entry);
 		}*/
-		paperTeam.removeEntries(paperTeam.getEntries());
+		//paperTeam.removeEntries(paperTeam.getEntries());
+		PlayerScoreboard.removeEntriesAll(paperTeam, paperTeam.getEntries());
 		Main.getGame().setLastHadLeft(this);
 	}
 

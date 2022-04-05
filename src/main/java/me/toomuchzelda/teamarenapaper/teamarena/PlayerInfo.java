@@ -1,12 +1,12 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
-import me.toomuchzelda.teamarenapaper.utils.PacketHologram;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.KillAssistTracker;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
-import me.toomuchzelda.teamarenapaper.teamarena.preferences.*;
+import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
+import me.toomuchzelda.teamarenapaper.utils.PacketHologram;
 import org.bukkit.Location;
 import org.bukkit.entity.Damageable;
 import org.bukkit.entity.Entity;
@@ -28,6 +28,7 @@ public class PlayerInfo
 	public Kit kit;
 	public Kit activeKit; // kit they've selected vs the kit they're currently using
 	//todo: read from DB or other persistent storage
+	//todo: prob make a preference
 	public String defaultKit;
 
 	private HashMap<Preference<?>, Object> preferences = new HashMap<>();
@@ -35,6 +36,8 @@ public class PlayerInfo
 	private final HashMap<String, Integer> messageCooldowns = new HashMap<>();
 	private final LinkedList<DamageLogEntry> damageReceivedLog;
 	private final KillAssistTracker killAssistTracker;
+	
+	private final PlayerScoreboard scoreboard; //scoreboard they view
 
 	public double kills;
 
@@ -52,6 +55,8 @@ public class PlayerInfo
 		killAssistTracker = new KillAssistTracker(player);
 
 		kills = 0;
+		
+		this.scoreboard = new PlayerScoreboard(player);
 	}
 	
 	public void setPreferenceValues(Map<Preference<?>, ?> values) {
@@ -99,6 +104,10 @@ public class PlayerInfo
 		damageReceivedLog.add(dinfo);
 	}
 
+	public PlayerScoreboard getScoreboard() {
+		return scoreboard;
+	}
+	
 	public void clearDamageReceivedLog() {
 		damageReceivedLog.clear();
 	}

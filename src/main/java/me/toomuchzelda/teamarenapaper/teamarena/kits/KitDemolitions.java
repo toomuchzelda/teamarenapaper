@@ -1,9 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
-import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.SidebarManager;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
@@ -15,12 +13,6 @@ import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.minecraft.network.protocol.game.ClientboundEntityEventPacket;
-import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
-import net.minecraft.network.protocol.game.ClientboundUpdateMobEffectPacket;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.enchantments.Enchantment;
@@ -259,8 +251,6 @@ public class KitDemolitions extends Kit
 		public static final int MINE_DAMAGE_TO_DIE = 3;
 		public static final int TNT_TIME_TO_DETONATE = 20;
 		public static final int TIME_TO_ARM = 30;
-		public static final MobEffectInstance GLOWING_MOB_EFFECT = new MobEffectInstance(MobEffects.GLOWING, 1000, 0,
-				false, false, false, null);
 		
 		//used to set the colour of the glowing effect on the mine armor stand's armor
 		// actual game teams don't matter, just need for the colour
@@ -274,6 +264,7 @@ public class KitDemolitions extends Kit
 				bukkitTeam.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
 				
 				GLOWING_COLOUR_TEAMS.put(color, bukkitTeam);
+				PlayerScoreboard.addGlobalTeam(bukkitTeam);
 			}
 		}
 		
@@ -326,7 +317,7 @@ public class KitDemolitions extends Kit
 				//make sure it's in hashmap first as the packet listener for glowing will fire on the following
 				// methods
 				ARMOR_STAND_ID_TO_DEMO_MINE.put(stand.getEntityId(), this);
-				glowTeam.addEntity(stand);
+				//glowTeam.addEntity(stand);
 				
 				stand.setGlowing(false);
 				stand.setSilent(true);
@@ -340,6 +331,7 @@ public class KitDemolitions extends Kit
 				stand.setRightLegPose(LEG_ANGLE);
 				stand.getEquipment().setBoots(leatherBoots, true);
 			}
+			PlayerScoreboard.addMembersAll(glowTeam, stands);
 			
 			this.axolotl = (Axolotl) world.spawnEntity(baseLoc.clone().add(0, 0.65, 0), EntityType.AXOLOTL);
 			axolotl.setAI(false);
@@ -348,7 +340,8 @@ public class KitDemolitions extends Kit
 		}
 		
 		public void removeEntites() {
-			glowingTeam.removeEntities(stands);
+			//glowingTeam.removeEntities(stands);
+			PlayerScoreboard.removeMembersAll(glowingTeam, stands);
 			for (ArmorStand stand : stands) {
 				ARMOR_STAND_ID_TO_DEMO_MINE.remove(stand.getEntityId());
 				stand.remove();
