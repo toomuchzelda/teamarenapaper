@@ -191,8 +191,8 @@ public abstract class TeamArena
 		spectatorTeam = new TeamArenaTeam("Spectators", "Specs", TeamArenaTeam.convert(NamedTextColor.DARK_GRAY), null,
 				null, null, Material.GLASS);
 		
-		PlayerScoreboard.addGlobalTeam(noTeamTeam.getPaperTeam());
-		PlayerScoreboard.addGlobalTeam(spectatorTeam.getPaperTeam());
+		//PlayerScoreboard.addGlobalTeam(noTeamTeam.getPaperTeam());
+		//PlayerScoreboard.addGlobalTeam(spectatorTeam.getPaperTeam());
 		
 		winningTeam = null;
 		lastHadLeft = null;

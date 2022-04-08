@@ -28,7 +28,7 @@ public final class Main extends JavaPlugin
 	
 	private static Main plugin;
 	
-	private static final ConcurrentHashMap<Player, PlayerInfo> playerInfo = new ConcurrentHashMap<>(1000);
+	private static final Map<Player, PlayerInfo> playerInfo = Collections.synchronizedMap(new LinkedHashMap<>(1000));
 	public static final Map<Integer, Player> playerIdLookup = Collections.synchronizedMap(new HashMap<>(1000));
 	
 	@Override

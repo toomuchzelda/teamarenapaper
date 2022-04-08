@@ -30,12 +30,18 @@ public class SidebarManager {
                 Component.text("Component name").color(TextColor.color(0, 255, 255)), RenderType.INTEGER);
 
         OBJECTIVE.setDisplaySlot(DisplaySlot.SIDEBAR);
+        
+        PlayerScoreboard.addGlobalObjective(OBJECTIVE);
     }
 
     /**
      * Set the "title" (Objective name) of the sidebar (Objective shown on the sidebar DisplaySlot)
      */
     public static void setTitle(Component displayName) {
+        PlayerScoreboard.doGlobalObjective(OBJECTIVE, objective -> {
+            objective.displayName(displayName);
+            Bukkit.broadcastMessage("set title for " + objective.getName());
+        });
         OBJECTIVE.displayName(displayName);
     }
 
@@ -50,18 +56,28 @@ public class SidebarManager {
 
         for(int i = 0; i < max; i++) {
             //replace the team prefix for that line
+            final int finalI = i;
+            String entryName = getUniqueEntryName(i);
             if(i < lines.length && i < lineTeams.size()) {
                 Team team = lineTeams.get(i);
-                if(!team.suffix().contains(lines[i]) && !lines[i].contains(team.suffix()))
+                if(!team.suffix().contains(lines[i]) || !lines[i].contains(team.suffix()))
                     team.suffix(lines[i]);
-                String entryName = getUniqueEntryName(i);
+                //String entryName = getUniqueEntryName(i);
                 //will auto remove from other team for me
                 team.addEntry(entryName);
+                PlayerScoreboard.addMembersAll(team, entryName);
+                
                 OBJECTIVE.getScore(entryName).setScore(lines.length - i);
+                PlayerScoreboard.doGlobalObjective(OBJECTIVE, objective ->
+                        objective.getScore(entryName).setScore(lines.length - finalI));
             }
             //more existing lines than we now want, so remove existing line
             else if(i >= lines.length && i < lineTeams.size()) {
                 OBJECTIVE.getScore(getUniqueEntryName(i)).resetScore();
+                PlayerScoreboard.doGlobalObjective(OBJECTIVE, objective ->
+                        objective.getScore(entryName).resetScore());
+    
+                PlayerScoreboard.removeGlobalTeam(lineTeams.get(i));
                 lineTeams.get(i).unregister();
                 //don't remove just yet to not interrupt the for loop?
                 lineTeams.set(i, null);
@@ -70,9 +86,11 @@ public class SidebarManager {
             else if(i >= lineTeams.size() && i < lines.length){
                 Team newLine = SCOREBOARD.registerNewTeam(TEAMS_IDENTIFIER + teamNames++);
                 newLine.suffix(lines[i]);
-                String entry = getUniqueEntryName(i);
-                newLine.addEntry(entry);
-                OBJECTIVE.getScore(entry).setScore(lines.length - i);
+                newLine.addEntry(entryName);
+                PlayerScoreboard.addGlobalTeam(newLine);
+                OBJECTIVE.getScore(entryName).setScore(lines.length - i);
+                PlayerScoreboard.doGlobalObjective(OBJECTIVE, objective ->
+                        objective.getScore(entryName).setScore(lines.length - finalI));
                 lineTeams.add(newLine);
             }
             
