@@ -473,6 +473,7 @@ public class DamageEvent {
             double maxHealth = living.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
             //they still got absorption hearts
             if(living.getAbsorptionAmount() > 0 && newHealth <= maxHealth) {
+				newHealth = living.getHealth() - finalDamage + living.getAbsorptionAmount();
                 living.setAbsorptionAmount(0);
                 // maybe remove the potion effect too?
             }
@@ -480,11 +481,25 @@ public class DamageEvent {
                 living.setAbsorptionAmount(newHealth - maxHealth);
                 newHealth = maxHealth;
             }
-            else if (newHealth <= 0) {
+            
+			if (newHealth <= 0) {
                 //todo: handle death here
                 //Bukkit.broadcast(Component.text(living.getName() + " has died"));
                 newHealth = living.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
                 isDeath = true;
+            }
+            
+            if(newHealth < 0) {
+                Main.logger().warning(getFinalAttacker().getName() + " is putting " + getVictim() + "'s health " +
+                        "to less than 0. newHealth=" + newHealth + ", maxHealth=" + maxHealth + ",lviingAbsorptionAmount=" +
+                        living.getAbsorptionAmount());
+    
+                if(getFinalAttacker() instanceof Player p) {
+                    Main.logger().warning("attacker kit: " + Main.getPlayerInfo(p).activeKit.getName());
+                }
+                if(victim instanceof Player p) {
+                    Main.logger().warning("victim kit: " + Main.getPlayerInfo(p).activeKit.getName());
+                }
             }
 
             living.setHealth(newHealth);
