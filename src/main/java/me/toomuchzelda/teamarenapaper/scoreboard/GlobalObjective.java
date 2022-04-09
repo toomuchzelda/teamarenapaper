@@ -44,6 +44,10 @@ public class GlobalObjective
 		PlayerScoreboard.getScoreboards().forEach(board -> board.modifyLocalObjective(this, consumer));
 	}
 	
+	public String getName() {
+		return name;
+	}
+	
 	public Component getDisplayName() {
 		return this.displayName;
 	}
@@ -79,6 +83,16 @@ public class GlobalObjective
 	public void resetScore(@NotNull String entryName) {
 		this.entries.remove(entryName);
 		modifyProperty(objective -> objective.getScore(entryName).resetScore());
+	}
+	
+	public void resetAllScores() {
+		var iter = entries.entrySet().iterator();
+		while(iter.hasNext()) {
+			Map.Entry<String, Integer> entry = iter.next();
+			String entryName = entry.getKey();
+			iter.remove();
+			modifyProperty(objective -> objective.getScore(entryName).resetScore());
+		}
 	}
 	
 	public Map<String, Integer> getScores() {

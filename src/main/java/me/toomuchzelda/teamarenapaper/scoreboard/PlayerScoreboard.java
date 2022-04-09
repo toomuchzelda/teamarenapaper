@@ -238,7 +238,10 @@ public class PlayerScoreboard
 	}
 	
 	public void modifyLocalObjective(GlobalObjective objective, Consumer<Objective> consumer) {
-		consumer.accept(getLocalObjective(objective));
+		Objective obj = getLocalObjective(objective);
+		if(obj != null) {
+			consumer.accept(obj);
+		}
 	}
 	
 	public Team getLocalTeam(Team bukkitTeam) {
