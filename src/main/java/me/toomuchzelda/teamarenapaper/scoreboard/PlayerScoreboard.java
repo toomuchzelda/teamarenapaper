@@ -1,6 +1,7 @@
-package me.toomuchzelda.teamarenapaper.teamarena;
+package me.toomuchzelda.teamarenapaper.scoreboard;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
@@ -29,7 +30,7 @@ public class PlayerScoreboard
 	/**
 	 * objectives all players see
 	 */
-	private static final Set<Objective> GLOBAL_OBJECTIVES = new HashSet<>();
+	private static final Set<GlobalObjective> GLOBAL_OBJECTIVES = new HashSet<>();
 	
 	private final Player player;
 	private final Scoreboard scoreboard;
@@ -47,8 +48,9 @@ public class PlayerScoreboard
 		for(Team team : GLOBAL_TEAMS) {
 			this.justAddBukkitTeam(team);
 		}
-		for(Objective objective : GLOBAL_OBJECTIVES) {
-			this.justAddObjective(objective);
+		
+		for(GlobalObjective objective : GLOBAL_OBJECTIVES) {
+			this.makeLocalObjective(objective);
 		}
 	}
 	
@@ -90,30 +92,6 @@ public class PlayerScoreboard
 		team.addEntries(bukkitTeam.getEntries());
 		
 		return team;
-	}
-	
-	private Objective registerObjective(Objective objective) {
-		Objective obj = this.scoreboard.registerNewObjective(objective.getName(), objective.getCriteria(), objective.displayName(),
-				objective.getRenderType());
-		
-		obj.setDisplaySlot(objective.getDisplaySlot());
-		
-		return obj;
-	}
-	
-	public void addObjective(Objective objective) {
-		Objective obj = justAddObjective(objective);
-		nonGlobalObjectives.add(obj);
-	}
-	
-	private Objective justAddObjective(Objective objective) {
-		Objective obj = this.scoreboard.getObjective(objective.getName());
-		if(obj != null)
-			obj.unregister();
-		
-		obj = this.registerObjective(objective);
-		
-		return obj;
 	}
 	
 	public boolean hasTeam(Team bukkitTeam) {
@@ -197,25 +175,13 @@ public class PlayerScoreboard
 		Team team = getTeam(bukkitTeam);
 		if(team != null) {
 			nonGlobalTeams.remove(team);
-			Bukkit.broadcastMessage("unregistering " + team.getName() + " for " + player.getName());
+			//Bukkit.broadcastMessage("unregistering " + team.getName() + " for " + player.getName());
 			team.unregister();
-		}
-	}
-	
-	public void removeObjective(Objective objective) {
-		Objective obj = getObjective(objective.getName());
-		if(obj != null) {
-			nonGlobalObjectives.remove(obj);
-			obj.unregister();
 		}
 	}
 	
 	public Team getBukkitTeam(String teamName) {
 		return this.scoreboard.getTeam(teamName);
-	}
-	
-	public Objective getObjective(String objectiveName) {
-		return this.scoreboard.getObjective(objectiveName);
 	}
 	
 	/**
@@ -241,36 +207,40 @@ public class PlayerScoreboard
 		}
 	}
 	
-	public static void addGlobalObjective(Objective objective) {
+	public static void addGlobalObjective(GlobalObjective objective) {
 		GLOBAL_OBJECTIVES.add(objective);
 		for(PlayerInfo pinfo : Main.getPlayerInfos()) {
-			Objective obj = pinfo.getScoreboard().justAddObjective(objective);
+			pinfo.getScoreboard().makeLocalObjective(objective);
 		}
 	}
 	
-	public static void removeGlobalTeam(Team bukkitTeam) {
-		//if(!GLOBAL_TEAMS.contains(bukkitTeam)) Bukkit.broadcastMessage("Global teams didn't have " + bukkitTeam.getName());
-		GLOBAL_TEAMS.remove(bukkitTeam);
-		for(PlayerInfo pinfo : Main.getPlayerInfos()) {
-			pinfo.getScoreboard().removeBukkitTeam(bukkitTeam);
-		}
+	public void makeLocalObjective(GlobalObjective objective) {
+		Objective newObj = scoreboard.registerNewObjective(objective.name, objective.criteria, objective.getDisplayName(), objective.getRenderType());
+		newObj.setDisplaySlot(objective.getDisplaySlot());
+		objective.getScores().forEach((key, value) -> newObj.getScore(key).setScore(value));
 	}
 	
-	public void removeGlobalObjective(Objective objective) {
-		GLOBAL_OBJECTIVES.remove(objective);
-		for(PlayerInfo pinfo : Main.getPlayerInfos()) {
-			pinfo.getScoreboard().removeObjective(objective);
-		}
+	public Objective getLocalObjective(GlobalObjective objective) {
+		return scoreboard.getObjective(objective.name);
 	}
 	
-	public static void doGlobalObjective(Objective objective, Consumer<Objective> method) {
-		for(PlayerInfo pinfo : Main.getPlayerInfos()) {
-			Objective obj = pinfo.getScoreboard().getObjective(objective.getName());
-			method.accept(obj);
-		}
+	public void modifyLocalObjective(GlobalObjective objective, Consumer<Objective> consumer) {
+		consumer.accept(getLocalObjective(objective));
 	}
 	
 	public Team getTeam(Team bukkitTeam) {
 		return this.scoreboard.getTeam(bukkitTeam.getName());
+	}
+	
+	public void modifyLocalTeam(Team team, Consumer<Team> consumer) {
+		consumer.accept(getLocalTeam(team));
+	}
+	
+	public Scoreboard getScoreboard() {
+		return this.scoreboard;
+	}
+	
+	public static Stream<PlayerScoreboard> getScoreboards() {
+		return Main.getPlayerInfos().stream().map(PlayerInfo::getScoreboard);
 	}
 }

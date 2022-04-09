@@ -3,7 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.capturetheflag;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
-import me.toomuchzelda.teamarenapaper.teamarena.PlayerScoreboard;
+import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.SidebarManager;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.utils.PacketHologram;

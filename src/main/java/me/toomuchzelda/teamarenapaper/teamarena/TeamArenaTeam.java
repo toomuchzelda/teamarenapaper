@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
@@ -207,7 +208,7 @@ public class TeamArenaTeam
 				//paperTeam.addEntry(entity.getUniqueId().toString());
 			}
 		}
-		//paperTeam.addEntities(entities);
+		paperTeam.addEntities(entities);
 		PlayerScoreboard.addMembersAll(paperTeam, entities);
 	}
 
@@ -228,7 +229,7 @@ public class TeamArenaTeam
 			playerMembers.remove(entity);
 			lastIn.remove(entity);
 		}
-		//paperTeam.removeEntities(entities);
+		paperTeam.removeEntities(entities);
 		PlayerScoreboard.removeMembersAll(paperTeam, entities);
 		Main.getGame().setLastHadLeft(this);
 	}
@@ -256,7 +257,7 @@ public class TeamArenaTeam
 		/*for(String entry : paperTeam.getEntries()) {
 			paperTeam.removeEntry(entry);
 		}*/
-		//paperTeam.removeEntries(paperTeam.getEntries());
+		paperTeam.removeEntries(paperTeam.getEntries());
 		PlayerScoreboard.removeEntriesAll(paperTeam, paperTeam.getEntries());
 		Main.getGame().setLastHadLeft(this);
 	}
