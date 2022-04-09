@@ -10,11 +10,9 @@ import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 /**
  * @author toomuchzelda
@@ -46,7 +44,7 @@ public class PlayerScoreboard
 		this.scoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
 		
 		for(Team team : GLOBAL_TEAMS) {
-			this.justAddBukkitTeam(team);
+			this.makeLocalTeam(team);
 		}
 		
 		for(GlobalObjective objective : GLOBAL_OBJECTIVES) {
@@ -63,12 +61,12 @@ public class PlayerScoreboard
 	 * @param bukkitTeam
 	 */
 	public void addBukkitTeam(Team bukkitTeam) {
-		Team team = justAddBukkitTeam(bukkitTeam);
+		Team team = makeLocalTeam(bukkitTeam);
 		nonGlobalTeams.add(team);
 	}
 	
-	private Team justAddBukkitTeam(Team bukkitTeam) {
-		Team team = getTeam(bukkitTeam);
+	private Team makeLocalTeam(Team bukkitTeam) {
+		Team team = getLocalTeam(bukkitTeam);
 		if(team != null)
 			team.unregister();
 		
@@ -129,7 +127,7 @@ public class PlayerScoreboard
 	 * add members on to team, and only this player will see the change
 	 */
 	public void addMembers(Team bukkitTeam, Entity... members) {
-		Team team = getTeam(bukkitTeam);
+		Team team = getLocalTeam(bukkitTeam);
 		if(team != null)
 			team.addEntities(members);
 		else{
@@ -139,7 +137,7 @@ public class PlayerScoreboard
 	}
 	
 	public void addMembers(Team bukkitTeam, String... members) {
-		Team team = getTeam(bukkitTeam);
+		Team team = getLocalTeam(bukkitTeam);
 		if(team != null) {
 			team.addEntries(members);
 		}
@@ -150,7 +148,7 @@ public class PlayerScoreboard
 	}
 	
 	public void removeMembers(Team bukkitTeam, Entity... members) {
-		Team team = getTeam(bukkitTeam);
+		Team team = getLocalTeam(bukkitTeam);
 		if(team != null) {
 			team.removeEntities(members);
 		}
@@ -161,7 +159,7 @@ public class PlayerScoreboard
 	}
 	
 	public void removeEntries(Team bukkitTeam, Collection<String> entries) {
-		Team team = getTeam(bukkitTeam);
+		Team team = getLocalTeam(bukkitTeam);
 		if(team != null) {
 			team.removeEntries(entries);
 		}
@@ -172,7 +170,7 @@ public class PlayerScoreboard
 	}
 	
 	public void removeBukkitTeam(Team bukkitTeam) {
-		Team team = getTeam(bukkitTeam);
+		Team team = getLocalTeam(bukkitTeam);
 		if(team != null) {
 			nonGlobalTeams.remove(team);
 			//Bukkit.broadcastMessage("unregistering " + team.getName() + " for " + player.getName());
@@ -203,9 +201,24 @@ public class PlayerScoreboard
 	public static void addGlobalTeam(Team bukkitTeam) {
 		GLOBAL_TEAMS.add(bukkitTeam);
 		for(PlayerInfo pinfo : Main.getPlayerInfos()) {
-			pinfo.getScoreboard().justAddBukkitTeam(bukkitTeam);
+			pinfo.getScoreboard().makeLocalTeam(bukkitTeam);
 		}
 	}
+	
+	public static void modifyGlobalTeam(Team bukkitTeam, Consumer<Team> method) {
+		for(PlayerInfo pinfo : Main.getPlayerInfos()) {
+			method.accept(pinfo.getScoreboard().getLocalTeam(bukkitTeam));
+		}
+	}
+	
+	public static void removeGlobalTeam(Team bukkitTeam) {
+		//if(!GLOBAL_TEAMS.contains(bukkitTeam)) Bukkit.broadcastMessage("Global teams didn't have " + bukkitTeam.getName());
+		GLOBAL_TEAMS.remove(bukkitTeam);
+		for(PlayerInfo pinfo : Main.getPlayerInfos()) {
+			pinfo.getScoreboard().removeBukkitTeam(bukkitTeam);
+		}
+	}
+	
 	
 	public static void addGlobalObjective(GlobalObjective objective) {
 		GLOBAL_OBJECTIVES.add(objective);
@@ -228,7 +241,7 @@ public class PlayerScoreboard
 		consumer.accept(getLocalObjective(objective));
 	}
 	
-	public Team getTeam(Team bukkitTeam) {
+	public Team getLocalTeam(Team bukkitTeam) {
 		return this.scoreboard.getTeam(bukkitTeam.getName());
 	}
 	
