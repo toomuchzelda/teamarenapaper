@@ -66,6 +66,8 @@ public class TNTMine extends DemoMine
 	public void trigger(Player triggerer) {
 		super.trigger(triggerer);
 		
+		removeEntities(); //won't remove the tnt as it's still null as of now
+		
 		TNTPrimed tnt = (TNTPrimed) baseLoc.getWorld().spawnEntity(axolotl.getLocation(), EntityType.PRIMED_TNT);
 		tnt.setFuseTicks(TNT_TIME_TO_DETONATE);
 		tnt.setSource(this.owner);
@@ -78,7 +80,14 @@ public class TNTMine extends DemoMine
 		return this.type == MineType.TNTMINE && this.tnt != null && !this.tnt.isValid();
 	}
 	
-	public static DemoMine getByTNT(Player player, TNTPrimed tnt) {
+	@Override
+	void removeEntities() {
+		super.removeEntities();
+		if(this.tnt != null)
+			tnt.remove();
+	}
+	
+	public static TNTMine getByTNT(Player player, TNTPrimed tnt) {
 		List<DemoMine> list = KitDemolitions.DemolitionsAbility.PLAYER_MINES.get(player);
 		TNTMine lex_mine = null;
 		if(list != null) {

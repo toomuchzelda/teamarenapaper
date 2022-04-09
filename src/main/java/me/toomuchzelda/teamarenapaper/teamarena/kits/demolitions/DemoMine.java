@@ -28,7 +28,9 @@ public abstract class DemoMine
 	//used to set the colour of the glowing effect on the mine armor stand's armor
 	// actual game teams don't matter, just need for the colour
 	private static final HashMap<NamedTextColor, Team> GLOWING_COLOUR_TEAMS = new HashMap<>(16);
+	
 	static final HashMap<Integer, DemoMine> ARMOR_STAND_ID_TO_DEMO_MINE = new HashMap<>(20, 0.4f);
+	public static final HashMap<Axolotl, DemoMine> AXOLOTL_TO_DEMO_MINE = new HashMap<>();
 	
 	static {
 		for(NamedTextColor color : NamedTextColor.NAMES.values()) {
@@ -83,11 +85,18 @@ public abstract class DemoMine
 		axolotl.setInvisible(true);
 	}
 	
-	void removeEntites() {
-		//glowingTeam.removeEntities(stands);
-		PlayerScoreboard.removeMembersAll(glowingTeam, stands);
+	void remove() {
+		removeEntities();
 		for (ArmorStand stand : stands) {
 			ARMOR_STAND_ID_TO_DEMO_MINE.remove(stand.getEntityId());
+		}
+		AXOLOTL_TO_DEMO_MINE.remove(axolotl);
+	}
+	
+	void removeEntities() {
+		glowingTeam.removeEntities(stands);
+		PlayerScoreboard.removeMembersAll(glowingTeam, stands);
+		for(ArmorStand stand : stands) {
 			stand.remove();
 		}
 		axolotl.remove();
@@ -112,7 +121,7 @@ public abstract class DemoMine
 			world.playSound(axolotl.getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 1.5f, 1f);
 			world.playSound(axolotl.getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 1.5f, 1.3f);
 			world.playSound(axolotl.getLocation(), Sound.BLOCK_STONE_BREAK, 1.5f, 1f);
-			this.removeEntites();
+			this.removeNextTick = true;
 			return true;
 		}
 		return false;

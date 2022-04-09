@@ -46,7 +46,6 @@ public class KitDemolitions extends Kit
 	public static class DemolitionsAbility extends Ability
 	{
 		public static final HashMap<Player, List<DemoMine>> PLAYER_MINES = new HashMap<>();
-		public static final HashMap<Axolotl, DemoMine> AXOLOTL_TO_DEMO_MINE = new HashMap<>();
 		
 		public static final DamageType DEMO_TNTMINE_BYSTANDER = new DamageType(DamageType.DEMO_TNTMINE,
 				"%Killed% was blown up by %Killer%'s TNT Mine because %Cause% stepped on it. Thanks a lot!");
@@ -58,7 +57,7 @@ public class KitDemolitions extends Kit
 		@Override
 		public void unregisterAbility() {
 			PLAYER_MINES.clear();
-			AXOLOTL_TO_DEMO_MINE.clear();
+			DemoMine.AXOLOTL_TO_DEMO_MINE.clear();
 			DemoMine.clearMap();
 		}
 		
@@ -67,8 +66,8 @@ public class KitDemolitions extends Kit
 			List<DemoMine> list = PLAYER_MINES.remove(player);
 			if(list != null) {
 				for (DemoMine mine : list) {
-					mine.removeEntites();
-					AXOLOTL_TO_DEMO_MINE.remove(mine.axolotl);
+					mine.remove();
+					//DemoMine.AXOLOTL_TO_DEMO_MINE.remove(mine.axolotl);
 				}
 			}
 		}
@@ -93,7 +92,7 @@ public class KitDemolitions extends Kit
 			if(event.getDamageType().is(DamageType.EXPLOSION) && event.getAttacker() instanceof TNTPrimed dTnt) {
 				Player demo = (Player) event.getFinalAttacker();
 				Player victim = event.getPlayerVictim();
-				DemoMine mine = TNTMine.getByTNT(demo, dTnt);
+				TNTMine mine = TNTMine.getByTNT(demo, dTnt);
 				if(mine != null) {
 					if(mine.triggerer == demo) {
 						event.setDamageType(DEMO_TNTMINE_REMOTE);
@@ -105,6 +104,7 @@ public class KitDemolitions extends Kit
 						event.setDamageType(DEMO_TNTMINE_BYSTANDER);
 						event.setDamageTypeCause(mine.triggerer);
 					}
+					event.setFinalDamage(event.getFinalDamage() * 0.65);
 				}
 			}
 		}
@@ -113,7 +113,7 @@ public class KitDemolitions extends Kit
 		public void onTick() {
 			int gameTick = TeamArena.getGameTick();
 			
-			var axIter = AXOLOTL_TO_DEMO_MINE.entrySet().iterator();
+			var axIter = DemoMine.AXOLOTL_TO_DEMO_MINE.entrySet().iterator();
 			while(axIter.hasNext()) {
 				Map.Entry<Axolotl, DemoMine> entry = axIter.next();
 				DemoMine mine = entry.getValue();
@@ -127,6 +127,7 @@ public class KitDemolitions extends Kit
 					}
 					
 					axIter.remove();
+					mine.removeEntities();
 				}
 				//determine if needs to be removed (next tick)
 				else if(mine.isDone()) {
@@ -155,8 +156,6 @@ public class KitDemolitions extends Kit
 						if (stepper.getBoundingBox().overlaps(axolotl.getBoundingBox())) {
 							//they stepped on mine, trigger explosion
 							mine.trigger(stepper);
-							
-							mine.removeEntites();
 						}
 					}
 				}
@@ -165,12 +164,19 @@ public class KitDemolitions extends Kit
 		
 		public static void handleAxolotlAttemptDamage(DamageEvent event) {
 			Axolotl axolotl = (Axolotl) event.getVictim();
-			DemoMine mine = AXOLOTL_TO_DEMO_MINE.get(axolotl);
+			DemoMine mine = DemoMine.AXOLOTL_TO_DEMO_MINE.get(axolotl);
 			if(mine != null) {
 				event.setCancelled(true);
 				if(event.getDamageType().isMelee()) {
 					if (event.getFinalAttacker() instanceof Player breaker) {
-						if (!mine.team.getPlayerMembers().contains(breaker)) {
+						if(breaker == mine.owner) {
+							if(mine.damage == 0)
+								breaker.sendMessage(Component.text("This is your mine. Keep punching to remove it")
+										.color(NamedTextColor.AQUA));
+							event.setFinalDamage(0d);
+							event.setCancelled(false);
+						}
+						else if (!mine.team.getPlayerMembers().contains(breaker)) {
 							event.setFinalDamage(0d);
 							event.setCancelled(false);
 						}
@@ -188,19 +194,25 @@ public class KitDemolitions extends Kit
 		
 		public static void handleAxolotlDamage(DamageEvent event) {
 			Axolotl axolotl = (Axolotl) event.getVictim();
-			DemoMine mine = AXOLOTL_TO_DEMO_MINE.get(axolotl);
+			DemoMine mine = DemoMine.AXOLOTL_TO_DEMO_MINE.get(axolotl);
 			if (mine != null && event.getDamageType().isMelee()) {
 				if(mine.hurt()) {
 					if(event.getFinalAttacker() instanceof Player breaker) {
-						Component message = Component.text("You've broken one of ").color(NamedTextColor.AQUA).append(
-							mine.owner.playerListName()).append(Component.text("'s " + mine.type.name + "s!")
-								.color(NamedTextColor.AQUA));
-						
+						Component message;
+						if(breaker != mine.owner) {
+							message = Component.text("You've broken one of ").color(NamedTextColor.AQUA).append(
+								mine.owner.playerListName()).append(Component.text("'s " + mine.type.name + "s!")
+									.color(NamedTextColor.AQUA));
+							
+							Component ownerMessage = Component.text("Someone broke one of your " + mine.type.name + "s!")
+									.color(NamedTextColor.AQUA);
+							PlayerUtils.sendKitMessage(mine.owner, ownerMessage, ownerMessage);
+						}
+						else {
+							message = Component.text("Broke your " + mine.type.name).color(NamedTextColor.AQUA);
+						}
 						breaker.sendMessage(message);
 					}
-					
-					PLAYER_MINES.remove(mine.owner);
-					AXOLOTL_TO_DEMO_MINE.remove(axolotl);
 				}
 			}
 		}
@@ -212,7 +224,7 @@ public class KitDemolitions extends Kit
 			});
 			fromPlayer.add(mine);
 			
-			AXOLOTL_TO_DEMO_MINE.put(mine.axolotl, mine);
+			DemoMine.AXOLOTL_TO_DEMO_MINE.put(mine.axolotl, mine);
 		}
 		
 		public static void removeMine(@NotNull DemoMine mine) {
@@ -223,7 +235,7 @@ public class KitDemolitions extends Kit
 				PLAYER_MINES.remove(player);
 			}
 			
-			AXOLOTL_TO_DEMO_MINE.remove(mine.axolotl);
+			DemoMine.AXOLOTL_TO_DEMO_MINE.remove(mine.axolotl);
 		}
 	}
 }
