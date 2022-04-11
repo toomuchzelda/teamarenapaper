@@ -31,20 +31,12 @@ public class TNTMine extends DemoMine
 		spawnLoc2.setYaw(180f);
 		
 		World world = baseLoc.getWorld();
-		stands = new ArmorStand[2];
-		stands[0] = (ArmorStand) world.spawnEntity(spawnLoc1, EntityType.ARMOR_STAND);
-		stands[1] = (ArmorStand) world.spawnEntity(spawnLoc2, EntityType.ARMOR_STAND);
-		
 		this.armorSlot = EquipmentSlot.FEET;
 		ItemStack leatherBoots = new ItemStack(Material.LEATHER_BOOTS);
 		ItemUtils.colourLeatherArmor(color, leatherBoots);
-		
-		for (ArmorStand stand : stands) {
-			//make sure it's in hashmap first as the packet listener for glowing will fire on the following
-			// methods
-			ARMOR_STAND_ID_TO_DEMO_MINE.put(stand.getEntityId(), this);
-			//glowTeam.addEntity(stand);
-			
+		stands = new ArmorStand[2];
+		// bullshit bukkit functional interface
+		org.bukkit.util.Consumer<ArmorStand> propApplier = stand -> {
 			stand.setGlowing(false);
 			stand.setSilent(true);
 			stand.setMarker(true);
@@ -56,7 +48,10 @@ public class TNTMine extends DemoMine
 			stand.setLeftLegPose(LEG_ANGLE);
 			stand.setRightLegPose(LEG_ANGLE);
 			stand.getEquipment().setBoots(leatherBoots, true);
-		}
+			ARMOR_STAND_ID_TO_DEMO_MINE.put(stand.getEntityId(), this);
+		};
+		stands[0] = world.spawn(spawnLoc1, ArmorStand.class, propApplier);
+		stands[1] = world.spawn(spawnLoc2, ArmorStand.class, propApplier);
 		
 		glowingTeam.addEntities(stands);
 		PlayerScoreboard.addMembersAll(glowingTeam, stands);
@@ -68,7 +63,7 @@ public class TNTMine extends DemoMine
 		
 		removeEntities(); //won't remove the tnt as it's still null as of now
 		
-		TNTPrimed tnt = (TNTPrimed) baseLoc.getWorld().spawnEntity(axolotl.getLocation(), EntityType.PRIMED_TNT);
+		TNTPrimed tnt = (TNTPrimed) baseLoc.getWorld().spawnEntity(hitboxEntity.getLocation(), EntityType.PRIMED_TNT);
 		tnt.setFuseTicks(TNT_TIME_TO_DETONATE);
 		tnt.setSource(this.owner);
 		tnt.setVelocity(new Vector(0, 0.45d, 0));

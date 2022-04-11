@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kingofthehill;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
@@ -369,7 +370,7 @@ public class KingOfTheHill extends TeamArena
 		//no more hills, game is over
 		//if(hillIndex == hills.length - 1) {
 		//change to if no team has won yet, keep rotating forever
-		if(owningTeam.getTotalScore() >= TICKS_TO_WIN) {
+		if (!CommandDebug.ignoreWinConditions && owningTeam.getTotalScore() >= TICKS_TO_WIN) {
 			
 			TeamArenaTeam winner = null;
 			int highestScore = 0;

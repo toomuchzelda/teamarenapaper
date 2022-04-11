@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.KitInventory;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
@@ -377,11 +378,10 @@ public abstract class TeamArena
 				lastTeam = team;
 			}
 		}
-		if(aliveTeamCount < 2) {
-			if(lastTeam != null) {
+		if (!CommandDebug.ignoreWinConditions && aliveTeamCount < 2) {
+			if (lastTeam != null) {
 				Bukkit.broadcast(lastTeam.getComponentName().append(Component.text(" is the last team standing so they win!!")));
-			}
-			else {
+			} else {
 				Bukkit.broadcast(Component.text("Where'd everyone go?"));
 			}
 			prepEnd();

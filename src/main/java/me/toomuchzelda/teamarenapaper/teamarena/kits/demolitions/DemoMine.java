@@ -11,7 +11,6 @@ import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Axolotl;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.scoreboard.Team;
@@ -47,7 +46,7 @@ public abstract class DemoMine
 	public final TeamArenaTeam team;
 	final Team glowingTeam;
 	ArmorStand[] stands;
-	final Axolotl axolotl; //the mine's interactable hitbox
+	final Axolotl hitboxEntity; //the mine's interactable hitbox
 	Player triggerer; //store the player that stepped on it for shaming OR the demo if remote detonate
 	
 	//for construction
@@ -79,10 +78,11 @@ public abstract class DemoMine
 		Location blockLoc = block.getLocation();
 		this.baseLoc = blockLoc.add(0.5d, topOfBlock - 0.85d, 0.5d);
 		
-		this.axolotl = (Axolotl) world.spawnEntity(baseLoc.clone().add(0, 0.65, 0), EntityType.AXOLOTL);
-		axolotl.setAI(false);
-		axolotl.setSilent(true);
-		axolotl.setInvisible(true);
+		this.hitboxEntity = world.spawn(baseLoc.clone().add(0, 0.65, 0), Axolotl.class, entity -> {
+			entity.setAI(false);
+			entity.setSilent(true);
+			entity.setInvisible(true);
+		});
 	}
 	
 	void remove() {
@@ -90,7 +90,7 @@ public abstract class DemoMine
 		for (ArmorStand stand : stands) {
 			ARMOR_STAND_ID_TO_DEMO_MINE.remove(stand.getEntityId());
 		}
-		AXOLOTL_TO_DEMO_MINE.remove(axolotl);
+		AXOLOTL_TO_DEMO_MINE.remove(hitboxEntity);
 	}
 	
 	void removeEntities() {
@@ -99,7 +99,7 @@ public abstract class DemoMine
 		for(ArmorStand stand : stands) {
 			stand.remove();
 		}
-		axolotl.remove();
+		hitboxEntity.remove();
 	}
 	
 	/**
@@ -107,20 +107,20 @@ public abstract class DemoMine
 	 */
 	boolean hurt() {
 		this.damage++;
-		World world = this.axolotl.getWorld();
+		World world = this.hitboxEntity.getWorld();
 		for(int i = 0; i < 3; i++) {
-			world.playSound(axolotl.getLocation(), Sound.BLOCK_GRASS_HIT, 999, 0.5f);
-			world.spawnParticle(Particle.CLOUD, axolotl.getLocation().add(0d, 0.2d, 0d), 1,
+			world.playSound(hitboxEntity.getLocation(), Sound.BLOCK_GRASS_HIT, 999, 0.5f);
+			world.spawnParticle(Particle.CLOUD, hitboxEntity.getLocation().add(0d, 0.2d, 0d), 1,
 					0.2d, 0.2d, 0.2d, 0.02d);
 		}
 		
 		if(this.damage >= type.damageToKill) {
 			// game command: /particle minecraft:cloud ~3 ~0.2 ~ 0.2 0.2 0.2 0.02 3 normal
-			world.spawnParticle(Particle.CLOUD, axolotl.getLocation().add(0d, 0.2d, 0d), 3,
+			world.spawnParticle(Particle.CLOUD, hitboxEntity.getLocation().add(0d, 0.2d, 0d), 3,
 					0.2d, 0.2d, 0.2d, 0.02d);
-			world.playSound(axolotl.getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 1.5f, 1f);
-			world.playSound(axolotl.getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 1.5f, 1.3f);
-			world.playSound(axolotl.getLocation(), Sound.BLOCK_STONE_BREAK, 1.5f, 1f);
+			world.playSound(hitboxEntity.getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 1.5f, 1f);
+			world.playSound(hitboxEntity.getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 1.5f, 1.3f);
+			world.playSound(hitboxEntity.getLocation(), Sound.BLOCK_STONE_BREAK, 1.5f, 1f);
 			this.removeNextTick = true;
 			return true;
 		}
@@ -129,10 +129,10 @@ public abstract class DemoMine
 	
 	void trigger(Player triggerer) {
 		this.triggerer = triggerer;
-		World world = axolotl.getWorld();
+		World world = hitboxEntity.getWorld();
 		
-		world.playSound(axolotl.getLocation(), Sound.ENTITY_CREEPER_HURT, 1f, 0f);
-		world.playSound(axolotl.getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 1f, 0f);
+		world.playSound(hitboxEntity.getLocation(), Sound.ENTITY_CREEPER_HURT, 1f, 0f);
+		world.playSound(hitboxEntity.getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 1f, 0f);
 		
 		//subclass here
 	}

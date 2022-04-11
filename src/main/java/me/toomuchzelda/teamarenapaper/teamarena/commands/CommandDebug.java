@@ -13,8 +13,13 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Locale;
 
 public class CommandDebug extends CustomCommand {
+
+    // TODO temporary feature
+    public static boolean ignoreWinConditions;
+
     public CommandDebug() {
         super("debug", "", "/debug <gui/hide/tictactoe> ...", PermissionLevel.OWNER);
     }
@@ -66,12 +71,39 @@ public class CommandDebug extends CustomCommand {
                     game.schedule();
                 }
             }
+            case "game" -> {
+                if (args.length < 2) {
+                    showUsage(sender, "/debug game <ignorewinconditions> [true/false]");
+                    return;
+                }
+                if (args[1].equalsIgnoreCase("ignorewinconditions")) {
+                    ignoreWinConditions = args.length == 3 ? "true".equalsIgnoreCase(args[2]) : !ignoreWinConditions;
+                    sender.sendMessage(Component.text("Set ignore win conditions to " + ignoreWinConditions)
+                            .color(NamedTextColor.GREEN));
+                }
+            }
             default -> showUsage(sender);
         }
     }
 
     @Override
     public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
-        return args.length == 1 ? Arrays.asList("hide", "gui", "tictactoe") : Collections.emptyList();
+        if (args.length == 1) {
+            return Arrays.asList("hide", "gui", "tictactoe");
+        } else if (args.length == 2) {
+            return switch (args[0].toLowerCase(Locale.ENGLISH)) {
+                case "gui" -> Arrays.asList("true", "false");
+                case "tictactoe" -> Arrays.asList("player", "bot");
+                case "game" -> Collections.singletonList("ignorewinconditions");
+                default -> Collections.emptyList();
+            };
+        } else if (args.length == 3) {
+            return switch (args[0].toLowerCase(Locale.ENGLISH)) {
+                case "tictactoe" -> Bukkit.getOnlinePlayers().stream().map(Player::getName).toList();
+                case "game" -> Arrays.asList("true", "false");
+                default -> Collections.emptyList();
+            };
+        }
+        return Collections.emptyList();
     }
 }

@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.capturetheflag;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
@@ -480,7 +481,7 @@ public class CaptureTheFlag extends TeamArena
 		Bukkit.broadcast(chatText);
 		
 		//end the game if win
-		if(capturingTeam.score >= capsToWin) {
+		if (!CommandDebug.ignoreWinConditions && capturingTeam.score >= capsToWin) {
 			winningTeam = capturingTeam;
 			prepEnd();
 		}

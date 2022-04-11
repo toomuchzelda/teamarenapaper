@@ -137,9 +137,9 @@ public class KitDemolitions extends Kit
 				else if(gameTick <= mine.creationTime + DemoMine.TIME_TO_ARM) {
 					//indicate its armed
 					if(gameTick == mine.creationTime + DemoMine.TIME_TO_ARM) {
-						World world = mine.axolotl.getWorld();
-						world.playSound(mine.axolotl.getLocation(), Sound.BLOCK_STONE_BUTTON_CLICK_OFF, 1f, 1f);
-						world.spawnParticle(Particle.CRIT, mine.axolotl.getLocation().add(0, 0.4, 0), 2, 0, 0, 0,0);
+						World world = mine.hitboxEntity.getWorld();
+						world.playSound(mine.hitboxEntity.getLocation(), Sound.BLOCK_STONE_BUTTON_CLICK_OFF, 1f, 1f);
+						world.spawnParticle(Particle.CRIT, mine.hitboxEntity.getLocation().add(0, 0.4, 0), 2, 0, 0, 0,0);
 						
 						Component message = Component.text("Your " + mine.type.name + " is now armed").color(NamedTextColor.GREEN);
 						PlayerUtils.sendKitMessage(mine.owner, message, message);
@@ -224,7 +224,7 @@ public class KitDemolitions extends Kit
 			});
 			fromPlayer.add(mine);
 			
-			DemoMine.AXOLOTL_TO_DEMO_MINE.put(mine.axolotl, mine);
+			DemoMine.AXOLOTL_TO_DEMO_MINE.put(mine.hitboxEntity, mine);
 		}
 		
 		public static void removeMine(@NotNull DemoMine mine) {
@@ -235,7 +235,7 @@ public class KitDemolitions extends Kit
 				PLAYER_MINES.remove(player);
 			}
 			
-			DemoMine.AXOLOTL_TO_DEMO_MINE.remove(mine.axolotl);
+			DemoMine.AXOLOTL_TO_DEMO_MINE.remove(mine.hitboxEntity);
 		}
 	}
 }

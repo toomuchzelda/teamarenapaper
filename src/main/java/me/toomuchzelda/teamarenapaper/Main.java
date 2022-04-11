@@ -9,6 +9,8 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.FileUtils;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.command.CommandMap;
@@ -16,7 +18,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 public final class Main extends JavaPlugin
@@ -80,9 +81,10 @@ public final class Main extends JavaPlugin
 			// evacuate the world first, then unload
 			World tempWorld = teamArena.getWorld();
 			if (tempWorld.getPlayerCount() != 0) {
-				World mainWorld = Bukkit.getWorlds().get(0);
+				Component kickMessage = Component.text("Please wait while toomuchzelda deploys some broken new feature!")
+						.color(NamedTextColor.GOLD);
 				for (Player player : tempWorld.getPlayers()) {
-					player.teleport(mainWorld.getSpawnLocation());
+					player.kick(kickMessage);
 				}
 			}
 			if (Bukkit.unloadWorld(tempWorld, false)) {

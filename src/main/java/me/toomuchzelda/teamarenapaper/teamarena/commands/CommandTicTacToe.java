@@ -69,7 +69,7 @@ public class CommandTicTacToe extends CustomCommand {
             player.sendMessage(Component.text("Invitation sent to " + target + ".").color(NamedTextColor.GREEN));
             targetPlayer.sendMessage(Component.text(player.getName() + " invited you to a game of tic tac toe! Click here to accept.")
                     .color(NamedTextColor.YELLOW)
-                    .clickEvent(ClickEvent.runCommand("tictactoe " + player.getName()))
+                    .clickEvent(ClickEvent.runCommand("/tictactoe " + player.getName()))
                     .hoverEvent(HoverEvent.showText(Component.text("/tictactoe " + player.getName()).color(NamedTextColor.WHITE)))
             );
             requests.put(player.getUniqueId(), new Invitation(targetPlayer.getUniqueId(), now));
