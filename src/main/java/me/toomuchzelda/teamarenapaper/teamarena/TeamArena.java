@@ -287,9 +287,19 @@ public abstract class TeamArena
 		
 	}
 
+	// peak humor
+	private static Sound getRandomStupidFuckingSound() {
+		Sound sound = Sound.values()[MathUtils.random.nextInt(Sound.values().length)];
+		String soundName = sound.name();
+		if (soundName.startsWith("MUSIC") || soundName.startsWith("UI")) {
+			return Sound.BLOCK_FIRE_EXTINGUISH;
+		}
+		return sound;
+	}
+
 	public void preGameTick() {
 		//if countdown is ticking, do announcements
-		if(players.size() >= MIN_PLAYERS_REQUIRED) {
+		if (!CommandDebug.ignoreWinConditions && players.size() >= MIN_PLAYERS_REQUIRED) {
 			//announce Game starting in:
 			// and play sound
 			sendCountdown(false);
@@ -329,9 +339,8 @@ public abstract class TeamArena
 				//announce game cancelled
 				// spam sounds lol xddddddd
 				for(int i = 0; i < 10; i++) {
-					gameWorld.playSound(border.getCenter().toLocation(gameWorld),
-							Sound.values()[MathUtils.randomMax(Sound.values().length - 1)],
-							SoundCategory.AMBIENT, 99999, (float) MathUtils.randomRange(0.5, 2));
+					gameWorld.playSound(border.getCenter().toLocation(gameWorld), getRandomStupidFuckingSound(),
+							SoundCategory.AMBIENT, 0.5f, (float) MathUtils.randomRange(0.5, 1.5));
 				}
 				Bukkit.broadcast(Component.text("Not enough players to start the game, game cancelled!").color(MathUtils.randomTextColor()));
 				SidebarManager.updatePreGameScoreboard(this);
