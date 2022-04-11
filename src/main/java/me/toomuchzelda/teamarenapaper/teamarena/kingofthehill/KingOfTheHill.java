@@ -16,6 +16,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.util.BoundingBox;
 
+import java.io.File;
 import java.util.*;
 
 public class KingOfTheHill extends TeamArena
@@ -508,7 +509,7 @@ public class KingOfTheHill extends TeamArena
 	}
 
 	@Override
-	public String mapPath() {
-		return super.mapPath() + "KOTH";
+	public File getMapPath() {
+		return new File(super.getMapPath(), "KOTH");
 	}
 }

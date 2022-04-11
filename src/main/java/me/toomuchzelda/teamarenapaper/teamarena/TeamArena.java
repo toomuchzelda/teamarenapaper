@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
+import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.inventory.KitInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
@@ -28,7 +29,6 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
@@ -90,7 +90,10 @@ public abstract class TeamArena
 	protected HashMap<Player, RespawnInfo> respawnTimers;
 	//for players that have joined mid-game and have 10 or whatever seconds to join
 	protected HashMap<Player, Integer> midJoinTimers;
-	protected ItemStack respawnItem;
+	protected static ItemStack respawnItem = ItemBuilder.of(Material.RED_DYE)
+			.displayName(Component.text("Right click to respawn").color(NamedTextColor.RED)
+					.decoration(TextDecoration.ITALIC, false))
+			.build();
 	public static final int RESPAWN_SECONDS = 5;
 	public static final int MID_GAME_JOIN_SECONDS = 10;
 	
@@ -98,7 +101,10 @@ public abstract class TeamArena
 			new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(),
 			new KitNone());
 	protected Map<String, Kit> kits;
-	protected ItemStack kitMenuItem;
+	protected static ItemStack kitMenuItem = ItemBuilder.of(Material.FEATHER)
+			.displayName(Component.text("Select a Kit").color(NamedTextColor.BLUE)
+					.decoration(TextDecoration.ITALIC, false))
+			.build();
 
 	protected MapInfo mapInfo;
 
@@ -107,21 +113,15 @@ public abstract class TeamArena
 	private final LinkedList<DamageIndicatorHologram> activeDamageIndicators = new LinkedList<>();
 
 	public TeamArena() {
-		Main.logger().info("Reading info from " + mapPath() + ':');
-		File[] maps = new File(mapPath()).listFiles();
-		for(File map : maps) {
-			Main.logger().info(map.getAbsolutePath() + " " + map.getName());
+		Main.logger().info("Reading info from " + getMapPath().getPath() + ':');
+		File[] maps = getMapPath().listFiles();
+		if (maps == null || maps.length == 0) {
+			throw new IllegalStateException(getMapPath().getAbsolutePath() + " is empty");
 		}
-		int rand = 0;
-		if(maps.length > 1) {
-			rand = MathUtils.randomMax(maps.length - 1);
-		}
-		String chosenMapName = maps[rand].getAbsolutePath();
-		Main.logger().info("Loading Map: " + chosenMapName);
 
 		//copy the map to another directory and load from there to avoid any accidental modifying of the original
 		// map
-		File source = maps[rand];
+		File source = maps[MathUtils.random.nextInt(maps.length)];
 		File dest = new File("temp_" + source.getName().toLowerCase(Locale.ENGLISH) + "_" + System.currentTimeMillis());
 		if (dest.mkdir()) {
 			FileUtils.copyFolder(source, dest);
@@ -141,7 +141,7 @@ public abstract class TeamArena
 		gameWorld = worldCreator.createWorld();
 
 		//parse config before world gamerules to know world options
-		File configFile = new File(chosenMapName, "config.yml");
+		File configFile = new File(source, "config.yml");
 		Yaml yaml = new Yaml();
 		Main.logger().info("Reading config YAML: " + configFile);
 
@@ -199,19 +199,6 @@ public abstract class TeamArena
 		winningTeam = null;
 		lastHadLeft = null;
 
-		kitMenuItem = new ItemStack(Material.FEATHER);
-		Component kitMenuName = Component.text("Select a Kit").color(NamedTextColor.BLUE)
-				.decoration(TextDecoration.ITALIC, false);
-		ItemMeta kitItemMeta = kitMenuItem.getItemMeta();
-		kitItemMeta.displayName(kitMenuName);
-		kitMenuItem.setItemMeta(kitItemMeta);
-		
-		respawnItem = new ItemStack(Material.RED_DYE);
-		Component respawnItemName = Component.text("Right click to respawn").color(NamedTextColor.RED);
-		ItemMeta respawnItemMeta = respawnItem.getItemMeta();
-		respawnItemMeta.displayName(respawnItemName);
-		respawnItem.setItemMeta(respawnItemMeta);
-
 		kits = new LinkedHashMap<>();
 		registerKits();
 		
@@ -232,11 +219,13 @@ public abstract class TeamArena
 		PlayerListScoreManager.removeScores();
 
 		//init all the players online at time of construction
-		for (Player p : Bukkit.getOnlinePlayers()) {
+		for (var entry : Main.getPlayerInfoMap().entrySet()) {
+			Player p = entry.getKey();
+			PlayerInfo pinfo = entry.getValue();
+
 			p.teleport(spawnPos);
 			players.add(p);
-			
-			PlayerInfo pinfo = Main.getPlayerInfo(p);
+
 			pinfo.spawnPoint = spawnPos;
 			pinfo.kit = findKit(pinfo.defaultKit);
 			pinfo.team = noTeamTeam;
@@ -1598,8 +1587,8 @@ public abstract class TeamArena
 		return kits.keySet();
 	}
 	
-	public String mapPath() {
-		return "Maps/";
+	public File getMapPath() {
+		return new File("Maps");
 	}
 
 	public World getWorld() {

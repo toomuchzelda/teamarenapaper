@@ -29,8 +29,8 @@ public final class Main extends JavaPlugin
 	
 	private static Main plugin;
 	
-	private static final Map<Player, PlayerInfo> playerInfo = Collections.synchronizedMap(new LinkedHashMap<>(1000));
-	public static final Map<Integer, Player> playerIdLookup = Collections.synchronizedMap(new HashMap<>(1000));
+	private static Map<Player, PlayerInfo> playerInfo;
+	public static Map<Integer, Player> playerIdLookup;
 	
 	@Override
 	public void onEnable()
@@ -39,26 +39,10 @@ public final class Main extends JavaPlugin
 		
 		logger = this.getLogger();
 		logger.info("Starting TMA");
-		
-		//unload all vanilla worlds
-		// stop mob AI in vanilla worlds to try save performance?
-		//for(World world : Bukkit.getWorlds()) {
-		//i think unloading the main world is not allowed
-		//logger.info("Unloading world: " + world.getName() + ", success: " + Bukkit.unloadWorld(world, false));
-		//}
-		
-		//delete temp maps that should have been deleted on shutdown, if any
-		// may be bad for running multiple servers from the same directory
-		/*for (File file : new File("Test").getAbsoluteFile().getParentFile().listFiles()) {
-			String name = file.getName();
-			
-			if(name.startsWith("TEMPMAP")) {
-				FileUtils.delete(file);
-				this.getLogger().info("Deleted folder " + name);
-			}
-		}*/
-		
-		//register Commands here
+
+		int initialCapacity = Bukkit.getMaxPlayers();
+		playerInfo = Collections.synchronizedMap(new LinkedHashMap<>(initialCapacity));
+		playerIdLookup = Collections.synchronizedMap(new HashMap<>(initialCapacity));
 		
 		eventListeners = new EventListeners(this);
 		packetListeners = new PacketListeners(this);
@@ -117,7 +101,12 @@ public final class Main extends JavaPlugin
 	public static Collection<PlayerInfo> getPlayerInfos() {
 		return playerInfo.values();
 	}
-	
+
+	public static Map<Player, PlayerInfo> getPlayerInfoMap() {
+		return playerInfo;
+	}
+
+	@Deprecated
 	public static Iterator<Map.Entry<Player, PlayerInfo>> getPlayersIter() {
 		return playerInfo.entrySet().iterator();
 	}

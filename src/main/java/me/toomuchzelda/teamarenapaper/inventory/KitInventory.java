@@ -93,4 +93,10 @@ public class KitInventory extends PagedInventory {
                 .toList();
         setPageItems(kitItems, inventory, 0, 45);
     }
+
+    @Override
+    public void close(Player player) {
+        // what a shitty method name
+        Main.getGame().setToRespawn(player);
+    }
 }

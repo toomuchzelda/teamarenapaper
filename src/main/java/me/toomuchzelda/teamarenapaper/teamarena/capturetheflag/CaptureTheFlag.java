@@ -27,6 +27,7 @@ import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.util.*;
 
 public class CaptureTheFlag extends TeamArena
@@ -714,7 +715,7 @@ public class CaptureTheFlag extends TeamArena
 	}
 	
 	@Override
-	public String mapPath() {
-		return super.mapPath() + "CTF";
+	public File getMapPath() {
+		return new File(super.getMapPath(), "CTF");
 	}
 }
