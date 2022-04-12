@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
+import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.TicTacToe;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
@@ -8,6 +9,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -18,7 +20,7 @@ public class CommandTicTacToe extends CustomCommand {
         super("tictactoe", "Better than team arena", "/tictactoe <player>/bot [difficulty]", PermissionLevel.ALL);
     }
 
-    record Invitation(UUID uuid, long timestamp) {}
+    record Invitation(UUID uuid, long timestamp, BukkitTask task) {}
 
     HashMap<UUID, Invitation> requests = new HashMap<>();
     @Override
@@ -58,6 +60,10 @@ public class CommandTicTacToe extends CustomCommand {
             if (invitation != null && now - invitation.timestamp() <= 60000 && invitation.uuid().equals(player.getUniqueId())) {
                 TicTacToe game = new TicTacToe(TicTacToe.getPlayer(targetPlayer), TicTacToe.getPlayer(player));
                 game.schedule();
+                if (!invitation.task.isCancelled())
+                    invitation.task().cancel();
+                requests.remove(targetPlayer.getUniqueId());
+                return;
             }
 
             invitation = requests.get(player.getUniqueId());
@@ -72,14 +78,18 @@ public class CommandTicTacToe extends CustomCommand {
                     .clickEvent(ClickEvent.runCommand("/tictactoe " + player.getName()))
                     .hoverEvent(HoverEvent.showText(Component.text("/tictactoe " + player.getName()).color(NamedTextColor.WHITE)))
             );
-            requests.put(player.getUniqueId(), new Invitation(targetPlayer.getUniqueId(), now));
+            BukkitTask task = Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
+                player.sendMessage(Component.text("The tic tac toe invitation to " + target + " has expired.").color(NamedTextColor.YELLOW));
+                targetPlayer.sendMessage(Component.text("The tic tac toe invitation from " + target + " has expired.").color(NamedTextColor.YELLOW));
+            }, 60 * 20);
+            requests.put(player.getUniqueId(), new Invitation(targetPlayer.getUniqueId(), now, task));
         }
     }
 
     @Override
     public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
         if (args.length == 1) {
-            return Stream.concat(Bukkit.getOnlinePlayers().stream().map(Player::getName), Stream.of("bot")).toList();
+            return Stream.concat(Bukkit.getOnlinePlayers().stream().map(Player::getName), Stream.of("bot", "botfirst")).toList();
         } else if (args.length == 2 && args[1].startsWith("bot")) {
             return Arrays.stream(TicTacToe.BotDifficulty.values()).map(Enum::name).toList();
         }

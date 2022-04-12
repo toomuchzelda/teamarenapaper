@@ -85,8 +85,6 @@ public abstract class TeamArena
 	 * -1 value means ready to respawn when next liveTick runs (magic number moment)
 	 */
 	protected HashMap<Player, RespawnInfo> respawnTimers;
-	//for players that have joined mid-game and have 10 or whatever seconds to join
-	protected HashMap<Player, Integer> midJoinTimers;
 	protected static ItemStack respawnItem = ItemBuilder.of(Material.RED_DYE)
 			.displayName(Component.text("Right click to respawn").color(NamedTextColor.RED)
 					.decoration(TextDecoration.ITALIC, false))
@@ -209,7 +207,6 @@ public abstract class TeamArena
 		players = ConcurrentHashMap.newKeySet();
 		spectators = ConcurrentHashMap.newKeySet();
 		respawnTimers = new HashMap<>();
-		midJoinTimers = new HashMap<>();
 		damageQueue = new ConcurrentLinkedQueue<>();
 
 		//list the teams in sidebar
@@ -217,9 +214,7 @@ public abstract class TeamArena
 		PlayerListScoreManager.removeScores();
 
 		//init all the players online at time of construction
-		var iter = Main.getPlayersIter();
-		while(iter.hasNext()) {
-			var entry = iter.next();
+		for (var entry : Main.getPlayerInfoMap().entrySet()) {
 			Player p = entry.getKey();
 			PlayerInfo pinfo = entry.getValue();
 
@@ -317,10 +312,15 @@ public abstract class TeamArena
 
 				//announce game cancelled
 				// spam sounds lol xddddddd
-				for(int i = 0; i < 10; i++) {
-					// peak humor
-					gameWorld.playSound(border.getCenter().toLocation(gameWorld), SoundUtils.getRandomSound(),
-							SoundCategory.AMBIENT, 99999f, (float) MathUtils.randomRange(0.5, 2));
+				for (Player player : Bukkit.getOnlinePlayers()) {
+					if ("jacky8399".equalsIgnoreCase(player.getName()))
+						continue;
+					for(int i = 0; i < 10; i++) {
+						// peak humor
+						Sound sound = MathUtils.random.nextBoolean() ? SoundUtils.getRandomObnoxiousSound() : SoundUtils.getRandomSound();
+						player.playSound(border.getCenter().toLocation(gameWorld), sound,
+								SoundCategory.AMBIENT, 99999f, (float) MathUtils.randomRange(0.5, 2));
+					}
 				}
 				Bukkit.broadcast(Component.text("Not enough players to start the game, game cancelled!").color(MathUtils.randomTextColor()));
 				SidebarManager.updatePreGameScoreboard(this);
@@ -336,8 +336,6 @@ public abstract class TeamArena
 		if(isRespawningGame()) {
 			respawnerTick();
 		}
-
-		midJoinerTick();
 
 		//ability tick 'events'
 		for (Kit kit : kits.values()) {
@@ -431,52 +429,19 @@ public abstract class TeamArena
 			}
 		}
 	}
-	
-	public void midJoinerTick() {
-		Iterator<Map.Entry<Player, Integer>> joinerIter = midJoinTimers.entrySet().iterator();
-		while(joinerIter.hasNext()) {
-			
-			Map.Entry<Player, Integer> entry = joinerIter.next();
-			Player p = entry.getKey();
-			
-			//player ready to respawn
-			if(entry.getValue() == -1) {
-				TeamArenaTeam team = addToLowestTeam(p, false);
-				//if team was dead before, now becoming alive, show their bossbar
-				if(!team.isAlive()) {
-					for(Player viewer : Bukkit.getOnlinePlayers()) {
-						viewer.showBossBar(team.bossBar);
-					}
-				}
-				team.addMembers(p);
-				
-				informOfTeam(p);
-				respawnPlayer(p);
-				joinerIter.remove();
-				continue;
+
+	public void handlePlayerJoinMidGame(Player player) {
+		TeamArenaTeam team = addToLowestTeam(player, false);
+		//if team was dead before, now becoming alive, show their bossbar
+		if (!team.isAlive()) {
+			for (Player viewer : Bukkit.getOnlinePlayers()) {
+				viewer.showBossBar(team.bossBar);
 			}
-			
-			//respawn within MID_GAME_JOIN_SECONDS seconds
-			int ticksLeft = getGameTick() - entry.getValue();
-			if(ticksLeft < MID_GAME_JOIN_SECONDS * 20) {
-				//tell them how long remaining to respawn
-				int seconds = MID_GAME_JOIN_SECONDS - (ticksLeft / 20);
-				TextColor color;
-				//flash green
-				if(seconds % 2 == 0)
-					color = TextColor.color(0, 255, 0);
-				else
-					color = TextColor.color(0, 190, 0);
-				
-				p.sendActionBar(Component.text(seconds).color(color));
-			}
-			//they're out of time
-			else {
-				joinerIter.remove();
-				p.sendActionBar(Component.text("Spectating...").color(NamedTextColor.BLUE));
-			}
-			
 		}
+		team.addMembers(player);
+
+		informOfTeam(player);
+//		respawnPlayer(player);
 	}
 	
 	public void damageTick() {
@@ -790,7 +755,6 @@ public abstract class TeamArena
 		players.clear();
 		spectators.clear();
 		respawnTimers.clear();
-		midJoinTimers.clear();
 		damageQueue.clear();
 		
 		Bukkit.getScheduler().runTaskLater(Main.getPlugin(), bukkitTask -> {
@@ -1187,26 +1151,13 @@ public abstract class TeamArena
 			player.getInventory().addItem(respawnItem);
 		}
 	}
-	
-	public boolean canMidGameJoin(Player player) {
-		Integer timeJoined = midJoinTimers.get(player);
-		return timeJoined != null && gameTick - timeJoined <= MID_GAME_JOIN_SECONDS * 20;
-	}
-	
-	public boolean isMidGameJoinWaiter(Player player) {
-		return midJoinTimers.containsKey(player);
-	}
-	
+
 	//set a player to respawn when their respawn time is up, only really needed if the respawn was interrupted
 	public void setToRespawn(Player player) {
 		RespawnInfo rinfo = respawnTimers.get(player);
 		if(rinfo != null) {
 			rinfo.interrupted = false;
 		}
-	}
-	
-	public void setToMidJoin(Player player) {
-		midJoinTimers.put(player, -1);
 	}
 
 	public boolean isSpectator(Player player) {
@@ -1259,30 +1210,25 @@ public abstract class TeamArena
 		player.setGameMode(GameMode.SURVIVAL);
 		player.getAttribute(Attribute.GENERIC_ATTACK_SPEED).setBaseValue(999999);
 		mapInfo.sendMapInfo(player);
-		if(gameState.isPreGame()) {
+		if (gameState.isPreGame()) {
 			//decided from loggingInPlayer(Player)
 			Main.getPlayerInfo(player).team.addMembers(player);
 			giveLobbyItems(player);
-			if(gameState == GameState.TEAMS_CHOSEN || gameState == GameState.GAME_STARTING) {
+			if (gameState == GameState.TEAMS_CHOSEN || gameState == GameState.GAME_STARTING) {
 				informOfTeam(player);
 			}
-			if(gameState == GameState.PREGAME || gameState == GameState.TEAMS_CHOSEN) {
+			if (gameState == GameState.PREGAME || gameState == GameState.TEAMS_CHOSEN) {
 				player.setAllowFlight(true);
 			}
-		}
-		else if(gameState == GameState.LIVE) {
-			if(Main.getPlayerInfo(player).team == spectatorTeam) {
-				setSpectator(player, true, false);
-				//makeSpectator(player);
-				player.sendMessage(Component.text("If you want to join this game, click the [item tbd] or type \"/respawn\"," +
-								" within " + MID_GAME_JOIN_SECONDS + " seconds, otherwise you may keep spectating.")
-						.color(TextColor.color(0, 255, 0)));
+		} else if (gameState == GameState.LIVE) {
+			if (Main.getPlayerInfo(player).team == spectatorTeam) {
+				handlePlayerJoinMidGame(player);
 
-				midJoinTimers.put(player, gameTick);
+				respawnTimers.put(player, new RespawnInfo(gameTick));
 			}
-			
-			for(TeamArenaTeam team : teams) {
-				if(team.isAlive())
+
+			for (TeamArenaTeam team : teams) {
+				if (team.isAlive())
 					player.showBossBar(team.bossBar);
 			}
 		}

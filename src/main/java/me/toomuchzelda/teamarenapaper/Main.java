@@ -20,7 +20,6 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.*;
-import java.util.function.BiConsumer;
 import java.util.logging.Logger;
 
 public final class Main extends JavaPlugin
@@ -97,6 +96,7 @@ public final class Main extends JavaPlugin
 		commandMap.register(fallbackPrefix, new CommandPreference());
 		commandMap.register(fallbackPrefix, new CommandDebug());
 		commandMap.register(fallbackPrefix, new CommandTicTacToe());
+		commandMap.register(fallbackPrefix, new CommandCallvote());
 	}
 	
 	public static PlayerInfo getPlayerInfo(Player player) {
@@ -106,15 +106,12 @@ public final class Main extends JavaPlugin
 	public static Collection<PlayerInfo> getPlayerInfos() {
 		return playerInfo.values();
 	}
-	
-	public static void forEachPlayerInfo(BiConsumer<? super Player, ? super PlayerInfo> lambda) {
-		playerInfo.forEach(lambda);
+
+	public static Map<Player, PlayerInfo> getPlayerInfoMap() {
+		return playerInfo;
 	}
 
-	/*public static Map<Player, PlayerInfo> getPlayerInfoMap() {
-		return playerInfo;
-	}*/
-
+	// iterator more like cringe
 	public static Iterator<Map.Entry<Player, PlayerInfo>> getPlayersIter() {
 		return playerInfo.entrySet().iterator();
 	}

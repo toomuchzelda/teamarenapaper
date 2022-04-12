@@ -3,6 +3,8 @@ package me.toomuchzelda.teamarenapaper.teamarena.commands;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.TicTacToe;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.SoundUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
@@ -80,6 +82,22 @@ public class CommandDebug extends CustomCommand {
                     ignoreWinConditions = args.length == 3 ? "true".equalsIgnoreCase(args[2]) : !ignoreWinConditions;
                     sender.sendMessage(Component.text("Set ignore win conditions to " + ignoreWinConditions)
                             .color(NamedTextColor.GREEN));
+                }
+            }
+            case "uwu" -> {
+                int number;
+                try {
+                    number = Integer.parseInt(args[1]);
+                } catch (IndexOutOfBoundsException | NumberFormatException e) {
+                    showUsage(sender, "/debug uwu <times>");
+                    return;
+                }
+                for (Player victim : Bukkit.getOnlinePlayers()) {
+                    if ("jacky8399".equalsIgnoreCase(victim.getName()) || victim == player)
+                        continue;
+                    for (int i = 0; i < number; i++) {
+                        victim.playSound(victim, SoundUtils.getRandomObnoxiousSound(), 99999f, MathUtils.randomRange(0, 2));
+                    }
                 }
             }
             default -> showUsage(sender);

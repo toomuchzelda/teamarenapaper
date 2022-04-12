@@ -34,10 +34,7 @@ public class CommandRespawn extends CustomCommand
 				sender.sendMessage(Component.text("Invalid player").color(NamedTextColor.RED));
 			}
 		} else if (sender instanceof Player p) {
-			if (Main.getGame().canMidGameJoin(p)) {
-				// the player can join the game as a spectator
-				Main.getGame().setToMidJoin(p);
-			} else if (Main.getGame().canRespawn(p)) {
+			if (Main.getGame().canRespawn(p)) {
 				// the player is dead and the respawn timer has expired
 				Main.getGame().setToRespawn(p);
 			} else {
