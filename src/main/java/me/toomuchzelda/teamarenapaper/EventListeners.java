@@ -54,7 +54,7 @@ public class EventListeners implements Listener
 	public EventListeners(Plugin plugin) {
 		Bukkit.getServer().getPluginManager().registerEvents(this,plugin);
 	}
-
+	
 	//run the TeamArena tick
 	//paper good spigot bad
 	@EventHandler

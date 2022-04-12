@@ -10,10 +10,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.KitDemolitions;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
-import me.toomuchzelda.teamarenapaper.utils.FileUtils;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -122,6 +119,7 @@ public abstract class TeamArena
 		//copy the map to another directory and load from there to avoid any accidental modifying of the original
 		// map
 		File source = maps[MathUtils.random.nextInt(maps.length)];
+		Main.logger().info("Loading map: " + source.getAbsolutePath());
 		File dest = new File("temp_" + source.getName().toLowerCase(Locale.ENGLISH) + "_" + System.currentTimeMillis());
 		if (dest.mkdir()) {
 			FileUtils.copyFolder(source, dest);
@@ -219,7 +217,9 @@ public abstract class TeamArena
 		PlayerListScoreManager.removeScores();
 
 		//init all the players online at time of construction
-		for (var entry : Main.getPlayerInfoMap().entrySet()) {
+		var iter = Main.getPlayersIter();
+		while(iter.hasNext()) {
+			var entry = iter.next();
 			Player p = entry.getKey();
 			PlayerInfo pinfo = entry.getValue();
 
@@ -276,16 +276,6 @@ public abstract class TeamArena
 		
 	}
 
-	// peak humor
-	private static Sound getRandomStupidFuckingSound() {
-		Sound sound = Sound.values()[MathUtils.random.nextInt(Sound.values().length)];
-		String soundName = sound.name();
-		if (soundName.startsWith("MUSIC") || soundName.startsWith("UI")) {
-			return Sound.BLOCK_FIRE_EXTINGUISH;
-		}
-		return sound;
-	}
-
 	public void preGameTick() {
 		//if countdown is ticking, do announcements
 		if (!CommandDebug.ignoreWinConditions && players.size() >= MIN_PLAYERS_REQUIRED) {
@@ -328,8 +318,9 @@ public abstract class TeamArena
 				//announce game cancelled
 				// spam sounds lol xddddddd
 				for(int i = 0; i < 10; i++) {
-					gameWorld.playSound(border.getCenter().toLocation(gameWorld), getRandomStupidFuckingSound(),
-							SoundCategory.AMBIENT, 0.5f, (float) MathUtils.randomRange(0.5, 1.5));
+					// peak humor
+					gameWorld.playSound(border.getCenter().toLocation(gameWorld), SoundUtils.getRandomSound(),
+							SoundCategory.AMBIENT, 99999f, (float) MathUtils.randomRange(0.5, 2));
 				}
 				Bukkit.broadcast(Component.text("Not enough players to start the game, game cancelled!").color(MathUtils.randomTextColor()));
 				SidebarManager.updatePreGameScoreboard(this);

@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper;
 
+import com.comphenix.protocol.ProtocolLibrary;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
@@ -15,9 +16,11 @@ import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.command.CommandMap;
 import org.bukkit.entity.Player;
+import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.*;
+import java.util.function.BiConsumer;
 import java.util.logging.Logger;
 
 public final class Main extends JavaPlugin
@@ -77,9 +80,11 @@ public final class Main extends JavaPlugin
 				logger.severe("Failed to unload world " + tempWorld.getName());
 			}
 		}
+		
+		HandlerList.unregisterAll(this);
+		ProtocolLibrary.getProtocolManager().removePacketListeners(this);
 	}
 	
-	//fuck YAML
 	private static void registerCommands() {
 		CommandMap commandMap = Bukkit.getCommandMap();
 		String fallbackPrefix = "tma";
@@ -101,12 +106,15 @@ public final class Main extends JavaPlugin
 	public static Collection<PlayerInfo> getPlayerInfos() {
 		return playerInfo.values();
 	}
-
-	public static Map<Player, PlayerInfo> getPlayerInfoMap() {
-		return playerInfo;
+	
+	public static void forEachPlayerInfo(BiConsumer<? super Player, ? super PlayerInfo> lambda) {
+		playerInfo.forEach(lambda);
 	}
 
-	@Deprecated
+	/*public static Map<Player, PlayerInfo> getPlayerInfoMap() {
+		return playerInfo;
+	}*/
+
 	public static Iterator<Map.Entry<Player, PlayerInfo>> getPlayersIter() {
 		return playerInfo.entrySet().iterator();
 	}
