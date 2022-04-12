@@ -307,12 +307,8 @@ public class CaptureTheFlag extends TeamArena
 	}
 
 	public void pickUpFlag(Player player, Flag flag, boolean broadcast) {
-		/*if(flagHolders.containsKey(player)) {
-			player.sendMessage("ur already hold flag ");
-			return;
-		}*/
-		if(!flag.team.isAlive()) {
-			final Component text = Component.text("Taking the flag of a dead team? Talk about cheap!").color(TextColor.color(255, 20 ,20));
+		if (!CommandDebug.ignoreWinConditions && !flag.team.isAlive()) {
+			Component text = Component.text("Taking the flag of a dead team? Talk about cheap!").color(TextColor.color(255, 20 ,20));
 			player.sendMessage(text);
 			player.playSound(player.getLocation(), Sound.ENTITY_HORSE_DEATH, SoundCategory.AMBIENT, 2f, 0.5f);
 			return;

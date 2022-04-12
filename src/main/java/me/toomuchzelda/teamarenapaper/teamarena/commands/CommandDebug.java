@@ -3,6 +3,8 @@ package me.toomuchzelda.teamarenapaper.teamarena.commands;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.TicTacToe;
+import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.SoundUtils;
 import net.kyori.adventure.text.Component;
@@ -23,7 +25,7 @@ public class CommandDebug extends CustomCommand {
     public static boolean ignoreWinConditions;
 
     public CommandDebug() {
-        super("debug", "", "/debug <gui/hide/tictactoe> ...", PermissionLevel.OWNER);
+        super("debug", "", "/debug ...", PermissionLevel.OWNER);
     }
 
     @Override
@@ -100,6 +102,43 @@ public class CommandDebug extends CustomCommand {
                     }
                 }
             }
+            case "setrank" -> {
+                if (args.length < 2) {
+                    showUsage(sender, "/debug setrank <rank> [player]");
+                }
+                PermissionLevel level = PermissionLevel.valueOf(args[1]);
+                Player target = args.length == 3 ? Bukkit.getPlayer(args[2]) : player;
+                if (target == null) {
+                    sender.sendMessage(Component.text("Player not found!").color(NamedTextColor.RED));
+                    return;
+                }
+                PlayerInfo info = Main.getPlayerInfo(target);
+                info.permissionLevel = level;
+            }
+            case "setteam" -> {
+                if (args.length < 2) {
+                    showUsage(sender, "/debug setteam <team> [player]");
+                }
+                TeamArenaTeam[] teams = Main.getGame().getTeams();
+                TeamArenaTeam targetTeam = null;
+                for (TeamArenaTeam team : teams) {
+                    if (team.getSimpleName().replace(' ', '_').equalsIgnoreCase(args[1])) {
+                        targetTeam = team;
+                        break;
+                    }
+                }
+                if (targetTeam == null) {
+                    sender.sendMessage(Component.text("Team not found!").color(NamedTextColor.RED));
+                    return;
+                }
+                Player target = args.length == 3 ? Bukkit.getPlayer(args[2]) : player;
+                if (target == null) {
+                    sender.sendMessage(Component.text("Player not found!").color(NamedTextColor.RED));
+                    return;
+                }
+                PlayerInfo info = Main.getPlayerInfo(target);
+                info.team = targetTeam;
+            }
             default -> showUsage(sender);
         }
     }
@@ -107,17 +146,22 @@ public class CommandDebug extends CustomCommand {
     @Override
     public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
         if (args.length == 1) {
-            return Arrays.asList("hide", "gui", "tictactoe");
+            return Arrays.asList("hide", "gui", "tictactoe", "game", "setrank", "setteam", "uwu");
         } else if (args.length == 2) {
             return switch (args[0].toLowerCase(Locale.ENGLISH)) {
                 case "gui" -> Arrays.asList("true", "false");
                 case "tictactoe" -> Arrays.asList("player", "bot");
                 case "game" -> Collections.singletonList("ignorewinconditions");
+                case "setrank" -> Arrays.stream(PermissionLevel.values()).map(Enum::name).toList();
+                case "setteam" -> Arrays.stream(Main.getGame().getTeams())
+                        .map(team -> team.getSimpleName().replace(' ', '_'))
+                        .toList();
                 default -> Collections.emptyList();
             };
         } else if (args.length == 3) {
             return switch (args[0].toLowerCase(Locale.ENGLISH)) {
-                case "tictactoe" -> Bukkit.getOnlinePlayers().stream().map(Player::getName).toList();
+                case "tictactoe", "setrank", "setteam" -> Bukkit.getOnlinePlayers().stream()
+                        .map(Player::getName).toList();
                 case "game" -> Arrays.asList("true", "false");
                 default -> Collections.emptyList();
             };

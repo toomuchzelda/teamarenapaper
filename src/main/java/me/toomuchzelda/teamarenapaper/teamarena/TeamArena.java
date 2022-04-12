@@ -273,7 +273,7 @@ public abstract class TeamArena
 
 	public void preGameTick() {
 		//if countdown is ticking, do announcements
-		if (!CommandDebug.ignoreWinConditions && players.size() >= MIN_PLAYERS_REQUIRED) {
+		if (CommandDebug.ignoreWinConditions || players.size() >= MIN_PLAYERS_REQUIRED) {
 			//announce Game starting in:
 			// and play sound
 			sendCountdown(false);
