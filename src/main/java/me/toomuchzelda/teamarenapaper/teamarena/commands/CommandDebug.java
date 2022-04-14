@@ -23,6 +23,7 @@ public class CommandDebug extends CustomCommand {
 
     // TODO temporary feature
     public static boolean ignoreWinConditions;
+    public static boolean disableAnimations;
 
     public CommandDebug() {
         super("debug", "", "/debug ...", PermissionLevel.OWNER);
@@ -83,6 +84,10 @@ public class CommandDebug extends CustomCommand {
                 if (args[1].equalsIgnoreCase("ignorewinconditions")) {
                     ignoreWinConditions = args.length == 3 ? "true".equalsIgnoreCase(args[2]) : !ignoreWinConditions;
                     sender.sendMessage(Component.text("Set ignore win conditions to " + ignoreWinConditions)
+                            .color(NamedTextColor.GREEN));
+                } else if (args[1].equalsIgnoreCase("stopwastingmybandwidth")) {
+                    disableAnimations = args.length == 3 ? "true".equalsIgnoreCase(args[2]) : !disableAnimations;
+                    sender.sendMessage(Component.text("Set disable animations to " + disableAnimations)
                             .color(NamedTextColor.GREEN));
                 }
             }
@@ -151,7 +156,7 @@ public class CommandDebug extends CustomCommand {
             return switch (args[0].toLowerCase(Locale.ENGLISH)) {
                 case "gui" -> Arrays.asList("true", "false");
                 case "tictactoe" -> Arrays.asList("player", "bot");
-                case "game" -> Collections.singletonList("ignorewinconditions");
+                case "game" -> Arrays.asList("ignorewinconditions", "stopwastingmybandwidth");
                 case "setrank" -> Arrays.stream(PermissionLevel.values()).map(Enum::name).toList();
                 case "setteam" -> Arrays.stream(Main.getGame().getTeams())
                         .map(team -> team.getSimpleName().replace(' ', '_'))

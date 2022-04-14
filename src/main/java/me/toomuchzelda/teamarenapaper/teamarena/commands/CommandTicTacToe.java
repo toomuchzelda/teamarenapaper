@@ -90,7 +90,7 @@ public class CommandTicTacToe extends CustomCommand {
     public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
         if (args.length == 1) {
             return Stream.concat(Bukkit.getOnlinePlayers().stream().map(Player::getName), Stream.of("bot", "botfirst")).toList();
-        } else if (args.length == 2 && args[1].startsWith("bot")) {
+        } else if (args.length == 2 && args[0].startsWith("bot")) {
             return Arrays.stream(TicTacToe.BotDifficulty.values()).map(Enum::name).toList();
         }
         return Collections.emptyList();

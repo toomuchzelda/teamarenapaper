@@ -573,20 +573,18 @@ public class EventListeners implements Listener
 	public void onPlayerArmorChange(InventoryClickEvent e) {
 		if (!(Main.getGame() instanceof CaptureTheFlag ctf))
 			return;
-		Player player = (Player) e.getWhoClicked();
-//		player.sendMessage(MessageFormat.format("click: {0}, slot type: {1}, action: {2}", e.getClick(), e.getSlotType(), e.getAction()));
 		ItemStack toCheck = null;
 		InventoryAction action = e.getAction();
 		// these two actions move the current item so check the current item
 		if (action == InventoryAction.MOVE_TO_OTHER_INVENTORY || action == InventoryAction.HOTBAR_SWAP) {
-			toCheck = e.getCurrentItem();
+			if (ctf.isFlagItem(e.getCurrentItem()))
+				e.setCancelled(true);
+			else if (e.getHotbarButton() != -1 && ctf.isFlagItem(e.getView().getBottomInventory().getItem(e.getHotbarButton())))
+				e.setCancelled(true);
 		} else if (e.getSlotType() == InventoryType.SlotType.ARMOR) {
-			toCheck = e.getCursor();
-		}
-//		player.sendMessage("ItemStack to check: " + toCheck);
-		
-		if (toCheck != null && ctf.isFlagItem(toCheck)) {
-			e.setCancelled(true);
+			if (ctf.isFlagItem(e.getCursor())) {
+				e.setCancelled(true);
+			}
 		}
 	}
 	
@@ -626,6 +624,11 @@ public class EventListeners implements Listener
 				}
 			}
 		}
+	}
+
+	@EventHandler
+	public void onRecipeUnlock(PlayerRecipeDiscoverEvent e) {
+		e.setCancelled(true);
 	}
 	
 	/*

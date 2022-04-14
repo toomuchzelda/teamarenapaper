@@ -54,15 +54,22 @@ public final class Inventories implements Listener {
         int size = 9 * provider.getRows();
         Inventory inv = Bukkit.createInventory(player, size, title);
         InventoryData data = new InventoryData(inv, provider);
-        InventoryData old = pluginInventories.put(inv, data);
-        if (old != null) {
+        Inventory oldInv = playerInventories.put(player, inv);
+        if (oldInv != null) {
+            InventoryData old = pluginInventories.remove(oldInv);
             // clean up old inventory
             if (debug) {
-                Main.logger().info("[GUI] Cleaning up GUI " + old + " for " + player.getName());
+                Main.logger().info("[GUI] Cleaning up GUI " + old.provider + " (inventory " + oldInv + ") for " + player.getName());
             }
-            old.provider.close(player);
+            if (old != null) {
+                try {
+                    old.provider.close(player);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
         }
-        playerInventories.put(player, inv);
+        pluginInventories.put(inv, data);
         provider.init(player, data);
         // just to be safe
         Bukkit.getScheduler().runTask(Main.getPlugin(), () -> player.openInventory(inv));
@@ -101,21 +108,21 @@ public final class Inventories implements Listener {
 
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent e) {
-        if (debug) {
+        if (debug)
             Main.logger().info("[GUI] Player closing GUI, reason: " + e.getReason());
-        }
         Player player = (Player) e.getPlayer();
-        Inventory inv = playerInventories.remove(player);
-        if (inv == e.getInventory()) {
-            InventoryData data = pluginInventories.remove(inv);
-            if (debug) {
+        Inventory inv = playerInventories.get(player);
+        if (e.getInventory() == inv) {
+            playerInventories.remove(player);
+        }
+        InventoryData data = pluginInventories.remove(e.getInventory());
+        if (data != null) {
+            if (debug)
                 Main.logger().info("[GUI] Closed GUI has provider " + data.provider);
-            }
-            data.provider.close(player);
-        } else {
-            InventoryData data = pluginInventories.remove(inv);
-            if (debug && data != null) {
-                Main.logger().info("[GUI] Error: orphaned inventory? Expected " + inv + " (from " + data.provider + "), got " + e.getInventory());
+            try {
+                data.provider.close(player);
+            } catch (Exception ex) {
+                ex.printStackTrace();
             }
         }
     }
@@ -125,7 +132,10 @@ public final class Inventories implements Listener {
         Inventory inv = e.getInventory();
         InventoryData data = pluginInventories.get(inv);
         if (debug) {
-            Main.logger().info("[GUI] Player " + e.getWhoClicked().getName() + " clicked " + data.provider);
+            Main.logger().info("[GUI] Player " + e.getWhoClicked().getName() +
+                    String.format(" clicked (click: %s, slot %s: %d, action: %s) in ",
+                            e.getClick(), e.getSlotType(), e.getSlot(), e.getAction()) +
+                    (data != null ? data.provider : "[unmanaged inventory]"));
         }
         if (data == null) // not our inventory
             return;

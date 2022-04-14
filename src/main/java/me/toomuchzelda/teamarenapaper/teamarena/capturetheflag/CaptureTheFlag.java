@@ -494,6 +494,8 @@ public class CaptureTheFlag extends TeamArena
 	}
 	
 	public void flagPositionTick(Flag flag) {
+		if (CommandDebug.disableAnimations)
+			return;
 		ArmorStand stand = flag.getArmorStand();
 		Location loc;
 		if(flag.isAtBase)
