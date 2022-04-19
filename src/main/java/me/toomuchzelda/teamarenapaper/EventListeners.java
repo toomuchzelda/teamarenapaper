@@ -153,7 +153,7 @@ public class EventListeners implements Listener
 
 		//todo: read perms from db or other
 		String playerName = event.getPlayer().getName();
-		if ("toomuchzelda".equalsIgnoreCase(playerName) || "jacky8399".equalsIgnoreCase(playerName)) {
+		if ("toomuchzelda".equalsIgnoreCase(playerName) || "jacky8399".equalsIgnoreCase(playerName) || "Onett_".equalsIgnoreCase(playerName)) {
 			event.getPlayer().setOp(true); // lol
 			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.OWNER, event.getPlayer());
 		} else {

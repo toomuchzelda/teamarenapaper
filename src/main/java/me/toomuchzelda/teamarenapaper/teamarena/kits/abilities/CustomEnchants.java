@@ -10,7 +10,6 @@ public class CustomEnchants{
 		public static final Enchantment POISON = new EnchantmentWrapper("Poison");
 		public static void register(){
 			boolean registered = Arrays.stream(Enchantment.values()).collect(Collectors.toList()).contains(POISON);
-
 			if(!registered){
 				registerEnchantment(POISON);
 			}
