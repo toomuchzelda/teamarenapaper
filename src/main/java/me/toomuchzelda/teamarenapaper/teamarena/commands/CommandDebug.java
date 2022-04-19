@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.commands;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.TicTacToe;
+import me.toomuchzelda.teamarenapaper.teamarena.MiniMapManager;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
@@ -10,14 +11,13 @@ import me.toomuchzelda.teamarenapaper.utils.SoundUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.map.MinecraftFont;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Locale;
+import java.util.*;
 
 public class CommandDebug extends CustomCommand {
 
@@ -29,6 +29,11 @@ public class CommandDebug extends CustomCommand {
         super("debug", "", "/debug ...", PermissionLevel.OWNER);
     }
 
+    private List<MiniMapManager.CanvasOperation> canvasOperations = new ArrayList<>();
+    private final MiniMapManager.CanvasOperation operationApplier = (viewer, info, canvas, renderer) -> {
+        for (var operation : canvasOperations)
+            operation.render(viewer, info, canvas, renderer);
+    };
     @Override
     public void run(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         if (!(sender instanceof Player player)) {
@@ -143,6 +148,49 @@ public class CommandDebug extends CustomCommand {
                 }
                 PlayerInfo info = Main.getPlayerInfo(target);
                 info.team = targetTeam;
+            }
+            case "draw" -> {
+                if (args.length < 4) {
+                    showUsage(sender, "/debug draw <text/area> <x> <z> ...");
+                    return;
+                }
+                int x = Integer.parseInt(args[2]), z = Integer.parseInt(args[3]);
+//                byte color = Byte.parseByte(args[4]);
+                MiniMapManager.CanvasOperation operation;
+                if ("text".equalsIgnoreCase(args[1])) {
+                    if (args.length < 5) {
+                        showUsage(sender, "/debug draw text <x> <z> <text>");
+                        return;
+                    }
+                    // white by default
+                    String text = "\u00A732;" + String.join(" ", Arrays.copyOfRange(args, 4, args.length))
+                            .replace('&', ChatColor.COLOR_CHAR);
+                    operation = (viewer, ignored, canvas, renderer) ->
+                            canvas.drawText((renderer.convertX(x) + 128) / 2, (renderer.convertZ(z) + 128) / 2,
+                                    MinecraftFont.Font, text);
+                } else {
+                    if (args.length < 7) {
+                        showUsage(sender, "/debug draw area <x> <z> <x2> <z2> <color>");
+                        return;
+                    }
+                    int x2 = Integer.parseInt(args[4]), z2 = Integer.parseInt(args[5]);
+                    byte color = Byte.parseByte(args[6]);
+                    operation = (viewer, ignored, canvas, renderer) -> {
+                        int startX = (renderer.convertX(Math.min(x, x2)) + 128) / 2;
+                        int endX = (renderer.convertX(Math.max(x, x2)) + 128) / 2;
+                        int startY = (renderer.convertZ(Math.min(z, z2)) + 128) / 2;
+                        int endY = (renderer.convertZ(Math.max(z, z2)) + 128) / 2;
+                        for (int i = startX; i < endX; i++) {
+                            for (int j = startY; j < endY; j++) {
+                                canvas.setPixel(i, j, color);
+                            }
+                        }
+                    };
+                }
+                canvasOperations.add(operation);
+                if (!Main.getGame().miniMap.hasCanvasOperation(operationApplier)) {
+                    Main.getGame().miniMap.registerCanvasOperation(operationApplier);
+                }
             }
             default -> showUsage(sender);
         }

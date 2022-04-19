@@ -14,6 +14,7 @@ import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.map.MapCursor;
 import org.bukkit.util.BoundingBox;
 
 import java.io.File;
@@ -419,6 +420,15 @@ public class KingOfTheHill extends TeamArena
 		updateSidebarTitle();
 
 		this.lastHillChangeTime = gameTick;
+
+		// register hill cursor
+		// TODO add fancy border
+		miniMap.registerCursor((ignored, ignored1) -> {
+			Location center = activeHill.getBorder().getCenter().toLocation(gameWorld);
+			Component currentHillText = Component.text("Active hill",
+					owningTeam != null ? owningTeam.getRGBTextColor() : NamedTextColor.WHITE);
+			return new MiniMapManager.CursorInfo(center, false, MapCursor.Type.WHITE_CROSS, currentHillText);
+		});
 	}
 
 	public void updateSidebarTitle() {

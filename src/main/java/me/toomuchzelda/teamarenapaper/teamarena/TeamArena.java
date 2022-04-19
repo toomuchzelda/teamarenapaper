@@ -107,6 +107,8 @@ public abstract class TeamArena
 
 	private final LinkedList<DamageIndicatorHologram> activeDamageIndicators = new LinkedList<>();
 
+	public final MiniMapManager miniMap;
+
 	public TeamArena() {
 		Main.logger().info("Reading info from " + getMapPath().getPath() + ':');
 		File[] maps = getMapPath().listFiles();
@@ -213,6 +215,8 @@ public abstract class TeamArena
 		SidebarManager.updatePreGameScoreboard(this);
 		PlayerListScoreManager.removeScores();
 
+		miniMap = new MiniMapManager(this);
+
 		//init all the players online at time of construction
 		for (var entry : Main.getPlayerInfoMap().entrySet()) {
 			Player p = entry.getKey();
@@ -251,6 +255,15 @@ public abstract class TeamArena
 		for (Ability ability : kit.getAbilities()) {
 			ability.registerAbility();
 		}
+	}
+
+	// player as in players in the players set
+	// infer the meaning yourself
+	protected void givePlayerItems(Player player, PlayerInfo info) {
+		PlayerInventory inventory = player.getInventory();
+		inventory.clear();
+		inventory.setItem(8, miniMap.getMapItem(info.team));
+		info.kit.giveKit(player, true, info);
 	}
 
 	public void tick() {
@@ -373,7 +386,6 @@ public abstract class TeamArena
 			}
 			prepEnd();
 		}
-		
 	}
 	
 	public void respawnerTick() {
@@ -676,15 +688,13 @@ public abstract class TeamArena
 		Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
 		while(iter.hasNext()) {
 			Map.Entry<Player, PlayerInfo> entry = iter.next();
-			Kit kit = entry.getValue().kit;
 			Player player = entry.getKey();
 			
 			PlayerUtils.resetState(player);
-			player.getInventory().clear();
 			player.setSaturatedRegenRate(0);
 			PlayerListScoreManager.setKills(player, 0);
-			
-			kit.giveKit(player, true, entry.getValue());
+
+			givePlayerItems(player, entry.getValue());
 			
 			for(TeamArenaTeam team : teams) {
 				if(team.isAlive())
@@ -756,6 +766,8 @@ public abstract class TeamArena
 		spectators.clear();
 		respawnTimers.clear();
 		damageQueue.clear();
+
+		miniMap.cleanUp();
 		
 		Bukkit.getScheduler().runTaskLater(Main.getPlugin(), bukkitTask -> {
 			for (TeamArenaTeam team : teams) {
@@ -984,13 +996,12 @@ public abstract class TeamArena
 		players.add(player);
 		spectators.remove(player);
 
-		player.getInventory().clear();
 		player.setAllowFlight(false);
 		PlayerUtils.resetState(player);
 		
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
 		player.teleport(pinfo.team.getNextSpawnpoint());
-		pinfo.kit.giveKit(player, true, pinfo);
+		givePlayerItems(player, pinfo);
 		pinfo.kills = 0;
 		PlayerListScoreManager.setKills(player, 0);
 
@@ -1166,7 +1177,9 @@ public abstract class TeamArena
 	}
 
 	public void giveSpectatorItems(Player player) {
-		player.getInventory().addItem(new ItemStack(Material.COMPASS));
+		PlayerInventory inventory = player.getInventory();
+		inventory.setItem(8, miniMap.getMapItem());
+		inventory.addItem(new ItemStack(Material.COMPASS));
 	}
 
 	//process logging in player
