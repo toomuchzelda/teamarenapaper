@@ -51,7 +51,7 @@ hs_err_pid*
 .nfs*
 
 # General
-**/.DS_Store
+.DS_Store
 .AppleDouble
 .LSOverride
 
