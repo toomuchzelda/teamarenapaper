@@ -609,8 +609,8 @@ public class EventListeners implements Listener
 			event.setCancelled(true);
 		}
 	}
+	
 	@EventHandler
-
 	public void onAttemptedHeal(EntityRegainHealthEvent event){
 		LivingEntity entity = (LivingEntity) event.getEntity();
 		if(KitVenom.POISONED_ENTITIES.containsKey(entity)){
