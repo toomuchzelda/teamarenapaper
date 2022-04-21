@@ -149,6 +149,7 @@ public class KitVenom extends Kit
 							public void run() {
 								if (activeDuration <= 0) {
 									cancel();
+									LEAP_TASKS.remove(this);
 								}
 								else {
 									activeDuration--;
