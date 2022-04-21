@@ -19,6 +19,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitGhost;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitPyro;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitReach;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitVenom;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.PreferenceManager;
@@ -598,6 +599,22 @@ public class EventListeners implements Listener
 			for(Ability a : abilities) {
 				a.onInteractEntity(event);
 			}
+		}
+	}
+
+	@EventHandler
+	public void onEat(PlayerItemConsumeEvent event){
+		Player player = event.getPlayer();
+		if(KitVenom.POISONED_ENTITIES.containsKey((LivingEntity)player)){
+			event.setCancelled(true);
+		}
+	}
+	@EventHandler
+
+	public void onAttemptedHeal(EntityRegainHealthEvent event){
+		LivingEntity entity = (LivingEntity) event.getEntity();
+		if(KitVenom.POISONED_ENTITIES.containsKey(entity)){
+			event.setCancelled(true);
 		}
 	}
 	
