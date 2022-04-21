@@ -2,12 +2,14 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
 
@@ -103,64 +105,70 @@ public class KitVenom extends Kit
 		@Override
 		public void onInteract(PlayerInteractEvent event) {
 			Player player = event.getPlayer();
-			Component CannotUseAbilityMsg = Component.text("You can't use Toxic Leap while holding the flag!").color(TextColor.color(255, 98, 20));
-			CaptureTheFlag game = (CaptureTheFlag) Main.getGame();
-			if(event.getMaterial() == Material.CHICKEN && game.isFlagCarrier(player)){
-				player.sendMessage(CannotUseAbilityMsg);
-				player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.AMBIENT, 2, 0.5f);
-			}
-			if(event.getMaterial() == Material.CHICKEN && !player.hasCooldown(Material.CHICKEN) && !game.isFlagCarrier(player)){
-				//Leap Ability Implementation
-				Vector direction = event.getPlayer().getLocation().getDirection();
-				Vector multiplier = new Vector(1.0, 0.5, 1.0);
-				multiplier.multiply(1.5);
-				Vector launch = multiplier.multiply(direction);
-				player.setCooldown(Material.CHICKEN, 12*20);
-				player.playSound(player, Sound.ENTITY_WITHER_SHOOT, (float)0.3, (float)1.1);
-				player.setVelocity(event.getPlayer().getVelocity().add(launch));
-				player.setFallDistance(0);
-				
-				//Checking for collision during the leap, and reducing cooldown + applying poison accordingly
-				//keeps track of whose already been hit with leapVictims
-				if(player.getVelocity().length() > 0.8){
-				new BukkitRunnable(){
-					int activeDuration = 10;
-					HashMap<LivingEntity, Boolean> leapVictims = new HashMap<>();
-					public void run() {
-						List<Entity> nearby = player.getNearbyEntities(1, 2, 1);
-						if(activeDuration <= 0){
-							cancel();
-						}
-						else{
-							activeDuration--;
-							if(!nearby.isEmpty()){
-								for(Entity entity : nearby){
-									if(entity instanceof LivingEntity && !leapVictims.containsKey(entity) && !(entity.getType().equals(EntityType.ARMOR_STAND))){
-										//Applying DMG + Sounds
-										LivingEntity victim = (LivingEntity) entity;
-										int newCooldown = player.getCooldown(Material.CHICKEN) - 6*20;
-											if(newCooldown <= 0){ 
-												newCooldown = 0;
-												player.stopSound(Sound.BLOCK_CONDUIT_ACTIVATE);
-												player.playSound(player, Sound.BLOCK_CONDUIT_ACTIVATE, 1, (float)1.5);
+			if(event.getMaterial() == Material.CHICKEN) {
+				if(Main.getGame() instanceof CaptureTheFlag ctf && ctf.isFlagCarrier(player)) {
+					Component cannotUseAbilityMsg = Component.text("You can't use Toxic Leap while holding the flag!").color(TextColor.color(255, 98, 20));
+					player.sendMessage(cannotUseAbilityMsg);
+					player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.AMBIENT, 2, 0.5f);
+				}
+				else if(!player.hasCooldown(Material.CHICKEN)) {
+					//Leap Ability Implementation
+					World world = player.getWorld();
+					Vector direction = player.getLocation().getDirection();
+					Vector multiplier = new Vector(1.0, 0.5, 1.0);
+					multiplier.multiply(1.5);
+					direction.multiply(multiplier);
+					player.setCooldown(Material.CHICKEN, 12 * 20);
+					//world.playSound to play sound for all playesr
+					world.playSound(player, Sound.ENTITY_WITHER_SHOOT, 0.3f, 1.1f);
+					EntityUtils.setVelocity(player, event.getPlayer().getVelocity().add(direction));
+					player.setFallDistance(0);
+					
+					//Checking for collision during the leap, and reducing cooldown + applying poison accordingly
+					//keeps track of whose already been hit with leapVictims
+					if (player.getVelocity().length() > 0.8) {
+						new BukkitRunnable()
+						{
+							int activeDuration = 10;
+							HashMap<LivingEntity, Boolean> leapVictims = new HashMap<>();
+							
+							public void run() {
+								List<Entity> nearby = player.getNearbyEntities(1, 2, 1);
+								if (activeDuration <= 0) {
+									cancel();
+								}
+								else {
+									activeDuration--;
+									if (!nearby.isEmpty()) {
+										for (Entity entity : nearby) {
+											if (entity instanceof LivingEntity && !leapVictims.containsKey(entity) && !(entity.getType().equals(EntityType.ARMOR_STAND))) {
+												//Applying DMG + Sounds
+												LivingEntity victim = (LivingEntity) entity;
+												int newCooldown = player.getCooldown(Material.CHICKEN) - 6 * 20;
+												if (newCooldown <= 0) {
+													newCooldown = 0;
+													player.stopSound(Sound.BLOCK_CONDUIT_ACTIVATE);
+													player.playSound(player, Sound.BLOCK_CONDUIT_ACTIVATE, 1, (float) 1.5);
+												}
+												victim.damage(2, player);
+												player.stopSound(Sound.ENTITY_PLAYER_ATTACK_NODAMAGE);
+												player.stopSound(Sound.ENTITY_PLAYER_ATTACK_WEAK);
+												player.stopSound(Sound.ENTITY_ILLUSIONER_MIRROR_MOVE);
+												player.playSound(player, Sound.ENTITY_ILLUSIONER_MIRROR_MOVE, 1, (float) 1.2);
+												player.setCooldown(Material.CHICKEN, newCooldown);
+												
+												//Applying Poison, tracking the poisoned entity
+												applyPoison(victim);
+												leapVictims.put(victim, true);
 											}
-										victim.damage(2, player);
-										player.stopSound(Sound.ENTITY_PLAYER_ATTACK_NODAMAGE);
-										player.stopSound(Sound.ENTITY_PLAYER_ATTACK_WEAK);
-										player.stopSound(Sound.ENTITY_ILLUSIONER_MIRROR_MOVE);
-										player.playSound(player, Sound.ENTITY_ILLUSIONER_MIRROR_MOVE, 1, (float)1.2);
-										player.setCooldown(Material.CHICKEN, newCooldown);
-
-										//Applying Poison, tracking the poisoned entity
-										applyPoison(victim);
-										leapVictims.put(victim, true);
+										}
 									}
 								}
 							}
-						}
-					}				
-				}.runTaskTimer(Main.getPlugin(), 0, 0);
-			}			
+						}.runTaskTimer(Main.getPlugin(), 0, 0);
+					}
+				}
+				
 			}
 		}
 		//Poison Sword Ability
