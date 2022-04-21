@@ -511,8 +511,10 @@ public abstract class TeamArena
 			
 			//ability on confirmed attacks done in this.onConfirmedDamage() called by DamageEvent.executeAttack()
 			if(event.getFinalAttacker() instanceof Player p && event.getVictim() instanceof Player p2) {
-				if(!canAttack(p, p2))
-					continue;
+				if(!canAttack(p, p2)) {
+					//continue;
+					event.setCancelled(true);
+				}
 			}
 			
 			event.executeAttack();

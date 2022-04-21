@@ -176,28 +176,33 @@ public class KitVenom extends Kit
 			if(player.getInventory().getItemInMainHand().getType() == Material.IRON_SWORD){
 				if(event.getDamageType().isMelee() && event.getVictim() instanceof LivingEntity){
 					LivingEntity victim = (LivingEntity) event.getVictim();
-					applyPoison(victim);
+					//prevent friendly poison
+					if(!(victim instanceof Player p) || Main.getGame().canAttack(player, p)) {
+						applyPoison(victim);
+					}
 				}
 			}
 		}
 		//Ensures poisonedEntities cannot be healed/eat
 		@Override
 		public void onTick(){
-			for (HashMap.Entry<LivingEntity, Integer> entry : POISONED_ENTITIES.entrySet()){
+			Iterator<Map.Entry<LivingEntity, Integer>> iter = POISONED_ENTITIES.entrySet().iterator();
+			while(iter.hasNext()) {
+				Map.Entry<LivingEntity, Integer> entry = iter.next();
 				LivingEntity entity = entry.getKey();
 				Integer durationLeft = entry.getValue();
 
 				//Checking if the duration is up
 				//If it is not, decrease duration by 1 tick
 				if(durationLeft <= 0){
-					POISONED_ENTITIES.remove(entity);
+					iter.remove();
 				}
 				else{
 					entry.setValue(durationLeft - 1);
 				}
 
 				if(entity.isDead()){
-					POISONED_ENTITIES.remove(entity);
+					iter.remove();
 					entity.removePotionEffect(PotionEffectType.POISON);
 				}
 				//Preventing Healing/Eating is handled in EventListeners.java
