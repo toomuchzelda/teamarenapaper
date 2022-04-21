@@ -6,10 +6,7 @@ import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 
-import org.bukkit.Material;
-import org.bukkit.Sound;
-import org.bukkit.SoundCategory;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
 
@@ -31,6 +28,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
 
 //Kit Description:
@@ -52,6 +50,9 @@ import org.bukkit.util.Vector;
 public class KitVenom extends Kit
 {
 	public static final HashMap<LivingEntity, Integer> POISONED_ENTITIES = new HashMap<>();
+	//keep track of all the bukkit tasks so we can cancel them in the event of some disaster or crash
+	public static final Set<BukkitTask> LEAP_TASKS = new HashSet<>();
+	public static final TextColor POISON_PURP = TextColor.color(145, 86, 204);
 	
 	public KitVenom() {
 		super("Venom", "Poison dmg on hit, poisoned people cannot be healed. It can also quickly jump in, afflicting all enemies it hits with poison and decreasing its cooldown with each enemy hit!", 
@@ -71,7 +72,7 @@ public class KitVenom extends Kit
 
 		ItemStack leap = new ItemStack(Material.CHICKEN);
 		ItemMeta leapMeta = leap.getItemMeta();
-		leapMeta.displayName(ItemUtils.noItalics(Component.text("Toxic Leap")).color(TextUtils.POISON_PURP));
+		leapMeta.displayName(ItemUtils.noItalics(Component.text("Toxic Leap")).color(POISON_PURP));
 		leap.setItemMeta(leapMeta);
 
 		setItems(sword, leap);
@@ -80,6 +81,18 @@ public class KitVenom extends Kit
 	
 	public static class VenomAbility extends Ability
 	{
+		//clean up
+		public void unregisterAbility() {
+			POISONED_ENTITIES.clear();
+			
+			Iterator<BukkitTask> iter = LEAP_TASKS.iterator();
+			while(iter.hasNext()) {
+				BukkitTask task = iter.next();
+				task.cancel();
+				iter.remove();
+			}
+		}
+		
 		//When Poison is applied
 		public void applyPoison(LivingEntity victim){
 			int poisonDuration = 0;
@@ -128,7 +141,7 @@ public class KitVenom extends Kit
 					//Checking for collision during the leap, and reducing cooldown + applying poison accordingly
 					//keeps track of whose already been hit with leapVictims
 					if (player.getVelocity().length() > 0.8) {
-						new BukkitRunnable()
+						BukkitTask runnable = new BukkitRunnable()
 						{
 							int activeDuration = 10;
 							Set<LivingEntity> leapVictims = new HashSet<>();
@@ -165,6 +178,8 @@ public class KitVenom extends Kit
 								}
 							}
 						}.runTaskTimer(Main.getPlugin(), 0, 0);
+						
+						LEAP_TASKS.add(runnable);
 					}
 				}
 			}

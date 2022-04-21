@@ -485,8 +485,14 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void entityRegainHealth(EntityRegainHealthEvent event) {
-		if(event.getEntity() instanceof Player p) {
-			Main.getPlayerInfo(p).getKillAssistTracker().heal(event.getAmount());
+		if(event.getEntity() instanceof LivingEntity living) {
+			if(KitVenom.POISONED_ENTITIES.containsKey(living)){
+				event.setCancelled(true);
+			}
+			
+			if(!event.isCancelled() && event.getEntity() instanceof Player p) {
+				Main.getPlayerInfo(p).getKillAssistTracker().heal(event.getAmount());
+			}
 		}
 	}
 
@@ -606,14 +612,6 @@ public class EventListeners implements Listener
 	public void onEat(PlayerItemConsumeEvent event){
 		Player player = event.getPlayer();
 		if(KitVenom.POISONED_ENTITIES.containsKey((LivingEntity)player)){
-			event.setCancelled(true);
-		}
-	}
-	
-	@EventHandler
-	public void onAttemptedHeal(EntityRegainHealthEvent event){
-		LivingEntity entity = (LivingEntity) event.getEntity();
-		if(KitVenom.POISONED_ENTITIES.containsKey(entity)){
 			event.setCancelled(true);
 		}
 	}
