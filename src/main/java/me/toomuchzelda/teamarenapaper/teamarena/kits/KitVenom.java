@@ -13,9 +13,7 @@ import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.HashMap;
+import java.util.*;
 
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
@@ -48,6 +46,9 @@ import org.bukkit.util.Vector;
 		Poison Duration Cap of 4 Seconds is still respected by Toxic Leap
 */
 
+/**
+ * @author onett425
+ */
 public class KitVenom extends Kit
 {
 	public static final HashMap<LivingEntity, Integer> POISONED_ENTITIES = new HashMap<>();
@@ -130,37 +131,35 @@ public class KitVenom extends Kit
 						new BukkitRunnable()
 						{
 							int activeDuration = 10;
-							HashMap<LivingEntity, Boolean> leapVictims = new HashMap<>();
+							Set<LivingEntity> leapVictims = new HashSet<>();
 							
 							public void run() {
-								List<Entity> nearby = player.getNearbyEntities(1, 2, 1);
 								if (activeDuration <= 0) {
 									cancel();
 								}
 								else {
 									activeDuration--;
-									if (!nearby.isEmpty()) {
-										for (Entity entity : nearby) {
-											if (entity instanceof LivingEntity && !leapVictims.containsKey(entity) && !(entity.getType().equals(EntityType.ARMOR_STAND))) {
-												//Applying DMG + Sounds
-												LivingEntity victim = (LivingEntity) entity;
-												int newCooldown = player.getCooldown(Material.CHICKEN) - 6 * 20;
-												if (newCooldown <= 0) {
-													newCooldown = 0;
-													player.stopSound(Sound.BLOCK_CONDUIT_ACTIVATE);
-													player.playSound(player, Sound.BLOCK_CONDUIT_ACTIVATE, 1, (float) 1.5);
-												}
-												victim.damage(2, player);
-												player.stopSound(Sound.ENTITY_PLAYER_ATTACK_NODAMAGE);
-												player.stopSound(Sound.ENTITY_PLAYER_ATTACK_WEAK);
-												player.stopSound(Sound.ENTITY_ILLUSIONER_MIRROR_MOVE);
-												player.playSound(player, Sound.ENTITY_ILLUSIONER_MIRROR_MOVE, 1, (float) 1.2);
-												player.setCooldown(Material.CHICKEN, newCooldown);
-												
-												//Applying Poison, tracking the poisoned entity
-												applyPoison(victim);
-												leapVictims.put(victim, true);
+									List<Entity> nearby = player.getNearbyEntities(1, 2, 1);
+									for (Entity entity : nearby) {
+										if (entity instanceof LivingEntity && !leapVictims.contains(entity) && !(entity.getType().equals(EntityType.ARMOR_STAND))) {
+											//Applying DMG + Sounds
+											LivingEntity victim = (LivingEntity) entity;
+											int newCooldown = player.getCooldown(Material.CHICKEN) - 6 * 20;
+											if (newCooldown <= 0) {
+												newCooldown = 0;
+												player.stopSound(Sound.BLOCK_CONDUIT_ACTIVATE);
+												player.playSound(player, Sound.BLOCK_CONDUIT_ACTIVATE, 1, 1.5f);
 											}
+											victim.damage(2, player);
+											player.stopSound(Sound.ENTITY_PLAYER_ATTACK_NODAMAGE);
+											player.stopSound(Sound.ENTITY_PLAYER_ATTACK_WEAK);
+											player.stopSound(Sound.ENTITY_ILLUSIONER_MIRROR_MOVE);
+											player.playSound(player, Sound.ENTITY_ILLUSIONER_MIRROR_MOVE, 1, 1.2f);
+											player.setCooldown(Material.CHICKEN, newCooldown);
+											
+											//Applying Poison, tracking the poisoned entity
+											applyPoison(victim);
+											leapVictims.add(victim);
 										}
 									}
 								}
@@ -168,7 +167,6 @@ public class KitVenom extends Kit
 						}.runTaskTimer(Main.getPlugin(), 0, 0);
 					}
 				}
-				
 			}
 		}
 		//Poison Sword Ability
