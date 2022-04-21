@@ -252,7 +252,7 @@ public abstract class TeamArena
 	}
 
 	protected final List<Kit> defaultKits = List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
-			new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitNone());
+			new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitNone(), new KitVenom());
 	protected void registerKits() {
 		defaultKits.forEach(this::registerKit);
 	}
@@ -511,8 +511,10 @@ public abstract class TeamArena
 			
 			//ability on confirmed attacks done in this.onConfirmedDamage() called by DamageEvent.executeAttack()
 			if(event.getFinalAttacker() instanceof Player p && event.getVictim() instanceof Player p2) {
-				if(!canAttack(p, p2))
-					continue;
+				if(!canAttack(p, p2)) {
+					//continue;
+					event.setCancelled(true);
+				}
 			}
 			
 			event.executeAttack();

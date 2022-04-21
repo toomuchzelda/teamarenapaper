@@ -19,6 +19,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitGhost;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitPyro;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitReach;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitVenom;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.PreferenceManager;
@@ -153,7 +154,7 @@ public class EventListeners implements Listener
 
 		//todo: read perms from db or other
 		String playerName = event.getPlayer().getName();
-		if ("toomuchzelda".equalsIgnoreCase(playerName) || "jacky8399".equalsIgnoreCase(playerName)) {
+		if ("toomuchzelda".equalsIgnoreCase(playerName) || "jacky8399".equalsIgnoreCase(playerName) || "Onett_".equalsIgnoreCase(playerName)) {
 			event.getPlayer().setOp(true); // lol
 			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.OWNER, event.getPlayer());
 		} else {
@@ -484,8 +485,14 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void entityRegainHealth(EntityRegainHealthEvent event) {
-		if(event.getEntity() instanceof Player p) {
-			Main.getPlayerInfo(p).getKillAssistTracker().heal(event.getAmount());
+		if(event.getEntity() instanceof LivingEntity living) {
+			if(KitVenom.POISONED_ENTITIES.containsKey(living)){
+				event.setCancelled(true);
+			}
+			
+			if(!event.isCancelled() && event.getEntity() instanceof Player p) {
+				Main.getPlayerInfo(p).getKillAssistTracker().heal(event.getAmount());
+			}
 		}
 	}
 
@@ -598,6 +605,14 @@ public class EventListeners implements Listener
 			for(Ability a : abilities) {
 				a.onInteractEntity(event);
 			}
+		}
+	}
+
+	@EventHandler
+	public void onEat(PlayerItemConsumeEvent event){
+		Player player = event.getPlayer();
+		if(KitVenom.POISONED_ENTITIES.containsKey((LivingEntity)player)){
+			event.setCancelled(true);
 		}
 	}
 	
