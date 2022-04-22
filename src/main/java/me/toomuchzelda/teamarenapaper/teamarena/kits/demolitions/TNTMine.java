@@ -35,7 +35,6 @@ public class TNTMine extends DemoMine
 		ItemStack leatherBoots = new ItemStack(Material.LEATHER_BOOTS);
 		ItemUtils.colourLeatherArmor(color, leatherBoots);
 		stands = new ArmorStand[2];
-		// bullshit bukkit functional interface
 		org.bukkit.util.Consumer<ArmorStand> propApplier = stand -> {
 			stand.setGlowing(false);
 			stand.setSilent(true);
@@ -48,7 +47,7 @@ public class TNTMine extends DemoMine
 			stand.setLeftLegPose(LEG_ANGLE);
 			stand.setRightLegPose(LEG_ANGLE);
 			stand.getEquipment().setBoots(leatherBoots, true);
-			ARMOR_STAND_ID_TO_DEMO_MINE.put(stand.getEntityId(), this);
+			KitDemolitions.DemolitionsAbility.ARMOR_STAND_ID_TO_DEMO_MINE.put(stand.getEntityId(), this);
 		};
 		stands[0] = world.spawn(spawnLoc1, ArmorStand.class, propApplier);
 		stands[1] = world.spawn(spawnLoc2, ArmorStand.class, propApplier);

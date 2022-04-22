@@ -14,6 +14,7 @@ import org.bukkit.entity.Axolotl;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.scoreboard.Team;
+import org.bukkit.util.BlockVector;
 import org.bukkit.util.EulerAngle;
 
 import java.util.HashMap;
@@ -27,9 +28,6 @@ public abstract class DemoMine
 	//used to set the colour of the glowing effect on the mine armor stand's armor
 	// actual game teams don't matter, just need for the colour
 	private static final HashMap<NamedTextColor, Team> GLOWING_COLOUR_TEAMS = new HashMap<>(16);
-	
-	static final HashMap<Integer, DemoMine> ARMOR_STAND_ID_TO_DEMO_MINE = new HashMap<>(20, 0.4f);
-	public static final HashMap<Axolotl, DemoMine> AXOLOTL_TO_DEMO_MINE = new HashMap<>();
 	
 	static {
 		for(NamedTextColor color : NamedTextColor.NAMES.values()) {
@@ -50,6 +48,7 @@ public abstract class DemoMine
 	Player triggerer; //store the player that stepped on it for shaming OR the demo if remote detonate
 	
 	//for construction
+	final BlockVector blockVector;
 	final Location baseLoc;
 	final Color color;
 	EquipmentSlot armorSlot;
@@ -68,6 +67,7 @@ public abstract class DemoMine
 		this.team = Main.getPlayerInfo(owner).team;
 		this.creationTime = TeamArena.getGameTick();
 		
+		this.blockVector = block.getLocation().toVector().toBlockVector();
 		this.color = BlockUtils.getBlockBukkitColor(block);
 		
 		this.glowingTeam = GLOWING_COLOUR_TEAMS.get((NamedTextColor) team.getPaperTeam().color());
@@ -83,14 +83,6 @@ public abstract class DemoMine
 			entity.setSilent(true);
 			entity.setInvisible(true);
 		});
-	}
-	
-	void remove() {
-		removeEntities();
-		for (ArmorStand stand : stands) {
-			ARMOR_STAND_ID_TO_DEMO_MINE.remove(stand.getEntityId());
-		}
-		AXOLOTL_TO_DEMO_MINE.remove(hitboxEntity);
 	}
 	
 	void removeEntities() {
@@ -139,12 +131,16 @@ public abstract class DemoMine
 	
 	abstract boolean isDone();
 	
+	BlockVector getBlockVector() {
+		return blockVector;
+	}
+	
 	public static boolean isMineStand(int id) {
-		return ARMOR_STAND_ID_TO_DEMO_MINE.containsKey(id);
+		return KitDemolitions.DemolitionsAbility.ARMOR_STAND_ID_TO_DEMO_MINE.containsKey(id);
 	}
 	
 	public static DemoMine getStandMine(int id) {
-		return ARMOR_STAND_ID_TO_DEMO_MINE.get(id);
+		return KitDemolitions.DemolitionsAbility.ARMOR_STAND_ID_TO_DEMO_MINE.get(id);
 	}
 	
 	public static ArmorStand getMineStand(int id) {
@@ -158,10 +154,6 @@ public abstract class DemoMine
 		}
 		
 		return null;
-	}
-	
-	static void clearMap() {
-		ARMOR_STAND_ID_TO_DEMO_MINE.clear();
 	}
 	
 	private static void clearTeams() {

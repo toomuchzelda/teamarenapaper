@@ -67,8 +67,8 @@ public final class Main extends JavaPlugin
 			// evacuate the world first, then unload
 			World tempWorld = teamArena.getWorld();
 			if (tempWorld.getPlayerCount() != 0) {
-				Component kickMessage = Component.text("Please wait while toomuchzelda deploys some broken new feature!")
-						.color(NamedTextColor.GOLD);
+				Component kickMessage = Component.text("Server closed uwu");
+						//.color(NamedTextColor.GOLD);
 				for (Player player : tempWorld.getPlayers()) {
 					player.kick(kickMessage);
 				}
