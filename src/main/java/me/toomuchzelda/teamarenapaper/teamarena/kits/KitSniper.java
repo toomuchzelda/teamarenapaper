@@ -34,6 +34,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import net.minecraft.world.item.alchemy.Potion;
@@ -136,14 +137,31 @@ public class KitSniper extends Kit {
                 }
             }
         }
-
+        //Sniper Rifle Shooting
         public void playerDropItem(PlayerDropItemEvent event) {
             Player player = event.getPlayer();
-            if(event.getItemDrop().getItemStack().getType() == Material.SPYGLASS && !event.getPlayer().hasCooldown(Material.SPYGLASS)){
-                Vector velocity = player.getLocation().getDirection().normalize().multiply(15d);
-                player.launchProjectile(Arrow.class, velocity).setPickupStatus(PickupStatus.DISALLOWED);
+            //if(event.getItemDrop().getItemStack().equals(new ItemStack(Material.SPYGLASS)) && !player.hasCooldown(Material.SPYGLASS)){
+                event.getItemDrop().setPickupDelay(1);
+                //Inaccuracy based on movement (like CS:GO)
+                //The more the player is moving, the less accurate their shot
+                Vector direction = player.getLocation().getDirection();
+                double inaccuracyMax = player.getVelocity().length();
+                double inaccuracy = MathUtils.random.nextGaussian() * inaccuracyMax * 0.100d;
+                double xDeviance = MathUtils.random.nextGaussian() * inaccuracy;
+                double yDeviance = MathUtils.random.nextGaussian() * inaccuracy;
+                double zDeviance = MathUtils.random.nextGaussian() * inaccuracy;
+                direction.setX(direction.getX() + xDeviance);
+		        direction.setY(direction.getY() + yDeviance);
+		        direction.setZ(direction.getZ() + zDeviance);
+                //Shooting Rifle
+                Vector arrowVelocity = direction.normalize().multiply(15d);
+                player.launchProjectile(Arrow.class, arrowVelocity).setPickupStatus(PickupStatus.DISALLOWED);
                 player.setCooldown(Material.SPYGLASS, (int) (2.5*20));
-            }
+           // }
+            //else{
+           //     event.setCancelled(true);
+           // }
+            //Testing below
         }
 
         @Override
@@ -173,9 +191,41 @@ public class KitSniper extends Kit {
 				}
             }
             //Sniper Shoot
+            //Problem: When players are sneaking, their velocity is automatically very low, test after implementing drop sniper to shoot
             if(player.getInventory().getItemInMainHand().getType() == Material.SPYGLASS && player.getPose() == Pose.SNEAKING && !player.hasCooldown(Material.SPYGLASS)){
-                Vector velocity = player.getLocation().getDirection().normalize().multiply(10d);
-                player.launchProjectile(Arrow.class, velocity).setPickupStatus(PickupStatus.DISALLOWED);
+                Vector direction = player.getLocation().getDirection();
+                Vector velocity = player.getVelocity();
+                //Nullifying gravity, which applies even if a player is standing still
+                    if(Math.abs(velocity.getY()) <= 1){
+                        velocity.setY(0);
+                    }
+                double inaccuracyAmp = velocity.length();
+                //Ensuring extreme velocities does not make sniper TOO inaccurate
+                //inaccuracyAmp will range from 0 to 1
+                if(inaccuracyAmp > 5){
+                    inaccuracyAmp = 5d;
+                }
+                inaccuracyAmp = inaccuracyAmp / 5;
+                double xDeviance = (Math.random() - 0.5) * inaccuracyAmp * 10d;
+                double yDeviance = (Math.random() - 0.5) * inaccuracyAmp * 10d;
+                double zDeviance = (Math.random() - 0.5) * inaccuracyAmp * 10d;
+                direction.setX(direction.getX() + xDeviance);
+                if(Math.abs(player.getVelocity().getY()) >= 1){
+                    direction.setY(direction.getY() + yDeviance);
+                }
+		        direction.setZ(direction.getZ() + zDeviance);
+                direction = direction.normalize();
+                Vector arrowVelocity = direction.multiply(10d);
+                //Shooting Rifle + Arrow Properties
+                Arrow arrow = player.launchProjectile(Arrow.class, arrowVelocity);
+                arrow.setShotFromCrossbow(true);
+                arrow.setGravity(false);
+                arrow.setKnockbackStrength(1);
+                arrow.setCritical(false);
+                arrow.setPickupStatus(PickupStatus.DISALLOWED);
+                arrow.setPierceLevel(100);
+                arrow.setDamage(1.5);
+
                 player.setCooldown(Material.SPYGLASS, (int) (2.5*20));
             }
             //Grenade Cooldown

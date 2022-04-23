@@ -535,8 +535,18 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void playerDropItem(PlayerDropItemEvent event) {
-		if(event.getPlayer().getGameMode() != GameMode.CREATIVE)
+		//if(event.getPlayer().getGameMode() != GameMode.CREATIVE)
+		if(Kit.getActiveKit(event.getPlayer()) != null && Kit.getActiveKit(event.getPlayer()).getName().equalsIgnoreCase("Sniper")){
+			if(Main.getGame() != null && Main.getGame().getGameState() == LIVE) {
+				Ability[] abilities = Kit.getAbilities(event.getPlayer());
+					for (Ability a : abilities) {
+						a.playerDropItem(event);
+					}
+			}
+		}
+		else{
 			event.setCancelled(true);
+		}	
 	}
 
 	//stop items being moved from one inventory to another (chests etc)

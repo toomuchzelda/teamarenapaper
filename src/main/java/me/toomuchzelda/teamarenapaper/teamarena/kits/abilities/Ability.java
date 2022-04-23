@@ -7,6 +7,7 @@ import io.papermc.paper.event.player.PlayerItemCooldownEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityShootBowEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 
@@ -125,4 +126,7 @@ public abstract class Ability {
      * @param event
      */
     public void projectileHitEntity(ProjectileCollideEvent event) {}
+
+    public void playerDropItem(PlayerDropItemEvent event) {
+    }
 }
