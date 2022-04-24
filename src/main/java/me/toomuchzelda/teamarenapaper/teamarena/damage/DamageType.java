@@ -144,6 +144,9 @@ public class DamageType {
     
     public static final DamageType PYRO_MOLOTOV = new DamageType(DamageTypeEnum.PYRO_MOLOTOV, "Pyro Incendiary", "%Killed% was burned to death by %Killer%'s incendiary")
             .setFire().setIgnoreArmor().setNoKnockback().setDamageSource(DamageSource.ON_FIRE);
+    
+    public static final DamageType SNIPER_GRENADE_FAIL = new DamageType(DamageTypeEnum.SNIPER_GRENADE_FAIL, "Grenade Fail", "%Killed% forgot they pulled the pin.").setInstantDeath().setNoKnockback()
+    .setDamageSource(DamageSource.explosion((net.minecraft.world.entity.LivingEntity) null));
 
     //a constant identifier for same types, to compare for same types across separate instances of this class
     // without evaluating a String
@@ -514,6 +517,6 @@ public class DamageType {
         WITHER_POISON,
         
         //Kit Stuff
-        PYRO_MOLOTOV
+        PYRO_MOLOTOV, SNIPER_GRENADE_FAIL
     }
 }
