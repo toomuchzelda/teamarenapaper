@@ -67,7 +67,8 @@ public abstract class DemoMine
 		this.team = Main.getPlayerInfo(owner).team;
 		this.creationTime = TeamArena.getGameTick();
 		
-		this.blockVector = block.getLocation().toVector().toBlockVector();
+		Location blockLoc = block.getLocation();
+		this.blockVector = blockLoc.toVector().toBlockVector();
 		this.color = BlockUtils.getBlockBukkitColor(block);
 		
 		this.glowingTeam = GLOWING_COLOUR_TEAMS.get((NamedTextColor) team.getPaperTeam().color());
@@ -75,10 +76,9 @@ public abstract class DemoMine
 		World world = block.getWorld();
 		double topOfBlock = BlockUtils.getBlockHeight(block);
 		//put downwards slightly so rotated legs lay flat on ground and boots partially in ground
-		Location blockLoc = block.getLocation();
-		this.baseLoc = blockLoc.add(0.5d, topOfBlock - 0.85d, 0.5d);
+		this.baseLoc = blockLoc.add(0.5d, topOfBlock, 0.5d);
 		
-		this.hitboxEntity = world.spawn(baseLoc.clone().add(0, 0.65, 0), Axolotl.class, entity -> {
+		this.hitboxEntity = world.spawn(baseLoc.clone().add(0, -0.20d, 0), Axolotl.class, entity -> {
 			entity.setAI(false);
 			entity.setSilent(true);
 			entity.setInvisible(true);
@@ -122,14 +122,22 @@ public abstract class DemoMine
 	void trigger(Player triggerer) {
 		this.triggerer = triggerer;
 		World world = hitboxEntity.getWorld();
+		Location loc = hitboxEntity.getLocation();
 		
-		world.playSound(hitboxEntity.getLocation(), Sound.ENTITY_CREEPER_HURT, 1f, 0f);
-		world.playSound(hitboxEntity.getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 1f, 0f);
+		world.playSound(loc, Sound.BLOCK_STONE_PRESSURE_PLATE_CLICK_ON, 1f, 1f);
+		world.playSound(loc, Sound.ENTITY_CREEPER_HURT, 1f, 0f);
+		world.playSound(loc, Sound.BLOCK_FIRE_EXTINGUISH, 1f, 0f);
 		
 		//subclass here
 	}
 	
 	abstract boolean isDone();
+	
+	boolean isTriggered() {
+		return this.triggerer != null;
+	}
+	
+	void tick() {};
 	
 	BlockVector getBlockVector() {
 		return blockVector;

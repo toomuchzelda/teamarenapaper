@@ -25,9 +25,11 @@ public class TNTMine extends DemoMine
 		
 		this.type = MineType.TNTMINE;
 		
-		Location spawnLoc1 = baseLoc.clone().add(0, 0, 0.5d);
+		Location standBaseLoc = baseLoc.add(0d, -0.85d, 0d);
+		
+		Location spawnLoc1 = standBaseLoc.clone().add(0, 0, 0.5d);
 		//put slightly lower to try prevent graphics plane fighting
-		Location spawnLoc2 = baseLoc.clone().add(0, -0.005, -0.5d);
+		Location spawnLoc2 = standBaseLoc.clone().add(0, -0.005, -0.5d);
 		spawnLoc2.setYaw(180f);
 		
 		World world = baseLoc.getWorld();

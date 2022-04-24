@@ -791,6 +791,10 @@ public class DamageEvent {
         this.damageTypeCause = cause;
     }
     
+    public Entity getDamageTypeCause() {
+        return this.damageTypeCause;
+    }
+    
     public boolean isCancelled() {
         return cancelled;
     }

@@ -1018,7 +1018,8 @@ public abstract class TeamArena
 	}
 
 	public void handleDeath(DamageEvent event) {
-		Bukkit.broadcast(event.getDamageType().getDeathMessage(NamedTextColor.YELLOW, event.getVictim(), event.getFinalAttacker(), null));
+		Bukkit.broadcast(event.getDamageType().getDeathMessage(NamedTextColor.YELLOW, event.getVictim(),
+				event.getFinalAttacker(), event.getDamageTypeCause()));
 		Entity e = event.getVictim();
 		//if player make them a spectator and put them in queue to respawn if is a respawning game
 		if(e instanceof Player p) {

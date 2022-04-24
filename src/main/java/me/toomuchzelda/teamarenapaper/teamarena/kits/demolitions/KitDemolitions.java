@@ -75,13 +75,13 @@ public class KitDemolitions extends Kit
 			});
 			fromPlayer.add(mine);
 			
-			for(ArmorStand stand : mine.stands) {
-				//slightly hacky, but this is already done inside the DemoMine constructor.
-				// it needs to be put into this map before the armor stands are spawned so the
-				// Metadata packet listener for them will read from this map, and know that it's
-				// a mine that needs the glowing effect applied.
-				//ARMOR_STAND_ID_TO_DEMO_MINE.put(stand.getEntityId(), mine);
-			}
+			//slightly hacky, but this is already done inside the DemoMine constructor.
+			// it needs to be put into this map before the armor stands are spawned so the
+			// Metadata packet listener for them will read from this map, and know that it's
+			// a mine that needs the glowing effect applied.
+			/*for(ArmorStand stand : mine.stands) {
+				ARMOR_STAND_ID_TO_DEMO_MINE.put(stand.getEntityId(), mine);
+			}*/
 			
 			AXOLOTL_TO_DEMO_MINE.put(mine.hitboxEntity, mine);
 			
@@ -137,7 +137,8 @@ public class KitDemolitions extends Kit
 						addMine(mine);
 					}
 					else if (mat == Material.BLAZE_ROD) {
-					
+						DemoMine mine = new PushMine(event.getPlayer(), block);
+						addMine(mine);
 					}
 				}
 				else {
@@ -180,6 +181,8 @@ public class KitDemolitions extends Kit
 				Map.Entry<Axolotl, DemoMine> entry = axIter.next();
 				DemoMine mine = entry.getValue();
 				
+				mine.tick();
+				
 				if(mine.removeNextTick) {
 					/*Player player = mine.owner;
 					List<DemoMine> list = PLAYER_MINES.get(player);
@@ -213,7 +216,7 @@ public class KitDemolitions extends Kit
 					// else do nothing and don't enter the control statement below that checks for collision
 				}
 				//if it hasn't been stepped on already check if anyone's standing on it
-				else if(mine.triggerer == null) {
+				else if(!mine.isTriggered()) {
 					for (Player stepper : Main.getGame().getPlayers()) {
 						if (mine.team.getPlayerMembers().contains(stepper))
 							continue;
