@@ -14,7 +14,6 @@ import org.bukkit.World;
 import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Explosive;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
@@ -46,7 +45,6 @@ import net.kyori.adventure.text.format.TextColor;
 public class KitSniper extends Kit {
     public static boolean SNIPER_CHAT_MESSAGE_SENT = false;
     public static boolean GRENADE_CHAT_MESSAGE_SENT = false;
-    public static int EXPECTED_GRENADE_COUNT = 0;
     public static final ItemStack GRENADE;
     public static final ItemStack SNIPER;
     public static final Set<BukkitTask> GRENADE_TASKS = new HashSet<>();
@@ -63,7 +61,7 @@ public class KitSniper extends Kit {
         SNIPER.setItemMeta(rifleMeta);
     }
     public KitSniper() {
-        super("Sniper", "Be careful when sniping... Too much movement and your aim will become trash. Don't forget to throw the grenade if you pull the pin btw.", Material.SPYGLASS);
+        super("Sniper", "Be careful when sniping... Too much movement and your aim will worsen. Don't forget to throw the grenade if you pull the pin btw.", Material.SPYGLASS);
 
         ItemStack[] armour = new ItemStack[4];
         armour[3] = new ItemStack(Material.LEATHER_HELMET);
@@ -98,53 +96,43 @@ public class KitSniper extends Kit {
 		public void removeAbility(Player player) {
             player.setExp(0);
             player.getInventory().remove(Material.TURTLE_HELMET);
-            EXPECTED_GRENADE_COUNT = 0;
             SNIPER_CHAT_MESSAGE_SENT = false;
             GRENADE_CHAT_MESSAGE_SENT = false;
 		}
 
         public void throwGrenade(Player player, double amp, int itemSlot){
             World world = player.getWorld();
-            PlayerInfo pInfo = Main.getPlayerInfo(player);
              BukkitTask runnable = new BukkitRunnable(){
                 //Grenade explosion
                 int timer = player.getCooldown(Material.TURTLE_HELMET);
                 boolean launched = false;
                 Item activeGrenade;
+                TeamArenaTeam team = Main.getPlayerInfo(player).team;
+                Color teamColor = team.getColour();
                 public void run() {
                     if(launched){
-                        //Grenade Particles
+                        //Grenade Particles when it is thrown
                         //In Motion
-                        TeamArenaTeam team = Main.getPlayerInfo(player).team;
-                        Color teamColor = team.getColour();
                         if(activeGrenade.getVelocity().length() > 0){
                             world.spawnParticle(Particle.REDSTONE, activeGrenade.getLocation(), 1, new Particle.DustOptions(teamColor, 2f));
                         }
                         else{
                              //On the ground
-                             world.spawnParticle(Particle.REDSTONE, activeGrenade.getLocation().add(Vector.getRandom().subtract(new Vector(-0.5,-0.5,-0.5)).multiply(2)), 1, new Particle.DustOptions(teamColor, 2f));
+                             world.spawnParticle(Particle.REDSTONE, activeGrenade.getLocation().add(Vector.getRandom().subtract(new Vector(-0.5,-0.5,-0.5)).multiply(4)), 2, new Particle.DustOptions(teamColor, 2f));
                         }
-                        
-                       
                     }
                     if(timer <= 0){
-                        //Grenade Fail
-                        //Check if inventory has any grenades, maybe update later to allow for admin abuse grenade spam
-                        System.out.println(launched);
+                        //Grenade Success
                         if(launched){
                             world.createExplosion(activeGrenade.getLocation(), 1.7f, false, false);
                             player.getInventory().addItem(GRENADE);
                             activeGrenade.remove();
                         }
-                        if(!launched){
-                            world.createExplosion(player.getLocation(), 2f, false, false);
-                            player.damage(999);
-                        }
                         cancel();   
                         GRENADE_TASKS.remove(this);
                     }
                     else if(!launched){
-                        //Grenade Success
+                        //Grenade Throw Initiated
                         if(!player.getInventory().contains(Material.TURTLE_HELMET)){
                             activeGrenade = world.dropItem(player.getLocation(), new ItemStack(Material.TURTLE_HELMET));
                             activeGrenade.setCanPlayerPickup(false);
@@ -153,7 +141,7 @@ public class KitSniper extends Kit {
                             activeGrenade.setVelocity(direction.multiply(amp));
                             launched = true;
                             world.playSound(activeGrenade.getLocation(), Sound.ENTITY_CREEPER_PRIMED, 1f, 1.1f);
-                        }             
+                        }
                     }
                     timer--;
                 }
@@ -232,7 +220,7 @@ public class KitSniper extends Kit {
             item.setOwner(player.getUniqueId());
             if(item.getItemStack().getType() == Material.SPYGLASS && !player.hasCooldown(Material.SPYGLASS)){
                 //Inaccuracy based on movement
-                //player.getVelocity() sux so i have to make a weird calculation
+                //player.getVelocity() sux so i will base movement on the player's state
                 Vector direction = player.getEyeLocation().getDirection();
                 double inaccuracy = 0;
                 if(player.isSprinting() || player.isGliding() || player.isJumping() || player.getLocation().subtract(0,1,0).getBlock().getType() == Material.AIR || Math.abs(player.getVelocity().length()) > 1){
@@ -243,7 +231,6 @@ public class KitSniper extends Kit {
                 }
                 direction.add(new Vector(Math.random() * inaccuracy - inaccuracy, Math.random() * inaccuracy - inaccuracy, Math.random() * inaccuracy - inaccuracy));
                 Vector arrowVelocity = direction.multiply(10d);
-                //System.out.println("direction" + direction + "mod Direction" + arrowVelocity + "block being standed on: " + player.getLocation().getBlock().getType());
                 //Shooting Rifle + Arrow Properties
                 Arrow arrow = player.launchProjectile(Arrow.class, arrowVelocity);
                 arrow.setShotFromCrossbow(true);
@@ -274,6 +261,7 @@ public class KitSniper extends Kit {
         @Override
         public void onPlayerTick(Player player) {
             float exp = player.getExp();
+            World world = player.getWorld();
 
             //Grenade Cooldown
             if(exp == 0.999f){
@@ -296,10 +284,10 @@ public class KitSniper extends Kit {
                 }
             }
 
-            //Sniper Information
+            //Sniper Information message
             if(player.getInventory().getItemInMainHand().getType() == Material.SPYGLASS){
-                Component actionBar = Component.text("Drop Spyglass in hand to Shoot").color(TextColor.color(89, 237, 76));
-                Component text = Component.text("Drop Spyglass in your main hand to Shoot").color(TextColor.color(89, 237, 76));
+                Component actionBar = Component.text("Drop Spyglass in hand to shoot").color(TextColor.color(89, 237, 76));
+                Component text = Component.text("Drop Spyglass in your main hand to shoot").color(TextColor.color(89, 237, 76));
                 PlayerInfo pinfo = Main.getPlayerInfo(player);
                 if (pinfo.getPreference(Preferences.KIT_ACTION_BAR)) {
 					player.sendActionBar(actionBar);
@@ -311,13 +299,13 @@ public class KitSniper extends Kit {
 				}
             }
 
-            //Grenade Information
+            //Grenade Information message
             if(player.getInventory().getItemInMainHand().getType() == Material.TURTLE_HELMET && player.getExp() == 0.999f){
                 Component actionBar = Component.text("Left/Right Click to Arm").color(TextColor.color(66, 245, 158));
                 Component text = Component.text("Click to arm the grenade").color(TextColor.color(66, 245, 158));
                 PlayerInfo pinfo = Main.getPlayerInfo(player);
                 if (pinfo.getPreference(Preferences.KIT_ACTION_BAR)) {
-					player.sendActionBar(text);
+					player.sendActionBar(actionBar);
 				}
                 //Chat Message is only sent once per life
 				if(pinfo.getPreference(Preferences.KIT_CHAT_MESSAGES) && !GRENADE_CHAT_MESSAGE_SENT) {
@@ -326,6 +314,17 @@ public class KitSniper extends Kit {
 				}
             }
 
+            //Grenade Fail Check
+             //Check if inventory has any grenades, maybe update later to allow for admin abuse grenade spam
+                if(player.getCooldown(Material.TURTLE_HELMET) == 1 && player.getInventory().contains(Material.TURTLE_HELMET) || player.getInventory().getHelmet().getType() == Material.TURTLE_HELMET){
+                    if(player.getInventory().getHelmet().getType() == Material.TURTLE_HELMET){
+                        Component text = Component.text("Please do not wear the grenade on your head. Thank you.").color(TextColor.color(66, 245, 158));
+                        player.sendMessage(text);
+                    }
+                    
+                    world.createExplosion(player.getLocation(), 2.5f, false, false);
+                    player.damage(999);
+                }
             //Sniper Reload Sound
             if(player.getCooldown(Material.SPYGLASS) == 15){
                 player.playSound(player, Sound.ITEM_ARMOR_EQUIP_CHAIN, 2f, 0.8f);
