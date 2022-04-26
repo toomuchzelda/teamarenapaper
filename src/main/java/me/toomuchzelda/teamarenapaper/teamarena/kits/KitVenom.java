@@ -1,35 +1,38 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
+import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
-import me.toomuchzelda.teamarenapaper.utils.TextUtils;
-
-import org.bukkit.*;
-import org.bukkit.entity.Player;
-import org.bukkit.event.player.PlayerInteractEvent;
-
-import java.util.*;
-
-import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.TextColor;
-
+import org.bukkit.Material;
+import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
+import org.bukkit.World;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.potion.PotionData;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.potion.PotionType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
+
+import java.util.*;
 
 //Kit Description:
 /*
@@ -53,10 +56,17 @@ public class KitVenom extends Kit
 	//keep track of all the bukkit tasks so we can cancel them in the event of some disaster or crash
 	public static final Set<BukkitTask> LEAP_TASKS = new HashSet<>();
 	public static final TextColor POISON_PURP = TextColor.color(145, 86, 204);
+
+	private static final ItemStack POTION_OF_POISON = ItemBuilder.of(Material.POTION)
+			.meta(PotionMeta.class, potionMeta -> {
+				potionMeta.setBasePotionData(new PotionData(PotionType.POISON));
+				potionMeta.addItemFlags(ItemFlag.HIDE_POTION_EFFECTS);
+			})
+			.build();
 	
 	public KitVenom() {
-		super("Venom", "Poison dmg on hit, poisoned people cannot be healed. It can also quickly jump in, afflicting all enemies it hits with poison and decreasing its cooldown with each enemy hit!", 
-				Material.POTION);
+		super("Venom", "Poison dmg on hit, poisoned people cannot be healed. It can also quickly jump in, afflicting all enemies it hits with poison and decreasing its cooldown with each enemy hit!",
+				POTION_OF_POISON);
 		this.setArmor(new ItemStack(Material.CHAINMAIL_HELMET), new ItemStack(Material.GOLDEN_CHESTPLATE),
 				new ItemStack(Material.IRON_LEGGINGS), new ItemStack(Material.IRON_BOOTS));
 		ItemStack sword = new ItemStack(Material.IRON_SWORD);

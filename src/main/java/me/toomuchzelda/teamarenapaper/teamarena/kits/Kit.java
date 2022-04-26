@@ -22,7 +22,7 @@ public abstract class Kit {
     
     private final String name;
     private final String description;
-    private final Material icon;
+    private final ItemStack display;
     //0: boots, 1: leggings, 2: chestplate, 3: helmet
     private ItemStack[] armour;
     private ItemStack[] items;
@@ -32,9 +32,13 @@ public abstract class Kit {
     private final Set<Player> activeUsers;
 
     public Kit(String name, String description, Material icon) {
+        this(name, description, new ItemStack(icon));
+    }
+
+    public Kit(String name, String description, ItemStack display) {
         this.name = name;
         this.description = description;
-        this.icon = icon;
+        this.display = display.clone();
 
         //these are set via the setter methods
         ItemStack[] armour = new ItemStack[4];
@@ -126,8 +130,8 @@ public abstract class Kit {
         this.abilities = abilities;
     }
 
-    public Material getIcon() {
-        return icon;
+    public ItemStack getIcon() {
+        return display.clone();
     }
     
     public static @Nullable Kit getActiveKit(Player player) {

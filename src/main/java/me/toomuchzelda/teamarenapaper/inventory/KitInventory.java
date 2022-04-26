@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.inventory;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -11,7 +12,11 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.map.MinecraftFont;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.StringJoiner;
+import java.util.stream.Collectors;
 
 public class KitInventory extends PagedInventory {
 
@@ -35,8 +40,11 @@ public class KitInventory extends PagedInventory {
         return Math.min(6, kits.size() / 9 + 1);
     }
 
+    private static final Style NAME_STYLE = Style.style(NamedTextColor.BLUE).decoration(TextDecoration.ITALIC, false);
     private static final Style LORE_STYLE = Style.style(NamedTextColor.YELLOW).decoration(TextDecoration.ITALIC, false);
-    public static ClickableItem getKitItem(Kit kit, boolean glow) {
+    private static final TextComponent SELECTED_COMPONENT = Component.text("Currently selected!", NamedTextColor.GREEN, TextDecoration.BOLD)
+            .decoration(TextDecoration.ITALIC, false);
+    public static ClickableItem getKitItem(Kit kit, boolean selected) {
         String desc = kit.getDescription();
         // word wrapping because some command-loving idiot didn't add line breaks in kit descriptions
         List<String> lines = new ArrayList<>();
@@ -54,18 +62,22 @@ public class KitInventory extends PagedInventory {
         // final line
         lines.add(line.toString());
 
-        List<? extends Component> loreLines = lines.stream()
+        ArrayList<TextComponent> loreLines = lines.stream()
                 .map(str -> Component.text(str).style(LORE_STYLE))
-                .toList();
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        if (selected) {
+            loreLines.add(Component.empty());
+            loreLines.add(SELECTED_COMPONENT);
+        }
 
         return ClickableItem.of(
-                ItemBuilder.of(kit.getIcon())
-                        .displayName(Component.text(kit.getName())
-                                .style(Style.style(NamedTextColor.BLUE).decoration(TextDecoration.ITALIC, false)))
+                ItemBuilder.from(kit.getIcon())
+                        .displayName(Component.text(kit.getName(), NAME_STYLE))
                         .lore(loreLines)
                         .hide(ItemFlag.values())
                         .meta(meta -> {
-                            if (glow) {
+                            if (selected) {
                                 meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
                                 meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
                             }
