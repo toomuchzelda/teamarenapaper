@@ -3,12 +3,15 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.RayTraceResult;
@@ -61,7 +64,10 @@ public class PushMine extends DemoMine
 		super.trigger(triggerer);
 		this.triggerTime = TeamArena.getGameTick();
 		
-		this.stands[0].teleport(stands[0].getLocation().add(0, 0.6, 0));
+		Location loc = stands[0].getLocation();
+		loc.add(0, 0.5, 0);
+		loc.setYaw(loc.getYaw() - 180f);
+		this.stands[0].teleport(loc);
 	}
 	
 	@Override
@@ -77,7 +83,8 @@ public class PushMine extends DemoMine
 				Vector explodeLocVec = explodeLoc.toVector();
 				RayTraceResult result;
 				for(Player p : Main.getGame().getPlayers()) {
-					//they're within blast radius and has a line of sight
+					if(this.team.getPlayerMembers().contains(p))
+						continue;
 					
 					//add half of height so aim for middle of body not feet
 					Vector vector = p.getLocation().add(0, p.getHeight() / 2, 0).toVector().subtract(explodeLocVec);
@@ -85,16 +92,26 @@ public class PushMine extends DemoMine
 					result = world.rayTrace(explodeLoc, vector, BLAST_RADIUS, FluidCollisionMode.SOURCE_ONLY, true, 0,
 							e -> e == p);
 					//Bukkit.broadcastMessage(result.toString());
+					double lengthSqrd = vector.lengthSquared();
+					double blockedPower = 1d;
+					boolean affect = false;
 					if(result != null && result.getHitEntity() == p) {
-						double lengthSqrd = vector.lengthSquared();
-						if (lengthSqrd <= BLAST_RADIUS_SQRD) {
-							//weaker knockback the further they are from mine base
-							double power = Math.sqrt(BLAST_RADIUS_SQRD - lengthSqrd);
-							vector.normalize();
-							vector.multiply(power * BLAST_STRENGTH);
-							
-							PlayerUtils.sendVelocity(p, vector);
-						}
+						affect = true;
+					}
+					//even if raytrace didn't hit, if they are within 1.1 block count it anyway
+					else if(lengthSqrd <= 1.04880884817d){
+						affect = true;
+					}
+					
+					if (affect) {
+						//weaker knockback the further they are from mine base
+						double power = Math.sqrt(BLAST_RADIUS_SQRD - lengthSqrd);
+						vector.normalize();
+						vector.multiply(power * BLAST_STRENGTH);
+						
+						PlayerUtils.sendVelocity(p, PlayerUtils.limitVelocity(vector));
+						//EntityDamageByEntityEvent event = new EntityDamageByEntityEvent(this.owner, p, EntityDamageEvent.DamageCause.BLOCK_EXPLOSION, 0.01d);
+						//DamageEvent dEvent = DamageEvent.createDamageEvent(event, DamageType.)
 					}
 				}
 				
