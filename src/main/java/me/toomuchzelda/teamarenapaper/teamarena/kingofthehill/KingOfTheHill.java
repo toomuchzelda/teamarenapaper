@@ -13,6 +13,8 @@ import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.map.MapCursor;
+import org.bukkit.map.MapPalette;
 import org.bukkit.util.BoundingBox;
 
 import java.util.*;
@@ -22,6 +24,7 @@ public class KingOfTheHill extends TeamArena
 	protected boolean randomHillOrder;
 	protected Hill[] hills;
 	protected Hill activeHill;
+	protected Hill lastActiveHill; // for minimap
 	protected int hillIndex;
 	protected int lastHillChangeTime;
 
@@ -417,6 +420,47 @@ public class KingOfTheHill extends TeamArena
 		updateSidebarTitle();
 
 		this.lastHillChangeTime = gameTick;
+
+		// register hill cursor
+		for (Hill hill : hills) {
+			miniMap.registerCursor((ignored, ignored1) -> {
+				boolean active = hill == activeHill;
+				Location center = hill.getBorder().getCenter().toLocation(gameWorld);
+				Component currentHillText = Component.text(hill.getName(),
+						active ?
+								(owningTeam != null ? owningTeam.getRGBTextColor() : NamedTextColor.WHITE) :
+								NamedTextColor.DARK_GRAY
+				);
+				MapCursor.Type icon = active ? MapCursor.Type.WHITE_CROSS : MapCursor.Type.SMALL_WHITE_CIRCLE;
+				return new MiniMapManager.CursorInfo(center, false, icon, currentHillText);
+			});
+		}
+		// fancy border for active hill
+		lastActiveHill = activeHill;
+		miniMap.registerCanvasOperation((player, info, canvas, renderer) -> {
+			if (lastActiveHill != activeHill) {
+				// clear old overlay
+				BoundingBox oldBox = lastActiveHill.getBorder();
+				renderer.drawRect(canvas, oldBox.getMin(), oldBox.getMax(),
+						MiniMapManager.Renderer.TRANSPARENT, MiniMapManager.Renderer.TRANSPARENT);
+				lastActiveHill = activeHill;
+			}
+
+			BoundingBox box = activeHill.getBorder();
+
+			if (TeamArena.getGameTick() % 40 < 20) { // only render every other second
+				var teamColor = owningTeam != null ? new java.awt.Color(owningTeam.getColour().asRGB(), false) : null;
+				@SuppressWarnings("deprecation")
+				byte color = teamColor != null ? MapPalette.matchColor(teamColor) : MapPalette.TRANSPARENT;
+//				@SuppressWarnings("deprecation")
+//				byte borderColor = teamColor != null ? MapPalette.matchColor(teamColor.darker()) : 29 /*COLOR_BLACK*/ * 4 + 3;
+				byte borderColor = 29 * 4 + 3;
+				renderer.drawRect(canvas, box.getMin(), box.getMax(), color, borderColor);
+			} else {
+				renderer.drawRect(canvas, box.getMin(), box.getMax(),
+						MiniMapManager.Renderer.TRANSPARENT, MiniMapManager.Renderer.TRANSPARENT);
+			}
+		});
 	}
 
 	public void updateSidebarTitle() {

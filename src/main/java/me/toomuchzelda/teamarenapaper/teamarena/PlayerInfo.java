@@ -21,7 +21,7 @@ import java.util.Map;
 //container class to store per-player info
 public class PlayerInfo
 {
-	public final CustomCommand.PermissionLevel permissionLevel;
+	public CustomCommand.PermissionLevel permissionLevel;
 	public TeamArenaTeam team;
 	public Location spawnPoint;
 	public PacketHologram nametag;

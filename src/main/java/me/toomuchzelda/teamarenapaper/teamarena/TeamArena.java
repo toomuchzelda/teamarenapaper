@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.KitInventory;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageIndicatorHologram;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
@@ -10,10 +11,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
-import me.toomuchzelda.teamarenapaper.utils.FileUtils;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -102,6 +100,8 @@ public abstract class TeamArena
 	protected ConcurrentLinkedQueue<DamageEvent> damageQueue;
 
 	private final LinkedList<DamageIndicatorHologram> activeDamageIndicators = new LinkedList<>();
+
+	public final MiniMapManager miniMap;
 
 	public TeamArena() {
 		Main.logger().info("Reading info from " + mapPath() + ':');
@@ -224,6 +224,8 @@ public abstract class TeamArena
 		SidebarManager.updatePreGameScoreboard(this);
 		PlayerListScoreManager.removeScores();
 
+		miniMap = new MiniMapManager(this);
+
 		//init all the players online at time of construction
 		for (Player p : Bukkit.getOnlinePlayers()) {
 			p.teleport(spawnPos);
@@ -265,6 +267,17 @@ public abstract class TeamArena
 		}
 	}
 
+	// player as in players in the players set
+	// infer the meaning yourself
+	protected void givePlayerItems(Player player, PlayerInfo info) {
+		player.sendMap(miniMap.view);
+		PlayerInventory inventory = player.getInventory();
+		inventory.clear();
+		inventory.setItem(8, miniMap.getMapItem(info.team));
+		info.kit.giveKit(player, true, info);
+	}
+
+
 	public void tick() {
 		gameTick++;
 
@@ -285,28 +298,26 @@ public abstract class TeamArena
 
 	public void preGameTick() {
 		//if countdown is ticking, do announcements
-		if(players.size() >= MIN_PLAYERS_REQUIRED) {
+		if (CommandDebug.ignoreWinConditions || players.size() >= MIN_PLAYERS_REQUIRED) {
 			//announce Game starting in:
 			// and play sound
 			sendCountdown(false);
 			//teams decided time
-			if(waitingSince + PRE_TEAMS_TIME == gameTick) {
+			if (waitingSince + PRE_TEAMS_TIME == gameTick) {
 				prepTeamsDecided();
 			}
 			//Game starting; teleport everyone to spawns and freeze them
-			else if(waitingSince + PRE_TEAMS_TIME + PRE_GAME_STARTING_TIME == gameTick) {
+			else if (waitingSince + PRE_TEAMS_TIME + PRE_GAME_STARTING_TIME == gameTick) {
 				prepGameStarting();
 			}
 			//start game
-			else if(waitingSince + TOTAL_WAITING_TIME == gameTick)
-			{
+			else if (waitingSince + TOTAL_WAITING_TIME == gameTick) {
 				prepLive();
 			}
-		}
-		else {
+		} else {
 			waitingSince = gameTick;
 
-			if(gameState == GameState.TEAMS_CHOSEN || gameState == GameState.GAME_STARTING) {
+			if (gameState == GameState.TEAMS_CHOSEN || gameState == GameState.GAME_STARTING) {
 				//remove players from all teams
 				/*for(TeamArenaTeam team : teams) {
 					team.removeAllMembers();
@@ -314,8 +325,8 @@ public abstract class TeamArena
 
 				//maybe band-aid, needed to set gamestate now for setSpectator() to work
 				setGameState(GameState.PREGAME);
-				for(Player p : Bukkit.getOnlinePlayers()) {
-					if(isSpectator(p))
+				for (Player p : Bukkit.getOnlinePlayers()) {
+					if (isSpectator(p))
 						setSpectator(p, false, false);
 					else
 						noTeamTeam.addMembers(p);
@@ -324,12 +335,18 @@ public abstract class TeamArena
 
 				//announce game cancelled
 				// spam sounds lol xddddddd
-				for(int i = 0; i < 10; i++) {
-					gameWorld.playSound(border.getCenter().toLocation(gameWorld),
-							Sound.values()[MathUtils.randomMax(Sound.values().length - 1)],
-							SoundCategory.AMBIENT, 99999, (float) MathUtils.randomRange(0.5, 2));
+				for (Player player : Bukkit.getOnlinePlayers()) {
+					if ("jacky8399".equalsIgnoreCase(player.getName()))
+						continue;
+					for (int i = 0; i < 10; i++) {
+						// peak humor
+						Sound sound = MathUtils.random.nextBoolean() ? SoundUtils.getRandomObnoxiousSound() : SoundUtils.getRandomSound();
+						player.playSound(border.getCenter().toLocation(gameWorld), sound,
+								SoundCategory.AMBIENT, 99999f, (float) MathUtils.randomRange(0.5, 2));
+					}
 				}
 				Bukkit.broadcast(Component.text("Not enough players to start the game, game cancelled!").color(MathUtils.randomTextColor()));
+				SidebarManager.updatePreGameScoreboard(this);
 			}
 			//setGameState(GameState.PREGAME);
 		}
@@ -373,11 +390,10 @@ public abstract class TeamArena
 				lastTeam = team;
 			}
 		}
-		if(aliveTeamCount < 2) {
-			if(lastTeam != null) {
+		if (!CommandDebug.ignoreWinConditions && aliveTeamCount < 2) {
+			if (lastTeam != null) {
 				Bukkit.broadcast(lastTeam.getComponentName().append(Component.text(" is the last team standing so they win!!")));
-			}
-			else {
+			} else {
 				Bukkit.broadcast(Component.text("Where'd everyone go?"));
 			}
 			prepEnd();
@@ -695,15 +711,13 @@ public abstract class TeamArena
 		Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
 		while(iter.hasNext()) {
 			Map.Entry<Player, PlayerInfo> entry = iter.next();
-			Kit kit = entry.getValue().kit;
 			Player player = entry.getKey();
 			
 			PlayerUtils.resetState(player);
-			player.getInventory().clear();
 			player.setSaturatedRegenRate(0);
 			PlayerListScoreManager.setKills(player, 0);
 			
-			kit.giveKit(player, true, entry.getValue());
+			givePlayerItems(player, entry.getValue());
 			
 			for(TeamArenaTeam team : teams) {
 				if(team.isAlive())
@@ -770,6 +784,8 @@ public abstract class TeamArena
 				ability.unregisterAbility();
 			}
 		}
+
+		miniMap.cleanUp();
 		
 		players.clear();
 		spectators.clear();
@@ -801,6 +817,8 @@ public abstract class TeamArena
 
 	
 	public void prepDead() {
+		// remove map
+		miniMap.removeMapView();
 		setGameState(GameState.DEAD);
 	}
 
@@ -998,13 +1016,12 @@ public abstract class TeamArena
 		players.add(player);
 		spectators.remove(player);
 
-		player.getInventory().clear();
 		player.setAllowFlight(false);
 		PlayerUtils.resetState(player);
 		
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
 		player.teleport(pinfo.team.getNextSpawnpoint());
-		pinfo.kit.giveKit(player, true, pinfo);
+		givePlayerItems(player, pinfo);
 		pinfo.kills = 0;
 		PlayerListScoreManager.setKills(player, 0);
 
@@ -1194,7 +1211,10 @@ public abstract class TeamArena
 	}
 
 	public void giveSpectatorItems(Player player) {
-		player.getInventory().addItem(new ItemStack(Material.COMPASS));
+		player.sendMap(miniMap.view);
+		PlayerInventory inventory = player.getInventory();
+		inventory.setItem(8, miniMap.getMapItem());
+		inventory.addItem(new ItemStack(Material.COMPASS));
 	}
 
 	//process logging in player
@@ -1538,7 +1558,11 @@ public abstract class TeamArena
 	public void queueDamage(DamageEvent event) {
 		damageQueue.add(event);
 	}
-	
+
+	public Set<Player> getPlayers() {
+		return players;
+	}
+
 	public TeamArenaTeam getSpectatorTeam() {
 		return spectatorTeam;
 	}

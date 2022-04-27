@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.capturetheflag;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
@@ -22,6 +23,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.map.MapCursor;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
@@ -309,7 +311,7 @@ public class CaptureTheFlag extends TeamArena
 			player.sendMessage("ur already hold flag ");
 			return;
 		}*/
-		if(!flag.team.isAlive()) {
+		if(!CommandDebug.ignoreWinConditions && !flag.team.isAlive()) {
 			final Component text = Component.text("Taking the flag of a dead team? Talk about cheap!").color(TextColor.color(255, 20 ,20));
 			player.sendMessage(text);
 			player.playSound(player.getLocation(), Sound.ENTITY_HORSE_DEATH, SoundCategory.AMBIENT, 2f, 0.5f);
@@ -636,6 +638,30 @@ public class CaptureTheFlag extends TeamArena
 		super.prepLive();
 
 		SidebarManager.setTitle(Component.text("CapsToWin: " + capsToWin).color(NamedTextColor.GOLD));
+
+
+		// register flag cursors
+		for (var entry : teamToFlags.entrySet()) {
+			TeamArenaTeam team = entry.getKey();
+			Flag flag = entry.getValue();
+
+			ArmorStand stand = flag.getArmorStand();
+			MapCursor.Type icon = MapCursor.Type.valueOf("BANNER_" + team.getDyeColour().name());
+			Component flagText = Component.text(team.getSimpleName() + " flag", team.getRGBTextColor());
+			Component yourFlagText = Component.text("Your flag", team.getRGBTextColor());
+			miniMap.registerCursor((player, playerInfo) -> {
+				// display extra information for own flag
+				if (playerInfo.team == team) {
+					if (flag.holder != null && gameTick % 40 < 20) {
+						return new MiniMapManager.CursorInfo(flag.holder.getLocation(), true, MapCursor.Type.RED_POINTER, yourFlagText);
+					} else {
+						return new MiniMapManager.CursorInfo(stand.getLocation(), false, icon, yourFlagText);
+					}
+				} else {
+					return new MiniMapManager.CursorInfo(stand.getLocation(), false, icon, flagText);
+				}
+			});
+		}
 	}
 
 	@Override
