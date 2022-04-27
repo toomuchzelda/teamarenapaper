@@ -252,7 +252,8 @@ public abstract class TeamArena
 	}
 
 	protected final List<Kit> defaultKits = List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
-			new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitNone(), new KitVenom(), new KitSniper());
+			new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitNone(), new KitVenom(),
+			new KitSniper());
 	protected void registerKits() {
 		defaultKits.forEach(this::registerKit);
 	}
