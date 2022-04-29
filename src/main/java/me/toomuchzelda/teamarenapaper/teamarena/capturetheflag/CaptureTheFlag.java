@@ -638,6 +638,7 @@ public class CaptureTheFlag extends TeamArena
 
 		SidebarManager.setTitle(Component.text("CapsToWin: " + capsToWin).color(NamedTextColor.GOLD));
 
+
 		// register flag cursors
 		for (var entry : teamToFlags.entrySet()) {
 			TeamArenaTeam team = entry.getKey();

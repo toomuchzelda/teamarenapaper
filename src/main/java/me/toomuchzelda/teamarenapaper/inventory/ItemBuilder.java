@@ -31,6 +31,10 @@ public final class ItemBuilder {
         return new ItemBuilder(material);
     }
 
+    public static ItemBuilder from(ItemStack stack) {
+        return new ItemBuilder(stack);
+    }
+
     public ItemBuilder amount(int amount) {
         stack.setAmount(amount);
         return this;

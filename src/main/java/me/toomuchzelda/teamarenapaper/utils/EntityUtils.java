@@ -5,14 +5,19 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.phys.Vec3;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.craftbukkit.v1_18_R2.CraftSound;
 import org.bukkit.craftbukkit.v1_18_R2.entity.CraftEntity;
 import org.bukkit.craftbukkit.v1_18_R2.entity.CraftLivingEntity;
+import org.bukkit.craftbukkit.v1_18_R2.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_18_R2.util.CraftVector;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -88,6 +93,24 @@ public class EntityUtils {
         //send to all viewers
         for (Player p : entity.getTrackedPlayers()) {
             PlayerUtils.sendPacket(p, packet);
+        }
+    }
+    
+    //set velocity fields and send the packet immediately instead of waiting for next tick
+    // otherwise use entity.setVelocity(Vector) for spigot to do it's stuff first
+    public static void setVelocity(Entity entity, Vector velocity) {
+        entity.setVelocity(velocity);
+    
+        if(entity instanceof Player player) {
+            ServerPlayer nmsPlayer = ((CraftPlayer) player).getHandle();
+            //do not do stuff next tick
+            nmsPlayer.hurtMarked = false;
+    
+            //send a packet NOW
+            // can avoid protocollib since the nms constructor is public and modular
+            Vec3 vec = CraftVector.toNMS(velocity);
+            ClientboundSetEntityMotionPacket packet = new ClientboundSetEntityMotionPacket(player.getEntityId(), vec);
+            nmsPlayer.connection.send(packet);
         }
     }
 

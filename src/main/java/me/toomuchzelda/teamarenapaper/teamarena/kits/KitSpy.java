@@ -70,7 +70,7 @@ public class KitSpy extends Kit
 	}
 	
 	public KitSpy() {
-		super("Spy", "sus", Material.SPYGLASS);
+		super("Spy", "sus", Material.CARVED_PUMPKIN);
 		
 		ItemStack boots = new ItemStack(Material.LEATHER_BOOTS);
 		LeatherArmorMeta meta = (LeatherArmorMeta) boots.getItemMeta();

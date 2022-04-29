@@ -91,10 +91,10 @@ public abstract class TeamArena
 			.build();
 	public static final int RESPAWN_SECONDS = 5;
 	public static final int MID_GAME_JOIN_SECONDS = 10;
-	
+
 	protected final List<Kit> defaultKits = List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
 			new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(),
-			new KitNone());
+			new KitNone(), new KitSniper(), new KitVenom());
 	protected Map<String, Kit> kits;
 	protected static ItemStack kitMenuItem = ItemBuilder.of(Material.FEATHER)
 			.displayName(Component.text("Select a Kit").color(NamedTextColor.BLUE)
@@ -190,10 +190,6 @@ public abstract class TeamArena
 		noTeamTeam = new TeamArenaTeam("No Team", "No Team", Color.YELLOW, Color.ORANGE, DyeColor.YELLOW, null, Material.GRASS_BLOCK);
 		spectatorTeam = new TeamArenaTeam("Spectators", "Specs", TeamArenaTeam.convert(NamedTextColor.DARK_GRAY), null,
 				null, null, Material.GLASS);
-		
-		//PlayerScoreboard.addGlobalTeam(noTeamTeam.getPaperTeam());
-		//PlayerScoreboard.addGlobalTeam(spectatorTeam.getPaperTeam());
-		
 		winningTeam = null;
 		lastHadLeft = null;
 
@@ -260,11 +256,13 @@ public abstract class TeamArena
 	// player as in players in the players set
 	// infer the meaning yourself
 	protected void givePlayerItems(Player player, PlayerInfo info) {
+		player.sendMap(miniMap.view);
 		PlayerInventory inventory = player.getInventory();
 		inventory.clear();
 		inventory.setItem(8, miniMap.getMapItem(info.team));
 		info.kit.giveKit(player, true, info);
 	}
+
 
 	public void tick() {
 		gameTick++;
@@ -299,15 +297,13 @@ public abstract class TeamArena
 				prepGameStarting();
 			}
 			//start game
-			else if(waitingSince + TOTAL_WAITING_TIME == gameTick)
-			{
+			else if (waitingSince + TOTAL_WAITING_TIME == gameTick) {
 				prepLive();
 			}
-		}
-		else {
+		} else {
 			waitingSince = gameTick;
 
-			if(gameState == GameState.TEAMS_CHOSEN || gameState == GameState.GAME_STARTING) {
+			if (gameState == GameState.TEAMS_CHOSEN || gameState == GameState.GAME_STARTING) {
 				//remove players from all teams
 				/*for(TeamArenaTeam team : teams) {
 					team.removeAllMembers();
@@ -315,8 +311,8 @@ public abstract class TeamArena
 
 				//maybe band-aid, needed to set gamestate now for setSpectator() to work
 				setGameState(GameState.PREGAME);
-				for(Player p : Bukkit.getOnlinePlayers()) {
-					if(isSpectator(p))
+				for (Player p : Bukkit.getOnlinePlayers()) {
+					if (isSpectator(p))
 						setSpectator(p, false, false);
 					else
 						noTeamTeam.addMembers(p);
@@ -328,7 +324,7 @@ public abstract class TeamArena
 				for (Player player : Bukkit.getOnlinePlayers()) {
 					if ("jacky8399".equalsIgnoreCase(player.getName()))
 						continue;
-					for(int i = 0; i < 10; i++) {
+					for (int i = 0; i < 10; i++) {
 						// peak humor
 						Sound sound = MathUtils.random.nextBoolean() ? SoundUtils.getRandomObnoxiousSound() : SoundUtils.getRandomSound();
 						player.playSound(border.getCenter().toLocation(gameWorld), sound,
@@ -518,7 +514,7 @@ public abstract class TeamArena
 				for (Ability ability : abilities) {
 					ability.onReceiveDamage(event);
 				}
-				
+
 				if (!event.isCancelled()) {
 					PlayerInfo pinfo = Main.getPlayerInfo(p);
 					//spawn damage indicator hologram
@@ -528,16 +524,15 @@ public abstract class TeamArena
 					spawnLoc.add(0, MathUtils.randomRange(1.4, 2), 0);
 					DamageIndicatorHologram hologram = new DamageIndicatorHologram(spawnLoc, PlayerUtils.getDamageIndicatorViewers(p, playerCause), damageText);
 					activeDamageIndicators.add(hologram);
-					
+
 					//add to their damage log
 					pinfo.logDamageReceived(p, event.getDamageType(), event.getFinalDamage(), event.getFinalAttacker(), gameTick);
-					
+
 					if (event.getFinalAttacker() instanceof Player attacker) {
 						pinfo.getKillAssistTracker().addDamage(attacker, event.getFinalDamage());
 					}
 				}
-			}
-			else if(event.getVictim() instanceof Axolotl) {
+			} else if(event.getVictim() instanceof Axolotl) {
 				KitDemolitions.DemolitionsAbility.handleAxolotlDamage(event);
 			}
 		}
@@ -554,7 +549,7 @@ public abstract class TeamArena
 			//don't bother passing it to event handlers?
 			return;
 		}
-		
+
 		if(event.hasKnockback()) {
 			//reduce knockback done by axes
 			if (event.getDamageType().isMelee() && event.getFinalAttacker() instanceof LivingEntity living) {
@@ -573,17 +568,17 @@ public abstract class TeamArena
 				}
 			}
 		}
-		
+
 		if(event.getVictim() instanceof Axolotl) {
 			KitDemolitions.DemolitionsAbility.handleAxolotlAttemptDamage(event);
 		}
 	}
-	
+
 	public boolean isDead(Entity victim) {
 		if(victim instanceof Player p) {
 			return !players.contains(p);
 		}
-		
+
 		return victim.isDead() || !victim.isValid();
 	}
 	
@@ -761,14 +756,14 @@ public abstract class TeamArena
 				ability.unregisterAbility();
 			}
 		}
-		
+
+		miniMap.cleanUp();
+
 		players.clear();
 		spectators.clear();
 		respawnTimers.clear();
 		damageQueue.clear();
 
-		miniMap.cleanUp();
-		
 		Bukkit.getScheduler().runTaskLater(Main.getPlugin(), bukkitTask -> {
 			for (TeamArenaTeam team : teams) {
 				//team.removeAllMembers();
@@ -793,6 +788,8 @@ public abstract class TeamArena
 
 	
 	public void prepDead() {
+		// remove map
+		miniMap.removeMapView();
 		setGameState(GameState.DEAD);
 	}
 
@@ -944,7 +941,7 @@ public abstract class TeamArena
 				//todo: kill the player here (remove from game)
 				EntityDamageEvent event = new EntityDamageEvent(player, EntityDamageEvent.DamageCause.VOID, 9999d);
 				DamageEvent dEvent = DamageEvent.createDamageEvent(event, DamageType.SUICIDE);
-				
+
 				if(isRespawningGame()) {
 					respawnTimers.remove(player); //if respawning game remove them from respawn queue
 					makeSpectator(player);
@@ -1178,6 +1175,7 @@ public abstract class TeamArena
 	}
 
 	public void giveSpectatorItems(Player player) {
+		player.sendMap(miniMap.view);
 		PlayerInventory inventory = player.getInventory();
 		inventory.setItem(8, miniMap.getMapItem());
 		inventory.addItem(new ItemStack(Material.COMPASS));
@@ -1521,13 +1519,13 @@ public abstract class TeamArena
 	public void queueDamage(DamageEvent event) {
 		damageQueue.add(event);
 	}
-	
-	public TeamArenaTeam getSpectatorTeam() {
-		return spectatorTeam;
-	}
-	
+
 	public Set<Player> getPlayers() {
 		return players;
+	}
+
+	public TeamArenaTeam getSpectatorTeam() {
+		return spectatorTeam;
 	}
 	
 	public ArrayList<String> getTabTeamsList() {

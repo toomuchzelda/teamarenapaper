@@ -153,13 +153,14 @@ public class DamageType {
     
     public static final DamageType PYRO_MOLOTOV = new DamageType(DamageTypeEnum.PYRO_MOLOTOV, "Pyro Incendiary", "%Killed% was burned to death by %Killer%'s incendiary")
             .setFire().setIgnoreArmor().setNoKnockback().setDamageSource(DamageSource.ON_FIRE);
-    
+
+	public static final DamageType SNIPER_GRENADE_FAIL = new DamageType(DamageTypeEnum.SNIPER_GRENADE_FAIL, "Grenade Fail", "%Killed% forgot they pulled the pin.")
+			.setInstantDeath().setNoKnockback().setDamageSource(DamageSource.explosion((net.minecraft.world.entity.LivingEntity) null));
+
     public static final DamageType DEMO_TNTMINE = new DamageType(DamageTypeEnum.DEMO_TNTMINE, "Demolitions TNT Mine",
             "%Killed% stepped on %Killer%'s TNT Mine and blew up")
             .setDamageSource(DamageSource.explosion((net.minecraft.world.entity.LivingEntity) null))
             .setIgnoreRate();
-    
-    
 
     //a constant identifier for same types, to compare for same types across separate instances of this class
     // without evaluating a String
@@ -201,7 +202,7 @@ public class DamageType {
         _projectile = copyOf._projectile;
         nmsDamageSource = copyOf.nmsDamageSource;
     }
-    
+
     public DamageType(DamageType copyOf, String... deathMessages) {
         id = copyOf.id;
         _burn = copyOf._burn;
@@ -549,9 +550,10 @@ public class DamageType {
         VOID_PUSHED,
         VOID_SHOT,
         WITHER_POISON,
-
+        
         //Kit Stuff
         PYRO_MOLOTOV,
         DEMO_TNTMINE,
+		SNIPER_GRENADE_FAIL
     }
 }

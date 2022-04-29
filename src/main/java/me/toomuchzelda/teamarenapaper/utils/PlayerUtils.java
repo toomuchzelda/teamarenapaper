@@ -31,12 +31,10 @@ import java.util.Map;
 import java.util.Set;
 
 public class PlayerUtils {
-	
-	
-	public static void sendPacket(Player player, PacketContainer... packets) {
+    public static void sendPacket(Player player, PacketContainer... packets) {
 		sendPacket(player, false, packets);
 	}
-	
+
 	public static void sendPacket(Player player, boolean triggerPacketListeners, PacketContainer... packets) {
 		for (PacketContainer packet : packets) {
 			try {
@@ -45,41 +43,41 @@ public class PlayerUtils {
 				e.printStackTrace();
 			}
 		}
-	}
-	
-	public static void sendPacket(Player player, Packet<?>... packets) {
-		ServerPlayer nmsPlayer = ((CraftPlayer) player).getHandle();
-		for (Packet<?> p : packets) {
-			nmsPlayer.connection.send(p);
-		}
-	}
-	
+    }
+
+    public static void sendPacket(Player player, Packet<?>... packets) {
+        ServerPlayer nmsPlayer = ((CraftPlayer) player).getHandle();
+        for (Packet<?> p : packets) {
+            nmsPlayer.connection.send(p);
+        }
+    }
+
 	public static final double MIN_VELOCITY_FIELD = -3.9d;
 	public static final double MAX_VELOCITY_FIELD = 3.9d;
 	public static Vector limitVelocity(Vector vector) {
 		vector.setX(MathUtils.clamp(MIN_VELOCITY_FIELD, MAX_VELOCITY_FIELD, vector.getX()));
 		vector.setY(MathUtils.clamp(MIN_VELOCITY_FIELD, MAX_VELOCITY_FIELD, vector.getY()));
 		vector.setZ(MathUtils.clamp(MIN_VELOCITY_FIELD, MAX_VELOCITY_FIELD, vector.getZ()));
-		
+
 		return vector;
 	}
-	
+
 	//set velocity fields and send the packet immediately instead of waiting for next tick
 	// otherwise use entity.setVelocity(Vector) for spigot to do it's stuff first
 	public static void sendVelocity(Player player, Vector velocity) {
 		player.setVelocity(velocity);
-		
+
 		ServerPlayer nmsPlayer = ((CraftPlayer) player).getHandle();
 		//do not do stuff next tick
 		nmsPlayer.hurtMarked = false;
-		
+
 		//send a packet NOW
 		// can avoid protocollib since the nms constructor is public and modular
 		Vec3 vec = CraftVector.toNMS(velocity);
 		ClientboundSetEntityMotionPacket packet = new ClientboundSetEntityMotionPacket(player.getEntityId(), vec);
 		nmsPlayer.connection.send(packet);
 	}
-	
+
 	public static Set<Player> getDamageIndicatorViewers(Player takingDamage, Player attacker) {
 		Set<Player> set = new HashSet<>();
 		var iter = Main.getPlayersIter();
@@ -89,7 +87,7 @@ public class PlayerUtils {
 			Map.Entry<Player, PlayerInfo> entry = iter.next();
 			pinfo = entry.getValue();
 			p = entry.getKey();
-			
+
 			if (p == attacker) {
 				if (pinfo.getPreference(Preferences.VIEW_OWN_DAMAGE_DISPLAYERS)) {
 					set.add(p);
@@ -101,7 +99,7 @@ public class PlayerUtils {
 		}
 		return set;
 	}
-	
+
 	/**
 	 * untested
 	 * @param player
@@ -112,10 +110,10 @@ public class PlayerUtils {
 			Material mat = player.getActiveItem().getType();
 			return mat == Material.BOW || mat == Material.CROSSBOW;
 		}
-		
+
 		return false;
 	}
-	
+
 	/**
 	 * use instead of player.setHealth() as that does not call the EntityRegainHealthEvent
 	 * We need to call this event for the player percent damage kill assist thing
@@ -131,39 +129,39 @@ public class PlayerUtils {
 			newHealth = maxHealth;
 			amount = newHealth - oldHealth;
 		}
-		
+
 		EntityRegainHealthEvent event = new EntityRegainHealthEvent(player, amount, reason);
 		Bukkit.getPluginManager().callEvent(event);
-		
+
 		if (!event.isCancelled()) {
 			player.setHealth(newHealth);
 			if (Main.getPlayerInfo(player).getPreference(Preferences.HEARTS_FLASH_REGEN))
 				sendHealth(player);
 		}
 	}
-	
+
 	public static void sendHealth(Player player) {
 		float health = (float) player.getHealth();
 		int food = player.getFoodLevel();
 		float saturation = player.getSaturation();
-		
+
 		ClientboundSetHealthPacket packet = new ClientboundSetHealthPacket(health, food, saturation);
-		
+
 		PlayerUtils.sendPacket(player, packet);
 	}
-	
+
 	//fuck paper, this is fucking insanity
 	public static void sendTitle(Player player, @NotNull Component title, @NotNull Component subtitle, int fadeInTicks,
 								 int stayTicks, int fadeOutTicks) {
-		
+
 		Title.Times times = Title.Times.times(Duration.ofMillis(fadeInTicks * 50L), Duration.ofMillis(stayTicks * 50L),
 				Duration.ofMillis(fadeOutTicks * 50L));
-		
+
 		Title fucktitle = Title.title(title, subtitle, times);
-		
+
 		player.showTitle(fucktitle);
 	}
-	
+
 	public static void resetState(Player player) {
 		player.setArrowsInBody(0);
 		player.setFallDistance(0);
@@ -181,11 +179,11 @@ public class PlayerUtils {
 			player.removePotionEffect(effect.getType());
 		}
 	}
-	
+
 	public static void sendKitMessage(Player player, Component chat, Component actionBar) {
 		sendKitMessage(player, chat, actionBar, Main.getPlayerInfo(player));
 	}
-	
+
 	public static void sendKitMessage(Player player, Component chat, Component actionBar, PlayerInfo pinfo) {
 		if (pinfo.getPreference(Preferences.KIT_CHAT_MESSAGES)) {
 			player.sendMessage(chat);
@@ -194,7 +192,7 @@ public class PlayerUtils {
 			player.sendActionBar(actionBar);
 		}
 	}
-	
+
 	/**
 	 * make a player invisible and hide their nametag from appropriate players
 	 * temporarily removed as not using hologram nametags

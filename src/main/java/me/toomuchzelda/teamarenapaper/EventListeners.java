@@ -17,6 +17,11 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
 import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitGhost;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitPyro;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitReach;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitVenom;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.PreferenceManager;
@@ -54,7 +59,7 @@ public class EventListeners implements Listener
 	public EventListeners(Plugin plugin) {
 		Bukkit.getServer().getPluginManager().registerEvents(this,plugin);
 	}
-	
+
 	//run the TeamArena tick
 	//paper good spigot bad
 	@EventHandler
@@ -153,7 +158,7 @@ public class EventListeners implements Listener
 
 		//todo: read perms from db or other
 		String playerName = event.getPlayer().getName();
-		if ("toomuchzelda".equalsIgnoreCase(playerName) || "jacky8399".equalsIgnoreCase(playerName)) {
+		if ("toomuchzelda".equalsIgnoreCase(playerName) || "jacky8399".equalsIgnoreCase(playerName) || "Onett_".equalsIgnoreCase(playerName)) {
 			event.getPlayer().setOp(true); // lol
 			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.OWNER, event.getPlayer());
 		} else {
@@ -303,12 +308,12 @@ public class EventListeners implements Listener
 	public void entityExplodeEvent(EntityExplodeEvent event) {
 		event.blockList().clear();
 	}
-	
+
 	@EventHandler
 	public void blockExplodeEvent(BlockExplodeEvent event) {
 		event.blockList().clear();
 	}
-	
+
 	@EventHandler
 	public void inventoryCreative(InventoryCreativeEvent event) {
 		if(Main.getGame() != null && event.getWhoClicked() instanceof Player p) {
@@ -429,7 +434,7 @@ public class EventListeners implements Listener
 			return;
 		
 		if(Main.getGame() != null) {
-			
+
 			if(cause == PlayerTeleportEvent.TeleportCause.NETHER_PORTAL ||
 				cause == PlayerTeleportEvent.TeleportCause.END_PORTAL ||
 				cause == PlayerTeleportEvent.TeleportCause.END_GATEWAY) {
@@ -437,7 +442,7 @@ public class EventListeners implements Listener
 			}
 			else if(!Main.getGame().getBorder().contains(event.getTo().toVector())) {
 				event.setCancelled(true);
-				
+
 				if (cause == PlayerTeleportEvent.TeleportCause.ENDER_PEARL) {
 					event.getPlayer().sendMessage(Component.text("One of your ender pearls landed outside the border. " +
 							"Aim better!").color(TextUtils.ERROR_RED));
@@ -450,7 +455,7 @@ public class EventListeners implements Listener
 					event.getPlayer().getInventory().addItem(new ItemStack(Material.DIAMOND));
 				}
 			}
-			
+
 			if(Main.getGame() instanceof CaptureTheFlag ctf && ctf.isFlagCarrier(event.getPlayer())) {
 				Player p = event.getPlayer();
 				event.setCancelled(true);
@@ -507,8 +512,14 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void entityRegainHealth(EntityRegainHealthEvent event) {
-		if(event.getEntity() instanceof Player p) {
-			Main.getPlayerInfo(p).getKillAssistTracker().heal(event.getAmount());
+		if(event.getEntity() instanceof LivingEntity living) {
+			if(KitVenom.POISONED_ENTITIES.containsKey(living)){
+				event.setCancelled(true);
+			}
+
+			if(!event.isCancelled() && event.getEntity() instanceof Player p) {
+				Main.getPlayerInfo(p).getKillAssistTracker().heal(event.getAmount());
+			}
 		}
 	}
 
@@ -551,8 +562,16 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void playerDropItem(PlayerDropItemEvent event) {
-		if(event.getPlayer().getGameMode() != GameMode.CREATIVE)
+		if(event.getPlayer().getGameMode() != GameMode.CREATIVE) {
 			event.setCancelled(true);
+		}
+
+		if(Main.getGame() != null && Main.getGame().getGameState() == LIVE) {
+			Ability[] abilities = Kit.getAbilities(event.getPlayer());
+			for (Ability a : abilities) {
+				a.playerDropItem(event);
+			}
+		}
 	}
 
 	//stop items being moved from one inventory to another (chests etc)
@@ -587,7 +606,7 @@ public class EventListeners implements Listener
 			}
 		}
 	}
-	
+
 	@EventHandler(ignoreCancelled = true)
 	public void onPlayerArmorDrag(InventoryDragEvent e) {
 		if (!(Main.getGame() instanceof CaptureTheFlag ctf))
@@ -630,7 +649,15 @@ public class EventListeners implements Listener
 	public void onRecipeUnlock(PlayerRecipeDiscoverEvent e) {
 		e.setCancelled(true);
 	}
-	
+
+	@EventHandler
+	public void onEat(PlayerItemConsumeEvent event){
+		Player player = event.getPlayer();
+		if(KitVenom.POISONED_ENTITIES.containsKey((LivingEntity)player)){
+			event.setCancelled(true);
+		}
+	}
+
 	/*
 	@EventHandler
 	public void entityRemoveFromWorld(EntityRemoveFromWorldEvent event) {
