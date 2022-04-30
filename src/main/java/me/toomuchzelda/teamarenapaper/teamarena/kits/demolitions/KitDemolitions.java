@@ -30,51 +30,53 @@ public class KitDemolitions extends Kit
 {
 	public KitDemolitions() {
 		super("Demolitions", "mines", Material.STONE_PRESSURE_PLATE);
-		
+
 		ItemStack sword = new ItemStack(Material.IRON_SWORD);
 		sword.addEnchantment(Enchantment.FIRE_ASPECT, 1);
-		
+
 		ItemStack tntMinePlacer = new ItemStack(Material.STICK);
-		
-		setItems(sword, tntMinePlacer, new ItemStack(Material.BLAZE_ROD));
-		
+
+		setItems(sword, tntMinePlacer, new ItemStack(Material.BLAZE_ROD), new ItemStack(Material.FLINT_AND_STEEL));
+
 		this.setAbilities(new DemolitionsAbility());
 	}
-	
+
 	public static class DemolitionsAbility extends Ability
 	{
 		public static final HashMap<Player, List<DemoMine>> PLAYER_MINES = new HashMap<>();
 		static final HashMap<Integer, DemoMine> ARMOR_STAND_ID_TO_DEMO_MINE = new HashMap<>(20, 0.4f);
 		public static final HashMap<Axolotl, DemoMine> AXOLOTL_TO_DEMO_MINE = new HashMap<>();
 		public static final HashSet<BlockVector> MINE_POSITIONS = new HashSet<>();
-		
-		
+
+
 		public static final DamageType DEMO_TNTMINE_BYSTANDER = new DamageType(DamageType.DEMO_TNTMINE,
 				"%Killed% was blown up by %Killer%'s TNT Mine because %Cause% stepped on it. Thanks a lot!");
-		
+
 		public static final DamageType DEMO_TNTMINE_REMOTE = new DamageType(DamageType.DEMO_TNTMINE,
 				"%Killed% was blown up %Killer%'s TNT Mine remotely");
-		
-		
+
+
 		@Override
 		public void unregisterAbility() {
 			PLAYER_MINES.clear();
 			AXOLOTL_TO_DEMO_MINE.clear();
 			ARMOR_STAND_ID_TO_DEMO_MINE.clear();
+
+			DemoMine.clearTeams();
 		}
-		
+
 		@Override
 		public void removeAbility(Player player) {
 			removeMines(player);
 		}
-		
+
 		public static void addMine(@NotNull DemoMine mine) {
 			Player player = mine.owner;
 			List<DemoMine> fromPlayer = PLAYER_MINES.computeIfAbsent(player, demoMines -> {
 				return new ArrayList<>(4);
 			});
 			fromPlayer.add(mine);
-			
+
 			//slightly hacky, but this is already done inside the DemoMine constructor.
 			// it needs to be put into this map before the armor stands are spawned so the
 			// Metadata packet listener for them will read from this map, and know that it's
@@ -82,12 +84,12 @@ public class KitDemolitions extends Kit
 			/*for(ArmorStand stand : mine.stands) {
 				ARMOR_STAND_ID_TO_DEMO_MINE.put(stand.getEntityId(), mine);
 			}*/
-			
+
 			AXOLOTL_TO_DEMO_MINE.put(mine.hitboxEntity, mine);
-			
+
 			MINE_POSITIONS.add(mine.getBlockVector());
 		}
-		
+
 		public void removeMines(Player player) {
 			List<DemoMine> list = PLAYER_MINES.remove(player);
 			if(list != null) {
@@ -97,34 +99,34 @@ public class KitDemolitions extends Kit
 					for(ArmorStand stand : mine.stands) {
 						ARMOR_STAND_ID_TO_DEMO_MINE.remove(stand.getEntityId());
 					}
-					
+
 					AXOLOTL_TO_DEMO_MINE.remove(mine.hitboxEntity);
-					
+
 					MINE_POSITIONS.remove(mine.getBlockVector());
-					
+
 					mine.removeEntities();
 					iter.remove();
 				}
 			}
 		}
-		
+
 		public void removeMine(DemoMine mine) {
 			List<DemoMine> list = PLAYER_MINES.get(mine.owner);
 			if(list != null) {
 				list.remove(mine);
 			}
-			
+
 			for(ArmorStand stand : mine.stands) {
 				ARMOR_STAND_ID_TO_DEMO_MINE.remove(stand.getEntityId());
 			}
-			
+
 			AXOLOTL_TO_DEMO_MINE.remove(mine.hitboxEntity);
-			
+
 			MINE_POSITIONS.remove(mine.getBlockVector());
-			
+
 			mine.removeEntities();
 		}
-		
+
 		@Override
 		public void onInteract(PlayerInteractEvent event) {
 			Block block = event.getClickedBlock();
@@ -136,7 +138,7 @@ public class KitDemolitions extends Kit
 						DemoMine mine = new TNTMine(event.getPlayer(), block);
 						addMine(mine);
 					}
-					else if (mat == Material.BLAZE_ROD) {
+					else {
 						DemoMine mine = new PushMine(event.getPlayer(), block);
 						addMine(mine);
 					}
@@ -147,7 +149,7 @@ public class KitDemolitions extends Kit
 				}
 			}
 		}
-		
+
 		@Override
 		public void onAttemptedAttack(DamageEvent event) {
 			if(event.getDamageType().is(DamageType.EXPLOSION) && event.getAttacker() instanceof TNTPrimed dTnt) {
@@ -169,20 +171,25 @@ public class KitDemolitions extends Kit
 				}
 			}
 		}
-		
+
+		@Override
+		public void onPlayerTick(Player demo) {
+
+		}
+
 		@Override
 		public void onTick() {
 			int gameTick = TeamArena.getGameTick();
-			
+
 			//add mines to be removed to this list and remove afterwards to prevent concurrent modification
 			List<DemoMine> toRemove = new LinkedList<>();
 			var axIter = AXOLOTL_TO_DEMO_MINE.entrySet().iterator();
 			while(axIter.hasNext()) {
 				Map.Entry<Axolotl, DemoMine> entry = axIter.next();
 				DemoMine mine = entry.getValue();
-				
+
 				mine.tick();
-				
+
 				if(mine.removeNextTick) {
 					/*Player player = mine.owner;
 					List<DemoMine> list = PLAYER_MINES.get(player);
@@ -190,12 +197,12 @@ public class KitDemolitions extends Kit
 					if(list.size() == 0) {
 						PLAYER_MINES.remove(player);
 					}
-					
+
 					axIter.remove();
 					mine.removeEntities();
 					MINE_POSITIONS.remove(mine.hitboxEntity.getLocation().toVector().toBlockVector());
 					Bukkit.broadcastMessage(MINE_POSITIONS.toString());*/
-					
+
 					toRemove.add(mine);
 				}
 				//determine if needs to be removed (next tick)
@@ -209,7 +216,7 @@ public class KitDemolitions extends Kit
 						World world = mine.hitboxEntity.getWorld();
 						world.playSound(mine.hitboxEntity.getLocation(), Sound.BLOCK_STONE_BUTTON_CLICK_OFF, 1f, 1f);
 						world.spawnParticle(Particle.CRIT, mine.hitboxEntity.getLocation().add(0, 0.4, 0), 2, 0, 0, 0,0);
-						
+
 						Component message = Component.text("Your " + mine.type.name + " is now armed").color(NamedTextColor.GREEN);
 						PlayerUtils.sendKitMessage(mine.owner, message, message);
 					}
@@ -220,7 +227,7 @@ public class KitDemolitions extends Kit
 					for (Player stepper : Main.getGame().getPlayers()) {
 						if (mine.team.getPlayerMembers().contains(stepper))
 							continue;
-						
+
 						Axolotl axolotl = entry.getKey();
 						if (stepper.getBoundingBox().overlaps(axolotl.getBoundingBox())) {
 							//they stepped on mine, trigger explosion
@@ -229,12 +236,12 @@ public class KitDemolitions extends Kit
 					}
 				}
 			}
-			
+
 			for(DemoMine remove : toRemove) {
 				removeMine(remove);
 			}
 		}
-		
+
 		public static void handleAxolotlAttemptDamage(DamageEvent event) {
 			Axolotl axolotl = (Axolotl) event.getVictim();
 			DemoMine mine = AXOLOTL_TO_DEMO_MINE.get(axolotl);
@@ -243,9 +250,10 @@ public class KitDemolitions extends Kit
 				if(event.getDamageType().is(DamageType.MELEE)) {
 					if (event.getFinalAttacker() instanceof Player breaker) {
 						if(breaker == mine.owner) {
-							if(mine.damage == 0)
+							/*if(mine.damage == 0)
 								breaker.sendMessage(Component.text("This is your mine. Keep punching to remove it")
-										.color(NamedTextColor.AQUA));
+										.color(NamedTextColor.AQUA));*/
+
 							event.setFinalDamage(0d);
 							event.setCancelled(false);
 						}
@@ -258,13 +266,13 @@ public class KitDemolitions extends Kit
 						else if(event.getDamageType().is(DamageType.MELEE)){
 							breaker.sendMessage(Component.text("This is ").color(NamedTextColor.AQUA).append(
 									mine.owner.playerListName()).append(Component.text("'s " + mine.type.name)));
-							
+
 						}
 					}
 				}
 			}
 		}
-		
+
 		public static void handleAxolotlDamage(DamageEvent event) {
 			Axolotl axolotl = (Axolotl) event.getVictim();
 			DemoMine mine = AXOLOTL_TO_DEMO_MINE.get(axolotl);
@@ -276,7 +284,7 @@ public class KitDemolitions extends Kit
 							message = Component.text("You've broken one of ").color(NamedTextColor.AQUA).append(
 								mine.owner.playerListName()).append(Component.text("'s " + mine.type.name + "s!")
 									.color(NamedTextColor.AQUA));
-							
+
 							Component ownerMessage = Component.text("Someone broke one of your " + mine.type.name + "s!")
 									.color(NamedTextColor.AQUA);
 							PlayerUtils.sendKitMessage(mine.owner, ownerMessage, ownerMessage);

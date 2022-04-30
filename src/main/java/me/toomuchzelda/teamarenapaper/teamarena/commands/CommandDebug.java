@@ -147,7 +147,7 @@ public class CommandDebug extends CustomCommand {
                     return;
                 }
                 PlayerInfo info = Main.getPlayerInfo(target);
-                info.team = targetTeam;
+				targetTeam.addMembers(target);
             }
             case "draw" -> {
                 if (args.length < 4) {

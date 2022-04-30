@@ -52,8 +52,12 @@ public class PushMine extends DemoMine
 		};
 		stands[0] = world.spawn(spawnLoc, ArmorStand.class, propApplier);
 
+		this.glowingTeam = DARK_GREEN_GLOWING_TEAM;
 		glowingTeam.addEntities(stands);
 		PlayerScoreboard.addMembersAll(glowingTeam, stands);
+
+		//owner demo should see it as lighter colour
+		Main.getPlayerInfo(owner).getScoreboard().addMembers(GREEN_GLOWING_TEAM, stands);
 	}
 
 	@Override

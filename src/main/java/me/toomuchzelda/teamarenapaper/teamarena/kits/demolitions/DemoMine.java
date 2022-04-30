@@ -17,74 +17,95 @@ import org.bukkit.scoreboard.Team;
 import org.bukkit.util.BlockVector;
 import org.bukkit.util.EulerAngle;
 
-import java.util.HashMap;
-
 public abstract class DemoMine
 {
 	public static final EulerAngle LEG_ANGLE = new EulerAngle(1.5708d, 0 ,0); //angle for legs so boots r horizontal
 	public static final int TNT_TIME_TO_DETONATE = 20;
 	public static final int TIME_TO_ARM = 30;
-	
+
 	//used to set the colour of the glowing effect on the mine armor stand's armor
 	// actual game teams don't matter, just need for the colour
-	private static final HashMap<NamedTextColor, Team> GLOWING_COLOUR_TEAMS = new HashMap<>(16);
-	
+
+	//DARK GREEN and RED - how other teammates see the mines of their team
+	static final Team DARK_GREEN_GLOWING_TEAM; // push mine
+	static final Team RED_GLOWING_TEAM; // tnt mine
+
+	static final Team AQUA_GLOWING_TEAM; // demo's targetted mine
+
+	//GREEN and GOLD - how the mine owner sees their mines
+	static final Team GREEN_GLOWING_TEAM;
+	static final Team GOLD_GLOWING_TEAM;
+
+
+	static final Team[] COLOUR_TEAMS;
+
+	private static final String MINE_TEAM_NAME = "DemoMine";
+
 	static {
-		for(NamedTextColor color : NamedTextColor.NAMES.values()) {
-			Team bukkitTeam = SidebarManager.SCOREBOARD.registerNewTeam("DemoMine" + color.value());
-			bukkitTeam.color(color);
-			bukkitTeam.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
-			
-			GLOWING_COLOUR_TEAMS.put(color, bukkitTeam);
-			PlayerScoreboard.addGlobalTeam(bukkitTeam);
-		}
+			COLOUR_TEAMS = new Team[5];
+
+			NamedTextColor[] matchingColours = new NamedTextColor[] {NamedTextColor.DARK_GREEN, NamedTextColor.RED,
+				NamedTextColor.AQUA, NamedTextColor.GREEN, NamedTextColor.GOLD};
+
+			for(int i = 0; i < 5; i++) {
+				COLOUR_TEAMS[i] = SidebarManager.SCOREBOARD.registerNewTeam(MINE_TEAM_NAME + matchingColours[i].value());
+				COLOUR_TEAMS[i].color(matchingColours[i]);
+				COLOUR_TEAMS[i].setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
+
+				PlayerScoreboard.addGlobalTeam(COLOUR_TEAMS[i]);
+			}
+
+			DARK_GREEN_GLOWING_TEAM = COLOUR_TEAMS[0];
+			RED_GLOWING_TEAM = COLOUR_TEAMS[1];
+			AQUA_GLOWING_TEAM = COLOUR_TEAMS[2];
+			GREEN_GLOWING_TEAM = COLOUR_TEAMS[3];
+			GOLD_GLOWING_TEAM = COLOUR_TEAMS[4];
 	}
-	
+
 	final Player owner;
 	public final TeamArenaTeam team;
-	final Team glowingTeam;
+	Team glowingTeam;
 	ArmorStand[] stands;
 	final Axolotl hitboxEntity; //the mine's interactable hitbox
 	Player triggerer; //store the player that stepped on it for shaming OR the demo if remote detonate
-	
+
 	//for construction
 	final BlockVector blockVector;
 	final Location baseLoc;
 	final Color color;
 	EquipmentSlot armorSlot;
-	
+
 	int damage = 0; //amount of damage it has
 	//whether to remove on next tick
 	// whether it needs to be removed from hashmaps is checked every tick, and we can't remove it on the same tick
 	// as the damage events are processed after the ability tick, so we need to 'schedule' it for removal next tick
 	boolean removeNextTick = false;
 	int creationTime; //store for knowing when it gets 'armed' after placing
-	
+	boolean glowing; //if it's glowing the targetted colour for the owner
+
 	MineType type;
-	
+
 	public DemoMine(Player demo, Block block) {
 		owner = demo;
 		this.team = Main.getPlayerInfo(owner).team;
 		this.creationTime = TeamArena.getGameTick();
-		
+
 		Location blockLoc = block.getLocation();
 		this.blockVector = blockLoc.toVector().toBlockVector();
 		this.color = BlockUtils.getBlockBukkitColor(block);
-		
-		this.glowingTeam = GLOWING_COLOUR_TEAMS.get((NamedTextColor) team.getPaperTeam().color());
-		
+
 		World world = block.getWorld();
 		double topOfBlock = BlockUtils.getBlockHeight(block);
 		//put downwards slightly so rotated legs lay flat on ground and boots partially in ground
 		this.baseLoc = blockLoc.add(0.5d, topOfBlock, 0.5d);
-		
+
 		this.hitboxEntity = world.spawn(baseLoc.clone().add(0, -0.20d, 0), Axolotl.class, entity -> {
 			entity.setAI(false);
 			entity.setSilent(true);
 			entity.setInvisible(true);
 		});
 	}
-	
+
 	void removeEntities() {
 		glowingTeam.removeEntities(stands);
 		PlayerScoreboard.removeMembersAll(glowingTeam, stands);
@@ -93,7 +114,7 @@ public abstract class DemoMine
 		}
 		hitboxEntity.remove();
 	}
-	
+
 	/**
 	 * @return return true if mine extinguised/removed
 	 */
@@ -105,7 +126,7 @@ public abstract class DemoMine
 			world.spawnParticle(Particle.CLOUD, hitboxEntity.getLocation().add(0d, 0.2d, 0d), 1,
 					0.2d, 0.2d, 0.2d, 0.02d);
 		}
-		
+
 		if(this.damage >= type.damageToKill) {
 			// game command: /particle minecraft:cloud ~3 ~0.2 ~ 0.2 0.2 0.2 0.02 3 normal
 			world.spawnParticle(Particle.CLOUD, hitboxEntity.getLocation().add(0d, 0.2d, 0d), 3,
@@ -118,39 +139,49 @@ public abstract class DemoMine
 		}
 		return false;
 	}
-	
+
 	void trigger(Player triggerer) {
 		this.triggerer = triggerer;
 		World world = hitboxEntity.getWorld();
 		Location loc = hitboxEntity.getLocation();
-		
+
 		world.playSound(loc, Sound.BLOCK_STONE_PRESSURE_PLATE_CLICK_ON, 1f, 1f);
 		world.playSound(loc, Sound.ENTITY_CREEPER_HURT, 1f, 0f);
 		world.playSound(loc, Sound.BLOCK_FIRE_EXTINGUISH, 1f, 0f);
-		
+
 		//subclass here
 	}
-	
+
 	abstract boolean isDone();
-	
+
 	boolean isTriggered() {
 		return this.triggerer != null;
 	}
-	
+
 	void tick() {};
-	
+
 	BlockVector getBlockVector() {
 		return blockVector;
 	}
-	
+
+	void glow() {
+		this.glowing = true;
+		Main.getPlayerInfo(owner).getScoreboard().addMembers(AQUA_GLOWING_TEAM, stands);
+	}
+
+	void unGlow() {
+		this.glowing = false;
+		Main.getPlayerInfo(owner).getScoreboard().addMembers(this.glowingTeam, stands);
+	}
+
 	public static boolean isMineStand(int id) {
 		return KitDemolitions.DemolitionsAbility.ARMOR_STAND_ID_TO_DEMO_MINE.containsKey(id);
 	}
-	
+
 	public static DemoMine getStandMine(int id) {
 		return KitDemolitions.DemolitionsAbility.ARMOR_STAND_ID_TO_DEMO_MINE.get(id);
 	}
-	
+
 	public static ArmorStand getMineStand(int id) {
 		DemoMine mine = getStandMine(id);
 		if(mine != null) {
@@ -160,14 +191,14 @@ public abstract class DemoMine
 					return stand;
 			}
 		}
-		
+
 		return null;
 	}
-	
-	private static void clearTeams() {
-		for(Team glowTeam : GLOWING_COLOUR_TEAMS.values()) {
-			PlayerScoreboard.removeEntriesAll(glowTeam, glowTeam.getEntries());
-			glowTeam.removeEntries(glowTeam.getEntries());
+
+	static void clearTeams() {
+		for(Team team : COLOUR_TEAMS) {
+			PlayerScoreboard.removeEntriesAll(team, team.getEntries());
+			team.removeEntries(team.getEntries());
 		}
 	}
 }

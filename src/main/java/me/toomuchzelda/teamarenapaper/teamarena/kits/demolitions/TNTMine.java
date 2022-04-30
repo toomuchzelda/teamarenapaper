@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions;
 
+import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import org.bukkit.Location;
@@ -19,19 +20,19 @@ import java.util.List;
 public class TNTMine extends DemoMine
 {
 	TNTPrimed tnt;
-	
+
 	public TNTMine(Player demo, Block block) {
 		super(demo, block);
-		
+
 		this.type = MineType.TNTMINE;
-		
+
 		Location standBaseLoc = baseLoc.add(0d, -0.85d, 0d);
-		
+
 		Location spawnLoc1 = standBaseLoc.clone().add(0, 0, 0.5d);
 		//put slightly lower to try prevent graphics plane fighting
 		Location spawnLoc2 = standBaseLoc.clone().add(0, -0.005, -0.5d);
 		spawnLoc2.setYaw(180f);
-		
+
 		World world = baseLoc.getWorld();
 		this.armorSlot = EquipmentSlot.FEET;
 		ItemStack leatherBoots = new ItemStack(Material.LEATHER_BOOTS);
@@ -53,36 +54,40 @@ public class TNTMine extends DemoMine
 		};
 		stands[0] = world.spawn(spawnLoc1, ArmorStand.class, propApplier);
 		stands[1] = world.spawn(spawnLoc2, ArmorStand.class, propApplier);
-		
+
+		this.glowingTeam = DemoMine.RED_GLOWING_TEAM;
 		glowingTeam.addEntities(stands);
 		PlayerScoreboard.addMembersAll(glowingTeam, stands);
+
+		//owner demo should see it as lighter colour
+		Main.getPlayerInfo(owner).getScoreboard().addMembers(GOLD_GLOWING_TEAM, stands);
 	}
-	
+
 	@Override
 	public void trigger(Player triggerer) {
 		super.trigger(triggerer);
-		
+
 		removeEntities(); //won't remove the tnt as it's still null as of now
-		
+
 		TNTPrimed tnt = (TNTPrimed) baseLoc.getWorld().spawnEntity(hitboxEntity.getLocation(), EntityType.PRIMED_TNT);
 		tnt.setFuseTicks(TNT_TIME_TO_DETONATE);
 		tnt.setSource(this.owner);
 		tnt.setVelocity(new Vector(0, 0.45d, 0));
 		this.tnt = tnt;
 	}
-	
+
 	@Override
 	boolean isDone() {
 		return this.type == MineType.TNTMINE && this.tnt != null && !this.tnt.isValid();
 	}
-	
+
 	@Override
 	void removeEntities() {
 		super.removeEntities();
 		if(this.tnt != null)
 			tnt.remove();
 	}
-	
+
 	public static TNTMine getByTNT(Player player, TNTPrimed tnt) {
 		List<DemoMine> list = KitDemolitions.DemolitionsAbility.PLAYER_MINES.get(player);
 		TNTMine lex_mine = null;
