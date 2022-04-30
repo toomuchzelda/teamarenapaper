@@ -3,15 +3,12 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.RayTraceResult;
@@ -23,17 +20,17 @@ public class PushMine extends DemoMine
 	public static final int TIME_TO_DETONATE = 20;
 	public static final double BLAST_RADIUS = 4.5;
 	public static final double BLAST_RADIUS_SQRD = BLAST_RADIUS * BLAST_RADIUS;
-	public static final double BLAST_STRENGTH = 0.4;
-	
+	public static final double BLAST_STRENGTH = 0.35d;
+
 	private int triggerTime;
-	
+
 	public PushMine(Player demo, Block block) {
 		super(demo, block);
-		
+
 		this.type = MineType.PUSHMINE;
-		
+
 		Location spawnLoc = baseLoc.clone().add(0, -1.8, 0);
-		
+
 		World world = baseLoc.getWorld();
 		this.armorSlot = EquipmentSlot.HEAD;
 		ItemStack leatherHelmet = new ItemStack(Material.LEATHER_HELMET);
@@ -54,22 +51,22 @@ public class PushMine extends DemoMine
 			KitDemolitions.DemolitionsAbility.ARMOR_STAND_ID_TO_DEMO_MINE.put(stand.getEntityId(), this);
 		};
 		stands[0] = world.spawn(spawnLoc, ArmorStand.class, propApplier);
-		
+
 		glowingTeam.addEntities(stands);
 		PlayerScoreboard.addMembersAll(glowingTeam, stands);
 	}
-	
+
 	@Override
 	public void trigger(Player triggerer) {
 		super.trigger(triggerer);
 		this.triggerTime = TeamArena.getGameTick();
-		
+
 		Location loc = stands[0].getLocation();
 		loc.add(0, 0.5, 0);
 		loc.setYaw(loc.getYaw() - 180f);
 		this.stands[0].teleport(loc);
 	}
-	
+
 	@Override
 	void tick() {
 		if(isTriggered()) {
@@ -78,17 +75,17 @@ public class PushMine extends DemoMine
 				Location explodeLoc = baseLoc.clone().add(0, 0.1, 0);
 				world.spawnParticle(Particle.EXPLOSION_NORMAL, explodeLoc, 1);
 				world.playSound(explodeLoc, Sound.ENTITY_GENERIC_EXPLODE, 1f, 2f);
-				
+
 				//create a sort of explosion that pushes everyone away
 				Vector explodeLocVec = explodeLoc.toVector();
 				RayTraceResult result;
 				for(Player p : Main.getGame().getPlayers()) {
 					if(this.team.getPlayerMembers().contains(p))
 						continue;
-					
+
 					//add half of height so aim for middle of body not feet
 					Vector vector = p.getLocation().add(0, p.getHeight() / 2, 0).toVector().subtract(explodeLocVec);
-					
+
 					result = world.rayTrace(explodeLoc, vector, BLAST_RADIUS, FluidCollisionMode.SOURCE_ONLY, true, 0,
 							e -> e == p);
 					//Bukkit.broadcastMessage(result.toString());
@@ -102,24 +99,24 @@ public class PushMine extends DemoMine
 					else if(lengthSqrd <= 1.04880884817d){
 						affect = true;
 					}
-					
+
 					if (affect) {
 						//weaker knockback the further they are from mine base
 						double power = Math.sqrt(BLAST_RADIUS_SQRD - lengthSqrd);
 						vector.normalize();
+						vector.add(p.getVelocity().multiply(0.4));
+						PlayerUtils.noNonFinites(vector);
 						vector.multiply(power * BLAST_STRENGTH);
-						
-						PlayerUtils.sendVelocity(p, PlayerUtils.limitVelocity(vector));
-						//EntityDamageByEntityEvent event = new EntityDamageByEntityEvent(this.owner, p, EntityDamageEvent.DamageCause.BLOCK_EXPLOSION, 0.01d);
-						//DamageEvent dEvent = DamageEvent.createDamageEvent(event, DamageType.)
+
+						PlayerUtils.sendVelocity(p, vector);
 					}
 				}
-				
+
 				this.removeEntities();
 			}
 		}
 	}
-	
+
 	@Override
 	boolean isDone() {
 		return !this.stands[0].isValid();

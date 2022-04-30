@@ -52,12 +52,10 @@ public class PlayerUtils {
         }
     }
 
-	public static final double MIN_VELOCITY_FIELD = -3.9d;
-	public static final double MAX_VELOCITY_FIELD = 3.9d;
-	public static Vector limitVelocity(Vector vector) {
-		vector.setX(MathUtils.clamp(MIN_VELOCITY_FIELD, MAX_VELOCITY_FIELD, vector.getX()));
-		vector.setY(MathUtils.clamp(MIN_VELOCITY_FIELD, MAX_VELOCITY_FIELD, vector.getY()));
-		vector.setZ(MathUtils.clamp(MIN_VELOCITY_FIELD, MAX_VELOCITY_FIELD, vector.getZ()));
+	public static Vector noNonFinites(Vector vector) {
+		if(!Double.isFinite(vector.getX())) vector.setX(0d);
+		if(!Double.isFinite(vector.getY())) vector.setY(0d);
+		if(!Double.isFinite(vector.getZ())) vector.setZ(0d);
 
 		return vector;
 	}
