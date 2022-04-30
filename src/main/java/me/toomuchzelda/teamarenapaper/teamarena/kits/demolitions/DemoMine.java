@@ -16,12 +16,14 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.BlockVector;
 import org.bukkit.util.EulerAngle;
+import org.bukkit.util.Vector;
 
 public abstract class DemoMine
 {
-	public static final EulerAngle LEG_ANGLE = new EulerAngle(1.5708d, 0 ,0); //angle for legs so boots r horizontal
-	public static final int TNT_TIME_TO_DETONATE = 20;
 	public static final int TIME_TO_ARM = 30;
+	public static final double REMOTE_ARMING_DISTANCE = 1000d;
+	public static final double REMOTE_ARMING_DISTANCE_SQRD = REMOTE_ARMING_DISTANCE * REMOTE_ARMING_DISTANCE;
+	public static final double TARGETTING_ANGLE = Math.PI / 4;
 
 	//used to set the colour of the glowing effect on the mine armor stand's armor
 	// actual game teams don't matter, just need for the colour
@@ -65,6 +67,7 @@ public abstract class DemoMine
 	final Player owner;
 	public final TeamArenaTeam team;
 	Team glowingTeam;
+	Team ownerGlowingTeam; //sub-mine specific
 	ArmorStand[] stands;
 	final Axolotl hitboxEntity; //the mine's interactable hitbox
 	Player triggerer; //store the player that stepped on it for shaming OR the demo if remote detonate
@@ -72,6 +75,7 @@ public abstract class DemoMine
 	//for construction
 	final BlockVector blockVector;
 	final Location baseLoc;
+	final Vector targetLoc;
 	final Color color;
 	EquipmentSlot armorSlot;
 
@@ -98,6 +102,7 @@ public abstract class DemoMine
 		double topOfBlock = BlockUtils.getBlockHeight(block);
 		//put downwards slightly so rotated legs lay flat on ground and boots partially in ground
 		this.baseLoc = blockLoc.add(0.5d, topOfBlock, 0.5d);
+		this.targetLoc = baseLoc.toVector().add(new Vector(0d, 0.1d, 0d));
 
 		this.hitboxEntity = world.spawn(baseLoc.clone().add(0, -0.20d, 0), Axolotl.class, entity -> {
 			entity.setAI(false);
@@ -158,10 +163,18 @@ public abstract class DemoMine
 		return this.triggerer != null;
 	}
 
+	boolean isArmed() {
+		return TeamArena.getGameTick() > this.creationTime + DemoMine.TIME_TO_ARM;
+	}
+
 	void tick() {};
 
 	BlockVector getBlockVector() {
 		return blockVector;
+	}
+
+	Vector getTargetLoc() {
+		return targetLoc;
 	}
 
 	void glow() {
@@ -171,7 +184,7 @@ public abstract class DemoMine
 
 	void unGlow() {
 		this.glowing = false;
-		Main.getPlayerInfo(owner).getScoreboard().addMembers(this.glowingTeam, stands);
+		Main.getPlayerInfo(owner).getScoreboard().addMembers(this.ownerGlowingTeam, stands);
 	}
 
 	public static boolean isMineStand(int id) {

@@ -45,14 +45,13 @@ public class PushMine extends DemoMine
 			stand.setInvulnerable(true);
 			stand.setBasePlate(false);
 			stand.setInvisible(true);
-			stand.setLeftLegPose(LEG_ANGLE);
-			stand.setRightLegPose(LEG_ANGLE);
 			stand.getEquipment().setHelmet(leatherHelmet, true);
 			KitDemolitions.DemolitionsAbility.ARMOR_STAND_ID_TO_DEMO_MINE.put(stand.getEntityId(), this);
 		};
 		stands[0] = world.spawn(spawnLoc, ArmorStand.class, propApplier);
 
 		this.glowingTeam = DARK_GREEN_GLOWING_TEAM;
+		this.ownerGlowingTeam = GREEN_GLOWING_TEAM;
 		glowingTeam.addEntities(stands);
 		PlayerScoreboard.addMembersAll(glowingTeam, stands);
 

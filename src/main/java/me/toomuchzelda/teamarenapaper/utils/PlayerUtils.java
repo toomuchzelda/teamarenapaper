@@ -20,6 +20,8 @@ import org.bukkit.craftbukkit.v1_18_R2.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_18_R2.util.CraftVector;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
+import org.bukkit.inventory.EntityEquipment;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
@@ -110,6 +112,12 @@ public class PlayerUtils {
 		}
 
 		return false;
+	}
+
+	public static boolean isHolding(Player player, ItemStack item) {
+		EntityEquipment equipment = player.getEquipment();
+
+		return equipment.getItemInMainHand().isSimilar(item) || equipment.getItemInOffHand().isSimilar(item);
 	}
 
 	/**

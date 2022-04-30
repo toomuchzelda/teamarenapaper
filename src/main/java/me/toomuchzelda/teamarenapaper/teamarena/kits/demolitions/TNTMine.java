@@ -13,12 +13,16 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.EulerAngle;
 import org.bukkit.util.Vector;
 
 import java.util.List;
 
 public class TNTMine extends DemoMine
 {
+	public static final EulerAngle LEG_ANGLE = new EulerAngle(1.5708d, 0 ,0); //angle for legs so boots r horizontal
+	public static final int TNT_TIME_TO_DETONATE = 20;
+
 	TNTPrimed tnt;
 
 	public TNTMine(Player demo, Block block) {
@@ -26,7 +30,7 @@ public class TNTMine extends DemoMine
 
 		this.type = MineType.TNTMINE;
 
-		Location standBaseLoc = baseLoc.add(0d, -0.85d, 0d);
+		Location standBaseLoc = baseLoc.clone().add(0d, -0.85d, 0d);
 
 		Location spawnLoc1 = standBaseLoc.clone().add(0, 0, 0.5d);
 		//put slightly lower to try prevent graphics plane fighting
@@ -56,6 +60,7 @@ public class TNTMine extends DemoMine
 		stands[1] = world.spawn(spawnLoc2, ArmorStand.class, propApplier);
 
 		this.glowingTeam = DemoMine.RED_GLOWING_TEAM;
+		this.ownerGlowingTeam = DemoMine.GOLD_GLOWING_TEAM;
 		glowingTeam.addEntities(stands);
 		PlayerScoreboard.addMembersAll(glowingTeam, stands);
 

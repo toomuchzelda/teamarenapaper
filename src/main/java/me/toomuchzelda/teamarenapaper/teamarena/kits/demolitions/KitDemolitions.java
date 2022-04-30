@@ -6,6 +6,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.utils.Pair;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
@@ -18,9 +19,11 @@ import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Axolotl;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
+import org.bukkit.event.Event;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.BlockVector;
+import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -28,6 +31,8 @@ import java.util.*;
 
 public class KitDemolitions extends Kit
 {
+	public static final ItemStack REMOTE_DETONATOR_ITEM = new ItemStack(Material.FLINT_AND_STEEL);
+
 	public KitDemolitions() {
 		super("Demolitions", "mines", Material.STONE_PRESSURE_PLATE);
 
@@ -36,7 +41,7 @@ public class KitDemolitions extends Kit
 
 		ItemStack tntMinePlacer = new ItemStack(Material.STICK);
 
-		setItems(sword, tntMinePlacer, new ItemStack(Material.BLAZE_ROD), new ItemStack(Material.FLINT_AND_STEEL));
+		setItems(sword, tntMinePlacer, new ItemStack(Material.BLAZE_ROD), REMOTE_DETONATOR_ITEM);
 
 		this.setAbilities(new DemolitionsAbility());
 	}
@@ -44,10 +49,11 @@ public class KitDemolitions extends Kit
 	public static class DemolitionsAbility extends Ability
 	{
 		public static final HashMap<Player, List<DemoMine>> PLAYER_MINES = new HashMap<>();
+		public static final HashMap<Player, DemoMine> TARGETTED_MINE = new HashMap<>();
+
 		static final HashMap<Integer, DemoMine> ARMOR_STAND_ID_TO_DEMO_MINE = new HashMap<>(20, 0.4f);
 		public static final HashMap<Axolotl, DemoMine> AXOLOTL_TO_DEMO_MINE = new HashMap<>();
 		public static final HashSet<BlockVector> MINE_POSITIONS = new HashSet<>();
-
 
 		public static final DamageType DEMO_TNTMINE_BYSTANDER = new DamageType(DamageType.DEMO_TNTMINE,
 				"%Killed% was blown up by %Killer%'s TNT Mine because %Cause% stepped on it. Thanks a lot!");
@@ -61,6 +67,7 @@ public class KitDemolitions extends Kit
 			PLAYER_MINES.clear();
 			AXOLOTL_TO_DEMO_MINE.clear();
 			ARMOR_STAND_ID_TO_DEMO_MINE.clear();
+			TARGETTED_MINE.clear();
 
 			DemoMine.clearTeams();
 		}
@@ -148,6 +155,16 @@ public class KitDemolitions extends Kit
 							TextUtils.ERROR_RED));
 				}
 			}
+			else if(mat == REMOTE_DETONATOR_ITEM.getType()) {
+				Player demo = event.getPlayer();
+				event.setUseItemInHand(Event.Result.DENY);
+				DemoMine mine = TARGETTED_MINE.get(demo);
+				if(mine != null) {
+					mine.trigger(demo);
+					mine.unGlow();
+					TARGETTED_MINE.remove(demo);
+				}
+			}
 		}
 
 		@Override
@@ -174,7 +191,67 @@ public class KitDemolitions extends Kit
 
 		@Override
 		public void onPlayerTick(Player demo) {
+			if(!PlayerUtils.isHolding(demo, REMOTE_DETONATOR_ITEM)) {
+				DemoMine mine = TARGETTED_MINE.remove(demo);
+				if(mine != null)
+					mine.unGlow();
 
+			}
+			else {
+				//Credit jacky8399 for in-field-of-view algorithm
+				Location demoLoc = demo.getEyeLocation();
+				Vector demoLocVec = demoLoc.toVector();
+				Vector direction = demoLoc.getDirection();
+
+				List<DemoMine> mines = PLAYER_MINES.get(demo);
+				List<Pair<DemoMine, Double>> targetCandidates = new ArrayList<>(mines.size());
+
+				if (mines != null) {
+					for (DemoMine mine : mines) {
+						if (!mine.isTriggered() && mine.isArmed() &&
+								mine.getTargetLoc().distanceSquared(demoLocVec) <= DemoMine.REMOTE_ARMING_DISTANCE_SQRD) {
+							Vector playerToPoint = mine.getTargetLoc().clone().subtract(demoLocVec).normalize();
+							double angle = playerToPoint.angle(direction);
+
+							if (angle <= DemoMine.TARGETTING_ANGLE) {
+								targetCandidates.add(new Pair<>(mine, angle));
+								/*demoLoc.getWorld().spawnParticle(Particle.CRIT,
+										mine.getTargetLoc().toLocation(demoLoc.getWorld()), 1);*/
+							}
+						}
+					}
+				}
+
+				//get the one being closest pointed at
+				Double smallestAngle = 10000d;
+				DemoMine targettedMine = null;
+				for(Pair<DemoMine, Double> pair : targetCandidates) {
+					if(pair.getRight() < smallestAngle) {
+						smallestAngle = pair.getRight();
+						targettedMine = pair.getLeft();
+					}
+				}
+
+				if(targettedMine != null) {
+					if(!targettedMine.glowing)
+						targettedMine.glow();
+
+					//unglow the previous mine if any and put the new one in
+					final DemoMine finalTargettedMine = targettedMine;
+					TARGETTED_MINE.compute(demo, (player, demoMine) -> {
+						if(demoMine != null && demoMine != finalTargettedMine) {
+							demoMine.unGlow();
+						}
+
+						return finalTargettedMine;
+					});
+				}
+				else if(targetCandidates.size() == 0) {
+					DemoMine mine = TARGETTED_MINE.remove(demo);
+					if(mine != null)
+						mine.unGlow();
+				}
+			}
 		}
 
 		@Override
@@ -210,7 +287,7 @@ public class KitDemolitions extends Kit
 					mine.removeNextTick = true;
 				}
 				//if it hasn't been armed yet
-				else if(gameTick <= mine.creationTime + DemoMine.TIME_TO_ARM) {
+				else if(!mine.isArmed()) {
 					//indicate its armed
 					if(gameTick == mine.creationTime + DemoMine.TIME_TO_ARM) {
 						World world = mine.hitboxEntity.getWorld();
