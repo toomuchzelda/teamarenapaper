@@ -73,10 +73,10 @@ public class PushMine extends DemoMine
 	@Override
 	void tick() {
 		if(isTriggered()) {
-			if(TeamArena.getGameTick() - triggerTime >= TIME_TO_DETONATE) {
+			if(TeamArena.getGameTick() - triggerTime == TIME_TO_DETONATE) {
 				World world = baseLoc.getWorld();
 				Location explodeLoc = baseLoc.clone().add(0, 0.1, 0);
-				world.spawnParticle(Particle.EXPLOSION_NORMAL, explodeLoc, 1);
+				world.spawnParticle(Particle.EXPLOSION_NORMAL, explodeLoc, 2);
 				world.playSound(explodeLoc, Sound.ENTITY_GENERIC_EXPLODE, 1f, 2f);
 
 				//create a sort of explosion that pushes everyone away
@@ -108,10 +108,9 @@ public class PushMine extends DemoMine
 						double power = Math.sqrt(BLAST_RADIUS_SQRD - lengthSqrd);
 						vector.normalize();
 						vector.add(p.getVelocity().multiply(0.4));
-						PlayerUtils.noNonFinites(vector);
 						vector.multiply(power * BLAST_STRENGTH);
 
-						PlayerUtils.sendVelocity(p, vector);
+						PlayerUtils.sendVelocity(p, PlayerUtils.noNonFinites(vector));
 					}
 				}
 

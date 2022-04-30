@@ -145,7 +145,9 @@ public abstract class DemoMine
 		return false;
 	}
 
-	void trigger(Player triggerer) {
+	void
+	trigger(Player triggerer) {
+		unGlow();
 		this.triggerer = triggerer;
 		World world = hitboxEntity.getWorld();
 		Location loc = hitboxEntity.getLocation();

@@ -161,7 +161,6 @@ public class KitDemolitions extends Kit
 				DemoMine mine = TARGETTED_MINE.get(demo);
 				if(mine != null) {
 					mine.trigger(demo);
-					mine.unGlow();
 					TARGETTED_MINE.remove(demo);
 				}
 			}
