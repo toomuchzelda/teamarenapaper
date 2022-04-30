@@ -13,7 +13,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.block.Block;
-import org.bukkit.craftbukkit.v1_18_R2.entity.CraftArmorStand;
+import org.bukkit.block.BlockFace;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Axolotl;
@@ -33,6 +33,19 @@ public class KitDemolitions extends Kit
 {
 	public static final ItemStack REMOTE_DETONATOR_ITEM = new ItemStack(Material.FLINT_AND_STEEL);
 
+	public static final EnumMap<Material, Boolean> VALID_MINE_BLOCKS;
+
+	static {
+		VALID_MINE_BLOCKS = new EnumMap<Material, Boolean>(Material.class);
+
+		for(Material mat : Material.values()) {
+			if(mat.isOccluding() || mat.name().endsWith("SLAB") || mat.name().endsWith("STAIRS")) {
+				VALID_MINE_BLOCKS.put(mat, true);
+			}
+		}
+	}
+
+
 	public KitDemolitions() {
 		super("Demolitions", "mines", Material.STONE_PRESSURE_PLATE);
 
@@ -44,6 +57,13 @@ public class KitDemolitions extends Kit
 		setItems(sword, tntMinePlacer, new ItemStack(Material.BLAZE_ROD), REMOTE_DETONATOR_ITEM);
 
 		this.setAbilities(new DemolitionsAbility());
+
+		this.setArmor(new ItemStack(Material.CHAINMAIL_HELMET), new ItemStack(Material.CHAINMAIL_CHESTPLATE),
+				new ItemStack(Material.CHAINMAIL_LEGGINGS), new ItemStack(Material.GOLDEN_BOOTS));
+	}
+
+	public static boolean isValidMineBlock(Block block) {
+		return VALID_MINE_BLOCKS.containsKey(block.getType());
 	}
 
 	public static class DemolitionsAbility extends Ability
@@ -59,7 +79,7 @@ public class KitDemolitions extends Kit
 				"%Killed% was blown up by %Killer%'s TNT Mine because %Cause% stepped on it. Thanks a lot!");
 
 		public static final DamageType DEMO_TNTMINE_REMOTE = new DamageType(DamageType.DEMO_TNTMINE,
-				"%Killed% was blown up %Killer%'s TNT Mine remotely");
+				"%Killed% was blown up by %Killer%'s TNT Mine remotely");
 
 
 		@Override
@@ -138,21 +158,25 @@ public class KitDemolitions extends Kit
 		public void onInteract(PlayerInteractEvent event) {
 			Block block = event.getClickedBlock();
 			Material mat = event.getMaterial();
-			if (block != null && (mat == Material.STICK || mat == Material.BLAZE_ROD)) {
-				if(!MINE_POSITIONS.contains(block.getLocation().toVector().toBlockVector())) {
-					if (mat == Material.STICK) {
-						// create a mine
-						DemoMine mine = new TNTMine(event.getPlayer(), block);
-						addMine(mine);
+			if (block != null && event.getBlockFace() == BlockFace.UP &&
+					(mat == Material.STICK || mat == Material.BLAZE_ROD)) {
+				if(isValidMineBlock(block)) {
+					if (!MINE_POSITIONS.contains(block.getLocation().toVector().toBlockVector())) {
+						if (mat == Material.STICK) {
+							// create a mine
+							DemoMine mine = new TNTMine(event.getPlayer(), block);
+							addMine(mine);
+						}
+						else {
+							DemoMine mine = new PushMine(event.getPlayer(), block);
+							addMine(mine);
+						}
 					}
 					else {
-						DemoMine mine = new PushMine(event.getPlayer(), block);
-						addMine(mine);
+						final Component message = Component.text("A Mine has already been placed here",
+								TextUtils.ERROR_RED);
+						PlayerUtils.sendKitMessage(event.getPlayer(), message, message);
 					}
-				}
-				else {
-					event.getPlayer().sendMessage(Component.text("A Mine has already been placed here",
-							TextUtils.ERROR_RED));
 				}
 			}
 			else if(mat == REMOTE_DETONATOR_ITEM.getType()) {
@@ -203,9 +227,10 @@ public class KitDemolitions extends Kit
 				Vector direction = demoLoc.getDirection();
 
 				List<DemoMine> mines = PLAYER_MINES.get(demo);
-				List<Pair<DemoMine, Double>> targetCandidates = new ArrayList<>(mines.size());
+				List<Pair<DemoMine, Double>> targetCandidates;
 
 				if (mines != null) {
+					targetCandidates = new ArrayList<>(mines.size());
 					for (DemoMine mine : mines) {
 						if (!mine.isTriggered() && mine.isArmed() &&
 								mine.getTargetLoc().distanceSquared(demoLocVec) <= DemoMine.REMOTE_ARMING_DISTANCE_SQRD) {
@@ -219,6 +244,9 @@ public class KitDemolitions extends Kit
 							}
 						}
 					}
+				}
+				else {
+					targetCandidates = new ArrayList<>(0);
 				}
 
 				//get the one being closest pointed at

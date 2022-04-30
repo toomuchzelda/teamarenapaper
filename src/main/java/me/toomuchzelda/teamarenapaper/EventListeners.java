@@ -79,12 +79,12 @@ public class EventListeners implements Listener
 		//run this before the game tick so there is a whole tick after prepDead and construction of the next
 		// TeamArena instance
 		if(Main.getGame().getGameState() == DEAD) {
-			
+
 			//use this opportunity to cleanup
 			Iterator<Map.Entry<Player, PlayerInfo>> pinfoIter = Main.getPlayersIter();
 			while(pinfoIter.hasNext()) {
 				Entry<Player, PlayerInfo> entry = pinfoIter.next();
-				
+
 				if(!entry.getKey().isOnline()) {
 					pinfoIter.remove();
 				}
@@ -94,13 +94,13 @@ public class EventListeners implements Listener
 			}
 			DamageTimes.cleanup();
 			Main.playerIdLookup.entrySet().removeIf(idLookupEntry -> !idLookupEntry.getValue().isOnline());
-			
+
 			if(MathUtils.random.nextBoolean()) {//MathUtils.randomMax(3) < 3) {
 				TeamArena.nextGameType = GameType.KOTH;
 			}
 			else
 				TeamArena.nextGameType = GameType.CTF;
-			
+
 			if(TeamArena.nextGameType == GameType.KOTH) {
 				Main.setGame(new KingOfTheHill());
 			}
@@ -115,7 +115,7 @@ public class EventListeners implements Listener
 		catch(Exception e) {
 			e.printStackTrace();
 		}
-		
+
 		/*try {
 			//update nametag positions
 			for (PlayerInfo pinfo : Main.getPlayerInfos()) {
@@ -135,7 +135,7 @@ public class EventListeners implements Listener
 
 		PacketListeners.cancelDamageSounds = true;
 	}
-	
+
 	private final HashMap<UUID, CompletableFuture<Map<Preference<?>, ?>>> preferenceFutureMap = new HashMap<>();
 	@EventHandler(priority = EventPriority.MONITOR)
 	public void asynchronousPlayerPreLoginEventHandler(AsyncPlayerPreLoginEvent e) {
@@ -145,8 +145,8 @@ public class EventListeners implements Listener
 			preferenceFutureMap.put(e.getUniqueId(), PreferenceManager.fetchPreferences(e.getUniqueId()));
 		}
 	}
-	
-	
+
+
 	//these three events are called in this order
 	@EventHandler
 	public void playerLogin(PlayerLoginEvent event) {
@@ -164,7 +164,7 @@ public class EventListeners implements Listener
 		} else {
 			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.ALL, event.getPlayer());
 		}
-		
+
 		synchronized (preferenceFutureMap) {
 			CompletableFuture<Map<Preference<?>, ?>> future = preferenceFutureMap.remove(uuid);
 			if (future == null) {
@@ -174,17 +174,17 @@ public class EventListeners implements Listener
 			}
 			playerInfo.setPreferenceValues(future.join());
 		}
-		
+
 		Main.addPlayerInfo(event.getPlayer(), playerInfo);
 		Main.getGame().loggingInPlayer(event.getPlayer(), playerInfo);
 		Main.playerIdLookup.put(event.getPlayer().getEntityId(), event.getPlayer());
 	}
-	
+
 	@EventHandler
 	public void playerSpawn(PlayerSpawnLocationEvent event) {
 		event.setSpawnLocation(Main.getPlayerInfo(event.getPlayer()).spawnPoint);
 	}
-	
+
 	@EventHandler
 	public void playerJoin(PlayerJoinEvent event) {
 		//disable yellow "Player has joined the game" messages
@@ -215,21 +215,21 @@ public class EventListeners implements Listener
 			return false;
 		});
 	}
-	
+
 	//public static int i = 0;
-	
+
 	//handle tab-completes asynchronously
 	/*@EventHandler
 	public void asyncTabComplete(AsyncTabCompleteEvent event) {
 		//parse if it's a command first
-		
+
 		Bukkit.broadcastMessage(event.getBuffer());
 		Bukkit.broadcastMessage("----------" + i++);
 		/*for(AsyncTabCompleteEvent.Completion completion : event.completions()) {
 			Bukkit.broadcast(Component.text(completion.suggestion() + " + ").append(completion.tooltip() == null ? Component.empty() : completion.tooltip()));
 		}
 		Bukkit.broadcastMessage("============");
-		
+
 		String typed = event.getBuffer();
 		if(typed.startsWith("/")) {
 			int firstSpaceIdx = typed.indexOf(' ');
@@ -251,12 +251,12 @@ public class EventListeners implements Listener
 					AsyncTabCompleteEvent.Completion completion = AsyncTabCompleteEvent.Completion.completion(s);
 					completionSuggestions.add(completion);
 				}
-				
+
 				event.completions(completionSuggestions);
 			}
 		}
 	}*/
-	
+
 	@EventHandler
 	public void playerQuit(PlayerQuitEvent event) {
 		event.quitMessage(null);
@@ -265,19 +265,19 @@ public class EventListeners implements Listener
 		Main.removePlayerInfo(event.getPlayer());
 		Main.playerIdLookup.remove(event.getPlayer().getEntityId());
 	}
-	
+
 	@EventHandler
 	public void playerMove(PlayerMoveEvent event) {
 		TeamArena game = Main.getGame();
 		if(game.getGameState() == GameState.GAME_STARTING && !game.isSpectator(event.getPlayer())) {
 			Location prev = event.getFrom();
 			Location next = event.getTo();
-			
+
 			if(prev.getX() != next.getX() || prev.getZ() != next.getZ()) {
 				event.setCancelled(true);
 			}
 		}
-		
+
 		//prevent them from moving outside the game border
 		if(!event.isCancelled()) {
 			Vector to = event.getTo().toVector();
@@ -297,10 +297,10 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void blockBreak(BlockBreakEvent event) {
-		if(event.getPlayer().getGameMode() != GameMode.CREATIVE)
+		if(event.getPlayer().getGameMode() != GameMode.CREATIVE && event.getBlock().getType().isCollidable())
 			event.setCancelled(true);
 	}
-	
+
 	/**
 	 * prevent explosions from breaking blocks
 	 */
@@ -326,7 +326,7 @@ public class EventListeners implements Listener
 			}
 		}
 	}
-	
+
 	/*@EventHandler
 	public void entityPoseChange(EntityPoseChangeEvent event) {
 		if(event.getEntity() instanceof  Player p) {
@@ -346,7 +346,7 @@ public class EventListeners implements Listener
 	public void entityDamage(EntityDamageEvent event) {
 		DamageEvent.createDamageEvent(event);
 	}
-	
+
 	@EventHandler
 	public void playerDeath(PlayerDeathEvent event) {
 		Main.logger().warning("PlayerDeathEvent called! not good");
@@ -368,10 +368,10 @@ public class EventListeners implements Listener
 	public void entityShootBow(EntityShootBowEvent event) {
 		event.getProjectile().setVelocity(EntityUtils.projectileLaunchVector(event.getEntity(),
 				event.getProjectile().getVelocity(), EntityUtils.VANILLA_PROJECTILE_SPRAY));
-		
+
 		if(event.getProjectile() instanceof AbstractArrow aa)
 			aa.setPickupStatus(AbstractArrow.PickupStatus.CREATIVE_ONLY);
-		
+
 		if(event.getEntity() instanceof Player p) {
 			Ability[] abilities = Kit.getAbilities(p);
 			for(Ability a : abilities) {
@@ -379,7 +379,7 @@ public class EventListeners implements Listener
 			}
 		}
 	}
-	
+
 	@EventHandler
 	public void entityLoadCrossbow(EntityLoadCrossbowEvent event) {
 		if(Main.getGame().getGameState() == LIVE) {
@@ -401,7 +401,7 @@ public class EventListeners implements Listener
 
 		event.getProjectile().setVelocity(EntityUtils.projectileLaunchVector(event.getPlayer(),
 				event.getProjectile().getVelocity(), EntityUtils.VANILLA_PROJECTILE_SPRAY));
-		
+
 		if(Main.getGame() != null) {
 			Player p = event.getPlayer();
 			if(Main.getGame().getGameState() == LIVE) {
@@ -414,7 +414,7 @@ public class EventListeners implements Listener
 					p.sendMessage(CaptureTheFlag.CANT_TELEPORT_HOLDING_FLAG_MESSAGE);
 					p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.AMBIENT, 2, 0.5f);
 				}
-			
+
 				if(!event.isCancelled()) {
 					Ability[] abilites = Kit.getAbilities(p);
 					for (Ability a : abilites) {
@@ -424,7 +424,7 @@ public class EventListeners implements Listener
 			}
 		}
 	}
-	
+
 	@EventHandler
 	public void playerTeleport(PlayerTeleportEvent event) {
 		PlayerTeleportEvent.TeleportCause cause = event.getCause();
@@ -432,7 +432,7 @@ public class EventListeners implements Listener
 			cause == PlayerTeleportEvent.TeleportCause.PLUGIN ||
 			cause == PlayerTeleportEvent.TeleportCause.UNKNOWN) //unkown is often rubber-bands and lagbacks
 			return;
-		
+
 		if(Main.getGame() != null) {
 
 			if(cause == PlayerTeleportEvent.TeleportCause.NETHER_PORTAL ||
@@ -477,10 +477,10 @@ public class EventListeners implements Listener
 		if(Main.getGame() != null) {
 			if(event.getCollidedWith() instanceof Player p && Main.getGame().isSpectator(p))
 				event.setCancelled(true);
-			else if(event.getCollidedWith() instanceof ArmorStand stand && Main.getGame() instanceof CaptureTheFlag ctf 
+			else if(event.getCollidedWith() instanceof ArmorStand stand && Main.getGame() instanceof CaptureTheFlag ctf
 					&& ctf.flagStands.containsKey(stand))
 				event.setCancelled(true);
-			
+
 			if(!event.isCancelled() && event.getEntity().getShooter() instanceof Player p) {
 				for(Ability a : Kit.getAbilities(p)) {
 					a.projectileHitEntity(event);
@@ -488,7 +488,7 @@ public class EventListeners implements Listener
 			}
 		}
 	}
-	
+
 	@EventHandler
 	public void projectileHit(ProjectileHitEvent event) {
 		if(Main.getGame() != null) {
@@ -587,7 +587,7 @@ public class EventListeners implements Listener
 			event.setCancelled(true);
 		}
 	}
-	
+
 	@EventHandler(ignoreCancelled = true)
 	public void onPlayerArmorChange(InventoryClickEvent e) {
 		if (!(Main.getGame() instanceof CaptureTheFlag ctf))
@@ -611,7 +611,7 @@ public class EventListeners implements Listener
 	public void onPlayerArmorDrag(InventoryDragEvent e) {
 		if (!(Main.getGame() instanceof CaptureTheFlag ctf))
 			return;
-		
+
 		if (ctf.isFlagItem(e.getOldCursor())) {
 			e.setCancelled(true);
 		}

@@ -29,6 +29,7 @@ public class PushMine extends DemoMine
 
 		this.type = MineType.PUSHMINE;
 
+		//put downwards slightly so rotated legs lay flat on ground and boots partially in ground
 		Location spawnLoc = baseLoc.clone().add(0, -1.8, 0);
 
 		World world = baseLoc.getWorld();
@@ -65,7 +66,7 @@ public class PushMine extends DemoMine
 		this.triggerTime = TeamArena.getGameTick();
 
 		Location loc = stands[0].getLocation();
-		loc.add(0, 0.5, 0);
+		loc.add(0, 0.18d, 0);
 		loc.setYaw(loc.getYaw() - 180f);
 		this.stands[0].teleport(loc);
 	}
@@ -76,7 +77,8 @@ public class PushMine extends DemoMine
 			if(TeamArena.getGameTick() - triggerTime == TIME_TO_DETONATE) {
 				World world = baseLoc.getWorld();
 				Location explodeLoc = baseLoc.clone().add(0, 0.1, 0);
-				world.spawnParticle(Particle.EXPLOSION_NORMAL, explodeLoc, 2);
+				world.spawnParticle(Particle.EXPLOSION_NORMAL, explodeLoc, 15);
+
 				world.playSound(explodeLoc, Sound.ENTITY_GENERIC_EXPLODE, 1f, 2f);
 
 				//create a sort of explosion that pushes everyone away
@@ -93,13 +95,12 @@ public class PushMine extends DemoMine
 							e -> e == p);
 					//Bukkit.broadcastMessage(result.toString());
 					double lengthSqrd = vector.lengthSquared();
-					double blockedPower = 1d;
 					boolean affect = false;
 					if(result != null && result.getHitEntity() == p) {
 						affect = true;
 					}
 					//even if raytrace didn't hit, if they are within 1.1 block count it anyway
-					else if(lengthSqrd <= 1.04880884817d){
+					else if(lengthSqrd <= 1.21d){
 						affect = true;
 					}
 

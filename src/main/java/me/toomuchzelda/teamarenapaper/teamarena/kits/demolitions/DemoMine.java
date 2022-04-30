@@ -100,7 +100,6 @@ public abstract class DemoMine
 
 		World world = block.getWorld();
 		double topOfBlock = BlockUtils.getBlockHeight(block);
-		//put downwards slightly so rotated legs lay flat on ground and boots partially in ground
 		this.baseLoc = blockLoc.add(0.5d, topOfBlock, 0.5d);
 		this.targetLoc = baseLoc.toVector().add(new Vector(0d, 0.1d, 0d));
 
@@ -108,12 +107,17 @@ public abstract class DemoMine
 			entity.setAI(false);
 			entity.setSilent(true);
 			entity.setInvisible(true);
+			entity.setCollidable(false);
 		});
 	}
 
 	void removeEntities() {
 		glowingTeam.removeEntities(stands);
 		PlayerScoreboard.removeMembersAll(glowingTeam, stands);
+		if(glowing) {
+			PlayerScoreboard.removeMembersAll(this.ownerGlowingTeam, stands);
+		}
+
 		for(ArmorStand stand : stands) {
 			stand.remove();
 		}
@@ -127,7 +131,7 @@ public abstract class DemoMine
 		this.damage++;
 		World world = this.hitboxEntity.getWorld();
 		for(int i = 0; i < 3; i++) {
-			world.playSound(hitboxEntity.getLocation(), Sound.BLOCK_GRASS_HIT, 999, 0.5f);
+			world.playSound(hitboxEntity.getLocation(), Sound.BLOCK_GRASS_HIT, 1f, 0.5f);
 			world.spawnParticle(Particle.CLOUD, hitboxEntity.getLocation().add(0d, 0.2d, 0d), 1,
 					0.2d, 0.2d, 0.2d, 0.02d);
 		}
@@ -187,10 +191,6 @@ public abstract class DemoMine
 	void unGlow() {
 		this.glowing = false;
 		Main.getPlayerInfo(owner).getScoreboard().addMembers(this.ownerGlowingTeam, stands);
-	}
-
-	public static boolean isMineStand(int id) {
-		return KitDemolitions.DemolitionsAbility.ARMOR_STAND_ID_TO_DEMO_MINE.containsKey(id);
 	}
 
 	public static DemoMine getStandMine(int id) {

@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.utils;
 
+import net.minecraft.world.level.material.MaterialColor;
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
@@ -22,16 +23,17 @@ public class BlockUtils
 		coords[2] = Double.parseDouble(split[2]) + zOffset;
 		return coords;
 	}
-	
+
 	public static int getBlockColor(Block block) {
+		//MaterialColor color = ((CraftBlock) block).getNMS().getMaterial().getColor();
 		return (((CraftBlock) block).getNMS().getBlock().defaultMaterialColor().col);
 	}
-	
+
 	public static Color getBlockBukkitColor(Block block) {
 		int col = getBlockColor(block);
 		return Color.fromRGB(col);
 	}
-	
+
 	//get the highest point of a block from it's base, also considering fancy block shapes
 	public static double getBlockHeight(Block block) {
 		Collection<BoundingBox> list = block.getCollisionShape().getBoundingBoxes();
@@ -43,7 +45,7 @@ public class BlockUtils
 		}
 		return highest;
 	}
-	
+
 	public static Vector parseCoordsToVec(String string, double xOffset, double yOffset, double zOffset) {
 		String[] split = string.split(",");
 		double x = Double.parseDouble(split[0]) + xOffset;
@@ -51,7 +53,7 @@ public class BlockUtils
 		double z = Double.parseDouble(split[2]) + zOffset;
 		return new Vector(x, y, z);
 	}
-	
+
 	//find the first non-air block below any coordinate
 	// returns null if none
 	public static Location getFloor(Location pos) {
@@ -62,7 +64,7 @@ public class BlockUtils
 				return loc;
 			}
 		}
-		
+
 		return null;
 	}
 }
