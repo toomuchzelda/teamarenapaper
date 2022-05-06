@@ -33,6 +33,7 @@ public class KitDemolitions extends Kit
 {
 	public static final ItemStack REMOTE_DETONATOR_ITEM = new ItemStack(Material.FLINT_AND_STEEL);
 
+	//valid blocks for mines to be placed on
 	public static final EnumMap<Material, Boolean> VALID_MINE_BLOCKS;
 
 	static {

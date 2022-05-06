@@ -17,7 +17,6 @@ import org.bukkit.util.Vector;
 public class PushMine extends DemoMine
 {
 	//time in ticks
-	public static final int TIME_TO_DETONATE = 20;
 	public static final double BLAST_RADIUS = 4.5;
 	public static final double BLAST_RADIUS_SQRD = BLAST_RADIUS * BLAST_RADIUS;
 	public static final double BLAST_STRENGTH = 0.35d;
@@ -74,7 +73,7 @@ public class PushMine extends DemoMine
 	@Override
 	void tick() {
 		if(isTriggered()) {
-			if(TeamArena.getGameTick() - triggerTime == TIME_TO_DETONATE) {
+			if(TeamArena.getGameTick() - triggerTime == this.timeToDetonate) {
 				World world = baseLoc.getWorld();
 				Location explodeLoc = baseLoc.clone().add(0, 0.1, 0);
 				world.spawnParticle(Particle.EXPLOSION_NORMAL, explodeLoc, 15);

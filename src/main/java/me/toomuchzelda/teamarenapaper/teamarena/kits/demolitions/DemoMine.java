@@ -15,7 +15,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.BlockVector;
-import org.bukkit.util.EulerAngle;
 import org.bukkit.util.Vector;
 
 public abstract class DemoMine
@@ -32,7 +31,7 @@ public abstract class DemoMine
 	static final Team DARK_GREEN_GLOWING_TEAM; // push mine
 	static final Team RED_GLOWING_TEAM; // tnt mine
 
-	static final Team AQUA_GLOWING_TEAM; // demo's targetted mine
+	static final Team BLUE_GLOWING_TEAM; // demo's targetted mine
 
 	//GREEN and GOLD - how the mine owner sees their mines
 	static final Team GREEN_GLOWING_TEAM;
@@ -47,7 +46,7 @@ public abstract class DemoMine
 			COLOUR_TEAMS = new Team[5];
 
 			NamedTextColor[] matchingColours = new NamedTextColor[] {NamedTextColor.DARK_GREEN, NamedTextColor.RED,
-				NamedTextColor.AQUA, NamedTextColor.GREEN, NamedTextColor.GOLD};
+				NamedTextColor.BLUE, NamedTextColor.GREEN, NamedTextColor.GOLD};
 
 			for(int i = 0; i < 5; i++) {
 				COLOUR_TEAMS[i] = SidebarManager.SCOREBOARD.registerNewTeam(MINE_TEAM_NAME + matchingColours[i].value());
@@ -59,7 +58,7 @@ public abstract class DemoMine
 
 			DARK_GREEN_GLOWING_TEAM = COLOUR_TEAMS[0];
 			RED_GLOWING_TEAM = COLOUR_TEAMS[1];
-			AQUA_GLOWING_TEAM = COLOUR_TEAMS[2];
+			BLUE_GLOWING_TEAM = COLOUR_TEAMS[2];
 			GREEN_GLOWING_TEAM = COLOUR_TEAMS[3];
 			GOLD_GLOWING_TEAM = COLOUR_TEAMS[4];
 	}
@@ -86,6 +85,7 @@ public abstract class DemoMine
 	boolean removeNextTick = false;
 	int creationTime; //store for knowing when it gets 'armed' after placing
 	boolean glowing; //if it's glowing the targetted colour for the owner
+	int timeToDetonate;
 
 	MineType type;
 
@@ -153,6 +153,14 @@ public abstract class DemoMine
 	trigger(Player triggerer) {
 		unGlow();
 		this.triggerer = triggerer;
+
+		if(this.owner == triggerer) {
+			this.timeToDetonate = type.timeToDetonateRemote;
+		}
+		else {
+			this.timeToDetonate = type.timeToDetonate;
+		}
+
 		World world = hitboxEntity.getWorld();
 		Location loc = hitboxEntity.getLocation();
 
@@ -185,7 +193,7 @@ public abstract class DemoMine
 
 	void glow() {
 		this.glowing = true;
-		Main.getPlayerInfo(owner).getScoreboard().addMembers(AQUA_GLOWING_TEAM, stands);
+		Main.getPlayerInfo(owner).getScoreboard().addMembers(BLUE_GLOWING_TEAM, stands);
 	}
 
 	void unGlow() {

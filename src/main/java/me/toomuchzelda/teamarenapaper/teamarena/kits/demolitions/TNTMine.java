@@ -21,7 +21,6 @@ import java.util.List;
 public class TNTMine extends DemoMine
 {
 	public static final EulerAngle LEG_ANGLE = new EulerAngle(1.5708d, 0 ,0); //angle for legs so boots r horizontal
-	public static final int TNT_TIME_TO_DETONATE = 20;
 
 	TNTPrimed tnt;
 
@@ -75,7 +74,7 @@ public class TNTMine extends DemoMine
 		removeEntities(); //won't remove the tnt as it's still null as of now
 
 		TNTPrimed tnt = (TNTPrimed) baseLoc.getWorld().spawnEntity(hitboxEntity.getLocation(), EntityType.PRIMED_TNT);
-		tnt.setFuseTicks(TNT_TIME_TO_DETONATE);
+		tnt.setFuseTicks(this.timeToDetonate);
 		tnt.setSource(this.owner);
 		tnt.setVelocity(new Vector(0, 0.45d, 0));
 		this.tnt = tnt;
