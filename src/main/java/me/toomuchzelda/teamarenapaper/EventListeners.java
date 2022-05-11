@@ -6,32 +6,33 @@ import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
-import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
-import me.toomuchzelda.teamarenapaper.teamarena.*;
+import me.toomuchzelda.teamarenapaper.teamarena.GameState;
+import me.toomuchzelda.teamarenapaper.teamarena.GameType;
+import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
 import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.KitGhost;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.KitPyro;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.KitReach;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.KitVenom;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.PreferenceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.command.Command;
-import org.bukkit.entity.*;
+import org.bukkit.entity.AbstractArrow;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -56,6 +57,19 @@ import static me.toomuchzelda.teamarenapaper.teamarena.GameState.LIVE;
 
 public class EventListeners implements Listener
 {
+
+	public static final EnumMap<Material, Boolean> BREAKABLE_BLOCKS;
+
+	static {
+		BREAKABLE_BLOCKS = new EnumMap<Material, Boolean>(Material.class);
+
+		for(Material mat : Material.values()) {
+			if(mat.isBlock() && !mat.isCollidable() && !mat.name().endsWith("SIGN") && !mat.name().endsWith("TORCH")) {
+				BREAKABLE_BLOCKS.put(mat, true);
+			}
+		}
+	}
+
 	public EventListeners(Plugin plugin) {
 		Bukkit.getServer().getPluginManager().registerEvents(this,plugin);
 	}
@@ -297,7 +311,7 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void blockBreak(BlockBreakEvent event) {
-		if(event.getPlayer().getGameMode() != GameMode.CREATIVE && event.getBlock().getType().isCollidable())
+		if(event.getPlayer().getGameMode() != GameMode.CREATIVE && !BREAKABLE_BLOCKS.containsKey(event.getBlock().getType()))
 			event.setCancelled(true);
 	}
 
