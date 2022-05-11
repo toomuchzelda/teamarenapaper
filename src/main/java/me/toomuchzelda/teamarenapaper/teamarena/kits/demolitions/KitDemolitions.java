@@ -6,7 +6,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
-import me.toomuchzelda.teamarenapaper.utils.Pair;
+import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
@@ -22,6 +22,7 @@ import org.bukkit.entity.TNTPrimed;
 import org.bukkit.event.Event;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
@@ -33,6 +34,11 @@ public class KitDemolitions extends Kit
 {
 	public static final ItemStack REMOTE_DETONATOR_ITEM = new ItemStack(Material.FLINT_AND_STEEL);
 
+	public static final int TNT_MINE_COUNT = 2;
+	public static final int PUSH_MINE_COUNT = 1;
+	public static final ItemStack TNT_MINE_ITEM = new ItemStack(Material.TNT);
+	public static final ItemStack PUSH_MINE_ITEM = new ItemStack(Material.WHITE_WOOL);
+
 	//valid blocks for mines to be placed on
 	public static final EnumMap<Material, Boolean> VALID_MINE_BLOCKS;
 
@@ -40,7 +46,13 @@ public class KitDemolitions extends Kit
 		VALID_MINE_BLOCKS = new EnumMap<Material, Boolean>(Material.class);
 
 		for(Material mat : Material.values()) {
+			if(!mat.isBlock())
+				continue;
+
 			if(mat.isOccluding() || mat.name().endsWith("SLAB") || mat.name().endsWith("STAIRS")) {
+				VALID_MINE_BLOCKS.put(mat, true);
+			}
+			else if(mat.name().endsWith("LEAVES")) {
 				VALID_MINE_BLOCKS.put(mat, true);
 			}
 		}
@@ -53,9 +65,8 @@ public class KitDemolitions extends Kit
 		ItemStack sword = new ItemStack(Material.IRON_SWORD);
 		sword.addEnchantment(Enchantment.FIRE_ASPECT, 1);
 
-		ItemStack tntMinePlacer = new ItemStack(Material.STICK);
-
-		setItems(sword, tntMinePlacer, new ItemStack(Material.BLAZE_ROD), REMOTE_DETONATOR_ITEM);
+		//Mine item stack sizes set in giveAbility()
+		setItems(sword, TNT_MINE_ITEM, PUSH_MINE_ITEM, REMOTE_DETONATOR_ITEM);
 
 		this.setAbilities(new DemolitionsAbility());
 
@@ -67,14 +78,17 @@ public class KitDemolitions extends Kit
 		return VALID_MINE_BLOCKS.containsKey(block.getType());
 	}
 
+	public record RegeneratingMine(MineType type, int removedTime) {}
+
 	public static class DemolitionsAbility extends Ability
 	{
-		public static final HashMap<Player, List<DemoMine>> PLAYER_MINES = new HashMap<>();
-		public static final HashMap<Player, DemoMine> TARGETTED_MINE = new HashMap<>();
+		public static final Map<Player, List<DemoMine>> PLAYER_MINES = new HashMap<>();
+		public static final Map<Player, List<RegeneratingMine>> REGENERATING_MINES = new LinkedHashMap<>();
+		public static final Map<Player, DemoMine> TARGETTED_MINE = new HashMap<>();
 
 		static final HashMap<Integer, DemoMine> ARMOR_STAND_ID_TO_DEMO_MINE = new HashMap<>(20, 0.4f);
-		public static final HashMap<Axolotl, DemoMine> AXOLOTL_TO_DEMO_MINE = new HashMap<>();
-		public static final HashSet<BlockVector> MINE_POSITIONS = new HashSet<>();
+		public static final Map<Axolotl, DemoMine> AXOLOTL_TO_DEMO_MINE = new LinkedHashMap<>();
+		public static final Set<BlockVector> MINE_POSITIONS = new HashSet<>();
 
 		public static final DamageType DEMO_TNTMINE_BYSTANDER = new DamageType(DamageType.DEMO_TNTMINE,
 				"%Killed% was blown up by %Killer%'s TNT Mine because %Cause% stepped on it. Thanks a lot!");
@@ -86,13 +100,25 @@ public class KitDemolitions extends Kit
 		@Override
 		public void unregisterAbility() {
 			PLAYER_MINES.clear();
+			REGENERATING_MINES.clear();
 			AXOLOTL_TO_DEMO_MINE.clear();
 			ARMOR_STAND_ID_TO_DEMO_MINE.clear();
 			TARGETTED_MINE.clear();
+			MINE_POSITIONS.clear();
 
 			DemoMine.clearTeams();
 		}
 
+		@Override
+		public void giveAbility(Player player) {
+			PlayerInventory inventory = player.getInventory();
+
+			ItemStack playersTNT = ItemUtils.getItemInInventory(TNT_MINE_ITEM, player.getInventory());
+			ItemStack playersPush = ItemUtils.getItemInInventory(PUSH_MINE_ITEM, player.getInventory());
+			//should not be null
+			playersTNT.setAmount(TNT_MINE_COUNT);
+			playersPush.setAmount(PUSH_MINE_COUNT);
+		}
 		@Override
 		public void removeAbility(Player player) {
 			removeMines(player);
@@ -136,6 +162,8 @@ public class KitDemolitions extends Kit
 					iter.remove();
 				}
 			}
+
+			REGENERATING_MINES.remove(player);
 		}
 
 		public void removeMine(DemoMine mine) {
@@ -157,27 +185,39 @@ public class KitDemolitions extends Kit
 
 		@Override
 		public void onInteract(PlayerInteractEvent event) {
-			Block block = event.getClickedBlock();
+
 			Material mat = event.getMaterial();
-			if (block != null && event.getBlockFace() == BlockFace.UP &&
-					(mat == Material.STICK || mat == Material.BLAZE_ROD)) {
+			int type = 0;
+			if(TNT_MINE_ITEM.getType() == mat)
+				type = 1;
+			else if(PUSH_MINE_ITEM.getType() == mat)
+				type = 2;
+
+			Block block = event.getClickedBlock();
+			if (type > 0 && block != null && event.getBlockFace() == BlockFace.UP) {
+				event.setUseItemInHand(Event.Result.DENY);
 				if(isValidMineBlock(block)) {
 					if (!MINE_POSITIONS.contains(block.getLocation().toVector().toBlockVector())) {
-						if (mat == Material.STICK) {
-							// create a mine
+						if (type == 1) { //tnt mine
 							DemoMine mine = new TNTMine(event.getPlayer(), block);
 							addMine(mine);
 						}
-						else {
+						else { //push mine
 							DemoMine mine = new PushMine(event.getPlayer(), block);
 							addMine(mine);
 						}
+
+						event.getItem().subtract();
 					}
 					else {
 						final Component message = Component.text("A Mine has already been placed here",
 								TextUtils.ERROR_RED);
 						PlayerUtils.sendKitMessage(event.getPlayer(), message, message);
 					}
+				}
+				else {
+					final Component message = Component.text("You can't place a Mine here", TextUtils.ERROR_RED);
+					PlayerUtils.sendKitMessage(event.getPlayer(), message, message);
 				}
 			}
 			else if(mat == REMOTE_DETONATOR_ITEM.getType()) {
@@ -227,8 +267,11 @@ public class KitDemolitions extends Kit
 				Vector demoLocVec = demoLoc.toVector();
 				Vector direction = demoLoc.getDirection();
 
+				//create a sort of method-local scope container class
+				record targettedMinePair(DemoMine mine, double angle) {}
+
 				List<DemoMine> mines = PLAYER_MINES.get(demo);
-				List<Pair<DemoMine, Double>> targetCandidates;
+				List<targettedMinePair> targetCandidates;
 
 				if (mines != null) {
 					targetCandidates = new ArrayList<>(mines.size());
@@ -239,7 +282,7 @@ public class KitDemolitions extends Kit
 							double angle = playerToPoint.angle(direction);
 
 							if (angle <= DemoMine.TARGETTING_ANGLE) {
-								targetCandidates.add(new Pair<>(mine, angle));
+								targetCandidates.add(new targettedMinePair(mine, angle));
 								/*demoLoc.getWorld().spawnParticle(Particle.CRIT,
 										mine.getTargetLoc().toLocation(demoLoc.getWorld()), 1);*/
 							}
@@ -253,10 +296,10 @@ public class KitDemolitions extends Kit
 				//get the one being closest pointed at
 				Double smallestAngle = 10000d;
 				DemoMine targettedMine = null;
-				for(Pair<DemoMine, Double> pair : targetCandidates) {
-					if(pair.getRight() < smallestAngle) {
-						smallestAngle = pair.getRight();
-						targettedMine = pair.getLeft();
+				for(targettedMinePair pair : targetCandidates) {
+					if(pair.angle() < smallestAngle) {
+						smallestAngle = pair.angle();
+						targettedMine = pair.mine();
 					}
 				}
 
@@ -296,19 +339,8 @@ public class KitDemolitions extends Kit
 				mine.tick();
 
 				if(mine.removeNextTick) {
-					/*Player player = mine.owner;
-					List<DemoMine> list = PLAYER_MINES.get(player);
-					list.remove(mine);
-					if(list.size() == 0) {
-						PLAYER_MINES.remove(player);
-					}
-
-					axIter.remove();
-					mine.removeEntities();
-					MINE_POSITIONS.remove(mine.hitboxEntity.getLocation().toVector().toBlockVector());
-					Bukkit.broadcastMessage(MINE_POSITIONS.toString());*/
-
 					toRemove.add(mine);
+					addRegeneratingMine(mine.owner, mine.type, gameTick);
 				}
 				//determine if needs to be removed (next tick)
 				else if(mine.isDone()) {
@@ -345,6 +377,48 @@ public class KitDemolitions extends Kit
 			for(DemoMine remove : toRemove) {
 				removeMine(remove);
 			}
+
+			//tick regenerating mines
+			var regPlayersIter = REGENERATING_MINES.entrySet().iterator();
+			while(regPlayersIter.hasNext()) {
+				var entry = regPlayersIter.next();
+
+				var regMinesIter = entry.getValue().iterator();
+				while(regMinesIter.hasNext()) {
+					RegeneratingMine regMine = regMinesIter.next();
+
+					//check if time up and give back one mine here
+					if(gameTick - regMine.removedTime() >= regMine.type().timeToRegen) {
+						Player owner = entry.getKey();
+						ItemStack mineItem;
+						if(regMine.type() == MineType.TNTMINE) {
+							mineItem = TNT_MINE_ITEM;
+						}
+						else {
+							mineItem = PUSH_MINE_ITEM;
+						}
+
+						owner.getInventory().addItem(mineItem);
+
+						regMinesIter.remove();
+					}
+				}
+
+				if(entry.getValue().size() == 0)
+					regPlayersIter.remove();
+			}
+		}
+
+		public void addRegeneratingMine(Player player, MineType type, int startTime) {
+			List<RegeneratingMine> regenningMines = REGENERATING_MINES.computeIfAbsent(player,
+					player1 -> new ArrayList<>(TNT_MINE_COUNT + TNT_MINE_COUNT));
+
+			regenningMines.add(new RegeneratingMine(type, startTime));
+
+			final Component message = Component.text("You'll get mine back in " + (type.timeToRegen / 20) + " seconds",
+					NamedTextColor.AQUA);
+
+			PlayerUtils.sendKitMessage(player, message, message);
 		}
 
 		public static void handleAxolotlAttemptDamage(DamageEvent event) {

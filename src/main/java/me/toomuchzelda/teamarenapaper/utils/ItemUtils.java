@@ -2,17 +2,19 @@ package me.toomuchzelda.teamarenapaper.utils;
 
 import com.destroystokyo.paper.MaterialSetTag;
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.Flag;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.ChatColor;
 import org.bukkit.Color;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.EntityEquipment;
-import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
+import org.jetbrains.annotations.NotNull;
+
+import javax.annotation.Nullable;
+import java.util.Iterator;
 
 public class ItemUtils {
     public static int _uniqueName = 0;
@@ -44,6 +46,29 @@ public class ItemUtils {
     public static boolean isSword(ItemStack item) {
         return SWORD_ITEMS.isTagged(item.getType());
     }
+
+	/**
+	 * get the instance of this item that is in the inventory
+	 * @return
+	 */
+	public static @Nullable ItemStack getItemInInventory(@NotNull ItemStack originalItem, Inventory inventory) {
+		Iterator<ItemStack> iter = inventory.iterator();
+		while(iter.hasNext()) {
+			ItemStack item = iter.next();
+
+			if(originalItem.isSimilar(item))
+				return item;
+		}
+
+		//they may be holding it on their mouse in their inventory (if a player)
+		if(inventory.getHolder() instanceof Player p) {
+			ItemStack cursor = p.getItemOnCursor();
+			if(originalItem.isSimilar(cursor))
+				return cursor;
+		}
+
+		return null;
+	}
 
     /**
      * also get rid of item from armor slots, and offhand
