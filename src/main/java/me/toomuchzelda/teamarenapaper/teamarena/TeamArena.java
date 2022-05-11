@@ -46,7 +46,7 @@ public abstract class TeamArena
 
 	private final File worldFile;
 	public World gameWorld;
-	
+
 	//ticks of wait time before teams are decided
 	protected static final int PRE_TEAMS_TIME = 25 * 20;
 	//ticks of wait time after teams chosen, before game starting phase
@@ -56,7 +56,7 @@ public abstract class TeamArena
 	protected static final int TOTAL_WAITING_TIME = PRE_TEAMS_TIME + PRE_GAME_STARTING_TIME + GAME_STARTING_TIME;
 	protected static final int END_GAME_TIME = 10 * 20;
 	protected static final int MIN_PLAYERS_REQUIRED = 2;
-	
+
 	//init to this, don't want negative numbers when waitingSince is set to the past in the prepGamestate() methods
 	protected static int gameTick = TOTAL_WAITING_TIME * 3;
 	protected long waitingSince;
@@ -195,7 +195,7 @@ public abstract class TeamArena
 
 		kits = new LinkedHashMap<>();
 		registerKits();
-		
+
 		//List of team names
 		tabTeamsList = new ArrayList<>(teams.length);
 		for(TeamArenaTeam team : teams) {
@@ -228,7 +228,7 @@ public abstract class TeamArena
 			pinfo.getKillAssistTracker().clear();
 			pinfo.kills = 0;
 			noTeamTeam.addMembers(p);
-			
+
 			if(pinfo.kit == null)
 				pinfo.kit = kits.values().iterator().next();
 
@@ -279,7 +279,7 @@ public abstract class TeamArena
 		{
 			endTick();
 		}
-		
+
 	}
 
 	public void preGameTick() {
@@ -322,8 +322,6 @@ public abstract class TeamArena
 				//announce game cancelled
 				// spam sounds lol xddddddd
 				for (Player player : Bukkit.getOnlinePlayers()) {
-					if ("jacky8399".equalsIgnoreCase(player.getName()))
-						continue;
 					for (int i = 0; i < 10; i++) {
 						// peak humor
 						Sound sound = MathUtils.random.nextBoolean() ? SoundUtils.getRandomObnoxiousSound() : SoundUtils.getRandomSound();
@@ -361,7 +359,7 @@ public abstract class TeamArena
 
 		//process damage events
 		damageTick();
-		
+
 		regenTick();
 
 		//end the game if there are no more players for some reason (everyone left or spectator)
@@ -383,24 +381,24 @@ public abstract class TeamArena
 			prepEnd();
 		}
 	}
-	
+
 	public void respawnerTick() {
 		Iterator<Map.Entry<Player, RespawnInfo>> respawnIter = respawnTimers.entrySet().iterator();
 		while (respawnIter.hasNext()) {
 			Map.Entry<Player, RespawnInfo> entry = respawnIter.next();
 			Player p = entry.getKey();
 			RespawnInfo rinfo = entry.getValue();
-			
+
 			//player interrupted respawning, ready to respawn
 			// now handled with the interrupted boolean
 			/*if(rinfo.deathTime == -1) {
-				
-				
+
+
 				respawnPlayer(p);
 				respawnIter.remove();
 				continue;
 			}*/
-			
+
 			//respawn after five seconds
 			int ticksLeft = getGameTick() - rinfo.deathTime;
 			if (ticksLeft >= RESPAWN_SECONDS * 20) {
@@ -411,7 +409,7 @@ public abstract class TeamArena
 							color = TextColor.color(52, 247, 140);
 						else
 							color = MathUtils.randomTextColor();
-						
+
 						p.sendActionBar(Component.text("Ready to respawn! Click the Red Dye or type /respawn")
 								//.color(MathUtils.randomTextColor()));
 								.color(color));
@@ -432,7 +430,7 @@ public abstract class TeamArena
 					color = TextColor.color(0, 255, 0);
 				else
 					color = TextColor.color(0, 190, 0);
-				
+
 				p.sendActionBar(Component.text("Respawning in " + seconds + " seconds").color(color));
 			}
 		}
@@ -451,17 +449,17 @@ public abstract class TeamArena
 		informOfTeam(player);
 //		respawnPlayer(player);
 	}
-	
+
 	public void damageTick() {
 		Iterator<DamageEvent> iter = damageQueue.iterator();
 		while(iter.hasNext()) {
 			DamageEvent event = iter.next();
 			iter.remove();
-			
+
 			onDamage(event);
 			if(event.isCancelled())
 				continue;
-			
+
 			//ability pre-attack events
 			if(event.getFinalAttacker() instanceof Player p) {
 				Ability[] abilities = Kit.getAbilities(p);
@@ -475,16 +473,16 @@ public abstract class TeamArena
 					ability.onAttemptedDamage(event);
 				}
 			}
-			
+
 			//ability on confirmed attacks done in this.onConfirmedDamage() called by DamageEvent.executeAttack()
 			if(event.getFinalAttacker() instanceof Player p && event.getVictim() instanceof Player p2) {
 				if(!canAttack(p, p2))
 					continue;
 			}
-			
+
 			event.executeAttack();
 		}
-		
+
 		var indiIter = activeDamageIndicators.iterator();
 		while(indiIter.hasNext()) {
 			DamageIndicatorHologram h = indiIter.next();
@@ -497,7 +495,7 @@ public abstract class TeamArena
 			}
 		}
 	}
-	
+
 	public void onConfirmedDamage(DamageEvent event) {
 
 		Player playerCause = null; //for hologram
@@ -537,7 +535,7 @@ public abstract class TeamArena
 			}
 		}
 	}
-	
+
 	/**
 	 * also for overriding in subclass
 	 */
@@ -581,7 +579,7 @@ public abstract class TeamArena
 
 		return victim.isDead() || !victim.isValid();
 	}
-	
+
 	public void onInteract(PlayerInteractEvent event) {
 		if (respawnItem.isSimilar(event.getItem())) {
 			event.setUseItemInHand(Event.Result.DENY);
@@ -597,29 +595,29 @@ public abstract class TeamArena
 
 	public void onInteractEntity(PlayerInteractEntityEvent event) {
 	}
-	
+
 	public void regenTick() {
 		if(gameTick % 60 == 0) {
 			Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
 			while(iter.hasNext()) {
 				Map.Entry<Player, PlayerInfo> entry = iter.next();
-				
+
 				Player p = entry.getKey();
 
 				PlayerUtils.heal(p, 1, EntityRegainHealthEvent.RegainReason.SATIATED); // half a heart
-				
+
 				/*double newHealth = p.getHealth() + 1; // half a heart
 				double maxHealth = p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
 				if (newHealth > maxHealth)
 					newHealth = maxHealth;
-				
+
 				p.setHealth(newHealth);
 				if(entry.getValue().getPreference(Preferences.HEARTS_FLASH_REGEN))
 					PlayerUtils.sendHealth(p);*/
 			}
 		}
 	}
-	
+
 	public void endTick() {
 		//fireworks
 		if(winningTeam != null && gameTick % 40 == 0)
@@ -654,7 +652,7 @@ public abstract class TeamArena
 
 		sendCountdown(true);
 	}
-	
+
 	public void prepGameStarting() {
 		//teleport players to team spawns
 		for(TeamArenaTeam team : teams) {
@@ -663,7 +661,7 @@ public abstract class TeamArena
 			for(Entity e : team.getPlayerMembers()) {
 				if(e instanceof Player p)
 					p.setAllowFlight(false);
-				
+
 				e.teleport(spawns[i % spawns.length]);
 				team.spawnsIndex++;
 				i++;
@@ -675,8 +673,8 @@ public abstract class TeamArena
 		//EventListeners.java should stop them from moving
 		setGameState(GameState.GAME_STARTING);
 	}
-	
-	
+
+
 	public void prepLive() {
 		setGameState(GameState.LIVE);
 
@@ -684,31 +682,31 @@ public abstract class TeamArena
 		while(iter.hasNext()) {
 			Map.Entry<Player, PlayerInfo> entry = iter.next();
 			Player player = entry.getKey();
-			
+
 			PlayerUtils.resetState(player);
 			player.setSaturatedRegenRate(0);
 			PlayerListScoreManager.setKills(player, 0);
 
 			givePlayerItems(player, entry.getValue());
-			
+
 			for(TeamArenaTeam team : teams) {
 				if(team.isAlive())
 					player.showBossBar(team.bossBar);
-				
+
 				team.bossBar.progress(0); //init to 0, normally is 1
 			}
-			
+
 			player.playSound(player.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.AMBIENT, 2, 1);
 		}
 	}
-	
+
 	public void prepEnd() {
 		waitingSince = gameTick;
-		
+
 		if(winningTeam != null) {
 			Component winText = winningTeam.getComponentName().append(Component.text(" wins!!").color(winningTeam.getRGBTextColor()));
 			Bukkit.broadcast(winText);
-			
+
 			Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
 			while(iter.hasNext()) {
 				Map.Entry<Player, PlayerInfo> entry = iter.next();
@@ -726,22 +724,22 @@ public abstract class TeamArena
 			Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
 			Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
 			Bukkit.broadcast(Component.text("DRAW!!!!!!").color(NamedTextColor.AQUA));
-			
+
 			Bukkit.getOnlinePlayers().forEach(player ->	player.playSound(player.getLocation(),
 					Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.AMBIENT, 2, 0.5f));
 		}
-		
-		
+
+
 		//cleanup everything before dropping the reference to this for garbage collection
 		// everything here may not need to be manually cleared, but better safe than sorry
-		
+
 		//reveal everyone to everyone just to be safe
 		for(Player p : Bukkit.getOnlinePlayers()) {
 			for(Player pp : Bukkit.getOnlinePlayers()) {
 				p.showPlayer(Main.getPlugin(), pp);
 			}
 			p.setAllowFlight(true);
-			
+
 			PlayerInfo pinfo = Main.getPlayerInfo(p);
 			if(pinfo.activeKit != null) { //!isSpectator(p)) {
 				pinfo.activeKit.removeKit(p, pinfo);
@@ -750,7 +748,7 @@ public abstract class TeamArena
 			pinfo.team = null;
 			pinfo.spawnPoint = null;
 		}
-		
+
 		for(Kit kit : kits.values()) {
 			for(Ability ability : kit.getAbilities()) {
 				ability.unregisterAbility();
@@ -772,7 +770,7 @@ public abstract class TeamArena
 			//spectatorTeam.removeAllMembers();
 			spectatorTeam.unregister();
 			noTeamTeam.unregister();
-			
+
 			//try to prevent visual bug of absorption remaining into next game
 			for(Player p : Bukkit.getOnlinePlayers()) {
 				PlayerUtils.resetState(p);
@@ -781,12 +779,12 @@ public abstract class TeamArena
 				}
 			}
 		}, END_GAME_TIME - 3);
-		
+
 		setGameState(GameState.END);
 		Bukkit.broadcastMessage("Game end");
 	}
 
-	
+
 	public void prepDead() {
 		// remove map
 		miniMap.removeMapView();
@@ -995,7 +993,7 @@ public abstract class TeamArena
 
 		player.setAllowFlight(false);
 		PlayerUtils.resetState(player);
-		
+
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
 		player.teleport(pinfo.team.getNextSpawnpoint());
 		givePlayerItems(player, pinfo);
@@ -1022,7 +1020,7 @@ public abstract class TeamArena
 		if(e instanceof Player p) {
 			//p.showTitle(Title.title(Component.empty(), Component.text("You died!").color(TextColor.color(255, 0, 0))));
 			PlayerUtils.sendTitle(p, Component.empty(), Component.text("You died!").color(TextColor.color(255, 0, 0)), 0, 30, 20);
-			
+
 			//Give out kill assists on the victim
 			Player killer = null;
 			DamageTimes dTimes = DamageTimes.getDamageTimes(p);
@@ -1039,11 +1037,11 @@ public abstract class TeamArena
 					a.onKill(event);
 				}
 			}
-			
+
 			PlayerInfo pinfo = Main.getPlayerInfo(p);
-			
+
 			attributeKillAndAssists(p, pinfo, killer);
-			
+
 			for(Ability a : pinfo.activeKit.getAbilities()) {
 				a.onDeath(event);
 			}
@@ -1060,11 +1058,11 @@ public abstract class TeamArena
 				DamageLogEntry.sendDamageLog(p, true);
 			else
 				pinfo.clearDamageReceivedLog();
-			
-			
+
+
 			//clear attack givers so they don't get falsely attributed on this next player's death
 			dTimes.clearAttackers();
-			
+
 			if(this.isRespawningGame()) {
 				respawnTimers.put(p, new RespawnInfo(gameTick));
 				p.getInventory().addItem(kitMenuItem.clone());
@@ -1079,15 +1077,15 @@ public abstract class TeamArena
 			}
 		}
 	}
-	
+
 	private void attributeKillAndAssists(Player victim, PlayerInfo victimInfo, @Nullable Player finalDamager) {
-		
+
 		//the finalDamager always gets 1 kill no matter what
 		if(finalDamager != null) {
 			addKillAmount(finalDamager, 1, victim);
 			victimInfo.getKillAssistTracker().removeAssist(finalDamager);
 		}
-		
+
 		var iter = victimInfo.getKillAssistTracker().getIterator();
 		while(iter.hasNext()) {
 			Map.Entry<Player, Double> entry = iter.next();
@@ -1099,29 +1097,29 @@ public abstract class TeamArena
 			iter.remove();
 		}
 	}
-	
+
 	/**
 	 * give a player some kill assist amount or kill(s)
 	 * relies on being called one at a time for each kill/death, and relies on amount not being greater than 1
 	 */
 	protected void addKillAmount(Player player, double amount, Player victim) {
-		
+
 		if(amount != 1)
 			player.sendMessage(Component.text("Scored a kill assist of " + MathUtils.round(amount, 2) + "!").color(NamedTextColor.RED));
-		
+
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
 		int killsBefore = (int) pinfo.kills;
 		pinfo.kills += amount;
 		int killsAfter = (int) pinfo.kills;
-		
+
 		PlayerListScoreManager.setKills(player, killsAfter);
-		
+
 		//player kill Assist abilities
 		Ability[] abilities = Kit.getAbilities(player);
 		for(Ability a : abilities) {
 			a.onAssist(player, amount, victim);
 		}
-		
+
 		if(killsAfter != killsBefore) { //if their number of kills increased to the next whole number
 			//todo: check for and give killstreaks here
 			final double someKillStreakAmount = 5;
@@ -1138,20 +1136,20 @@ public abstract class TeamArena
 	public boolean canRespawn(Player player) {
 		if(gameState != GameState.LIVE)
 			return false;
-		
+
 		RespawnInfo rinfo = respawnTimers.get(player);
 		if(rinfo == null)
 			return false;
-		
+
 		int timeLeft = rinfo.deathTime;
 		return gameTick - timeLeft >= RESPAWN_SECONDS * 20;
 	}
-	
+
 	public void interruptRespawn(Player player) {
 		//todo: make async
 		if(gameState != GameState.LIVE)
 			return;
-		
+
 		RespawnInfo rinfo = respawnTimers.get(player);
 		if(rinfo != null && !rinfo.interrupted) {
 			rinfo.interrupted = true;
@@ -1265,7 +1263,7 @@ public abstract class TeamArena
 		p.showTitle(Title.title(Component.empty(), text));
 		p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.AMBIENT, 2f, 0.5f);
 	}
-	
+
 	//find an appropriate team to put player on at any point during game
 	// boolean to actually put them on that team or just to get the team they would've been put on
 	public TeamArenaTeam addToLowestTeam(Player player, boolean add) {
@@ -1287,7 +1285,7 @@ public abstract class TeamArena
 		//    else judge on lastLeft, or pick randomly if no lastLeft
 		if(remainder != teams.length - 1)
 		{
-			
+
 			//get all teams with that lowest player amount
 			ArrayList<TeamArenaTeam> lowestTeams = new ArrayList<>(teams.length);
 			for(TeamArenaTeam team : teams) {
@@ -1295,7 +1293,7 @@ public abstract class TeamArena
 					lowestTeams.add(team);
 				}
 			}
-			
+
 			if(gameState == GameState.LIVE) {
 				//shuffle them, and loop through and get the first one in the list that has the lowest score.
 				Collections.shuffle(lowestTeams);
@@ -1351,9 +1349,9 @@ public abstract class TeamArena
 					s = "Teams will be chosen in ";
 				else
 					s = "Game starting in ";
-				
+
 				Bukkit.broadcast(Component.text(s + timeLeft + 's').color(NamedTextColor.RED));
-				
+
 				for (Player p : Bukkit.getOnlinePlayers()) {
 					p.playSound(p.getLocation(), Sound.ENTITY_CREEPER_DEATH, SoundCategory.AMBIENT, 10, 0);
 				}
@@ -1418,11 +1416,11 @@ public abstract class TeamArena
 		int y = gameWorld.getHighestBlockYAt(centre.getBlockX(), centre.getBlockZ());
 		if(y > centre.getY())
 			centre.setY(y);
-		
+
 		spawnPos = centre.toLocation(gameWorld, 90, 0);
 		spawnPos.setY(spawnPos.getY() + 2);
 
-		
+
 		//if both Y are 0 then have no ceiling
 		// do this after spawnpoint calculation otherwise it's trouble
 		if(corner1.getY() == 0 && corner2.getY() == 0) {
@@ -1527,15 +1525,15 @@ public abstract class TeamArena
 	public TeamArenaTeam getSpectatorTeam() {
 		return spectatorTeam;
 	}
-	
+
 	public ArrayList<String> getTabTeamsList() {
 		return tabTeamsList;
 	}
-	
+
 	public Collection<String> getTabKitList() {
 		return kits.keySet();
 	}
-	
+
 	public File getMapPath() {
 		return new File("Maps");
 	}
@@ -1543,11 +1541,11 @@ public abstract class TeamArena
 	public World getWorld() {
 		return gameWorld;
 	}
-	
+
 	public BoundingBox getBorder() {
 		return border;
 	}
-	
+
 	/**
 	 * for use in configs
 	 */
@@ -1557,7 +1555,7 @@ public abstract class TeamArena
 				return team;
 			}
 		}
-		
+
 		return null;
 	}
 
