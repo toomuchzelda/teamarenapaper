@@ -79,7 +79,6 @@ public class DamageEvent {
 	public static @Nullable DamageEvent createDamageEvent(EntityDamageEvent event) {
 
 		event.setCancelled(true);
-		//Bukkit.broadcast(Component.text("DamageCause: " + event.getCause()));
 		if(Main.getGame().getGameState() != LIVE)
 			return null;
 
@@ -99,9 +98,6 @@ public class DamageEvent {
 			if(dEvent.getDamager() instanceof Player p && Main.getGame().isSpectator(p))
 				return null;
 			else if (dEvent.getCause() == EntityDamageEvent.DamageCause.PROJECTILE && dEvent.getDamager() instanceof AbstractArrow aa) {
-				//Bukkit.broadcastMessage("Critical arrow: " + aa.isCritical());
-				//Bukkit.broadcastMessage("speed: " + aa.getVelocity().length());
-
 				//fix arrow damage - no random crits
 				//  arrow damage is the vanilla formula without the part
 				double damage = Math.ceil(MathUtils.clamp(0, 2.147483647E9d, aa.getDamage() * aa.getVelocity().length()));
@@ -121,7 +117,8 @@ public class DamageEvent {
 			}
 		}
 
-		//Bukkit.broadcastMessage("EventFinalDamage: " + event.getFinalDamage());
+		Bukkit.broadcastMessage("EDEvent raw damage: " + event.getDamage());
+		Bukkit.broadcastMessage("EDEvent final damage: " + event.getFinalDamage());
 
 		//Main.getGame().queueDamage(new DamageEvent(event));
 		//will queue itself
@@ -268,6 +265,15 @@ public class DamageEvent {
 
 						//cancelled event doesn't do sweeping attacks, re-do them here
 						if(living instanceof Player p && damageType.is(DamageType.MELEE)) {
+
+
+
+							Bukkit.broadcastMessage("CustomBaseItemDamage: " +
+									DamageCalculator.getMaterialBaseDamage(item.getType()));
+
+
+
+
 							//Bukkit.broadcastMessage("DamageType is melee: line 99");
 							//same as nmsP.getAttackStrengthCooldown(0.5f);
 							boolean isChargedWeapon = p.getAttackCooldown() > 0.9f;
