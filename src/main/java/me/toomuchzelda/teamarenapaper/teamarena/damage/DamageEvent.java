@@ -269,7 +269,7 @@ public class DamageEvent {
 
 
 							Bukkit.broadcastMessage("CustomBaseItemDamage: " +
-									DamageCalculator.getMaterialBaseDamage(item.getType()));
+									DamageNumbers.getMaterialBaseDamage(item.getType()));
 
 
 

@@ -1,13 +1,14 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import java.util.Arrays;
 
-public class DamageCalculator
+public class DamageNumbers
 {
 	private static final double[] MATERIAL_BASE_DAMAGE;
 	private static final double DAMAGE_PER_STRENGTH_LEVEL = 3d;
@@ -51,6 +52,26 @@ public class DamageCalculator
 
 	private static void setBaseDamage(Material mat, double d) {
 		MATERIAL_BASE_DAMAGE[mat.ordinal()] = d;
+	}
+
+	public static double getDamageForPotionEffect(PotionEffect effect) {
+		double damage = 0d;
+		if(effect.getType() == PotionEffectType.INCREASE_DAMAGE) {
+			damage = DAMAGE_PER_STRENGTH_LEVEL;
+		}
+		else if(effect.getType() == PotionEffectType.WEAKNESS) {
+			damage = DAMAGE_PER_WEAKNESS_LEVEL;
+		}
+
+		return damage * effect.getAmplifier();
+	}
+
+	public static double getCritDamage(double d) {
+		return d * 1.5d;
+	}
+
+	public static double getEnchantmentDamage(Enchantment enchantment, int levels, LivingEntity victim) {
+		return (double) enchantment.getDamageIncrease(levels, victim.getCategory());
 	}
 
 	public static double getMaterialBaseDamage(Material mat) {
