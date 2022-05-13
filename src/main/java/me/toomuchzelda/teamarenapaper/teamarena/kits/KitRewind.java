@@ -45,13 +45,14 @@ public class KitRewind extends Kit{
         ItemStack clock = new ItemStack(Material.CLOCK);
         ItemMeta clockMeta = clock.getItemMeta();
         clockMeta.displayName(ItemUtils.noItalics(Component.text("Time Machine")));
-        ItemStack timeStasis = new ItemStack(Material.LODESTONE);
+        clock.setItemMeta(clockMeta);
+        ItemStack timeStasis = new ItemStack(Material.SHULKER_SHELL);
         ItemMeta stasisMeta = timeStasis.getItemMeta();
-        stasisMeta.displayName(ItemUtils.noItalics(Component.text("Time Stasis")));
+        stasisMeta.displayName(ItemUtils.noItalics(Component.text("The World")));
+        timeStasis.setItemMeta(stasisMeta);
         setItems(sword, clock, timeStasis);
 
         setAbilities(new RewindAbility());
-
     }
 
     public static class RewindAbility extends Ability{
@@ -65,24 +66,40 @@ public class KitRewind extends Kit{
 			player.setCooldown(Material.CLOCK, 15*20);
 		}
 
+        public void removeAbility(Player player){
+            player.resetPlayerTime();
+        }
+
         public void onPlayerTick(Player player) {
+            //Player tick is used to determine cooldowns + abilities
+            //Time tick is purely aesthetic
             Location loc = player.getLocation();
             int currTick = player.getTicksLived();
             int elapsedTick = currTick % (15 * 20);
+            long timeTick = player.getPlayerTimeOffset();
+            //Since each time period (day, sunset, night) has a different time frame, time step varies so each cycle lasts 5 seconds
+            long timeStepSize = 0;
             //Checking that the current location is a valid rewind location, if it is, add it to possible rewind locations.
-            if(!loc.getBlock().isEmpty()){
+            if(!loc.getBlock().isEmpty() && loc.getBlock().getType() != Material.LAVA){
               PREV_LOCS.put(player.getTicksLived(), player.getLocation());  
             }
-            //Displaying the current cycle in the action bar, providing distinct sound cues for people who don't use action bar
-            if(elapsedTick >= 0 && elapsedTick < 5*20){
 
+            //Displaying the current cycle in the action bar, providing distinct sound cues for people who don't use action bar
+            Component currState = Component.text("sample text");;
+            if(elapsedTick >= 0 && elapsedTick < 5*20){
+                currState = Component.text("Current State: Regen");
             }
             else if(elapsedTick < 10*20){
-
+                currState = Component.text("Current State: Time Dilation");
             }
             else{
-
+                currState = Component.text("Current State: Knockback");
             }
+            
+            player.sendActionBar(currState);
+            //Manipulating the time displayed on rewind clock
+            timeStepSize = getTimeStep(timeTick, 1);
+            player.setPlayerTime(player.getPlayerTimeOffset() + timeStepSize, false);
         }
 
         //Cancels damage that is dealt while in stasis
@@ -96,32 +113,51 @@ public class KitRewind extends Kit{
         public void onInteract(PlayerInteractEvent event) {
             Material mat = event.getMaterial();
             Player player = event.getPlayer();
-            
-            //preventing "Time Stasis" lodestone from being placed
-            if(event.useItemInHand() != Event.Result.DENY && mat == Material.LODESTONE) {
-				event.setUseItemInHand(Event.Result.DENY);
-			}
 
             //Rewind Clock implementation
             if(mat == Material.CLOCK && player.getCooldown(Material.CLOCK) == 0){
                 int currTick = player.getTicksLived();
                 int pastTick = currTick - (15 * 20);
-                //line 110 causes issues
+                long timeTick = player.getPlayerTimeOffset();
+                //Below while loop causes issues
                 while(PREV_LOCS.get(pastTick) == null){
                     pastTick++;
                 }
                 Location pastLoc = PREV_LOCS.get(pastTick);
                 rewindBuff(player, currTick);
+
                 player.teleport(pastLoc);
+                //Creating impression of "going back in time"
+                //Algorithm first does a full day cycle rewind then applies correction based on the time that should've passed during the transition period
+                BukkitTask runnable = new BukkitRunnable() {
+                    int activeDuration = 2;
+                    long timeStep = 24000 / 2;
+                    long desiredTime = (player.getPlayerTimeOffset() - 24000 + getTimeStep(timeTick, 2)) % 24000;
+                    public void run() {
+                        if (activeDuration <= 0) {
+                            player.setPlayerTime(desiredTime, false);
+                            cancel();
+                            REWIND_TASKS.remove(this);
+                        }
+                        else{
+                            activeDuration--;
+                            player.setPlayerTime((player.getPlayerTimeOffset() - timeStep) % 24000, false);
+                        }
+                    }  
+                }.runTaskTimer(Main.getPlugin(), 0, 0);
+                REWIND_TASKS.add(runnable);
+
                 rewindBuff(player, currTick);
                 player.setCooldown(Material.CLOCK, 15 * 20);
             }
 
             //Time Stasis implementation
-            if(mat == Material.LODESTONE && player.getCooldown(Material.LODESTONE) == 0){
+            if(mat == Material.SHULKER_SHELL && player.getCooldown(Material.SHULKER_SHELL) == 0){
                 //true duration: 0.5 * 20
                 player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, (int) 8 * 20, 1));
                 player.setInvisible(true);
+                ItemStack[] armor = player.getInventory().getArmorContents();
+                player.getInventory().setArmorContents(null);
                 BukkitTask runnable = new BukkitRunnable() {
                     //true duration: 0.5 * 20
                     int activeDuration = (int) 8 * 20;
@@ -130,18 +166,41 @@ public class KitRewind extends Kit{
                             cancel();
                             REWIND_TASKS.remove(this);
                             player.setInvisible(false);
+                            player.getInventory().setArmorContents(armor);
                         }
                         else{
                             activeDuration--;
                             //Add particle effect which will show where the stasis player is
-
                         }
                     }  
                 }.runTaskTimer(Main.getPlugin(), 0, 0);
 
                 REWIND_TASKS.add(runnable);
-                player.setCooldown(Material.LODESTONE, 10 * 20);
+                player.setCooldown(Material.SHULKER_SHELL, 10 * 20);
             }
+        }
+
+        //based on the current timeTick, find how big the timeStep is for the given tick and the given # of steps
+        public long getTimeStep (long timeTick, int numSteps){
+            long currTick = timeTick;
+            long elapsedTick;
+            long sum = 0;
+            for(int i = 0; i < numSteps; i++){
+                elapsedTick = currTick % 24000;
+                if(elapsedTick >= 0 && elapsedTick < 12000){
+                    sum += 12000 / (5*20);
+                    currTick += 12000 / (5*20);
+                }
+                if(elapsedTick >= 12000 && elapsedTick < 13800){
+                    sum += 1800 / (5*20);
+                    currTick += 1800 / (5*20);
+                }
+                if(elapsedTick >= 13800 && elapsedTick < 24000){
+                    sum += 10200 / (5*20);
+                    currTick += 10200 / (5*20);
+                }
+            }
+            return sum;
         }
 
         //When rewinding, a buff is given based on a 15 second cycle with 3 sections, each with a 5 second timeframe
