@@ -517,7 +517,7 @@ public abstract class TeamArena
 					PlayerInfo pinfo = Main.getPlayerInfo(p);
 					//spawn damage indicator hologram
 					// divide by two to display as hearts
-					Component damageText = Component.text(MathUtils.round(event.getFinalDamage() / 2, 2)).color(pinfo.team.getRGBTextColor());
+					Component damageText = Component.text(MathUtils.round(event.getFinalDamage() / 2, 2), pinfo.team.getRGBTextColor(), TextDecoration.BOLD);
 					Location spawnLoc = p.getLocation();
 					spawnLoc.add(0, MathUtils.randomRange(1.4, 2), 0);
 					DamageIndicatorHologram hologram = new DamageIndicatorHologram(spawnLoc, PlayerUtils.getDamageIndicatorViewers(p, playerCause), damageText);

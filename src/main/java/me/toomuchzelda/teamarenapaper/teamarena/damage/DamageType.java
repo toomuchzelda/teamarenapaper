@@ -9,21 +9,24 @@ import net.kyori.adventure.text.format.TextColor;
 import net.minecraft.world.damagesource.DamageSource;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageByBlockEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
 
 //partially from RedWarfare's AttackType class - credit libraryaddict
 // https://github.com/libraryaddict/RedWarfare/blob/master/redwarfare-core/src/me/libraryaddict/core/damage/AttackType.java
 public class DamageType {
-    
+
     /******************************************************************************************
      *                                  GENERAL DAMAGETYPES
      ******************************************************************************************/
-    
+
     public static final DamageType BERRY_BUSH = new DamageType(DamageTypeEnum.BERRY_BUSH, "Berry Bush", "%Killed% ate one too many sweet berries").setNoKnockback()
             .setDamageSource(DamageSource.SWEET_BERRY_BUSH);
 
@@ -126,7 +129,7 @@ public class DamageType {
             "of their own body odour", "%Killed% thought Mineplex was better than Red Warfare", "%Killed% kicked a stray " +
             "cat because they thought it was funny", "%Killed% had negative social credit score", "%Killed% played " +
             "russian roulette, and lost", "%Killed% lost against themselves in a 1v1").setInstantDeath().setNoKnockback();
-    
+
     public static final DamageType SWEEP_ATTACK = new DamageType(DamageTypeEnum.SWEEP_ATTACK, "Sweep Attack", "%Killed% was killed by %Killer%'s sweeping attack")
             .setMelee();
 
@@ -146,11 +149,11 @@ public class DamageType {
 
     public static final DamageType WITHER_POISON = new DamageType(DamageTypeEnum.WITHER_POISON, "Wither Poison", "%Killed% drank a vial of wither poison")
             .setNoKnockback().setDamageSource(DamageSource.WITHER);
-    
+
     /******************************************************************************************
      *                                  KIT DAMAGETYPES
      ******************************************************************************************/
-    
+
     public static final DamageType PYRO_MOLOTOV = new DamageType(DamageTypeEnum.PYRO_MOLOTOV, "Pyro Incendiary", "%Killed% was burned to death by %Killer%'s incendiary")
             .setFire().setIgnoreArmor().setNoKnockback().setDamageSource(DamageSource.ON_FIRE);
 
@@ -165,8 +168,9 @@ public class DamageType {
     //a constant identifier for same types, to compare for same types across separate instances of this class
     // without evaluating a String
     private final DamageTypeEnum id;
+	private final String[] _deathMessages;
+	private final List<Enchantment> applicableEnchantments;
     private boolean _burn;
-    private final String[] _deathMessages;
     private boolean _explosion;
     private boolean _fall;
     private boolean _fire;
@@ -184,6 +188,8 @@ public class DamageType {
         this.id = id;
         _name = name;
         _deathMessages = deathMessages;
+		applicableEnchantments = new ArrayList<>(2);
+		applicableEnchantments.add(Enchantment.PROTECTION_ENVIRONMENTAL);
     }
 
     public DamageType(DamageType copyOf) {
@@ -201,6 +207,7 @@ public class DamageType {
         _name = copyOf._name;
         _projectile = copyOf._projectile;
         nmsDamageSource = copyOf.nmsDamageSource;
+		applicableEnchantments = copyOf.applicableEnchantments;
     }
 
     public DamageType(DamageType copyOf, String... deathMessages) {
@@ -218,6 +225,7 @@ public class DamageType {
         _name = copyOf._name;
         _projectile = copyOf._projectile;
         nmsDamageSource = copyOf.nmsDamageSource;
+		applicableEnchantments = copyOf.applicableEnchantments;
     }
 
     public static DamageType getAttack(EntityDamageEvent event) {
@@ -329,7 +337,7 @@ public class DamageType {
             return MELEE;
         }
     }
-    
+
     public static DamageType getSweeping(EntityDamageEvent event) {
         if(event instanceof EntityDamageByEntityEvent dEvent && dEvent.getDamager() instanceof LivingEntity living) {
             return getSweeping(living);
@@ -338,7 +346,7 @@ public class DamageType {
             return SWEEP_ATTACK;
         }
     }
-    
+
     public static DamageType getSweeping(LivingEntity living) {
         return new DamageType(SWEEP_ATTACK).setDamageSource(DamageSourceCreator.getMelee(living).sweep());
     }
@@ -360,7 +368,7 @@ public class DamageType {
     public String getName() {
         return _name;
     }
-    
+
     public boolean isBurn() {
         return _burn;
     }
@@ -400,7 +408,7 @@ public class DamageType {
     public boolean isProjectile() {
         return _projectile;
     }
-    
+
     //if two damagetypes are the same, used for melee/projectile/sweeping where a new DamageType instance
     // is constructed.
     public boolean is(DamageType damageType) {
@@ -418,11 +426,15 @@ public class DamageType {
     public DamageType setBurn() {
         _burn = true;
 
+		addApplicableEnchant(Enchantment.PROTECTION_FIRE);
+
         return this;
     }
 
     public DamageType setExplosion() {
         _explosion = true;
+
+		addApplicableEnchant(Enchantment.PROTECTION_EXPLOSIONS);
 
         return this;
     }
@@ -431,6 +443,7 @@ public class DamageType {
         _fall = true;
         setIgnoreArmor();
         setIgnoreRate();
+		addApplicableEnchant(Enchantment.PROTECTION_FALL);
 
         return this;
     }
@@ -439,6 +452,7 @@ public class DamageType {
         setBurn();
 
         _fire = true;
+		removeApplicableEnchant(Enchantment.PROTECTION_ENVIRONMENTAL);
 
         return this;
     }
@@ -476,8 +490,31 @@ public class DamageType {
     public DamageType setProjectile() {
         _projectile = true;
 
-        return this;
+		addApplicableEnchant(Enchantment.PROTECTION_PROJECTILE);
+
+		return this;
     }
+
+	public DamageType addApplicableEnchant(Enchantment enchantment) {
+		if(!applicableEnchantments.contains(enchantment)) {
+			applicableEnchantments.add(enchantment);
+		}
+
+		return this;
+	}
+
+	public DamageType removeApplicableEnchant(Enchantment enchantment) {
+		applicableEnchantments.remove(enchantment);
+
+		return this;
+	}
+
+	/**
+	 * shouldn't contain duplicates
+	 */
+	public List<Enchantment> getApplicableEnchantments() {
+		return applicableEnchantments;
+	}
 
     public DamageType setDamageSource(DamageSource source) {
         this.nmsDamageSource = source;
@@ -508,7 +545,7 @@ public class DamageType {
 
         entity.remove();
     }
-    
+
     private enum DamageTypeEnum {
         BERRY_BUSH,
         CACTUS,
@@ -550,7 +587,7 @@ public class DamageType {
         VOID_PUSHED,
         VOID_SHOT,
         WITHER_POISON,
-        
+
         //Kit Stuff
         PYRO_MOLOTOV,
         DEMO_TNTMINE,

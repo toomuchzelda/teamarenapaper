@@ -19,7 +19,7 @@ import java.util.*;
 // not using those anymore so adapted to be an independent packet hologram thing
 public class PacketHologram
 {
-	
+
 	private final int id;
 	public static final int armorStandID = 1;
 	private PacketContainer spawnPacket;
@@ -28,7 +28,7 @@ public class PacketHologram
 	private PacketContainer teleportPacket;
 
 	protected Location location;
-	
+
 	//store the fields for metadata so we can easily access and modify
 	private WrappedDataWatcher data;
 	private WrappedDataWatcher.WrappedDataWatcherObject metadata;
@@ -45,7 +45,7 @@ public class PacketHologram
 	//marker for if this nametag should exist
 	private boolean isAlive;
 
-	protected Set<Player> viewers = new HashSet<>();
+	protected Set<Player> viewers = new LinkedHashSet<>();
 
 	//constructor for player nametag
 	// position updated every tick in EventListeners.java
@@ -220,7 +220,7 @@ public class PacketHologram
 			}
 		}
 	}
-	
+
 	public void remove() {
 		this.isAlive = false;
 		for(Player p : viewers) {
@@ -231,7 +231,7 @@ public class PacketHologram
 	public boolean isAlive() {
 		return isAlive;
 	}
-	
+
 	public void setViewers(Collection<Player> players) {
 		viewers.clear();
 		viewers.addAll(players);
@@ -248,11 +248,11 @@ public class PacketHologram
 	public int getId() {
 		return id;
 	}
-	
+
 	public PacketContainer getMetadataPacket() {
 		return metadataPacket;
 	}
-	
+
 	public PacketContainer getDeletePacket() {
 		return deletePacket;
 	}
