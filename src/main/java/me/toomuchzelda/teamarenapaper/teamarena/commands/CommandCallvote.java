@@ -1,11 +1,13 @@
 package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
-import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -13,11 +15,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.Sound;
-import org.bukkit.boss.BarColor;
-import org.bukkit.boss.BarStyle;
-import org.bukkit.boss.BossBar;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -27,6 +25,8 @@ import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Great for hackusations
@@ -34,51 +34,79 @@ import java.util.function.Consumer;
  */
 public class CommandCallvote extends CustomCommand {
 
-	public record TopicOptions(@Nullable Consumer<VotingResults> action, @NotNull Component actionMessage, boolean priority) {}
-	public record Topic(@Nullable Player caller,
+	public record TopicOptions(boolean priority,
+							   @Nullable Consumer<VotingResults> action,
+							   @NotNull Component actionMessage,
+							   @NotNull Map<String, VoteOption> options) {}
+	public record Topic(@Nullable UUID caller,
 						@NotNull Component owner,
 						@NotNull Component display,
 						@NotNull TopicOptions options,
 						@NotNull ZonedDateTime time) {}
-	public record VotingResults(List<Component> yeas, List<Component> nays, List<Component> didNotVote) {
 
-		public boolean passed() {
-			return yeas.size() > nays.size();
+	public record VoteOption(String id, Component display, Function<Set<UUID>, Component> votesFormatter, Component result) {
+		public VoteOption(String id, Component display) {
+			this(id, display, results -> display.append(Component.text(": " + results.size())), display);
+		}
+
+		public VoteOption(String id, Component display, Component votes) {
+			this(id, display, votes, display);
+		}
+
+		public VoteOption(String id, Component display, Component votes, Component result) {
+			this(id, display, results -> votes.append(Component.text(results.size())), result);
+		}
+
+		public static final VoteOption YEA = new VoteOption("yes", Component.text("Yes", NamedTextColor.GREEN),
+				Component.text("Yeas: "), Component.text("PASSED", NamedTextColor.DARK_GREEN, TextDecoration.BOLD));
+		public static final VoteOption NAY = new VoteOption("no", Component.text("No", NamedTextColor.RED),
+				Component.text("Nays: "), Component.text("DID NOT PASS", NamedTextColor.DARK_RED, TextDecoration.BOLD));
+		public static final Map<String, VoteOption> DEFAULT_OPTIONS = Map.of("yes", YEA, "no", NAY);
+		public static Map<String, VoteOption> getOptions(VoteOption... options) {
+			var map = new HashMap<String, VoteOption>();
+			for (var option : options) {
+				map.put(option.id(), option);
+			}
+			return map;
+		}
+	}
+	public record VotingResults(Map<VoteOption, Set<UUID>> votes, @Nullable VoteOption result) {
+		public VotingResults(Map<VoteOption, Set<UUID>> votes) {
+			this(votes, votes.size() == 0 ? null :
+				Collections.max(votes.entrySet(),
+						Map.Entry.comparingByValue(Comparator.comparingInt(Set::size))).getKey()
+			);
+		}
+
+		@NotNull
+		public Set<UUID> votes(VoteOption option) {
+			return votes.getOrDefault(option, Collections.emptySet());
 		}
 	}
 
 	public final Queue<Topic> priorityQueue = new ArrayDeque<>();
-	public final Queue<Topic> queue = new ArrayDeque<>(); // obviously arrays > linked nodes
-	public final Map<UUID, Boolean> ballot = new LinkedHashMap<>(Bukkit.getMaxPlayers());
+	public final Queue<Topic> queue = new ArrayDeque<>(); // obviously arrays > linked lists
+	public final Map<UUID, @NotNull VoteOption> ballot = new LinkedHashMap<>(Bukkit.getMaxPlayers());
 	public final Set<UUID> calledVotes = new HashSet<>();
 	Topic currentTopic = null;
 	BossBar bar;
 	int maxTime = 1, timeLeft;
 
-	public CommandCallvote() {
-		super("callvote", "The most important feature", "/callvote ...", Arrays.asList("voteyes", "voteno"),PermissionLevel.ALL);
+	public static CommandCallvote instance;
 
-//        bar = BossBar.bossBar(Component.empty(), 0, BossBar.Color.WHITE, BossBar.Overlay.PROGRESS);
-		bar = Bukkit.createBossBar("", BarColor.WHITE, BarStyle.SOLID);
+	public CommandCallvote() {
+		super("callvote", "The most important feature", "/callvote ...", PermissionLevel.ALL,
+				"vote");
+
+        bar = BossBar.bossBar(Component.empty(), 0, BossBar.Color.WHITE, BossBar.Overlay.PROGRESS);
 
 		Bukkit.getScheduler().runTaskTimer(Main.getPlugin(), this::tick, 0, 20);
 		Bukkit.getScheduler().runTaskTimer(Main.getPlugin(), this::updateBossBar, 0, 1);
+
+		instance = this;
 	}
 
 	static final Component SEPARATOR_COMPONENT = Component.text("==========", NamedTextColor.GOLD, TextDecoration.BOLD);
-	static final Component LINKS_COMPONENT = Component.text()
-			.append(Component.text("Click to vote: ", NamedTextColor.YELLOW))
-			.append(Component.text("[YES]", NamedTextColor.GREEN, TextDecoration.BOLD)
-					.clickEvent(ClickEvent.runCommand("/voteyes"))
-					.hoverEvent(HoverEvent.showText(Component.text("Click to vote").append(
-							Component.text("YES", NamedTextColor.GREEN))))
-			)
-			.append(Component.space())
-			.append(Component.text("[NO]", NamedTextColor.RED, TextDecoration.BOLD)
-					.clickEvent(ClickEvent.runCommand("/voteno"))
-					.hoverEvent(HoverEvent.showText(Component.text("Click to vote").append(
-							Component.text("NO", NamedTextColor.RED))))
-			).build();
 	void tick() {
 		if (currentTopic == null) {
 			if ((currentTopic = priorityQueue.poll()) == null) // poll priority queue first
@@ -96,10 +124,8 @@ public class CommandCallvote extends CustomCommand {
 					Component.text(" has called for a new vote!", NamedTextColor.YELLOW),
 					Component.newline(), topicComponent,
 					//Component.newline(), SEPARATOR_COMPONENT,
-					Component.newline(), LINKS_COMPONENT,
+					Component.newline(), getTopicVoteLinks(),
 					Component.newline(), SEPARATOR_COMPONENT));
-			// abstinence by default
-			Bukkit.getOnlinePlayers().forEach(player -> ballot.put(player.getUniqueId(), null));
 		} else {
 			if (timeLeft == 30 || timeLeft == 20 || timeLeft == 10 || timeLeft == 5) {
 				// don't spam the console
@@ -109,91 +135,84 @@ public class CommandCallvote extends CustomCommand {
 				VotingResults results = tallyResults();
 				Bukkit.broadcast(Component.text("The vote has ended!", NamedTextColor.AQUA));
 				for (Player player : Bukkit.getOnlinePlayers()) {
-					player.sendMessage(getTopicDisplay(player.locale(), results));
+					player.sendMessage(getTopicDisplay(currentTopic, player.locale(), results));
 				}
-				Bukkit.getConsoleSender().sendMessage(getTopicDisplay(null, results));
+				Bukkit.getConsoleSender().sendMessage(getTopicDisplay(currentTopic, null, results));
 				if (currentTopic.options().action() != null) {
 					currentTopic.options().action().accept(results);
 				}
-				if(currentTopic.caller != null)
-					calledVotes.remove(currentTopic.caller.getUniqueId());
+				if (currentTopic.caller != null)
+					calledVotes.remove(currentTopic.caller);
 
 				currentTopic = null;
 				ballot.clear();
-				//updateBossBar();
 				return;
 			}
 			timeLeft--;
 		}
-		//updateBossBar();
 	}
 
 	void updateBossBar() {
-		if (currentTopic != null) {
-			Component title = Component.textOfChildren(
+		if (currentTopic == null) {
+			for (var player : Bukkit.getOnlinePlayers()) {
+				player.hideBossBar(bar);
+			}
+			return;
+		}
+
+		var separator = Component.text(" | ");
+		if (ballot.size() == 0 || currentTopic.options().options() == VoteOption.DEFAULT_OPTIONS) {
+			// no votes yet or yes/no vote
+			bar.name(Component.textOfChildren(
 					Component.text("Topic: ", NamedTextColor.GOLD, TextDecoration.BOLD),
 					currentTopic.display(),
-					Component.text(" | "),
+					separator,
 					Component.text("Time left: ", NamedTextColor.GREEN),
 					Component.text(timeLeft + "s", NamedTextColor.YELLOW)
-			);
-			bar.setTitle(LegacyComponentSerializer.legacySection().serialize(title));
-			//bar.setProgress((float) timeLeft / maxTime);
-			bar.setProgress(getYeasPercent());
-
-
-			Bukkit.getOnlinePlayers().forEach(bar::addPlayer);
+			));
+			int yeas = 0;
+			int total = ballot.size();
+			for (var vote : ballot.values()) {
+				if (vote == VoteOption.YEA) {
+					yeas += 1;
+				}
+			}
+			bar.progress(total != 0 ? (float) yeas / total : 0.5f);
 		} else {
-			bar.removeAll();
+			// the ballot can't be empty
+			Map<VoteOption, Long> count = ballot.values().stream().collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+			var popular = Collections.max(count.entrySet(), Map.Entry.comparingByValue());
+			var percentage = (float) popular.getValue() / ballot.size();
+			bar.name(Component.textOfChildren(
+					Component.text("Topic: ", NamedTextColor.GOLD, TextDecoration.BOLD),
+					currentTopic.display(),
+					separator,
+					Component.text("Time left: ", NamedTextColor.GREEN),
+					Component.text(timeLeft + "s", NamedTextColor.YELLOW),
+					separator,
+					Component.text("Most votes: ", NamedTextColor.GREEN),
+					popular.getKey().display(),
+					Component.text(" (" + TextUtils.ONE_DECIMAL_POINT.format(percentage * 100) + "%)")
+			));
+			bar.progress(percentage);
 		}
-	}
 
-	public float getYeasPercent() {
-		float yes = 0;
-		float total = 0;
-
-		for (var entry : ballot.entrySet()) {
-			Boolean vote = entry.getValue();
-
-			if(vote != null && vote)
-				yes += 1f;
-
-			total += 1f;
-		}
-
-		if(total > 0) {
-			return yes / total;
-		}
-		else {
-			return 0.5f;
+		for (var player : Bukkit.getOnlinePlayers()) {
+			player.showBossBar(bar);
 		}
 	}
 
 	VotingResults tallyResults() {
-		LinkedList<Component> yeas = new LinkedList<>(), nays = new LinkedList<>(), didNotVote = new LinkedList<>();
-		for (var entry : ballot.entrySet()) {
-			Component component;
-			OfflinePlayer player = Bukkit.getOfflinePlayer(entry.getKey());
-			Boolean vote = entry.getValue();
-			if (player.isOnline()) {
-				component = EntityUtils.getName(player.getPlayer());
-			} else {
-				component = Component.text("???", NamedTextColor.GOLD);
-			}
-
-			if (vote == null) {
-				didNotVote.add(component);
-			} else if (vote) {
-				yeas.add(component);
-			} else {
-				nays.add(component);
-			}
-		}
-		return new VotingResults(yeas, nays, didNotVote);
+		// transform map of voter to vote into map of vote to list of voters
+		var map = ballot.entrySet().stream()
+				.collect(Collectors.groupingBy(Map.Entry::getValue,
+						Collectors.mapping(Map.Entry::getKey, ImmutableSet.toImmutableSet())
+				));
+		return new VotingResults(ImmutableMap.copyOf(map));
 	}
 
-	Component getTopicDisplay(@Nullable Locale locale, @Nullable VotingResults results) {
-		if (currentTopic == null)
+	Component getTopicDisplay(@Nullable Topic topic, @Nullable Locale locale, @Nullable VotingResults results) {
+		if (topic == null)
 			return Component.text("There is no ongoing vote.", NamedTextColor.DARK_RED);
 		Duration time = Duration.between(currentTopic.time(), ZonedDateTime.now());
 
@@ -202,41 +221,63 @@ public class CommandCallvote extends CustomCommand {
 				SEPARATOR_COMPONENT,
 				Component.newline(),
 				Component.text("Topic: ", NamedTextColor.YELLOW),
-				currentTopic.display(),
+				topic.display(),
 				Component.text("\nSubmitted by ", NamedTextColor.YELLOW),
-				currentTopic.owner(),
+				topic.owner(),
 				Component.space(),
 				TextUtils.formatDuration(time, currentTopic.time(), locale),
 				Component.text(" ago", NamedTextColor.YELLOW),
 				Component.newline(),
-				currentTopic.options().actionMessage(),
+				topic.options().actionMessage(),
 				Component.newline()
 		);
-		if (results != null) {
-			message.append(Component.text("Yeas: " + results.yeas().size(), NamedTextColor.GREEN),
-					Component.text(" Nays: " + results.nays().size(), NamedTextColor.RED),
-					Component.text(" Didn't vote: " + results.didNotVote().size(), NamedTextColor.YELLOW),
-					Component.newline(),
-					Component.text("Result: ", NamedTextColor.YELLOW),
-					results.passed() ?
-							Component.text("PASSED", NamedTextColor.GREEN) :
-							Component.text("DID NOT PASS", NamedTextColor.RED));
-		} else {
-			long noOfVotes = ballot.values().stream().filter(Objects::nonNull).count();
-			message.append(Component.text("Votes: " + noOfVotes, NamedTextColor.GOLD));
+		if (topic == currentTopic) {
+			if (results != null) {
+				var options = new ArrayList<Component>(results.votes().size());
+				for (var entry : results.votes().entrySet()) {
+					var option = entry.getKey();
+					var voters = entry.getValue();
+					options.add(option.votesFormatter().apply(voters));
+				}
+				message.append(Component.join(JoinConfiguration.separator(Component.space()), options));
+				message.append(Component.newline(),
+						Component.text("Result: ", NamedTextColor.YELLOW),
+						results.result() != null ?
+								results.result().display() :
+								Component.text("No result", NamedTextColor.DARK_GRAY));
+			} else {
+				long noOfVotes = ballot.size();
+				message.append(Component.text("Votes: " + noOfVotes, NamedTextColor.GOLD));
+			}
 		}
 		return message.append(Component.newline(), SEPARATOR_COMPONENT).build();
 	}
 
-	static final Component LE_FUNNY_VOTE = Component.textOfChildren(
-			/*Component.text("Reminder: This vote has ", NamedTextColor.DARK_RED),
-			Component.text("NO", NamedTextColor.RED, TextDecoration.BOLD),
-			Component.text(" actual effect!", NamedTextColor.DARK_RED)*/
-			Component.text("Reminder: This vote has no actual effect!", TextUtils.ERROR_RED));
-	public void createVote(@Nullable Player caller, Component owner, Component display) {
-		createVote(caller, owner, display, new TopicOptions(null, LE_FUNNY_VOTE, false));
+	static final Component OPENING_BRACKET = Component.text("["),
+			CLOSING_BRACKET = Component.text("]");
+	Component getTopicVoteLinks() {
+		var builder = Component.text().append(
+				Component.text("Click to vote: ", NamedTextColor.YELLOW),
+				Component.newline()
+		);
+		var options = currentTopic.options().options().values();
+		var links = new ArrayList<Component>(options.size());
+		for (var option : options) {
+			var component = Component.text();
+			component.append(OPENING_BRACKET, option.display(), CLOSING_BRACKET);
+			component.clickEvent(ClickEvent.runCommand("/vote " + option.id));
+			component.hoverEvent(HoverEvent.showText(Component.text("Click to vote for ").append(option.display)));
+			links.add(component.build());
+		}
+		builder.append(Component.join(JoinConfiguration.separator(Component.space()), links));
+		return builder.build();
 	}
-	public void createVote(@Nullable Player caller, Component owner, Component display, @NotNull TopicOptions options) {
+
+	static final Component LE_FUNNY_VOTE = Component.text("Reminder: This vote has no actual effect!", TextUtils.ERROR_RED);
+	public void createVote(@Nullable UUID caller, Component owner, Component display) {
+		createVote(caller, owner, display, new TopicOptions(false, null, LE_FUNNY_VOTE, VoteOption.DEFAULT_OPTIONS));
+	}
+	public void createVote(@Nullable UUID caller, Component owner, Component display, @NotNull TopicOptions options) {
 		Topic topic = new Topic(caller, owner, display, options, ZonedDateTime.now());
 		if (options.priority())
 			priorityQueue.add(topic);
@@ -246,20 +287,34 @@ public class CommandCallvote extends CustomCommand {
 
 	@Override
 	public void run(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) {
-		if (args.length == 0 && ("voteyes".equalsIgnoreCase(label) || "voteno".equalsIgnoreCase(label))) {
+		if ("vote".equalsIgnoreCase(label)) {
 			if (!(sender instanceof Player player)) {
 				sender.sendMessage(Component.text("Computers don't have voting rights!", NamedTextColor.RED));
+				return;
+			}
+			if (args.length != 1) {
+				player.sendMessage(getTopicVoteLinks());
 				return;
 			}
 			if (currentTopic == null) {
 				player.sendMessage(Component.text("There is no topic to vote on!").color(NamedTextColor.RED));
 				return;
 			}
-			boolean vote = "voteyes".equalsIgnoreCase(label);
-			Boolean oldVote = ballot.put(player.getUniqueId(), vote);
+			var options = currentTopic.options().options();
+			var vote = options.get(args[0]);
+			if (vote == null) {
+				player.sendMessage(Component.text(args[0] + " is not a valid option."));
+				return;
+			}
+			var oldVote = ballot.put(player.getUniqueId(), vote);
 			if (oldVote != null) {
-				player.sendMessage(Component.text("You changed your vote to " + (vote ? "YES" : "NO") + ".")
-						.color(NamedTextColor.GREEN));
+				player.sendMessage(Component.text().color(NamedTextColor.GREEN)
+						.append(Component.text("You changed your vote from "))
+						.append(oldVote.display())
+						.append(Component.text(" to "))
+						.append(vote.display())
+						.append(Component.text("."))
+				);
 			} else {
 				player.sendMessage(Component.text("You casted your vote.").color(NamedTextColor.GREEN));
 			}
@@ -269,7 +324,51 @@ public class CommandCallvote extends CustomCommand {
 				return;
 			}
 			switch (args[0]) {
-				case "info" -> sender.sendMessage(getTopicDisplay(sender instanceof Player player ? player.locale() : null, null));
+				case "info" -> sender.sendMessage(getTopicDisplay(currentTopic, sender instanceof Player player ? player.locale() : null, null));
+				case "queue" -> {
+					int index = 1;
+					sender.sendMessage(Component.text("Priority queue:", NamedTextColor.GOLD));
+					for (var topic : priorityQueue) {
+						sender.sendMessage(Component.text().append(
+								Component.text(index++ + ". ", NamedTextColor.GOLD),
+								topic.display()
+						).hoverEvent(HoverEvent.showText(getTopicDisplay(topic, null, null))));
+					}
+					sender.sendMessage(Component.text("Queue:", NamedTextColor.GOLD));
+					for (var topic : queue) {
+						sender.sendMessage(Component.text().append(
+								Component.text(index++ + ". ", NamedTextColor.GOLD),
+								topic.display()
+						).hoverEvent(HoverEvent.showText(getTopicDisplay(topic, null, null))));
+					}
+				}
+				case "clearqueue" -> {
+					if (!hasPermission(sender, PermissionLevel.MOD)) {
+						sender.sendMessage(NO_PERMISSION);
+						return;
+					}
+					queue.removeIf(topic -> {
+						if (topic.caller != null) {
+							calledVotes.remove(topic.caller);
+						}
+						return true;
+					});
+					sender.sendMessage(Component.text("Normal queue cleared."));
+				}
+				case "abort" -> {
+					if (!hasPermission(sender, PermissionLevel.MOD)) {
+						sender.sendMessage(NO_PERMISSION);
+						return;
+					}
+					if (currentTopic == null) {
+						return;
+					}
+					if (currentTopic.caller != null)
+						calledVotes.remove(currentTopic.caller);
+					currentTopic = null;
+					ballot.clear();
+					Bukkit.broadcast(Component.text("The ongoing poll has been aborted.", NamedTextColor.YELLOW));
+				}
 				case "extend" -> {
 					if (!hasPermission(sender, PermissionLevel.MOD)) {
 						sender.sendMessage(NO_PERMISSION);
@@ -293,75 +392,76 @@ public class CommandCallvote extends CustomCommand {
 					timeLeft += Math.max(0, time);
 				}
 				case "myvoteissuperimportant" -> {
-					if (!(sender instanceof Player player)) {
-						sender.sendMessage(Component.text("Computers don't have voting rights!", NamedTextColor.RED));
+					if (currentTopic == null) {
+						sender.sendMessage(Component.text("There is no topic to vote on!", NamedTextColor.RED));
 						return;
 					}
-					if (!hasPermission(player, PermissionLevel.OWNER)) {
+					if (sender instanceof Player player && !hasPermission(sender, PermissionLevel.OWNER)) {
 						player.chat("I am Kim Jong Un (101% support rating)");
 						player.getWorld().playSound(player, Sound.ENTITY_CAT_AMBIENT, 1, 0);
 						return;
 					}
 					if (args.length < 2) {
-						showUsage(player, "/callvote myvoteissuperimportant <vote> [amount]");
+						showUsage(sender, "/callvote myvoteissuperimportant <vote> [amount]");
 						return;
 					}
-					boolean vote = "true".equalsIgnoreCase(args[1]);
+					VoteOption option = currentTopic.options().options().get(args[1]);
+					if (option == null) {
+						sender.sendMessage(Component.text("Invalid option " + args[1], NamedTextColor.RED));
+						return;
+					}
+
 					int amount = 10;
 					if (args.length == 3) {
 						try {
 							amount = Integer.parseInt(args[2]);
-						} catch (NumberFormatException e) {
-							player.chat("I (Kim Jong Un) can't express numbers");
-							player.getWorld().playSound(player, Sound.ENTITY_CAT_AMBIENT, 1, 0);
-							return;
-						}
+						} catch (NumberFormatException ignored) { }
 					}
-					Bukkit.broadcast(Component.text(player.getName() + " has casted " + amount + "x ")
-							.color(NamedTextColor.YELLOW)
-							.append(Component.text(vote ? "YES" : "NO")
-									.color(vote ? NamedTextColor.GREEN : NamedTextColor.RED))
-							.append(Component.text(" votes!"))
-							.append(Component.text("Some people are, of course, more equal than others.")
-									.color(NamedTextColor.GRAY).decorate(TextDecoration.ITALIC)));
+					Bukkit.broadcast(Component.textOfChildren(
+							sender.name(),
+							Component.text(" has casted " + amount + "x ", NamedTextColor.YELLOW),
+							option.display(),
+							Component.text(" votes!", NamedTextColor.YELLOW),
+							Component.newline(),
+							Component.text("Some people are, of course, more equal than others.", NamedTextColor.GRAY, TextDecoration.ITALIC)
+					));
+					for (int i = 0; i < amount; i++) {
+						ballot.put(UUID.randomUUID(), option);
+					}
 				}
+				// TODO allow specifying options
 				case "createpriority" -> {
 					if (!hasPermission(sender, PermissionLevel.MOD)) {
 						showUsage(sender);
 						return;
 					}
 					String topic = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
-					Player caller;
+					UUID caller;
 					Component name;
 					if(sender instanceof Player player) {
-						caller = player;
+						caller = player.getUniqueId();
 						name = player.playerListName();
-					}
-					else {
+					} else {
 						caller = null;
 						name = sender.name();
 					}
 					createVote(caller, name, LegacyComponentSerializer.legacyAmpersand().deserialize(topic),
-							new TopicOptions(null, LE_FUNNY_VOTE, true));
+							new TopicOptions(true, null, LE_FUNNY_VOTE, VoteOption.DEFAULT_OPTIONS));
 					sender.sendMessage(Component.text("Queued a topic!").color(NamedTextColor.GREEN));
 				}
 				default -> {
 					String topic = String.join(" ", Arrays.copyOfRange(args, 0, args.length));
-					Player caller;
+					UUID caller;
 					Component name;
-					if(sender instanceof Player player) {
-						caller = player;
+					if (sender instanceof Player player) {
+						caller = player.getUniqueId();
 						name = player.playerListName();
 
-						if(calledVotes.contains(caller.getUniqueId())) {
-							caller.sendMessage(Component.text("You've already queued a topic!", TextUtils.ERROR_RED));
+						if (!calledVotes.add(caller)) {
+							player.sendMessage(Component.text("You've already queued a topic!", TextUtils.ERROR_RED));
 							return;
 						}
-						else {
-							calledVotes.add(caller.getUniqueId());
-						}
-					}
-					else {
+					} else {
 						caller = null;
 						name = sender.name();
 					}
@@ -376,7 +476,7 @@ public class CommandCallvote extends CustomCommand {
 	public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
 		if (args.length == 1) {
 			return hasPermission(sender, PermissionLevel.MOD) ?
-					Arrays.asList("extend", "myvoteissuperimportant", "createpriority", "info") :
+					Arrays.asList("extend", "myvoteissuperimportant", "createpriority", "info", "queue", "clearqueue", "abort") :
 					Arrays.asList("myvoteissuperimportant", "info");
 		}
 		return Collections.emptyList();

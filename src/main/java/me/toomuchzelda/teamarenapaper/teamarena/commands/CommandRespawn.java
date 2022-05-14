@@ -11,17 +11,15 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public class CommandRespawn extends CustomCommand
-{
+public class CommandRespawn extends CustomCommand {
 	public CommandRespawn() {
 		super("respawn", "Respawn after waiting while dead",
-				"/respawn [player]", Arrays.asList("suicide", "kill"), PermissionLevel.ALL);
+				"/respawn [player]", PermissionLevel.ALL, "suicide", "kill");
 	}
-	
+
 	@Override
 	public void run(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) {
 		if (args.length > 0 && hasPermission(sender, PermissionLevel.OWNER)) {
@@ -46,7 +44,7 @@ public class CommandRespawn extends CustomCommand
 			showUsage(sender, "/respawn <player>");
 		}
 	}
-	
+
 	@Override
 	public @NotNull List<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
 		if (args.length == 1 && hasPermission(sender, PermissionLevel.OWNER))

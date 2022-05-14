@@ -4,12 +4,13 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.command.BlockCommandSender;
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -21,19 +22,20 @@ public abstract class CustomCommand extends Command {
 
     private static final HashMap<String, CustomCommand> PLUGIN_COMMANDS = new HashMap<>();
 
+	protected CustomCommand(@NotNull String name, @NotNull String description, @NotNull String usage,
+							PermissionLevel permissionLevel, String... aliases) {
+		this(name, description, usage, permissionLevel, Arrays.asList(aliases));
+	}
+
     protected CustomCommand(@NotNull String name, @NotNull String description, @NotNull String usage,
-                            @NotNull List<String> aliases, PermissionLevel permissionLevel) {
+							PermissionLevel permissionLevel, List<String> aliases) {
         super(name, description, usage, aliases);
         this.permissionLevel = permissionLevel;
-        
+
         PLUGIN_COMMANDS.put(name, this);
         for (String alias : aliases) {
             PLUGIN_COMMANDS.put(alias, this);
         }
-    }
-
-    protected CustomCommand(@NotNull String name, @NotNull String description, @NotNull String usage, @NotNull PermissionLevel permissionLevel) {
-        this(name, description, usage, Collections.emptyList(), permissionLevel);
     }
 
     public static final Component NO_PERMISSION = Component.text("You do not have permission to run this command!").color(NamedTextColor.DARK_RED);
@@ -48,7 +50,9 @@ public abstract class CustomCommand extends Command {
             }
         }
         try {
-            run(sender, commandLabel, args);
+			run(sender, commandLabel, args);
+		} catch (CommandException e) {
+			sender.sendMessage(e.message);
         } catch (Throwable e) {
             Main.logger().severe("Command " + getClass().getSimpleName() + " finished execution exceptionally " +
                     "for input /" + commandLabel + " " + String.join(" ", args));
@@ -57,7 +61,7 @@ public abstract class CustomCommand extends Command {
         return true;
     }
 
-    public abstract void run(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args);
+    public abstract void run(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) throws CommandException;
 
     @Override
     public final @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
@@ -105,13 +109,24 @@ public abstract class CustomCommand extends Command {
             return sender instanceof ConsoleCommandSender;
     }
 
+	@Nullable
+	protected static Player getPlayerOrThrow(CommandSender sender, String[] args, int index) throws CommandException {
+		if (args.length > index + 1) {
+			return Bukkit.getPlayer(args[index]);
+		} else if (sender instanceof Player player) {
+			return player;
+		} else {
+			throw new CommandException(PLAYER_ONLY);
+		}
+	}
+
     //todo: a system for commands that have multiple word arguments ie. /give player item amount etc
     // whatever that means
 //    @Deprecated
 //    public static List<String> filterCompletions(List<String> allArgs, String... args) {
 //        return Collections.emptyList();
 //    }
-    
+
     public static CustomCommand getFromName(String name) {
         return PLUGIN_COMMANDS.get(name);
     }
