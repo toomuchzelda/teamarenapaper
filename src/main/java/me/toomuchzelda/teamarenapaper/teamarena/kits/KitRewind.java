@@ -1,14 +1,18 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import java.util.*;
+import java.util.Map.Entry;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Particle;
+import org.bukkit.World;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.potion.PotionEffect;
@@ -19,15 +23,16 @@ import org.bukkit.util.Vector;
 import org.bukkit.event.Event;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.minecraft.world.entity.LivingEntity;
 
 public class KitRewind extends Kit{
 
-    public static final HashMap<Integer, Location> PREV_LOCS = new HashMap<>();
     public static final Set<BukkitTask> REWIND_TASKS = new HashSet<>();
 
     public KitRewind(){
@@ -57,6 +62,8 @@ public class KitRewind extends Kit{
 
     public static class RewindAbility extends Ability{
 
+        public final HashMap<Integer, Location> PREV_LOCS = new HashMap<>();
+
         //clean up
 		public void unregisterAbility() {
 			PREV_LOCS.clear();
@@ -64,6 +71,7 @@ public class KitRewind extends Kit{
 
         public void giveAbility(Player player) {
 			player.setCooldown(Material.CLOCK, 15*20);
+            player.setPlayerTime(6000, false);
 		}
 
         public void removeAbility(Player player){
@@ -76,7 +84,7 @@ public class KitRewind extends Kit{
             Location loc = player.getLocation();
             int currTick = player.getTicksLived();
             int elapsedTick = currTick % (15 * 20);
-            long timeTick = player.getPlayerTimeOffset();
+            long timeTick = player.getPlayerTimeOffset() % 24000;
             //Since each time period (day, sunset, night) has a different time frame, time step varies so each cycle lasts 5 seconds
             long timeStepSize = 0;
             //Checking that the current location is a valid rewind location, if it is, add it to possible rewind locations.
@@ -95,40 +103,92 @@ public class KitRewind extends Kit{
             else{
                 currState = Component.text("Current State: Knockback");
             }
-            
             player.sendActionBar(currState);
+            //Time tick display calculation 
+                if(timeTick >= 6000 && timeTick < 6100 - 1){
+                    timeStepSize = 1;
+                }
+                if(timeTick == 6099){
+                    timeStepSize = 12000 - 6100 + 1;
+                }
+                if(timeTick >= 12000 && timeTick < 13800 - 18){
+                    timeStepSize = 18;
+                }
+                if(timeTick == 13782){
+                    timeStepSize = 18000 - 13800 + 18;
+                }
+                if(timeTick >= 18000 && timeTick < 18100 - 1){
+                    timeStepSize = 1;
+                }
+                if(timeTick == 18099){
+                    timeStepSize = 11900 + 1;
+                }
             //Manipulating the time displayed on rewind clock
-            timeStepSize = getTimeStep(timeTick, 1);
-            player.setPlayerTime(player.getPlayerTimeOffset() + timeStepSize, false);
+            player.setPlayerTime((player.getPlayerTimeOffset() + timeStepSize) % 24000, false);
         }
 
-        //Cancels damage that is dealt while in stasis
+        //Cancels damage that is received while in stasis
         public void onAttemptedDamage(DamageEvent event) {
             Player player = event.getPlayerVictim();
-            if(player.hasPotionEffect(PotionEffectType.INVISIBILITY)){
+            //Change 8 * 20 to 0.5 * 20 once done testing
+            if(player.getCooldown(Material.SHULKER_SHELL) >= (10 * 20 - (8 * 20))){
                 event.setCancelled(true);
             }
         }
 
+        //Cancels attacks that are attempted while in stasis
+        public void onAttemptedAttack(DamageEvent event) {
+            Player player = (Player) event.getAttacker();
+            //Change 8 * 20 to 0.5 * 20 once done testing
+            if(player.getCooldown(Material.SHULKER_SHELL) >= (10 * 20 - (8 * 20))){
+                event.setCancelled(true);
+            }
+        }
+
+        //Possibly prevent movement while in stasis? 
+        /*
+        public void onMove(PlayerMoveEvent event){
+            Player player = event.getPlayer();
+            if(player.hasPotionEffect(PotionEffectType.INVISIBILITY)){
+                event.setCancelled(true);
+            }
+        }
+        */
+
         public void onInteract(PlayerInteractEvent event) {
             Material mat = event.getMaterial();
             Player player = event.getPlayer();
+            World world = player.getWorld();
 
             //Rewind Clock implementation
             if(mat == Material.CLOCK && player.getCooldown(Material.CLOCK) == 0){
                 int currTick = player.getTicksLived();
                 int pastTick = currTick - (15 * 20);
-                long timeTick = player.getPlayerTimeOffset();
+                Location pastLoc = null;
                 //Below while loop causes issues
-                while(PREV_LOCS.get(pastTick) == null){
-                    pastTick++;
+                while(!PREV_LOCS.isEmpty() && pastLoc != null && pastTick >= 0){
+                    pastLoc = PREV_LOCS.remove(pastTick);
+                    pastTick--;
                 }
-                Location pastLoc = PREV_LOCS.get(pastTick);
-                rewindBuff(player, currTick);
 
-                player.teleport(pastLoc);
+                if(pastLoc != null){
+                    //Success
+                    rewindBuff(player, currTick);
+                    player.teleport(pastLoc);
+                    rewindBuff(player, currTick);
+                    player.setCooldown(Material.CLOCK, 15 * 20);
+                    PREV_LOCS.clear();
+                }
+                else{
+                    //Failure
+                    Component warning = Component.text("The past seems unsafe");
+                    player.sendMessage(warning);
+                    System.out.print(pastTick);
+                }
+                
                 //Creating impression of "going back in time"
                 //Algorithm first does a full day cycle rewind then applies correction based on the time that should've passed during the transition period
+                /*
                 BukkitTask runnable = new BukkitRunnable() {
                     int activeDuration = 2;
                     long timeStep = 24000 / 2;
@@ -146,18 +206,30 @@ public class KitRewind extends Kit{
                     }  
                 }.runTaskTimer(Main.getPlugin(), 0, 0);
                 REWIND_TASKS.add(runnable);
-
-                rewindBuff(player, currTick);
-                player.setCooldown(Material.CLOCK, 15 * 20);
+                */
             }
 
             //Time Stasis implementation
             if(mat == Material.SHULKER_SHELL && player.getCooldown(Material.SHULKER_SHELL) == 0){
                 //true duration: 0.5 * 20
-                player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, (int) 8 * 20, 1));
-                player.setInvisible(true);
+                TeamArenaTeam team = Main.getPlayerInfo(player).team;
                 ItemStack[] armor = player.getInventory().getArmorContents();
+                HashMap swordSlots = player.getInventory().all(Material.IRON_SWORD);
+                ItemStack barrier = new ItemStack(Material.BARRIER);
+                ItemMeta barrierMeta = barrier.getItemMeta();
+                Component barrierName = ItemUtils.noItalics(Component.text("Melee Disabled")).color(TextUtils.ERROR_RED);
+                barrierMeta.displayName(barrierName);
+                barrier.setItemMeta(barrierMeta);
+
+                Iterator<Map.Entry<Integer, ItemStack>> iter = swordSlots.entrySet().iterator();
                 player.getInventory().setArmorContents(null);
+                while(iter.hasNext()){
+                    Map.Entry<Integer, ItemStack> entry = iter.next();
+                    int slot = entry.getKey();
+                    player.getInventory().setItem(slot, barrier);
+                }
+                
+                player.setInvisible(true);
                 BukkitTask runnable = new BukkitRunnable() {
                     //true duration: 0.5 * 20
                     int activeDuration = (int) 8 * 20;
@@ -167,10 +239,18 @@ public class KitRewind extends Kit{
                             REWIND_TASKS.remove(this);
                             player.setInvisible(false);
                             player.getInventory().setArmorContents(armor);
+                            //Replacing the barriers with swords again
+                            Iterator<Map.Entry<Integer, ItemStack>>iter = swordSlots.entrySet().iterator();
+                                while(iter.hasNext()){
+                                    Map.Entry<Integer, ItemStack> entry = iter.next();
+                                    int slot = entry.getKey();
+                                    player.getInventory().setItem(slot, new ItemStack(Material.IRON_SWORD));
+                                }
                         }
                         else{
                             activeDuration--;
                             //Add particle effect which will show where the stasis player is
+                            world.spawnParticle(Particle.REDSTONE, player.getLocation(), 4, Math.cos((Math.random() - 0.5) * 4 * Math.PI), 0, Math.sin((Math.random() - 0.5) * 4 * Math.PI), 8, new Particle.DustOptions(team.getColour(), 3));
                         }
                     }  
                 }.runTaskTimer(Main.getPlugin(), 0, 0);
@@ -178,29 +258,11 @@ public class KitRewind extends Kit{
                 REWIND_TASKS.add(runnable);
                 player.setCooldown(Material.SHULKER_SHELL, 10 * 20);
             }
-        }
 
-        //based on the current timeTick, find how big the timeStep is for the given tick and the given # of steps
-        public long getTimeStep (long timeTick, int numSteps){
-            long currTick = timeTick;
-            long elapsedTick;
-            long sum = 0;
-            for(int i = 0; i < numSteps; i++){
-                elapsedTick = currTick % 24000;
-                if(elapsedTick >= 0 && elapsedTick < 12000){
-                    sum += 12000 / (5*20);
-                    currTick += 12000 / (5*20);
-                }
-                if(elapsedTick >= 12000 && elapsedTick < 13800){
-                    sum += 1800 / (5*20);
-                    currTick += 1800 / (5*20);
-                }
-                if(elapsedTick >= 13800 && elapsedTick < 24000){
-                    sum += 10200 / (5*20);
-                    currTick += 10200 / (5*20);
-                }
+            //Prevents players from placing barriers
+            if(mat == Material.BARRIER && player.isInvisible()){
+                event.setCancelled(true);
             }
-            return sum;
         }
 
         //When rewinding, a buff is given based on a 15 second cycle with 3 sections, each with a 5 second timeframe
@@ -227,22 +289,7 @@ public class KitRewind extends Kit{
             }
             else{
                 //Knockback (not functional)
-                List<Entity> affectedEnemies = player.getNearbyEntities(8, 8, 8);
-                for(Entity entity : affectedEnemies){
-                    if(entity instanceof org.bukkit.entity.LivingEntity victim && !(entity.getType().equals(EntityType.ARMOR_STAND))){
-                        Location victimLoc = victim.getLocation();
-                        Vector distanceVector = victimLoc.subtract(player.getLocation()).toVector();
-                        Vector kbAmp = new Vector(1d,1d,1d);
-                        if(distanceVector.lengthSquared() <= 3){
-                            kbAmp.multiply(3);
-                        }
-                        else{
-                            kbAmp.multiply(9 / distanceVector.lengthSquared());
-                        }
-                        Vector launch = distanceVector.normalize().multiply(kbAmp);
-                        victim.setVelocity(launch);
-                    }
-                }
+                player.getWorld().createExplosion(player, 0.1f, false, false);
             }
         }
     }
