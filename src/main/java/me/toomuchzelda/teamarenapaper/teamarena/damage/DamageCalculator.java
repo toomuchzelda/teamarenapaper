@@ -17,7 +17,8 @@ public class DamageCalculator
 			ItemStack[] armor = getArmor(victim);
 
 			for(ItemStack armorPiece : armor) {
-				armorPoints += DamageNumbers.getBaseDefensePoints(armorPiece.getType());
+				if(armorPiece != null)
+					armorPoints += DamageNumbers.getBaseDefensePoints(armorPiece.getType());
 			}
 			armorPoints = Math.min(20d, armorPoints);
 			percentBlocked = armorPoints / 25d;
@@ -35,8 +36,9 @@ public class DamageCalculator
 		double points = 0;
 		ItemStack[] armor = getArmor(victim);
 
-		for(ItemStack piece : armor) {
-			points += DamageNumbers.getEnchantedDefensePointsForDamageType(type, piece.getEnchantments());
+		for(ItemStack armorPiece : armor) {
+			if(armorPiece != null)
+				points += DamageNumbers.getEnchantedDefensePointsForDamageType(type, armorPiece.getEnchantments());
 		}
 
 		return Math.min(20d, points);

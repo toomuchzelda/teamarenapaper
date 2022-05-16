@@ -53,7 +53,7 @@ public class DamageType {
             .setNoKnockback().setDamageSource(DamageSource.DRY_OUT);
 
     public static final DamageType EXPLOSION = new DamageType(DamageTypeEnum.EXPLOSION, "Explosion", "%Killed% was caught in an explosion")
-            .setDamageSource(DamageSource.explosion((net.minecraft.world.entity.LivingEntity) null));
+			.setExplosion().setDamageSource(DamageSource.explosion((net.minecraft.world.entity.LivingEntity) null));
 
     public static final DamageType FALL = new DamageType(DamageTypeEnum.FALL, "Fall", "%Killed% fell to their death").setFall().setNoKnockback()
             .setDamageSource(DamageSource.FALL);
@@ -163,7 +163,7 @@ public class DamageType {
     public static final DamageType DEMO_TNTMINE = new DamageType(DamageTypeEnum.DEMO_TNTMINE, "Demolitions TNT Mine",
             "%Killed% stepped on %Killer%'s TNT Mine and blew up")
             .setDamageSource(DamageSource.explosion((net.minecraft.world.entity.LivingEntity) null))
-            .setIgnoreRate();
+            .setIgnoreRate().setExplosion();
 
     //a constant identifier for same types, to compare for same types across separate instances of this class
     // without evaluating a String

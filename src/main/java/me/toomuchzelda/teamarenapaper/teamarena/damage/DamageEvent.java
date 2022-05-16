@@ -192,34 +192,33 @@ public class DamageEvent {
 		damageEvent.knockbackResistance = 1;
 
 		if(damageEvent.victim instanceof LivingEntity living) {
-			//Bukkit.broadcastMessage("Final damage before addition: " + finalDamage);
 			damageEvent.knockbackResistance = 1d - living.getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE).getValue();
 
 			//Bukkit.broadcastMessage("DamageType is ignore armor: " + damageType.isIgnoreArmor());
-			if(!damageEvent.damageType.isIgnoreArmor()) {
-				//get the amount of armor points / "armor bars" above their hotbar
+			if(!damageEvent.damageType.isIgnoreArmor() && event.isApplicable(EntityDamageEvent.DamageModifier.ARMOR)) {
+				//get the amount of damage blocked by their base armor (armor bars above their hotbar)
 				double percentBaseBlocked = 1d - DamageCalculator.calcBlockedDamagePercent(
 						damageEvent.damageType, damageEvent.rawDamage, living);
 
+				Bukkit.broadcastMessage("raw damage: " + damageEvent.rawDamage);
 				Bukkit.broadcastMessage("percentBaseBlocked: " + percentBaseBlocked);
 
-				double reducedDamage = damageEvent.rawDamage * percentBaseBlocked;
+				double customReducedDamage = damageEvent.rawDamage * percentBaseBlocked;
 				//Bukkit.broadcastMessage("reducedDamage: " + reducedDamage);
 
 				//get enchantment reduction
 				double percentEnchBlocked = 1d - DamageCalculator.calcEnchantDefensePercentForDamageTypeOnLivingEntity(
 						damageEvent.damageType, living);
 
-				reducedDamage *= percentEnchBlocked;
+				Bukkit.broadcastMessage("percentEnchBlocked: " + percentEnchBlocked);
 
-				//refresh
-				damageEvent.finalDamage = reducedDamage;
+				customReducedDamage *= percentEnchBlocked;
 
-                /*Bukkit.broadcastMessage("Raw damage: " + rawDamage);
-                double armorMod = event.getDamage(EntityDamageEvent.DamageModifier.ARMOR);
-                Bukkit.broadcastMessage("Armor modifier: " + armorMod);
-                Bukkit.broadcastMessage("Final Damage: " + finalDamage);
-                Bukkit.broadcastMessage("Percentage blocked: " + ((Math.abs(armorMod) / rawDamage) * 100));*/
+				Bukkit.broadcastMessage("custom dmg after ench: " + customReducedDamage);
+
+				damageEvent.finalDamage = customReducedDamage;
+
+				Bukkit.broadcastMessage("finalDamage: " + damageEvent.finalDamage);
 			}
 		}
 
@@ -231,13 +230,7 @@ public class DamageEvent {
 			if(dEvent.getDamager() instanceof Projectile projectile) {
 
 				if(dEvent.getDamager() instanceof AbstractArrow aa) {
-					//knockbackMults.add((double) aa.getKnockbackStrength());
 					damageEvent.knockbackLevels += aa.getKnockbackStrength();
-                    /*if(aa.getPierceLevel() > 0) {
-                        //store info about how it's moving now, before the EntityDamageEvent ends and the cancellation
-                        // makes the arrow bounce off the damagee, so we can re-set the movement later
-                        ArrowPierceManager.addOrUpdateInfo(aa);
-                    }*/
 				}
 
 				if (projectile.getShooter() instanceof LivingEntity living) {
