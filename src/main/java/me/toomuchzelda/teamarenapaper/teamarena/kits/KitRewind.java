@@ -35,9 +35,26 @@ import net.kyori.adventure.sound.SoundStop;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 
+//Kit Description:
+/*
+	Main Ability: Rewind
+        CD: 15 seconds
+            Every 15 seconds, this kit can travel to its previous location 15 seconds ago, with an extra buff depending on
+            a 15 second cycle with 3 equivalent parts (each last for 5 seconds).
+            They are denoted by the current time of day:
+                Day: Regeneration
+                Sunset: Time Dilation (AoE Slow)
+                Night: Knockback (KB Explosion w/ minor damage)
+	Sub Ability: Stasis
+		CD: 12 sec
+        Active Duration: 0.7 sec
+            Provides Rewind with temporary invulnerability, but it is unable to attack during this time
+*/
+
 /**
  * @author onett425
  */
+
 public class KitRewind extends Kit{
 
     public static final Set<BukkitTask> REWIND_TASKS = new HashSet<>();
@@ -94,6 +111,7 @@ public class KitRewind extends Kit{
 
         public void removeAbility(Player player){
             player.resetPlayerTime();
+            //Fixes the display of the clock in kit selection menu
             player.setCooldown(Material.CLOCK, 0);
             PREV_LOCS.clear();
         }
@@ -156,7 +174,7 @@ public class KitRewind extends Kit{
         //Cancels damage that is received while in stasis
         public void onAttemptedDamage(DamageEvent event) {
             Player player = event.getPlayerVictim();
-            if(player.getCooldown(Material.SHULKER_SHELL) >= (10 * 20 - STASIS_DURATION)){
+            if(player.getCooldown(Material.SHULKER_SHELL) >= (12 * 20 - STASIS_DURATION)){
                 event.setCancelled(true);
             }
         }
@@ -164,7 +182,7 @@ public class KitRewind extends Kit{
         //Cancels attacks that are attempted while in stasis
         public void onAttemptedAttack(DamageEvent event) {
             Player player = (Player) event.getAttacker();
-            if(player.getCooldown(Material.SHULKER_SHELL) >= (10 * 20 - STASIS_DURATION)){
+            if(player.getCooldown(Material.SHULKER_SHELL) >= (12 * 20 - STASIS_DURATION)){
                 event.setCancelled(true);
             }
         }
@@ -220,7 +238,7 @@ public class KitRewind extends Kit{
 					player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.AMBIENT, 2, 0.5f);
 				}
                 else{
-                    //While in Stasis, armor is removed and player becomes invisible
+                    //"Glitching" aesthetic effect + particles
                     TeamArenaTeam team = Main.getPlayerInfo(player).team;
                     ItemStack[] armor = player.getInventory().getArmorContents();
                     HashMap swordSlots = player.getInventory().all(Material.IRON_SWORD);
@@ -275,12 +293,12 @@ public class KitRewind extends Kit{
                     }.runTaskTimer(Main.getPlugin(), 0, 0);
 
                     REWIND_TASKS.add(runnable);
-                    player.setCooldown(Material.SHULKER_SHELL, 10 * 20);
+                    player.setCooldown(Material.SHULKER_SHELL, 12 * 20);
                 }
             }
 
             //Prevents players from placing barriers
-            if(mat == Material.BARRIER && player.getCooldown(Material.SHULKER_SHELL) >= (10 * 20 - STASIS_DURATION)){
+            if(mat == Material.BARRIER && player.getCooldown(Material.SHULKER_SHELL) >= (12 * 20 - STASIS_DURATION)){
                 event.setCancelled(true);
             }
         }
@@ -296,7 +314,7 @@ public class KitRewind extends Kit{
                 player.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 150, 1));
             }
             else if(elapsedTick < 10*20){
-                //Time Dilation
+                //Time Dilation: Gives nearby enemies Slow 3 + No Jump for 3 seconds
                 List<Entity> affectedEnemies = player.getNearbyEntities(8, 8, 8);
                 for(Entity entity : affectedEnemies){
                     if(entity instanceof org.bukkit.entity.LivingEntity victim && !(entity.getType().equals(EntityType.ARMOR_STAND))){
@@ -308,7 +326,7 @@ public class KitRewind extends Kit{
                 player.getWorld().playSound(player.getLocation(), Sound.BLOCK_BEACON_DEACTIVATE, SoundCategory.AMBIENT, 0.5f, 1f);
             }
             else{
-                //Knockback
+                //Knockback: Minor Damage and KB in an AoE
                 player.getWorld().createExplosion(player, 1f, false, false);
 
                 //KB Amp
