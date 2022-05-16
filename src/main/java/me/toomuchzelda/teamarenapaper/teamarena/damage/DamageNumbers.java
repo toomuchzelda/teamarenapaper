@@ -134,7 +134,7 @@ public class DamageNumbers
 		return (double) enchantment.getDamageIncrease(levels, victim.getCategory());
 	}
 
-	public static double getDefensePoints(Material mat) {
+	public static double getBaseDefensePoints(Material mat) {
 		return ARMOR_BASE_PROTECTION[mat.ordinal()];
 	}
 
@@ -146,21 +146,23 @@ public class DamageNumbers
 	 * amount of Enchantment Protection Factor to take effect for this DamageType. refer to mc wiki.
 	 * capped at 20
 	 */
-	public static double getDamageEnchantedPoints(DamageType type, Map<Enchantment, Integer> enchantments) {
+	public static double getEnchantedDefensePointsForDamageType(DamageType type, Map<Enchantment, Integer> enchantments) {
 		double points = 0;
 
 		int levels;
 		for(Enchantment ench : type.getApplicableEnchantments()) {
 			levels = enchantments.getOrDefault(ench, 0);
-			points += ENCHANTMENT_VALUES.get(ench) * levels;
+			points += getEnchantDefensePoints(ench, levels);
 		}
 
 		return Math.min(20d, points);
 	}
 
-	//convert from EPF to percent of damage blocked, maxed at 80%. Percent format is in range 0 to 0.8
-	public static double getDamageEnchantedPercent(DamageType type, Map<Enchantment, Integer> enchantments) {
-		return getDamageEnchantedPoints(type, enchantments) / 25d;
+	/**
+	 * convert from EPF to percent of damage blocked, maxed at 80%. Percent format is in range 0 to 0.8
+	 */
+	public static double getEnchantedPercentBlockedForDamageType(DamageType type, Map<Enchantment, Integer> enchantments) {
+		return getEnchantedDefensePointsForDamageType(type, enchantments) / 25d;
 	}
 
 	public static double calcArrowDamage(double arrowDamage, double arrowSpeed) {

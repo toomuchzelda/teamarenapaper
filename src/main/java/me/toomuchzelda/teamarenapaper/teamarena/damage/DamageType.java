@@ -409,6 +409,10 @@ public class DamageType {
         return _projectile;
     }
 
+	public boolean hasApplicableEnchants() {
+		return this.applicableEnchantments.size() == 0;
+	}
+
     //if two damagetypes are the same, used for melee/projectile/sweeping where a new DamageType instance
     // is constructed.
     public boolean is(DamageType damageType) {
@@ -494,6 +498,12 @@ public class DamageType {
 
 		return this;
     }
+
+	public DamageType setIgnoreArmorEnchants() {
+		applicableEnchantments.clear();
+
+		return this;
+	}
 
 	public DamageType addApplicableEnchant(Enchantment enchantment) {
 		if(!applicableEnchantments.contains(enchantment)) {

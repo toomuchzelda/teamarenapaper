@@ -33,7 +33,7 @@ import java.util.List;
 import static me.toomuchzelda.teamarenapaper.teamarena.GameState.LIVE;
 
 //a custom damage event for custom knockback and other customisability bukkit/spigot/paper can't provide
-public class DamageEvent {
+public class Tempdmg {
 
 	private Entity victim;
 	//damage before damage-reduction calculations
@@ -47,7 +47,6 @@ public class DamageEvent {
 	//null implies no knockback
 	// dont use 0,0,0 vector as that'll stop the player moving for a split moment
 	private Vector knockback;
-	private float knockbackLevels;
 	//from 0 to 1, 0 = no knockback received, 1 = all knockback received
 	private double knockbackResistance;
 
@@ -68,8 +67,8 @@ public class DamageEvent {
 	public static final double yMult = 0.1;
 	public static final double xzMult = 1;
 
-	public static @Nullable DamageEvent createFromBukkitEvent(EntityDamageEvent event, DamageType damageType) {
-		DamageEvent newEvent = createFromBukkitEvent(event);
+	public static @Nullable DamageEvent createDamageEvent(EntityDamageEvent event, DamageType damageType) {
+		DamageEvent newEvent = createDamageEvent(event);
 		if(newEvent != null)
 			newEvent.setDamageType(damageType);
 
@@ -78,7 +77,7 @@ public class DamageEvent {
 
 	//EntityDamageEvent does all the damage calculations for us! does it?
 	// nope.
-	public static @Nullable DamageEvent createFromBukkitEvent(EntityDamageEvent event) {
+	public static @Nullable DamageEvent createDamageEvent(EntityDamageEvent event) {
 
 		event.setCancelled(true);
 		if(Main.getGame().getGameState() != LIVE)
@@ -101,8 +100,8 @@ public class DamageEvent {
 				return null;
 			else if (dEvent.getCause() == EntityDamageEvent.DamageCause.PROJECTILE && dEvent.getDamager() instanceof AbstractArrow aa) {
 				//fix arrow damage - no random crits
-				//  arrow damage is the vanilla formula without the random crit part
-				double damage = DamageNumbers.calcArrowDamage(aa.getDamage(), aa.getVelocity().length());
+				//  arrow damage is the vanilla formula without the part
+				double damage = Math.ceil(MathUtils.clamp(0, 2.147483647E9d, aa.getDamage() * aa.getVelocity().length()));
 				//this also does all armor re-calculations and stuff
 				dEvent.setDamage(damage);
 
@@ -124,62 +123,54 @@ public class DamageEvent {
 
 		//Main.getGame().queueDamage(new DamageEvent(event));
 		//will queue itself
-		DamageEvent dEvent = fromEDE(event);
-		Main.getGame().queueDamage(dEvent);
-		return dEvent;
+		return new DamageEvent(event);
 	}
 
-	private DamageEvent(Entity victim, double damage) {
-		this.victim = victim;
-		this.rawDamage = damage;
+	private DamageEvent(EntityDamageEvent event) {
+		victim = event.getEntity();
+		rawDamage = event.getDamage();
+		finalDamage = event.getFinalDamage();
 		cancelled = false;
-	}
 
-	private static DamageEvent fromEDE(EntityDamageEvent event) {
-		DamageEvent damageEvent = new DamageEvent(event.getEntity(), event.getDamage());
-
-		damageEvent.finalDamage = event.getFinalDamage();
-		damageEvent.cancelled = false;
-
-		damageEvent.damageType = DamageType.getAttack(event);
+		damageType = DamageType.getAttack(event);
 		//if it's fire caused by an entity, set the damager from the cached DamageTimes
 		// sort of re-construct this DamageEvent so it's accurate
 		EntityDamageEvent.DamageCause cause = event.getCause();
 		if(cause == EntityDamageEvent.DamageCause.FIRE_TICK) {
 
 			//Bukkit.broadcastMessage("instanceof EEBEE: " + (event instanceof EntityDamageByEntityEvent));
-			if(damageEvent.victim instanceof LivingEntity living) {
+			if(victim instanceof LivingEntity living) {
 				DamageTimes dTimes = DamageTimes.getDamageTimes(living);
 				if(dTimes.fireTimes.fireGiver != null && dTimes.fireTimes.fireType != null) {
-					if(damageEvent.damageType.isProjectile())
-						damageEvent.realAttacker = dTimes.fireTimes.fireGiver;
+					if(damageType.isProjectile())
+						realAttacker = dTimes.fireTimes.fireGiver;
 					else
-						damageEvent.attacker = dTimes.fireTimes.fireGiver;
+						attacker = dTimes.fireTimes.fireGiver;
 
-					damageEvent.damageType = dTimes.fireTimes.fireType;
+					damageType = dTimes.fireTimes.fireType;
 				}
 			}
 		}
 		// also attribute fall damage if they were pushed
 		else if((cause == EntityDamageEvent.DamageCause.FALL || cause == EntityDamageEvent.DamageCause.VOID)
-				&& damageEvent.victim instanceof LivingEntity living) {
+				&& victim instanceof LivingEntity living) {
 
 			DamageTimes times = DamageTimes.getDamageTimes(living);
 			if(times.lastDamager != null && TeamArena.getGameTick() - times.lastAttackTime < 10 * 20) { // 10 seconds since last attacked
 				if(times.lastAttackEvent.damageType.is(DamageType.PROJECTILE)) {
 					if(cause == EntityDamageEvent.DamageCause.FALL)
-						damageEvent.damageType = DamageType.FALL_SHOT;
+						this.damageType = DamageType.FALL_SHOT;
 					else
-						damageEvent.damageType = DamageType.VOID_SHOT;
+						this.damageType = DamageType.VOID_SHOT;
 				}
 				else {
 					if(cause == EntityDamageEvent.DamageCause.FALL)
-						damageEvent.damageType = DamageType.FALL_PUSHED;
+						this.damageType = DamageType.FALL_PUSHED;
 					else
-						damageEvent.damageType = DamageType.VOID_PUSHED;
+						this.damageType = DamageType.VOID_PUSHED;
 				}
 
-				damageEvent.attacker = times.lastDamager;
+				this.attacker = times.lastDamager;
 			}
 		}
 
@@ -189,31 +180,33 @@ public class DamageEvent {
 		//if(damageType.isKnockback())
 		//   knockbackMults = new LinkedList<>();
 
-		damageEvent.knockbackResistance = 1;
+		knockbackResistance = 1;
 
-		if(damageEvent.victim instanceof LivingEntity living) {
+		if(victim instanceof LivingEntity living) {
 			//Bukkit.broadcastMessage("Final damage before addition: " + finalDamage);
-			damageEvent.knockbackResistance = 1d - living.getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE).getValue();
+			knockbackResistance = 1 - living.getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE).getValue();
 
 			//Bukkit.broadcastMessage("DamageType is ignore armor: " + damageType.isIgnoreArmor());
-			if(!damageEvent.damageType.isIgnoreArmor()) {
+			if(!damageType.isIgnoreArmor() && event.isApplicable(EntityDamageEvent.DamageModifier.ARMOR)) {
 				//get the amount of armor points / "armor bars" above their hotbar
-				double percentBaseBlocked = 1d - DamageCalculator.calcBlockedDamagePercent(
-						damageEvent.damageType, damageEvent.rawDamage, living);
+				double armorPoints;
+				if(living.getAttribute(Attribute.GENERIC_ARMOR) != null)
+					armorPoints = living.getAttribute(Attribute.GENERIC_ARMOR).getValue();
+				else
+					armorPoints = 0;
 
-				Bukkit.broadcastMessage("percentBaseBlocked: " + percentBaseBlocked);
+				if(armorPoints > 20)
+					armorPoints = 20;
 
-				double reducedDamage = damageEvent.rawDamage * percentBaseBlocked;
+				//turn into range 0 to 0.8
+				armorPoints *= 0.04;
+
+				double reducedDamage = -(rawDamage * armorPoints);
 				//Bukkit.broadcastMessage("reducedDamage: " + reducedDamage);
-
-				//get enchantment reduction
-				double percentEnchBlocked = 1d - DamageCalculator.calcEnchantDefensePercentForDamageTypeOnLivingEntity(
-						damageEvent.damageType, living);
-
-				reducedDamage *= percentEnchBlocked;
+				event.setDamage(EntityDamageEvent.DamageModifier.ARMOR, reducedDamage);
 
 				//refresh
-				damageEvent.finalDamage = reducedDamage;
+				finalDamage = event.getFinalDamage();
 
                 /*Bukkit.broadcastMessage("Raw damage: " + rawDamage);
                 double armorMod = event.getDamage(EntityDamageEvent.DamageModifier.ARMOR);
@@ -221,18 +214,26 @@ public class DamageEvent {
                 Bukkit.broadcastMessage("Final Damage: " + finalDamage);
                 Bukkit.broadcastMessage("Percentage blocked: " + ((Math.abs(armorMod) / rawDamage) * 100));*/
 			}
+
+			//if the victim has absorption hearts, it subtracts that from the final damage
+			// so do this even though it's deprecated
+			if(event.isApplicable(EntityDamageEvent.DamageModifier.ABSORPTION)) {
+				//Bukkit.broadcastMessage("Absorption reduction modifier: " + event.getDamage(EntityDamageEvent.DamageModifier.ABSORPTION));
+				//subtract as the reduction is a negative number
+				finalDamage -= event.getDamage(EntityDamageEvent.DamageModifier.ABSORPTION);
+			}
 		}
 
 		boolean doBaseKB = true;
-		damageEvent.knockbackLevels = 0;
+		float kbLevels = 0;
 
 		if(event instanceof EntityDamageByEntityEvent dEvent) {
-			damageEvent.isCritical = dEvent.isCritical();
+			isCritical = dEvent.isCritical();
 			if(dEvent.getDamager() instanceof Projectile projectile) {
 
 				if(dEvent.getDamager() instanceof AbstractArrow aa) {
 					//knockbackMults.add((double) aa.getKnockbackStrength());
-					damageEvent.knockbackLevels += aa.getKnockbackStrength();
+					kbLevels += aa.getKnockbackStrength();
                     /*if(aa.getPierceLevel() > 0) {
                         //store info about how it's moving now, before the EntityDamageEvent ends and the cancellation
                         // makes the arrow bounce off the damagee, so we can re-set the movement later
@@ -241,17 +242,17 @@ public class DamageEvent {
 				}
 
 				if (projectile.getShooter() instanceof LivingEntity living) {
-					damageEvent.realAttacker = living;
-					damageEvent.attacker = projectile;
+					realAttacker = living;
+					attacker = projectile;
 				}
 			}
 			else {
-				damageEvent.attacker = dEvent.getDamager();
-				damageEvent.realAttacker = null;
-				if(damageEvent.attacker instanceof TNTPrimed tnt) {
+				attacker = dEvent.getDamager();
+				realAttacker = null;
+				if(attacker instanceof TNTPrimed tnt) {
 					Entity tntSource = tnt.getSource();
 					if(tntSource != null) {
-						damageEvent.realAttacker = tntSource;
+						realAttacker = tntSource;
 					}
 				}
 
@@ -260,16 +261,16 @@ public class DamageEvent {
 						//item used during the attack, if applicable
 						ItemStack item = living.getEquipment().getItemInMainHand();
 						//halve the strength of knockback enchantments
-						damageEvent.knockbackLevels += ((float) item.getEnchantmentLevel(Enchantment.KNOCKBACK)) / 2;
+						kbLevels += ((float) item.getEnchantmentLevel(Enchantment.KNOCKBACK)) / 2;
 						//knockbackMults.add(level);
 
 						//cancelled event doesn't do sweeping attacks, re-do them here
-						if(living instanceof Player p && damageEvent.damageType.is(DamageType.MELEE)) {
+						if(living instanceof Player p && damageType.is(DamageType.MELEE)) {
 
 
 
 							//Bukkit.broadcastMessage("CustomBaseItemDamage: " +
-						//			DamageNumbers.getMaterialBaseDamage(item.getType()));
+							//			DamageNumbers.getMaterialBaseDamage(item.getType()));
 
 
 
@@ -284,25 +285,25 @@ public class DamageEvent {
 							double walkedDist = nmsPlayer.walkDist - nmsPlayer.walkDistO;
 							boolean notExceedingWalkSpeed = walkedDist < p.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).getValue();
 
-							if(isChargedWeapon && !isChargedSprintAttack && !damageEvent.isCritical &&
+							if(isChargedWeapon && !isChargedSprintAttack && !isCritical &&
 									notExceedingWalkSpeed) {
 								if(ItemUtils.isSword(item))
-									damageEvent.isSweep = true;
+									isSweep = true;
 							}
 
-							if(damageEvent.isSweep) {
+							if(isSweep) {
 								float sweepingEdgeDmg = (float) (1f + EnchantmentHelper.getSweepingDamageRatio(nmsPlayer)
-										* damageEvent.finalDamage);
+										* finalDamage);
 
 								List<LivingEntity> list = p.getWorld().getLivingEntities();
 								Iterator<LivingEntity> iter = list.iterator();
 								//only mobs colliding with this bounding box
-								BoundingBox box = damageEvent.victim.getBoundingBox().expand(1, 0.25, 1);
+								BoundingBox box = victim.getBoundingBox().expand(1, 0.25, 1);
 								while(iter.hasNext()) {
 									LivingEntity livingEntity = iter.next();
 									net.minecraft.world.entity.LivingEntity nmsLivingEntity = ((CraftLivingEntity) livingEntity).getHandle();
 									//disqualifying conditions
-									if(livingEntity == p || livingEntity == damageEvent.victim)
+									if(livingEntity == p || livingEntity == victim)
 										continue;
 
 									if(livingEntity instanceof ArmorStand stand && stand.isMarker())
@@ -317,18 +318,18 @@ public class DamageEvent {
 								}
 							}
 						}
-						else if(damageEvent.damageType.is(DamageType.SWEEP_ATTACK)) {
+						else if(damageType.is(DamageType.SWEEP_ATTACK)) {
 							//sweep attacks no do base kb
 							// use de kb level based on attacker looking direction instead
 							doBaseKB = false;
-							damageEvent.knockbackLevels += 1;
+							kbLevels += 1;
 						}
 					}
 
-					if(living instanceof Player p && damageEvent.damageType.isMelee()) {
-						damageEvent.wasSprinting = p.isSprinting();
-						if(damageEvent.wasSprinting)
-							damageEvent.knockbackLevels += 1;
+					if(living instanceof Player p && damageType.isMelee()) {
+						wasSprinting = p.isSprinting();
+						if(wasSprinting)
+							kbLevels += 1;
 					}
 
                     /*Bukkit.broadcastMessage("Raw damage: " + rawDamage);
@@ -340,13 +341,14 @@ public class DamageEvent {
 
 		}
 
-		if(damageEvent.damageType.isKnockback()) {
-			damageEvent.knockback = calculateKnockback(damageEvent, doBaseKB);
+		if(damageType.isKnockback()) {
+			knockback = calculateKnockback(doBaseKB, kbLevels);
 		}
 
 		//Bukkit.broadcastMessage("kbresist: " + knockbackResistance);
 
-		return damageEvent;
+		//queue this damage
+		Main.getGame().queueDamage(this);
 	}
 
     /*public DamageEvent(Entity damagee, double rawDamage, double finalDamage, DamageType damageType, Entity damager,
@@ -664,18 +666,18 @@ public class DamageEvent {
 		return true;
 	}
 
-	public static Vector calculateKnockback(DamageEvent dEvent, boolean baseKnockback) {
+	public Vector calculateKnockback(boolean baseKnockback, float knockbackLevels) {
 		Vector knockback = new Vector();
-		if (dEvent.attacker != null)
+		if (attacker != null)
 		{
 			if(baseKnockback) {
 				Vector offset;
-				if (dEvent.attacker instanceof Projectile && dEvent.damageType.isProjectile()) {
-					offset = dEvent.attacker.getLocation().getDirection();
+				if (attacker instanceof Projectile && damageType.isProjectile()) {
+					offset = attacker.getLocation().getDirection();
 					offset.setZ(-offset.getZ());
 				}
 				else {
-					offset = dEvent.attacker.getLocation().toVector().subtract(dEvent.victim.getLocation().toVector());
+					offset = attacker.getLocation().toVector().subtract(victim.getLocation().toVector());
 				}
 
 				double xDist = offset.getX();
@@ -688,13 +690,13 @@ public class DamageEvent {
 
 				double dist = Math.sqrt(xDist * xDist + zDist * zDist);
 
-				Vector vec = dEvent.victim.getVelocity();
+				Vector vec = victim.getVelocity();
 
 				vec.setX(vec.getX() / 2);
 				vec.setY(vec.getY() / 2);
 				vec.setZ(vec.getZ() / 2);
 
-				vec.add(new Vector(-(xDist / dist * xzVal * dEvent.knockbackResistance), yVal, -(zDist / dist * xzVal * dEvent.knockbackResistance)));
+				vec.add(new Vector(-(xDist / dist * xzVal * knockbackResistance), yVal, -(zDist / dist * xzVal * knockbackResistance)));
 
 				if (vec.getY() > yVal)
 					vec.setY(yVal);
@@ -702,18 +704,17 @@ public class DamageEvent {
 				knockback.add(vec);
 			}
 
-			if (dEvent.knockbackLevels != 0)
+			if (knockbackLevels != 0)
 			{
-				float knockbackLevels = dEvent.knockbackLevels;;
 				knockbackLevels *= xzMult;
 				knockbackLevels /= 2;
 
 				Vector kbEnch;
 
-				double xKb = -Math.sin(dEvent.attacker.getLocation().getYaw() * 3.1415927F / 180.0f) * knockbackLevels;
-				double zKb = Math.cos(dEvent.attacker.getLocation().getYaw() * 3.1415927F / 180.0f) * knockbackLevels;
+				double xKb = -Math.sin(attacker.getLocation().getYaw() * 3.1415927F / 180.0f) * knockbackLevels;
+				double zKb = Math.cos(attacker.getLocation().getYaw() * 3.1415927F / 180.0f) * knockbackLevels;
 
-				kbEnch = new Vector(xKb * dEvent.knockbackResistance, yMult, zKb * dEvent.knockbackResistance);
+				kbEnch = new Vector(xKb * knockbackResistance, yMult, zKb * knockbackResistance);
 				knockback.add(kbEnch);
 			}
 		}
@@ -806,3 +807,4 @@ public class DamageEvent {
 		return cancelled;
 	}
 }
+

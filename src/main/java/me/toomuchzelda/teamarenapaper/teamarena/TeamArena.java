@@ -938,7 +938,7 @@ public abstract class TeamArena
 			} else {
 				//todo: kill the player here (remove from game)
 				EntityDamageEvent event = new EntityDamageEvent(player, EntityDamageEvent.DamageCause.VOID, 9999d);
-				DamageEvent dEvent = DamageEvent.createDamageEvent(event, DamageType.SUICIDE);
+				DamageEvent dEvent = DamageEvent.createFromBukkitEvent(event, DamageType.SUICIDE);
 
 				if(isRespawningGame()) {
 					respawnTimers.remove(player); //if respawning game remove them from respawn queue

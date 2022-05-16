@@ -21,14 +21,14 @@ public class CommandRespawn extends CustomCommand
 		super("respawn", "Respawn after waiting while dead",
 				"/respawn [player]", Arrays.asList("suicide", "kill"), PermissionLevel.ALL);
 	}
-	
+
 	@Override
 	public void run(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) {
 		if (args.length > 0 && hasPermission(sender, PermissionLevel.OWNER)) {
 			Player toKill = Bukkit.getPlayer(args[0]);
 			if (toKill != null) {
 				// admin abuse
-				DamageEvent.createDamageEvent(new EntityDamageEvent(toKill, EntityDamageEvent.DamageCause.VOID,
+				DamageEvent.createFromBukkitEvent(new EntityDamageEvent(toKill, EntityDamageEvent.DamageCause.VOID,
 						Integer.MAX_VALUE), DamageType.SUICIDE_ASSISTED);
 			} else {
 				sender.sendMessage(Component.text("Invalid player").color(NamedTextColor.RED));
@@ -39,14 +39,14 @@ public class CommandRespawn extends CustomCommand
 				Main.getGame().setToRespawn(p);
 			} else {
 				// suicide
-				DamageEvent.createDamageEvent(new EntityDamageEvent(p, EntityDamageEvent.DamageCause.VOID,
+				DamageEvent.createFromBukkitEvent(new EntityDamageEvent(p, EntityDamageEvent.DamageCause.VOID,
 						Integer.MAX_VALUE), DamageType.SUICIDE);
 			}
 		} else {
 			showUsage(sender, "/respawn <player>");
 		}
 	}
-	
+
 	@Override
 	public @NotNull List<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
 		if (args.length == 1 && hasPermission(sender, PermissionLevel.OWNER))

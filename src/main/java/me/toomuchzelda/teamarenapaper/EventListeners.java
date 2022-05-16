@@ -302,7 +302,7 @@ public class EventListeners implements Listener
 					if(game.getGameState() == LIVE) {
 						event.setCancelled(false);
 						EntityDamageEvent dEvent = new EntityDamageEvent(event.getPlayer(), EntityDamageEvent.DamageCause.VOID, 999);
-						DamageEvent.createDamageEvent(dEvent);
+						DamageEvent.createFromBukkitEvent(dEvent);
 					}
 				}
 			}
@@ -358,7 +358,7 @@ public class EventListeners implements Listener
 	//create and cache damage events
 	@EventHandler
 	public void entityDamage(EntityDamageEvent event) {
-		DamageEvent.createDamageEvent(event);
+		DamageEvent.createFromBukkitEvent(event);
 	}
 
 	@EventHandler
