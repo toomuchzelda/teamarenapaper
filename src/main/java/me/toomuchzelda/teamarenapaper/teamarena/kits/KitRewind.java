@@ -21,8 +21,10 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
+import it.unimi.dsi.fastutil.Hash;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
@@ -87,12 +89,13 @@ public class KitRewind extends Kit{
 
     public static class RewindAbility extends Ability{
 
-        public final HashMap<Integer, Location> PREV_LOCS = new HashMap<>();
-        int startingTick = 0;
+        //HashMap<playerID: UUID, pastLoc: HashMap<tick: int, loc: Location>>
+        public final HashMap<UUID, HashMap<Integer, Location>> PREV_LOCS_MASTER = new HashMap<>();
+        public final HashMap<UUID, Integer> STARTING_TICK = new HashMap<>();
 
         //clean up
 		public void unregisterAbility() {
-			PREV_LOCS.clear();
+			PREV_LOCS_MASTER.clear();
 
             Iterator<BukkitTask> iter = REWIND_TASKS.iterator();
 			while(iter.hasNext()) {
@@ -105,32 +108,40 @@ public class KitRewind extends Kit{
         public void giveAbility(Player player) {
 			player.setCooldown(Material.CLOCK, 15*20);
             player.setPlayerTime(6000, false);
-            PREV_LOCS.clear();
-            startingTick = TeamArena.getGameTick();
+            STARTING_TICK.put(player.getUniqueId(), TeamArena.getGameTick());
+
+            HashMap<Integer, Location> playerLocs = new HashMap<>();
+            PREV_LOCS_MASTER.put(player.getUniqueId(), playerLocs);
 		}
 
         public void removeAbility(Player player){
             player.resetPlayerTime();
             //Fixes the display of the clock in kit selection menu
             player.setCooldown(Material.CLOCK, 0);
-            PREV_LOCS.clear();
+            PREV_LOCS_MASTER.get(player.getUniqueId()).clear();
         }
 
         public void onPlayerTick(Player player) {
             //Player tick is used to determine cooldowns + abilities
             //Time tick is purely aesthetic
             Location loc = player.getLocation();
+            UUID playerID = player.getUniqueId();
+            HashMap<Integer, Location> playerLocs = PREV_LOCS_MASTER.get(playerID);
             Block currBlock = loc.getBlock().getRelative(BlockFace.DOWN);
             int currTick = TeamArena.getGameTick();
-            int elapsedTick = (currTick - startingTick) % (15 * 20);
+            int tickDiff = currTick - (15 * 20) - 1;
+            int elapsedTick = (currTick - STARTING_TICK.get(playerID)) % (15 * 20);
             long timeTick = player.getPlayerTimeOffset() % 24000;
             //Since each time period (day, sunset, night) has a different time frame, time step varies so each cycle lasts 5 seconds
             long timeStepSize = 0;
 
             //Checking that the current location is a valid rewind location, if it is, add it to possible rewind locations.
             if(player.isFlying() || player.isGliding() || (!currBlock.isEmpty() && currBlock.getType() != Material.LAVA)){
-              PREV_LOCS.put(currTick, player.getLocation());  
+              playerLocs.put(currTick, player.getLocation());  
             }
+            //Removing locations which are > 15 seconds away since they are no longer valid.
+            playerLocs.remove(tickDiff);
+
 
             //Displaying the current cycle in the action bar, providing distinct sound cues for people who don't use action bar
             Component currState = Component.text("sample text");;
@@ -191,8 +202,8 @@ public class KitRewind extends Kit{
             Material mat = event.getMaterial();
             Player player = event.getPlayer();
             World world = player.getWorld();
+            UUID playerID = player.getUniqueId();
             
-
             //Rewind Clock implementation
             if(mat == Material.CLOCK && player.getCooldown(Material.CLOCK) == 0){
                 //No Rewinding w/ Flag
@@ -204,9 +215,10 @@ public class KitRewind extends Kit{
                 else{
                     int currTick = TeamArena.getGameTick();
                     int pastTick = currTick - (15 * 20);
-                    Location pastLoc = PREV_LOCS.get(pastTick);
+                    HashMap<Integer, Location> playerLocs = PREV_LOCS_MASTER.get(playerID);
+                    Location pastLoc = playerLocs.get(pastTick);
                         while(pastLoc == null && pastTick < currTick){
-                            pastLoc = PREV_LOCS.get(pastTick);
+                            pastLoc = playerLocs.get(pastTick);
                             pastTick++;
                         }
 
@@ -218,7 +230,7 @@ public class KitRewind extends Kit{
                         world.playSound(player, Sound.ENTITY_ENDERMAN_TELEPORT , 1f, 1.5f);
                         rewindBuff(player, currTick);
                         player.setCooldown(Material.CLOCK, 15 * 20);
-                        PREV_LOCS.clear();
+                        playerLocs.clear();
                     }
                     else{
                         //Failure
@@ -307,7 +319,7 @@ public class KitRewind extends Kit{
         public void rewindBuff(Player player, int currTick){
             //Returns how far the currTick is in the cycle
             //[0, 299]
-            int elapsedTick = (currTick - startingTick) % (15 * 20);
+            int elapsedTick = (currTick - STARTING_TICK.get(player.getUniqueId())) % (15 * 20);
             if(elapsedTick >= 0 && elapsedTick < 5*20){
                 //Regen 2 for 7.5 seconds => 3 hearts healed
                 player.removePotionEffect(PotionEffectType.REGENERATION);
@@ -327,17 +339,23 @@ public class KitRewind extends Kit{
             }
             else{
                 //Knockback: Minor Damage and KB in an AoE
-                player.getWorld().createExplosion(player, 1f, false, false);
+                player.getWorld().createExplosion(player, 0.8f, false, false);
 
                 //KB Amp
                 List<Entity> affectedEnemies = player.getNearbyEntities(3, 3, 3);
                 for(Entity entity : affectedEnemies){
                     if(entity instanceof org.bukkit.entity.LivingEntity victim && !(entity.getType().equals(EntityType.ARMOR_STAND))){
                         org.bukkit.util.@NotNull Vector vel = victim.getVelocity();
-                        if(vel.getY() < 0){
-                            vel.setY(0);
+                        Vector relativePos = victim.getLocation().toVector().subtract(player.getLocation().toVector());
+                        double vecLength = relativePos.lengthSquared();
+                        if(vecLength <= 0.25){
+                            vecLength = 0.25;
                         }
-                        victim.setVelocity(vel.multiply(10));
+                        double amp = 25 * 1/vecLength;
+                        if(vel.getY() < 0){
+                            vel.setY(1/30);
+                        }
+                        victim.setVelocity(vel.add(relativePos.multiply(amp)));
                     }
                 }
 
