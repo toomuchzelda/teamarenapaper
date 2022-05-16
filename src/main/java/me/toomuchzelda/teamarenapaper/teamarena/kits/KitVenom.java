@@ -129,13 +129,14 @@ public class KitVenom extends Kit
 		@Override
 		public void onInteract(PlayerInteractEvent event) {
 			Player player = event.getPlayer();
-			if(event.getMaterial() == Material.CHICKEN) {
+			//Raw Chicken is proper ability form, Cooked Chicken is funny admin abuse mode
+			if(event.getMaterial() == Material.CHICKEN || event.getMaterial() == Material.COOKED_CHICKEN) {
 				if(Main.getGame() instanceof CaptureTheFlag ctf && ctf.isFlagCarrier(player)) {
 					Component cannotUseAbilityMsg = Component.text("You can't use Toxic Leap while holding the flag!").color(TextColor.color(255, 98, 20));
 					player.sendMessage(cannotUseAbilityMsg);
 					player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.AMBIENT, 2, 0.5f);
 				}
-				else if(!player.hasCooldown(Material.CHICKEN)) {
+				else if(!player.hasCooldown(Material.CHICKEN) || (event.getMaterial() == Material.COOKED_CHICKEN && !player.hasCooldown(Material.COOKED_CHICKEN))) {
 					//Leap Ability Implementation
 					World world = player.getWorld();
 					Vector direction = player.getLocation().getDirection();
@@ -143,6 +144,7 @@ public class KitVenom extends Kit
 					multiplier.multiply(1.5);
 					direction.multiply(multiplier);
 					player.setCooldown(Material.CHICKEN, 12 * 20);
+					player.setCooldown(Material.COOKED_CHICKEN, 4 * 20);
 					//world.playSound to play sound for all playesr
 					world.playSound(player, Sound.ENTITY_WITHER_SHOOT, 0.3f, 1.1f);
 					EntityUtils.setVelocity(player, event.getPlayer().getVelocity().add(direction));
@@ -180,6 +182,7 @@ public class KitVenom extends Kit
 											player.stopSound(Sound.ENTITY_ILLUSIONER_MIRROR_MOVE);
 											player.playSound(player, Sound.ENTITY_ILLUSIONER_MIRROR_MOVE, 1, 1.2f);
 											player.setCooldown(Material.CHICKEN, newCooldown);
+											player.setCooldown(Material.COOKED_CHICKEN, 0);
 											
 											//Applying Poison, tracking the poisoned entity
 											applyPoison(victim);
