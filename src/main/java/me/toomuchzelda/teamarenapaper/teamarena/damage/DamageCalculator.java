@@ -1,8 +1,12 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
+import org.bukkit.Bukkit;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+
+import java.util.Map;
 
 public class DamageCalculator
 {
@@ -10,7 +14,7 @@ public class DamageCalculator
 	 * Percentage of damage to be blocked by the victim's armor, ignoring enchantments, for this DamageType
 	 * @return percent in range 0.0 to 1.0
 	 */
-	public static double calcBlockedDamagePercent(DamageType type, double damage, LivingEntity victim) {
+	public static double calcBlockedDamagePercent(DamageType type, LivingEntity victim) {
 		double percentBlocked = 0d;
 		if(!type.isIgnoreArmor()) {
 			double armorPoints = 0d;
@@ -51,6 +55,37 @@ public class DamageCalculator
 		return calcEnchantDefensePointsForDamageTypeOnLivingEntity(type, victim) / 25d;
 	}
 
+	public static double calcItemEnchantDamage(ItemStack item, LivingEntity victim) {
+		double d = 0d;
+
+		for(Map.Entry<Enchantment, Integer> ench : item.getEnchantments().entrySet()) {
+			d += DamageNumbers.getEnchantmentDamage(ench.getKey(), ench.getValue(), victim);
+		}
+
+		return d;
+	}
+
+	public static double calcArmorReducedDamage(DamageType damageType, double damage, LivingEntity victim) {
+		//get the amount of damage blocked by their base armor (armor bars above their hotbar)
+		double percentBaseBlocked = 1d - DamageCalculator.calcBlockedDamagePercent(damageType, victim);
+
+		Bukkit.broadcastMessage("percentBaseBlocked: " + percentBaseBlocked);
+
+		double customReducedDamage = damage * percentBaseBlocked;
+		//Bukkit.broadcastMessage("reducedDamage: " + reducedDamage);
+
+		//get enchantment reduction
+		double percentEnchBlocked = 1d - DamageCalculator.calcEnchantDefensePercentForDamageTypeOnLivingEntity(
+				damageType, victim);
+
+		Bukkit.broadcastMessage("percentEnchBlocked: " + percentEnchBlocked);
+
+		customReducedDamage *= percentEnchBlocked;
+
+		Bukkit.broadcastMessage("finalDamage: " + customReducedDamage);
+
+		return customReducedDamage;
+	}
 
 	//PlayerInventory.getArmorContents doesn't create copies of ItemStacks, probably faster than
 	// EntityEquipment.getArmorContents

@@ -23,6 +23,7 @@ import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.potion.PotionEffect;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
@@ -37,7 +38,9 @@ public class DamageEvent {
 
 	private Entity victim;
 	//damage before damage-reduction calculations
-	private double rawDamage;
+	private double rawDamage; // full raw damage
+	private double baseDamage; //base damage if any
+	private double enchantDamage; //enchantment damage from the item if any
 
 	//damage after damage-reduction calculations
 	private double finalDamage;
@@ -138,6 +141,8 @@ public class DamageEvent {
 	private static DamageEvent fromEDE(EntityDamageEvent event) {
 		DamageEvent damageEvent = new DamageEvent(event.getEntity(), event.getDamage());
 
+		Bukkit.broadcastMessage("Bukkit rawDamage: " + damageEvent.rawDamage);
+
 		damageEvent.finalDamage = event.getFinalDamage();
 		damageEvent.cancelled = false;
 
@@ -191,40 +196,10 @@ public class DamageEvent {
 
 		damageEvent.knockbackResistance = 1;
 
-		if(damageEvent.victim instanceof LivingEntity living) {
-			damageEvent.knockbackResistance = 1d - living.getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE).getValue();
-
-			//Bukkit.broadcastMessage("DamageType is ignore armor: " + damageType.isIgnoreArmor());
-			if(!damageEvent.damageType.isIgnoreArmor() && event.isApplicable(EntityDamageEvent.DamageModifier.ARMOR)) {
-				//get the amount of damage blocked by their base armor (armor bars above their hotbar)
-				double percentBaseBlocked = 1d - DamageCalculator.calcBlockedDamagePercent(
-						damageEvent.damageType, damageEvent.rawDamage, living);
-
-				Bukkit.broadcastMessage("raw damage: " + damageEvent.rawDamage);
-				Bukkit.broadcastMessage("percentBaseBlocked: " + percentBaseBlocked);
-
-				double customReducedDamage = damageEvent.rawDamage * percentBaseBlocked;
-				//Bukkit.broadcastMessage("reducedDamage: " + reducedDamage);
-
-				//get enchantment reduction
-				double percentEnchBlocked = 1d - DamageCalculator.calcEnchantDefensePercentForDamageTypeOnLivingEntity(
-						damageEvent.damageType, living);
-
-				Bukkit.broadcastMessage("percentEnchBlocked: " + percentEnchBlocked);
-
-				customReducedDamage *= percentEnchBlocked;
-
-				Bukkit.broadcastMessage("custom dmg after ench: " + customReducedDamage);
-
-				damageEvent.finalDamage = customReducedDamage;
-
-				Bukkit.broadcastMessage("finalDamage: " + damageEvent.finalDamage);
-			}
-		}
-
 		boolean doBaseKB = true;
 		damageEvent.knockbackLevels = 0;
 
+		boolean alreadyCalcedArmor = false;
 		if(event instanceof EntityDamageByEntityEvent dEvent) {
 			damageEvent.isCritical = dEvent.isCritical();
 			if(dEvent.getDamager() instanceof Projectile projectile) {
@@ -249,24 +224,45 @@ public class DamageEvent {
 				}
 
 				if(dEvent.getDamager() instanceof LivingEntity living) {
-					if(living.getEquipment() != null) {
+					if(damageEvent.damageType.isMelee() && living.getEquipment() != null) {
 						//item used during the attack, if applicable
 						ItemStack item = living.getEquipment().getItemInMainHand();
+
+						//recalculate the damage done by the item
+						double itemDamage = DamageNumbers.getMaterialBaseDamage(item.getType());
+						//add damage from potion effects (strength and weakness)
+						for(PotionEffect potEffect : living.getActivePotionEffects()) {
+							itemDamage += DamageNumbers.getDamageForPotionEffect(potEffect);
+						}
+						//crit
+						if(damageEvent.isCritical) {
+							itemDamage = DamageNumbers.getCritDamage(itemDamage);
+						}
+
+						damageEvent.baseDamage = itemDamage;
+
+						Bukkit.broadcastMessage("Custom base damage: " + itemDamage);
+
+						//add enchantments
+						if(damageEvent.victim instanceof LivingEntity livingVictim) {
+							double enchDamage = DamageCalculator.calcItemEnchantDamage(item, livingVictim);
+							damageEvent.enchantDamage = enchDamage;
+							itemDamage += enchDamage;
+							Bukkit.broadcastMessage("Custom ench damage: " + enchDamage);
+
+							//do armor calc on victim
+							damageEvent.finalDamage = DamageCalculator.calcArmorReducedDamage(damageEvent.damageType, itemDamage, livingVictim);
+							alreadyCalcedArmor = true;
+						}
+
+						damageEvent.rawDamage = itemDamage;
+
 						//halve the strength of knockback enchantments
 						damageEvent.knockbackLevels += ((float) item.getEnchantmentLevel(Enchantment.KNOCKBACK)) / 2;
 						//knockbackMults.add(level);
 
-						//cancelled event doesn't do sweeping attacks, re-do them here
+						//cancelled bukkit event doesn't do sweeping attacks, re-do them here
 						if(living instanceof Player p && damageEvent.damageType.is(DamageType.MELEE)) {
-
-
-
-							//Bukkit.broadcastMessage("CustomBaseItemDamage: " +
-						//			DamageNumbers.getMaterialBaseDamage(item.getType()));
-
-
-
-
 							//Bukkit.broadcastMessage("DamageType is melee: line 99");
 							//same as nmsP.getAttackStrengthCooldown(0.5f);
 							boolean isChargedWeapon = p.getAttackCooldown() > 0.9f;
@@ -323,14 +319,19 @@ public class DamageEvent {
 						if(damageEvent.wasSprinting)
 							damageEvent.knockbackLevels += 1;
 					}
-
-                    /*Bukkit.broadcastMessage("Raw damage: " + rawDamage);
-                    Bukkit.broadcastMessage("Final damage after addition: " + finalDamage);
-                    Bukkit.broadcastMessage("Armor rating: " + EntityUtils.getArmorPercent(living));
-                    Bukkit.broadcastMessage("Attribute armor: " + living.getAttribute(Attribute.GENERIC_ARMOR).getValue());*/
 				}
 			}
 
+		}
+
+		if(!alreadyCalcedArmor && damageEvent.victim instanceof LivingEntity living) {
+			damageEvent.knockbackResistance = 1d - living.getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE).getValue();
+
+			//Bukkit.broadcastMessage("DamageType is ignore armor: " + damageType.isIgnoreArmor());
+			if(!damageEvent.damageType.isIgnoreArmor() && event.isApplicable(EntityDamageEvent.DamageModifier.ARMOR)) {
+				damageEvent.finalDamage = DamageCalculator.calcArmorReducedDamage(damageEvent.damageType,
+						damageEvent.rawDamage, living);
+			}
 		}
 
 		if(damageEvent.damageType.isKnockback()) {
