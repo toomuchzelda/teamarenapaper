@@ -54,25 +54,25 @@ public class EntityUtils {
 
         return entityName;
     }
-    
+
     public static Vector projectileLaunchVector(Entity shooter, Vector original, double spray) {
         //slight randomness in direction
         double randX = MathUtils.random.nextGaussian() * spray;
         double randY = MathUtils.random.nextGaussian() * spray;
         double randZ = MathUtils.random.nextGaussian() * spray;
-        
+
         Vector direction = shooter.getLocation().getDirection();
         double power = original.subtract(shooter.getVelocity()).length();
-        
+
         //probably add to each component?
         direction.setX(direction.getX() + randX);
         direction.setY(direction.getY() + randY);
         direction.setZ(direction.getZ() + randZ);
-        
+
         direction.multiply(power);
-        
+
         //Bukkit.broadcastMessage("velocity: " + direction.toString());
-        
+
         return direction;
     }
 
@@ -82,30 +82,38 @@ public class EntityUtils {
      * @param entity Entity playing the effect on
      */
     public static void playCritEffect(Entity entity) {
-        net.minecraft.world.entity.Entity nmsEntity = ((CraftEntity) entity).getHandle();
-        ClientboundAnimatePacket packet = new ClientboundAnimatePacket(nmsEntity, ClientboundAnimatePacket.CRITICAL_HIT);
-
-        //if a player, send packet to self
-        if (entity instanceof Player p) {
-            PlayerUtils.sendPacket(p, packet);
-        }
-
-        //send to all viewers
-        for (Player p : entity.getTrackedPlayers()) {
-            PlayerUtils.sendPacket(p, packet);
-        }
+		playEffect(entity, ClientboundAnimatePacket.CRITICAL_HIT);
     }
-    
+
+	public static void playMagicCritEffect(Entity entity) {
+		playEffect(entity, ClientboundAnimatePacket.MAGIC_CRITICAL_HIT);
+	}
+
+	public static void playEffect(Entity entity, int effect) {
+		net.minecraft.world.entity.Entity nmsEntity = ((CraftEntity) entity).getHandle();
+		ClientboundAnimatePacket packet = new ClientboundAnimatePacket(nmsEntity, effect);
+
+		//if a player, send packet to self
+		if (entity instanceof Player p) {
+			PlayerUtils.sendPacket(p, packet);
+		}
+
+		//send to all viewers
+		for (Player p : entity.getTrackedPlayers()) {
+			PlayerUtils.sendPacket(p, packet);
+		}
+	}
+
     //set velocity fields and send the packet immediately instead of waiting for next tick
     // otherwise use entity.setVelocity(Vector) for spigot to do it's stuff first
     public static void setVelocity(Entity entity, Vector velocity) {
         entity.setVelocity(velocity);
-    
+
         if(entity instanceof Player player) {
             ServerPlayer nmsPlayer = ((CraftPlayer) player).getHandle();
             //do not do stuff next tick
             nmsPlayer.hurtMarked = false;
-    
+
             //send a packet NOW
             // can avoid protocollib since the nms constructor is public and modular
             Vec3 vec = CraftVector.toNMS(velocity);
@@ -124,13 +132,13 @@ public class EntityUtils {
         ClientboundAnimatePacket packet = new ClientboundAnimatePacket(nmsLivingEntity, ClientboundAnimatePacket.HURT);
 
         boolean isSilent = entity.isSilent();
-        
+
         //get and construct sound
         SoundEvent nmsSound;
         float pitch = 0f;
         float volume = 0f;
         Sound sound = null;
-        
+
         if(!isSilent) {
             try {
                 if (deathSound)
@@ -138,13 +146,13 @@ public class EntityUtils {
                     //nmsSound = (SoundEvent) getDeathSoundMethod.invoke(nmsLivingEntity);
                 else
                     nmsSound = (SoundEvent) getHurtSoundMethod.invoke(nmsLivingEntity, damageType.getDamageSource());
-        
+
                 pitch = nmsLivingEntity.getVoicePitch();
                 volume = nmsLivingEntity.getSoundVolume(); //(float) getSoundVolumeMethod.invoke(nmsLivingEntity);
             }
             catch (IllegalAccessException | InvocationTargetException e) {
                 e.printStackTrace();
-        
+
                 nmsSound = SoundEvents.GOAT_SCREAMING_HURT;
                 pitch = 0.5f;
                 volume = 9999f;

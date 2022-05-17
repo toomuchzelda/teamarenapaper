@@ -143,7 +143,7 @@ public class DamageEvent {
 
 		Bukkit.broadcastMessage("Bukkit rawDamage: " + damageEvent.rawDamage);
 
-		damageEvent.finalDamage = event.getFinalDamage();
+		damageEvent.finalDamage = damageEvent.rawDamage;
 		damageEvent.cancelled = false;
 
 		damageEvent.damageType = DamageType.getAttack(event);
@@ -321,14 +321,11 @@ public class DamageEvent {
 					}
 				}
 			}
-
 		}
 
-		if(!alreadyCalcedArmor && damageEvent.victim instanceof LivingEntity living) {
+		if(damageEvent.victim instanceof LivingEntity living) {
 			damageEvent.knockbackResistance = 1d - living.getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE).getValue();
-
-			//Bukkit.broadcastMessage("DamageType is ignore armor: " + damageType.isIgnoreArmor());
-			if(!damageEvent.damageType.isIgnoreArmor() && event.isApplicable(EntityDamageEvent.DamageModifier.ARMOR)) {
+			if (!alreadyCalcedArmor) {
 				damageEvent.finalDamage = DamageCalculator.calcArmorReducedDamage(damageEvent.damageType,
 						damageEvent.rawDamage, living);
 			}
@@ -337,8 +334,6 @@ public class DamageEvent {
 		if(damageEvent.damageType.isKnockback()) {
 			damageEvent.knockback = calculateKnockback(damageEvent, doBaseKB);
 		}
-
-		//Bukkit.broadcastMessage("kbresist: " + knockbackResistance);
 
 		return damageEvent;
 	}
@@ -444,7 +439,7 @@ public class DamageEvent {
 			//knockback
 			if(knockback != null) {
 				if (victim instanceof Player player) {
-					//send knockback packet
+					//send knockback packet without modifying player's velocity
 					Vec3 vec = CraftVector.toNMS(knockback);
 					ClientboundSetEntityMotionPacket packet = new ClientboundSetEntityMotionPacket(player.getEntityId(), vec);
 					PlayerUtils.sendPacket(player, packet);
@@ -469,37 +464,26 @@ public class DamageEvent {
 				finalDamage = 0;
 			}
 
-			double newHealth = (living.getHealth() + living.getAbsorptionAmount()) - finalDamage;
-			double maxHealth = living.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+			double absorp = living.getAbsorptionAmount();
+			double newHealth = living.getHealth();
 			//they still got absorption hearts
-			if(living.getAbsorptionAmount() > 0 && newHealth <= maxHealth) {
-				newHealth = living.getHealth() - finalDamage + living.getAbsorptionAmount();
-				living.setAbsorptionAmount(0);
-				// maybe remove the potion effect too?
+			if(absorp > 0) {
+				if(finalDamage >= absorp) {
+					living.setAbsorptionAmount(0);
+					newHealth -= finalDamage - absorp;
+				}
+				else {
+					living.setAbsorptionAmount(absorp - finalDamage);
+				}
 			}
-			else if(newHealth > maxHealth) {
-				living.setAbsorptionAmount(newHealth - maxHealth);
-				newHealth = maxHealth;
+			else {
+				newHealth -= finalDamage;
 			}
 
 			if (newHealth <= 0) {
-				//todo: handle death here
 				//Bukkit.broadcast(Component.text(living.getName() + " has died"));
 				newHealth = living.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
 				isDeath = true;
-			}
-
-			if(newHealth < 0) {
-				Main.logger().warning(getFinalAttacker().getName() + " is putting " + getVictim() + "'s health " +
-						"to less than 0. newHealth=" + newHealth + ", maxHealth=" + maxHealth + ",lviingAbsorptionAmount=" +
-						living.getAbsorptionAmount());
-
-				if(getFinalAttacker() instanceof Player p) {
-					Main.logger().warning("attacker kit: " + Main.getPlayerInfo(p).activeKit.getName());
-				}
-				if(victim instanceof Player p) {
-					Main.logger().warning("victim kit: " + Main.getPlayerInfo(p).activeKit.getName());
-				}
 			}
 
 			living.setHealth(newHealth);
@@ -510,6 +494,9 @@ public class DamageEvent {
 
 			if(isCritical)
 				EntityUtils.playCritEffect(living);
+
+			if(enchantDamage > 0d)
+				EntityUtils.playMagicCritEffect(living);
 
 			if(isDeath)
 				Main.getGame().handleDeath(this); // run this after to ensure the animations are seen by viewers

@@ -68,23 +68,15 @@ public class DamageCalculator
 	public static double calcArmorReducedDamage(DamageType damageType, double damage, LivingEntity victim) {
 		//get the amount of damage blocked by their base armor (armor bars above their hotbar)
 		double percentBaseBlocked = 1d - DamageCalculator.calcBlockedDamagePercent(damageType, victim);
+		damage = damage * percentBaseBlocked;
 
-		Bukkit.broadcastMessage("percentBaseBlocked: " + percentBaseBlocked);
-
-		double customReducedDamage = damage * percentBaseBlocked;
-		//Bukkit.broadcastMessage("reducedDamage: " + reducedDamage);
-
-		//get enchantment reduction
+		//get reduction by enchantments
 		double percentEnchBlocked = 1d - DamageCalculator.calcEnchantDefensePercentForDamageTypeOnLivingEntity(
 				damageType, victim);
 
-		Bukkit.broadcastMessage("percentEnchBlocked: " + percentEnchBlocked);
+		damage *= percentEnchBlocked;
 
-		customReducedDamage *= percentEnchBlocked;
-
-		Bukkit.broadcastMessage("finalDamage: " + customReducedDamage);
-
-		return customReducedDamage;
+		return damage;
 	}
 
 	//PlayerInventory.getArmorContents doesn't create copies of ItemStacks, probably faster than
