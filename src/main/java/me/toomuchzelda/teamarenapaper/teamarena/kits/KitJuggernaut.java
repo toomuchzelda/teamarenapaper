@@ -11,10 +11,10 @@ import org.bukkit.inventory.meta.ItemMeta;
 public class KitJuggernaut extends Kit {
     public KitJuggernaut() {
         super("Juggernaut", "The most beloved kit", Material.DIAMOND_CHESTPLATE);
-        setArmor(new ItemStack(Material.DIAMOND_HELMET),
+        setArmor(new ItemStack(Material.NETHERITE_HELMET),
                 new ItemStack(Material.NETHERITE_CHESTPLATE),
                 new ItemStack(Material.NETHERITE_LEGGINGS),
-                new ItemStack(Material.DIAMOND_BOOTS));
+                new ItemStack(Material.NETHERITE_BOOTS));
         
         ItemStack sword = new ItemStack(Material.WOODEN_SWORD);
         ItemMeta swordMeta = sword.getItemMeta();
@@ -38,7 +38,7 @@ public class KitJuggernaut extends Kit {
         }
 
         @Override
-        public void onTick(Player player) {
+        public void onPlayerTick(Player player) {
             player.setFoodLevel(6);
         }
     }

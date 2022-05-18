@@ -1,9 +1,8 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.core.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
@@ -85,7 +84,7 @@ public class KitDwarf extends Kit
 		}
 		
 		@Override
-		public void onTick(Player player) {
+		public void onPlayerTick(Player player) {
 			float expToGain; //perTick
 			
 			if (player.isSprinting()) {

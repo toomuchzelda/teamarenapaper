@@ -1,8 +1,8 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kingofthehill;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.core.MathUtils;
-import me.toomuchzelda.teamarenapaper.core.RealHologram;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.RealHologram;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.kyori.adventure.text.Component;
@@ -33,7 +33,7 @@ public class Hill {
     }
 
     public void playParticles(Color... colors) {
-        //fucking ParticleBuilder doesn't support coloured SPELL_MOB Particles
+        //ParticleBuilder doesn't support coloured SPELL_MOB Particles
 
         //https://www.spigotmc.org/wiki/colored-particles/
 
@@ -69,6 +69,9 @@ public class Hill {
                 if(p.getLocation().toVector().distanceSquared(border.getCenter()) < VIEW_DISTANCE * VIEW_DISTANCE) {
 
                     int num = Main.getPlayerInfo(p).getPreference(Preferences.KOTH_HILL_PARTICLES);
+					if (num == 0)
+						continue;
+
                     if(TeamArena.getGameTick() % num == 0) {
                         p.spawnParticle(Particle.SPELL_MOB, location.getX(), location.getY(),
                                 location.getZ(), 0, red, green, blue, 1);
@@ -101,8 +104,11 @@ public class Hill {
             for(Player p : Bukkit.getOnlinePlayers()) {
                 //if player is within 35 blocks
                 if(p.getLocation().toVector().distanceSquared(border.getCenter()) < VIEW_DISTANCE * VIEW_DISTANCE) {
-    
+
                     int num = Main.getPlayerInfo(p).getPreference(Preferences.KOTH_HILL_PARTICLES);
+					if (num == 0)
+						continue;
+
                     if(TeamArena.getGameTick() % num == 0) {
                         p.spawnParticle(Particle.SPELL_MOB, location.getX(), location.getY(),
                                 location.getZ(), 0, red, green, blue, 1);

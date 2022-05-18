@@ -1,63 +1,84 @@
 package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.inventory.Inventories;
+import me.toomuchzelda.teamarenapaper.inventory.KitInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.LinkedList;
-import java.util.List;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 
 public class CommandKit extends CustomCommand {
 
     public CommandKit() {
-        super("kit", "Select or view kits", "\"/kit\" to view all kits, \"/kit <kit name>\" to select that kit.",
-                new LinkedList<String>(), CustomCommand.ALL);
+        super("kit", "Manage kits", "/kit <gui/set/list>", PermissionLevel.ALL);
     }
 
     @Override
-    public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
-        if(sender instanceof Player p) {
-            if(args.length > 0) {
-                Main.getGame().selectKit(p, args[0]);
+    public void run(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
+        if (args.length == 0) {
+            showUsage(sender);
+            return;
+        }
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(Component.text("You can't use this command from the console!").color(NamedTextColor.RED));
+            return;
+        }
+
+        switch (args[0]) {
+            case "gui" -> Inventories.openInventory(player, new KitInventory());
+            case "set" -> {
+                if (args.length != 2) {
+                    showUsage(sender, "/kit set <kit>");
+                    return;
+                }
+                Kit kit = Main.getGame().findKit(args[1]);
+                if (kit == null) {
+                    player.sendMessage(Component.text("Kit " + args[1] + " doesn't exist").color(NamedTextColor.RED));
+                    return;
+                }
+                Main.getGame().selectKit(player, kit);
             }
-            else {
-                p.sendMessage(Component.text("Usage: /kit <kit name>").color(NamedTextColor.RED));
+            case "list" -> {
                 Component kitList = Component.text("Available kits: ").color(NamedTextColor.BLUE);
 
-                Kit[] kits = Main.getGame().getKits();
-                for(Kit kit : kits) {
+                for (Kit kit : Main.getGame().getKits()) {
                     kitList = kitList.append(Component.text(kit.getName() + ", ")).color(NamedTextColor.BLUE);
                 }
-                p.sendMessage(kitList);
+                player.sendMessage(kitList);
+            }
+            default -> {
+                if (args.length == 1) {
+                    // we do a little trolling
+                    Kit kit = Main.getGame().findKit(args[0]);
+                    if (kit != null) {
+                        sender.sendMessage(Component.text("Did you mean: /kit set " + kit.getName() + "?").color(NamedTextColor.YELLOW));
+                    }
+                }
+                showUsage(sender);
             }
         }
-        else {
-            sender.sendMessage(Component.text("You can't use this command from the console!").color(NamedTextColor.RED));
-        }
-        return true;
     }
     
     @Override
-    public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
-        if(args.length == 1 && sender instanceof Player) {
-            /*LinkedList<String> list = Main.getGame().getTabKitList();
-            LinkedList<String> newList = new LinkedList<>();
-            String arg = args[0];
-            for(String kit : list) {
-                if(kit.toLowerCase().startsWith(arg.toLowerCase()))
-                    newList.add(kit);
-            }
-            return newList;*/
-
-            return CustomCommand.doAutocomplete(Main.getGame().getTabKitList(), args[0]);
+    public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
+        if (sender instanceof Player p) {
+            //if they are waiting to respawn, interrupt their respawn timer
+            // absolutely disgusting
+            Main.getGame().interruptRespawn(p);
         }
-        
-        return new LinkedList<>();
+        if (args.length == 1) {
+            return Arrays.asList("list", "set", "gui");
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("set")) {
+            return Main.getGame().getTabKitList();
+        }
+
+        return Collections.emptyList();
     }
 }

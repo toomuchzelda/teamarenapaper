@@ -1,13 +1,13 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import org.bukkit.craftbukkit.v1_18_R1.entity.CraftArrow;
+import org.bukkit.craftbukkit.v1_19_R1.entity.CraftArrow;
 import org.bukkit.entity.AbstractArrow;
-import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Entity;
 import org.bukkit.util.Vector;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Hashtable;
 
 //maybe not needed, uhhhhhh
 public class ArrowPierceManager {
@@ -102,13 +102,6 @@ public class ArrowPierceManager {
 
     //just in case
     public static void cleanup() {
-        Iterator<Map.Entry<AbstractArrow, ArrowInfo>> iter = piercedEntitiesMap.entrySet().iterator();
-
-        while(iter.hasNext()) {
-            Map.Entry<AbstractArrow, ArrowInfo> entry = iter.next();
-            if(!entry.getKey().isValid()) {
-                iter.remove();
-            }
-        }
+        piercedEntitiesMap.entrySet().removeIf(entry -> !entry.getKey().isValid());
     }
 }

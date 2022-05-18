@@ -2,7 +2,6 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import org.bukkit.FireworkEffect;
@@ -32,9 +31,8 @@ public class KitBurst extends Kit
 		ItemStack crossbow = new ItemStack(Material.CROSSBOW);
 		
 		ItemStack firework = new ItemStack(Material.FIREWORK_ROCKET);
-		
-		ItemStack[] items = new ItemStack[]{sword, firework, crossbow};
-		setItems(items);
+
+		setItems(sword, firework, crossbow);
 		
 		setAbilities(new BurstAbility());
 	}
