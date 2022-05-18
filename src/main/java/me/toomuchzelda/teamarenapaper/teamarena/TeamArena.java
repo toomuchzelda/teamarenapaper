@@ -94,7 +94,7 @@ public abstract class TeamArena
 
 	protected final List<Kit> defaultKits = List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
 			new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(),
-			new KitNone(), new KitSniper(), new KitVenom());
+			new KitNone(), new KitSniper(), new KitVenom(), new KitValkyrie());
 	protected Map<String, Kit> kits;
 	protected static ItemStack kitMenuItem = ItemBuilder.of(Material.FEATHER)
 			.displayName(Component.text("Select a Kit").color(NamedTextColor.BLUE)
