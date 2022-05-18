@@ -4,6 +4,7 @@ import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
@@ -41,7 +42,7 @@ public class KitSniper extends Kit {
 	public static final AttributeModifier KNIFE_SPEED = new AttributeModifier(
 			UUID.fromString("743e8aec-10f7-44c7-b0b0-cf1f32634c72"),
 			"Sniper Knife", 0.2, //20% = speed 1
-			AttributeModifier.Operation.MULTIPLY_SCALAR_1, EquipmentSlot.HAND);
+			AttributeModifier.Operation.ADD_SCALAR, EquipmentSlot.HAND);
 
 	static {
 		GRENADE = new ItemStack(Material.TURTLE_HELMET);
@@ -217,14 +218,17 @@ public class KitSniper extends Kit {
 				if (player.isSprinting() || player.isGliding() || player.isJumping() ||
 						loc.subtract(0, 1, 0).getBlock().getType() == Material.AIR ||
 						player.getVelocity().lengthSquared() > 1) {
-					inaccuracy = 2;
+					inaccuracy = 0.2;
 				} else if (player.isInWater() || player.isSwimming()) {
-					inaccuracy = 1;
+					inaccuracy = 0.1;
 				}
 				Vector velocity = loc.getDirection();
-				var random = new Vector(gunInaccuracy.nextGaussian(), gunInaccuracy.nextGaussian(), gunInaccuracy.nextGaussian());
-				random.normalize().multiply(inaccuracy);
-				velocity.add(random);
+				if (inaccuracy != 0) {
+					var random = new Vector(gunInaccuracy.nextGaussian(), gunInaccuracy.nextGaussian(), gunInaccuracy.nextGaussian());
+					random.normalize().multiply(inaccuracy);
+					velocity.add(random);
+				}
+				velocity.multiply(10);
 				//Shooting Rifle + Arrow Properties
 				Arrow arrow = player.launchProjectile(Arrow.class, velocity);
 				arrow.setShotFromCrossbow(true);
@@ -237,7 +241,9 @@ public class KitSniper extends Kit {
 				world.playSound(player, Sound.ENTITY_GENERIC_EXPLODE, 0.8f, 2.5f);
 
 				//Sniper Cooldown + deleting the dropped sniper and returning a new one.
-				player.setCooldown(Material.SPYGLASS, 50);
+				if (!CommandDebug.sniperAccuracy) {
+					player.setCooldown(Material.SPYGLASS, 50);
+				}
 				event.setCancelled(true);
 			}
 		}
@@ -292,13 +298,15 @@ public class KitSniper extends Kit {
 			if (inventory.getHelmet() != null && inventory.getHelmet().getType() == Material.TURTLE_HELMET) {
 				player.sendMessage(Component.text("Please do not wear the grenade on your head. Thank you.", GRENADE_MSG_COLOR));
 
-				world.createExplosion(player.getLocation(), 2.5f, false, false);
 				var fakeEvent = new EntityDamageEvent(player, EntityDamageEvent.DamageCause.ENTITY_EXPLOSION, 999);
-				DamageEvent.createDamageEvent(fakeEvent, DamageType.EXPLOSION);
-			} else if (player.getCooldown(Material.TURTLE_HELMET) == 1 && inventory.contains(Material.TURTLE_HELMET)) {
+				DamageEvent.createDamageEvent(fakeEvent);
+
 				world.createExplosion(player.getLocation(), 2.5f, false, false);
-				var fakeEvent = new EntityDamageByEntityEvent(player, player, EntityDamageEvent.DamageCause.ENTITY_EXPLOSION, 999);
+			} else if (player.getCooldown(Material.TURTLE_HELMET) == 1 && inventory.contains(Material.TURTLE_HELMET)) {
+				var fakeEvent = new EntityDamageEvent(player, EntityDamageEvent.DamageCause.ENTITY_EXPLOSION, 999);
 				DamageEvent.createDamageEvent(fakeEvent, DamageType.SNIPER_GRENADE_FAIL);
+
+				world.createExplosion(player.getLocation(), 2.5f, false, false);
 			}
 			//Sniper Reload Sound
 			if (player.getCooldown(Material.SPYGLASS) == 15) {

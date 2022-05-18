@@ -25,6 +25,7 @@ public class CommandDebug extends CustomCommand {
     // TODO temporary feature
     public static boolean ignoreWinConditions;
     public static boolean disableAnimations;
+	public static boolean sniperAccuracy;
 
     public CommandDebug() {
         super("debug", "", "/debug ...", PermissionLevel.OWNER);
@@ -58,6 +59,10 @@ public class CommandDebug extends CustomCommand {
 				} else if (args[1].equalsIgnoreCase("stopwastingmybandwidth")) {
 					disableAnimations = args.length == 3 ? "true".equalsIgnoreCase(args[2]) : !disableAnimations;
 					sender.sendMessage(Component.text("Set disable animations to " + disableAnimations)
+							.color(NamedTextColor.GREEN));
+				} else if (args[1].equalsIgnoreCase("sniperaccuracy")) {
+					sniperAccuracy = args.length == 3 ? "true".equalsIgnoreCase(args[2]) : !sniperAccuracy;
+					sender.sendMessage(Component.text("Set sniper accuracy debug to " + sniperAccuracy)
 							.color(NamedTextColor.GREEN));
 				}
 			}
@@ -233,7 +238,7 @@ public class CommandDebug extends CustomCommand {
             return switch (args[0].toLowerCase(Locale.ENGLISH)) {
                 case "gui" -> Arrays.asList("true", "false");
                 case "tictactoe" -> Arrays.asList("player", "bot");
-                case "game" -> Arrays.asList("ignorewinconditions", "stopwastingmybandwidth");
+                case "game" -> Arrays.asList("ignorewinconditions", "stopwastingmybandwidth", "sniperaccuracy");
                 case "setrank" -> Arrays.stream(PermissionLevel.values()).map(Enum::name).toList();
                 case "setteam" -> Arrays.stream(Main.getGame().getTeams())
                         .map(team -> team.getSimpleName().replace(' ', '_'))
