@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -10,16 +11,18 @@ import org.bukkit.inventory.PlayerInventory;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-public abstract class Kit
-{
+public abstract class Kit {
+    public static final Comparator<Kit> COMPARATOR = Comparator.comparing(Kit::getName);
+
     private static final Ability[] EMPTY_ABILITIES = new Ability[0];
     
     private final String name;
     private final String description;
-    private final Material icon;
+    private final ItemStack display;
     //0: boots, 1: leggings, 2: chestplate, 3: helmet
     private ItemStack[] armour;
     private ItemStack[] items;
@@ -29,9 +32,13 @@ public abstract class Kit
     private final Set<Player> activeUsers;
 
     public Kit(String name, String description, Material icon) {
+        this(name, description, new ItemStack(icon));
+    }
+
+    public Kit(String name, String description, ItemStack display) {
         this.name = name;
         this.description = description;
-        this.icon = icon;
+        this.display = display.clone();
 
         //these are set via the setter methods
         ItemStack[] armour = new ItemStack[4];
@@ -111,6 +118,10 @@ public abstract class Kit
         this.armour = new ItemStack[] {feet, legs, chest, head};
     }
 
+    public ItemStack[] getArmour() {
+        return armour;
+    }
+    
     public void setItems(ItemStack... items) {
         this.items = items;
     }
@@ -119,12 +130,42 @@ public abstract class Kit
         this.abilities = abilities;
     }
 
-    public Material getIcon() {
-        return icon;
+    public ItemStack getIcon() {
+        return display.clone();
     }
-
+    
+    public static @Nullable Kit getActiveKit(Player player) {
+        Kit kit = Main.getPlayerInfo(player).activeKit;
+        return kit;
+    }
+    
+    /**
+     * for spy
+     * @return
+     */
+    public static Kit getActiveKitHideInvis(Player player) {
+        Kit kit = getActiveKit(player);
+        if(kit == null)
+            return null;
+        
+        while(kit.isInvisKit()) {
+            kit = getRandomKit();
+        }
+    
+        return kit;
+    }
+    
+    public static Kit getRandomKit() {
+        Kit[] kits = Main.getGame().getKits().toArray(new Kit[0]);
+        return kits[MathUtils.randomMax(kits.length - 1)];
+    }
+    
     public String getName() {
         return name;
+    }
+
+    public String getDescription() {
+        return description;
     }
 
     public Set<Player> getActiveUsers() {
@@ -135,10 +176,12 @@ public abstract class Kit
         return abilities;
     }
     
+    public boolean isInvisKit() {
+        return false;
+    }
+    
     /**
      * get abilities of the kit the player is actively using
-     * @param player
-     * @return
      */
     public static Ability[] getAbilities(Player player) {
         PlayerInfo pinfo = Main.getPlayerInfo(player);
@@ -148,5 +191,21 @@ public abstract class Kit
         else {
             return EMPTY_ABILITIES;
         }
+    }
+    
+    public static boolean hasAbility(Player player, Class<? extends Ability> ability) {
+        Kit kit = getActiveKit(player);
+        return hasAbility(kit, ability);
+    }
+    
+    public static boolean hasAbility(Kit kit, Class<? extends Ability> ability) {
+        if(kit != null) {
+            for (Ability a : kit.getAbilities()) {
+                if (ability.isInstance(a))
+                    return true;
+            }
+        }
+        
+        return false;
     }
 }

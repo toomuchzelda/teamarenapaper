@@ -1,16 +1,19 @@
 package me.toomuchzelda.teamarenapaper.teamarena.capturetheflag;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.core.BlockUtils;
-import me.toomuchzelda.teamarenapaper.core.ItemUtils;
-import me.toomuchzelda.teamarenapaper.core.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
+import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
+import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
@@ -21,10 +24,13 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.map.MapCursor;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.util.*;
 
 public class CaptureTheFlag extends TeamArena
@@ -38,7 +44,7 @@ public class CaptureTheFlag extends TeamArena
 	public static final int DROPPED_TIME_PER_TICK = TAKEN_FLAG_RETURN_TIME / (5 * 20);
 	public static final int DROPPED_PROGRESS_BAR_LENGTH = 10;
 	public static final String DROPPED_PROGRESS_STRING;
-	
+
 	public static final Component PICK_UP_MESSAGE = Component.text("%holdingTeam% has picked up %team%'s flag").color(NamedTextColor.GOLD);
 	public static final Component DROP_MESSAGE = Component.text("%holdingTeam% has dropped %team%'s flag").color(NamedTextColor.GOLD);
 	public static final Component RETURNED_MESSAGE = Component.text("%team%'s flag has been returned to their base").color(NamedTextColor.GOLD);
@@ -50,13 +56,13 @@ public class CaptureTheFlag extends TeamArena
 	public static final Component RETURNED_TITLE = Component.text("%team%'s flag returned").color(NamedTextColor.GOLD);
 	public static final Component CAPTURED_TITLE = Component.text("%holdingTeam% captured %team%'s flag!").color(NamedTextColor.GOLD);
 	public static final Component PASSED_TITLE = Component.text("%holdingTeam% gave %team%'s flag to %otherTeam%").color(NamedTextColor.GOLD);
-	
+
 	public static final Component CANT_CAPTURE_YOUR_FLAG_NOT_AT_BASE = Component.text("You can't capture until your flag is safely at your base!").color(TextColor.color(255, 20, 20));
 	public static final String CANT_CAPTURE_KEY = "yrflagnotatbase";
-	
+
 	public static final Component CANT_TELEPORT_HOLDING_FLAG_MESSAGE = Component.text("You can't teleport while holding the flag!").color(TextColor.color(255, 20, 20));
 	public static final Component CANT_TELEPORT_HOLDING_FLAG_TITLE = Component.text("Can't teleport with the flag!").color(TextColor.color(255, 20, 20));
-	
+
 	static {
 		StringBuilder builder = new StringBuilder(DROPPED_PROGRESS_BAR_LENGTH);
 		for(int i = 0; i < DROPPED_PROGRESS_BAR_LENGTH; i++) {
@@ -110,14 +116,14 @@ public class CaptureTheFlag extends TeamArena
 		if(flags.size() == 0)
 			flagHolders.remove(player);
 	}
-	
+
 	public CaptureTheFlag() {
 		super();
 	}
-	
+
 	@Override
 	public void liveTick() {
-		
+
 		//check if dropped flags have been left long enough to be returned
 		// use their nametag for time left to return
 		for(Flag flag : teamToFlags.values()) {
@@ -127,9 +133,9 @@ public class CaptureTheFlag extends TeamArena
 					returnSpeed = 1;
 				else
 					returnSpeed = DROPPED_TIME_PER_TICK;
-				
+
 				flag.ticksUntilReturn = flag.ticksUntilReturn - returnSpeed;
-				
+
 				//int timePassed = TAKEN_FLAG_RETURN_TIME - flag.ticksUntilReturn;
 				if(flag.ticksUntilReturn <= 0) {
 					returnFlagToBase(flag);
@@ -141,9 +147,9 @@ public class CaptureTheFlag extends TeamArena
 						percentage = 1;
 					else if (percentage < 0)
 						percentage = 0;
-					
+
 					int splitIndex = (int) ((float) DROPPED_PROGRESS_BAR_LENGTH * percentage);
-					
+
 					Component firstComponent = Component.text()
 							.content(DROPPED_PROGRESS_STRING.substring(0, splitIndex))
 							.color(flag.team.getRGBTextColor())
@@ -152,17 +158,17 @@ public class CaptureTheFlag extends TeamArena
 									.build()).build();
 
 					flag.progressBarComponent = firstComponent;
-					
+
 					flag.getArmorStand().customName(firstComponent);
-					
+
 					//set the flag item's durability so the holder can see it too
 					if(flag.holder != null) {
 						ItemStack invFlag = getFlagInInventory(flag, flag.holder);
-						
+
 						if(invFlag == null || invFlag.getType().isAir())
 							throw new IllegalStateException("Flag " + flag.team.getName() +
 									" holder field is not null but the player does not have the item in their inventory!");
-						
+
 						Damageable meta = (Damageable) invFlag.getItemMeta();
 						short durability = (short) (invFlag.getType().getMaxDurability() * (1 - percentage));
 						meta.setDamage(durability);
@@ -171,73 +177,110 @@ public class CaptureTheFlag extends TeamArena
 				}
 			}
 		}
-		
-		updateLiveSidebar();
-		
+
 		super.liveTick();
 	}
-	
-	public void updateLiveSidebar() {
+
+	public static final Component GAME_NAME = Component.text("Capture the Flag", NamedTextColor.AQUA);
+
+	private final Map<TeamArenaTeam, Component> sidebarCache = new LinkedHashMap<>();
+	@Override
+	public Collection<Component> updateSharedSidebar() {
+		sidebarCache.clear();
+
+		var flags = teamToFlags.values().stream()
+				.filter(flag -> CommandDebug.ignoreWinConditions || flag.team.isAlive())
+				.sorted(Flag.BY_SCORE_DESC)
+				.toList();
+
+		for (var flag : flags) {
+			var builder = Component.text();
+			builder.append(flag.team.getComponentSimpleName(), Component.text(": "));
+			if (flag.isAtBase) {
+				builder.append(Component.text("⌂ Safe", NamedTextColor.GREEN));
+			} else if (flag.holdingTeam != null) {
+				builder.append(flag.holdingTeam.colourWord("■ Held").decorate(TextDecoration.BOLD));
+			} else {
+				builder.append(TextUtils.getProgressText("� Dropped",
+						NamedTextColor.GRAY, flag.team.getRGBTextColor(), NamedTextColor.GREEN,
+						1 - (double) flag.ticksUntilReturn / TAKEN_FLAG_RETURN_TIME));
+			}
+			sidebarCache.put(flag.team, builder.build());
+		}
+
+		return Collections.emptyList();
+	}
+
+	@Override
+	public void updateSidebar(Player player, SidebarManager sidebar) {
+		var playerTeam = Main.getPlayerInfo(player).team;
+		sidebar.setTitle(player, GAME_NAME);
+		sidebarCache.forEach((team, entry) -> {
+			if (playerTeam == team) {
+				sidebar.addEntry(Component.textOfChildren(OWN_TEAM_PREFIX, entry));
+			} else {
+				sidebar.addEntry(entry);
+			}
+		});
+
+	}
+
+	@Override
+	public void updateLegacySidebar(Player player, SidebarManager sidebar) {
+		sidebar.setTitle(player, Component.text("CapsToWin: " + capsToWin, NamedTextColor.GOLD));
 		//update the sidebar every tick
 		byte numLines;
-		LinkedList<Flag> aliveFlags = new LinkedList<>();
-		
-		Component[] lines;
-		for(Flag flag : teamToFlags.values()) {
-			if(flag.team.isAlive())
-				aliveFlags.add(flag);
-		}
-		
-		Comparator<Flag> byScore = (teamArenaTeam, t1) -> (t1.team.getTotalScore()) - (teamArenaTeam.team.getTotalScore());
-		aliveFlags.sort(byScore);
-		
-		if(aliveFlags.size() <= 7)
+		List<Flag> aliveFlags = teamToFlags.values().stream()
+				.filter(flag -> flag.team.isAlive())
+				.sorted(Flag.BY_SCORE_DESC)
+				.toList();
+
+		if (aliveFlags.size() <= 7)
 			numLines = 2;
 		else
 			numLines = 1;
-		
-		lines = new Component[numLines * aliveFlags.size()];
-		
+
+		Component[] lines = new Component[numLines * aliveFlags.size()];
+
 		int index = 0;
 		for (Flag flag : aliveFlags) {
 			Component first = flag.team.getComponentSimpleName();
-			if(numLines == 2) {
+			if (numLines == 2) {
 				Component flagStatus = Component.text("Flag ").color(NamedTextColor.WHITE);
-				if(flag.isAtBase)
+				if (flag.isAtBase)
 					flagStatus = flagStatus.append(Component.text("Safe").color(NamedTextColor.GREEN));
-				else if(flag.holdingTeam != null) {
+				else if (flag.holdingTeam != null) {
 					flagStatus = flagStatus.append(Component.text("Held by ")).append(flag.holdingTeam.getComponentSimpleName());
-				}
-				else {
+				} else {
 					flagStatus = flagStatus.append(flag.progressBarComponent);//Component.text("Unsafe").color(TextColor.color(255, 85, 0)));
 				}
-				
+
 				lines[index] = first.append(Component.text(": " + flag.team.getTotalScore()).color(NamedTextColor.WHITE));
 				lines[index + 1] = flagStatus;
-			}
-			else {
+			} else {
 				Component flagStatus;
-				if(flag.isAtBase)
+				if (flag.isAtBase)
 					flagStatus = Component.text("Safe").color(NamedTextColor.GREEN);
-				else if(flag.holdingTeam != null) {
+				else if (flag.holdingTeam != null) {
 					flagStatus = Component.text("Held").color(flag.holdingTeam.getRGBTextColor());
-				}
-				else {
+				} else {
 					flagStatus = flag.progressBarComponent;//Component.text("Unsafe").color(TextColor.color(255, 85, 0));
 				}
 				lines[index] = first.append(Component.text(": " + flag.team.getTotalScore() + ' ').color(NamedTextColor.WHITE).append(flagStatus));
 			}
-			
+
 			index += numLines;
 		}
-		
-		SidebarManager.setLines(lines);
+
+		for (var line : lines) {
+			sidebar.addEntry(line);
+		}
 	}
-	
+
 	@Override
 	public void tick() {
 		super.tick();
-		
+
 		//tick flags
 		for(Map.Entry<ArmorStand, Flag> entry : flagStands.entrySet()) {
 			ArmorStand stand = entry.getKey();
@@ -246,13 +289,13 @@ public class CaptureTheFlag extends TeamArena
 				if(!flag.isBeingCarried()) {
 					//spin and bob around if not being carried
 					flagPositionTick(flag);
-					
+
 					//check player get it
 					if(gameState == GameState.LIVE) {
 						for (Player p : players) {
 							//if(isSpectator(p))
 							//	continue;
-							
+
 							if(p.getBoundingBox().overlaps(stand.getBoundingBox())) {
 								//return flag to base if teammate touches it and not at base
 								if(flag.team.getPlayerMembers().contains(p)) {
@@ -293,23 +336,19 @@ public class CaptureTheFlag extends TeamArena
 			}
 		}
 	}
-	
+
 	@Override
 	public void handleDeath(DamageEvent event) {
 		if(event.getVictim() instanceof Player p) {
 			dropFlags(p);
 		}
-		
+
 		super.handleDeath(event);
 	}
 
 	public void pickUpFlag(Player player, Flag flag, boolean broadcast) {
-		/*if(flagHolders.containsKey(player)) {
-			player.sendMessage("ur already hold flag ");
-			return;
-		}*/
-		if(!flag.team.isAlive()) {
-			final Component text = Component.text("Taking the flag of a dead team? Talk about cheap!").color(TextColor.color(255, 20 ,20));
+		if (!CommandDebug.ignoreWinConditions && !flag.team.isAlive()) {
+			Component text = Component.text("Taking the flag of a dead team? Talk about cheap!").color(TextColor.color(255, 20 ,20));
 			player.sendMessage(text);
 			player.playSound(player.getLocation(), Sound.ENTITY_HORSE_DEATH, SoundCategory.AMBIENT, 2f, 0.5f);
 			return;
@@ -325,7 +364,7 @@ public class CaptureTheFlag extends TeamArena
 		addFlagHeld(player, flag);
 		if(flag.isAtBase)
 			flag.ticksUntilReturn = TAKEN_FLAG_RETURN_TIME;
-		
+
 		flag.isAtBase = false;
 		flag.holder = player;
 		flag.holdingTeam = Main.getPlayerInfo(player).team;
@@ -424,27 +463,27 @@ public class CaptureTheFlag extends TeamArena
 			ItemUtils.removeFromPlayerInventory(getFlagInInventory(flag, flag.holder), flag.holder);
 		}
 		flag.teleportToBase();
-		
+
 		final TextReplacementConfig returnConfig = TextReplacementConfig.builder().match("%team%").replacement(flag.team.getComponentSimpleName()).build();
-		
+
 		Component chatText = RETURNED_MESSAGE.replaceText(returnConfig);
 		Component titleText = RETURNED_TITLE.replaceText(returnConfig);
-		
+
 		var iter = Main.getPlayersIter();
 		while(iter.hasNext()) {
 			Map.Entry<Player, PlayerInfo> entry = iter.next();
 			Player p = entry.getKey();
-			
+
 			if(entry.getValue().getPreference(Preferences.RECEIVE_GAME_TITLES)) {
 				PlayerUtils.sendTitle(p, Component.empty(), titleText, 7, 30, 7);
 			}
-			
+
 			p.playSound(p.getLocation(), Sound.BLOCK_LARGE_AMETHYST_BUD_PLACE, SoundCategory.AMBIENT, 2, 1);
 		}
-		
+
 		Bukkit.broadcast(chatText);
 	}
-	
+
 	public void captureTheFlag(Player player, TeamArenaTeam capturingTeam, Flag capturedFlag) {
 		capturingTeam.score++;
 		player.setGlowing(false);
@@ -454,7 +493,7 @@ public class CaptureTheFlag extends TeamArena
 		capturedFlag.sendRecreatePackets(player);
 		player.getInventory().remove(capturedFlag.item);
 		ItemUtils.removeFromPlayerInventory(getFlagInInventory(capturedFlag, player), player);
-		
+
 		updateBossBars();
 
 		final TextReplacementConfig holdingConfig = TextReplacementConfig.builder().match("%holdingTeam%")
@@ -463,28 +502,28 @@ public class CaptureTheFlag extends TeamArena
 
 		Component chatText = CAPTURED_MESSAGE.replaceText(holdingConfig).replaceText(victimConfig);
 		Component titleText = CAPTURED_TITLE.replaceText(holdingConfig).replaceText(victimConfig);
-		
+
 		var iter = Main.getPlayersIter();
 		while(iter.hasNext()) {
 			Map.Entry<Player, PlayerInfo> entry = iter.next();
 			Player p = entry.getKey();
-			
+
 			if(entry.getValue().getPreference(Preferences.RECEIVE_GAME_TITLES)) {
 				PlayerUtils.sendTitle(p, Component.empty(), titleText, 7, 30, 7);
 			}
-			
+
 			p.playSound(p.getLocation(), Sound.BLOCK_LARGE_AMETHYST_BUD_BREAK, SoundCategory.AMBIENT, 2f, 1f);
 		}
-		
+
 		Bukkit.broadcast(chatText);
-		
+
 		//end the game if win
-		if(capturingTeam.score >= capsToWin) {
+		if (!CommandDebug.ignoreWinConditions && capturingTeam.score >= capsToWin) {
 			winningTeam = capturingTeam;
 			prepEnd();
 		}
 	}
-	
+
 	public void updateBossBars() {
 		for(TeamArenaTeam team : teams) {
 			float progress = (float) team.score / (float) capsToWin;
@@ -493,7 +532,7 @@ public class CaptureTheFlag extends TeamArena
 			team.bossBar.progress(progress);
 		}
 	}
-	
+
 	public void flagPositionTick(Flag flag) {
 		ArmorStand stand = flag.getArmorStand();
 		Location loc;
@@ -502,7 +541,7 @@ public class CaptureTheFlag extends TeamArena
 		else {
 			RayTraceResult result = flag.currentLoc.getWorld().rayTraceBlocks(flag.currentLoc,
 					new Vector(0, -1, 0), 383, FluidCollisionMode.SOURCE_ONLY, true);
-			
+
 			if(result != null) {
 				double distance = flag.currentLoc.toVector().distance(result.getHitPosition());
 				//max fall of 0.1 blocks per tick
@@ -525,11 +564,11 @@ public class CaptureTheFlag extends TeamArena
 		//net.minecraft.world.entity.decoration.ArmorStand nmsStand = ((CraftArmorStand) stand).getHandle();
 		//nmsStand.moveTo(loc.getX(), loc.getY(), loc.getZ(), loc.getYaw(), loc.getPitch());
 	}
-	
+
 	@Override
 	public void onDamage(DamageEvent event) {
 		super.onDamage(event);
-		
+
 		if(event.getVictim() instanceof ArmorStand stand && flagStands.containsKey(stand)) {
 			event.setCancelled(true);
 		}
@@ -580,9 +619,15 @@ public class CaptureTheFlag extends TeamArena
 
 	public boolean isFlagItem(ItemStack item) {
 		if(item == null) return false;
-		return flagItems.contains(item.getItemMeta().getDisplayName());
+		ItemMeta meta = item.getItemMeta();
+		return meta != null && flagItems.contains(meta.getDisplayName());
 	}
-	
+
+	@Override
+	public boolean isWearableArmorPiece(ItemStack item) {
+		return !isFlagItem(item) && super.isWearableArmorPiece(item);
+	}
+
 	/**
 	 * Get the copy of a flag item in a players inventory e.g the specific flag item in the inventory of a player holding the flag
 	 */
@@ -590,97 +635,120 @@ public class CaptureTheFlag extends TeamArena
 		Iterator<ItemStack> iter = player.getInventory().iterator();
 		while(iter.hasNext()) {
 			ItemStack item = iter.next();
-			
+
 			if(itemIsThisFlagsItem(flag, item))
 				return item;
 		}
-		
+
 		//they may be holding it on their mouse in their inventory
 		ItemStack cursor = player.getItemOnCursor();
 		if(itemIsThisFlagsItem(flag, cursor))
 			return cursor;
-		
+
 		return null;
 	}
-	
+
 	public boolean itemIsThisFlagsItem(Flag flag, ItemStack item) {
 		if(item == null)
 			return false;
-		
+
 		if(item.getType() == Material.LEATHER_CHESTPLATE) {
 			ItemStack cloneItem = item.clone();
 			Damageable meta = (Damageable) cloneItem.getItemMeta();
 			meta.setDamage(0);
 			cloneItem.setItemMeta(meta);
-			
+
 			return flag.item.isSimilar(cloneItem);
 		}
-		
+
 		return false;
 	}
-	
+
 	@Override
 	public void onInteract(PlayerInteractEvent event) {
 		if((event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK)
 				&& isFlagItem(event.getItem())) {
 			event.setUseItemInHand(Event.Result.DENY);
 		}
+
+		super.onInteract(event);
 	}
 
 	@Override
 	public void prepLive() {
 		super.prepLive();
 
-		SidebarManager.setTitle(Component.text("CapsToWin: " + capsToWin).color(NamedTextColor.GOLD));
+		// register flag cursors
+		for (var entry : teamToFlags.entrySet()) {
+			TeamArenaTeam team = entry.getKey();
+			Flag flag = entry.getValue();
+
+			ArmorStand stand = flag.getArmorStand();
+			MapCursor.Type icon = MapCursor.Type.valueOf("BANNER_" + team.getDyeColour().name());
+			Component flagText = Component.text(team.getSimpleName() + " flag", team.getRGBTextColor());
+			Component yourFlagText = Component.text("Your flag", team.getRGBTextColor());
+			miniMap.registerCursor((player, playerInfo) -> {
+				// display extra information for own flag
+				if (playerInfo.team == team) {
+					if (flag.holder != null && gameTick % 40 < 20) {
+						return new MiniMapManager.CursorInfo(flag.holder.getLocation(), true, MapCursor.Type.RED_POINTER, yourFlagText);
+					} else {
+						return new MiniMapManager.CursorInfo(stand.getLocation(), false, icon, yourFlagText);
+					}
+				} else {
+					return new MiniMapManager.CursorInfo(stand.getLocation(), false, icon, flagText);
+				}
+			});
+		}
 	}
 
 	@Override
 	public void prepEnd() {
 		super.prepEnd();
-		
+
 		flagItems.clear();
-		
-		
+
+
 		Bukkit.getScheduler().runTaskLater(Main.getPlugin(), bukkitTask -> {
-			
+
 			for(Flag flag : flagStands.values()) {
 				flag.getArmorStand().remove();
 				flag.unregisterTeam();
 			}
-		
+
 		}, END_GAME_TIME - 4); //one tick before the scheduled tasks in super
 	}
-	
-	
-	
+
+
+
 	@Override
 	public boolean canSelectKitNow() {
 		return !gameState.isEndGame();
 	}
-	
+
 	@Override
 	public boolean canSelectTeamNow() {
 		return gameState == GameState.PREGAME;
 	}
-	
+
 	@Override
 	public boolean isRespawningGame() {
 		return true;
 	}
-	
+
 	public boolean isFlagCarrier(Player p) {
 		return flagHolders.containsKey(p);
 	}
-	
+
 	@Override
 	public void parseConfig(Map<String, Object> map) {
 		super.parseConfig(map);
-		
+
 		flagStands = new HashMap<>();
 		teamToFlags = new HashMap<>();
-		
+
 		Map<String, Object> customFlags = (Map<String, Object>) map.get("Custom");
-		
+
 		Main.logger().info("Custom Info: ");
 		Main.logger().info(customFlags.toString());
 
@@ -699,17 +767,17 @@ public class CaptureTheFlag extends TeamArena
 				if (team == null) {
 					throw new IllegalArgumentException("Unknown team " + entry.getKey() + "!!!! Use the team's full name i.e \"Red Team:\"");
 				}
-				
+
 				Location teamsFlagLoc = BlockUtils.parseCoordsToVec((String) entry.getValue(), 0.5, -0.4, 0.5).toLocation(gameWorld);
 				Flag flag = new Flag(this, team, teamsFlagLoc);
-				
+
 				teamToFlags.put(team, flag);
 			}
 		}
 	}
-	
+
 	@Override
-	public String mapPath() {
-		return super.mapPath() + "CTF";
+	public File getMapPath() {
+		return new File(super.getMapPath(), "CTF");
 	}
 }

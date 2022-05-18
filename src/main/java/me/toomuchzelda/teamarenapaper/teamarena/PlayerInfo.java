@@ -1,90 +1,75 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
-import me.toomuchzelda.teamarenapaper.core.Hologram;
+import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
+import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.KillAssistTracker;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
-import me.toomuchzelda.teamarenapaper.teamarena.preferences.*;
+import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
+import me.toomuchzelda.teamarenapaper.utils.PacketHologram;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
+import org.bukkit.entity.Damageable;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 //container class to store per-player info
 public class PlayerInfo
 {
-	public final byte permissionLevel;
+	public CustomCommand.PermissionLevel permissionLevel;
 	public TeamArenaTeam team;
 	public Location spawnPoint;
-	public Hologram nametag;
+	public PacketHologram nametag;
 	public Kit kit;
 	public Kit activeKit; // kit they've selected vs the kit they're currently using
 	//todo: read from DB or other persistent storage
+	//todo: prob make a preference
 	public String defaultKit;
 
-	//todo make array
-	private HashMap<Preference<?>, Object> preferences = new HashMap<>(); //todo make array
-	//todo make array
-	//todo make array
-	//todo make array
-	//todo make array
-	//todo make array
-	//todo make array
-	//todo make array
-	//todo make array
-	//todo make array
-	//todo make array
-	//todo make array
-	//todo make array
-	
-	private final HashMap<String, Integer> messageCooldowns = new HashMap<String, Integer>(); 
+	private Map<Preference<?>, Object> preferences = new HashMap<>();
 
-	// cringe
-	//from 1-10. number of ticks in between particle play
-	//public byte kothHillParticles;
-	//public final PreferenceKothHillParticles kothParticles;
-	//whether the player wants to see titles during/regarding gameplay (they will also get a chat message regardless)
-	//public boolean receiveGameTitles;
-	//public final PreferenceReceiveGameTitles receiveGameTitles;
-	//sound played when hit a bow shot
-	//public Sound bowShotHitSound;
-	//public final PreferenceBowHitSound bowHitSound;
-	//whether the screen should tilt when taking damage
-	//public boolean damageTilt;
-	//public final PreferenceDamageTilt damageTilt;
-	
-	//for kit related messages; play in chat, action bar, or both
-	//public boolean kitActionBarMessages;
-	//public final PreferenceKitActionBar kitActionBar;
-	//public boolean kitChatMessages;
-	//public final PreferenceKitChatMessages kitChatMessages;
+	private final Map<String, Integer> messageCooldowns = new HashMap<>();
+	private final LinkedList<DamageLogEntry> damageReceivedLog;
+	private final KillAssistTracker killAssistTracker;
+	private final PlayerScoreboard scoreboard; //scoreboard they view
+	private final MetadataViewer metadataViewer; //custom entity metadata tracker
 
-	public PlayerInfo(byte permissionLevel) {
+	public double kills;
+	//for right clicking the leather chestplate
+	public boolean viewingGlowingTeammates;
+
+	public PlayerInfo(CustomCommand.PermissionLevel permissionLevel, Player player) {
 		team = null;
 		spawnPoint = null;
 		nametag = null;
 		kit = null;
 		activeKit = null;
 		defaultKit = "Trooper";
-		//kothHillParticles = 1;
-		//kothParticles = new PreferenceKothHillParticles();
-		//receiveGameTitles = true;
-		//receiveGameTitles = new PreferenceReceiveGameTitles();
-		//damageTilt = true;
-		//damageTilt = new PreferenceDamageTilt();
-		
+
 		this.permissionLevel = permissionLevel;
-		//bowShotHitSound = Sound.ENTITY_ARROW_HIT_PLAYER;
-		//bowHitSound = new PreferenceBowHitSound();
-		
-		//kitActionBarMessages = true;
-		//kitActionBar = new PreferenceKitActionBar();
-		//kitChatMessages = true;
-		//kitChatMessages = new PreferenceKitChatMessages();
+		damageReceivedLog = new LinkedList<>();
+
+		killAssistTracker = new KillAssistTracker(player);
+		kills = 0;
+		viewingGlowingTeammates = false;
+
+		this.scoreboard = new PlayerScoreboard(player);
+		this.metadataViewer = new MetadataViewer(player);
 	}
-	
+
 	public void setPreferenceValues(Map<Preference<?>, ?> values) {
 		preferences = new HashMap<>(values); // disgusting and slow
 	}
-	
+
 	public <T> void setPreference(Preference<T> preference, T value) {
 		preferences.put(preference, value);
 	}
@@ -93,7 +78,7 @@ public class PlayerInfo
 	public <T> T getPreference(Preference<T> preference) {
 		return (T) preferences.getOrDefault(preference, preference.getDefaultValue());
 	}
-	
+
 	/**
 	 * see if enough time has passed for a message to be sent to player (no spam)
 	 * @param message message, or a key representing the message, to be sent
@@ -116,8 +101,33 @@ public class PlayerInfo
 			return true;
 		}
 	}
-	
+
 	public void clearMessageCooldowns() {
 		messageCooldowns.clear();
+	}
+
+	public void logDamageReceived(Damageable damaged, DamageType damageType, double damage, @Nullable Entity damager, int time) {
+		Component damagerComponent = damager == null ? null : EntityUtils.getComponent(damager);
+		damageReceivedLog.add(new DamageLogEntry(damageType, damage, damagerComponent, time));
+	}
+
+	public MetadataViewer getMetadataViewer() {
+		return metadataViewer;
+	}
+
+	public PlayerScoreboard getScoreboard() {
+		return scoreboard;
+	}
+
+	public void clearDamageReceivedLog() {
+		damageReceivedLog.clear();
+	}
+
+	public KillAssistTracker getKillAssistTracker() {
+		return killAssistTracker;
+	}
+
+	public List<DamageLogEntry> getDamageReceivedLog() {
+		return damageReceivedLog;
 	}
 }
