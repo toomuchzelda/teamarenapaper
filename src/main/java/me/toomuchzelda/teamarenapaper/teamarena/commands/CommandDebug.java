@@ -2,12 +2,9 @@ package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
-import me.toomuchzelda.teamarenapaper.inventory.TicTacToe;
 import me.toomuchzelda.teamarenapaper.teamarena.MiniMapManager;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.SoundUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -64,22 +61,6 @@ public class CommandDebug extends CustomCommand {
 					sniperAccuracy = args.length == 3 ? "true".equalsIgnoreCase(args[2]) : !sniperAccuracy;
 					sender.sendMessage(Component.text("Set sniper accuracy debug to " + sniperAccuracy)
 							.color(NamedTextColor.GREEN));
-				}
-			}
-			case "uwu" -> {
-				int number;
-				try {
-					number = Integer.parseInt(args[1]);
-				} catch (IndexOutOfBoundsException | NumberFormatException e) {
-					showUsage(sender, "/debug uwu <times>");
-					break;
-				}
-				for (Player victim : Bukkit.getOnlinePlayers()) {
-					if ("jacky8399".equalsIgnoreCase(victim.getName()) || victim == sender)
-						continue;
-					for (int i = 0; i < number; i++) {
-						victim.playSound(victim, SoundUtils.getRandomObnoxiousSound(), 99999f, MathUtils.randomRange(0, 2));
-					}
 				}
 			}
 			case "draw" -> {
@@ -208,24 +189,6 @@ public class CommandDebug extends CustomCommand {
                     }
                 }
             }
-            case "tictactoe" -> {
-                if (args.length != 2) {
-                    showUsage(sender, "/debug tictactoe <player/bot>");
-                    return;
-                }
-                if (args[1].equalsIgnoreCase("bot")) {
-                    TicTacToe game = new TicTacToe(TicTacToe.getPlayer(player), TicTacToe.getBot(TicTacToe.BotDifficulty.EASY));
-                    game.schedule();
-                } else {
-                    Player otherPlayer = Bukkit.getPlayer(args[1]);
-                    if (otherPlayer == null || otherPlayer == player) {
-                        sender.sendMessage(Component.text("Player not found!").color(NamedTextColor.RED));
-                        return;
-                    }
-                    TicTacToe game = new TicTacToe(TicTacToe.getPlayer(player), TicTacToe.getPlayer(otherPlayer));
-                    game.schedule();
-                }
-            }
             default -> showUsage(sender);
         }
     }
@@ -233,11 +196,10 @@ public class CommandDebug extends CustomCommand {
     @Override
     public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
         if (args.length == 1) {
-            return Arrays.asList("hide", "gui", "tictactoe", "game", "setrank", "setteam", "uwu", "votetest");
+            return Arrays.asList("hide", "gui", "game", "setrank", "setteam", "votetest");
         } else if (args.length == 2) {
             return switch (args[0].toLowerCase(Locale.ENGLISH)) {
                 case "gui" -> Arrays.asList("true", "false");
-                case "tictactoe" -> Arrays.asList("player", "bot");
                 case "game" -> Arrays.asList("ignorewinconditions", "stopwastingmybandwidth", "sniperaccuracy");
                 case "setrank" -> Arrays.stream(PermissionLevel.values()).map(Enum::name).toList();
                 case "setteam" -> Arrays.stream(Main.getGame().getTeams())
@@ -247,7 +209,7 @@ public class CommandDebug extends CustomCommand {
             };
         } else if (args.length == 3) {
             return switch (args[0].toLowerCase(Locale.ENGLISH)) {
-                case "tictactoe", "setrank", "setteam" -> Bukkit.getOnlinePlayers().stream()
+                case "setrank", "setteam" -> Bukkit.getOnlinePlayers().stream()
                         .map(Player::getName).toList();
                 case "game" -> Arrays.asList("true", "false");
                 default -> Collections.emptyList();
