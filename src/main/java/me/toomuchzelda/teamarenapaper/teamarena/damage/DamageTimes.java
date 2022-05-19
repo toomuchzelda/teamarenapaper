@@ -27,7 +27,7 @@ public class DamageTimes {
 
     public Entity lastDamager;
 
-    public DamageTimes(LivingEntity living) {
+    private DamageTimes(LivingEntity living) {
 
         fireTimes = new FireTimes();
         fireTimes.lastFireTime = 0;
@@ -42,7 +42,7 @@ public class DamageTimes {
 
         entityDamageTimes.put(living, this);
     }
-    
+
     public void clearAttackers() {
         lastDamager = null;
         lastAttackEvent = null;
