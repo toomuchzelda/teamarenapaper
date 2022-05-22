@@ -189,7 +189,6 @@ public class KitVenom extends Kit
 								}
 							}
 						}.runTaskTimer(Main.getPlugin(), 0, 0);
-						
 						LEAP_TASKS.add(runnable);
 					}
 				}
