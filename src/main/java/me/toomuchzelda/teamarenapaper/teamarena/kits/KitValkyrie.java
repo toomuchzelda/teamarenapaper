@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -22,6 +23,7 @@ import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.Action;
@@ -29,6 +31,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.MainHand;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitScheduler;
@@ -36,10 +39,12 @@ import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import net.kyori.adventure.sound.SoundStop;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import net.minecraft.network.chat.TextComponent;
@@ -64,8 +69,7 @@ import net.minecraft.network.chat.TextComponent;
 
 	Main Ability: Gravity Bomb
 		Charge CD: 12 seconds
-        Max Charges: 2
-        Detonation Time: 2 seconds
+        Detonation Time: 1.5 seconds
 
         Launches an eye of ender like an explosive grenade, 
         which will detonate after a short fuse time.
@@ -93,6 +97,13 @@ public class KitValkyrie extends Kit{
     public static final int NORMAL_BONUS = 1;
     public static final int SWEET_SPOT_BONUS = 3;
 
+    public static final ItemStack GRAV_BOMB;
+    //BOMB_CD actual: 12 * 20
+    public static final int BOMB_CD = 12;
+    public static final int DETONATION_TIME = 30;
+    public static final double KB_AMP = 9.0;
+    public static final Set<BukkitTask> VALK_TASKS = new HashSet<>();
+
     static{
         VALK_AXE = new ItemStack(Material.NETHERITE_AXE);
         ItemMeta valkMeta = VALK_AXE.getItemMeta();
@@ -101,6 +112,11 @@ public class KitValkyrie extends Kit{
         valkMeta.displayName(ItemUtils.noItalics(Component.text("Battle Axe")));
         valkMeta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
         VALK_AXE.setItemMeta(valkMeta);
+
+        GRAV_BOMB = new ItemStack(Material.HEART_OF_THE_SEA);
+        ItemMeta gravMeta = GRAV_BOMB.getItemMeta();
+        gravMeta.displayName(ItemUtils.noItalics(Component.text("Gravity Bomb")));
+        GRAV_BOMB.setItemMeta(gravMeta);
     }
 
     public KitValkyrie(){
@@ -118,7 +134,7 @@ public class KitValkyrie extends Kit{
         boots.setItemMeta(bootMeta);
 
         this.setArmor(helm, chest, legs, boots);
-        setItems(VALK_AXE);
+        setItems(VALK_AXE, GRAV_BOMB);
         setAbilities(new ValkyrieAbility());
     }
 
@@ -127,7 +143,17 @@ public class KitValkyrie extends Kit{
         //ACTIVE_AXE tracks when attacks should be allowed (should only be via axe ability)
         //If it contains a player, they are allowed to attack with axe
         public static final Set<Player> ACTIVE_AXE = new HashSet<>();
+        public final HashMap<Player, Integer> BOMB_RECHARGES = new HashMap<>();
 
+        public void unregisterAbility() {
+			Iterator<BukkitTask> iter = VALK_TASKS.iterator();
+			while(iter.hasNext()) {
+				BukkitTask task = iter.next();
+				task.cancel();
+				iter.remove();
+			}
+		}
+        
         public void removeAbility(Player player) {
             UUID playerID = player.getUniqueId();
 			player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).removeModifier(AXE_SLOW);
@@ -168,16 +194,36 @@ public class KitValkyrie extends Kit{
 
             //Particle effect: Indicator that Axe is off CD
             if(player.getInventory().getItemInMainHand().getType() == Material.NETHERITE_AXE && !player.hasCooldown(Material.NETHERITE_AXE)){
-                world.spawnParticle(Particle.CRIT, player.getLocation().add(0, 1, 0), 2);
+                world.spawnParticle(Particle.CRIT, player.getLocation().add(0, 1, 0), 1);
             }
             //Sound Effect: Indicates Axe is now off CD
             if(player.getCooldown(Material.NETHERITE_AXE) == 1){
                 player.playSound(player, Sound.ITEM_AXE_SCRAPE, 1.0f, 1.3f);
             }
+
+            //Gravity Bomb Action Bar
+            if(player.getInventory().getItemInMainHand().getType() == Material.HEART_OF_THE_SEA){
+                Component actionBar = Component.text("Left Click to THROW    Right Click to TOSS").color(TextColor.color(3, 182, 252));
+                player.sendActionBar(actionBar);
+            }
+        }
+
+        public void onTick() {
+            //Stolen from toomuchzelda
+			int currentTick = TeamArena.getGameTick();
+			var itemIter = BOMB_RECHARGES.entrySet().iterator();
+			while(itemIter.hasNext()) {
+				Map.Entry<Player, Integer> entry = itemIter.next();
+				if(currentTick - entry.getValue() >= BOMB_CD){
+					entry.getKey().getInventory().addItem(GRAV_BOMB);
+					itemIter.remove();
+				}
+			}
         }
 
         public void onInteract(PlayerInteractEvent event) {
             Player player = event.getPlayer();
+            PlayerInventory inv = player.getInventory();
             ItemStack item = event.getItem();
             Material mat = event.getMaterial();
             Action action = event.getAction();
@@ -185,6 +231,17 @@ public class KitValkyrie extends Kit{
             //Initializes Wind-Up when an attack does not hit a player
             if((action == Action.LEFT_CLICK_AIR || action == Action.LEFT_CLICK_BLOCK) && mat == Material.NETHERITE_AXE && player.getExp() == 0 && player.getCooldown(Material.NETHERITE_AXE) == 0){
                     windUp(player);
+            }
+
+            if(mat == Material.HEART_OF_THE_SEA){
+                if(action == Action.LEFT_CLICK_AIR || action == Action.LEFT_CLICK_BLOCK){
+                    inv.setItem(inv.getHeldItemSlot(), inv.getItem(inv.getHeldItemSlot()).subtract());
+					throwGrenade(player, 1.5d);
+                }
+                if(action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK){
+                    inv.setItem(inv.getHeldItemSlot(), inv.getItem(inv.getHeldItemSlot()).subtract());
+					throwGrenade(player, 0.8d);
+                }
             }
         }
 
@@ -203,6 +260,7 @@ public class KitValkyrie extends Kit{
                         valkAttack(player);
                         player.setExp(0);
                         cancel();
+                        VALK_TASKS.remove(this);
                     }
                     else{
                         duration--;
@@ -217,11 +275,13 @@ public class KitValkyrie extends Kit{
 
                         if(!isAxe){
                             cancel();
+                            VALK_TASKS.remove(this);
                             player.setExp(0);
                         }
                     }
                 }
             }.runTaskTimer(Main.getPlugin(), 0, 0);
+            VALK_TASKS.add(runnable);
         }
 
         //An AOE attack that follows a succesful windup, hits all enemies within an area, applies bonus damage based on distance
@@ -274,6 +334,7 @@ public class KitValkyrie extends Kit{
                 public void run() {
                     if(increment >= duration){
                         cancel();
+                        VALK_TASKS.remove(this);
                     }
                     else{
                         for(int i = 0; i < 9; i++){
@@ -290,6 +351,89 @@ public class KitValkyrie extends Kit{
                     
                 }
             }.runTaskTimer(Main.getPlugin(), 0, 0);
+            VALK_TASKS.add(runnable);
         }
+
+        public void throwGrenade(Player player, double amp){
+			World world = player.getWorld();
+            Vector direction = player.getLocation().getDirection();
+            final TeamArenaTeam team = Main.getPlayerInfo(player).team;
+			Color teamColor = team.getColour();
+
+			Item activeGrenade = world.dropItem(player.getLocation(), new ItemStack(Material.HEART_OF_THE_SEA));
+            activeGrenade.setCanPlayerPickup(false);
+			activeGrenade.setCanMobPickup(false);
+		    activeGrenade.setVelocity(direction.multiply(amp));
+		    world.playSound(activeGrenade.getLocation(), Sound.ENTITY_CREEPER_PRIMED, 1f, 1.1f);
+            
+			BukkitTask runnable = new BukkitRunnable(){
+				//Grenade explosion
+				int timer = DETONATION_TIME;
+                DustTransition particle = new DustTransition(teamColor, Color.WHITE, 2);
+				public void run() {
+						//Grenade Particles when it is thrown
+						//In Motion
+						if(activeGrenade.getVelocity().length() > 0){
+							world.spawnParticle(Particle.REDSTONE, activeGrenade.getLocation(), 1, new Particle.DustOptions(teamColor, 2f));
+                            world.spawnParticle(Particle.ENCHANTMENT_TABLE, activeGrenade.getLocation(), 8, 0,0,0, 0.5f);
+						}
+						else{
+							//On the ground
+							world.spawnParticle(Particle.DUST_COLOR_TRANSITION, activeGrenade.getLocation().add(Vector.getRandom().subtract(new Vector(-0.5,-0.5,-0.5)).multiply(4)), 2, particle);
+                            world.spawnParticle(Particle.ENCHANTMENT_TABLE, activeGrenade.getLocation(), 12,  0,0,0, 1.5f);
+						}
+					if(timer <= 0){
+                        player.getWorld().playSound(player.getLocation(), Sound.BLOCK_RESPAWN_ANCHOR_DEPLETE, 1.0f, 1.3f);
+                        
+                        //Pull-in
+                        List<Entity> affectedEnemies = player.getNearbyEntities(3, 3, 3);
+                        for(Entity entity : affectedEnemies){
+                            if(entity instanceof org.bukkit.entity.LivingEntity victim && !(entity.getType().equals(EntityType.ARMOR_STAND))){
+                                Vector vel = victim.getVelocity();
+                                Vector relativePos = victim.getLocation().toVector().subtract(activeGrenade.getLocation().toVector());
+                                double vecLength = relativePos.lengthSquared();
+                                if(vecLength <= 0.25){
+                                    vecLength = 0.25;
+                                }
+                                double amp = KB_AMP * vecLength;
+                                if(vel.getY() < 0){
+                                    vel.setY(1/30);
+                                }
+                                victim.setVelocity(vel.subtract(relativePos.multiply(amp)));
+                            }
+                        }
+
+						//Explosion
+						world.createExplosion(activeGrenade.getLocation(), 0.8f, false, false);
+                        player.stopSound(Sound.ENTITY_GENERIC_EXPLODE);
+                        player.getWorld().stopSound(SoundStop.named(Sound.ENTITY_GENERIC_EXPLODE));
+						activeGrenade.remove();
+                        BOMB_RECHARGES.put((Player) player, TeamArena.getGameTick());
+
+                        //KB Amp
+                        affectedEnemies = player.getNearbyEntities(3, 3, 3);
+                        for(Entity entity : affectedEnemies){
+                            if(entity instanceof org.bukkit.entity.LivingEntity victim && !(entity.getType().equals(EntityType.ARMOR_STAND))){
+                                Vector vel = victim.getVelocity();
+                                Vector relativePos = victim.getLocation().toVector().subtract(activeGrenade.getLocation().toVector());
+                                double vecLength = relativePos.lengthSquared();
+                                if(vecLength <= 0.25){
+                                    vecLength = 0.25;
+                                }
+                                double amp = KB_AMP * 1/vecLength;
+                                if(vel.getY() < 0){
+                                    vel.setY(1/30);
+                                }
+                                victim.setVelocity(vel.add(relativePos.multiply(amp)));
+                            }
+                        }
+                        cancel();
+                        VALK_TASKS.remove(this);
+					}
+					timer--;
+				}
+			}.runTaskTimer(Main.getPlugin(), 0, 0);
+            VALK_TASKS.add(runnable);
+		}
     }
 }
