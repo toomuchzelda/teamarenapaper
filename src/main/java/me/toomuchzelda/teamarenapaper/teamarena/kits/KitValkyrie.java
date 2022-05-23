@@ -71,7 +71,7 @@ import net.kyori.adventure.text.format.TextColor;
 
 	    Gravity Bomb Detonation
             Upon detonation, the bomb will pull enemies within r = 3 towards itself
-            Before exploding and dealing light damage
+            Before exploding and dealing very light damage
 */
 /**
  * @author onett425
@@ -118,7 +118,7 @@ public class KitValkyrie extends Kit{
     }
 
     public KitValkyrie(){
-        super("Valkyrie", "A tanky melee kit which much pay special attention to time and spacing. The Battle Axe takes a while to swing, but hits all enemies in an area around you! Hit your enemies at the very edge of your attack radius to maximize damage!",
+        super("Valkyrie", "A tanky melee kit which much pay special attention to timing and spacing. The Battle Axe takes a while to swing, but hits all enemies in an area around you! Hit your enemies at the very edge of your attack radius to maximize damage!",
 				Material.NETHERITE_AXE);
         ItemStack helm = new ItemStack(Material.IRON_HELMET);
         ItemStack chest = new ItemStack(Material.DIAMOND_CHESTPLATE);
@@ -306,7 +306,10 @@ public class KitValkyrie extends Kit{
                     ACTIVE_AXE.add(player);
 
                     //If distance is < 1, it is a "sour hit" and no bonus damage is given
-                    if(distanceSq >= 1 && distanceSq < 4){
+                    if(distanceSq < 1){
+
+                    }
+                    else if(distanceSq >= 1 && distanceSq < 4){
                         meta.addEnchant(Enchantment.DAMAGE_ALL, AXE_SHARP + NORMAL_BONUS, true);
                     }
                     else{
