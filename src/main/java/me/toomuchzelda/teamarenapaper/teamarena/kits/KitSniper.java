@@ -183,9 +183,11 @@ public class KitSniper extends Kit {
 		@Override
 		public void projectileHitEntity(ProjectileCollideEvent event) {
 			Projectile projectile = event.getEntity();
+			if (!(projectile instanceof Arrow arrow))
+				return;
 			Entity victim = event.getCollidedWith();
 			Player shooter = (Player) projectile.getShooter();
-			if (victim instanceof Player player && projectile.getType() == EntityType.ARROW) {
+			if (victim instanceof Player player) {
 				double headLocation = player.getLocation().getY();
 				double projectileHitY = projectile.getLocation().getY();
 				//Must consider when player is below the other player, which makes getting headshots much harder.
@@ -197,7 +199,7 @@ public class KitSniper extends Kit {
 				//Disabled headshot if you are too close since it was buggy
 				if (projectileHitY - headLocation > headshotThresh && projectile.getOrigin().distance(projectile.getLocation()) > 10) {
 					// such a horrible damage system
-					var fakeEvent = new EntityDamageByEntityEvent(player, shooter, EntityDamageEvent.DamageCause.PROJECTILE, 999);
+					var fakeEvent = new EntityDamageByEntityEvent(shooter, player, EntityDamageEvent.DamageCause.PROJECTILE, 999);
 					DamageEvent.createDamageEvent(fakeEvent);
 					//Hitmarker Sound effect
 					//shooter.playSound(shooter.getLocation(), Sound.ENTITY_ITEM_FRAME_PLACE, 2f, 2.0f);
