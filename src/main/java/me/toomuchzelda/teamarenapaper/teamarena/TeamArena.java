@@ -10,7 +10,10 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.KitDemolitions;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.*;
+import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.SoundUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -29,9 +32,9 @@ import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.yaml.snakeyaml.Yaml;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -43,6 +46,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public abstract class TeamArena
 {
 	public static GameType nextGameType = GameType.CTF;
+	@Nullable
+	public static String nextMapName = null;
 
 	private final File worldFile;
 	public World gameWorld;
@@ -118,22 +123,29 @@ public abstract class TeamArena
 
 		//copy the map to another directory and load from there to avoid any accidental modifying of the original
 		// map
-		File source = maps[MathUtils.random.nextInt(maps.length)];
+		File source;
+		if (nextMapName != null) {
+			source = new File(getMapPath(), nextMapName);
+			nextMapName = null;
+			if (!source.exists()) {
+				throw new IllegalStateException("Map " + source.getName() + " does not exist!");
+			}
+		} else {
+			source = maps[MathUtils.random.nextInt(maps.length)];
+		}
 		Main.logger().info("Loading map: " + source.getAbsolutePath());
 		File dest = new File("temp_" + source.getName().toLowerCase(Locale.ENGLISH) + "_" + System.currentTimeMillis());
 		if (dest.mkdir()) {
-			FileUtils.copyFolder(source, dest);
-			//delete the uid.dat
-			for (File uid : dest.listFiles()) {
-				if (uid.getName().equalsIgnoreCase("uid.dat")) {
-					boolean b = uid.delete();
-					Main.logger().info("Attempted delete of uid.dat in copy world, success: " + b);
-				}
+			try {
+				org.apache.commons.io.FileUtils.copyDirectory(source, dest, file -> !file.getName().equals("uid.dat"));
+			} catch (IOException e) {
+				throw new RuntimeException("Failed to copy map", e);
 			}
 		} else {
 			//dae not bothered to try catch
 			throw new IllegalArgumentException("Couldn't create new directory for temp map " + dest.getAbsolutePath());
 		}
+		dest.deleteOnExit();
 		worldFile = dest;
 		WorldCreator worldCreator = new WorldCreator(dest.getName());
 		gameWorld = worldCreator.createWorld();

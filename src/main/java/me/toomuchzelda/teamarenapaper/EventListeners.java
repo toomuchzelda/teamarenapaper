@@ -15,7 +15,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
-import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
@@ -48,6 +47,7 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 
+import java.lang.reflect.Constructor;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
@@ -109,17 +109,18 @@ public class EventListeners implements Listener
 			DamageTimes.cleanup();
 			Main.playerIdLookup.entrySet().removeIf(idLookupEntry -> !idLookupEntry.getValue().isOnline());
 
-			if(MathUtils.random.nextBoolean()) {//MathUtils.randomMax(3) < 3) {
-				TeamArena.nextGameType = GameType.KOTH;
+			// initialize next game
+			if (TeamArena.nextGameType == null) {
+				TeamArena.nextGameType = GameType.values()[MathUtils.random.nextInt(GameType.values().length)];
 			}
-			else
-				TeamArena.nextGameType = GameType.CTF;
 
-			if(TeamArena.nextGameType == GameType.KOTH) {
-				Main.setGame(new KingOfTheHill());
-			}
-			else if(TeamArena.nextGameType == GameType.CTF) {
-				Main.setGame(new CaptureTheFlag());
+			try {
+				Constructor<? extends TeamArena> constructor = TeamArena.nextGameType.gameClazz.getConstructor();
+				TeamArena game = constructor.newInstance();
+				Main.setGame(game);
+				TeamArena.nextGameType = null;
+			} catch (ReflectiveOperationException ex) {
+				throw new Error("Failed to create game reflectively", ex);
 			}
 		}
 
