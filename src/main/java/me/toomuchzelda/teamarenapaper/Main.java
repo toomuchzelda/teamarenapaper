@@ -9,15 +9,12 @@ import me.toomuchzelda.teamarenapaper.teamarena.commands.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
-import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
-import org.bukkit.World;
 import org.bukkit.command.CommandMap;
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -62,25 +59,8 @@ public final class Main extends JavaPlugin
 		// Plugin shutdown logic
 
 		// delete temporarily loaded map if any
-		if (teamArena != null && teamArena.getWorld() != null) {
-			// evacuate the world first, then unload
-			World tempWorld = teamArena.getWorld();
-			if (tempWorld.getPlayerCount() != 0) {
-				Component kickMessage = Component.text("Server closed uwu");
-						//.color(NamedTextColor.GOLD);
-				for (Player player : tempWorld.getPlayers()) {
-					player.kick(kickMessage);
-				}
-			}
-			if (Bukkit.unloadWorld(tempWorld, false)) {
-				try {
-					org.apache.commons.io.FileUtils.deleteDirectory(teamArena.getWorldFile());
-				} catch (IOException e) {
-					logger.severe("Failed to delete world " + tempWorld.getName() + ": " + e);
-				}
-			} else {
-				logger.severe("Failed to unload world " + tempWorld.getName());
-			}
+		if (teamArena != null) {
+			teamArena.cleanUp();
 		}
 
 		HandlerList.unregisterAll(this);
@@ -139,15 +119,12 @@ public final class Main extends JavaPlugin
 		return teamArena;
 	}
 
-	public static void setGame(TeamArena game) {
-		String name = teamArena.getWorld().getName();
-		boolean bool = Bukkit.unloadWorld(teamArena.getWorld(), false);
-		logger().info("World " + name + " successfully unloaded: " + bool);
-		teamArena.gameWorld = null;
+	public static void setGame(TeamArena newGame) {
+		teamArena.cleanUp();
 
 		//might as well reset
 		ItemUtils._uniqueName = 0;
 
-		teamArena = game;
+		teamArena = newGame;
 	}
 }

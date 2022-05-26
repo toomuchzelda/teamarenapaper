@@ -19,6 +19,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
+import org.apache.commons.io.FileUtils;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
@@ -275,6 +276,21 @@ public abstract class TeamArena
 		info.kit.giveKit(player, true, info);
 	}
 
+	public void cleanUp() {
+		for (Player player : gameWorld.getPlayers()) {
+			player.kick(Component.text("You have been evacuated!", NamedTextColor.YELLOW));
+		}
+		if (Bukkit.unloadWorld(gameWorld, false)) {
+			try {
+				FileUtils.forceDelete(worldFile);
+			} catch (IOException ex) {
+				Main.logger().severe("Failed to delete world " + gameWorld.getName() + ": " + ex);
+			}
+		} else {
+			Main.logger().severe("Failed to unload world " + gameWorld.getName());
+		}
+		gameWorld = null;
+	}
 
 	public void tick() {
 		gameTick++;
