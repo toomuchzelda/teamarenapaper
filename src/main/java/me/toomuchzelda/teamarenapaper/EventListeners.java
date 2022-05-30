@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper;
 
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
+import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
@@ -26,6 +27,8 @@ import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.entity.AbstractArrow;
@@ -682,4 +685,24 @@ public class EventListeners implements Listener
 		}
 	}
 	*/
+
+
+	static final Component MOTD_SEPARATOR = Component.textOfChildren(Component.space(),
+			Component.text("|", NamedTextColor.DARK_RED, TextDecoration.BOLD), Component.space());
+	static final Component MOTD = Component.textOfChildren(
+			Component.text("             "),
+			TextUtils.getUselessRGBText("Blue Warfare", TextColor.color(0x060894), TextColor.color(0x1ad3f0)),
+			Component.space(),
+			TextUtils.getUselessRainbowText("[1.18.2]"),
+			Component.newline(),
+			TextUtils.getUselessRGBText("King of the Hill", TextColor.color(0x595959), TextColor.color(0xadadad)),
+			MOTD_SEPARATOR,
+			TextUtils.getUselessRGBText("Capture the Flag", TextColor.color(0x1d6e16), TextColor.color(0x00ff40)),
+			MOTD_SEPARATOR,
+			TextUtils.getUselessRGBText("UnbalancedBS", TextColor.color(0x631773), TextColor.color(0xff00f2))
+	);
+	@EventHandler
+	public void onMOTD(PaperServerListPingEvent e) {
+		e.motd(MOTD);
+	}
 }
