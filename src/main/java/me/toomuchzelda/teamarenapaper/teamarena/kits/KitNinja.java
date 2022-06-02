@@ -74,7 +74,7 @@ public class KitNinja extends Kit
 			if(event.getDamageType().isMelee() && event.getVictim() instanceof LivingEntity living) {
 				DamageTimes.DamageTime dTimes = DamageTimes.getDamageTime(living, DamageTimes.TrackedDamageTypes.ATTACK);
 
-				int ndt = TeamArena.getGameTick() - dTimes.getTimeGiven();
+				int ndt = TeamArena.getGameTick() - dTimes.getLastTimeDamaged();
 				if(ndt >= living.getMaximumNoDamageTicks() / 4) {
 					event.setIgnoreInvulnerability(true);
 					if(event.hasKnockback())

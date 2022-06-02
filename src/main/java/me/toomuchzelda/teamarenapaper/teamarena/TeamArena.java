@@ -213,6 +213,8 @@ public abstract class TeamArena
 
 		miniMap = new MiniMapManager(this);
 
+		DamageTimes.clear();
+
 		//init all the players online at time of construction
 		for (var entry : Main.getPlayerInfoMap().entrySet()) {
 			Player p = entry.getKey();
@@ -356,6 +358,9 @@ public abstract class TeamArena
 				}
 			}
 		}
+
+		//queue fire damage events
+		fireTick();
 
 		//process damage events
 		damageTick();
@@ -605,15 +610,37 @@ public abstract class TeamArena
 				Player p = entry.getKey();
 
 				PlayerUtils.heal(p, 1, EntityRegainHealthEvent.RegainReason.SATIATED); // half a heart
+			}
+		}
+	}
 
-				/*double newHealth = p.getHealth() + 1; // half a heart
-				double maxHealth = p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
-				if (newHealth > maxHealth)
-					newHealth = maxHealth;
+	/**
+	 * Handle all entities on fire
+	 */
+	public void fireTick() {
+		var iter = DamageTimes.getIterator();
+		Map.Entry<LivingEntity, DamageTimes.DamageTime[]> entry;
 
-				p.setHealth(newHealth);
-				if(entry.getValue().getPreference(Preferences.HEARTS_FLASH_REGEN))
-					PlayerUtils.sendHealth(p);*/
+		DamageTimes.DamageTime fireTime;
+		final int currentTick = getGameTick();
+		while(iter.hasNext()) {
+			entry = iter.next();
+			fireTime = entry.getValue()[DamageTimes.TrackedDamageTypes.FIRE.ordinal()];
+
+			if(entry.getKey().getFireTicks() > 0) {
+				if(fireTime.getTimeGiven() == -1) {
+					fireTime.setTimeGiven(currentTick);
+				}
+
+				if ((currentTick - fireTime.getTimeGiven()) % 20 == 0) {
+					DamageEvent fireDEvent = DamageEvent.newDamageEvent(entry.getKey(), 1, DamageType.FIRE_TICK, null, false);
+					queueDamage(fireDEvent);
+					Bukkit.broadcastMessage("custom fired");
+				}
+			}
+			//clear fire giver so they don't get credit if the person gets set on fire later
+			else {
+				fireTime.extinguish();
 			}
 		}
 	}
@@ -771,7 +798,6 @@ public abstract class TeamArena
 			spectatorTeam.unregister();
 			noTeamTeam.unregister();
 
-			//try to prevent visual bug of absorption remaining into next game
 			for(Player p : Bukkit.getOnlinePlayers()) {
 				PlayerUtils.resetState(p);
 				for(TeamArenaTeam team : teams) {

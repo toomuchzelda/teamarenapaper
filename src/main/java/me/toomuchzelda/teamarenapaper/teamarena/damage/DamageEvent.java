@@ -78,6 +78,10 @@ public class DamageEvent {
 		if(Main.getGame().getGameState() != LIVE)
 			return null;
 
+		//Handle entity fire ourselves
+		if(event.getCause() == EntityDamageEvent.DamageCause.FIRE_TICK)
+			return null;
+
 		//marker armorstands must never be damaged/killed
 		if(event.getEntity() instanceof ArmorStand stand && stand.isMarker())
 			return null;
@@ -150,7 +154,7 @@ public class DamageEvent {
 		else if((damageType.isFall() || damageType.is(DamageType.VOID)) && victim instanceof LivingEntity living) {
 			DamageTimes.DamageTime times = DamageTimes.getDamageTime(living, DamageTimes.TrackedDamageTypes.ATTACK);
 
-			if(times.getGiver() != null && TeamArena.getGameTick() - times.getTimeGiven() < 10 * 20) { // 10 seconds since last attacked
+			if(times.getGiver() != null && TeamArena.getGameTick() - times.getLastTimeDamaged() < 10 * 20) { // 10 seconds since last attacked
 				if(times.getDamageType().is(DamageType.PROJECTILE)) {
 					if(damageType.isFall())
 						damageType = DamageType.FALL_SHOT;
@@ -393,7 +397,7 @@ public class DamageEvent {
 
 			boolean doHurtEffect = true;
 			if(!damageType.isIgnoreRate() && !ignoreInvulnerability) {
-				ndt = TeamArena.getGameTick() - dTimes.getTimeGiven();
+				ndt = TeamArena.getGameTick() - dTimes.getLastTimeDamaged();
 
 				//they are still in no-damage-time
 				// if they were hit with a stronger attack from a different entity, only apply
@@ -532,10 +536,19 @@ public class DamageEvent {
 				if(fireTicks > victim.getFireTicks()) {
 					if (victim instanceof LivingEntity living) {
 						DamageTimes.DamageTime time = DamageTimes.getDamageTime(living, DamageTimes.TrackedDamageTypes.FIRE);
-						time.update(getFinalAttacker(), time.getTimeGiven(), time.getDamage(), type);
+
+						int timeGiven;
+						if(victim.getFireTicks() <= 0)
+							timeGiven = TeamArena.getGameTick();
+						else
+							timeGiven = time.getTimeGiven();
+
+						//Just update:
+						//- person who gave the fire
+						//- if they weren't already on fire, the time that the fire started
+						time.update(getFinalAttacker(), timeGiven, time.getLastTimeDamaged(), time.getDamage(), type);
 					}
 
-					//todo: custom fireticker thing
 					victim.setFireTicks(fireTicks);
 				}
 			}
@@ -585,7 +598,7 @@ public class DamageEvent {
 
 	// mfw java no primitive pointers
 	private void updateNDT(DamageTimes.DamageTime dTime) {
-		dTime.update(getFinalAttacker(), TeamArena.getGameTick(), this.finalDamage, this.damageType);
+		dTime.update(getFinalAttacker(), dTime.getTimeGiven(), TeamArena.getGameTick(), this.finalDamage, this.damageType);
 	}
 
 	public static Vector calculateKnockback(Entity victim, DamageType damageType, Entity attacker, boolean baseKnockback,

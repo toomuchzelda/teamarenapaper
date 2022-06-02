@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.damage;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -34,14 +35,6 @@ public class DamageTimes {
 		return arr;
 	}
 
-	public static void setDamageTime(LivingEntity victim, TrackedDamageTypes type, Entity giver,
-									 DamageType damageType, int timeStamp, double damage) {
-		DamageTime[] arr = ENTITY_DAMAGE_TIMES.computeIfAbsent(victim, living -> newTimesArray(victim));
-		DamageTime entry = arr[type.ordinal()];
-
-		entry.update(giver, timeStamp, damage, damageType);
-	}
-
 	public static DamageTime getDamageTime(LivingEntity victim, TrackedDamageTypes type) {
 		DamageTime[] arr = ENTITY_DAMAGE_TIMES.computeIfAbsent(victim, living -> newTimesArray(victim));
 		return arr[type.ordinal()];
@@ -55,7 +48,7 @@ public class DamageTimes {
 
 		DamageTime mostRecent = arr[0];
 		for(DamageTime time : arr) {
-			if(time.getTimeGiven() > mostRecent.getTimeGiven()) {
+			if(time.getLastTimeDamaged() > mostRecent.getLastTimeDamaged()) {
 				mostRecent = time;
 			}
 		}
@@ -64,23 +57,49 @@ public class DamageTimes {
 	}
 
 	public static void clearDamageTimes(LivingEntity victim) {
-		DamageTime[] arr = ENTITY_DAMAGE_TIMES.computeIfAbsent(victim, living -> newTimesArray(victim));
-
-		for(DamageTime time : arr) {
-			time.clear();
+		DamageTime[] arr = ENTITY_DAMAGE_TIMES.get(victim);
+		if(arr != null) {
+			for (DamageTime time : arr) {
+				time.clear();
+			}
 		}
+	}
+
+	public static void clear() {
+		ENTITY_DAMAGE_TIMES.clear();
+	}
+
+	public static Iterator<Map.Entry<LivingEntity, DamageTime[]>> getIterator() {
+		return ENTITY_DAMAGE_TIMES.entrySet().iterator();
 	}
 
 	public static class DamageTime
 	{
 		private Entity giver;
+		/**
+		 * for status effect aka FIRE and POISON. for ATTACK and OTHER this is ignored
+		 * record the time the initial fire was given, so that if their fire is 're-given' meaning
+		 * the time given is reset, it won't interrupt their current fire damage rythm
+		 * eg if we did:
+		 *
+		 * if((TeamArena.getGameTick() - lastTimeDamaged) % 20 == 0) {
+		 * 		hurtPlayer();
+		 * }
+		 *
+		 * Then when lastTimeDamaged is reset, say by being attacked by another player's fire aspect sword,
+		 * if they were on already fire they would have to wait another second before being hurt again, interrupting
+		 * their fire damage rhythm. So use variable timeGiven instead.
+		 *
+		 * Set to -1 when they are not on fire, so the rhythm doesn't carry over in between set-on-fire events
+		 */
 		private int timeGiven;
+		private int lastTimeDamaged;
 		private double damage;
 		private DamageType damageType;
 
 		private DamageTime() {
 			this.giver = null;
-			this.timeGiven = 0;
+			this.lastTimeDamaged = 0;
 			this.damage = 0;
 			this.damageType = null;
 		}
@@ -89,11 +108,19 @@ public class DamageTimes {
 			return damageType;
 		}
 
+		public int getTimeGiven() {
+			return timeGiven;
+		}
+
+		public void setTimeGiven(int timeGiven) {
+			this.timeGiven = timeGiven;
+		}
+
 		/**
 		 * The time (tick) this damage was dealt to the livingentity
 		 */
-		public int getTimeGiven() {
-			return timeGiven;
+		public int getLastTimeDamaged() {
+			return lastTimeDamaged;
 		}
 
 		public double getDamage() {
@@ -104,9 +131,19 @@ public class DamageTimes {
 			return giver;
 		}
 
-		public void update(Entity giver, int timeGiven, double damage, DamageType damageType) {
+		public void extinguish() {
+			this.giver = null;
+			this.timeGiven = -1;
+		}
+
+		public void update(Entity giver, int lastTimeDamaged, double damage, DamageType damageType) {
+			update(giver, lastTimeDamaged, lastTimeDamaged, damage, damageType);
+		}
+
+		public void update(Entity giver, int timeGiven, int lastTimeDamaged, double damage, DamageType damageType) {
 			this.giver = giver;
 			this.timeGiven = timeGiven;
+			this.lastTimeDamaged = lastTimeDamaged;
 			this.damage = damage;
 			this.damageType = damageType;
 		}
@@ -114,6 +151,7 @@ public class DamageTimes {
 		public void clear() {
 			this.giver = null;
 			this.timeGiven = 0;
+			this.lastTimeDamaged = 0;
 			this.damage = 0d;
 			this.damageType = null;
 		}
