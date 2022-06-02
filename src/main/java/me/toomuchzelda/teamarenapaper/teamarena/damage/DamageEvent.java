@@ -72,7 +72,7 @@ public class DamageEvent {
 	public static final double yMult = 0.1;
 	public static final double xzMult = 1;
 
-	public static @Nullable DamageEvent createFromBukkitEvent(EntityDamageEvent event) {
+	public static @Nullable DamageEvent handleBukkitEvent(EntityDamageEvent event) {
 
 		event.setCancelled(true);
 		if(Main.getGame().getGameState() != LIVE)
@@ -82,6 +82,7 @@ public class DamageEvent {
 		if(event.getEntity() instanceof ArmorStand stand && stand.isMarker())
 			return null;
 
+		//damage only occur in game world
 		if(event.getEntity().getWorld() != Main.getGame().getWorld())
 			return null;
 
@@ -97,7 +98,7 @@ public class DamageEvent {
 				//fix arrow damage - no random crits
 				//  arrow damage is the vanilla formula without the random crit part
 				double damage = DamageNumbers.calcArrowDamage(aa.getDamage(), aa.getVelocity().length());
-				//this also does all armor re-calculations and stuff
+
 				dEvent.setDamage(damage);
 
 				//stop arrows from bouncing off after this event is run
@@ -116,8 +117,6 @@ public class DamageEvent {
 		//Bukkit.broadcastMessage("EDEvent raw damage: " + event.getDamage());
 		//Bukkit.broadcastMessage("EDEvent final damage: " + event.getFinalDamage());
 
-		//Main.getGame().queueDamage(new DamageEvent(event));
-		//will queue itself
 		DamageEvent dEvent = fromEDE(event);
 		Main.getGame().queueDamage(dEvent);
 		return dEvent;
@@ -134,29 +133,25 @@ public class DamageEvent {
 
 		DamageEvent damageEvent = new DamageEvent(victim, rawDamage);
 
-		//Bukkit.broadcastMessage("Bukkit rawDamage: " + damage);
-
 		double finalDamage = rawDamage;
 
 		//if it's fire caused by a non-specified attacker, set the damager from the cached DamageTimes
 		// sort of re-construct this DamageEvent so it's accurate
 		if(damageType.isFire() && attacker == null) {
-			//Bukkit.broadcastMessage("instanceof EEBEE: " + (event instanceof EntityDamageByEntityEvent));
 			if(victim instanceof LivingEntity living) {
-				DamageTimes dTimes = DamageTimes.getDamageTimes(living);
-				if(dTimes.fireTimes.fireGiver != null && dTimes.fireTimes.fireType != null) {
-
-					attacker = dTimes.fireTimes.fireGiver;
-					damageType = dTimes.fireTimes.fireType;
+				DamageTimes.DamageTime dTime = DamageTimes.getDamageTime(living, DamageTimes.TrackedDamageTypes.FIRE);
+				if(dTime.getGiver() != null && dTime.getDamageType() != null) {
+					attacker = dTime.getGiver();
+					damageType = dTime.getDamageType();
 				}
 			}
 		}
 		// also attribute fall damage if they were pushed
 		else if((damageType.isFall() || damageType.is(DamageType.VOID)) && victim instanceof LivingEntity living) {
+			DamageTimes.DamageTime times = DamageTimes.getDamageTime(living, DamageTimes.TrackedDamageTypes.ATTACK);
 
-			DamageTimes times = DamageTimes.getDamageTimes(living);
-			if(times.lastDamager != null && TeamArena.getGameTick() - times.lastAttackTime < 10 * 20) { // 10 seconds since last attacked
-				if(times.lastAttackEvent.damageType.is(DamageType.PROJECTILE)) {
+			if(times.getGiver() != null && TeamArena.getGameTick() - times.getTimeGiven() < 10 * 20) { // 10 seconds since last attacked
+				if(times.getDamageType().is(DamageType.PROJECTILE)) {
 					if(damageType.isFall())
 						damageType = DamageType.FALL_SHOT;
 					else
@@ -169,7 +164,7 @@ public class DamageEvent {
 						damageType = DamageType.VOID_PUSHED;
 				}
 
-				attacker = times.lastDamager;
+				attacker = times.getGiver();
 			}
 		}
 
@@ -189,14 +184,12 @@ public class DamageEvent {
 		if(attacker != null) {
 			//damageEvent.isCritical = dEvent.isCritical();
 			if(attacker instanceof Projectile projectile) {
-
 				if(attacker instanceof AbstractArrow aa) {
 					knockbackLevels += aa.getKnockbackStrength();
 				}
 
 				if (projectile.getShooter() instanceof LivingEntity living) {
 					realAttacker = living;
-					attacker = projectile;
 				}
 			}
 			else {
@@ -216,7 +209,8 @@ public class DamageEvent {
 						double itemDamage = DamageNumbers.getMaterialBaseDamage(item.getType());
 						//add damage from potion effects (strength and weakness)
 						for(PotionEffect potEffect : living.getActivePotionEffects()) {
-							itemDamage += DamageNumbers.getDamageForPotionEffect(potEffect);
+							itemDamage += DamageNumbers.getPotionEffectDamage(potEffect);
+							//Bukkit.broadcastMessage("added " + potEffect.getType().getName() + ", new total: " + itemDamage);
 						}
 						//crit
 						if(critical) {
@@ -368,10 +362,6 @@ public class DamageEvent {
 			if (type == ArrowPierceManager.PierceType.REMOVE_ARROW) {
 				aa.remove();
 			} else {
-				//cancelled EntityDamageEvent makes arrows bounce off hit entities.
-				// reset the arrow's direction and velocity at the end of the tick to counter this
-				//ArrowPierceManager.fixArrowMovement(aa);
-
 				//don't do damage to the same entity more than once for piercing enchanted arrows
 				if (type == ArrowPierceManager.PierceType.ALREADY_HIT) {
 					return;
@@ -395,44 +385,41 @@ public class DamageEvent {
 			net.minecraft.world.entity.LivingEntity nmsLiving = ((CraftLivingEntity) living).getHandle();
 			nmsLiving.animationSpeed = 1.5f;
 
-			DamageTimes dTimes = DamageTimes.getDamageTimes(living);
+			DamageTimes.TrackedDamageTypes trackedType = damageType.getTrackedType();
+			DamageTimes.DamageTime dTimes = DamageTimes.getDamageTime(living, trackedType);
+			Bukkit.broadcastMessage(trackedType.toString());
+
 			int ndt;
 
 			boolean doHurtEffect = true;
 			if(!damageType.isIgnoreRate() && !ignoreInvulnerability) {
-				if (damageType.isMelee() || damageType.isProjectile()) {
-					ndt = TeamArena.getGameTick() - dTimes.lastAttackTime;
+				ndt = TeamArena.getGameTick() - dTimes.getTimeGiven();
 
-					//they are still in no-damage-time
-					// if they were hit with a stronger attack, only apply
-					// strength of new attack - strength of last attack, as if they were only hit
-					// by the person with the stronger weapon
-					// also do not extra knockback, and don't play the hurt effect again
-					// else if the new attack isn't stronger than the previous attack with this invulnerability period
-					// then don't take damage
-					if (ndt < living.getMaximumNoDamageTicks() / 2) {
-						if (finalDamage > living.getLastDamage() && dTimes.lastDamager != attacker) {
+				//they are still in no-damage-time
+				// if they were hit with a stronger attack from a different entity, only apply
+				// strength of new attack - strength of last attack, as if they were only hit
+				// by the source of greater damage
+				// also do not extra knockback, and don't play the hurt effect again
+				// else if the new attack isn't stronger than the previous attack with this invulnerability period
+				// then don't take damage
+				// Does not apply to non ATTACK tracked types, they can only hit twice per second max
+				if (ndt < living.getMaximumNoDamageTicks() / 2) {
+					if (trackedType == DamageTimes.TrackedDamageTypes.ATTACK) {
+						if (getFinalAttacker() != dTimes.getGiver() && finalDamage > dTimes.getDamage()) {
 							this.setNoKnockback();
-							this.finalDamage = this.finalDamage - living.getLastDamage();
+							this.finalDamage = this.finalDamage - dTimes.getDamage();
 							doHurtEffect = false;
 						}
 						else {
 							return;
 						}
 					}
-				}
-				else {
-					if (damageType.isFire())
-						ndt = TeamArena.getGameTick() - dTimes.fireTimes.lastFireTime;
-					else
-						ndt = TeamArena.getGameTick() - dTimes.lastMiscDamageTime;
-
-					//not do damage if not enough invuln ticks elapsed
-					if (ndt < living.getMaximumNoDamageTicks() / 2) {
+					else {
 						return;
 					}
 				}
 			}
+
 
 			//run modifications done by confirmed damage ability "Event Handlers"
 			Main.getGame().onConfirmedDamage(this);
@@ -456,7 +443,8 @@ public class DamageEvent {
 
 			//damage
 			boolean isDeath = false;
-			//this should be impossible normally but can happen in some circumstances ie a player is wearing full protection 5
+
+			//this should be impossible normally but can happen in some circumstances
 			if(finalDamage < 0) {
 				Main.logger().warning(getFinalAttacker().getName() + " is doing " + finalDamage + " damage to " + victim.getName() +
 						" DamageType: " + damageType.toString() + " attacker: " + (attacker != null ? attacker.getName() : "null"));
@@ -543,12 +531,11 @@ public class DamageEvent {
 
 				if(fireTicks > victim.getFireTicks()) {
 					if (victim instanceof LivingEntity living) {
-						DamageTimes dTimes = DamageTimes.getDamageTimes(living);
-						dTimes.fireTimes.fireGiver = getFinalAttacker();
-						dTimes.fireTimes.fireType = type;
-						dTimes.fireTimes.lastFireTime = TeamArena.getGameTick();
+						DamageTimes.DamageTime time = DamageTimes.getDamageTime(living, DamageTimes.TrackedDamageTypes.FIRE);
+						time.update(getFinalAttacker(), time.getTimeGiven(), time.getDamage(), type);
 					}
 
+					//todo: custom fireticker thing
 					victim.setFireTicks(fireTicks);
 				}
 			}
@@ -597,58 +584,8 @@ public class DamageEvent {
 	}
 
 	// mfw java no primitive pointers
-	private void updateNDT(DamageTimes dTimes) {
-		if(this.damageType.isMelee() || this.damageType.isProjectile())
-		{
-			dTimes.lastAttackTime = TeamArena.getGameTick();
-			dTimes.lastAttackEvent = this;
-			//Bukkit.broadcast(Component.text("Point 5"));
-		}
-		else if(this.damageType.isFire()) {
-			dTimes.fireTimes.lastFireTime = TeamArena.getGameTick();
-		}
-		else {
-			dTimes.lastMiscDamageTime = TeamArena.getGameTick();
-			//Bukkit.broadcast(Component.text("Point 7"));
-		}
-
-		if(this.getFinalAttacker() != null)
-			dTimes.lastDamager = this.getFinalAttacker();
-	}
-
-	//whether this event will cause damage or not based on victim's no damage ticks
-	// read-only, to be used in 'events', kit abilities and such
-	public boolean willHit() {
-		if(!(victim instanceof LivingEntity living))
-			return true;
-
-		int ndt;
-		DamageTimes dTimes = DamageTimes.getDamageTimes(living);
-		if (damageType.isMelee() || damageType.isProjectile()) {
-			ndt = TeamArena.getGameTick() - dTimes.lastAttackTime;
-
-			//they are still in no-damage-time
-			// if they were hit with a stronger attack, only apply
-			// strength of new attack - strength of last attack, as if they were only hit
-			// by the person with the stronger weapon
-			// also do not extra knockback, and don't play the hurt effect again
-			// else if the new attack isn't stronger than the previous attack with this invulnerability period
-			// then don't take damage
-			if (ndt < living.getMaximumNoDamageTicks() / 2) {
-				return finalDamage > living.getLastDamage() && dTimes.lastDamager != attacker;
-			}
-		}
-		else {
-			if (damageType.isFire())
-				ndt = TeamArena.getGameTick() - dTimes.fireTimes.lastFireTime;
-			else
-				ndt = TeamArena.getGameTick() - dTimes.lastMiscDamageTime;
-
-			//not do damage if not enough invuln ticks elapsed
-			return ndt >= living.getMaximumNoDamageTicks() / 2;
-		}
-
-		return true;
+	private void updateNDT(DamageTimes.DamageTime dTime) {
+		dTime.update(getFinalAttacker(), TeamArena.getGameTick(), this.finalDamage, this.damageType);
 	}
 
 	public static Vector calculateKnockback(Entity victim, DamageType damageType, Entity attacker, boolean baseKnockback,

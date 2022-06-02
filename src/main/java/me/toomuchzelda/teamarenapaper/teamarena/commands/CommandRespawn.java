@@ -28,8 +28,8 @@ public class CommandRespawn extends CustomCommand
 			Player toKill = Bukkit.getPlayer(args[0]);
 			if (toKill != null) {
 				// admin abuse
-				DamageEvent.createFromBukkitEvent(new EntityDamageEvent(toKill, EntityDamageEvent.DamageCause.VOID,
-						Integer.MAX_VALUE), DamageType.SUICIDE_ASSISTED);
+				DamageEvent killEvent = DamageEvent.newDamageEvent(toKill, 99999d, DamageType.SUICIDE_ASSISTED, null, false);
+				Main.getGame().queueDamage(killEvent);
 			} else {
 				sender.sendMessage(Component.text("Invalid player").color(NamedTextColor.RED));
 			}
@@ -39,8 +39,10 @@ public class CommandRespawn extends CustomCommand
 				Main.getGame().setToRespawn(p);
 			} else {
 				// suicide
-				DamageEvent.createFromBukkitEvent(new EntityDamageEvent(p, EntityDamageEvent.DamageCause.VOID,
-						Integer.MAX_VALUE), DamageType.SUICIDE);
+				//DamageEvent.createFromBukkitEvent(new EntityDamageEvent(p, EntityDamageEvent.DamageCause.VOID,
+				//		Integer.MAX_VALUE), DamageType.SUICIDE);
+				DamageEvent killEvent = DamageEvent.newDamageEvent(p, 99999d, DamageType.SUICIDE, null, false);
+				Main.getGame().queueDamage(killEvent);
 			}
 		} else {
 			showUsage(sender, "/respawn <player>");

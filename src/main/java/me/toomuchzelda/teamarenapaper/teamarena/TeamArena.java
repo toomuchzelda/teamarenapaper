@@ -103,7 +103,7 @@ public abstract class TeamArena
 
 	protected MapInfo mapInfo;
 
-	protected ConcurrentLinkedQueue<DamageEvent> damageQueue;
+	protected Queue<DamageEvent> damageQueue;
 
 	private final LinkedList<DamageIndicatorHologram> activeDamageIndicators = new LinkedList<>();
 
@@ -205,7 +205,7 @@ public abstract class TeamArena
 		players = ConcurrentHashMap.newKeySet();
 		spectators = ConcurrentHashMap.newKeySet();
 		respawnTimers = new HashMap<>();
-		damageQueue = new ConcurrentLinkedQueue<>();
+		damageQueue = new LinkedList<>();
 
 		//list the teams in sidebar
 		SidebarManager.updatePreGameScoreboard(this);
@@ -937,8 +937,9 @@ public abstract class TeamArena
 				player.sendMessage(text);
 			} else {
 				//todo: kill the player here (remove from game)
-				EntityDamageEvent event = new EntityDamageEvent(player, EntityDamageEvent.DamageCause.VOID, 9999d);
-				DamageEvent dEvent = DamageEvent.createFromBukkitEvent(event, DamageType.SUICIDE);
+				//EntityDamageEvent event = new EntityDamageEvent(player, EntityDamageEvent.DamageCause.VOID, 9999d);
+				//DamageEvent dEvent = DamageEvent.createFromBukkitEvent(event, DamageType.SUICIDE);
+				queueDamage(DamageEvent.newDamageEvent(player, 99999d, DamageType.SUICIDE, null, false));
 
 				if(isRespawningGame()) {
 					respawnTimers.remove(player); //if respawning game remove them from respawn queue
@@ -1018,17 +1019,16 @@ public abstract class TeamArena
 		Entity e = event.getVictim();
 		//if player make them a spectator and put them in queue to respawn if is a respawning game
 		if(e instanceof Player p) {
-			//p.showTitle(Title.title(Component.empty(), Component.text("You died!").color(TextColor.color(255, 0, 0))));
 			PlayerUtils.sendTitle(p, Component.empty(), Component.text("You died!").color(TextColor.color(255, 0, 0)), 0, 30, 20);
 
 			//Give out kill assists on the victim
 			Player killer = null;
-			DamageTimes dTimes = DamageTimes.getDamageTimes(p);
+			DamageTimes.DamageTime dTimes = DamageTimes.getLastDamageTime(p);
 			if(event.getFinalAttacker() instanceof Player finalAttacker) {
 				killer = finalAttacker;
 			}
 			else {
-				if(dTimes.lastDamager instanceof Player finalAttacker)
+				if(dTimes.getGiver() instanceof Player finalAttacker)
 					killer = finalAttacker;
 			}
 			//killer's onKill ability
@@ -1061,7 +1061,7 @@ public abstract class TeamArena
 
 
 			//clear attack givers so they don't get falsely attributed on this next player's death
-			dTimes.clearAttackers();
+			DamageTimes.clearDamageTimes(p);
 
 			if(this.isRespawningGame()) {
 				respawnTimers.put(p, new RespawnInfo(gameTick));

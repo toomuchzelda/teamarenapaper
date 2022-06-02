@@ -1,90 +1,129 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
-import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
 
-import java.util.HashMap;
-import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
-//class for recording when damage of different types has been taken by LivingEntity
+/**
+ * class for recording when damage of different types has been taken by LivingEntity
+ *
+ * There is an individual 'ticker' or 'tracker' for:
+ * - Direct player attacks like melee and projectiles
+ * - Fire
+ * - Poison
+ * - Everything else
+ *
+ * @author toomuchzelda
+ */
 public class DamageTimes {
 
-    public static final HashMap<LivingEntity, DamageTimes> entityDamageTimes = new HashMap<>();
+	private static final Map<LivingEntity, DamageTime[]> ENTITY_DAMAGE_TIMES = new LinkedHashMap<>();
 
-    //tick they last received damage from direct "Fighting" sources i.e melee / projectile
-    public int lastAttackTime;
-    //reference to the last direct attack event
-    public DamageEvent lastAttackEvent;
+	//supposedly this array is a new allocation on every .values() call, so cache here
+	private static final TrackedDamageTypes[] TRACKED_DAMAGE_TYPES_ARR = TrackedDamageTypes.values();
 
-    public FireTimes fireTimes;
-    //for all damagetypes not explicitly covered
-    public int lastMiscDamageTime;
+	private static DamageTime[] newTimesArray(LivingEntity victim) {
+		DamageTime[] arr = new DamageTime[TRACKED_DAMAGE_TYPES_ARR.length];
 
-    public Entity lastDamager;
+		for(TrackedDamageTypes type : TRACKED_DAMAGE_TYPES_ARR) {
+			arr[type.ordinal()] = new DamageTime();
+		}
 
-    private DamageTimes(LivingEntity living) {
+		return arr;
+	}
 
-        fireTimes = new FireTimes();
-        fireTimes.lastFireTime = 0;
-        fireTimes.fireGiver = null;
-        fireTimes.fireType = null;
+	public static void setDamageTime(LivingEntity victim, TrackedDamageTypes type, Entity giver,
+									 DamageType damageType, int timeStamp, double damage) {
+		DamageTime[] arr = ENTITY_DAMAGE_TIMES.computeIfAbsent(victim, living -> newTimesArray(victim));
+		DamageTime entry = arr[type.ordinal()];
 
-        lastAttackTime = 0;
-        lastDamager = null;
+		entry.update(giver, timeStamp, damage, damageType);
+	}
 
+	public static DamageTime getDamageTime(LivingEntity victim, TrackedDamageTypes type) {
+		DamageTime[] arr = ENTITY_DAMAGE_TIMES.computeIfAbsent(victim, living -> newTimesArray(victim));
+		return arr[type.ordinal()];
+	}
 
-        lastMiscDamageTime = 0;
+	/**
+	 * Get most recently occuring DamageTime thing
+	 */
+	public static DamageTime getLastDamageTime(LivingEntity victim) {
+		DamageTime[] arr = ENTITY_DAMAGE_TIMES.computeIfAbsent(victim, living -> newTimesArray(victim));
 
-        entityDamageTimes.put(living, this);
-    }
+		DamageTime mostRecent = arr[0];
+		for(DamageTime time : arr) {
+			if(time.getTimeGiven() > mostRecent.getTimeGiven()) {
+				mostRecent = time;
+			}
+		}
 
-    public void clearAttackers() {
-        lastDamager = null;
-        lastAttackEvent = null;
-        fireTimes.fireGiver = null;
-        fireTimes.fireType = null;
-    }
+		return mostRecent;
+	}
 
-    public static DamageTimes getDamageTimes(LivingEntity living) {
-        DamageTimes times = entityDamageTimes.get(living);
-        if(times == null)
-            times = new DamageTimes(living);
+	public static void clearDamageTimes(LivingEntity victim) {
+		DamageTime[] arr = ENTITY_DAMAGE_TIMES.computeIfAbsent(victim, living -> newTimesArray(victim));
 
-        return times;
-    }
+		for(DamageTime time : arr) {
+			time.clear();
+		}
+	}
 
-    public static class FireTimes
-    {
-        public int lastFireTime;
-        public DamageType fireType;
-        //if fire was caused by an entity, the entity that caused it
-        // reset when the fire stops in EventListeners.endTick()
-        public Entity fireGiver;
+	public static class DamageTime
+	{
+		private Entity giver;
+		private int timeGiven;
+		private double damage;
+		private DamageType damageType;
 
-        public FireTimes() {
+		private DamageTime() {
+			this.giver = null;
+			this.timeGiven = 0;
+			this.damage = 0;
+			this.damageType = null;
+		}
 
-        }
-    }
+		public DamageType getDamageType() {
+			return damageType;
+		}
 
-    public static void cleanup() {
-        Iterator<Map.Entry<LivingEntity, DamageTimes>> iter = entityDamageTimes.entrySet().iterator();
-        while(iter.hasNext()) {
-            Map.Entry<LivingEntity, DamageTimes> entry = iter.next();
+		/**
+		 * The time (tick) this damage was dealt to the livingentity
+		 */
+		public int getTimeGiven() {
+			return timeGiven;
+		}
 
-            LivingEntity living = entry.getKey();
+		public double getDamage() {
+			return damage;
+		}
 
-            if(living instanceof Player p && !p.isOnline()) {
-                iter.remove();
-            }
-            else if(!living.isValid()) {
-                iter.remove();
-            }
-            Main.logger().info(living.getName() + " has been DamageTime cleaned up");
-        }
-    }
+		public Entity getGiver() {
+			return giver;
+		}
+
+		public void update(Entity giver, int timeGiven, double damage, DamageType damageType) {
+			this.giver = giver;
+			this.timeGiven = timeGiven;
+			this.damage = damage;
+			this.damageType = damageType;
+		}
+
+		public void clear() {
+			this.giver = null;
+			this.timeGiven = 0;
+			this.damage = 0d;
+			this.damageType = null;
+		}
+	}
+
+	//DamageTypes as in type of damage, and not DamageType.class
+	public enum TrackedDamageTypes {
+		ATTACK,
+		FIRE,
+		POISON,
+		OTHER
+	}
 }

@@ -2,13 +2,13 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
@@ -18,8 +18,6 @@ import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.inventory.ItemStack;
@@ -28,7 +26,7 @@ import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
@@ -87,7 +85,7 @@ public class KitPyro extends Kit
 
 	public static class PyroAbility extends Ability
 	{
-		public final HashMap<Player, Integer> MOLOTOV_RECHARGES = new HashMap<>();
+		public final Map<Player, Integer> MOLOTOV_RECHARGES = new LinkedHashMap<>();
 		public final LinkedList<MolotovInfo> ACTIVE_MOLOTOVS = new LinkedList<>();
 		public static final int MOLOTOV_RECHARGE_TIME = 10 * 20;
 		public static final int MOLOTOV_ACTIVE_TIME = 5 * 20;
@@ -146,15 +144,16 @@ public class KitPyro extends Kit
 					if (living == minfo.thrower)
 						continue;
 
-					@SuppressWarnings("deprecation")
-					EntityDamageByEntityEvent event = new EntityDamageByEntityEvent(minfo.thrower, living,
+					/*EntityDamageByEntityEvent event = new EntityDamageByEntityEvent(minfo.thrower, living,
 							EntityDamageEvent.DamageCause.FIRE_TICK, 1);
-
-					DamageEvent damageEvent = DamageEvent.createFromBukkitEvent(event);
+					*DamageEvent damageEvent = DamageEvent.createFromBukkitEvent(event);
 					if (damageEvent != null) {
 						damageEvent.setDamageType(DamageType.PYRO_MOLOTOV);
 						damageEvent.setRealAttacker(minfo.thrower);
-					}
+					}*/
+
+					DamageEvent damageEvent = DamageEvent.newDamageEvent(living, 1.75d, DamageType.PYRO_MOLOTOV, minfo.thrower(), false);
+					Main.getGame().queueDamage(damageEvent);
 				}
 			}
 		}
@@ -167,6 +166,7 @@ public class KitPyro extends Kit
 
 			if (arrow.getColor() == null || !arrow.getColor().equals(MOLOTOV_ARROW_COLOR))
 				return;
+
 			if (event.getHitBlock() == null)
 				return;
 

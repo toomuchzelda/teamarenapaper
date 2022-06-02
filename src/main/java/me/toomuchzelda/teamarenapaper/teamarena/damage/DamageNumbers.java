@@ -17,7 +17,7 @@ public class DamageNumbers
 	private static final double[] ARMOR_BASE_PROTECTION;// armour defense points, amount of armor bar it fills up
 	private static final Map<Enchantment, Double> ENCHANTMENT_VALUES; //Enchantment Protection Factor per level
 	private static final double DAMAGE_PER_STRENGTH_LEVEL = 3d;
-	private static final double DAMAGE_PER_WEAKNESS_LEVEL = 4d;
+	private static final double DAMAGE_PER_WEAKNESS_LEVEL = -4d;
 
 	static {
 		//***** ITEM DAMAGE *****
@@ -110,7 +110,7 @@ public class DamageNumbers
 		ARMOR_BASE_PROTECTION[mat.ordinal()] = d;
 	}
 
-	public static double getDamageForPotionEffect(PotionEffect effect) {
+	public static double getPotionEffectDamage(PotionEffect effect) {
 		double damage = 0d;
 		if(effect.getType() == PotionEffectType.INCREASE_DAMAGE) {
 			damage = DAMAGE_PER_STRENGTH_LEVEL;

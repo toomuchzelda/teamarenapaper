@@ -16,7 +16,7 @@ public abstract class Ability {
 
     protected Ability() {
     }
-    
+
     //register all one-time-registered things for this ability
     public void registerAbility() {
     }
@@ -31,32 +31,32 @@ public abstract class Ability {
 
     public void removeAbility(Player player) {
     }
-    
+
     /**
      * when an attack is *attempted* on the ability user
      * may or may not be cancelled at this point
      */
     public void onAttemptedDamage(DamageEvent event) {
-    
+
     }
-    
+
     /**
      * when the ability user actually takes damage
      */
     public void onReceiveDamage(DamageEvent event) {}
-    
+
     /**
      * when the user *attempts* to attack another entity
      */
     public void onAttemptedAttack(DamageEvent event) {}
-    
+
     /**
      * when the user successfully deals damage to another entity
      */
     public void onDealtAttack(DamageEvent event) {
-    
+
     }
-    
+
     /**
      * when user dies from a DamageEvent
      * not cancellable
@@ -70,7 +70,7 @@ public abstract class Ability {
      */
     public void onKill(DamageEvent event) {
     }
-    
+
     /**
      * when user is awarded a kill or kill assist on someone when they die
      */
@@ -83,26 +83,26 @@ public abstract class Ability {
      */
     public void onLaunchProjectile(PlayerLaunchProjectileEvent event) {
     }
-    
+
     /**
      * when user shoots a bow
      * @param event
      */
     public void onShootBow(EntityShootBowEvent event) {
     }
-    
+
     /**
      * when user loads a crossbow
      */
     public void onLoadCrossbow(EntityLoadCrossbowEvent event) {
     }
-    
+
     /**
      * run every tick for an individual ability user
      */
     public void onPlayerTick(Player player) {
     }
-    
+
     /**
      * run every tick for this ability globally (once per ability per tick)
      */
@@ -114,13 +114,13 @@ public abstract class Ability {
     public void onItemCooldown(PlayerItemCooldownEvent event) {
 
     }
-    
+
     public void onInteract(PlayerInteractEvent event) {
     }
 
     public void onInteractEntity(PlayerInteractEntityEvent event) {
     }
-    
+
     /**
      * When a projectile shot by this user hits an entity
      * @param event

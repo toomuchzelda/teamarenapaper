@@ -165,6 +165,10 @@ public class DamageType {
             .setDamageSource(DamageSource.explosion((net.minecraft.world.entity.LivingEntity) null))
             .setIgnoreRate().setExplosion();
 
+	public static final DamageType TOXIC_LEAP =
+			new DamageType(DamageTypeEnum.TOXIC_LEAP, "Venom Leap", "%Killed% was killed by %Killer%'s Toxic Leap");
+
+
     //a constant identifier for same types, to compare for same types across separate instances of this class
     // without evaluating a String
     private final DamageTypeEnum id;
@@ -179,10 +183,11 @@ public class DamageType {
     private boolean _instantDeath;
     private boolean _isntKnockback;
     private boolean _melee;
+	private boolean _projectile;
     private final String _name;
-    private boolean _projectile;
     //mainly for getting correct damage sound from nms in EntityUtils.playHurtAnimation
     private DamageSource nmsDamageSource;
+	private DamageTimes.TrackedDamageTypes trackedType;
 
     private DamageType(DamageTypeEnum id, String name, String... deathMessages) {
         this.id = id;
@@ -190,6 +195,7 @@ public class DamageType {
         _deathMessages = deathMessages;
 		applicableEnchantments = new ArrayList<>(2);
 		applicableEnchantments.add(Enchantment.PROTECTION_ENVIRONMENTAL);
+		trackedType = DamageTimes.TrackedDamageTypes.OTHER;
     }
 
     public DamageType(DamageType copyOf) {
@@ -208,6 +214,7 @@ public class DamageType {
         _projectile = copyOf._projectile;
         nmsDamageSource = copyOf.nmsDamageSource;
 		applicableEnchantments = copyOf.applicableEnchantments;
+		trackedType = copyOf.trackedType;
     }
 
     public DamageType(DamageType copyOf, String... deathMessages) {
@@ -226,6 +233,7 @@ public class DamageType {
         _projectile = copyOf._projectile;
         nmsDamageSource = copyOf.nmsDamageSource;
 		applicableEnchantments = copyOf.applicableEnchantments;
+		trackedType = copyOf.trackedType;
     }
 
     public static DamageType getAttack(EntityDamageEvent event) {
@@ -369,6 +377,10 @@ public class DamageType {
         return _name;
     }
 
+	public DamageTimes.TrackedDamageTypes getTrackedType() {
+		return this.trackedType;
+	}
+
     public boolean isBurn() {
         return _burn;
     }
@@ -431,6 +443,7 @@ public class DamageType {
         _burn = true;
 
 		addApplicableEnchant(Enchantment.PROTECTION_FIRE);
+		setTrackedDamageType(DamageTimes.TrackedDamageTypes.FIRE);
 
         return this;
     }
@@ -439,6 +452,7 @@ public class DamageType {
         _explosion = true;
 
 		addApplicableEnchant(Enchantment.PROTECTION_EXPLOSIONS);
+		setTrackedDamageType(DamageTimes.TrackedDamageTypes.ATTACK);
 
         return this;
     }
@@ -448,6 +462,7 @@ public class DamageType {
         setIgnoreArmor();
         setIgnoreRate();
 		addApplicableEnchant(Enchantment.PROTECTION_FALL);
+		setTrackedDamageType(DamageTimes.TrackedDamageTypes.OTHER);
 
         return this;
     }
@@ -457,6 +472,7 @@ public class DamageType {
 
         _fire = true;
 		removeApplicableEnchant(Enchantment.PROTECTION_ENVIRONMENTAL);
+		setTrackedDamageType(DamageTimes.TrackedDamageTypes.FIRE);
 
         return this;
     }
@@ -482,6 +498,8 @@ public class DamageType {
     public DamageType setMelee() {
         _melee = true;
 
+		setTrackedDamageType(DamageTimes.TrackedDamageTypes.ATTACK);
+
         return this;
     }
 
@@ -495,12 +513,19 @@ public class DamageType {
         _projectile = true;
 
 		addApplicableEnchant(Enchantment.PROTECTION_PROJECTILE);
+		setTrackedDamageType(DamageTimes.TrackedDamageTypes.ATTACK);
 
 		return this;
     }
 
 	public DamageType setIgnoreArmorEnchants() {
 		applicableEnchantments.clear();
+
+		return this;
+	}
+
+	public DamageType setTrackedDamageType(DamageTimes.TrackedDamageTypes type) {
+		this.trackedType = type;
 
 		return this;
 	}
@@ -601,6 +626,6 @@ public class DamageType {
         //Kit Stuff
         PYRO_MOLOTOV,
         DEMO_TNTMINE,
-		SNIPER_GRENADE_FAIL
+		SNIPER_GRENADE_FAIL, TOXIC_LEAP
     }
 }

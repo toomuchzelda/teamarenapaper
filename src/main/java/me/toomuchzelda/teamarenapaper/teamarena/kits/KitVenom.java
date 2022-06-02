@@ -4,6 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
@@ -40,10 +41,10 @@ import java.util.*;
 		Deals +2 seconds of poison on hit which caps at 4 seconds
 	Sub Ability: Toxic Leap
 		CD: 12 sec
-		Deals 1.5 DMG (~1 Heart to Full Iron), 
+		Deals 1.5 DMG (~1 Heart to Full Iron),
 		Each enemy hit during the dash receives +2 sec Poison,
 		CD is reduced by 6 sec per enemy hit.
-		
+
 		Poison Duration Cap of 4 Seconds is still respected by Toxic Leap
 */
 
@@ -57,13 +58,15 @@ public class KitVenom extends Kit
 	public static final Set<BukkitTask> LEAP_TASKS = new HashSet<>();
 	public static final TextColor POISON_PURP = TextColor.color(145, 86, 204);
 
+
+
 	private static final ItemStack POTION_OF_POISON = ItemBuilder.of(Material.POTION)
 			.meta(PotionMeta.class, potionMeta -> {
 				potionMeta.setBasePotionData(new PotionData(PotionType.POISON));
 				potionMeta.addItemFlags(ItemFlag.HIDE_POTION_EFFECTS);
 			})
 			.build();
-	
+
 	public KitVenom() {
 		super("Venom", "Poison dmg on hit, poisoned people cannot be healed. It can also quickly jump in, afflicting all enemies it hits with poison and decreasing its cooldown with each enemy hit!",
 				POTION_OF_POISON);
@@ -88,13 +91,13 @@ public class KitVenom extends Kit
 		setItems(sword, leap);
 		setAbilities(new VenomAbility());
 	}
-	
+
 	public static class VenomAbility extends Ability
 	{
 		//clean up
 		public void unregisterAbility() {
 			POISONED_ENTITIES.clear();
-			
+
 			Iterator<BukkitTask> iter = LEAP_TASKS.iterator();
 			while(iter.hasNext()) {
 				BukkitTask task = iter.next();
@@ -102,7 +105,7 @@ public class KitVenom extends Kit
 				iter.remove();
 			}
 		}
-		
+
 		//When Poison is applied
 		public void applyPoison(LivingEntity victim){
 			int poisonDuration = 0;
@@ -116,12 +119,12 @@ public class KitVenom extends Kit
 				}
 				else{
 					victim.addPotionEffect(new PotionEffect(PotionEffectType.POISON, 2 * 25 + poisonDuration, 0));
-				}					
+				}
 			}
 			//Adds new victim, or updates current vicim's poison duration.
 			//Extra check is necessary since some mobs are immune to poison.
 			if(victim.hasPotionEffect(PotionEffectType.POISON)){
-				POISONED_ENTITIES.put(victim, (Integer) victim.getPotionEffect(PotionEffectType.POISON).getDuration());			
+				POISONED_ENTITIES.put(victim, (Integer) victim.getPotionEffect(PotionEffectType.POISON).getDuration());
 			}
 		}
 
@@ -147,7 +150,7 @@ public class KitVenom extends Kit
 					world.playSound(player, Sound.ENTITY_WITHER_SHOOT, 0.3f, 1.1f);
 					EntityUtils.setVelocity(player, event.getPlayer().getVelocity().add(direction));
 					player.setFallDistance(0);
-					
+
 					//Checking for collision during the leap, and reducing cooldown + applying poison accordingly
 					//keeps track of whose already been hit with leapVictims
 					if (player.getVelocity().length() > 0.8) {
@@ -155,7 +158,7 @@ public class KitVenom extends Kit
 						{
 							int activeDuration = 10;
 							Set<LivingEntity> leapVictims = new HashSet<>();
-							
+
 							public void run() {
 								if (activeDuration <= 0) {
 									cancel();
@@ -174,13 +177,13 @@ public class KitVenom extends Kit
 												player.stopSound(Sound.BLOCK_CONDUIT_ACTIVATE);
 												player.playSound(player, Sound.BLOCK_CONDUIT_ACTIVATE, 1, 1.5f);
 											}
-											victim.damage(2, player);
-											player.stopSound(Sound.ENTITY_PLAYER_ATTACK_NODAMAGE);
-											player.stopSound(Sound.ENTITY_PLAYER_ATTACK_WEAK);
+											//victim.damage(2, player);
+											DamageEvent.newDamageEvent(victim ,2, DamageType.TOXIC_LEAP, player, false);
+
 											player.stopSound(Sound.ENTITY_ILLUSIONER_MIRROR_MOVE);
 											player.playSound(player, Sound.ENTITY_ILLUSIONER_MIRROR_MOVE, 1, 1.2f);
 											player.setCooldown(Material.CHICKEN, newCooldown);
-											
+
 											//Applying Poison, tracking the poisoned entity
 											applyPoison(victim);
 											leapVictims.add(victim);
@@ -189,7 +192,7 @@ public class KitVenom extends Kit
 								}
 							}
 						}.runTaskTimer(Main.getPlugin(), 0, 0);
-						
+
 						LEAP_TASKS.add(runnable);
 					}
 				}
@@ -234,7 +237,7 @@ public class KitVenom extends Kit
 				//Preventing Healing/Eating is handled in EventListeners.java
 				//Entities cannot be healed
 				//Players cannot be healed + cannot eat
-        	}		
+        	}
 		}
 	}
 }
