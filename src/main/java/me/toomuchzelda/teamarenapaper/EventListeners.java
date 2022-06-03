@@ -31,6 +31,7 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.command.Command;
+import org.bukkit.craftbukkit.v1_18_R2.CraftWorldBorder;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.LivingEntity;
@@ -46,6 +47,7 @@ import org.bukkit.event.player.*;
 import org.bukkit.event.player.PlayerLoginEvent.Result;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
@@ -297,17 +299,69 @@ public class EventListeners implements Listener
 		}
 
 		//prevent them from moving outside the game border
-		if(!event.isCancelled()) {
-			Vector to = event.getTo().toVector();
-			if(!game.getBorder().contains(to)) {
-				event.setCancelled(true);
-				//if they're hitting the bottom border call it falling into the void
-				if(to.getY() < game.getBorder().getMinY()) {
-					if(game.getGameState() == LIVE) {
-						event.setCancelled(false);
-						EntityDamageEvent dEvent = new EntityDamageEvent(event.getPlayer(), EntityDamageEvent.DamageCause.VOID, 999);
-						DamageEvent.createDamageEvent(dEvent);
+		if (event.isCancelled())
+			return;
+
+		Vector from = event.getFrom().toVector();
+		Vector to = event.getTo().toVector();
+		// dynamic world border
+		if (from.distanceSquared(to) != 0) {
+			Player player = event.getPlayer();
+			BoundingBox border = game.getBorder();
+			// only display when distance to border <= 10 blocks
+			if (MathUtils.distanceBetween(border, from) <= 10) {
+				Vector closest = new Vector(
+						from.getX() > border.getCenterX() ? border.getMaxX() : border.getMinX(),
+						0,
+						from.getZ() > border.getCenterZ() ? border.getMaxZ() : border.getMinZ()
+				);
+
+				WorldBorder worldBorder = player.getWorldBorder();
+				// calculate the center of the world border
+				// such that at size 512 the world border edge would line up with the closest point
+				double centerX = closest.getX() + Math.signum(from.getX() - closest.getX()) * 256,
+						centerZ = closest.getZ() + Math.signum(from.getZ() - closest.getZ()) * 256;
+				if (worldBorder == null || // no border
+						((CraftWorldBorder) worldBorder).getHandle().getLerpTarget() == 768 || // fading away
+						Math.abs(worldBorder.getCenter().getX() - centerX) > Vector.getEpsilon() ||
+						Math.abs(worldBorder.getCenter().getZ() - centerZ) > Vector.getEpsilon()) {
+					// wrong center, replace border
+					if (worldBorder == null) {
+						worldBorder = Bukkit.createWorldBorder();
+						worldBorder.setCenter(centerX, centerZ);
+						worldBorder.setSize(768);
+						worldBorder.setSize(512, 1);
+						worldBorder.setWarningDistance(3);
+						worldBorder.setWarningTime(0);
+						player.setWorldBorder(worldBorder);
+					} else {
+						worldBorder.setCenter(centerX, centerZ);
+						worldBorder.setSize(512, 1);
 					}
+				}
+			} else {
+				WorldBorder worldBorder = player.getWorldBorder();
+				if (worldBorder != null && ((CraftWorldBorder) worldBorder).getHandle().getLerpRemainingTime() == 0) {
+					worldBorder.setSize(768, 2);
+					Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
+						// check if the world border is the same and has faded out completely
+						if (player.getWorldBorder() == worldBorder && worldBorder.getSize() == 768) {
+							player.setWorldBorder(null);
+						}
+					}, 40);
+				}
+			}
+		}
+
+
+		if(!game.getBorder().contains(to)) {
+			event.setCancelled(true);
+			//if they're hitting the bottom border call it falling into the void
+			if(to.getY() < game.getBorder().getMinY()) {
+				if(game.getGameState() == LIVE) {
+					event.setCancelled(false);
+					EntityDamageEvent dEvent = new EntityDamageEvent(event.getPlayer(), EntityDamageEvent.DamageCause.VOID, 999);
+					DamageEvent.createDamageEvent(dEvent);
 				}
 			}
 		}
