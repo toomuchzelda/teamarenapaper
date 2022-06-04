@@ -1089,7 +1089,7 @@ public abstract class TeamArena
 	}
 
 	public void handleDeath(DamageEvent event) {
-		Bukkit.broadcast(event.getDamageType().getDeathMessage(NamedTextColor.YELLOW, event.getVictim(),
+		Bukkit.broadcast(event.getDamageType().getDeathMessage(event.getVictim(),
 				event.getFinalAttacker(), event.getDamageTypeCause()));
 		Entity e = event.getVictim();
 		//if player make them a spectator and put them in queue to respawn if is a respawning game
@@ -1129,10 +1129,8 @@ public abstract class TeamArena
 
 			makeSpectator(p);
 
-			if(pinfo.getPreference(Preferences.RECEIVE_DAMAGE_RECEIVED_LIST))
-				DamageLogEntry.sendDamageLog(p, true);
-			else
-				pinfo.clearDamageReceivedLog();
+			DamageLogEntry.sendDamageLog(p);
+			pinfo.clearDamageReceivedLog();
 
 
 			//clear attack givers so they don't get falsely attributed on this next player's death

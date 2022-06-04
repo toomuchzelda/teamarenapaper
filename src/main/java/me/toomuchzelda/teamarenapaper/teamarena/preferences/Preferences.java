@@ -1,8 +1,14 @@
 package me.toomuchzelda.teamarenapaper.teamarena.preferences;
 
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
 import org.bukkit.Sound;
 
 public class Preferences {
+
+	public static void registerPreferences() {
+
+	}
+
     public static final Preference<Sound> BOW_HIT_SOUND = SimplePreference.of("bow_hit_sound",
             "Sound that plays when you hit a bow shot on an entity", Sound.class, Sound.ENTITY_ARROW_HIT_PLAYER);
     public static final Preference<Boolean> HEARTS_FLASH_DAMAGE = SimplePreference.of("hearts_flash_damage",
@@ -28,8 +34,13 @@ public class Preferences {
     public static final Preference<Boolean> VIEW_OTHER_DAMAGE_DISPLAYERS = SimplePreference.of("damage_hologram_others",
             "See damage displayers for damage caused by other players", true);
 
-    public static final Preference<Boolean> RECEIVE_DAMAGE_RECEIVED_LIST = SimplePreference.of("damage_received_list",
-            "Get a list of everything that killed you when you die", false);
+    public static final Preference<DamageLogEntry.Style> RECEIVE_DAMAGE_RECEIVED_LIST = SimplePreference.of("damage_received_list",
+			"""
+					Format of the list of damage you received when you die.
+					NONE = Do not list damage received.
+					COMPACT = List total damage received, grouped by type.
+					FULL = List all damage received.
+					""", DamageLogEntry.Style.class, DamageLogEntry.Style.COMPACT);
 
 	public static final Preference<Boolean> TEAM_CHAT_SOUND = SimplePreference.of("team_chat_sound",
 			"Hear a sound when receiving a team chat message", true);
