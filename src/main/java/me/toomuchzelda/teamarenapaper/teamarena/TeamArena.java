@@ -838,29 +838,26 @@ public abstract class TeamArena
 		respawnTimers.clear();
 		damageQueue.clear();
 
-		Bukkit.getScheduler().runTaskLater(Main.getPlugin(), bukkitTask -> {
-			for (TeamArenaTeam team : teams) {
-				//team.removeAllMembers();
-				team.unregister();
-			}
-			//spectatorTeam.removeAllMembers();
-			spectatorTeam.unregister();
-			noTeamTeam.unregister();
-
-			for(Player p : Bukkit.getOnlinePlayers()) {
-				PlayerUtils.resetState(p);
-				for(TeamArenaTeam team : teams) {
-					p.hideBossBar(team.bossBar);
-				}
-			}
-		}, END_GAME_TIME - 3);
-
 		setGameState(GameState.END);
 		Bukkit.broadcastMessage("Game end");
 	}
 
 
 	public void prepDead() {
+		for (TeamArenaTeam team : teams) {
+			//team.removeAllMembers();
+			team.unregister();
+		}
+		//spectatorTeam.removeAllMembers();
+		spectatorTeam.unregister();
+		noTeamTeam.unregister();
+
+		for(Player p : Bukkit.getOnlinePlayers()) {
+			PlayerUtils.resetState(p);
+			for(TeamArenaTeam team : teams) {
+				p.hideBossBar(team.bossBar);
+			}
+		}
 		// remove map
 		miniMap.removeMapView();
 		setGameState(GameState.DEAD);
