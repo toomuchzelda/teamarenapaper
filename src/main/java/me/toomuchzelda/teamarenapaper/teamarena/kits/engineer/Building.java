@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.engineer;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
 
 import me.toomuchzelda.teamarenapaper.Main;
@@ -14,23 +15,25 @@ public class Building {
     Player player;
     Location loc;
     RealHologram holo;
-    Block prevBlock;
+    BlockData prevBlockData;
     TextColor teamColor;
     Component holoText;
 
     public Building(Player player, Location loc){
-        this.loc = loc.add(0, 1, 0);
+		this.prevBlockData = loc.clone().getBlock().getBlockData().clone();
+        this.loc = loc.clone();
         this.player = player;
-        this.prevBlock = loc.getBlock();
         this.teamColor = Main.getPlayerInfo(player).team.getRGBTextColor();
-        this.holo = new RealHologram(this.loc, this.holoText);
-
-        loc.getBlock().setType(Material.HONEYCOMB);
+        this.holo = new RealHologram(this.loc.clone().toCenterLocation().add(0,1.5,0), this.holoText);
     }
 
     public Location getLoc(){
         return this.loc;
     }
+
+	public BlockData getPrevBlockData() {
+		return this.prevBlockData;
+	}
 
     public void setLoc(Location newLoc){
         this.loc = newLoc;
@@ -38,6 +41,7 @@ public class Building {
 
     public void setText(Component newText){
         this.holoText = newText.color(teamColor);
+		this.holo.setText(this.holoText);
     }
 
     public void destroy(){
