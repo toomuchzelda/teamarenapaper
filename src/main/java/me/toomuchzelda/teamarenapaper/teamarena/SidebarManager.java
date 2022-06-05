@@ -1,67 +1,84 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
+import com.jacky8399.ratchetandclank.helper.PlayerScoreboards;
 import me.toomuchzelda.teamarenapaper.scoreboard.GlobalObjective;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.scoreboard.*;
+import org.bukkit.scoreboard.DisplaySlot;
+import org.bukkit.scoreboard.RenderType;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.Team;
 
 import java.util.ArrayList;
 import java.util.Objects;
 
 //could be made into an instantiable object class
 public class SidebarManager {
-	
+
 	public static final Scoreboard SCOREBOARD = Bukkit.getScoreboardManager().getNewScoreboard();
-	
+
+	public static final boolean USE_NEW_SIDEBAR = true;
+
 	//The text on top of the sidebar
 	//public static final Objective OBJECTIVE;
 	public static final GlobalObjective OBJECTIVE;
-	
-	
+
+
 	public static ArrayList<Team> lineTeams = new ArrayList<>();
-	
+
 	public static long teamNames = 0;
 	public static final String TEAMS_IDENTIFIER = "sb";
 	//some colour code, just for invisible entry name
 	public static final String ENTRY_IDENTIFIER = "§b";
-	
+
 	static {
 		//OBJECTIVE = SCOREBOARD.registerNewObjective("testObjective", "dummy",
 		//		Component.text("Component name").color(TextColor.color(0, 255, 255)), RenderType.INTEGER);
-		
+
 		//OBJECTIVE.setDisplaySlot(DisplaySlot.SIDEBAR);
 		OBJECTIVE = new GlobalObjective("testObjective", "dummy",
 				Component.text("Component name").color(TextColor.color(0, 255, 255)), RenderType.INTEGER);
-		
+
 		OBJECTIVE.setDisplaySlot(DisplaySlot.SIDEBAR);
-		
+
 		PlayerScoreboard.addGlobalObjective(OBJECTIVE);
 	}
-	
+
 	/**
 	 * Set the "title" (Objective name) of the sidebar (Objective shown on the sidebar DisplaySlot)
 	 */
 	public static void setTitle(Component displayName) {
+		if (USE_NEW_SIDEBAR) {
+			PlayerScoreboards.setTitle(displayName);
+			return;
+		}
+
 		//OBJECTIVE.displayName(displayName);
 		OBJECTIVE.setDisplayName(displayName);
 	}
-	
+
 	public static void setLines(Component... lines) {
+		if (USE_NEW_SIDEBAR) {
+			PlayerScoreboards.setLines(lines);
+			return;
+		}
+
+
 		int max = Math.max(lines.length, lineTeams.size());
 		//set scores to keep order of entries correct in sidebar
 		int lineNum = 0;
-        
+
         /*for(int i = 0; i <= lineTeams.size(); i++) {
             OBJECTIVE.getScore(getUniqueEntryName(i)).resetScore();
         }*/
-		
+
 		for(int i = 0; i < max; i++) {
 			//replace the team prefix for that line
 			String entryName = getUniqueEntryName(i);
-			
+
 			if(i < lines.length && i < lineTeams.size()) {
 				Team team = lineTeams.get(i);
 				if(!team.suffix().contains(lines[i]) || !lines[i].contains(team.suffix())) {
@@ -73,7 +90,7 @@ public class SidebarManager {
 				//will auto remove from other team for me
 				team.addEntry(entryName);
 				PlayerScoreboard.addMembersAll(team, entryName);
-				
+
 				//OBJECTIVE.getScore(entryName).setScore(lines.length - i);
 				OBJECTIVE.setScore(entryName, lines.length - i);
 			}
@@ -81,7 +98,7 @@ public class SidebarManager {
 			else if(i >= lines.length && i < lineTeams.size()) {
 				//OBJECTIVE.getScore(getUniqueEntryName(i)).resetScore();
 				OBJECTIVE.resetScore(getUniqueEntryName(i));
-				
+
 				PlayerScoreboard.removeGlobalTeam(lineTeams.get(i));
 				lineTeams.get(i).unregister();
 				//don't remove just yet to not interrupt the for loop?
@@ -97,14 +114,14 @@ public class SidebarManager {
 				OBJECTIVE.setScore(entryName, lines.length - i);
 				lineTeams.add(newLine);
 			}
-			
+
 			//lineNum--;
 		}
-		
+
 		//clean up
 		lineTeams.removeIf(Objects::isNull);
 	}
-	
+
 	public static void updatePreGameScoreboard(TeamArena game) {
 		SidebarManager.setTitle(Component.text("Teams").color(NamedTextColor.GOLD));
 		TeamArenaTeam[] teams = game.getTeams();
@@ -114,7 +131,7 @@ public class SidebarManager {
 		}
 		setLines(teamsList);
 	}
-	
+
 	public static void updateTeamsDecidedScoreboard(TeamArena game) {
 		// Team names and number of players e.g
 		//--------------------
@@ -123,29 +140,29 @@ public class SidebarManager {
 		// Red Team
 		// Players: 12
 		//--------------------
-		
+
 		TeamArenaTeam[] teams = game.getTeams();
-		
+
 		int size = game.getTeams().length * 2;
 		//two more lines for spectators, if there are any
 		if(game.getSpectators().size() > 0)
 			size += 1;
-		
+
 		Component[] lines = new Component[size];
 		int index = 0;
 		for(TeamArenaTeam team : teams) {
 			lines[index] = team.getComponentName();
 			lines[index + 1] = Component.text("Players: " + team.getPlayerMembers().size());
-			
+
 			index += 2;
 		}
-		
+
 		if(game.getSpectators().size() > 0) {
 			lines[index] = game.getSpectatorTeam().getComponentName();
 		}
 		setLines(lines);
 	}
-	
+
 	public static String getUniqueEntryName(int num) {
         /*String s = ENTRY_IDENTIFIER;
         for(int i = 0; i < num; i++) {

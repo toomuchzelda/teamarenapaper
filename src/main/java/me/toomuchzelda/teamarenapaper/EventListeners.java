@@ -5,6 +5,7 @@ import com.destroystokyo.paper.event.player.PlayerAdvancementCriterionGrantEvent
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
+import com.jacky8399.ratchetandclank.helper.PlayerScoreboards;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
@@ -199,12 +200,13 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void playerJoin(PlayerJoinEvent event) {
+		var player = event.getPlayer();
 		//disable yellow "Player has joined the game" messages
 		event.joinMessage(null);
-		//event.getPlayer().setScoreboard(SidebarManager.SCOREBOARD);
-		Main.getPlayerInfo(event.getPlayer()).getScoreboard().set();
-		//new Hologram(event.getPlayer());
-		Main.getGame().joiningPlayer(event.getPlayer());
+		Main.getPlayerInfo(player).getScoreboard().set();
+		// send sidebar objectives
+		PlayerScoreboards.getPlayerScoreboard(player).registerObjectives(player);
+		Main.getGame().joiningPlayer(player);
 	}
 
 	//don't show any commands the player doesn't have permission to use in the tab list
