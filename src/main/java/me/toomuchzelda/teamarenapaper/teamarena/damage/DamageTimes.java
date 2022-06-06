@@ -159,9 +159,19 @@ public class DamageTimes {
 
 	//DamageTypes as in type of damage, and not DamageType.class
 	public enum TrackedDamageTypes {
-		ATTACK,
-		FIRE,
-		POISON,
-		OTHER
+		ATTACK(true),
+		FIRE(false),
+		POISON(false),
+		OTHER(false);
+
+		private final boolean considerDamage;
+
+		TrackedDamageTypes(boolean considerDamage) {
+			this.considerDamage = considerDamage;
+		}
+
+		public boolean considersDamage() {
+			return considerDamage;
+		}
 	}
 }

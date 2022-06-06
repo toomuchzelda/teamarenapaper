@@ -391,7 +391,6 @@ public class DamageEvent {
 
 			DamageTimes.TrackedDamageTypes trackedType = damageType.getTrackedType();
 			DamageTimes.DamageTime dTimes = DamageTimes.getDamageTime(living, trackedType);
-			Bukkit.broadcastMessage(trackedType.toString());
 
 			int ndt;
 
@@ -408,15 +407,11 @@ public class DamageEvent {
 				// then don't take damage
 				// Does not apply to non ATTACK tracked types, they can only hit twice per second max
 				if (ndt < living.getMaximumNoDamageTicks() / 2) {
-					if (trackedType == DamageTimes.TrackedDamageTypes.ATTACK) {
-						if (getFinalAttacker() != dTimes.getGiver() && finalDamage > dTimes.getDamage()) {
-							this.setNoKnockback();
-							this.finalDamage = this.finalDamage - dTimes.getDamage();
-							doHurtEffect = false;
-						}
-						else {
-							return;
-						}
+					if (trackedType.considersDamage() &&
+							getFinalAttacker() != dTimes.getGiver() && finalDamage > dTimes.getDamage()) {
+						this.setNoKnockback();
+						this.finalDamage = this.finalDamage - dTimes.getDamage();
+						doHurtEffect = false;
 					}
 					else {
 						return;
