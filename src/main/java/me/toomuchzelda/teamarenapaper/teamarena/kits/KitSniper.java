@@ -6,6 +6,8 @@ import java.util.Set;
 
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
@@ -43,16 +45,16 @@ public class KitSniper extends Kit {
 	public static final ItemStack GRENADE;
 	public static final ItemStack SNIPER;
 	public static final Set<BukkitTask> GRENADE_TASKS = new HashSet<>();
-	
+
 	public static final AttributeModifier KNIFE_SPEED = new AttributeModifier("Sniper Knife", 0.2, //20% = speed 1
 			AttributeModifier.Operation.ADD_SCALAR);
-	
+
 	static{
 		GRENADE = new ItemStack(Material.TURTLE_HELMET);
 		ItemMeta grenadeMeta = GRENADE.getItemMeta();
 		grenadeMeta.displayName(ItemUtils.noItalics(Component.text("Frag Grenade")));
 		GRENADE.setItemMeta(grenadeMeta);
-		
+
 		SNIPER = new ItemStack(Material.SPYGLASS);
 		ItemMeta rifleMeta = SNIPER.getItemMeta();
 		rifleMeta.displayName(ItemUtils.noItalics(Component.text("CheyTac Intervention")));
@@ -60,26 +62,26 @@ public class KitSniper extends Kit {
 	}
 	public KitSniper() {
 		super("Sniper", "Be careful when sniping... Too much movement and your aim will worsen. Don't forget to throw the grenade if you pull the pin btw.", Material.SPYGLASS);
-		
+
 		ItemStack[] armour = new ItemStack[4];
 		armour[3] = new ItemStack(Material.LEATHER_HELMET);
 		armour[2] = new ItemStack(Material.LEATHER_CHESTPLATE);
 		armour[1] = new ItemStack(Material.LEATHER_LEGGINGS);
 		armour[0] = new ItemStack(Material.LEATHER_BOOTS);
 		this.setArmour(armour);
-		
+
 		ItemStack sword = new ItemStack(Material.IRON_SWORD);
-		
+
 		setItems(sword, SNIPER, GRENADE);
 		setAbilities(new SniperAbility());
 	}
-	
+
 	public static class SniperAbility extends Ability{
 		private final Set<Player> RECEIVED_SNIPER_CHAT_MESSAGE = new HashSet<>();
 		private final Set<Player> RECEIVED_GRENADE_CHAT_MESSAGE = new HashSet<>();
 		public static final TextColor SNIPER_MSG_COLOR = TextColor.color(89, 237, 76);
 		public static final TextColor GRENADE_MSG_COLOR = TextColor.color(66, 245, 158);
-		
+
 		@Override
 		public void unregisterAbility() {
 			Iterator<BukkitTask> iter = GRENADE_TASKS.iterator();
@@ -89,12 +91,12 @@ public class KitSniper extends Kit {
 				iter.remove();
 			}
 		}
-		
+
 		@Override
 		public void giveAbility(Player player) {
 			player.setExp(0.999f);
 		}
-		
+
 		@Override
 		public void removeAbility(Player player) {
 			player.setExp(0);
@@ -103,7 +105,7 @@ public class KitSniper extends Kit {
 			RECEIVED_SNIPER_CHAT_MESSAGE.remove(player);
 			RECEIVED_GRENADE_CHAT_MESSAGE.remove(player);
 		}
-		
+
 		public void throwGrenade(Player player, double amp, int itemSlot){
 			World world = player.getWorld();
 			BukkitTask runnable = new BukkitRunnable(){
@@ -152,7 +154,7 @@ public class KitSniper extends Kit {
 			}.runTaskTimer(Main.getPlugin(), 0, 0);
 			GRENADE_TASKS.add(runnable);
 		}
-		
+
 		@Override
 		public void onInteract(PlayerInteractEvent event) {
 			Material mat = event.getMaterial();
@@ -161,7 +163,7 @@ public class KitSniper extends Kit {
 			PlayerInventory inv = player.getInventory();
 			Action action = event.getAction();
 			PlayerInfo pinfo = Main.getPlayerInfo(player);
-			
+
 			//Grenade Pull Pin
 			if(mat == Material.TURTLE_HELMET && !player.hasCooldown(Material.TURTLE_HELMET) && player.getExp() == 0.999f && player.getInventory().getItemInMainHand().getType() == Material.TURTLE_HELMET){
 				Component actionBar = Component.text("Left Click to THROW    Right Click to TOSS").color(TextColor.color(242, 44, 44));
@@ -192,7 +194,7 @@ public class KitSniper extends Kit {
 				}
 			}
 		}
-		
+
 		//Headshot
 		@Override
 		public void projectileHitEntity(ProjectileCollideEvent event){
@@ -248,7 +250,7 @@ public class KitSniper extends Kit {
 				arrow.setPierceLevel(100);
 				arrow.setDamage(1);
 				world.playSound(player, Sound.ENTITY_GENERIC_EXPLODE, 0.8f, 2.5f);
-				
+
 				//Sniper Cooldown + deleting the dropped sniper and returning a new one.
 				player.setCooldown(Material.SPYGLASS, (int) (2.5*20));
 				item.remove();
@@ -265,15 +267,15 @@ public class KitSniper extends Kit {
 				event.setCancelled(true);
 			}
 		}
-		
+
 		@Override
 		public void onPlayerTick(Player player) {
 			float exp = player.getExp();
 			World world = player.getWorld();
-			
+
 			//Grenade Cooldown
 			if(exp == 0.999f){
-			
+
 			}
 			else if(exp + 0.005f >= 1){
 				player.setExp(0.999f);
@@ -281,7 +283,7 @@ public class KitSniper extends Kit {
 			else{
 				player.setExp(exp + 0.005f);
 			}
-			
+
 			//Speed based on held item
 			AttributeInstance instance = player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
 			if(player.getInventory().getItemInMainHand().getType() == Material.IRON_SWORD){
@@ -295,7 +297,7 @@ public class KitSniper extends Kit {
 					instance.removeModifier(KNIFE_SPEED);
 				}
 			}
-			
+
 			//Sniper Information message
 			if(player.getInventory().getItemInMainHand().getType() == Material.SPYGLASS){
 				Component actionBar = Component.text("Drop Spyglass in hand to shoot").color(SNIPER_MSG_COLOR);
@@ -310,10 +312,10 @@ public class KitSniper extends Kit {
 					RECEIVED_SNIPER_CHAT_MESSAGE.add(player);
 				}
 			}
-			
+
 			//Grenade Information message
 			if(player.getInventory().getItemInMainHand().getType() == Material.TURTLE_HELMET && player.getExp() == 0.999f){
-				
+
 				Component actionBar = Component.text("Left/Right Click to Arm").color(GRENADE_MSG_COLOR);
 				Component text = Component.text("Click to arm the grenade").color(GRENADE_MSG_COLOR);
 				PlayerInfo pinfo = Main.getPlayerInfo(player);
@@ -326,7 +328,7 @@ public class KitSniper extends Kit {
 					RECEIVED_GRENADE_CHAT_MESSAGE.add(player);
 				}
 			}
-			
+
 			//Grenade Fail Check
 			//Check if inventory has any grenades, maybe update later to allow for admin abuse grenade spam
 			ItemStack helmet = player.getEquipment().getHelmet();
@@ -339,9 +341,12 @@ public class KitSniper extends Kit {
 					Component text = Component.text("Please do not wear the grenade on your head. Thank you.").color(GRENADE_MSG_COLOR);
 					player.sendMessage(text);
 				}
-				
-				world.createExplosion(player.getLocation(), 2.5f, false, false);
-				player.damage(999);
+
+				//visual explosion
+				world.spawnParticle(Particle.EXPLOSION_NORMAL, player.getEyeLocation(), 1);
+				world.playSound(player.getEyeLocation(),  Sound.ENTITY_GENERIC_EXPLODE, 1f, 1f);
+				DamageEvent dEvent = DamageEvent.newDamageEvent(player, 99999d, DamageType.SNIPER_GRENADE_FAIL, null, false);
+				Main.getGame().queueDamage(dEvent);
 			}
 			//Sniper Reload Sound
 			if(player.getCooldown(Material.SPYGLASS) == 15){
