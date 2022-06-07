@@ -1515,8 +1515,10 @@ public abstract class TeamArena
 		//Map border
 		// Only supports rectangular prism borders as of now
 		ArrayList<String> borders = (ArrayList<String>) map.get("Border");
-		Vector corner1 = BlockUtils.parseCoordsToVec(borders.get(0), 0, 0, 0);
-		Vector corner2 = BlockUtils.parseCoordsToVec(borders.get(1), 0, 0, 0);
+		Vector vec1 = BlockUtils.parseCoordsToVec(borders.get(0), 0, 0, 0);
+		Vector vec2 = BlockUtils.parseCoordsToVec(borders.get(1), 0, 0, 0);
+		Vector corner1 = Vector.getMinimum(vec1, vec2);
+		Vector corner2 = Vector.getMaximum(vec1, vec2).add(new Vector(1, 1, 1));
 		border = BoundingBox.of(corner1, corner2);
 
 		//calculate spawnpoint based on map border
@@ -1536,11 +1538,10 @@ public abstract class TeamArena
 
 		//if both Y are 0 then have no ceiling
 		// do this after spawnpoint calculation otherwise it's trouble
-		if(corner1.getY() == 0 && corner2.getY() == 0) {
-			corner1.setY(1000d);
-			corner2.setY(-1000d);
+		if(vec1.getY() == vec2.getY()) {
+			corner1.setY(gameWorld.getMinHeight());
+			corner2.setY(gameWorld.getMaxHeight());
 			border = BoundingBox.of(corner1, corner2);
-			Main.logger().info("border has 1000 and -1000 Y limits");
 		}
 
 		//Create the teams

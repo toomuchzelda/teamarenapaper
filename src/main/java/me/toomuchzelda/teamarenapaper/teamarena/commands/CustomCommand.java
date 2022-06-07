@@ -120,7 +120,7 @@ public abstract class CustomCommand extends Command {
     }
 
 	protected static @NotNull Player getPlayerOrThrow(CommandSender sender, String[] args, int index) throws CommandException {
-		if (args.length > index + 1) {
+		if (args.length > index) {
 			var player = Bukkit.getPlayer(args[index]);
 			if (player == null) {
 				throw new CommandException(Component.text("Player " + args[index] + " not found!", TextUtils.ERROR_RED));

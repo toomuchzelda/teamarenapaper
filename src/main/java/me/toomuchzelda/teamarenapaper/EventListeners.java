@@ -13,9 +13,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
-import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
@@ -278,25 +276,22 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void playerMove(PlayerMoveEvent event) {
+		Player player = event.getPlayer();
 		TeamArena game = Main.getGame();
-		if(game.getGameState() == GameState.GAME_STARTING && !game.isSpectator(event.getPlayer())) {
+		if (game.getGameState() == GameState.GAME_STARTING && !game.isSpectator(player)) {
 			Location prev = event.getFrom();
 			Location next = event.getTo();
 
 			if(prev.getX() != next.getX() || prev.getZ() != next.getZ()) {
 				event.setCancelled(true);
+				return;
 			}
 		}
-
-		//prevent them from moving outside the game border
-		if (event.isCancelled())
-			return;
 
 		Vector from = event.getFrom().toVector();
 		Vector to = event.getTo().toVector();
 		// dynamic world border
 		if (from.distanceSquared(to) != 0) {
-			Player player = event.getPlayer();
 			BoundingBox border = game.getBorder();
 			// only display when distance to border <= 10 blocks
 			if (MathUtils.distanceBetween(border, from) <= 10) {
@@ -343,16 +338,17 @@ public class EventListeners implements Listener
 			}
 		}
 
-
-		if(!game.getBorder().contains(to)) {
-			event.setCancelled(true);
-			//if they're hitting the bottom border call it falling into the void
-			if(to.getY() < game.getBorder().getMinY()) {
-				if(game.getGameState() == LIVE) {
-					event.setCancelled(false);
-					DamageEvent dEvent = DamageEvent.newDamageEvent(event.getPlayer(), 9999d, DamageType.VOID, null, false);
-					Main.getGame().queueDamage(dEvent);
-				}
+		//prevent them from moving outside the game border
+		if (player.getGameMode() != GameMode.SPECTATOR && !game.getBorder().contains(to)) {
+			// if they're hitting the bottom border call it falling into the void
+			if (to.getY() < game.getBorder().getMinY() && game.getGameState() == LIVE) {
+				event.setCancelled(false);
+				DamageEvent dEvent = DamageEvent.newDamageEvent(event.getPlayer(), 9999d, DamageType.VOID, null, false);
+				Main.getGame().queueDamage(dEvent);
+			} else {
+				Location newTo = event.getTo().clone();
+				newTo.set(from.getX(), from.getY(), from.getZ());
+				event.setTo(newTo);
 			}
 		}
 	}

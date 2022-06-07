@@ -106,6 +106,9 @@ public class Hill {
                 if(p.getLocation().toVector().distanceSquared(border.getCenter()) < VIEW_DISTANCE * VIEW_DISTANCE) {
 
                     int num = Main.getPlayerInfo(p).getPreference(Preferences.KOTH_HILL_PARTICLES);
+					if (num == 0)
+						continue;
+
                     if(TeamArena.getGameTick() % num == 0) {
                         p.spawnParticle(Particle.SPELL_MOB, location.getX(), location.getY(),
                                 location.getZ(), 0, red, green, blue, 1);
