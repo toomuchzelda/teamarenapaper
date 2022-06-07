@@ -226,6 +226,58 @@ public class CaptureTheFlag extends TeamArena
 	}
 
 	@Override
+	public void updateLegacySidebar(Player player, SidebarManager sidebar) {
+		sidebar.setTitle(player, Component.text("CapsToWin: " + capsToWin, NamedTextColor.GOLD));
+		//update the sidebar every tick
+		byte numLines;
+		List<Flag> aliveFlags = teamToFlags.values().stream()
+				.filter(flag -> flag.team.isAlive())
+				.sorted(Flag.BY_SCORE_DESC)
+				.toList();
+
+		if (aliveFlags.size() <= 7)
+			numLines = 2;
+		else
+			numLines = 1;
+
+		Component[] lines = new Component[numLines * aliveFlags.size()];
+
+		int index = 0;
+		for (Flag flag : aliveFlags) {
+			Component first = flag.team.getComponentSimpleName();
+			if (numLines == 2) {
+				Component flagStatus = Component.text("Flag ").color(NamedTextColor.WHITE);
+				if (flag.isAtBase)
+					flagStatus = flagStatus.append(Component.text("Safe").color(NamedTextColor.GREEN));
+				else if (flag.holdingTeam != null) {
+					flagStatus = flagStatus.append(Component.text("Held by ")).append(flag.holdingTeam.getComponentSimpleName());
+				} else {
+					flagStatus = flagStatus.append(flag.progressBarComponent);//Component.text("Unsafe").color(TextColor.color(255, 85, 0)));
+				}
+
+				lines[index] = first.append(Component.text(": " + flag.team.getTotalScore()).color(NamedTextColor.WHITE));
+				lines[index + 1] = flagStatus;
+			} else {
+				Component flagStatus;
+				if (flag.isAtBase)
+					flagStatus = Component.text("Safe").color(NamedTextColor.GREEN);
+				else if (flag.holdingTeam != null) {
+					flagStatus = Component.text("Held").color(flag.holdingTeam.getRGBTextColor());
+				} else {
+					flagStatus = flag.progressBarComponent;//Component.text("Unsafe").color(TextColor.color(255, 85, 0));
+				}
+				lines[index] = first.append(Component.text(": " + flag.team.getTotalScore() + ' ').color(NamedTextColor.WHITE).append(flagStatus));
+			}
+
+			index += numLines;
+		}
+
+		for (var line : lines) {
+			sidebar.addEntry(line);
+		}
+	}
+
+	@Override
 	public void tick() {
 		super.tick();
 

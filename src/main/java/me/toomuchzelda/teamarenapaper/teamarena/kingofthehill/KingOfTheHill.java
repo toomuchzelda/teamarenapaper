@@ -250,7 +250,7 @@ public class KingOfTheHill extends TeamArena
 		// contending teams
 		record CaptureSummary(TeamArenaTeam team, float progress, float change) {}
 		var teamSummary = Arrays.stream(teams)
-				.filter(team -> team != owningTeam && (CommandDebug.ignoreWinConditions || team.isAlive()))
+				.filter(team -> CommandDebug.ignoreWinConditions || team.isAlive())
 				.map(team -> new CaptureSummary(team,
 						hillCapProgresses.getOrDefault(team, 0f),
 						hillCapChange.getOrDefault(team, 0f)))
@@ -264,15 +264,21 @@ public class KingOfTheHill extends TeamArena
 		for (var summary : teamSummary) {
 			var builder = Component.text();
 			builder.append(summary.team.getComponentSimpleName(), Component.text(": "));
-			// whatever the hell this means
-			double percentage = summary.progress / ticksAndPlayersToCaptureHill * 100;
-			builder.append(Component.text((int) percentage + "% "));
-			if (summary.change > 0) {
-				builder.append(Component.text(summary == fastestGrowingTeam && TeamArena.getGameTick() % 20 < 10 ? "▲" : "↑", NamedTextColor.GREEN));
-			} else if (summary.change < 0) {
-				builder.append(Component.text("↓", NamedTextColor.RED));
+			if (summary.team == owningTeam) {
+				builder.append(Component.text("King", NamedTextColor.GOLD, TextDecoration.BOLD));
 			} else {
-				builder.append(Component.text("-", NamedTextColor.DARK_GRAY));
+
+				// whatever the hell this means
+				double percentage = summary.progress / ticksAndPlayersToCaptureHill * 100;
+				builder.append(Component.text((int) percentage + "% "));
+				if (summary.change > 0) {
+					builder.append(Component.text(summary == fastestGrowingTeam && TeamArena.getGameTick() % 20 < 10 ?
+							"▲" : "↑", NamedTextColor.GREEN));
+				} else if (summary.change < 0) {
+					builder.append(Component.text("↓", NamedTextColor.RED));
+				} else {
+					builder.append(Component.text("-", NamedTextColor.DARK_GRAY));
+				}
 			}
 
 			sidebarCache.put(summary.team, builder.build());
@@ -282,39 +288,19 @@ public class KingOfTheHill extends TeamArena
 	}
 
 	public static final Component GAME_NAME = Component.text("King of the Hill", NamedTextColor.YELLOW);
-	public static final Component KING_TEXT = Component.textOfChildren(
-			Component.text("King", NamedTextColor.GOLD), Component.text(": "));
-
-	public static final Component CONTENDER_TEXT = Component.textOfChildren(
-			Component.text("Contenders", NamedTextColor.YELLOW), Component.text(": "));
 
 	@Override
 	public void updateSidebar(Player player, SidebarManager sidebar) {
-		var playerInfo = Main.getPlayerInfo(player);
-		// for conservatives like toomuchzelda
-		if (playerInfo.getPreference(Preferences.SIDEBAR_STYLE) == SidebarManager.Style.LEGACY) {
-			updateSidebarLegacy(player, sidebar);
-			return;
-		}
-
-		var playerTeam = playerInfo.team;
+		var playerTeam = Main.getPlayerInfo(player).team;
 		sidebar.setTitle(player, GAME_NAME);
 
-		var king = owningTeam != null ?
-				owningTeam.getComponentSimpleName() :
-				Component.text("Vacant", NamedTextColor.GRAY);
-
-		sidebar.addEntry(playerTeam == owningTeam ?
-				Component.textOfChildren(OWN_TEAM_PREFIX, KING_TEXT, king) :
-				Component.textOfChildren(KING_TEXT, king));
-		sidebar.addEntry(CONTENDER_TEXT);
 		int teamsShown = 0;
 
 		for (var entry : sidebarCache.entrySet()) {
 			var team = entry.getKey();
 			var line = entry.getValue();
 
-			if (teamsShown >= 3 && team != playerTeam)
+			if (teamsShown >= 4 && team != playerTeam)
 				continue; // don't show
 			teamsShown++;
 			if (team == playerTeam) {
@@ -329,10 +315,11 @@ public class KingOfTheHill extends TeamArena
 
 	}
 
-	public void updateSidebarLegacy(Player player, SidebarManager sidebar) {
-		sidebar.setTitle(player, Component.textOfChildren(GAME_NAME, Component.text(" (Legacy)")));
+	@Override
+	public void updateLegacySidebar(Player player, SidebarManager sidebar) {
+		sidebar.setTitle(player, Component.text("ThisHill:" + activeHill.getHillTime() + " | ToWin:" + (TICKS_TO_WIN / 20), NamedTextColor.GOLD));
 
-		var aliveTeams = Arrays.asList(teams);
+		var aliveTeams = Arrays.stream(teams).filter(TeamArenaTeam::isAlive).toList();
 		int numLines;
 		if(aliveTeams.size() <= 5)
 			numLines = 3;
@@ -407,7 +394,6 @@ public class KingOfTheHill extends TeamArena
 		owningTeam = null;
 		hillCapProgresses.clear();
 		ticksAndPlayersToCaptureHill = INITIAL_CAP_TIME;
-		updateSidebarTitle();
 	}
 
 	public void nextHillOrEnd() {
@@ -467,8 +453,6 @@ public class KingOfTheHill extends TeamArena
 			}
 		}
 
-		updateSidebarTitle();
-
 		this.lastHillChangeTime = gameTick;
 
 		// register hill cursor
@@ -511,11 +495,6 @@ public class KingOfTheHill extends TeamArena
 						MiniMapManager.Renderer.TRANSPARENT, MiniMapManager.Renderer.TRANSPARENT);
 			}
 		});
-	}
-
-	public void updateSidebarTitle() {
-		Component hillAndTotalTime = Component.text("ThisHill:" + activeHill.getHillTime() + " | ToWin:" + (TICKS_TO_WIN / 20)).color(NamedTextColor.GOLD);
-//		SidebarManager.setTitle(hillAndTotalTime);
 	}
 
 	@Override

@@ -297,8 +297,8 @@ public abstract class TeamArena
 
 		for (var player : Bukkit.getOnlinePlayers()) {
 			var sidebar = SidebarManager.getInstance(player);
-
-			if (Main.getPlayerInfo(player).getPreference(Preferences.SIDEBAR_STYLE) == SidebarManager.Style.HIDDEN) {
+			var style = Main.getPlayerInfo(player).getPreference(Preferences.SIDEBAR_STYLE);
+			if (style == SidebarManager.Style.HIDDEN) {
 				sidebar.clear(player);
 				continue;
 			}
@@ -318,7 +318,11 @@ public abstract class TeamArena
 				}
 			} else {
 				sharedSidebar.forEach(sidebar::addEntry);
-				updateSidebar(player, sidebar);
+				if (style == SidebarManager.Style.MODERN) {
+					updateSidebar(player, sidebar);
+				} else { // for conservatives like toomuchzelda
+					updateLegacySidebar(player, sidebar);
+				}
 			}
 
 			sidebar.update(player);
@@ -330,6 +334,11 @@ public abstract class TeamArena
 	}
 
 	public abstract void updateSidebar(Player player, SidebarManager sidebar);
+
+	public void updateLegacySidebar(Player player, SidebarManager sidebar) {
+		sidebar.addEntry(Component.text("Warning: legacy unsupported", NamedTextColor.YELLOW));
+		updateSidebar(player, sidebar);
+	}
 
 	public void tick() {
 		gameTick++;
