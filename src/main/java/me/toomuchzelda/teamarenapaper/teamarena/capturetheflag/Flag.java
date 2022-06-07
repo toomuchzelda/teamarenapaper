@@ -4,7 +4,6 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
-import me.toomuchzelda.teamarenapaper.teamarena.SidebarManager;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.utils.PacketHologram;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
@@ -28,16 +27,22 @@ import org.bukkit.scoreboard.Team;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.EulerAngle;
 
+import java.util.Comparator;
+
 public class Flag
 {
+
+	public static final Comparator<Flag> BY_SCORE = Comparator.comparingInt((Flag flag) -> flag.team.getTotalScore());
+	public static final Comparator<Flag> BY_SCORE_DESC = BY_SCORE.reversed();
+
 	public final TeamArenaTeam team;
 	public final Location baseLoc; // where it spawns/returns to (team's base usually)
-	public final BoundingBox baseBox; // boundingbox at the team's base a player has to touch to capture an enemy's flag 
+	public final BoundingBox baseBox; // boundingbox at the team's base a player has to touch to capture an enemy's flag
 	public Location currentLoc;
 	public final PacketContainer markerMetadataPacket;
 	public final PacketContainer normalMetadataPacket;
 	public final ClientboundRemoveEntitiesPacket removePacket;
-	
+
 	/**
 	 * have a seperate bukkit team to put on.
 	 * needs to be on a team to have the correct colour glowing effect,
@@ -46,7 +51,7 @@ public class Flag
 	 * and make it transparent in some places
 	 */
 	private final Team bukkitTeam;
-	
+
 	private ArmorStand stand;
 	public Player holder;
 	public TeamArenaTeam holdingTeam;
@@ -55,19 +60,19 @@ public class Flag
 	public int ticksUntilReturn;
 
 	public Component progressBarComponent; //band aid; pass the progress bar from stand custom name calculation to sidebar
-	
+
 	public static final EulerAngle LEG_ANGLE = new EulerAngle(Math.PI, 0, 0);
-	
+
 	public Flag(CaptureTheFlag game, TeamArenaTeam team, Location baseLoc) {
 		this.team = team;
 		this.baseLoc = baseLoc;
 		this.currentLoc = baseLoc.clone();
-		
+
 		stand = (ArmorStand) baseLoc.getWorld().spawnEntity(baseLoc, EntityType.ARMOR_STAND);
 		//stand.setMarker(true);
 		stand.setInvisible(true);
 		stand.setBasePlate(false);
-		
+
 		//set the armor stand's armor (team coloured chest and head piece)
 		ItemStack[] items = new ItemStack[]{new ItemStack(Material.LEATHER_HELMET), new ItemStack(Material.LEATHER_CHESTPLATE)};
 		for(ItemStack item : items) {
@@ -75,7 +80,7 @@ public class Flag
 			meta.setColor(team.getColour());
 			item.setItemMeta(meta);
 		}
-		
+
 		stand.getEquipment().setHelmet(items[0]);
 		stand.getEquipment().setChestplate(items[1]);
 
@@ -84,28 +89,28 @@ public class Flag
 		stand.setGlowing(true);
 		stand.setLeftLegPose(LEG_ANGLE);
 		stand.setRightLegPose(LEG_ANGLE);
-		
+
 		stand.customName(team.getComponentName().append(Component.text("'s Flag")));
 		stand.setCustomNameVisible(true);
 		this.baseBox = stand.getBoundingBox().clone();
-		
+
 		isAtBase = true;
 		ticksUntilReturn = 0;
-		
+
 		game.flagStands.put(stand, this);
-		
-		if(SidebarManager.SCOREBOARD.getTeam(team.getName() + "Flag") != null)
-			SidebarManager.SCOREBOARD.getTeam(team.getName() + "Flag").unregister();
+
+		if(PlayerScoreboard.SCOREBOARD.getTeam(team.getName() + "Flag") != null)
+			PlayerScoreboard.SCOREBOARD.getTeam(team.getName() + "Flag").unregister();
 
 		//use a seperate team so noone sees the partially invis armor stand bones
-		bukkitTeam = SidebarManager.SCOREBOARD.registerNewTeam(team.getName() + "Flag");
+		bukkitTeam = PlayerScoreboard.SCOREBOARD.registerNewTeam(team.getName() + "Flag");
 		bukkitTeam.color(NamedTextColor.nearestTo(team.getRGBTextColor()));
 		bukkitTeam.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
 		bukkitTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.ALWAYS);
 		bukkitTeam.addEntity(stand);
-		
+
 		PlayerScoreboard.addGlobalTeam(bukkitTeam);
-		
+
 		markerMetadataPacket = constructMarkerMetadataPacket();
 		normalMetadataPacket = contructNormalMetadataPacket();
 		removePacket = new ClientboundRemoveEntitiesPacket(stand.getEntityId());
@@ -120,15 +125,15 @@ public class Flag
 		// and we change the durability often
 		game.flagItems.add(item.getItemMeta().getDisplayName());
 	}
-	
+
 	public ArmorStand getArmorStand() {
 		return stand;
 	}
-	
+
 	public boolean isBeingCarried() {
 		return stand.isInsideVehicle();
 	}
-	
+
 	public void teleportToBase() {
 		stand.teleport(baseLoc);
 		currentLoc = baseLoc.clone();
@@ -142,50 +147,50 @@ public class Flag
 		holdingTeam = null;
 		stand.customName(team.getComponentName().append(Component.text("'s Flag")));
 	}
-	
+
 	private PacketContainer constructMarkerMetadataPacket() {
 		PacketContainer metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
 		//entity id
 		metadataPacket.getIntegers().write(0, stand.getEntityId());
-		
+
 		WrappedDataWatcher data = WrappedDataWatcher.getEntityWatcher(stand).deepClone();
-		
+
 		WrappedDataWatcher.WrappedDataWatcherObject armorStandMeta =
 				new WrappedDataWatcher.WrappedDataWatcherObject(PacketHologram.ARMOR_STAND_METADATA_INDEX,
 						WrappedDataWatcher.Registry.get(Byte.class));
 		data.setObject(armorStandMeta, PacketHologram.ARMOR_STAND_MARKER_BIT_MASK);
-		
+
 		metadataPacket.getWatchableCollectionModifier().write(0, data.getWatchableObjects());
-		
+
 		return metadataPacket;
 	}
-	
+
 	private PacketContainer contructNormalMetadataPacket() {
 		PacketContainer metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
 		metadataPacket.getIntegers().write(0, stand.getEntityId());
 		metadataPacket.getWatchableCollectionModifier().write(0,
 				WrappedDataWatcher.getEntityWatcher(stand).getWatchableObjects());
-		
+
 		return metadataPacket;
 	}
-	
+
 	public PacketContainer getMarkerMetadataPacket() {
 		return markerMetadataPacket;
 	}
-	
+
 	public PacketContainer getNormalMetadataPacket() {
 		return normalMetadataPacket;
 	}
-	
+
 	public ClientboundAddMobPacket getSpawnPacket() {
 		LivingEntity nmsLivingStand = ((CraftLivingEntity) stand).getHandle();
 		return new ClientboundAddMobPacket(nmsLivingStand);
 	}
-	
+
 	public ClientboundRemoveEntitiesPacket getRemovePacket() {
 		return removePacket;
 	}
-	
+
 	public void sendRecreatePackets(Player player) {
 		PlayerUtils.sendPacket(player, getSpawnPacket());
 		PlayerUtils.sendPacket(player, normalMetadataPacket);
@@ -194,7 +199,7 @@ public class Flag
 		player.sendEquipmentChange(stand, EquipmentSlot.HEAD, helmet);
 		player.sendEquipmentChange(stand, EquipmentSlot.CHEST, chestplate);
 	}
-	
+
 	public void unregisterTeam() {
 		PlayerScoreboard.removeGlobalTeam(bukkitTeam);
 		bukkitTeam.unregister();

@@ -5,14 +5,10 @@ import com.destroystokyo.paper.event.player.PlayerAdvancementCriterionGrantEvent
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
-import com.jacky8399.ratchetandclank.helper.PlayerScoreboards;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
-import me.toomuchzelda.teamarenapaper.teamarena.GameState;
-import me.toomuchzelda.teamarenapaper.teamarena.GameType;
-import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
@@ -205,7 +201,7 @@ public class EventListeners implements Listener
 		event.joinMessage(null);
 		Main.getPlayerInfo(player).getScoreboard().set();
 		// send sidebar objectives
-		PlayerScoreboards.getPlayerScoreboard(player).registerObjectives(player);
+		SidebarManager.getInstance(player).registerObjectives(player);
 		Main.getGame().joiningPlayer(player);
 	}
 

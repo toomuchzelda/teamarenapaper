@@ -1,4 +1,4 @@
-package com.jacky8399.ratchetandclank.helper.nms;
+package me.toomuchzelda.teamarenapaper.utils;
 
 import io.netty.buffer.Unpooled;
 import io.papermc.paper.adventure.PaperAdventure;

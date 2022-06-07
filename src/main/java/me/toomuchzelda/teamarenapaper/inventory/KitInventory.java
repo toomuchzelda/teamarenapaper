@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.inventory;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -10,7 +11,6 @@ import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
-import org.bukkit.map.MinecraftFont;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -51,7 +51,7 @@ public class KitInventory extends PagedInventory {
         StringJoiner line = new StringJoiner(" ");
         for (String word : desc.split("\\s|\\n")) {
             // arbitrary width
-            if (MinecraftFont.Font.getWidth(line.toString()) < 200) {
+            if (TextUtils.measureWidth(line.toString()) < 200) {
                 line.add(word);
             } else {
                 lines.add(line.toString());

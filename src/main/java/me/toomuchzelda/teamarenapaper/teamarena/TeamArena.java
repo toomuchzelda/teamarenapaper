@@ -220,8 +220,6 @@ public abstract class TeamArena
 		respawnTimers = new HashMap<>();
 		damageQueue = new LinkedList<>();
 
-		//list the teams in sidebar
-		SidebarManager.updatePreGameScoreboard(this);
 		PlayerListScoreManager.removeScores();
 
 		miniMap = new MiniMapManager(this);
@@ -290,6 +288,49 @@ public abstract class TeamArena
 		gameWorld = null;
 	}
 
+	public static final Component OWN_TEAM_PREFIX = Component.text("▶ ");
+	public final void tickSidebar() {
+		boolean showGameSidebar = gameState != GameState.PREGAME && gameState != GameState.TEAMS_CHOSEN;
+		boolean showTeamSize = gameState == GameState.TEAMS_CHOSEN;
+
+		Collection<Component> sharedSidebar = showGameSidebar ? updateSharedSidebar() : null;
+
+		for (var player : Bukkit.getOnlinePlayers()) {
+			var sidebar = SidebarManager.getInstance(player);
+
+			if (Main.getPlayerInfo(player).getPreference(Preferences.SIDEBAR_STYLE) == SidebarManager.Style.HIDDEN) {
+				sidebar.clear(player);
+				continue;
+			}
+
+			if (!showGameSidebar) {
+				sidebar.setTitle(player, Component.text("Teams", NamedTextColor.GOLD));
+				for (var team : getTeams()) {
+					var builder = Component.text();
+					if (team.getPlayerMembers().contains(player)) {
+						builder.append(OWN_TEAM_PREFIX);
+					}
+					builder.append(team.getComponentName());
+					if (showTeamSize) {
+						builder.append(Component.text(": " + team.getPlayerMembers().size()));
+					}
+					sidebar.addEntry(builder.build());
+				}
+			} else {
+				sharedSidebar.forEach(sidebar::addEntry);
+				updateSidebar(player, sidebar);
+			}
+
+			sidebar.update(player);
+		}
+	}
+
+	public Collection<Component> updateSharedSidebar() {
+		return Collections.emptyList();
+	}
+
+	public abstract void updateSidebar(Player player, SidebarManager sidebar);
+
 	public void tick() {
 		gameTick++;
 
@@ -306,6 +347,7 @@ public abstract class TeamArena
 			endTick();
 		}
 
+		tickSidebar();
 	}
 
 	public void preGameTick() {
@@ -356,7 +398,6 @@ public abstract class TeamArena
 					}
 				}
 				Bukkit.broadcast(Component.text("Not enough players to start the game, game cancelled!").color(MathUtils.randomTextColor()));
-				SidebarManager.updatePreGameScoreboard(this);
 			}
 			//setGameState(GameState.PREGAME);
 		}
@@ -723,8 +764,6 @@ public abstract class TeamArena
 		for(Player p : spectators) {
 			makeSpectator(p);
 		}
-
-		SidebarManager.updateTeamsDecidedScoreboard(this);
 
 		sendCountdown(true);
 	}
