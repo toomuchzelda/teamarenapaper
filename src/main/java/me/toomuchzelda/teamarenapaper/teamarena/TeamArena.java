@@ -13,6 +13,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
@@ -318,10 +319,19 @@ public abstract class TeamArena
 				}
 			} else {
 				sharedSidebar.forEach(sidebar::addEntry);
-				if (style == SidebarManager.Style.MODERN) {
+				if (style == SidebarManager.Style.MODERN || style == SidebarManager.Style.RGB_MANIAC) {
 					updateSidebar(player, sidebar);
 				} else { // for conservatives like toomuchzelda
 					updateLegacySidebar(player, sidebar);
+				}
+			}
+
+			if (style == SidebarManager.Style.RGB_MANIAC || style == SidebarManager.Style.LEGACY_RGB_MANIAC) {
+				double progress = (int) (TeamArena.getGameTick() / 5 * 5) / 70d;
+				for (var iterator = sidebar.getEntries().listIterator(); iterator.hasNext(); ) {
+					var index = iterator.nextIndex();
+					var entry = iterator.next();
+					iterator.set(TextUtils.getRGBManiacComponent(entry, Style.empty(), progress + index / 7d));
 				}
 			}
 

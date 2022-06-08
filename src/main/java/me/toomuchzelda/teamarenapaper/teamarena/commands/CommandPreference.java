@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -16,32 +17,34 @@ import java.util.*;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class CommandPreference extends CustomCommand {
-    public static final TextColor HEADINGS = TextColor.color(37, 95, 221);
-    public static final TextColor TEXT = TextColor.color(242, 242, 214);
+    public static final TextColor HEADINGS = NamedTextColor.BLUE;
+    public static final TextColor TEXT = NamedTextColor.WHITE;
 
 
     public CommandPreference() {
         super("preference", "Change or view player preferences",
-                "/preference [change/info] preference (your new setting if changing)", PermissionLevel.ALL);
+                "/preference <change/info> <preference> [value]", PermissionLevel.ALL);
     }
 
     @Override
     public void run(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
-        if (sender instanceof Player p) {
+        if (sender instanceof Player player) {
             if (args.length == 2 && args[0].equalsIgnoreCase("info")) {
-                Preference pref = getPreference(p, args[1], true);
+                Preference pref = getPreference(player, args[1], true);
                 if (pref == null)
                     return; //error message sent in the method
 
-                Object value = Main.getPlayerInfo(p).getPreference(pref);
-                Component name = Component.text(pref.getName() + ": ").color(HEADINGS);
-                Component desc = Component.text(pref.getDescription()).color(TEXT).append(Component.newline());
-                Component currentValue = Component.text("Currently set to: " + pref.serialize(value)).color(NamedTextColor.GOLD).append(Component.newline());
-                Component defaultValue = Component.text("Default value: " + pref.getDefaultValue()).color(NamedTextColor.YELLOW);
+                Object value = Main.getPlayerInfo(player).getPreference(pref);
 
-                p.sendMessage(name.append(desc).append(currentValue).append(defaultValue));
+				player.sendMessage(Component.textOfChildren(
+					Component.text(pref.getName() + ": ", HEADINGS),
+					Component.text(pref.getDescription(), TEXT),
+					Component.text("\nCurrently set to: " + pref.serialize(value), NamedTextColor.GOLD),
+					Component.text("\nDefault value: " + pref.serialize(pref.getDefaultValue()), NamedTextColor.YELLOW)
+				));
+
             } else if (args.length >= 3 && args[0].equalsIgnoreCase("change")) {
-                Preference pref = getPreference(p, args[1], true);
+                Preference pref = getPreference(player, args[1], true);
                 if (pref == null)
                     return;
 				// for values with spaces
@@ -50,34 +53,33 @@ public class CommandPreference extends CustomCommand {
                 try {
                     newValue = pref.deserialize(input);
                 } catch (IllegalArgumentException e) {
-                    Component arg = Component.text(input + " invalid: ").color(HEADINGS);
-                    Component error = Component.text(e.getMessage()).color(TEXT);
-                    p.sendMessage(arg.append(error));
+                    player.sendMessage(Component.text(
+							"Invalid value '" + input + "' for preference " + args[1] + ":\n" + e,
+							TextUtils.ERROR_RED));
                     return;
                 }
 
-                Main.getPlayerInfo(p).setPreference(pref, newValue);
-                p.sendMessage(Component.text("Successfully changed preference").color(HEADINGS));
-                p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.MASTER, 2, 2);
+                Main.getPlayerInfo(player).setPreference(pref, newValue);
+                player.sendMessage(Component.text("Successfully changed preference", HEADINGS));
+                player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.MASTER, 2, 2);
             } else {
-                showUsage(p);
+                showUsage(player);
             }
         } else {
-            sender.sendMessage(Component.text("You can't use this command from the console!").color(TextColor.color(255, 0, 0)));
+            sender.sendMessage(PLAYER_ONLY);
         }
     }
 
     @Override
     public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
-        if (sender instanceof Player) {
+        if (sender instanceof Player player) {
             if (args.length == 1) {
                 return Arrays.asList("info", "change");
             } else if (args.length > 1 && args[0].equalsIgnoreCase("change")) {
-                Player p = (Player) sender;
-                if (args.length == 2)
-                    return Preference.PREFERENCES.keySet();
-                else {
-                    Preference<?> pref = getPreference(p, args[1], false);
+                if (args.length == 2) {
+					return Preference.PREFERENCES.keySet();
+				} else {
+                    Preference<?> pref = getPreference(player, args[1], false);
                     if (pref != null) {
                         // try listing possible values
                         List<String> suggestions = pref.getTabSuggestions();
@@ -96,10 +98,11 @@ public class CommandPreference extends CustomCommand {
     public static Preference<?> getPreference(Player sender, String preferenceStr, boolean sendError) {
         Preference<?> pref = Preference.PREFERENCES.get(preferenceStr);
         if (pref == null && sendError) {
-            Component text = Component.text("Preference ").color(TEXT);
-            Component argName = Component.text(preferenceStr).color(HEADINGS);
-            Component remainderText = Component.text(" doesn't exist").color(TEXT);
-            sender.sendMessage(text.append(argName).append(remainderText));
+            sender.sendMessage(Component.textOfChildren(
+					Component.text("Preference", TEXT),
+					Component.text(preferenceStr, HEADINGS),
+					Component.text(" doesn't exist!", TEXT)
+			));
         }
 
         return pref;

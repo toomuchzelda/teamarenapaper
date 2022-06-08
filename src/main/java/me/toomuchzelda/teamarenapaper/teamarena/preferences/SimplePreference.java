@@ -104,7 +104,7 @@ public class SimplePreference<T> extends Preference<T> {
 
 	@Override
 	public @Nullable List<String> getTabSuggestions() {
-		return Collections.unmodifiableList(tabSugguestions);
+		return tabSugguestions != null ? Collections.unmodifiableList(tabSugguestions) : null;
 	}
 
 	@Override

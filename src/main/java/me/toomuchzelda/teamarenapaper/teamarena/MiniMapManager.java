@@ -205,6 +205,9 @@ public class MiniMapManager {
             MapCursorCollection mapCursors = new MapCursorCollection();
             PlayerInfo playerInfo = Main.getPlayerInfo(player);
 
+			if (playerInfo == null)
+				return;
+
             for (CursorProvider provider : cursors) {
                 // no need to add the cursor at all if it's not visible
                 if (provider.displayCondition().test(player, playerInfo)) {

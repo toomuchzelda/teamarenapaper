@@ -247,13 +247,15 @@ public class KingOfTheHill extends TeamArena
 	@Override
 	public Collection<Component> updateSharedSidebar() {
 		sidebarCache.clear();
-		// contending teams
 		record CaptureSummary(TeamArenaTeam team, float progress, float change) {}
 		var teamSummary = Arrays.stream(teams)
 				.filter(team -> CommandDebug.ignoreWinConditions || team.isAlive())
-				.map(team -> new CaptureSummary(team,
-						hillCapProgresses.getOrDefault(team, 0f),
-						hillCapChange.getOrDefault(team, 0f)))
+				.map(team -> new CaptureSummary(
+						team,
+						// max capture progress if king of the hill for sorting purposes
+						team == owningTeam ? Float.MAX_VALUE : hillCapProgresses.getOrDefault(team, 0f),
+						hillCapChange.getOrDefault(team, 0f))
+				)
 				.sorted(Comparator.comparingDouble(CaptureSummary::progress).reversed())
 				.toList();
 		if (teamSummary.size() == 0)
@@ -265,9 +267,8 @@ public class KingOfTheHill extends TeamArena
 			var builder = Component.text();
 			builder.append(summary.team.getComponentSimpleName(), Component.text(": "));
 			if (summary.team == owningTeam) {
-				builder.append(Component.text("King", NamedTextColor.GOLD, TextDecoration.BOLD));
+				builder.append(Component.text("KING", NamedTextColor.GOLD, TextDecoration.BOLD));
 			} else {
-
 				// whatever the hell this means
 				double percentage = summary.progress / ticksAndPlayersToCaptureHill * 100;
 				builder.append(Component.text((int) percentage + "% "));

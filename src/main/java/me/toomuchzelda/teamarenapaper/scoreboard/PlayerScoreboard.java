@@ -44,12 +44,17 @@ public class PlayerScoreboard
 		this.player = player;
 		this.scoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
 
-		for(Team team : GLOBAL_TEAMS) {
-			this.makeLocalTeam(team);
-		}
+		try {
+			for (Team team : GLOBAL_TEAMS) {
+				this.makeLocalTeam(team);
+			}
 
-		for(GlobalObjective objective : GLOBAL_OBJECTIVES) {
-			this.makeLocalObjective(objective);
+			for (GlobalObjective objective : GLOBAL_OBJECTIVES) {
+				this.makeLocalObjective(objective);
+			}
+		} catch (IllegalStateException ex) {
+			Main.logger().severe("Failed to initialize scoreboard for " + player.getName());
+			ex.printStackTrace();
 		}
 	}
 

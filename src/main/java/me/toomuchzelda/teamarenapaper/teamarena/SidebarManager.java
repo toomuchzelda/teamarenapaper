@@ -7,10 +7,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Random;
-import java.util.WeakHashMap;
+import java.util.*;
 
 import static me.toomuchzelda.teamarenapaper.utils.ScoreboardUtils.*;
 
@@ -27,16 +24,19 @@ public class SidebarManager {
 	}
 
 	public Component title;
+
 	private SidebarManager(Component title) {
 		this.title = title;
 	}
 
 	private static final int MAX_ENTRIES = 15; // max entries the minecraft client will display
+
 	private record Entry(String teamName, String entryName) {}
 
 	private Entry[] team1, team2;
 	private static final String ALPHANUMERIC = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 	private static final Random RANDOM = new Random();
+
 	private static String getRandomString() {
 		StringBuilder sb = new StringBuilder(16);
 		for (int i = 0; i < 16; i++)
@@ -70,15 +70,27 @@ public class SidebarManager {
 	}
 
 	private final ArrayList<Component> entries = new ArrayList<>(MAX_ENTRIES);
+
 	public void addEntry(@NotNull Component entry) {
 		if (entries.size() == MAX_ENTRIES)
 			return;
 		entries.add(entry);
 	}
 
+	public List<Component> getEntries() {
+		return entries;
+	}
+
+	public void setEntry(int index, Component entry) {
+		if (index >= MAX_ENTRIES || index >= entries.size())
+			return;
+		entries.set(index, entry);
+	}
+
 	// whether entry changes should be written to the second sidebar
 	private boolean isSidebar2 = true;
 	private int sidebar1LastSize = 0, sidebar2LastSize = 0;
+
 	public void update(Player player) {
 		String objective = isSidebar2 ? "sidebar2" : "sidebar1";
 		Entry[] bufferEntries = isSidebar2 ? team2 : team1;
@@ -130,6 +142,8 @@ public class SidebarManager {
 	public enum Style {
 		HIDDEN,
 		MODERN,
-		LEGACY
+		RGB_MANIAC,
+		LEGACY,
+		LEGACY_RGB_MANIAC
 	}
 }
