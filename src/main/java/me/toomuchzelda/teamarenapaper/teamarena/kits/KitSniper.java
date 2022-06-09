@@ -198,9 +198,9 @@ public class KitSniper extends Kit {
 				}
 				//Disabled headshot if you are too close since it was buggy
 				if (projectileHitY - headLocation > headshotThresh && projectile.getOrigin().distance(projectile.getLocation()) > 10) {
-					// such a horrible damage system
-					var fakeEvent = new EntityDamageByEntityEvent(shooter, player, EntityDamageEvent.DamageCause.PROJECTILE, 999);
-					DamageEvent.createDamageEvent(fakeEvent);
+					DamageEvent dEvent = DamageEvent.newDamageEvent(player, 999d, DamageType.PROJECTILE, shooter, false);
+					Main.getGame().queueDamage(dEvent);
+
 					//Hitmarker Sound effect
 					//shooter.playSound(shooter.getLocation(), Sound.ENTITY_ITEM_FRAME_PLACE, 2f, 2.0f);
 				}
@@ -300,13 +300,13 @@ public class KitSniper extends Kit {
 			if (inventory.getHelmet() != null && inventory.getHelmet().getType() == Material.TURTLE_HELMET) {
 				player.sendMessage(Component.text("Please do not wear the grenade on your head. Thank you.", GRENADE_MSG_COLOR));
 
-				var fakeEvent = new EntityDamageEvent(player, EntityDamageEvent.DamageCause.ENTITY_EXPLOSION, 999);
-				DamageEvent.createDamageEvent(fakeEvent);
+				DamageEvent dEvent = DamageEvent.newDamageEvent(player, 999d, DamageType.EXPLOSION, null, false);
+				Main.getGame().queueDamage(dEvent);
 
 				world.createExplosion(player.getLocation(), 2.5f, false, false);
 			} else if (player.getCooldown(Material.TURTLE_HELMET) == 1 && inventory.contains(Material.TURTLE_HELMET)) {
-				var fakeEvent = new EntityDamageEvent(player, EntityDamageEvent.DamageCause.ENTITY_EXPLOSION, 999);
-				DamageEvent.createDamageEvent(fakeEvent, DamageType.SNIPER_GRENADE_FAIL);
+				DamageEvent dEvent = DamageEvent.newDamageEvent(player, 999d, DamageType.SNIPER_GRENADE_FAIL, null, false);
+				Main.getGame().queueDamage(dEvent);
 
 				world.createExplosion(player.getLocation(), 2.5f, false, false);
 			}

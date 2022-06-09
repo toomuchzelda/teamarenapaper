@@ -10,16 +10,12 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.KitDemolitions;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
-import me.toomuchzelda.teamarenapaper.utils.SoundUtils;
+import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
-import org.apache.commons.io.FileUtils;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
@@ -137,10 +133,14 @@ public abstract class TeamArena
 		Main.logger().info("Loading map: " + source.getAbsolutePath());
 		File dest = new File("temp_" + source.getName().toLowerCase(Locale.ENGLISH) + "_" + System.currentTimeMillis());
 		if (dest.mkdir()) {
-			try {
-				org.apache.commons.io.FileUtils.copyDirectory(source, dest, file -> !file.getName().equals("uid.dat"));
-			} catch (IOException e) {
-				throw new RuntimeException("Failed to copy map", e);
+			FileUtils.copyFolder(source, dest);
+			//delete the uid.dat
+			for (File uid : dest.listFiles()) {
+				if (uid.getName().equalsIgnoreCase("uid.dat")) {
+					boolean b = uid.delete();
+					Main.logger().info("Attempted delete of uid.dat in copy world, success: " + b);
+					break;
+				}
 			}
 		} else {
 			//dae not bothered to try catch
@@ -283,11 +283,7 @@ public abstract class TeamArena
 			player.kick(Component.text("You have been evacuated!", NamedTextColor.YELLOW));
 		}
 		if (Bukkit.unloadWorld(gameWorld, false)) {
-			try {
-				FileUtils.forceDelete(worldFile);
-			} catch (IOException ex) {
-				Main.logger().severe("Failed to delete world " + gameWorld.getName() + ": " + ex);
-			}
+			FileUtils.delete(worldFile);
 		} else {
 			Main.logger().severe("Failed to unload world " + gameWorld.getName());
 		}

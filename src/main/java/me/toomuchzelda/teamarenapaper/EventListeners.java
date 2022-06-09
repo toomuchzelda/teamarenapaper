@@ -351,8 +351,8 @@ public class EventListeners implements Listener
 			if(to.getY() < game.getBorder().getMinY()) {
 				if(game.getGameState() == LIVE) {
 					event.setCancelled(false);
-					EntityDamageEvent dEvent = new EntityDamageEvent(event.getPlayer(), EntityDamageEvent.DamageCause.VOID, 999);
-					DamageEvent.createDamageEvent(dEvent);
+					DamageEvent dEvent = DamageEvent.newDamageEvent(event.getPlayer(), 9999d, DamageType.VOID, null, false);
+					Main.getGame().queueDamage(dEvent);
 				}
 			}
 		}
