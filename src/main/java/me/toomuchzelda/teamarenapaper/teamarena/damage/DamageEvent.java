@@ -200,114 +200,110 @@ public class DamageEvent {
 					realAttacker = living;
 				}
 			}
-			else {
-				if(attacker instanceof TNTPrimed tnt) {
-					Entity tntSource = tnt.getSource();
-					if(tntSource != null) {
-						realAttacker = tntSource;
+			else if(attacker instanceof TNTPrimed tnt) {
+				Entity tntSource = tnt.getSource();
+				if(tntSource != null) {
+					realAttacker = tntSource;
+				}
+			}
+			else if(attacker instanceof LivingEntity living) {
+				if(damageType.isMelee() && living.getEquipment() != null) {
+					//item used during the attack, if applicable
+					ItemStack item = living.getEquipment().getItemInMainHand();
+
+					//recalculate the damage done by the item
+					double itemDamage = DamageNumbers.getMaterialBaseDamage(item.getType());
+					//add damage from potion effects (strength and weakness)
+					for(PotionEffect potEffect : living.getActivePotionEffects()) {
+						itemDamage += DamageNumbers.getPotionEffectDamage(potEffect);
+						//Bukkit.broadcastMessage("added " + potEffect.getType().getName() + ", new total: " + itemDamage);
+					}
+					//crit
+					if(critical) {
+						itemDamage = DamageNumbers.getCritDamage(itemDamage);
+					}
+
+					damageEvent.baseDamage = itemDamage;
+
+					//Bukkit.broadcastMessage("Custom base damage: " + itemDamage);
+
+					//add enchantments
+					if(victim instanceof LivingEntity livingVictim) {
+						double enchDamage = DamageCalculator.calcItemEnchantDamage(item, livingVictim);
+						itemDamage += enchDamage;
+						//Bukkit.broadcastMessage("Custom ench damage: " + enchDamage);
+						//do armor calc on victim
+						finalDamage = DamageCalculator.calcArmorReducedDamage(damageType, itemDamage, livingVictim);
+						alreadyCalcedArmor = true;
+
+						damageEvent.enchantDamage = enchDamage;
+					}
+
+					rawDamage = itemDamage;
+
+					//halve the strength of knockback enchantments
+					knockbackLevels += ((float) item.getEnchantmentLevel(Enchantment.KNOCKBACK)) / 2;
+					//knockbackMults.add(level);
+
+					//cancelled bukkit event doesn't do sweeping attacks, re-do them here
+					if(living instanceof Player p && damageType.is(DamageType.MELEE)) {
+						//Bukkit.broadcastMessage("DamageType is melee: line 99");
+						//same as nmsP.getAttackStrengthCooldown(0.5f);
+						boolean isChargedWeapon = p.getAttackCooldown() > 0.9f;
+
+						boolean isChargedSprintAttack = isChargedWeapon && p.isSprinting();
+
+						net.minecraft.world.entity.player.Player nmsPlayer = ((CraftPlayer) p).getHandle();
+						double walkedDist = nmsPlayer.walkDist - nmsPlayer.walkDistO;
+						boolean notExceedingWalkSpeed = walkedDist < p.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).getValue();
+						boolean sweep = false;
+
+						if(isChargedWeapon && !isChargedSprintAttack && !critical &&
+								notExceedingWalkSpeed) {
+							if(ItemUtils.isSword(item))
+								sweep = true;
+						}
+
+						if(sweep) {
+							float sweepingEdgeDmg = (float) (1f + EnchantmentHelper.getSweepingDamageRatio(nmsPlayer)
+									* finalDamage);
+
+							List<LivingEntity> list = p.getWorld().getLivingEntities();
+							Iterator<LivingEntity> iter = list.iterator();
+							//only mobs colliding with this bounding box
+							BoundingBox box = victim.getBoundingBox().expand(1, 0.25, 1);
+							while(iter.hasNext()) {
+								LivingEntity livingEntity = iter.next();
+								net.minecraft.world.entity.LivingEntity nmsLivingEntity = ((CraftLivingEntity) livingEntity).getHandle();
+								//disqualifying conditions
+								if(livingEntity == p || livingEntity == victim)
+									continue;
+
+								if(livingEntity instanceof ArmorStand stand && stand.isMarker())
+									continue;
+
+								if(nmsPlayer.distanceToSqr(nmsLivingEntity) < 9 && livingEntity.getBoundingBox().overlaps(box)) {
+									//does the damage/armor calculations and calls the EntityDamageEvent,
+									// which will create another one of these and queue it
+									nmsLivingEntity.hurt(DamageType.getSweeping(p).getDamageSource(), sweepingEdgeDmg);
+								}
+							}
+						}
+
+						damageEvent.isSweep = sweep;
+					}
+					else if(damageType.is(DamageType.SWEEP_ATTACK)) {
+						//sweep attacks no do base kb
+						// use de kb level based on attacker looking direction instead
+						doBaseKB = false;
+						knockbackLevels += 1;
 					}
 				}
 
-				if(attacker instanceof LivingEntity living) {
-					if(damageType.isMelee() && living.getEquipment() != null) {
-						//item used during the attack, if applicable
-						ItemStack item = living.getEquipment().getItemInMainHand();
-
-						//recalculate the damage done by the item
-						double itemDamage = DamageNumbers.getMaterialBaseDamage(item.getType());
-						//add damage from potion effects (strength and weakness)
-						for(PotionEffect potEffect : living.getActivePotionEffects()) {
-							itemDamage += DamageNumbers.getPotionEffectDamage(potEffect);
-							//Bukkit.broadcastMessage("added " + potEffect.getType().getName() + ", new total: " + itemDamage);
-						}
-						//crit
-						if(critical) {
-							itemDamage = DamageNumbers.getCritDamage(itemDamage);
-						}
-
-						damageEvent.baseDamage = itemDamage;
-
-						//Bukkit.broadcastMessage("Custom base damage: " + itemDamage);
-
-						//add enchantments
-						if(victim instanceof LivingEntity livingVictim) {
-							double enchDamage = DamageCalculator.calcItemEnchantDamage(item, livingVictim);
-							itemDamage += enchDamage;
-							//Bukkit.broadcastMessage("Custom ench damage: " + enchDamage);
-							//do armor calc on victim
-							finalDamage = DamageCalculator.calcArmorReducedDamage(damageType, itemDamage, livingVictim);
-							alreadyCalcedArmor = true;
-
-							damageEvent.enchantDamage = enchDamage;
-						}
-
-						rawDamage = itemDamage;
-
-						//halve the strength of knockback enchantments
-						knockbackLevels += ((float) item.getEnchantmentLevel(Enchantment.KNOCKBACK)) / 2;
-						//knockbackMults.add(level);
-
-						//cancelled bukkit event doesn't do sweeping attacks, re-do them here
-						if(living instanceof Player p && damageType.is(DamageType.MELEE)) {
-							//Bukkit.broadcastMessage("DamageType is melee: line 99");
-							//same as nmsP.getAttackStrengthCooldown(0.5f);
-							boolean isChargedWeapon = p.getAttackCooldown() > 0.9f;
-
-							boolean isChargedSprintAttack = isChargedWeapon && p.isSprinting();
-
-							net.minecraft.world.entity.player.Player nmsPlayer = ((CraftPlayer) p).getHandle();
-							double walkedDist = nmsPlayer.walkDist - nmsPlayer.walkDistO;
-							boolean notExceedingWalkSpeed = walkedDist < p.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).getValue();
-							boolean sweep = false;
-
-							if(isChargedWeapon && !isChargedSprintAttack && critical &&
-									notExceedingWalkSpeed) {
-								if(ItemUtils.isSword(item))
-									sweep = true;
-							}
-
-							if(sweep) {
-								float sweepingEdgeDmg = (float) (1f + EnchantmentHelper.getSweepingDamageRatio(nmsPlayer)
-										* finalDamage);
-
-								List<LivingEntity> list = p.getWorld().getLivingEntities();
-								Iterator<LivingEntity> iter = list.iterator();
-								//only mobs colliding with this bounding box
-								BoundingBox box = victim.getBoundingBox().expand(1, 0.25, 1);
-								while(iter.hasNext()) {
-									LivingEntity livingEntity = iter.next();
-									net.minecraft.world.entity.LivingEntity nmsLivingEntity = ((CraftLivingEntity) livingEntity).getHandle();
-									//disqualifying conditions
-									if(livingEntity == p || livingEntity == victim)
-										continue;
-
-									if(livingEntity instanceof ArmorStand stand && stand.isMarker())
-										continue;
-
-									if(nmsPlayer.distanceToSqr(nmsLivingEntity) < 9 && livingEntity.getBoundingBox().overlaps(box)) {
-										//does the damage/armor calculations and calls the EntityDamageEvent,
-										// which will create another one of these and queue it
-										// somewhat inefficient, but i don't wanna do the damage numbers myself
-										nmsLivingEntity.hurt(DamageType.getSweeping(p).getDamageSource(), sweepingEdgeDmg);
-									}
-								}
-							}
-
-							damageEvent.isSweep = sweep;
-						}
-						else if(damageType.is(DamageType.SWEEP_ATTACK)) {
-							//sweep attacks no do base kb
-							// use de kb level based on attacker looking direction instead
-							doBaseKB = false;
-							knockbackLevels += 1;
-						}
-					}
-
-					if(living instanceof Player p && damageType.isMelee()) {
-						damageEvent.wasSprinting = p.isSprinting();
-						if(damageEvent.wasSprinting)
-							knockbackLevels += 1;
-					}
+				if(living instanceof Player p && damageType.isMelee()) {
+					damageEvent.wasSprinting = p.isSprinting();
+					if(damageEvent.wasSprinting)
+						knockbackLevels += 1;
 				}
 			}
 		}
