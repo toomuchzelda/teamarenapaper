@@ -27,151 +27,152 @@ public class DamageType {
      *                                  GENERAL DAMAGETYPES
      ******************************************************************************************/
 
-    public static final DamageType BERRY_BUSH = new DamageType(DamageTypeEnum.BERRY_BUSH, "Berry Bush", "%Killed% ate one too many sweet berries").setNoKnockback()
+    public static final DamageType BERRY_BUSH = new DamageType("Berry Bush", "%Killed% ate one too many sweet berries").setNoKnockback()
             .setDamageSource(DamageSource.SWEET_BERRY_BUSH);
 
-    public static final DamageType CACTUS = new DamageType(DamageTypeEnum.CACTUS, "Cactus", "%Killed% hugged a cactus").setNoKnockback()
+    public static final DamageType CACTUS = new DamageType("Cactus", "%Killed% hugged a cactus").setNoKnockback()
             .setDamageSource(DamageSource.CACTUS);
 
-    public static final DamageType CRAMMING = new DamageType(DamageTypeEnum.CRAMMING, "Cramming", "%Killer% was crammed to death").setIgnoreArmor()
+    public static final DamageType CRAMMING = new DamageType("Cramming", "%Killer% was crammed to death").setIgnoreArmor()
             .setNoKnockback().setDamageSource(DamageSource.CRAMMING);
 
-    public static final DamageType CUSTOM = new DamageType(DamageTypeEnum.CUSTOM, "Custom", "%Killed% fell over and died").setNoKnockback()
+    public static final DamageType CUSTOM = new DamageType("Custom", "%Killed% fell over and died").setNoKnockback()
             .setDamageSource(DamageSource.GENERIC);
 
-    public static final DamageType DAMAGE_POTION = new DamageType(DamageTypeEnum.DAMAGE_POTION, "Damage Potion",
+    public static final DamageType DAMAGE_POTION = new DamageType("Damage Potion",
             "%Killed% died to %Killer%'s damage potion which isn't part of the game?").setNoKnockback()
             .setDamageSource(DamageSource.MAGIC);
 
-    public static final DamageType DRAGON_BREATH = new DamageType(DamageTypeEnum.DRAGON_BREATH, "Dragon Breath", "%Killed% sucked a lungful of dragon's breath")
+    public static final DamageType DRAGON_BREATH = new DamageType("Dragon Breath", "%Killed% sucked a lungful of dragon's breath")
             .setNoKnockback().setDamageSource(DamageSource.DRAGON_BREATH);
 
-    public static final DamageType DROWNED = new DamageType(DamageTypeEnum.DROWNED, "Drowned", "%Killed% is swimming with the fishes").setIgnoreArmor()
+    public static final DamageType DROWNED = new DamageType("Drowned", "%Killed% is swimming with the fishes").setIgnoreArmor()
             .setNoKnockback().setDamageSource(DamageSource.DROWN);
 
-    public static final DamageType DRYOUT = new DamageType(DamageTypeEnum.DRYOUT, "Dryout", "%Killed% died of dehydration")
+    public static final DamageType DRYOUT = new DamageType("Dryout", "%Killed% died of dehydration")
             .setNoKnockback().setDamageSource(DamageSource.DRY_OUT);
 
-    public static final DamageType EXPLOSION = new DamageType(DamageTypeEnum.EXPLOSION, "Explosion", "%Killed% was caught in an explosion")
+    public static final DamageType EXPLOSION = new DamageType("Explosion", "%Killed% was caught in an explosion")
 			.setExplosion().setDamageSource(DamageSource.explosion((net.minecraft.world.entity.LivingEntity) null));
 
-    public static final DamageType FALL = new DamageType(DamageTypeEnum.FALL, "Fall", "%Killed% fell to their death").setFall().setNoKnockback()
+    public static final DamageType FALL = new DamageType("Fall", "%Killed% fell to their death").setFall().setNoKnockback()
             .setDamageSource(DamageSource.FALL);
 
-    public static final DamageType FALL_PUSHED = new DamageType(DamageTypeEnum.FALL_PUSHED, "Pushed Fall", "%Killed% was pushed to their death by %Killer%")
+    public static final DamageType FALL_PUSHED = new DamageType("Pushed Fall", "%Killed% was pushed to their death by %Killer%")
             .setFall().setNoKnockback().setDamageSource(DamageSource.FALL);
 
-    public static final DamageType FALL_SHOT = new DamageType(DamageTypeEnum.FALL_SHOT, "Shot Fall", "%Killed% was shot by %Killer% and fell to their death")
+    public static final DamageType FALL_SHOT = new DamageType("Shot Fall", "%Killed% was shot by %Killer% and fell to their death")
             .setFall().setNoKnockback().setDamageSource(DamageSource.FALL);
 
-    public static final DamageType FALLING_BLOCK = new DamageType(DamageTypeEnum.FALLING_BLOCK, "Falling Block", "%Killed% was crushed beneath a falling block")
+    public static final DamageType FALLING_BLOCK = new DamageType("Falling Block", "%Killed% was crushed beneath a falling block")
             .setNoKnockback().setDamageSource(DamageSource.FALLING_BLOCK);
 
-    public static final DamageType FALLING_STALACTITE = new DamageType(DamageTypeEnum.FALLING_STALACTITE, "Falling Stalactite", "%Killed% was impaled by a " +
+    public static final DamageType FALLING_STALACTITE = new DamageType("Falling Stalactite", "%Killed% was impaled by a " +
             "falling stalactite").setNoKnockback().setDamageSource(DamageSource.FALLING_STALACTITE);
 
     /**
      * Direct exposure to fire
      */
-    public static final DamageType FIRE = new DamageType(DamageTypeEnum.FIRE, "Direct Fire", "%Killed% stood inside flames and laughed").setNoKnockback()
+    public static final DamageType FIRE = new DamageType("Direct Fire", "%Killed% stood inside flames and laughed").setNoKnockback()
             .setBurn().setDamageSource(DamageSource.IN_FIRE);
 
-    public static final DamageType FIRE_ASPECT = new DamageType(DamageTypeEnum.FIRE_ASPECT, "Fire Aspect", "%Killed% was charred to a crisp by %Killer%").setFire()
+    public static final DamageType FIRE_ASPECT = new DamageType("Fire Aspect", "%Killed% was charred to a crisp by %Killer%").setFire()
             .setNoKnockback().setIgnoreArmor().setDamageSource(DamageSource.ON_FIRE);
 
-    public static final DamageType FIRE_BOW = new DamageType(DamageTypeEnum.FIRE_BOW, "Fire Bow", "%Killed% charred to a crisp by %Killer%'s bow").setFire()
+    public static final DamageType FIRE_BOW = new DamageType("Fire Bow", "%Killed% charred to a crisp by %Killer%'s bow").setFire()
             .setNoKnockback().setIgnoreArmor().setDamageSource(DamageSource.ON_FIRE);
 
     /**
      * Fire on the entity itself
      */
-    public static final DamageType FIRE_TICK = new DamageType(DamageTypeEnum.FIRE_TICK, "Fire Tick", "%Killed% was burned alive").setNoKnockback().setFire()
+    public static final DamageType FIRE_TICK = new DamageType("Fire Tick", "%Killed% was burned alive").setNoKnockback().setFire()
             .setIgnoreArmor().setDamageSource(DamageSource.ON_FIRE);
 
-    public static final DamageType FISHING_HOOK = new DamageType(DamageTypeEnum.FISHING_HOOK, "Fishing Hook", "%Killed% was killed by %Killer%'s... Fishing rod?");
+    public static final DamageType FISHING_HOOK = new DamageType("Fishing Hook", "%Killed% was killed by %Killer%'s... Fishing rod?");
 
-    public static final DamageType FLY_INTO_WALL = new DamageType(DamageTypeEnum.FLY_INTO_WALL, "Flew into Wall", "%Killed% still hadn't gotten the hang of flying")
+    public static final DamageType FLY_INTO_WALL = new DamageType("Flew into Wall", "%Killed% still hadn't gotten the hang of flying")
             .setNoKnockback().setDamageSource(DamageSource.FLY_INTO_WALL);
 
-    public static final DamageType FREEZE = new DamageType(DamageTypeEnum.FREEZE, "Freeze", "%Killed% froze to death")
+    public static final DamageType FREEZE = new DamageType("Freeze", "%Killed% froze to death")
             .setIgnoreArmor().setDamageSource(DamageSource.FREEZE);
 
-    public static final DamageType LAVA = new DamageType(DamageTypeEnum.LAVA, "Lava", "%Killed% tried to swim in lava").setNoKnockback().setBurn()
+    public static final DamageType LAVA = new DamageType("Lava", "%Killed% tried to swim in lava").setNoKnockback().setBurn()
             .setDamageSource(DamageSource.LAVA);
 
-    public static final DamageType LIGHTNING = new DamageType(DamageTypeEnum.LIGHTNING, "Lightning", "%Killed% was electrified by lightning").setNoKnockback()
+    public static final DamageType LIGHTNING = new DamageType("Lightning", "%Killed% was electrified by lightning").setNoKnockback()
             .setDamageSource(DamageSource.LIGHTNING_BOLT);
 
-    public static final DamageType MAGMA = new DamageType(DamageTypeEnum.MAGMA, "Magma", "%Killed% took a rest on some hot magma").setNoKnockback().setBurn()
+    public static final DamageType MAGMA = new DamageType("Magma", "%Killed% took a rest on some hot magma").setNoKnockback().setBurn()
             .setDamageSource(DamageSource.HOT_FLOOR);
 
-    public static final DamageType MELEE = new DamageType(DamageTypeEnum.MELEE, "Melee", "%Killed% was murdered by %Killer%").setMelee();
+    public static final DamageType MELEE = new DamageType("Melee", "%Killed% was murdered by %Killer%").setMelee();
 
-    public static final DamageType MELTING = new DamageType(DamageTypeEnum.MELTING, "Melting", "%Killed% melted in the hot sun").setNoKnockback();
+    public static final DamageType MELTING = new DamageType("Melting", "%Killed% melted in the hot sun").setNoKnockback();
 
-    public static final DamageType POISON = new DamageType(DamageTypeEnum.POISON, "Poison", "%Killed% drank a flask of poison").setIgnoreArmor()
+    public static final DamageType POISON = new DamageType("Poison", "%Killed% drank a flask of poison").setIgnoreArmor()
             .setNoKnockback().setTrackedDamageType(DamageTimes.TrackedDamageTypes.POISON);
 
-    public static final DamageType PROJECTILE = new DamageType(DamageTypeEnum.PROJECTILE, "Projectile", "%Killed% was shot by %Killer%").setProjectile();
+    public static final DamageType PROJECTILE = new DamageType("Projectile", "%Killed% was shot by %Killer%").setProjectile();
 
-    public static final DamageType QUIT = new DamageType(DamageTypeEnum.QUIT, "Quit", "%Killed% has left the game").setInstantDeath().setNoKnockback();
+    public static final DamageType QUIT = new DamageType("Quit", "%Killed% has left the game").setInstantDeath().setNoKnockback();
 
-    public static final DamageType STARVATION = new DamageType(DamageTypeEnum.STARVATION, "Starvation", "%Killed% died from starvation").setIgnoreArmor()
+    public static final DamageType STARVATION = new DamageType("Starvation", "%Killed% died from starvation").setIgnoreArmor()
             .setNoKnockback().setDamageSource(DamageSource.STARVE);
 
-    public static final DamageType SUFFOCATION = new DamageType(DamageTypeEnum.SUFFOCATION, "Suffocation", "%Killed% choked on block").setNoKnockback()
+    public static final DamageType SUFFOCATION = new DamageType("Suffocation", "%Killed% choked on block").setNoKnockback()
             .setDamageSource(DamageSource.IN_WALL);
 
-    public static final DamageType SUICIDE = new DamageType(DamageTypeEnum.SUICIDE, "Suicide", "%Killed% died").setInstantDeath().setNoKnockback();
+    public static final DamageType SUICIDE = new DamageType("Suicide", "%Killed% died").setInstantDeath().setNoKnockback();
 
-    public static final DamageType SUICIDE_ASSISTED = new DamageType(DamageTypeEnum.SUICIDE_ASSISTED, "Assisted Suicide",
+    public static final DamageType SUICIDE_ASSISTED = new DamageType("Assisted Suicide",
             "%Killed% saw T_0_E_D's face and died", "%Killed% caught a whiff " +
             "of their own body odour", "%Killed% thought Mineplex was better than Red Warfare", "%Killed% kicked a stray " +
             "cat because they thought it was funny", "%Killed% had negative social credit score", "%Killed% played " +
             "russian roulette, and lost", "%Killed% lost against themselves in a 1v1").setInstantDeath().setNoKnockback();
 
-    public static final DamageType SWEEP_ATTACK = new DamageType(DamageTypeEnum.SWEEP_ATTACK, "Sweep Attack", "%Killed% was killed by %Killer%'s sweeping attack")
+    public static final DamageType SWEEP_ATTACK = new DamageType("Sweep Attack", "%Killed% was killed by %Killer%'s sweeping attack")
             .setMelee();
 
-    public static final DamageType THORNS = new DamageType(DamageTypeEnum.THORNS, "Thorns", "%Killed% found out how the thorns enchantment works")
+    public static final DamageType THORNS = new DamageType("Thorns", "%Killed% found out how the thorns enchantment works")
             .setNoKnockback();//TODO: construct with entity
 
-    public static final DamageType UNKNOWN = new DamageType(DamageTypeEnum.UNKNOWN, "Unknown", "%Killed% died from unknown causes").setNoKnockback();
+    public static final DamageType UNKNOWN = new DamageType("Unknown", "%Killed% died from unknown causes").setNoKnockback();
 
-    public static final DamageType VOID = new DamageType(DamageTypeEnum.VOID, "Void", "%Killed% fell into the void").setIgnoreArmor().setNoKnockback()
+    public static final DamageType VOID = new DamageType("Void", "%Killed% fell into the void").setIgnoreArmor().setNoKnockback()
             .setIgnoreRate().setDamageSource(DamageSource.OUT_OF_WORLD);
 
-    public static final DamageType VOID_PUSHED = new DamageType(DamageTypeEnum.VOID_PUSHED, "Void Pushed", "%Killed% was knocked into the void by %Killer%")
+    public static final DamageType VOID_PUSHED = new DamageType("Void Pushed", "%Killed% was knocked into the void by %Killer%")
             .setIgnoreArmor().setNoKnockback().setIgnoreRate().setDamageSource(DamageSource.OUT_OF_WORLD);
 
-    public static final DamageType VOID_SHOT = new DamageType(DamageTypeEnum.VOID_SHOT, "Void Shot", "%Killed% was shot into the void by %Killer%")
+    public static final DamageType VOID_SHOT = new DamageType("Void Shot", "%Killed% was shot into the void by %Killer%")
             .setIgnoreArmor().setNoKnockback().setIgnoreRate().setDamageSource(DamageSource.OUT_OF_WORLD);
 
-    public static final DamageType WITHER_POISON = new DamageType(DamageTypeEnum.WITHER_POISON, "Wither Poison", "%Killed% drank a vial of wither poison")
+    public static final DamageType WITHER_POISON = new DamageType("Wither Poison", "%Killed% drank a vial of wither poison")
             .setNoKnockback().setDamageSource(DamageSource.WITHER);
 
     /******************************************************************************************
      *                                  KIT DAMAGETYPES
      ******************************************************************************************/
 
-    public static final DamageType PYRO_MOLOTOV = new DamageType(DamageTypeEnum.PYRO_MOLOTOV, "Pyro Incendiary", "%Killed% was burned to death by %Killer%'s incendiary")
+    public static final DamageType PYRO_MOLOTOV = new DamageType("Pyro Incendiary", "%Killed% was burned to death by %Killer%'s incendiary")
             .setFire().setIgnoreArmor().setNoKnockback().setDamageSource(DamageSource.ON_FIRE);
 
-	public static final DamageType SNIPER_GRENADE_FAIL = new DamageType(DamageTypeEnum.SNIPER_GRENADE_FAIL, "Grenade Fail", "%Killed% forgot they pulled the pin.")
+	public static final DamageType SNIPER_GRENADE_FAIL = new DamageType("Grenade Fail", "%Killed% forgot they pulled the pin.")
 			.setInstantDeath().setNoKnockback().setDamageSource(DamageSource.explosion((net.minecraft.world.entity.LivingEntity) null));
 
-    public static final DamageType DEMO_TNTMINE = new DamageType(DamageTypeEnum.DEMO_TNTMINE, "Demolitions TNT Mine",
+    public static final DamageType DEMO_TNTMINE = new DamageType("Demolitions TNT Mine",
             "%Killed% stepped on %Killer%'s TNT Mine and blew up")
             .setDamageSource(DamageSource.explosion((net.minecraft.world.entity.LivingEntity) null))
             .setIgnoreRate().setExplosion();
 
-	public static final DamageType TOXIC_LEAP =
-			new DamageType(DamageTypeEnum.TOXIC_LEAP, "Venom Leap", "%Killed% was killed by %Killer%'s Toxic Leap");
+	public static final DamageType TOXIC_LEAP = new DamageType("Venom Leap", "%Killed% was killed by %Killer%'s Toxic Leap");
 
+
+	private static int idCounter = 0;
 
     //a constant identifier for same types, to compare for same types across separate instances of this class
     // without evaluating a String
-    private final DamageTypeEnum id;
+	private final int id;
 	private final String[] _deathMessages;
 	private final List<Enchantment> applicableEnchantments;
     private boolean _burn;
@@ -189,8 +190,8 @@ public class DamageType {
     private DamageSource nmsDamageSource;
 	private DamageTimes.TrackedDamageTypes trackedType;
 
-    private DamageType(DamageTypeEnum id, String name, String... deathMessages) {
-        this.id = id;
+    private DamageType(String name, String... deathMessages) {
+		this.id = nextId();
         _name = name;
         _deathMessages = deathMessages;
 		applicableEnchantments = new ArrayList<>(2);
@@ -235,6 +236,10 @@ public class DamageType {
 		applicableEnchantments = copyOf.applicableEnchantments;
 		trackedType = copyOf.trackedType;
     }
+
+	private static int nextId() {
+		return idCounter++;
+	}
 
     public static DamageType getAttack(EntityDamageEvent event) {
         EntityDamageEvent.DamageCause cause = event.getCause();
@@ -579,53 +584,5 @@ public class DamageType {
         }
 
         entity.remove();
-    }
-
-    private enum DamageTypeEnum {
-        BERRY_BUSH,
-        CACTUS,
-        CRAMMING,
-        CUSTOM,
-        DAMAGE_POTION,
-        DRAGON_BREATH,
-        DROWNED,
-        DRYOUT,
-        EXPLOSION,
-        FALL,
-        FALL_PUSHED,
-        FALL_SHOT,
-        FALLING_BLOCK,
-        FALLING_STALACTITE,
-        FIRE,
-        FIRE_ASPECT,
-        FIRE_BOW,
-        FIRE_TICK,
-        FISHING_HOOK,
-        FLY_INTO_WALL,
-        FREEZE,
-        LAVA,
-        LIGHTNING,
-        MAGMA,
-        MELEE,
-        MELTING,
-        POISON,
-        PROJECTILE,
-        QUIT,
-        STARVATION,
-        SUFFOCATION,
-        SUICIDE,
-        SUICIDE_ASSISTED,
-        SWEEP_ATTACK,
-        THORNS,
-        UNKNOWN,
-        VOID,
-        VOID_PUSHED,
-        VOID_SHOT,
-        WITHER_POISON,
-
-        //Kit Stuff
-        PYRO_MOLOTOV,
-        DEMO_TNTMINE,
-		SNIPER_GRENADE_FAIL, TOXIC_LEAP
     }
 }
