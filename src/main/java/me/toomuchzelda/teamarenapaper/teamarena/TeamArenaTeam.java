@@ -38,11 +38,11 @@ public class TeamArenaTeam
 
 	private final DyeColor dyeColour;
 	private final TextColor RGBColour;
-	
+
 	//BossBars are sent in prepLive() of each game class extending TeamArena
 	private final BossBar.Color barColor;
 	public final BossBar bossBar;
-	
+
 	public final Material iconMaterial;
 	private final ItemStack iconItem;
 
@@ -70,7 +70,7 @@ public class TeamArenaTeam
 		this.colour = colour;
 		this.secondColour = secondColour;
 		this.dyeColour = dyeColor;
-		
+
 		this.RGBColour = TextColor.color(colour.asRGB());
 
 		spawns = null;
@@ -82,14 +82,14 @@ public class TeamArenaTeam
 
 		this.componentName = colourWord(this.name);
 		this.componentSimpleName = colourWord(this.simpleName);
-		
+
 		this.barColor = barColor;
 		if(barColor != null) {
 			bossBar = BossBar.bossBar(componentName, 1, barColor, BossBar.Overlay.NOTCHED_10);
 		}
 		else
 			bossBar = null;
-		
+
 		this.iconMaterial = icon;
 		this.iconItem = new ItemStack(iconMaterial);
 		ItemMeta meta = iconItem.getItemMeta();
@@ -106,7 +106,7 @@ public class TeamArenaTeam
 		//paperTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
 		paperTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.ALWAYS);
 		paperTeam.color(NamedTextColor.nearestTo(this.RGBColour));
-		
+
 		PlayerScoreboard.addGlobalTeam(paperTeam);
 	}
 
@@ -141,11 +141,11 @@ public class TeamArenaTeam
 	public DyeColor getDyeColour() {
 		return dyeColour;
 	}
-	
+
 	public int getTotalScore() {
 		return score + score2;
 	}
-	
+
 	public BossBar.Color getBarColor() {
 		return barColor;
 	}
@@ -153,7 +153,7 @@ public class TeamArenaTeam
 	public TextColor getRGBTextColor() {
 		return RGBColour;
 	}
-	
+
 	public ItemStack getIconItem() {
 		return this.iconItem.clone();
 	}
@@ -193,13 +193,13 @@ public class TeamArenaTeam
 
 				team.removeMembers(player);
 				pinfo.team = this;
-				
+
 				//change tab list name to colour for RGB colours
 				// and armor stand nametag
 				updateNametag(player);
 
 				//paperTeam.addEntry(player.getName());
-				
+
 				playerMembers.add(player);
 				lastIn.push(player);
 			}
@@ -252,7 +252,7 @@ public class TeamArenaTeam
 			playerMembers.remove(player);
 			lastIn.remove(player);
 		}
-		
+
 		//clear any non player entities in the paper team
 		/*for(String entry : paperTeam.getEntries()) {
 			paperTeam.removeEntry(entry);
@@ -269,11 +269,11 @@ public class TeamArenaTeam
 	public Set<Player> getPlayerMembers() {
 		return playerMembers;
 	}
-	
+
 	public boolean isAlive() {
 		return playerMembers.size() > 0;
 	}
-	
+
 	/**
 	 * if a non-player entity is on this team
 	 * @param entity
@@ -362,7 +362,7 @@ public class TeamArenaTeam
 		}
 		return Color.fromRGB(ints[0], ints[1], ints[2]);
 	}
-	
+
 	public static void playFireworks(TeamArenaTeam team) {
 		for(Entity e : team.playerMembers) {
 			Color colour1;
@@ -389,7 +389,7 @@ public class TeamArenaTeam
 			boolean flicker = MathUtils.random.nextBoolean();
 			FireworkEffect effect = FireworkEffect.builder().trail(true).with(type).flicker(flicker).withColor(colour1)
 					.withFade(colour2).build();
-			
+
 			meta.addEffect(effect);
 			meta.setPower(1);
 			firework.setFireworkMeta(meta);

@@ -16,6 +16,8 @@ import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
@@ -85,16 +87,6 @@ public class EventListeners implements Listener
 	public void endTick(ServerTickEndEvent event) {
 		PacketListeners.cancelDamageSounds = false;
 
-		//Reset mobs' fire status if they've been extinguished
-		Iterator<Map.Entry<LivingEntity, DamageTimes>> iter = DamageTimes.entityDamageTimes.entrySet().iterator();
-		while(iter.hasNext()) {
-			Map.Entry<LivingEntity, DamageTimes> entry = iter.next();
-			if(entry.getKey().getFireTicks() <= 0) {
-				entry.getValue().fireTimes.fireGiver = null;
-				entry.getValue().fireTimes.fireType = null;
-			}
-		}
-
 		//run this before the game tick so there is a whole tick after prepDead and construction of the next
 		// TeamArena instance
 		if(Main.getGame().getGameState() == DEAD) {
@@ -111,7 +103,6 @@ public class EventListeners implements Listener
 					entry.getValue().clearMessageCooldowns();
 				}
 			}
-			DamageTimes.cleanup();
 			Main.playerIdLookup.entrySet().removeIf(idLookupEntry -> !idLookupEntry.getValue().isOnline());
 
 			// initialize next game
@@ -369,8 +360,10 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void blockBreak(BlockBreakEvent event) {
-		if(event.getPlayer().getGameMode() != GameMode.CREATIVE && !BREAKABLE_BLOCKS.containsKey(event.getBlock().getType()))
+		if((Main.getGame() != null && Main.getGame().getGameState() != LIVE &&
+				!BREAKABLE_BLOCKS.containsKey(event.getBlock().getType())) || event.getPlayer().getGameMode() != GameMode.CREATIVE) {
 			event.setCancelled(true);
+		}
 	}
 
 	/**
@@ -416,7 +409,7 @@ public class EventListeners implements Listener
 	//create and cache damage events
 	@EventHandler
 	public void entityDamage(EntityDamageEvent event) {
-		DamageEvent.createDamageEvent(event);
+		DamageEvent.handleBukkitEvent(event);
 	}
 
 	@EventHandler
