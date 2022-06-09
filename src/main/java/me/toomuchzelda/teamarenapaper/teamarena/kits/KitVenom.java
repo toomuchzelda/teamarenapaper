@@ -2,8 +2,10 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
@@ -33,6 +35,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
 
+import javax.annotation.Nullable;
 import java.util.*;
 
 //Kit Description:
@@ -107,10 +110,13 @@ public class KitVenom extends Kit
 		}
 
 		//When Poison is applied
-		public void applyPoison(LivingEntity victim){
+		public void applyPoison(LivingEntity victim, @Nullable Entity giver){
 			int poisonDuration = 0;
+			boolean hadPoison = false;
+
 			if(victim.hasPotionEffect(PotionEffectType.POISON)){
 				poisonDuration = victim.getPotionEffect(PotionEffectType.POISON).getDuration();
+				hadPoison = true;
 			}
 			//At level 1, Poison deals damage every 25 ticks.
 			if(poisonDuration <= 4 * 25){
@@ -125,6 +131,15 @@ public class KitVenom extends Kit
 			//Extra check is necessary since some mobs are immune to poison.
 			if(victim.hasPotionEffect(PotionEffectType.POISON)){
 				POISONED_ENTITIES.put(victim, (Integer) victim.getPotionEffect(PotionEffectType.POISON).getDuration());
+
+				DamageTimes.DamageTime poisonTime = DamageTimes.getDamageTime(victim, DamageTimes.TrackedDamageTypes.POISON);
+				int timeGiven;
+				if(hadPoison)
+					timeGiven = poisonTime.getTimeGiven();
+				else
+					timeGiven = TeamArena.getGameTick();
+
+				poisonTime.update(giver, timeGiven);
 			}
 		}
 
@@ -185,7 +200,7 @@ public class KitVenom extends Kit
 											player.setCooldown(Material.CHICKEN, newCooldown);
 
 											//Applying Poison, tracking the poisoned entity
-											applyPoison(victim);
+											applyPoison(victim, player);
 											leapVictims.add(victim);
 										}
 									}
@@ -201,13 +216,13 @@ public class KitVenom extends Kit
 		//Poison Sword Ability
 		@Override
 		public void onAttemptedAttack(DamageEvent event){
-			Player player = (Player) event.getAttacker();
+			Player player = (Player) event.getFinalAttacker();
 			if(player.getInventory().getItemInMainHand().getType() == Material.IRON_SWORD){
 				if(event.getDamageType().isMelee() && event.getVictim() instanceof LivingEntity){
 					LivingEntity victim = (LivingEntity) event.getVictim();
 					//prevent friendly poison
 					if(!(victim instanceof Player p) || Main.getGame().canAttack(player, p)) {
-						applyPoison(victim);
+						applyPoison(victim, player);
 					}
 				}
 			}

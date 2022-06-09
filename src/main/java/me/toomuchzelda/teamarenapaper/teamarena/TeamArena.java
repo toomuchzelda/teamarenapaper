@@ -20,12 +20,13 @@ import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
-import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
@@ -37,7 +38,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 //main game class
 public abstract class TeamArena
@@ -359,8 +359,8 @@ public abstract class TeamArena
 			}
 		}
 
-		//queue fire damage events
-		fireTick();
+		//handle and queue fire + poison damage events
+		fireAndPoisonTick();
 
 		//process damage events
 		damageTick();
@@ -617,30 +617,55 @@ public abstract class TeamArena
 	/**
 	 * Handle all entities on fire
 	 */
-	public void fireTick() {
+	public void fireAndPoisonTick() {
 		var iter = DamageTimes.getIterator();
 		Map.Entry<LivingEntity, DamageTimes.DamageTime[]> entry;
 
-		DamageTimes.DamageTime fireTime;
+		DamageTimes.DamageTime time;
+		LivingEntity victim;
+		PotionEffect poison;
 		final int currentTick = getGameTick();
+		int poisonRate;
 		while(iter.hasNext()) {
 			entry = iter.next();
-			fireTime = entry.getValue()[DamageTimes.TrackedDamageTypes.FIRE.ordinal()];
+			victim = entry.getKey();
 
-			if(entry.getKey().getFireTicks() > 0) {
-				if(fireTime.getTimeGiven() == -1) {
-					fireTime.setTimeGiven(currentTick);
+			//FIRE
+			time = entry.getValue()[DamageTimes.TrackedDamageTypes.FIRE.ordinal()];
+			if(victim.getFireTicks() > 0) {
+				if(time.getTimeGiven() == -1) {
+					time.setTimeGiven(currentTick);
 				}
 
-				if ((currentTick - fireTime.getTimeGiven()) % 20 == 0) {
-					DamageEvent fireDEvent = DamageEvent.newDamageEvent(entry.getKey(), 1, DamageType.FIRE_TICK, null, false);
+				if ((currentTick - time.getTimeGiven()) % 20 == 0) {
+					DamageEvent fireDEvent = DamageEvent.newDamageEvent(victim, 1, DamageType.FIRE_TICK, null, false);
 					queueDamage(fireDEvent);
-					Bukkit.broadcastMessage("custom fired");
 				}
 			}
 			//clear fire giver so they don't get credit if the person gets set on fire later
 			else {
-				fireTime.extinguish();
+				time.extinguish();
+			}
+
+			//POISON
+			time = entry.getValue()[DamageTimes.TrackedDamageTypes.POISON.ordinal()];
+			poison = victim.getPotionEffect(PotionEffectType.POISON);
+			if(poison != null) {
+				if(time.getTimeGiven() == -1) {
+					time.setTimeGiven(currentTick);
+				}
+
+				//TODO: higher poison effect amplifier means faster damage?
+				//TODO: how often does poison deal damage?
+
+				poisonRate = poison.getAmplifier() > 0 ? 12 : 25;
+				if((currentTick - time.getTimeGiven()) % poisonRate == 0 && victim.getHealth() > 2d) { //must leave them at half a heart
+					DamageEvent pEvent = DamageEvent.newDamageEvent(victim, 1d, DamageType.POISON, time.getGiver(), false);
+					queueDamage(pEvent);
+				}
+			}
+			else {
+				time.extinguish();
 			}
 		}
 	}

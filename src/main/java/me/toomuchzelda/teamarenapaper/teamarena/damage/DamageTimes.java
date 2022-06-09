@@ -136,6 +136,11 @@ public class DamageTimes {
 			this.timeGiven = -1;
 		}
 
+		public void update(Entity giver, int timeGiven) {
+			this.giver = giver;
+			this.timeGiven = timeGiven;
+		}
+
 		public void update(Entity giver, int lastTimeDamaged, double damage, DamageType damageType) {
 			update(giver, lastTimeDamaged, lastTimeDamaged, damage, damageType);
 		}

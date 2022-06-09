@@ -110,7 +110,7 @@ public class DamageType {
     public static final DamageType MELTING = new DamageType(DamageTypeEnum.MELTING, "Melting", "%Killed% melted in the hot sun").setNoKnockback();
 
     public static final DamageType POISON = new DamageType(DamageTypeEnum.POISON, "Poison", "%Killed% drank a flask of poison").setIgnoreArmor()
-            .setNoKnockback();
+            .setNoKnockback().setTrackedDamageType(DamageTimes.TrackedDamageTypes.POISON);
 
     public static final DamageType PROJECTILE = new DamageType(DamageTypeEnum.PROJECTILE, "Projectile", "%Killed% was shot by %Killer%").setProjectile();
 
@@ -422,7 +422,7 @@ public class DamageType {
     }
 
 	public boolean hasApplicableEnchants() {
-		return this.applicableEnchantments.size() == 0;
+		return this.applicableEnchantments.size() > 0;
 	}
 
     //if two damagetypes are the same, used for melee/projectile/sweeping where a new DamageType instance

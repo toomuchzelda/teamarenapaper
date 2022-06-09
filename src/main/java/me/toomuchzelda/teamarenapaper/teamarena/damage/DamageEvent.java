@@ -73,13 +73,17 @@ public class DamageEvent {
 	public static final double xzMult = 1;
 
 	public static @Nullable DamageEvent handleBukkitEvent(EntityDamageEvent event) {
-
 		event.setCancelled(true);
+
 		if(Main.getGame().getGameState() != LIVE)
 			return null;
 
 		//Handle entity fire ourselves
 		if(event.getCause() == EntityDamageEvent.DamageCause.FIRE_TICK)
+			return null;
+
+		//handle poison ourselves
+		if(event.getCause() == EntityDamageEvent.DamageCause.POISON)
 			return null;
 
 		//marker armorstands must never be damaged/killed
@@ -541,6 +545,7 @@ public class DamageEvent {
 						//Just update:
 						//- person who gave the fire
 						//- if they weren't already on fire, the time that the fire started
+						//- damageType of the fire
 						time.update(getFinalAttacker(), timeGiven, time.getLastTimeDamaged(), time.getDamage(), type);
 					}
 
