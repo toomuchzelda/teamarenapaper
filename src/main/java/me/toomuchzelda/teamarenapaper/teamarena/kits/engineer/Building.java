@@ -12,7 +12,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 
 public class Building {
-    Player player;
+    Player owner;
     Location loc;
     RealHologram holo;
     BlockData prevBlockData;
@@ -21,7 +21,7 @@ public class Building {
 
     public Building(Player player, Location loc){
         this.loc = loc.clone();
-        this.player = player;
+        this.owner = player;
         this.teamColor = Main.getPlayerInfo(player).team.getRGBTextColor();
     }
 
@@ -33,5 +33,7 @@ public class Building {
         this.loc = newLoc;
     }
 
-    public void destroy(){}
+    public void destroy(){
+		holo.remove();
+	}
 }

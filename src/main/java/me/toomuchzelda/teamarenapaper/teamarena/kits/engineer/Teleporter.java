@@ -23,6 +23,7 @@ public class Teleporter extends Building{
 		this.loc.getBlock().setType(Material.HONEYCOMB_BLOCK);
 		this.holo = new RealHologram(this.loc.clone().toCenterLocation().add(0,1.5,0), this.holoText);
     }
+
 	public void setText(Component newText){
 		this.holoText = newText.color(teamColor);
 		this.holo.setText(this.holoText);

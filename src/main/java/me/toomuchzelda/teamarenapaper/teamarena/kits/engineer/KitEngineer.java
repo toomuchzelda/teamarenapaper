@@ -16,6 +16,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Skeleton;
 import org.bukkit.event.Event;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -44,23 +45,22 @@ import org.jetbrains.annotations.NotNull;
     Kit Goal: Utility/Ranged
     Defensive + Offensive play should be equally viable
 
-    WRENCH
-
     Main Ability: Sentry
         Active Time / CD = 20 seconds
-        Similar to TF2 Sentry, visible range is restricted to a cone of view
-        Angle at which sentry is placed is determined during placement
-        Sentry can be picked up and repositioned, however there is a set-up time.
+        Similar to TF2 Sentry, Sentry will rotate 90 degrees total.
         Turret will slowly rotate back and forth within its range.
+        Initial angle at which sentry is placed is determined by where the builder is looking.
         Turret will target the closest enemy within its sight
 
-        Upon placement, the turret will self destruct after 20 seconds.
+        Upon placement, the turret will self destruct after its Active Time/ CD is up.
 
-        Turret Stats:
+        Turret Further Details:
             -Visible Angle: 90 Degrees (Able to turn 360 degrees to track a locked-on enemy)
             -Health: 20 Hearts + Full Leather Armor
-            -Fire-Rate:
-            -DMG:
+            -Fire-Rate: 1 shot every .75 sec (15 ticks)
+            -DMG: 6 DMG per shot (full charge no enchant bow)
+            -DPS: 8 DPS (4 Hearts per second)
+            -Completely impervious to Invis? (Give ghost some usefulness back)
 
 
     Sub Ability: Teleporter
@@ -75,6 +75,7 @@ public class KitEngineer extends Kit{
     public static final ItemStack SENTRY;
     public static final ItemStack WRANGLER;
     public static final ItemStack ACTIVE_WRANGLER;
+	//ABILITY_ITEMS tracks which items have abilities for scenarios where ability items are in main and offhand
 	public static final Set<Material> ABILITY_ITEMS = new HashSet<>();
 	static final Team[] COLOUR_TEAMS;
 	static final Team RED_GLOWING_TEAM;
@@ -117,6 +118,7 @@ public class KitEngineer extends Kit{
 			PlayerScoreboard.addGlobalTeam(COLOUR_TEAMS[i]);
 		}
 
+		//Red = Invalid, Green = Valid
 		RED_GLOWING_TEAM = COLOUR_TEAMS[0];
 		GREEN_GLOWING_TEAM = COLOUR_TEAMS[1];
     }
@@ -155,7 +157,7 @@ public class KitEngineer extends Kit{
         public static final HashMap<Player, List<Building>> ACTIVE_BUILDINGS = new HashMap<>();
         public static final HashMap<Player, List<Teleporter>> ACTIVE_TELEPORTERS = new HashMap<>();
 		public static final HashMap<Player, List<Sentry>> ACTIVE_SENTRY = new HashMap<>();
-		public static final HashMap<Player, LivingEntity> PREPARING_SENTRY = new HashMap<>();
+		public static final HashMap<Player, LivingEntity> ACTIVE_PROJECTION = new HashMap<>();
 		static final HashMap<Integer, Player> PROJECTION_ID = new HashMap<>(20, 0.4f);
 
         public static final int TP_CD = 30;
@@ -174,8 +176,9 @@ public class KitEngineer extends Kit{
 				buildings.forEach((Building::destroy));
 			});
 			ACTIVE_BUILDINGS.clear();
+			ACTIVE_SENTRY.clear();
 			ACTIVE_TELEPORTERS.clear();
-			PREPARING_SENTRY.clear();
+			ACTIVE_PROJECTION.clear();
 			PROJECTION_ID.clear();
 		}
 
@@ -192,6 +195,10 @@ public class KitEngineer extends Kit{
                 List<Teleporter> teleporters = new LinkedList<>();
                 ACTIVE_TELEPORTERS.put(player, teleporters);
             }
+			if(!ACTIVE_SENTRY.containsKey(player)){
+				List<Sentry> sentries = new LinkedList<>();
+				ACTIVE_SENTRY.put(player, sentries);
+			}
             if(!ACTIVE_BUILDINGS.containsKey(player)){
                 List<Building> buildings = new LinkedList<>();
                 ACTIVE_BUILDINGS.put(player, buildings);
@@ -199,7 +206,7 @@ public class KitEngineer extends Kit{
         }
 
 		public void removeAbility(Player player) {
-			if(PREPARING_SENTRY.containsKey(player)){
+			if(ACTIVE_PROJECTION.containsKey(player)){
 				destroyProjection(player);
 			}
 		}
@@ -215,7 +222,8 @@ public class KitEngineer extends Kit{
 
 			if(event.useItemInHand() != Event.Result.DENY && (mat == Material.CHEST_MINECART ||
 																mat == Material.BOOK ||
-																mat == Material.IRON_SHOVEL)) {
+																mat == Material.IRON_SHOVEL) &&
+										event.getAction() == Action.RIGHT_CLICK_BLOCK) {
 				event.setUseItemInHand(Event.Result.DENY);
 			}
 
@@ -264,23 +272,73 @@ public class KitEngineer extends Kit{
 
 			//Initializing Sentry Build
 			if(mat == Material.CHEST_MINECART &&
-					PREPARING_SENTRY.containsKey(player) &&
-							isValidProjection(PREPARING_SENTRY.get(player).getLocation(), player) &&
+					ACTIVE_PROJECTION.containsKey(player) &&
+							isValidProjection(ACTIVE_PROJECTION.get(player).getLocation(), player) &&
 								!player.hasCooldown(Material.CHEST_MINECART)) {
-				LivingEntity projection = PREPARING_SENTRY.get(player);
-				Sentry sentry = new Sentry(player, projection);
+				createSentry(player, item);
+			}
+        }
 
+		//Converts the Projection into a Sentry
+		public void createSentry(Player player, ItemStack currItem){
+			PlayerInventory inv = player.getInventory();
+			boolean isMainHand = inv.getItemInMainHand().equals(currItem);
+			LivingEntity projection = ACTIVE_PROJECTION.get(player);
+			List<Building> buildings = ACTIVE_BUILDINGS.get(player);
+			List<Sentry> sentries = ACTIVE_SENTRY.get(player);
+			Sentry sentry = new Sentry(player, projection);
+			sentries.add(sentry);
+			buildings.add(sentry);
 
-				PREPARING_SENTRY.remove(player);
-				PROJECTION_ID.remove(projection.getEntityId());
-				player.setCooldown(Material.CHEST_MINECART, SENTRY_CD);
+			ACTIVE_PROJECTION.remove(player);
+			PROJECTION_ID.remove(projection.getEntityId());
+			player.setCooldown(Material.CHEST_MINECART, SENTRY_CD);
 
-				inv.setItemInMainHand(item.subtract());
+			if(isMainHand){
+				inv.setItemInMainHand(currItem.subtract());
 				if(!inv.contains(WRANGLER) || inv.contains(ACTIVE_WRANGLER)){
 					inv.setItemInMainHand(WRANGLER);
 				}
 			}
-        }
+			else{
+				inv.setItemInOffHand(currItem.subtract());
+				if(!inv.contains(WRANGLER) || inv.contains(ACTIVE_WRANGLER)){
+					inv.setItemInOffHand(WRANGLER);
+				}
+			}
+		}
+
+		public void destroySentry(Player player, Sentry sentry){
+			PlayerInventory inv = player.getInventory();
+			List<Building> buildings = ACTIVE_BUILDINGS.get(player);
+			List<Sentry> sentries = ACTIVE_SENTRY.get(player);
+			sentries.remove(sentry);
+			buildings.remove(sentry);
+			sentry.destroy();
+
+			if(sentries.isEmpty()){
+				//No more sentries are active, so wrangler can now be replaced
+				if(inv.getItemInOffHand().equals(WRANGLER) || inv.getItemInOffHand().equals(ACTIVE_WRANGLER)){
+					//Must make seperate case for when sentry is in offhand :(
+					inv.setItemInOffHand(SENTRY);
+				}
+				else {
+					int wranglerSlot = inv.first(WRANGLER);
+					int activeWranglerSlot = inv.first(ACTIVE_WRANGLER);
+					if (wranglerSlot != -1) {
+						//wrangler found
+						inv.setItem(wranglerSlot, SENTRY);
+					} else {
+						//ActiveWrangler Found
+						inv.setItem(activeWranglerSlot, SENTRY);
+					}
+				}
+			}
+			else{
+				//Active sentries still exist, so do not replace wrangler.
+				inv.addItem(SENTRY);
+			}
+		}
 
         //Finding Duplicates for a given engineer
 		public Teleporter findDuplicateTele(List<Teleporter> teleporters, Location loc){
@@ -326,9 +384,6 @@ public class KitEngineer extends Kit{
                     }
                     );
                 }
-				if(ACTIVE_SENTRY.containsKey(player)){
-
-				}
             }
 
             //Display of TP Hologram Text
@@ -349,8 +404,9 @@ public class KitEngineer extends Kit{
                 }
 
 			//Initializing Sentry Projection
-			if(player.getInventory().getItemInMainHand().getType() == Material.CHEST_MINECART &&
-									!PREPARING_SENTRY.containsKey(player) &&
+			if((player.getInventory().getItemInMainHand().getType() == Material.CHEST_MINECART ||
+					player.getInventory().getItemInOffHand().getType() == Material.CHEST_MINECART) &&
+									!ACTIVE_PROJECTION.containsKey(player) &&
 										!player.hasCooldown(Material.CHEST_MINECART)){
 				createProjection(player);
 			}
@@ -358,16 +414,17 @@ public class KitEngineer extends Kit{
 			//Cancel Sentry Projection bc...
 			//1) No Sentry is being held in main hand
 			//2) Sentry is on CD
-			if(player.getInventory().getItemInMainHand().getType() != Material.CHEST_MINECART &&
-							PREPARING_SENTRY.containsKey(player) &&
+			if((player.getInventory().getItemInMainHand().getType() != Material.CHEST_MINECART &&
+					player.getInventory().getItemInOffHand().getType() != Material.CHEST_MINECART) &&
+					ACTIVE_PROJECTION.containsKey(player) &&
 								!player.hasCooldown(Material.CHEST_MINECART)){
 				destroyProjection(player);
 			}
 
 			//Controlling projection of Sentry
-			if(PREPARING_SENTRY.containsKey(player) &&
+			if(ACTIVE_PROJECTION.containsKey(player) &&
 					!player.hasCooldown(Material.CHEST_MINECART)){
-				LivingEntity projection = PREPARING_SENTRY.get(player);
+				LivingEntity projection = ACTIVE_PROJECTION.get(player);
 				//Y Coordinate is lowered so the projection doesn't obstruct the Engineer's view
 				Location playerLoc = player.getEyeLocation().clone().add(0,-.8,0);
 				Location projPos = projectSentry(playerLoc, player);
@@ -380,6 +437,17 @@ public class KitEngineer extends Kit{
 				else{
 					Main.getPlayerInfo(player).getScoreboard().addMembers(RED_GLOWING_TEAM, projection);
 				}
+			}
+
+			//Sentry behavior is handled in Sentry class
+			if(ACTIVE_SENTRY.containsKey(player)){
+				List<Sentry> activeSentries = ACTIVE_SENTRY.get(player);
+				activeSentries.forEach(Sentry::tick);
+				activeSentries.forEach(sentry -> {
+					if(sentry.isExpired() || sentry.isDestroyed()){
+						destroySentry(player, sentry);
+					}
+				});
 			}
         }
 
@@ -394,7 +462,7 @@ public class KitEngineer extends Kit{
 		public void createProjection(Player player){
 			Location loc = projectSentry(player.getLocation().clone(), player);
 			TextColor teamColorText = Main.getPlayerInfo(player).team.getRGBTextColor();
-			LivingEntity sentry = player.getWorld().spawn(loc, Skeleton.class, entity ->{
+			LivingEntity projection = player.getWorld().spawn(loc, Skeleton.class, entity ->{
 				entity.setAI(false);
 				entity.setCollidable(false);
 				entity.setInvisible(true);
@@ -402,19 +470,20 @@ public class KitEngineer extends Kit{
 				entity.setInvulnerable(true);
 				entity.setShouldBurnInDay(false);
 				entity.getEquipment().clear();
+				entity.setCanPickupItems(false);
+				entity.setSilent(true);
 
-				entity.customName(Component.text(player.getName() + "'s Sentry").color(teamColorText));
 				PROJECTION_ID.put(entity.getEntityId(), player);
-				PREPARING_SENTRY.put(player, entity);
+				ACTIVE_PROJECTION.put(player, entity);
 			});
 		}
 
 		public void destroyProjection(Player player){
-			LivingEntity sentry = PREPARING_SENTRY.get(player);
-			sentry.setInvulnerable(false);
-			sentry.remove();
-			PREPARING_SENTRY.remove(player);
-			PROJECTION_ID.remove(sentry.getEntityId());
+			LivingEntity projection = ACTIVE_PROJECTION.get(player);
+			projection.setInvulnerable(false);
+			projection.remove();
+			ACTIVE_PROJECTION.remove(player);
+			PROJECTION_ID.remove(projection.getEntityId());
 		}
 
 		public static Player getProjection(int id) {
@@ -427,7 +496,6 @@ public class KitEngineer extends Kit{
 			Location initLoc = loc.clone();
 			Vector direction = loc.getDirection().clone();
 			Location distance;
-			//No obstruction found
 				Vector increment = direction.clone().multiply(0.05);
 				Location projLoc = initLoc.clone();
 				Block currBlock = loc.getBlock();
