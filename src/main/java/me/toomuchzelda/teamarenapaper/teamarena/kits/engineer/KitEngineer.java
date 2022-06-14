@@ -9,6 +9,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.KitDemolitions;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Color;
 import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
@@ -53,14 +54,15 @@ import org.jetbrains.annotations.NotNull;
         Turret will target the closest enemy within its sight
 
         Upon placement, the turret will self destruct after its Active Time/ CD is up.
+        By itself, Turret is quite weak, but with wrangler it has substantial damage.
 
         Turret Further Details:
             -Visible Angle: 90 Degrees (Able to turn 360 degrees to track a locked-on enemy)
             -Health: 20 Hearts + Full Leather Armor
-            -Fire-Rate: 1 shot every .75 sec (15 ticks)
-            -DMG: 6 DMG per shot (full charge no enchant bow)
-            -DPS: 8 DPS (4 Hearts per second)
-            -Completely impervious to Invis? (Give ghost some usefulness back)
+            -Fire-Rate: 1 shot every second (20 ticks)
+            -DMG: 2 DMG per shot
+            -DPS: 2 DPS
+            -Completely impervious to Invis (Give ghost some usefulness back)
 
 
     Sub Ability: Teleporter
@@ -74,6 +76,7 @@ public class KitEngineer extends Kit{
 
     public static final ItemStack SENTRY;
     public static final ItemStack WRANGLER;
+	//I had an idea for manual burst fire, but scrapped it. ACTIVE_WRANGLER is not used currently.
     public static final ItemStack ACTIVE_WRANGLER;
 	//ABILITY_ITEMS tracks which items have abilities for scenarios where ability items are in main and offhand
 	public static final Set<Material> ABILITY_ITEMS = new HashSet<>();
@@ -273,10 +276,20 @@ public class KitEngineer extends Kit{
 			//Initializing Sentry Build
 			if(mat == Material.CHEST_MINECART &&
 					ACTIVE_PROJECTION.containsKey(player) &&
-							isValidProjection(ACTIVE_PROJECTION.get(player).getLocation(), player) &&
+							isValidProjection(ACTIVE_PROJECTION.get(player).getLocation()) &&
 								!player.hasCooldown(Material.CHEST_MINECART)) {
 				createSentry(player, item);
 			}
+
+			if(mat == Material.STICK && !player.hasCooldown(Material.STICK)){
+				List<Sentry> sentries = ACTIVE_SENTRY.get(player);
+				sentries.stream().filter(sentry -> sentry.currState != Sentry.State.STARTUP)
+						.forEach(sentry -> {
+							sentry.shoot(sentry.sentry.getLocation().getDirection());
+						});
+				player.setCooldown(Material.STICK, Sentry.SENTRY_FIRE_RATE);
+			}
+
         }
 
 		//Converts the Projection into a Sentry
@@ -431,7 +444,7 @@ public class KitEngineer extends Kit{
 				projection.teleport(projPos);
 
 				//Handling color display that indicates validity of current sentry location
-				if(isValidProjection(projPos, player)){
+				if(isValidProjection(projPos)){
 					Main.getPlayerInfo(player).getScoreboard().addMembers(GREEN_GLOWING_TEAM, projection);
 				}
 				else{
@@ -449,9 +462,58 @@ public class KitEngineer extends Kit{
 					}
 				});
 			}
+
+			//Controlling Wrangler
+			Material mainMat = player.getInventory().getItemInMainHand().getType();
+			Material offMat = player.getInventory().getItemInOffHand().getType();
+			if((mainMat == Material.STICK || offMat == Material.STICK)){
+				wranglerProjection(player);
+			}
         }
 
-		public boolean isValidProjection(Location projPos, Player player){
+		public void wranglerProjection(Player player){
+			List<Sentry> sentries = ACTIVE_SENTRY.get(player);
+			Color teamColor = Main.getPlayerInfo(player).team.getColour();
+			float currPitch = player.getLocation().getPitch();
+			float currYaw = player.getLocation().getYaw();
+
+			sentries.stream()
+					//First remove sentries that are currently starting up
+					.filter(sentry -> sentry.currState != Sentry.State.STARTUP)
+					//Calculate projected path for each sentry and make them look at that spot
+					.forEach(
+					sentry -> {
+						sentry.currState = Sentry.State.WRANGLED;
+
+						//Making sentry look at the same block as player
+						Location terminatingPoint = findBlock(player.getEyeLocation(), 100);
+						Location initLoc = sentry.sentry.getEyeLocation().clone();
+						//sentryLoc is for calculating the beam, sentryPosLoc is for altering pitch + yaw of sentry itself
+						Location sentryLoc = sentry.sentry.getEyeLocation().clone();
+						Location sentryPosLoc = sentry.sentry.getLocation().clone();
+						Vector sentryToTermDir = terminatingPoint.subtract(sentryLoc).toVector().normalize();
+						sentryPosLoc.setDirection(sentryToTermDir);
+						sentry.sentry.teleport(sentryPosLoc);
+
+						//Creating particle beam
+						Vector inc = sentryToTermDir.multiply(0.5);
+						Block currBlock = sentryLoc.getBlock();
+						Material blockType = currBlock.getType();
+
+						while((blockType == Material.AIR || currBlock.isLiquid() || !currBlock.isCollidable()) &&
+								initLoc.distanceSquared(sentryLoc) < Math.pow(100, 2)){
+							sentryLoc.add(inc);
+							currBlock = sentryLoc.getBlock();
+							blockType = currBlock.getType();
+							player.getWorld().spawnParticle(Particle.REDSTONE,
+									sentryLoc, 1, 0, 0, 0,
+									new Particle.DustOptions(teamColor, 0.7f));
+						}
+					}
+			);
+		}
+
+		public boolean isValidProjection(Location projPos){
 			Block projBlock = projPos.getBlock();
 			return !projPos.clone().add(0,2,0).getBlock().isCollidable() &&
 					!projPos.clone().add(0,1,0).getBlock().isCollidable() &&
@@ -490,28 +552,32 @@ public class KitEngineer extends Kit{
 			return PROJECTION_ID.get(id);
 		}
 
-		public Location projectSentry(Location loc, Player player){
-			//loc is the eye location of the player
-			Block aimedBlock = player.getTargetBlock(SENTRY_PLACEMENT_RANGE);
+		public Location findBlock(Location loc, int range){
+			//loc is the eye location of the entity
 			Location initLoc = loc.clone();
 			Vector direction = loc.getDirection().clone();
 			Location distance;
-				Vector increment = direction.clone().multiply(0.05);
-				Location projLoc = initLoc.clone();
-				Block currBlock = loc.getBlock();
-				Material blockType = currBlock.getType();
-				while((blockType == Material.AIR || currBlock.isLiquid() || !currBlock.isCollidable()) &&
-						initLoc.distanceSquared(projLoc) < Math.pow(SENTRY_PLACEMENT_RANGE, 2)
-						&& !isValidProjection(projLoc, player)){
-					projLoc.add(increment);
-					currBlock = projLoc.getBlock();
-					blockType = currBlock.getType();
-				}
-				distance = projLoc.clone();
-				distance.setYaw(initLoc.getYaw());
-				distance.setPitch(0);
+			Vector increment = direction.clone().multiply(0.05);
+			Location projLoc = initLoc.clone();
+			Block currBlock = loc.getBlock();
+			Material blockType = currBlock.getType();
+			while((blockType == Material.AIR || currBlock.isLiquid() || !currBlock.isCollidable()) &&
+					initLoc.distanceSquared(projLoc) < Math.pow(range, 2)
+					&& !isValidProjection(projLoc)){
+				projLoc.add(increment);
+				currBlock = projLoc.getBlock();
+				blockType = currBlock.getType();
+			}
+			distance = projLoc.clone();
+			return distance;
+		}
 
-				return distance;
+		public Location projectSentry(Location loc, Player player){
+			Location distance = findBlock(loc, SENTRY_PLACEMENT_RANGE);
+			distance.setYaw(loc.getYaw());
+			distance.setPitch(0);
+
+			return distance;
 		}
 
 		public void onTick() {

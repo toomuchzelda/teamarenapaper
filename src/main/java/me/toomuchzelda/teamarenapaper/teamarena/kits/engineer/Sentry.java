@@ -15,6 +15,8 @@ import org.bukkit.entity.*;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
 
 import java.util.Collection;
@@ -22,13 +24,13 @@ import java.util.Optional;
 
 public class Sentry extends Building{
 
-	//Recovery is currently unused, may be added to nerf sentry is necessary
-	//Intended to represent time in between locking onto targets
+	//Recovery represents downtime after wrangler is used
 	enum State{
 		STARTUP,
 		NEUTRAL,
 		LOCKED,
-		RECOVERY
+		RECOVERY,
+		WRANGLED
 	}
 
 	State currState;
@@ -36,11 +38,13 @@ public class Sentry extends Building{
 	LivingEntity sentry;
 	int initTick;
 	int creationTick;
+	int downTimeTick;
 	boolean isDead;
 	ItemStack[] armor;
 	//public static final int SENTRY_LIFETIME = KitEngineer.EngineerAbility.SENTRY_CD;
 	public static final int SENTRY_LIFETIME = 300;
 	public static final int SENTRY_STARTUP_TIME = 40;
+	public static final int SENTRY_DOWN_TIME = 40;
 	public static final int SENTRY_CYCLE_TIME = 120;
 	public static final int SENTRY_SIGHT_RANGE = 15;
 	//degree rotation = how much the sentry will rotate
@@ -49,7 +53,7 @@ public class Sentry extends Building{
 	public static final double SENTRY_PITCH_VIEW = 15.0;
 	public static final double SENTRY_YAW_VIEW = 70.0;
 	//Fire every SENTRY_FIRE_RATE ticks
-	public static final int SENTRY_FIRE_RATE = 15;
+	public static final int SENTRY_FIRE_RATE = 12;
     public Sentry(Player player, LivingEntity sentry){
 		super(player, sentry.getLocation());
 		this.currState = State.STARTUP;
@@ -57,6 +61,7 @@ public class Sentry extends Building{
 		this.initYaw = this.loc.getYaw();
 		this.initTick = TeamArena.getGameTick();
 		this.creationTick = TeamArena.getGameTick() + SENTRY_STARTUP_TIME;
+		this.downTimeTick = -1;
 		this.isDead = false;
 		this.holo = new RealHologram(this.loc.clone().add(0,2.0,0), this.holoText);
 
@@ -239,6 +244,16 @@ public class Sentry extends Building{
 		}
 	}
 
+	public void shoot(Vector direction){
+		AbstractArrow sentryFire = sentry.launchProjectile(Arrow.class);
+		sentryFire.setVelocity(direction.multiply(2));
+		sentryFire.setDamage(2.0);
+		sentryFire.setKnockbackStrength(0);
+		sentryFire.setShooter(owner);
+		sentryFire.setCritical(false);
+		sentryFire.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
+	}
+
 	public void tick(){
 
 		if(sentry.isDead()){
@@ -263,13 +278,8 @@ public class Sentry extends Building{
 			if(sentryCanSee(sentry, (Player) sentryCasted.getTarget())
 					&& Main.getPlayerInfo((Player) sentryCasted.getTarget()).activeKit != null){
 				if(TeamArena.getGameTick() % SENTRY_FIRE_RATE == 0){
-					AbstractArrow sentryFire = sentry.launchProjectile(Arrow.class);
 					Vector direction = sentryCasted.getTarget().getLocation().subtract(sentry.getLocation()).toVector().normalize();
-					sentryFire.setVelocity(direction.multiply(2));
-					sentryFire.setKnockbackStrength(0);
-					sentryFire.setShooter(owner);
-					sentryFire.setCritical(false);
-					sentryFire.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
+					shoot(direction);
 
 				}
 
@@ -279,6 +289,16 @@ public class Sentry extends Building{
 			else{
 				this.currState = State.NEUTRAL;
 			}
+		}
+		else if(this.currState == State.WRANGLED){
+			if((owner.getInventory().getItemInMainHand().getType() != Material.STICK &&
+					owner.getInventory().getItemInOffHand().getType() != Material.STICK) ||
+						owner.hasCooldown(Material.STICK)){
+				this.currState = State.NEUTRAL;
+			}
+		}
+		else if(this.currState == State.RECOVERY){
+
 		}
 	}
 	@Override
