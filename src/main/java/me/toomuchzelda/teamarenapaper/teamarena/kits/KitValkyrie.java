@@ -303,14 +303,14 @@ public class KitValkyrie extends Kit{
             while(iter.hasNext()){
                 Entity entity = iter.next();
                 if (entity instanceof LivingEntity victim && !victim.getType().equals(EntityType.ARMOR_STAND)){
-                    double distanceSq = victim.getLocation().distanceSquared(loc);
+                    double distance = victim.getLocation().distance(loc);
                     ACTIVE_AXE.add(player);
 
                     //If distance is < 1, it is a "sour hit" and no bonus damage is given
-                    if(distanceSq < 1){
+                    if(distance < 1){
 
                     }
-                    else if(distanceSq >= 1 && distanceSq < 4){
+                    else if(distance >= 1 && distance < 3){
                         meta.addEnchant(Enchantment.DAMAGE_ALL, AXE_SHARP + NORMAL_BONUS, true);
                     }
                     else{
