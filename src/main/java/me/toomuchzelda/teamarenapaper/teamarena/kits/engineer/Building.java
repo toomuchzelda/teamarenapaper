@@ -18,6 +18,13 @@ public class Building {
     BlockData prevBlockData;
     TextColor teamColor;
     Component holoText;
+	BuildingType type;
+	String name;
+
+	enum BuildingType{
+		SENTRY,
+		TELEPORTER
+	}
 
     public Building(Player player, Location loc){
         this.loc = loc.clone();

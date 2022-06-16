@@ -2,10 +2,15 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.engineer;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSpy;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.RealHologram;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
+import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -50,12 +55,14 @@ public class Sentry extends Building{
 	//degree rotation = how much the sentry will rotate
 	//degree view = the sentry's cone of vision
 	public static final int SENTRY_DEGREE_ROTATION = 90;
-	public static final double SENTRY_PITCH_VIEW = 15.0;
-	public static final double SENTRY_YAW_VIEW = 70.0;
+	public static final double SENTRY_YAW_VIEW = 15.0;
+	public static final double SENTRY_PITCH_VIEW = 70.0;
 	//Fire every SENTRY_FIRE_RATE ticks
 	public static final int SENTRY_FIRE_RATE = 12;
     public Sentry(Player player, LivingEntity sentry){
 		super(player, sentry.getLocation());
+		this.name = "Sentry";
+		this.type = BuildingType.SENTRY;
 		this.currState = State.STARTUP;
 		this.sentry = sentry;
 		this.initYaw = this.loc.getYaw();
@@ -111,11 +118,15 @@ public class Sentry extends Building{
 		sentryToTarget.normalize(); //set to a distance of 1
 		Location relAngle = sentry.getEyeLocation();
 		relAngle.setDirection(sentryToTarget);
+		double yawAngle = relAngle.getYaw();
+		double currYaw = sentry.getLocation().getYaw();
+
 		double pitchAngle = relAngle.getPitch();
 		double currPitch = sentry.getLocation().getPitch();
 		//line of sight rn is not smart, cannot detect player if they are above/below
 		//This is an "intended feature" to prevent camping
-		return (Math.abs(pitchAngle - currPitch) <= SENTRY_PITCH_VIEW &&
+		return (Math.abs(yawAngle - currYaw) <= SENTRY_YAW_VIEW &&
+				//Math.abs(pitchAngle - currPitch) <= SENTRY_PITCH_VIEW &&
 						sentry.hasLineOfSight(target));
 	}
 
@@ -172,14 +183,29 @@ public class Sentry extends Building{
 	}
 
 	public void findTarget(){
+		TeamArenaTeam ownerTeam = Main.getPlayerInfo(owner).team;
 		Location sentryLoc = sentry.getLocation().clone();
 		Mob sentryCasted = (Mob) sentry;
 		Collection<Player> nearbyTargets = sentryLoc.getNearbyPlayers(SENTRY_SIGHT_RANGE);
 		Optional<Player> nearestPlayer = nearbyTargets.stream()
+				//Always ignore teammates and players who are invisible or are obstructed from view
 				.filter(player -> !player.isInvisible()
 						&& sentryCanSee(sentry, player)
 						&& Main.getGame().canAttack(player, owner))
-				//Always ignore teammates and players who are invisible or are obstructed from view
+				//Ignore spies who are disguised as allies
+				.filter(enemy -> {
+					//If enemy has no kit, or they
+					if(Main.getPlayerInfo(enemy).activeKit != null &&
+							Main.getPlayerInfo(enemy).activeKit.getName().equalsIgnoreCase("Spy") &&
+							Main.getPlayerInfo(enemy).activeKit.getActiveUsers().contains(enemy)){
+							//If enemy is disguised, but is not disguised as an ally, it is a valid target.
+								return !PlayerUtils.isDisguisedAsAlly(owner, enemy);
+					}
+					//If any of the above properties is false, the enemy is a valid target
+					else{
+						return true;
+					}
+				})
 				.reduce((currClosest, currPlayer) -> {
 					if(loc.distanceSquared(currPlayer.getLocation()) <
 							loc.distanceSquared(currClosest.getLocation())){
@@ -195,6 +221,10 @@ public class Sentry extends Building{
 			//sentryCasted.lookAt(nearestPlayer.get(), 1.0f, 90.0f);
 			sentryCasted.setTarget(nearestPlayer.get());
 			this.currState = State.LOCKED;
+		}
+		else{
+			sentryCasted.setTarget(null);
+			this.currState = State.NEUTRAL;
 		}
 	}
 
@@ -275,18 +305,17 @@ public class Sentry extends Building{
 				findTarget();
 			}
 			//Sentry remains locked on until the target becomes obstructed from view OR target dies
-			if(sentryCanSee(sentry, (Player) sentryCasted.getTarget())
+			if((sentryCasted.getTarget() != null && sentryCanSee(sentry, (Player) sentryCasted.getTarget()))
 					&& Main.getPlayerInfo((Player) sentryCasted.getTarget()).activeKit != null){
 				if(TeamArena.getGameTick() % SENTRY_FIRE_RATE == 0){
 					Vector direction = sentryCasted.getTarget().getLocation().subtract(sentry.getLocation()).toVector().normalize();
 					shoot(direction);
-
 				}
-
 				lockOn();
 			}
 			//View is now obstructed, enter recovery state
 			else{
+				sentryCasted.setTarget(null);
 				this.currState = State.NEUTRAL;
 			}
 		}
@@ -305,5 +334,6 @@ public class Sentry extends Building{
 	public void destroy(){
 		sentry.remove();
 		holo.remove();
+		this.isDead = true;
 	}
 }

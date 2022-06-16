@@ -2,17 +2,21 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.engineer;
 
 import java.util.*;
 
+import me.toomuchzelda.teamarenapaper.inventory.ClickableItem;
+import me.toomuchzelda.teamarenapaper.inventory.Inventories;
+import me.toomuchzelda.teamarenapaper.inventory.InventoryProvider;
+import me.toomuchzelda.teamarenapaper.inventory.PagedInventory;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.SidebarManager;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.DemoMine;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.KitDemolitions;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSpy;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Color;
 import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Skeleton;
@@ -23,10 +27,9 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
+import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
-
-import it.unimi.dsi.fastutil.Hash;
 
 import org.bukkit.Location;
 
@@ -35,11 +38,8 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
-import me.toomuchzelda.teamarenapaper.utils.RealHologram;
-import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
-import org.jetbrains.annotations.NotNull;
 
 //Kit Description:
 /*
@@ -212,6 +212,7 @@ public class KitEngineer extends Kit{
 			if(ACTIVE_PROJECTION.containsKey(player)){
 				destroyProjection(player);
 			}
+			Inventories.closeInventory(player, EngineerInventory.class);
 		}
 
         @Override
@@ -281,13 +282,20 @@ public class KitEngineer extends Kit{
 				createSentry(player, item);
 			}
 
-			if(mat == Material.STICK && !player.hasCooldown(Material.STICK)){
+			if(mat == Material.STICK &&
+					!player.hasCooldown(Material.STICK) &&
+					ACTIVE_SENTRY.containsKey(player)){
 				List<Sentry> sentries = ACTIVE_SENTRY.get(player);
 				sentries.stream().filter(sentry -> sentry.currState != Sentry.State.STARTUP)
 						.forEach(sentry -> {
 							sentry.shoot(sentry.sentry.getLocation().getDirection());
 						});
 				player.setCooldown(Material.STICK, Sentry.SENTRY_FIRE_RATE);
+			}
+
+			//Destruction PDA
+			if(mat == Material.BOOK){
+				Inventories.openInventory(event.getPlayer(), new EngineerInventory());
 			}
 
         }
@@ -386,17 +394,23 @@ public class KitEngineer extends Kit{
             //Handling Teleporting teammates
             if(teleporters.size() == 2){
                 for(Teleporter teleporter : teleporters){
-                    Location teleLoc = teleporter.getTPLoc();
-                    Collection<Player> players = teleLoc.getNearbyPlayers(0.30);
-
-                    players.forEach(p -> {
-                        if(!Main.getGame().canAttack(player, p) && p.isSneaking()
-                        && p.getLocation().getY() == teleLoc.getY() && !teleporter.hasCD()){
-                            useTeleporter(p, teleLoc);
-                        }
-                    }
-                    );
-                }
+					if(!teleporter.hasCD()){
+						Location teleLoc = teleporter.getTPLoc();
+						Collection<Player> players = teleLoc.getNearbyPlayers(0.30);
+						players.stream()
+								//Allies and spies disguised as allies can use
+								.filter((user ->
+										(!Main.getGame().canAttack(player, user) ||
+												PlayerUtils.isDisguisedAsAlly(player, user)) &&
+														user.isSneaking() &&
+														user.getLocation().getY() == teleLoc.getY()
+									))
+								.forEach(user -> {
+											useTeleporter(player, user, teleLoc);
+										}
+								);
+					}
+				}
             }
 
             //Display of TP Hologram Text
@@ -589,22 +603,86 @@ public class KitEngineer extends Kit{
 					List<Building> buildings = ACTIVE_BUILDINGS.get(p);
 					buildings.forEach(Building::destroy);
 					ACTIVE_BUILDINGS.remove(p);
+					ACTIVE_SENTRY.remove(p);
 					ACTIVE_TELEPORTERS.remove(p);
 				}
 			});
 		}
 
         //Assume there are 2 active TPs
-        public void useTeleporter(Player player, Location currLoc){
-            List<Teleporter> teleporters = ACTIVE_TELEPORTERS.get(player);
+        public void useTeleporter(Player owner, Player teleporting, Location currLoc){
+            List<Teleporter> teleporters = ACTIVE_TELEPORTERS.get(owner);
             Location destination = teleporters.get(0).getTPLoc();
             if(destination.equals(currLoc)){
                 destination = teleporters.get(1).getTPLoc();
             }
-			destination.setYaw(player.getLocation().getYaw());
-			destination.setPitch(player.getLocation().getPitch());
-            player.teleport(destination);
+			destination.setYaw(teleporting.getLocation().getYaw());
+			destination.setPitch(teleporting.getLocation().getPitch());
+			teleporting.teleport(destination);
             teleporters.forEach((teleporter) -> teleporter.setLastUsedTick(TeamArena.getGameTick()));
         }
+		public class EngineerInventory extends PagedInventory {
+
+			@Override
+			public Component getTitle(Player player) {
+				return Component.text("Click Building to Destroy");
+			}
+
+			@Override
+			public int getRows() {
+				return 1;
+			}
+
+			@Override
+			public void init(Player player, InventoryAccessor inventory) {
+				buildPDA(player, inventory);
+			}
+
+			@Override
+			public void update(Player player, InventoryAccessor inventory) {
+				if (TeamArena.getGameTick() % 10 == 0) {
+					inventory.invalidate();
+				}
+			}
+
+			//Stolen from jack
+			public void buildPDA (Player player, InventoryAccessor inventory) {
+				ArrayList<ClickableItem> items = new ArrayList<>();
+				List<Building> buildings = ACTIVE_BUILDINGS.get(player);
+				List<Teleporter> teleporters = ACTIVE_TELEPORTERS.get(player);
+				List<Sentry> sentries = ACTIVE_SENTRY.get(player);
+
+				for(Building building: buildings){
+					ItemStack item = new ItemStack(Material.BARRIER);
+					if(building.type == Building.BuildingType.SENTRY){
+						item = new ItemStack(Material.BOW);
+					}
+					else if(building.type == Building.BuildingType.TELEPORTER){
+						item = new ItemStack(Material.HONEYCOMB_BLOCK);
+					}
+					ItemMeta meta = item.getItemMeta();
+					meta.displayName(Component.text(building.name));
+					Component buildingInfo = Component.text(
+							String.format("%.2f", player.getLocation().distance(building.getLoc())) + " blocks away");
+					meta.lore(Collections.singletonList(buildingInfo));
+					item.setItemMeta(meta);
+
+					items.add(ClickableItem.of(item, e -> {
+						if(building.type == Building.BuildingType.SENTRY){
+							destroySentry(player, (Sentry) building);
+						}
+						else if(building.type == Building.BuildingType.TELEPORTER){
+							building.destroy();
+							buildings.remove(building);
+							teleporters.remove(building);
+						}
+
+						items.remove(e.getCurrentItem());
+						Inventories.closeInventory(player);
+							}));
+						}
+				setPageItems(items, inventory, 0, 9);
+			}
+		}
     }
 }

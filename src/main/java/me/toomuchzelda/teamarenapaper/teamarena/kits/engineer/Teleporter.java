@@ -13,10 +13,11 @@ public class Teleporter extends Building{
     int lastUsedTick;
 	Location teleLoc;
 	BlockData prevBlockData;
-	RealHologram holo;
 
     public Teleporter(Player player, Location loc){
         super(player, loc);
+		this.name = "Teleporter";
+		this.type = BuildingType.TELEPORTER;
 		this.prevBlockData = loc.clone().getBlock().getBlockData().clone();
         this.lastUsedTick = TeamArena.getGameTick();
 		this.teleLoc = loc.clone().toCenterLocation().add(0,0.5,0);
