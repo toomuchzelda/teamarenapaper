@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper;
 
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
+import com.destroystokyo.paper.event.player.PlayerAdvancementCriterionGrantEvent;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
@@ -723,15 +724,10 @@ public class EventListeners implements Listener
 		}
 	}
 
-	/*
 	@EventHandler
-	public void entityRemoveFromWorld(EntityRemoveFromWorldEvent event) {
-		//don't get arrows still in motion
-		if(event.getEntity() instanceof AbstractArrow aa && aa.isInBlock()) {
-			ArrowPierceManager.piercedEntitiesMap.remove(event.getEntity());
-		}
+	public void playerAdvancementCriterionGrant(PlayerAdvancementCriterionGrantEvent event) {
+		event.setCancelled(true);
 	}
-	*/
 
 
 	static final Component MOTD_SEPARATOR = Component.textOfChildren(Component.space(),
