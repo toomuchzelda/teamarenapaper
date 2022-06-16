@@ -1,6 +1,5 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
-import com.google.common.collect.EvictingQueue;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
@@ -32,9 +31,7 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.WeakHashMap;
+import java.util.*;
 
 //Kit Description:
 /*
@@ -95,7 +92,7 @@ public class KitRewind extends Kit {
 
 		public static final int TICK_CYCLE = 15 * 20;
 
-		record RewindInfo(int startingTick, EvictingQueue<Vector> rewindLocations) {}
+		record RewindInfo(int startingTick, Queue<Vector> rewindLocations) {}
 		public final WeakHashMap<Player, RewindInfo> rewindInfo = new WeakHashMap<>();
 
 		record StasisInfo(int startingTick, ItemStack[] armor, HashMap<Integer, ? extends ItemStack> swords) {}
@@ -111,7 +108,7 @@ public class KitRewind extends Kit {
 		public void giveAbility(Player player) {
 			player.setCooldown(Material.CLOCK, TICK_CYCLE);
 			// can only rewind to TICK_CYCLE ticks away, so only TICK_CYCLE locations will be stored
-			rewindInfo.put(player, new RewindInfo(TeamArena.getGameTick(), EvictingQueue.create(TICK_CYCLE)));
+			rewindInfo.put(player, new RewindInfo(TeamArena.getGameTick(), new LinkedList<>()));
 		}
 
 		@Override
@@ -178,6 +175,8 @@ public class KitRewind extends Kit {
 			//Checking that the current location is a valid rewind location, if it is, add it to possible rewind locations.
 			if (player.isFlying() || player.isGliding() || (!currBlock.isEmpty() && currBlock.getType() != Material.LAVA)) {
 				info.rewindLocations().add(player.getLocation().toVector());
+				if(info.rewindLocations().size() >= TICK_CYCLE)
+					info.rewindLocations().remove();
 			}
 
 			//Sound to signify a time-cycle change
