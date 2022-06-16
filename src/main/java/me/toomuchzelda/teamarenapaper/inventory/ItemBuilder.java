@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.inventory;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.ComponentLike;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Color;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
@@ -53,7 +54,10 @@ public final class ItemBuilder {
     }
 
     public ItemBuilder displayName(ComponentLike component) {
-        meta.displayName(component.asComponent());
+		var actualComponent = component.asComponent();
+		if (actualComponent.decoration(TextDecoration.ITALIC) == TextDecoration.State.NOT_SET)
+			actualComponent = actualComponent.decoration(TextDecoration.ITALIC, false);
+        meta.displayName(actualComponent);
         return this;
     }
 
@@ -62,11 +66,15 @@ public final class ItemBuilder {
     }
 
     public ItemBuilder lore(List<? extends ComponentLike> components) {
-        List<Component> actualComponents = new ArrayList<>(components.size());
+        List<Component> lore = new ArrayList<>(components.size());
         for (ComponentLike componentLike : components) {
-            actualComponents.add(componentLike.asComponent());
+			var actualComponent = componentLike.asComponent();
+			if (actualComponent.decoration(TextDecoration.ITALIC) == TextDecoration.State.NOT_SET)
+				lore.add(actualComponent.decoration(TextDecoration.ITALIC, false));
+			else
+            	lore.add(actualComponent);
         }
-        meta.lore(actualComponents);
+        meta.lore(lore);
         return this;
     }
 

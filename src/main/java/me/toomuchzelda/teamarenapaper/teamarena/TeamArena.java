@@ -20,29 +20,31 @@ import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
-import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.yaml.snakeyaml.Yaml;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 //main game class
 public abstract class TeamArena
 {
 	public static GameType nextGameType = GameType.CTF;
+	@Nullable
+	public static String nextMapName = null;
 
 	private final File worldFile;
 	public World gameWorld;
@@ -103,7 +105,7 @@ public abstract class TeamArena
 
 	protected MapInfo mapInfo;
 
-	protected ConcurrentLinkedQueue<DamageEvent> damageQueue;
+	protected Queue<DamageEvent> damageQueue;
 
 	private final LinkedList<DamageIndicatorHologram> activeDamageIndicators = new LinkedList<>();
 
@@ -118,7 +120,16 @@ public abstract class TeamArena
 
 		//copy the map to another directory and load from there to avoid any accidental modifying of the original
 		// map
-		File source = maps[MathUtils.random.nextInt(maps.length)];
+		File source;
+		if (nextMapName != null) {
+			source = new File(getMapPath(), nextMapName);
+			nextMapName = null;
+			if (!source.exists()) {
+				throw new IllegalStateException("Map " + source.getName() + " does not exist!");
+			}
+		} else {
+			source = maps[MathUtils.random.nextInt(maps.length)];
+		}
 		Main.logger().info("Loading map: " + source.getAbsolutePath());
 		File dest = new File("temp_" + source.getName().toLowerCase(Locale.ENGLISH) + "_" + System.currentTimeMillis());
 		if (dest.mkdir()) {
@@ -128,12 +139,14 @@ public abstract class TeamArena
 				if (uid.getName().equalsIgnoreCase("uid.dat")) {
 					boolean b = uid.delete();
 					Main.logger().info("Attempted delete of uid.dat in copy world, success: " + b);
+					break;
 				}
 			}
 		} else {
 			//dae not bothered to try catch
 			throw new IllegalArgumentException("Couldn't create new directory for temp map " + dest.getAbsolutePath());
 		}
+		dest.deleteOnExit();
 		worldFile = dest;
 		WorldCreator worldCreator = new WorldCreator(dest.getName());
 		gameWorld = worldCreator.createWorld();
@@ -205,13 +218,15 @@ public abstract class TeamArena
 		players = ConcurrentHashMap.newKeySet();
 		spectators = ConcurrentHashMap.newKeySet();
 		respawnTimers = new HashMap<>();
-		damageQueue = new ConcurrentLinkedQueue<>();
+		damageQueue = new LinkedList<>();
 
 		//list the teams in sidebar
 		SidebarManager.updatePreGameScoreboard(this);
 		PlayerListScoreManager.removeScores();
 
 		miniMap = new MiniMapManager(this);
+
+		DamageTimes.clear();
 
 		//init all the players online at time of construction
 		for (var entry : Main.getPlayerInfoMap().entrySet()) {
@@ -263,6 +278,17 @@ public abstract class TeamArena
 		info.kit.giveKit(player, true, info);
 	}
 
+	public void cleanUp() {
+		for (Player player : gameWorld.getPlayers()) {
+			player.kick(Component.text("You have been evacuated!", NamedTextColor.YELLOW));
+		}
+		if (Bukkit.unloadWorld(gameWorld, false)) {
+			FileUtils.delete(worldFile);
+		} else {
+			Main.logger().severe("Failed to unload world " + gameWorld.getName());
+		}
+		gameWorld = null;
+	}
 
 	public void tick() {
 		gameTick++;
@@ -356,6 +382,9 @@ public abstract class TeamArena
 				}
 			}
 		}
+
+		//handle and queue fire + poison damage events
+		fireAndPoisonTick();
 
 		//process damage events
 		damageTick();
@@ -517,7 +546,7 @@ public abstract class TeamArena
 					PlayerInfo pinfo = Main.getPlayerInfo(p);
 					//spawn damage indicator hologram
 					// divide by two to display as hearts
-					Component damageText = Component.text(MathUtils.round(event.getFinalDamage() / 2, 2)).color(pinfo.team.getRGBTextColor());
+					Component damageText = Component.text(MathUtils.round(event.getFinalDamage() / 2, 2), pinfo.team.getRGBTextColor(), TextDecoration.BOLD);
 					Location spawnLoc = p.getLocation();
 					spawnLoc.add(0, MathUtils.randomRange(1.4, 2), 0);
 					DamageIndicatorHologram hologram = new DamageIndicatorHologram(spawnLoc, PlayerUtils.getDamageIndicatorViewers(p, playerCause), damageText);
@@ -605,15 +634,62 @@ public abstract class TeamArena
 				Player p = entry.getKey();
 
 				PlayerUtils.heal(p, 1, EntityRegainHealthEvent.RegainReason.SATIATED); // half a heart
+			}
+		}
+	}
 
-				/*double newHealth = p.getHealth() + 1; // half a heart
-				double maxHealth = p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
-				if (newHealth > maxHealth)
-					newHealth = maxHealth;
+	/**
+	 * Handle all entities on fire
+	 */
+	public void fireAndPoisonTick() {
+		var iter = DamageTimes.getIterator();
+		Map.Entry<LivingEntity, DamageTimes.DamageTime[]> entry;
 
-				p.setHealth(newHealth);
-				if(entry.getValue().getPreference(Preferences.HEARTS_FLASH_REGEN))
-					PlayerUtils.sendHealth(p);*/
+		DamageTimes.DamageTime time;
+		LivingEntity victim;
+		PotionEffect poison;
+		final int currentTick = getGameTick();
+		int poisonRate;
+		while(iter.hasNext()) {
+			entry = iter.next();
+			victim = entry.getKey();
+
+			//FIRE
+			time = entry.getValue()[DamageTimes.TrackedDamageTypes.FIRE.ordinal()];
+			if(victim.getFireTicks() > 0) {
+				if(time.getTimeGiven() == -1) {
+					time.setTimeGiven(currentTick);
+				}
+
+				if ((currentTick - time.getTimeGiven()) % 20 == 0) {
+					DamageEvent fireDEvent = DamageEvent.newDamageEvent(victim, 1, DamageType.FIRE_TICK, null, false);
+					queueDamage(fireDEvent);
+				}
+			}
+			//clear fire giver so they don't get credit if the person gets set on fire later
+			else {
+				time.extinguish();
+			}
+
+			//POISON
+			time = entry.getValue()[DamageTimes.TrackedDamageTypes.POISON.ordinal()];
+			poison = victim.getPotionEffect(PotionEffectType.POISON);
+			if(poison != null) {
+				if(time.getTimeGiven() == -1) {
+					time.setTimeGiven(currentTick);
+				}
+
+				//TODO: higher poison effect amplifier means faster damage?
+				//TODO: how often does poison deal damage?
+
+				poisonRate = poison.getAmplifier() > 0 ? 12 : 25;
+				if((currentTick - time.getTimeGiven()) % poisonRate == 0 && victim.getHealth() > 2d) { //must leave them at half a heart
+					DamageEvent pEvent = DamageEvent.newDamageEvent(victim, 1d, DamageType.POISON, time.getGiver(), false);
+					queueDamage(pEvent);
+				}
+			}
+			else {
+				time.extinguish();
 			}
 		}
 	}
@@ -771,7 +847,6 @@ public abstract class TeamArena
 			spectatorTeam.unregister();
 			noTeamTeam.unregister();
 
-			//try to prevent visual bug of absorption remaining into next game
 			for(Player p : Bukkit.getOnlinePlayers()) {
 				PlayerUtils.resetState(p);
 				for(TeamArenaTeam team : teams) {
@@ -937,8 +1012,9 @@ public abstract class TeamArena
 				player.sendMessage(text);
 			} else {
 				//todo: kill the player here (remove from game)
-				EntityDamageEvent event = new EntityDamageEvent(player, EntityDamageEvent.DamageCause.VOID, 9999d);
-				DamageEvent dEvent = DamageEvent.createDamageEvent(event, DamageType.SUICIDE);
+				//EntityDamageEvent event = new EntityDamageEvent(player, EntityDamageEvent.DamageCause.VOID, 9999d);
+				//DamageEvent dEvent = DamageEvent.createFromBukkitEvent(event, DamageType.SUICIDE);
+				queueDamage(DamageEvent.newDamageEvent(player, 99999d, DamageType.SUICIDE, null, false));
 
 				if(isRespawningGame()) {
 					respawnTimers.remove(player); //if respawning game remove them from respawn queue
@@ -1018,17 +1094,16 @@ public abstract class TeamArena
 		Entity e = event.getVictim();
 		//if player make them a spectator and put them in queue to respawn if is a respawning game
 		if(e instanceof Player p) {
-			//p.showTitle(Title.title(Component.empty(), Component.text("You died!").color(TextColor.color(255, 0, 0))));
 			PlayerUtils.sendTitle(p, Component.empty(), Component.text("You died!").color(TextColor.color(255, 0, 0)), 0, 30, 20);
 
 			//Give out kill assists on the victim
 			Player killer = null;
-			DamageTimes dTimes = DamageTimes.getDamageTimes(p);
+			DamageTimes.DamageTime dTimes = DamageTimes.getLastDamageTime(p);
 			if(event.getFinalAttacker() instanceof Player finalAttacker) {
 				killer = finalAttacker;
 			}
 			else {
-				if(dTimes.lastDamager instanceof Player finalAttacker)
+				if(dTimes.getGiver() instanceof Player finalAttacker)
 					killer = finalAttacker;
 			}
 			//killer's onKill ability
@@ -1061,7 +1136,7 @@ public abstract class TeamArena
 
 
 			//clear attack givers so they don't get falsely attributed on this next player's death
-			dTimes.clearAttackers();
+			DamageTimes.clearDamageTimes(p);
 
 			if(this.isRespawningGame()) {
 				respawnTimers.put(p, new RespawnInfo(gameTick));
@@ -1258,9 +1333,13 @@ public abstract class TeamArena
 
 	public void informOfTeam(Player p) {
 		TeamArenaTeam team = Main.getPlayerInfo(p).team;
-		Component text = Component.text("You are on ").color(NamedTextColor.GOLD).append(team.getComponentName());
+		Component text = Component.text("You are on ", NamedTextColor.GOLD).append(team.getComponentName());
+		PlayerUtils.sendTitle(p, Component.empty(), text, 10, 70, 20);
+		if(gameState == GameState.TEAMS_CHOSEN) {
+			final Component startConniving = Component.text("! Start scheming a game plan with /t!", NamedTextColor.GOLD);
+			text = text.append(startConniving);
+		}
 		p.sendMessage(text);
-		p.showTitle(Title.title(Component.empty(), text));
 		p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.AMBIENT, 2f, 0.5f);
 	}
 

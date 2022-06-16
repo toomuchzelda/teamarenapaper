@@ -20,6 +20,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiFunction;
@@ -109,11 +110,14 @@ public class MiniMapManager {
         view.setScale(MapView.Scale.valueOf((byte) scale));
         view.setTrackingPosition(false);
 
+		// let's hope the map file is removed
+		File mainWorldFile = new File(Bukkit.getWorldContainer(), Bukkit.getWorlds().get(0).getName());
+		File mapDataFile = new File(mainWorldFile, "data" + File.separator + "map_" + view.getId() + ".dat");
+		mapDataFile.deleteOnExit();
+
         // our renderer
         renderer = new Renderer();
         view.addRenderer(renderer);
-
-        Main.logger().info("Minimap: Center: (" + centerX + ", " + centerZ + "), Scale: " + view.getScale().name() + ", Map width: " + mapWidth);
 
         stack = ItemBuilder.of(Material.FILLED_MAP).meta(MapMeta.class, mapMeta -> mapMeta.setMapView(view)).build();
     }

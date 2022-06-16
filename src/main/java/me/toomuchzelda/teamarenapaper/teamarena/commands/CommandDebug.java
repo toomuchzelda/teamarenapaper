@@ -2,15 +2,12 @@ package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
-import me.toomuchzelda.teamarenapaper.inventory.TicTacToe;
-import me.toomuchzelda.teamarenapaper.teamarena.MiniMapManager;
-import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.SoundUtils;
+import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -18,6 +15,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.map.MinecraftFont;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.File;
 import java.util.*;
 
 public class CommandDebug extends CustomCommand {
@@ -64,22 +62,6 @@ public class CommandDebug extends CustomCommand {
 					sniperAccuracy = args.length == 3 ? "true".equalsIgnoreCase(args[2]) : !sniperAccuracy;
 					sender.sendMessage(Component.text("Set sniper accuracy debug to " + sniperAccuracy)
 							.color(NamedTextColor.GREEN));
-				}
-			}
-			case "uwu" -> {
-				int number;
-				try {
-					number = Integer.parseInt(args[1]);
-				} catch (IndexOutOfBoundsException | NumberFormatException e) {
-					showUsage(sender, "/debug uwu <times>");
-					break;
-				}
-				for (Player victim : Bukkit.getOnlinePlayers()) {
-					if ("jacky8399".equalsIgnoreCase(victim.getName()) || victim == sender)
-						continue;
-					for (int i = 0; i < number; i++) {
-						victim.playSound(victim, SoundUtils.getRandomObnoxiousSound(), 99999f, MathUtils.randomRange(0, 2));
-					}
 				}
 			}
 			case "draw" -> {
@@ -140,6 +122,7 @@ public class CommandDebug extends CustomCommand {
 			case "setrank" -> {
 				if (args.length < 2) {
 					showUsage(sender, "/debug setrank <rank> [player]");
+					break;
 				}
 				PermissionLevel level = PermissionLevel.valueOf(args[1]);
 				Player target = getPlayerOrThrow(sender, args, 2);
@@ -153,6 +136,7 @@ public class CommandDebug extends CustomCommand {
 			case "setteam" -> {
 				if (args.length < 2) {
 					showUsage(sender, "/debug setteam <team> [player]");
+					break;
 				}
 				TeamArenaTeam[] teams = Main.getGame().getTeams();
 				TeamArenaTeam targetTeam = null;
@@ -163,16 +147,33 @@ public class CommandDebug extends CustomCommand {
 					}
 				}
 				if (targetTeam == null) {
-					sender.sendMessage(Component.text("Team not found!").color(NamedTextColor.RED));
+					sender.sendMessage(Component.text("Team not found!", NamedTextColor.RED));
 					break;
 				}
 				Player target = getPlayerOrThrow(sender, args, 2);
 				if (target == null) {
-					sender.sendMessage(Component.text("Player not found!").color(NamedTextColor.RED));
+					sender.sendMessage(Component.text("Player not found!", NamedTextColor.RED));
 					break;
 				}
 				PlayerInfo info = Main.getPlayerInfo(target);
 				targetTeam.addMembers(target);
+			}
+			case "setgame" -> {
+				if (args.length < 2) {
+					showUsage(sender, "/debug setgame <game> [map]");
+				}
+				TeamArena.nextGameType = GameType.valueOf(args[1]);
+				if (args.length > 2) {
+					TeamArena.nextMapName = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
+				} else {
+					TeamArena.nextMapName = null;
+				}
+				sender.sendMessage(MiniMessage.miniMessage().deserialize(
+						"<green>Set game mode to <yellow><ctf></yellow> and map to <yellow><map></yellow>",
+						Placeholder.unparsed("ctf", TeamArena.nextGameType.name()),
+						Placeholder.unparsed("map", TeamArena.nextMapName != null ? TeamArena.nextMapName : "random")
+				));
+
 			}
 			default -> {
 				return false;
@@ -208,24 +209,6 @@ public class CommandDebug extends CustomCommand {
                     }
                 }
             }
-            case "tictactoe" -> {
-                if (args.length != 2) {
-                    showUsage(sender, "/debug tictactoe <player/bot>");
-                    return;
-                }
-                if (args[1].equalsIgnoreCase("bot")) {
-                    TicTacToe game = new TicTacToe(TicTacToe.getPlayer(player), TicTacToe.getBot(TicTacToe.BotDifficulty.EASY));
-                    game.schedule();
-                } else {
-                    Player otherPlayer = Bukkit.getPlayer(args[1]);
-                    if (otherPlayer == null || otherPlayer == player) {
-                        sender.sendMessage(Component.text("Player not found!").color(NamedTextColor.RED));
-                        return;
-                    }
-                    TicTacToe game = new TicTacToe(TicTacToe.getPlayer(player), TicTacToe.getPlayer(otherPlayer));
-                    game.schedule();
-                }
-            }
             default -> showUsage(sender);
         }
     }
@@ -233,23 +216,32 @@ public class CommandDebug extends CustomCommand {
     @Override
     public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
         if (args.length == 1) {
-            return Arrays.asList("hide", "gui", "tictactoe", "game", "setrank", "setteam", "uwu", "votetest");
+            return Arrays.asList("hide", "gui", "game", "setrank", "setteam", "setgame", "votetest");
         } else if (args.length == 2) {
             return switch (args[0].toLowerCase(Locale.ENGLISH)) {
                 case "gui" -> Arrays.asList("true", "false");
-                case "tictactoe" -> Arrays.asList("player", "bot");
                 case "game" -> Arrays.asList("ignorewinconditions", "stopwastingmybandwidth", "sniperaccuracy");
                 case "setrank" -> Arrays.stream(PermissionLevel.values()).map(Enum::name).toList();
                 case "setteam" -> Arrays.stream(Main.getGame().getTeams())
                         .map(team -> team.getSimpleName().replace(' ', '_'))
                         .toList();
+				case "setgame" -> Arrays.stream(GameType.values()).map(Enum::name).toList();
                 default -> Collections.emptyList();
             };
         } else if (args.length == 3) {
             return switch (args[0].toLowerCase(Locale.ENGLISH)) {
-                case "tictactoe", "setrank", "setteam" -> Bukkit.getOnlinePlayers().stream()
+                case "setrank", "setteam" -> Bukkit.getOnlinePlayers().stream()
                         .map(Player::getName).toList();
                 case "game" -> Arrays.asList("true", "false");
+				case "setgame" -> {
+					String gameMode = args[1].toUpperCase(Locale.ENGLISH);
+					File mapContainer = new File("Maps" + File.separator + gameMode);
+					if (!mapContainer.exists() || !mapContainer.isDirectory())
+						yield Collections.emptyList();
+
+					String[] files = mapContainer.list();
+					yield files != null ? Arrays.asList(files) : Collections.emptyList();
+				}
                 default -> Collections.emptyList();
             };
         }

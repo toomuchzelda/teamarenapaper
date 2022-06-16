@@ -2,13 +2,13 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
@@ -18,8 +18,6 @@ import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.inventory.ItemStack;
@@ -28,7 +26,7 @@ import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
@@ -37,7 +35,7 @@ public class KitPyro extends Kit
 	public static final ItemStack MOLOTOV_ARROW;
 	public static final ItemStack FIRE_ARROW;
 	public static final Color MOLOTOV_ARROW_COLOR = Color.fromRGB(255, 84, 10);
-	
+
 	static {
 		MOLOTOV_ARROW = new ItemStack(Material.TIPPED_ARROW);
 		PotionMeta molotovMeta = (PotionMeta) MOLOTOV_ARROW.getItemMeta();
@@ -45,7 +43,7 @@ public class KitPyro extends Kit
 		molotovMeta.setColor(MOLOTOV_ARROW_COLOR);
 		molotovMeta.displayName(Component.text("Incendiary Projectile").color(TextColor.color(255, 84, 10)));
 		MOLOTOV_ARROW.setItemMeta(molotovMeta);
-		
+
 		/*FIRE_ARROW = new ItemStack(Material.TIPPED_ARROW);
 		PotionMeta fireMeta = (PotionMeta) FIRE_ARROW.getItemMeta();
 		fireMeta.clearCustomEffects();
@@ -55,10 +53,10 @@ public class KitPyro extends Kit
 
 		FIRE_ARROW = new ItemStack(Material.ARROW);
 	}
-	
+
 	public KitPyro() {
 		super("Pyro", "fire burn burn fire!", Material.FLINT_AND_STEEL);
-		
+
 		ItemStack boots = new ItemStack(Material.CHAINMAIL_BOOTS);
 		boots.addEnchantment(Enchantment.PROTECTION_FIRE, 4);
 		ItemStack leggings = new ItemStack(Material.LEATHER_LEGGINGS);
@@ -69,30 +67,30 @@ public class KitPyro extends Kit
 		ItemUtils.colourLeatherArmor(Color.RED, leggings);
 		ItemUtils.colourLeatherArmor(Color.RED, chestplate);
 		ItemUtils.colourLeatherArmor(Color.RED, helmet);
-		
+
 		this.setArmor(helmet, chestplate, leggings, boots);
-		
+
 		ItemStack sword = new ItemStack(Material.WOODEN_SWORD);
 		sword.addEnchantment(Enchantment.FIRE_ASPECT, 1);
-		
+
 		ItemStack bow = new ItemStack(Material.BOW);
 		ItemMeta bowMeta = bow.getItemMeta();
 		bowMeta.addEnchant(Enchantment.ARROW_FIRE, 1, true);
 		bow.setItemMeta(bowMeta);
 
 		this.setItems(sword, bow, FIRE_ARROW, MOLOTOV_ARROW);
-		
+
 		this.setAbilities(new PyroAbility());
 	}
-	
+
 	public static class PyroAbility extends Ability
 	{
-		public final HashMap<Player, Integer> MOLOTOV_RECHARGES = new HashMap<>();
+		public final Map<Player, Integer> MOLOTOV_RECHARGES = new LinkedHashMap<>();
 		public final LinkedList<MolotovInfo> ACTIVE_MOLOTOVS = new LinkedList<>();
 		public static final int MOLOTOV_RECHARGE_TIME = 10 * 20;
 		public static final int MOLOTOV_ACTIVE_TIME = 5 * 20;
 		public static final double BOX_RADIUS = 2.5;
-		
+
 		@Override
 		public void onShootBow(EntityShootBowEvent event) {
 				if (FIRE_ARROW.equals(event.getConsumable())) {
@@ -104,7 +102,7 @@ public class KitPyro extends Kit
 					MOLOTOV_RECHARGES.put((Player) event.getEntity(), TeamArena.getGameTick());
 				}
 		}
-		
+
 		@Override
 		public void onTick() {
 			int currentTick = TeamArena.getGameTick();
@@ -116,7 +114,7 @@ public class KitPyro extends Kit
 					itemIter.remove();
 				}
 			}
-			
+
 			var iter = ACTIVE_MOLOTOVS.iterator();
 			while(iter.hasNext()) {
 				MolotovInfo minfo = iter.next();
@@ -146,19 +144,20 @@ public class KitPyro extends Kit
 					if (living == minfo.thrower)
 						continue;
 
-					@SuppressWarnings("deprecation")
-					EntityDamageByEntityEvent event = new EntityDamageByEntityEvent(minfo.thrower, living,
+					/*EntityDamageByEntityEvent event = new EntityDamageByEntityEvent(minfo.thrower, living,
 							EntityDamageEvent.DamageCause.FIRE_TICK, 1);
-
-					DamageEvent damageEvent = DamageEvent.createDamageEvent(event);
+					*DamageEvent damageEvent = DamageEvent.createFromBukkitEvent(event);
 					if (damageEvent != null) {
 						damageEvent.setDamageType(DamageType.PYRO_MOLOTOV);
 						damageEvent.setRealAttacker(minfo.thrower);
-					}
+					}*/
+
+					DamageEvent damageEvent = DamageEvent.newDamageEvent(living, 1.75d, DamageType.PYRO_MOLOTOV, minfo.thrower(), false);
+					Main.getGame().queueDamage(damageEvent);
 				}
 			}
 		}
-		
+
 		//called manually in EventListeners.projectileHit
 		// spawn the molotov effect
 		public void onProjectileHit(ProjectileHitEvent event) {
@@ -167,6 +166,7 @@ public class KitPyro extends Kit
 
 			if (arrow.getColor() == null || !arrow.getColor().equals(MOLOTOV_ARROW_COLOR))
 				return;
+
 			if (event.getHitBlock() == null)
 				return;
 
@@ -211,7 +211,7 @@ public class KitPyro extends Kit
 				arrow.remove();
 			}
 		}
-		
+
 		@Override
 		public void projectileHitEntity(ProjectileCollideEvent event) {
 			if(event.getEntity() instanceof Arrow a) {
@@ -230,7 +230,7 @@ public class KitPyro extends Kit
 			MOLOTOV_RECHARGES.clear();
 			ACTIVE_MOLOTOVS.clear();
 		}
-		
+
 		@Override
 		public void onDeath(DamageEvent event) {
 			MOLOTOV_RECHARGES.remove(event.getPlayerVictim());

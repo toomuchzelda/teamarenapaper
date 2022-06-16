@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper;
 
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
+import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
@@ -15,6 +16,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
@@ -27,8 +29,11 @@ import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.command.Command;
+import org.bukkit.craftbukkit.v1_18_R2.CraftWorldBorder;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.LivingEntity;
@@ -44,10 +49,12 @@ import org.bukkit.event.player.*;
 import org.bukkit.event.player.PlayerLoginEvent.Result;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 
+import java.lang.reflect.Constructor;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
@@ -80,16 +87,6 @@ public class EventListeners implements Listener
 	public void endTick(ServerTickEndEvent event) {
 		PacketListeners.cancelDamageSounds = false;
 
-		//Reset mobs' fire status if they've been extinguished
-		Iterator<Map.Entry<LivingEntity, DamageTimes>> iter = DamageTimes.entityDamageTimes.entrySet().iterator();
-		while(iter.hasNext()) {
-			Map.Entry<LivingEntity, DamageTimes> entry = iter.next();
-			if(entry.getKey().getFireTicks() <= 0) {
-				entry.getValue().fireTimes.fireGiver = null;
-				entry.getValue().fireTimes.fireType = null;
-			}
-		}
-
 		//run this before the game tick so there is a whole tick after prepDead and construction of the next
 		// TeamArena instance
 		if(Main.getGame().getGameState() == DEAD) {
@@ -106,20 +103,20 @@ public class EventListeners implements Listener
 					entry.getValue().clearMessageCooldowns();
 				}
 			}
-			DamageTimes.cleanup();
 			Main.playerIdLookup.entrySet().removeIf(idLookupEntry -> !idLookupEntry.getValue().isOnline());
 
-			if(MathUtils.random.nextBoolean()) {//MathUtils.randomMax(3) < 3) {
-				TeamArena.nextGameType = GameType.KOTH;
+			// initialize next game
+			if (TeamArena.nextGameType == null) {
+				TeamArena.nextGameType = GameType.values()[MathUtils.random.nextInt(GameType.values().length)];
 			}
-			else
-				TeamArena.nextGameType = GameType.CTF;
 
-			if(TeamArena.nextGameType == GameType.KOTH) {
-				Main.setGame(new KingOfTheHill());
-			}
-			else if(TeamArena.nextGameType == GameType.CTF) {
-				Main.setGame(new CaptureTheFlag());
+			try {
+				Constructor<? extends TeamArena> constructor = TeamArena.nextGameType.gameClazz.getConstructor();
+				TeamArena game = constructor.newInstance();
+				Main.setGame(game);
+				TeamArena.nextGameType = null;
+			} catch (ReflectiveOperationException ex) {
+				throw new Error("Failed to create game reflectively", ex);
 			}
 		}
 
@@ -293,17 +290,69 @@ public class EventListeners implements Listener
 		}
 
 		//prevent them from moving outside the game border
-		if(!event.isCancelled()) {
-			Vector to = event.getTo().toVector();
-			if(!game.getBorder().contains(to)) {
-				event.setCancelled(true);
-				//if they're hitting the bottom border call it falling into the void
-				if(to.getY() < game.getBorder().getMinY()) {
-					if(game.getGameState() == LIVE) {
-						event.setCancelled(false);
-						EntityDamageEvent dEvent = new EntityDamageEvent(event.getPlayer(), EntityDamageEvent.DamageCause.VOID, 999);
-						DamageEvent.createDamageEvent(dEvent);
+		if (event.isCancelled())
+			return;
+
+		Vector from = event.getFrom().toVector();
+		Vector to = event.getTo().toVector();
+		// dynamic world border
+		if (from.distanceSquared(to) != 0) {
+			Player player = event.getPlayer();
+			BoundingBox border = game.getBorder();
+			// only display when distance to border <= 10 blocks
+			if (MathUtils.distanceBetween(border, from) <= 10) {
+				Vector closest = new Vector(
+						from.getX() > border.getCenterX() ? border.getMaxX() : border.getMinX(),
+						0,
+						from.getZ() > border.getCenterZ() ? border.getMaxZ() : border.getMinZ()
+				);
+
+				WorldBorder worldBorder = player.getWorldBorder();
+				// calculate the center of the world border
+				// such that at size 512 the world border edge would line up with the closest point
+				double centerX = closest.getX() + Math.signum(from.getX() - closest.getX()) * 256,
+						centerZ = closest.getZ() + Math.signum(from.getZ() - closest.getZ()) * 256;
+				if (worldBorder == null || // no border
+						((CraftWorldBorder) worldBorder).getHandle().getLerpTarget() == 768 || // fading away
+						Math.abs(worldBorder.getCenter().getX() - centerX) > Vector.getEpsilon() ||
+						Math.abs(worldBorder.getCenter().getZ() - centerZ) > Vector.getEpsilon()) {
+					// wrong center, replace border
+					if (worldBorder == null) {
+						worldBorder = Bukkit.createWorldBorder();
+						worldBorder.setCenter(centerX, centerZ);
+						worldBorder.setSize(768);
+						worldBorder.setSize(512, 1);
+						worldBorder.setWarningDistance(3);
+						worldBorder.setWarningTime(0);
+						player.setWorldBorder(worldBorder);
+					} else {
+						worldBorder.setCenter(centerX, centerZ);
+						worldBorder.setSize(512, 1);
 					}
+				}
+			} else {
+				WorldBorder worldBorder = player.getWorldBorder();
+				if (worldBorder != null && ((CraftWorldBorder) worldBorder).getHandle().getLerpRemainingTime() == 0) {
+					worldBorder.setSize(768, 2);
+					Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
+						// check if the world border is the same and has faded out completely
+						if (player.getWorldBorder() == worldBorder && worldBorder.getSize() == 768) {
+							player.setWorldBorder(null);
+						}
+					}, 40);
+				}
+			}
+		}
+
+
+		if(!game.getBorder().contains(to)) {
+			event.setCancelled(true);
+			//if they're hitting the bottom border call it falling into the void
+			if(to.getY() < game.getBorder().getMinY()) {
+				if(game.getGameState() == LIVE) {
+					event.setCancelled(false);
+					DamageEvent dEvent = DamageEvent.newDamageEvent(event.getPlayer(), 9999d, DamageType.VOID, null, false);
+					Main.getGame().queueDamage(dEvent);
 				}
 			}
 		}
@@ -311,8 +360,10 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void blockBreak(BlockBreakEvent event) {
-		if(event.getPlayer().getGameMode() != GameMode.CREATIVE && !BREAKABLE_BLOCKS.containsKey(event.getBlock().getType()))
+		if((Main.getGame() != null && Main.getGame().getGameState() != LIVE &&
+				!BREAKABLE_BLOCKS.containsKey(event.getBlock().getType())) || event.getPlayer().getGameMode() != GameMode.CREATIVE) {
 			event.setCancelled(true);
+		}
 	}
 
 	/**
@@ -358,7 +409,7 @@ public class EventListeners implements Listener
 	//create and cache damage events
 	@EventHandler
 	public void entityDamage(EntityDamageEvent event) {
-		DamageEvent.createDamageEvent(event);
+		DamageEvent.handleBukkitEvent(event);
 	}
 
 	@EventHandler
@@ -681,4 +732,24 @@ public class EventListeners implements Listener
 		}
 	}
 	*/
+
+
+	static final Component MOTD_SEPARATOR = Component.textOfChildren(Component.space(),
+			Component.text("|", NamedTextColor.DARK_RED, TextDecoration.BOLD), Component.space());
+	static final Component MOTD = Component.textOfChildren(
+			Component.text("             "),
+			TextUtils.getUselessRGBText("Blue Warfare", TextColor.color(0x060894), TextColor.color(0x1ad3f0)),
+			Component.space(),
+			TextUtils.getUselessRainbowText("[1.18.2]"),
+			Component.newline(),
+			TextUtils.getUselessRGBText("King of the Hill", TextColor.color(0x595959), TextColor.color(0xadadad)),
+			MOTD_SEPARATOR,
+			TextUtils.getUselessRGBText("Capture the Flag", TextColor.color(0x1d6e16), TextColor.color(0x00ff40)),
+			MOTD_SEPARATOR,
+			TextUtils.getUselessRGBText("UnbalancedBS", TextColor.color(0x631773), TextColor.color(0xff00f2))
+	);
+	@EventHandler
+	public void onMOTD(PaperServerListPingEvent e) {
+		e.motd(MOTD);
+	}
 }

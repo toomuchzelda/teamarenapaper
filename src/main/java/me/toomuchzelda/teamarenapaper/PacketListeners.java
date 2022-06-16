@@ -39,9 +39,9 @@ public class PacketListeners
 	 * but not those made by TeamArena
 	 */
 	public static boolean cancelDamageSounds = false;
-	
+
 	public PacketListeners(JavaPlugin plugin) {
-		
+
 		//commented out as not using holograms (keeping in case future versions support more
 		// rgb stuff)
 		//Spawn player's nametag hologram whenever the player is spawned on a client
@@ -50,9 +50,9 @@ public class PacketListeners
 		{
 			@Override
 			public void onPacketSending(PacketEvent event) {
-				
+
 				int id = event.getPacket().getIntegers().read(0);
-				
+
 				//if the receiver of this packet is supposed to view a disguise instead of the actual player
 				// re-send the player info packet before spawning them into render distance as we removed it before,
 				// for the sake of not appearing in the tab list
@@ -74,14 +74,14 @@ public class PacketListeners
 
 					//event.schedule(ScheduledPacket.fromSilent(disguise.removePlayerInfoPacket, recipient));
 				}
-				
+
 				//old hologram nametags code
-				
+
 				/*Player player = Main.playerIdLookup.get(id);
 				//unsure if always will be player or not
 				if(player != null) {
 					PlayerInfo pinfo = Main.getPlayerInfo(player);
-					
+
 					//if player is invis, don't spawn nametag for players on other teams if a game exists
 					// otherwise don't spawn one at all
 					if(player.isInvisible()) {
@@ -96,13 +96,13 @@ public class PacketListeners
 							return;
 						}
 					}
-					
+
 					Hologram hologram = pinfo.nametag;
 					PacketContainer spawnPacket = hologram.getSpawnPacket();
 					PacketContainer metaDataPacket = hologram.getMetadataPacket();
 					//send to this spawn packet's recipient
 					PlayerUtils.sendPacket(event.getPlayer(), spawnPacket, metaDataPacket);
-					
+
 					//Main.logger().info("Spawned hologram along with player");
 				}*/
 			}
@@ -113,29 +113,32 @@ public class PacketListeners
 			@Override
 			public void onPacketSending(PacketEvent event) {
 				ClientboundPlayerInfoPacket nmsPacket = (ClientboundPlayerInfoPacket) event.getPacket().getHandle();
-				
+
 				ClientboundPlayerInfoPacket.Action action = nmsPacket.getAction();
 				if(action == ClientboundPlayerInfoPacket.Action.ADD_PLAYER ||
 						action == ClientboundPlayerInfoPacket.Action.REMOVE_PLAYER) {
-					
+
 					//LinkedList<ClientboundPlayerInfoPacket.PlayerUpdate> clonedList = new LinkedList<>(nmsPacket.getEntries());
 					var iter = nmsPacket.getEntries().listIterator();//clonedList.listIterator(0);
 					while(iter.hasNext()) {
 						ClientboundPlayerInfoPacket.PlayerUpdate update = iter.next();
-						
+
 						GameProfile profile = update.getProfile();
 						Player player = Bukkit.getPlayer(profile.getId());
+
+						if (player == null)
+							continue;
 
 						DisguiseManager.Disguise disguise = DisguiseManager.getDisguiseSeeing(player, event.getPlayer());
 						if(disguise != null) {
 							if(action == ClientboundPlayerInfoPacket.Action.ADD_PLAYER) {
-								
+
 								ClientboundPlayerInfoPacket.PlayerUpdate replacementUpdate =
 										new ClientboundPlayerInfoPacket.PlayerUpdate(disguise.disguisedGameProfile,
 												update.getLatency(), update.getGameMode(), update.getDisplayName());
-								
+
 								iter.set(replacementUpdate);
-								
+
 								ClientboundPlayerInfoPacket.PlayerUpdate tabListUpdate =
 										new ClientboundPlayerInfoPacket.PlayerUpdate(disguise.tabListGameProfile,
 												update.getLatency(), update.getGameMode(), update.getDisplayName());
@@ -151,11 +154,11 @@ public class PacketListeners
 								disguise.viewers.put(event.getPlayer(), TeamArena.getGameTick()); //record time so don't send packet twice in spawn player listener
 							}
 							else {
-								
+
 								ClientboundPlayerInfoPacket.PlayerUpdate tabListUpdate =
 										new ClientboundPlayerInfoPacket.PlayerUpdate(disguise.tabListGameProfile,
 												update.getLatency(), update.getGameMode(), update.getDisplayName());
-								
+
 								iter.add(tabListUpdate);
 
 								/*Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
@@ -168,7 +171,7 @@ public class PacketListeners
 				}
 			}
 		});
-		
+
 		//move the nametag armorstands with every player movement
 		// and disguises
 		/*ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
@@ -180,12 +183,12 @@ public class PacketListeners
 			public void onPacketSending(PacketEvent event) {
 				StructureModifier<Integer> ints = event.getPacket().getIntegers();
 				int id = ints.read(0);
-				
+
 				//use entity id of the disguised player if they're seeing one
 				ints.write(0, DisguiseManager.getDisguiseToSeeId(id, event.getPlayer()));
-				
+
 				//old hologram nametag code
-				
+
 				/*
 				Player player = Main.playerIdLookup.get(id);
 				if(player != null) {
@@ -209,7 +212,7 @@ public class PacketListeners
 				}
 			}
 		});*/
-		
+
 		//despawn hologram clientside when player is despawned (moved out of render distance or other)
 		/*ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.ENTITY_DESTROY)
@@ -220,20 +223,20 @@ public class PacketListeners
 				// for every player also add their nametag hologram to be removed as well
 				IntList ids = (IntList) event.getPacket().getModifier().read(0);
 				LinkedList<Integer> toAlsoRemove = new LinkedList<>();
-				
+
 				for(int i : ids) {
 					/*Player removedPlayer = Main.playerIdLookup.get(i);
 					if(removedPlayer != null) {
 						int armorStandId = Main.getPlayerInfo(removedPlayer).nametag.getId();
 						toAlsoRemove.add(armorStandId);
 					}
-					
+
 					DisguiseManager.Disguise disg = DisguiseManager.getDisguiseSeeing(i, event.getPlayer());
 					if(disg != null) {
 						toAlsoRemove.add(disg.tabListPlayerId);
 					}
 				}
-				
+
 				if(toAlsoRemove.size() > 0) {
 					for(int i : toAlsoRemove) {
 						ids.add(i);
@@ -242,7 +245,7 @@ public class PacketListeners
 				}
 			}
 		});*/
-		
+
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.NAMED_SOUND_EFFECT)
 		{
@@ -261,7 +264,7 @@ public class PacketListeners
 				}
 			}
 		});
-		
+
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.ENTITY_EQUIPMENT)
 		{
@@ -271,31 +274,31 @@ public class PacketListeners
 				if(teamArena != null && teamArena.getGameState() == GameState.LIVE) {
 					ClientboundSetEquipmentPacket packet = (ClientboundSetEquipmentPacket) event.getPacket().getHandle();
 					Player equippingPlayer = Main.playerIdLookup.get(packet.getEntity());
-				
+
 					if(equippingPlayer == null) //may not be a player, zombies/skeletons can wear armour
 						return;
-					
+
 					//if they have spy ability manipulate their armour to viewers
 					if(Kit.hasAbility(equippingPlayer, KitSpy.SpyAbility.class)) {
 						KitSpy.SpyDisguiseInfo spyInfo = KitSpy.getInfo(equippingPlayer);
 						DisguiseManager.Disguise disg = DisguiseManager.getDisguiseSeeing(packet.getEntity(), event.getPlayer());
-					
+
 						if(disg != null) { //the viewer is indeed viewing a disguise of this player
 							ItemStack[] kitArmour = spyInfo.disguisingAsKit.getArmour();
-							
+
 							//replace the items in the packet accordingly
 							var iter = packet.getSlots().listIterator();
 							LivingEntity nmsLiving = ((CraftPlayer) equippingPlayer).getHandle();
 							while(iter.hasNext()) {
 								Pair<EquipmentSlot, net.minecraft.world.item.ItemStack> pair = iter.next();
-								
+
 								//don't touch the hand slots, and don't change it if it's air (taking an armor piece off)
 								if(pair.getFirst().getType() == EquipmentSlot.Type.ARMOR && !pair.getSecond().isEmpty()) {
 									ItemStack armorPiece = kitArmour[pair.getFirst().getIndex()];
 									net.minecraft.world.item.ItemStack nmsArmor = CraftItemStack.asNMSCopy(armorPiece);
 									// paper avoids sending unnecessary metadata in NMS, so do that here too
 									nmsArmor = nmsLiving.stripMeta(nmsArmor, false);
-									
+
 									Pair<EquipmentSlot, net.minecraft.world.item.ItemStack> newPair = Pair.of(pair.getFirst(), nmsArmor);
 									iter.set(newPair);
 								}
@@ -305,8 +308,8 @@ public class PacketListeners
 				}
 			}
 		});
-		
-		
+
+
 		/**
 		 * could optimise by caching WrappedDataWatchers inside DemoMine object
 		 */
@@ -317,27 +320,27 @@ public class PacketListeners
 			public void onPacketSending(PacketEvent event) {
 				PacketContainer packet = event.getPacket();
 				int id = packet.getIntegers().read(0);
-				
+
 				DemoMine mine = DemoMine.getStandMine(id);
 				if(mine != null) {
 					boolean shouldSeeGlowing = mine.team.getPlayerMembers().contains(event.getPlayer());
-					
+
 					StructureModifier<List<WrappedWatchableObject>> modifier = packet.getWatchableCollectionModifier();
 					List<WrappedWatchableObject> objects = modifier.read(0);
-					
+
 					WrappedDataWatcher watcher = new WrappedDataWatcher();
-					
+
 					ListIterator<WrappedWatchableObject> iter = objects.listIterator();
-					
+
 					WrappedWatchableObject obj;
 					while(iter.hasNext()) {
-						
+
 						obj = iter.next();
-						
+
 						WrappedDataWatcher.WrappedDataWatcherObject watcherObj =
 								new WrappedDataWatcher.WrappedDataWatcherObject(
 										obj.getIndex(), obj.getWatcherObject().getSerializer());
-						
+
 						if(obj.getIndex() == 0) {
 							byte meta = (Byte) obj.getValue();
 							if(shouldSeeGlowing)
@@ -345,16 +348,16 @@ public class PacketListeners
 								meta |= (byte) 0x40; //https://wiki.vg/Entity_metadata#Entity_Metadata_Format
 							else
 								meta = (byte) (meta & ~(1 << 6)); //MUST explicity set to 0
-							
+
 							Byte b = meta;
-							
+
 							watcher.setObject(watcherObj, b);
 						}
 						else {
 							watcher.setObject(watcherObj, obj.getValue());
 						}
 					}
-					
+
 					modifier.write(0, watcher.getWatchableObjects());
 				}
 			}

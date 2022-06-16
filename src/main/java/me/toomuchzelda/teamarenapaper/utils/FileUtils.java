@@ -8,7 +8,7 @@ public class FileUtils
 {
 	//from kayz1:
 	// https://stackoverflow.com/questions/6214703/copy-entire-directory-contents-to-another-directory
-	
+
 	public static void copyFolder(File source, File destination)
 	{
 		if (source.isDirectory())
@@ -17,14 +17,14 @@ public class FileUtils
 			{
 				destination.mkdirs();
 			}
-			
+
 			String files[] = source.list();
-			
+
 			for (String file : files)
 			{
 				File srcFile = new File(source, file);
 				File destFile = new File(destination, file);
-				
+
 				copyFolder(srcFile, destFile);
 			}
 		}
@@ -32,14 +32,14 @@ public class FileUtils
 		{
 			InputStream in = null;
 			OutputStream out = null;
-			
+
 			try
 			{
 				in = new FileInputStream(source);
 				out = new FileOutputStream(destination);
-				
+
 				byte[] buffer = new byte[1024];
-				
+
 				int length;
 				while ((length = in.read(buffer)) > 0)
 				{
@@ -56,7 +56,7 @@ public class FileUtils
 				{
 					e1.printStackTrace();
 				}
-				
+
 				try
 				{
 					out.close();
@@ -81,7 +81,9 @@ public class FileUtils
 				deleteRec(f);
 			}
 		}
-		
-		file.delete();
+
+		if(!file.delete()) {
+			Main.logger().severe("Failed to delete " + file.getAbsolutePath());
+		}
 	}
 }

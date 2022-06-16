@@ -30,4 +30,7 @@ public class Preferences {
 
     public static final Preference<Boolean> RECEIVE_DAMAGE_RECEIVED_LIST = SimplePreference.of("damage_received_list",
             "Get a list of everything that killed you when you die", false);
+
+	public static final Preference<Boolean> TEAM_CHAT_SOUND = SimplePreference.of("team_chat_sound",
+			"Hear a sound when receiving a team chat message", true);
 }
