@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
@@ -39,7 +40,7 @@ public abstract class CustomCommand extends Command {
     }
 
     public static final Component NO_PERMISSION = Component.text("You do not have permission to run this command!").color(NamedTextColor.DARK_RED);
-    public static final Component PLAYER_ONLY = Component.text("You can't run this command from the console!").color(NamedTextColor.RED);
+    public static final Component PLAYER_ONLY = Component.text("You can't run this command from the console!").color(TextUtils.ERROR_RED);
     @Override
     public final boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         if (sender instanceof Player player) {
@@ -95,7 +96,7 @@ public abstract class CustomCommand extends Command {
     }
 
     protected void showUsage(CommandSender sender, String usage) {
-        sender.sendMessage(Component.text("Usage: " + usage).color(NamedTextColor.RED));
+        sender.sendMessage(Component.text("Usage: " + usage).color(TextUtils.ERROR_RED));
     }
 
     protected void showUsage(CommandSender sender) {

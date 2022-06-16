@@ -1333,9 +1333,13 @@ public abstract class TeamArena
 
 	public void informOfTeam(Player p) {
 		TeamArenaTeam team = Main.getPlayerInfo(p).team;
-		Component text = Component.text("You are on ").color(NamedTextColor.GOLD).append(team.getComponentName());
+		Component text = Component.text("You are on ", NamedTextColor.GOLD).append(team.getComponentName());
+		PlayerUtils.sendTitle(p, Component.empty(), text, 10, 70, 20);
+		if(gameState == GameState.TEAMS_CHOSEN) {
+			final Component startConniving = Component.text("! Start scheming a game plan with /t!", NamedTextColor.GOLD);
+			text = text.append(startConniving);
+		}
 		p.sendMessage(text);
-		p.showTitle(Title.title(Component.empty(), text));
 		p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.AMBIENT, 2f, 0.5f);
 	}
 

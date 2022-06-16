@@ -80,6 +80,7 @@ public final class Main extends JavaPlugin
 		commandMap.register(fallbackPrefix, new CommandDebug());
 		commandMap.register(fallbackPrefix, new CommandTicTacToe());
 		commandMap.register(fallbackPrefix, new CommandCallvote());
+		commandMap.register(fallbackPrefix, new CommandTeamChat());
 	}
 
 	public static PlayerInfo getPlayerInfo(Player player) {
