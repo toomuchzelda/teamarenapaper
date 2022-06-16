@@ -61,8 +61,6 @@ public class KitVenom extends Kit
 	public static final Set<BukkitTask> LEAP_TASKS = new HashSet<>();
 	public static final TextColor POISON_PURP = TextColor.color(145, 86, 204);
 
-
-
 	private static final ItemStack POTION_OF_POISON = ItemBuilder.of(Material.POTION)
 			.meta(PotionMeta.class, potionMeta -> {
 				potionMeta.setBasePotionData(new PotionData(PotionType.POISON));
@@ -202,7 +200,7 @@ public class KitVenom extends Kit
 											player.setCooldown(Material.CHICKEN, newCooldown);
 
 											player.setCooldown(Material.COOKED_CHICKEN, 0);
-											
+
 
 											//Applying Poison, tracking the poisoned entity
 											applyPoison(victim, player);
