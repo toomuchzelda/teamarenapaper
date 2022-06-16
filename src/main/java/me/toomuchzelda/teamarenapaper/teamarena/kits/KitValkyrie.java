@@ -51,8 +51,8 @@ import net.kyori.adventure.text.format.TextColor;
     Weapon: Netherite Axe w/ Sharp 3 + KB 1
     ~ 5 DMG
     Slowed while holding axe
-    
-    Sub-Ability: Spin Attack 
+
+    Sub-Ability: Spin Attack
         Attacks have a short charge up time and short CD
         Attacks hit ALL enemies within 3 block range
         Damage based on distance from player
@@ -65,7 +65,7 @@ import net.kyori.adventure.text.format.TextColor;
 		Charge CD: 12 seconds
         Detonation Time: 1.5 seconds
 
-        Launches a Heart of the Sea like an explosive grenade, 
+        Launches a Heart of the Sea like an explosive grenade,
         which will detonate after a short fuse time.
         (Can be thrown with low or high velocity depending on type of click)
 
@@ -102,7 +102,7 @@ public class KitValkyrie extends Kit{
         VALK_AXE = new ItemStack(Material.NETHERITE_AXE);
         ItemMeta valkMeta = VALK_AXE.getItemMeta();
         valkMeta.addEnchant(Enchantment.DAMAGE_ALL, AXE_SHARP, true);
-        valkMeta.addEnchant(Enchantment.KNOCKBACK, 1, false);        
+        valkMeta.addEnchant(Enchantment.KNOCKBACK, 1, false);
         valkMeta.displayName(ItemUtils.noItalics(Component.text("Battle Axe")));
         valkMeta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
         VALK_AXE.setItemMeta(valkMeta);
@@ -114,7 +114,7 @@ public class KitValkyrie extends Kit{
         lore.add(BOMB_LORE);
         lore.add(BOMB_LORE2);
         gravMeta.lore(lore);
-        GRAV_BOMB.setItemMeta(gravMeta);  
+        GRAV_BOMB.setItemMeta(gravMeta);
     }
 
     public KitValkyrie(){
@@ -151,7 +151,7 @@ public class KitValkyrie extends Kit{
 				iter.remove();
 			}
 		}
-        
+
         public void removeAbility(Player player) {
 			player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).removeModifier(AXE_SLOW);
             player.setExp(0);
@@ -225,6 +225,9 @@ public class KitValkyrie extends Kit{
 					itemIter.remove();
 				}
 			}
+
+			//clean up cancelled or ended bukkit tasks
+			VALK_TASKS.removeIf(BukkitTask::isCancelled);
         }
 
         public void onInteract(PlayerInteractEvent event) {
@@ -261,12 +264,11 @@ public class KitValkyrie extends Kit{
                 //isAxe ensures that the axe is held in hand for the whole wind-up time.
                 boolean isAxe = true;
                 float expInc = 1/(float)AXE_WINDUP;
-                
+
                 public void run(){
-                    if(duration <= 0){     
+                    if(duration <= 0){
                         valkAttack(player);
                         cancel();
-                        VALK_TASKS.remove(this);
                         player.setExp(0);
                     }
                     else{
@@ -282,7 +284,6 @@ public class KitValkyrie extends Kit{
 
                         if(!isAxe){
                             cancel();
-                            VALK_TASKS.remove(this);
                             player.setExp(0);
                         }
                     }
@@ -319,7 +320,7 @@ public class KitValkyrie extends Kit{
                     item.setItemMeta(meta);
                     player.attack(victim);
                     item.addEnchantment(Enchantment.DAMAGE_ALL, AXE_SHARP);
-                    
+
                 }
                 iter.remove();
             }
@@ -340,11 +341,10 @@ public class KitValkyrie extends Kit{
 
                 int duration = 4;
                 int increment = 0;
-                
+
                 public void run() {
                     if(increment >= duration){
                         cancel();
-                        VALK_TASKS.remove(this);
                     }
                     else{
                         for(int i = 0; i < 10; i++){
@@ -355,10 +355,10 @@ public class KitValkyrie extends Kit{
                             loc.subtract(radius * Math.cos(rad), 0, radius * Math.sin(rad));
                         }
                         increment++;
-                        
+
 
                     }
-                    
+
                 }
             }.runTaskTimer(Main.getPlugin(), 0, 0);
             VALK_TASKS.add(runnable);
@@ -375,7 +375,7 @@ public class KitValkyrie extends Kit{
 			activeGrenade.setCanMobPickup(false);
 		    activeGrenade.setVelocity(direction.multiply(amp));
 		    world.playSound(activeGrenade.getLocation(), Sound.ENTITY_CREEPER_PRIMED, 1f, 1.1f);
-            
+
 			BukkitTask runnable = new BukkitRunnable(){
 				//Grenade explosion
 				int timer = DETONATION_TIME;
@@ -411,11 +411,10 @@ public class KitValkyrie extends Kit{
                                     activeGrenade.remove();
                                     BOMB_RECHARGES.put((Player) player, TeamArena.getGameTick());
                                     cancel();
-                                    VALK_TASKS.remove(this);
                                 }
                                 else{
                                     for(Entity entity : affectedEnemies){
-                                        //Pull-in 
+                                        //Pull-in
                                         if(entity instanceof org.bukkit.entity.LivingEntity victim && !(entity.getType().equals(EntityType.ARMOR_STAND))){
                                             if(!(victim instanceof Player p) || Main.getGame().canAttack(player, p)) {
                                                 Vector currVel = entity.getVelocity().clone();
@@ -443,7 +442,6 @@ public class KitValkyrie extends Kit{
                         VALK_TASKS.add(runnable);
 
                         cancel();
-                        VALK_TASKS.remove(this);
 					}
 				}
 			}.runTaskTimer(Main.getPlugin(), 0, 0);
