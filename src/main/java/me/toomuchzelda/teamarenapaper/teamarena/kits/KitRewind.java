@@ -87,7 +87,6 @@ public class KitRewind extends Kit {
 		setAbilities(new RewindAbility());
 	}
 
-	@SuppressWarnings("UnstableApiUsage") // EvictingQueue is beta, who cares
 	public static class RewindAbility extends Ability {
 
 		public static final int TICK_CYCLE = 15 * 20;
