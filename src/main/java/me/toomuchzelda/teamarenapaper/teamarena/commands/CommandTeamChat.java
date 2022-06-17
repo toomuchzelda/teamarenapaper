@@ -79,7 +79,7 @@ public class CommandTeamChat extends CustomCommand
 
 		return Component.text().append(team.colourWord(TEAM_CHAT_PREFIX).decoration(TextDecoration.BOLD, true))
 				.append(sender.playerListName())
-				.append(Component.text(": "))
+				.append(Component.space())
 				.append(messageContents).build();
 	}
 }
