@@ -16,18 +16,13 @@ import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
-import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.PreferenceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
-import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -35,15 +30,13 @@ import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.craftbukkit.v1_18_R2.CraftWorldBorder;
-import org.bukkit.entity.AbstractArrow;
-import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.*;
@@ -367,16 +360,29 @@ public class EventListeners implements Listener
 		}
 	}
 
+	@EventHandler
+	public void blockPlace(BlockPlaceEvent event) {
+		if(event.getPlayer().getGameMode() != GameMode.CREATIVE) {
+			event.setCancelled(true);
+		}
+
+		Main.getGame().onPlaceBlock(event);
+
+		for(Ability ability : Kit.getAbilities(event.getPlayer())) {
+			ability.onPlaceBlock(event);
+		}
+	}
+
 	/**
 	 * prevent explosions from breaking blocks
 	 */
 	@EventHandler
-	public void entityExplodeEvent(EntityExplodeEvent event) {
+	public void entityExplode(EntityExplodeEvent event) {
 		event.blockList().clear();
 	}
 
 	@EventHandler
-	public void blockExplodeEvent(BlockExplodeEvent event) {
+	public void blockExplode(BlockExplodeEvent event) {
 		event.blockList().clear();
 	}
 
@@ -656,18 +662,16 @@ public class EventListeners implements Listener
 
 	@EventHandler(ignoreCancelled = true)
 	public void onPlayerArmorChange(InventoryClickEvent e) {
-		if (!(Main.getGame() instanceof CaptureTheFlag ctf))
-			return;
-		ItemStack toCheck = null;
+		TeamArena game = Main.getGame();
 		InventoryAction action = e.getAction();
 		// these two actions move the current item so check the current item
 		if (action == InventoryAction.MOVE_TO_OTHER_INVENTORY || action == InventoryAction.HOTBAR_SWAP) {
-			if (ctf.isFlagItem(e.getCurrentItem()))
+			if (!game.isWearableArmorPiece(e.getCurrentItem()))
 				e.setCancelled(true);
-			else if (e.getHotbarButton() != -1 && ctf.isFlagItem(e.getView().getBottomInventory().getItem(e.getHotbarButton())))
+			else if (e.getHotbarButton() != -1 && !game.isWearableArmorPiece(e.getView().getBottomInventory().getItem(e.getHotbarButton())))
 				e.setCancelled(true);
 		} else if (e.getSlotType() == InventoryType.SlotType.ARMOR) {
-			if (ctf.isFlagItem(e.getCursor())) {
+			if (!game.isWearableArmorPiece(e.getCursor())) {
 				e.setCancelled(true);
 			}
 		}
@@ -675,10 +679,19 @@ public class EventListeners implements Listener
 
 	@EventHandler(ignoreCancelled = true)
 	public void onPlayerArmorDrag(InventoryDragEvent e) {
-		if (!(Main.getGame() instanceof CaptureTheFlag ctf))
-			return;
+		ItemStack draggedItem = e.getOldCursor();
 
-		if (ctf.isFlagItem(e.getOldCursor())) {
+		boolean isDraggingOnArmorSlot = false;
+		if(e.getInventory().getHolder() instanceof HumanEntity) {
+			for(int i : e.getInventorySlots()) {
+				if(ItemUtils.isArmorSlotIndex(i)) {
+					isDraggingOnArmorSlot = true;
+					break;
+				}
+			}
+		}
+
+		if(isDraggingOnArmorSlot && !Main.getGame().isWearableArmorPiece(draggedItem)) {
 			e.setCancelled(true);
 		}
 	}

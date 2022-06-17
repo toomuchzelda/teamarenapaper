@@ -6,6 +6,7 @@ import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import org.bukkit.entity.Player;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
@@ -129,4 +130,10 @@ public abstract class Ability {
 
     public void playerDropItem(PlayerDropItemEvent event) {
     }
+
+	/**
+	 * Player places a block. By default, already cancelled. May be un-cancelled by the TeamArena instance before this
+	 * method has been called
+	 */
+	public void onPlaceBlock(BlockPlaceEvent event) {}
 }

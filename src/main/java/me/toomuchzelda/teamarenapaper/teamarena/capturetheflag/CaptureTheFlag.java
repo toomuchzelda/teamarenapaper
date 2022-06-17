@@ -586,6 +586,11 @@ public class CaptureTheFlag extends TeamArena
 		return meta != null && flagItems.contains(meta.getDisplayName());
 	}
 
+	@Override
+	public boolean isWearableArmorPiece(ItemStack item) {
+		return !isFlagItem(item) && super.isWearableArmorPiece(item);
+	}
+
 	/**
 	 * Get the copy of a flag item in a players inventory e.g the specific flag item in the inventory of a player holding the flag
 	 */

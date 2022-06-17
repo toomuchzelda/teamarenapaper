@@ -26,7 +26,7 @@ public class CommandTeamChat extends CustomCommand
 			, TextUtils.ERROR_RED);
 	public static final Collection<String> TAB_COMPLETE = Collections.singleton("<message>");
 
-	public static final String TEAM_CHAT_PREFIX = "TEAM CHAT: ";
+	public static final String TEAM_CHAT_PREFIX = "TEAM CHAT ";
 
 	public CommandTeamChat() {
 		super("teamchat", "Send a message only your teammates can see", "/teamchat [message]", PermissionLevel.ALL, "t");

@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
+import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.bossbar.BossBar;
@@ -18,6 +19,7 @@ import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
 
@@ -28,8 +30,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class TeamArenaTeam
 {
-	public static final Component SHOW_ALL_TEAMMATES = Component.text("Left click to show all teammates", TextUtils.LEFT_CLICK_TO);
-	public static final Component PING = Component.text("Point at something and right click to ping!", TextUtils.RIGHT_CLICK_TO);
+	public static final Component SHOW_ALL_TEAMMATES = ItemUtils.noItalics(Component.text("Left click to show all teammates", TextUtils.LEFT_CLICK_TO));
+	public static final Component PING = ItemUtils.noItalics(Component.text("Point at something and right click to ping!", TextUtils.RIGHT_CLICK_TO));
 	public static final List<Component> HOTBAR_ITEM_LORE = List.of(SHOW_ALL_TEAMMATES, PING);
 
 	private final String name;
@@ -107,11 +109,12 @@ public class TeamArenaTeam
 		meta.displayName(componentName.decoration(TextDecoration.ITALIC, false));
 		iconItem.setItemMeta(meta);
 
-		hotbarItem = iconItem.clone();
-		meta = hotbarItem.getItemMeta();
-		meta.displayName(componentName);
-		meta.lore(HOTBAR_ITEM_LORE);
-		hotbarItem.setItemMeta(meta);
+		hotbarItem = new ItemStack(Material.LEATHER_CHESTPLATE);
+		LeatherArmorMeta leatherMeta = (LeatherArmorMeta) hotbarItem.getItemMeta();
+		leatherMeta.displayName(ItemUtils.noItalics(Component.text("You are on ", NamedTextColor.GOLD).append(componentName)));
+		leatherMeta.lore(HOTBAR_ITEM_LORE);
+		leatherMeta.setColor(this.colour);
+		hotbarItem.setItemMeta(leatherMeta);
 
 		paperTeam = SidebarManager.SCOREBOARD.registerNewTeam(name);
 		paperTeam.displayName(componentName);

@@ -20,6 +20,7 @@ import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -275,8 +276,8 @@ public abstract class TeamArena
 		PlayerInventory inventory = player.getInventory();
 		inventory.clear();
 		inventory.setItem(8, miniMap.getMapItem(info.team));
+		inventory.setItem(7, info.team.getHotbarItem());
 		info.kit.giveKit(player, true, info);
-		inventory.addItem(info.team.getHotbarItem());
 	}
 
 	public void cleanUp() {
@@ -626,6 +627,8 @@ public abstract class TeamArena
 	public void onInteractEntity(PlayerInteractEntityEvent event) {
 	}
 
+	public void onPlaceBlock(BlockPlaceEvent event) {}
+
 	public void regenTick() {
 		if(gameTick % 60 == 0) {
 			Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
@@ -679,9 +682,6 @@ public abstract class TeamArena
 				if(time.getTimeGiven() == -1) {
 					time.setTimeGiven(currentTick);
 				}
-
-				//TODO: higher poison effect amplifier means faster damage?
-				//TODO: how often does poison deal damage?
 
 				poisonRate = poison.getAmplifier() > 0 ? 12 : 25;
 				if((currentTick - time.getTimeGiven()) % poisonRate == 0 && victim.getHealth() > 2d) { //must leave them at half a heart
@@ -1592,6 +1592,19 @@ public abstract class TeamArena
 			return false;
 		}
 		return true;
+	}
+
+	public boolean isTeamHotbarItem(ItemStack item) {
+		for(TeamArenaTeam team : teams) {
+			if(team.getHotbarItem().isSimilar(item))
+				return true;
+		}
+
+		return false;
+	}
+
+	public boolean isWearableArmorPiece(ItemStack item) {
+		return !isTeamHotbarItem(item);
 	}
 
 	public void queueDamage(DamageEvent event) {
