@@ -276,6 +276,7 @@ public abstract class TeamArena
 		inventory.clear();
 		inventory.setItem(8, miniMap.getMapItem(info.team));
 		info.kit.giveKit(player, true, info);
+		inventory.addItem(info.team.getHotbarItem());
 	}
 
 	public void cleanUp() {

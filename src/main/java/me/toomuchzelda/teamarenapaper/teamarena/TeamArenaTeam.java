@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -20,12 +21,17 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
 
+import java.util.List;
 import java.util.Set;
 import java.util.Stack;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class TeamArenaTeam
 {
+	public static final Component SHOW_ALL_TEAMMATES = Component.text("Left click to show all teammates", TextUtils.LEFT_CLICK_TO);
+	public static final Component PING = Component.text("Point at something and right click to ping!", TextUtils.RIGHT_CLICK_TO);
+	public static final List<Component> HOTBAR_ITEM_LORE = List.of(SHOW_ALL_TEAMMATES, PING);
+
 	private final String name;
 	private final String simpleName;
 
@@ -38,6 +44,7 @@ public class TeamArenaTeam
 
 	private final DyeColor dyeColour;
 	private final TextColor RGBColour;
+	private final TextColor RGBSecondColor;
 
 	//BossBars are sent in prepLive() of each game class extending TeamArena
 	private final BossBar.Color barColor;
@@ -45,6 +52,9 @@ public class TeamArenaTeam
 
 	public final Material iconMaterial;
 	private final ItemStack iconItem;
+
+	//hotbar item players have during game
+	private final ItemStack hotbarItem;
 
 	//paper good spigot bad
 	private Team paperTeam;
@@ -72,6 +82,7 @@ public class TeamArenaTeam
 		this.dyeColour = dyeColor;
 
 		this.RGBColour = TextColor.color(colour.asRGB());
+		this.RGBSecondColor = TextColor.color(colour.asRGB());
 
 		spawns = null;
 		score = 0;
@@ -95,6 +106,12 @@ public class TeamArenaTeam
 		ItemMeta meta = iconItem.getItemMeta();
 		meta.displayName(componentName.decoration(TextDecoration.ITALIC, false));
 		iconItem.setItemMeta(meta);
+
+		hotbarItem = iconItem.clone();
+		meta = hotbarItem.getItemMeta();
+		meta.displayName(componentName);
+		meta.lore(HOTBAR_ITEM_LORE);
+		hotbarItem.setItemMeta(meta);
 
 		paperTeam = SidebarManager.SCOREBOARD.registerNewTeam(name);
 		paperTeam.displayName(componentName);
@@ -154,8 +171,16 @@ public class TeamArenaTeam
 		return RGBColour;
 	}
 
+	public TextColor getRGBSecondTextColor() {
+		return RGBSecondColor;
+	}
+
 	public ItemStack getIconItem() {
 		return this.iconItem.clone();
+	}
+
+	public ItemStack getHotbarItem() {
+		return this.hotbarItem.clone();
 	}
 
 	public static Color convert(NamedTextColor textColor) {
@@ -319,10 +344,10 @@ public class TeamArenaTeam
 
 	//create gradient component word like player name or team name
 	public Component colourWord(String str) {
-		Component component = Component.empty();
-
+		Component component;
 		if(secondColour != null) {
-			for (float i = 0; i < str.length(); i++) {
+			component = TextUtils.getUselessRGBText(str, getRGBTextColor(), getRGBSecondTextColor());
+			/*for (float i = 0; i < str.length(); i++) {
 				//percentage of second colour to use, leftover is percentage of first colour
 				// from 0 to 1
 				float percentage = (i / (float) str.length());
@@ -339,10 +364,10 @@ public class TeamArenaTeam
 
 
 				component = component.append(Component.text(str.charAt((int) i)).color(result));
-			}
+			}*/
 		}
 		else {
-			component = Component.text(str).color(getRGBTextColor());
+			component = Component.text(str, getRGBTextColor());
 		}
 		return component;
 	}
