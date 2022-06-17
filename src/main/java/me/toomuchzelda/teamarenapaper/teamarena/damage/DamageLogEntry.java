@@ -1,65 +1,149 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.JoinConfiguration;
+import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
 import javax.annotation.Nullable;
-import java.util.List;
+import java.text.DecimalFormat;
+import java.time.Duration;
+import java.util.*;
+import java.util.stream.Collectors;
 
-public class DamageLogEntry {
-    public DamageType damageType;
-    public double damage;
-    public @Nullable
-    Component damager;
-    public int time;
+public record DamageLogEntry(DamageType damageType, double damage, @Nullable Component damager, int time) {
+	public static final Comparator<DamageLogEntry> ASCENDING = Comparator.comparingInt(DamageLogEntry::time);
+	public static final Comparator<DamageLogEntry> DESCENDING = ASCENDING.reversed();
 
-    public DamageLogEntry(DamageType type, double damage, @Nullable Entity damager, int time) {
-        this.damageType = type;
-        this.damage = damage;
-        if(damager != null)
-            this.damager = EntityUtils.getName(damager);
-        else
-            this.damager = null;
-        this.time = time;
-    }
+	private static final DecimalFormat DAMAGE_FORMAT = new DecimalFormat("#.##");
+	private static final TextColor HEART_COLOR = TextColor.color(217, 45, 2);
 
-    public static void sendDamageLog(Player player, boolean clear) {
+	public Component asComponent() {
+		return asComponent(false);
+	}
 
-        Component text = Component.text("Here's how you died:").color(NamedTextColor.DARK_PURPLE).append(Component.newline());
+	private static Component getDamageTypeComponent(DamageType type) {
+		if (type.is(DamageType.FREEZE)) {
+			return Component.text("❄ " + type.getName(), NamedTextColor.AQUA);
+		} else if (type.is(DamageType.POISON)) {
+			return Component.text("☠ " + type.getName(), NamedTextColor.GREEN);
+		} else if (type.isFire()) {
+			return Component.text("\uD83D\uDD25 " + type.getName(), NamedTextColor.RED); // lol emoji
+		} else {
+			return Component.text(type.getName(), NamedTextColor.DARK_GREEN);
+		}
+	}
 
-        PlayerInfo pinfo = Main.getPlayerInfo(player);
-        List<DamageLogEntry> list = pinfo.getDamageReceivedLog();
-        var iter = list.iterator();
-        while(iter.hasNext()) {
-            DamageLogEntry dinfo = iter.next();
-            text = text.append(Component.text(MathUtils.round((dinfo.damage / 2), 2) + " ♥").color(TextColor.color(217, 45, 2)));
-            text = text.append(Component.text(", Cause: " + dinfo.damageType.getName()).color(TextColor.color(255, 247, 0)));
-            if(dinfo.damager != null) {
-                text = text.append(Component.text(", Damager: ").color(TextColor.color(6, 122, 0)).append(dinfo.damager));
-            }
-            float timeAgo = TeamArena.getGameTick() - dinfo.time;
-            timeAgo /= 20;
-            text = text.append(Component.text(", " + timeAgo + "s ago").color(NamedTextColor.WHITE));
+	public Component asComponent(boolean legacy) {
+		var builder = Component.text();
+		if (legacy) {
+			builder.append(Component.text(DAMAGE_FORMAT.format(damage / 2) + " ♥", HEART_COLOR));
+			builder.append(Component.text(", Cause: " + damageType.getName(), TextColor.color(255, 247, 0)));
+			if (damager != null) {
+				builder.append(Component.text(", Damager: ", TextColor.color(6, 122, 0)), damager);
+			}
+			float timeAgo = TeamArena.getGameTick() - time;
+			timeAgo /= 20;
+			builder.append(Component.text(", " + timeAgo + "s ago", NamedTextColor.WHITE));
+		} else {
+			builder.append(
+					Component.text("-" + DAMAGE_FORMAT.format(damage / 2) + "♥", HEART_COLOR),
+					Component.text(" from ", NamedTextColor.YELLOW),
+					getDamageTypeComponent(damageType)
+			);
+			if (damager != null) {
+				builder.append(
+						Component.text(" by ", NamedTextColor.DARK_GREEN),
+						damager
+				);
+			}
+			long timeAgo = (TeamArena.getGameTick() - time) * 50L;
+			if (timeAgo == 0) {
+				builder.append(Component.text(" just now", NamedTextColor.YELLOW));
+			} else {
+				builder.append(Component.space(),
+						TextUtils.formatDuration(Duration.ofMillis(timeAgo)),
+						Component.text(" ago", NamedTextColor.YELLOW));
+			}
+		}
+		return builder.build();
+	}
 
-            if(iter.hasNext())
-                text = text.append(Component.newline());
+	public record DamageSummary(DamageLogEntry summaryEntry, List<DamageLogEntry> entries) {}
 
-            if(clear)
-                iter.remove();
-        }
+	public static Map<DamageType, DamageSummary> createSummary(List<DamageLogEntry> entries) {
+		var damageTypes = entries.stream()
+				.sorted(DESCENDING)
+				.collect(Collectors.groupingBy(
+						entry -> entry.damageType,
+						LinkedHashMap::new,
+						Collectors.toList()
+				));
+		LinkedHashMap<DamageType, DamageSummary> summary = new LinkedHashMap<>();
+		damageTypes.forEach((type, list) -> {
+			// get damager and time from the first entry
+			DamageLogEntry firstEntry = list.get(0);
+			double totalDamage = 0;
+			for (var entry : list) {
+				totalDamage += entry.damage;
+			}
 
-        player.sendMessage(text);
+			summary.put(type, new DamageSummary(
+					new DamageLogEntry(type, totalDamage, firstEntry.damager, firstEntry.time),
+					Collections.unmodifiableList(list))
+			);
+		});
+		return Collections.unmodifiableMap(summary);
+	}
 
-        /*if(clear) {
-            pinfo.clearDamageInfos();
-        }*/
-    }
+	public static void sendDamageLog(Player player) {
+		PlayerInfo pinfo = Main.getPlayerInfo(player);
+		Style style = pinfo.getPreference(Preferences.RECEIVE_DAMAGE_RECEIVED_LIST);
+
+		if (style == Style.NONE)
+			return;
+
+		List<DamageLogEntry> list = pinfo.getDamageReceivedLog();
+		if (style == Style.COMPACT) {
+			player.sendMessage(Component.text("Here's how you died: (hover to see more)", NamedTextColor.DARK_PURPLE));
+			var damageSummary = createSummary(list);
+			damageSummary.values().stream()
+					.map(summary -> {
+						var builder = Component.text().content("  "); // indentation
+						builder.append(summary.summaryEntry.asComponent());
+						// show all damage received on hover, separated by newlines
+						builder.hoverEvent(HoverEvent.showText(
+								summary.entries.stream()
+										.map(DamageLogEntry::asComponent)
+										.collect(Component.toComponent(Component.newline()))
+						));
+						return builder.build();
+					})
+					.forEach(player::sendMessage);
+
+		} else {
+			player.sendMessage(Component.text("Here's how you died:", NamedTextColor.DARK_PURPLE));
+			List<Component> components = new ArrayList<>(list.size());
+			for (var dinfo : list) {
+				var builder = Component.text();
+				builder.content("  "); // indentation
+				builder.append(dinfo.asComponent(true));
+				components.add(builder.build());
+			}
+			player.sendMessage(Component.join(JoinConfiguration.newlines(), components));
+		}
+	}
+
+	public enum Style {
+		NONE,
+		COMPACT,
+		FULL
+	}
 }

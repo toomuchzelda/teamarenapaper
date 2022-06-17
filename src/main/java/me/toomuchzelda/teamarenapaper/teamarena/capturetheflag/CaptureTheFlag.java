@@ -8,10 +8,12 @@ import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
@@ -176,57 +178,92 @@ public class CaptureTheFlag extends TeamArena
 			}
 		}
 
-		updateLiveSidebar();
-
 		super.liveTick();
 	}
 
-	public void updateLiveSidebar() {
-		//update the sidebar every tick
-		byte numLines;
-		LinkedList<Flag> aliveFlags = new LinkedList<>();
+	public static final Component GAME_NAME = Component.text("Capture the Flag", NamedTextColor.AQUA);
 
-		Component[] lines;
-		for(Flag flag : teamToFlags.values()) {
-			if(flag.team.isAlive())
-				aliveFlags.add(flag);
+	private final Map<TeamArenaTeam, Component> sidebarCache = new LinkedHashMap<>();
+	@Override
+	public Collection<Component> updateSharedSidebar() {
+		sidebarCache.clear();
+
+		var flags = teamToFlags.values().stream()
+				.filter(flag -> CommandDebug.ignoreWinConditions || flag.team.isAlive())
+				.sorted(Flag.BY_SCORE_DESC)
+				.toList();
+
+		for (var flag : flags) {
+			var builder = Component.text();
+			builder.append(flag.team.getComponentSimpleName(), Component.text(": "));
+			if (flag.isAtBase) {
+				builder.append(Component.text("⌂ Safe", NamedTextColor.GREEN));
+			} else if (flag.holdingTeam != null) {
+				builder.append(flag.holdingTeam.colourWord("■ Held").decorate(TextDecoration.BOLD));
+			} else {
+				builder.append(TextUtils.getProgressText("� Dropped",
+						NamedTextColor.GRAY, flag.team.getRGBTextColor(), NamedTextColor.GREEN,
+						1 - (double) flag.ticksUntilReturn / TAKEN_FLAG_RETURN_TIME));
+			}
+			sidebarCache.put(flag.team, builder.build());
 		}
 
-		Comparator<Flag> byScore = (teamArenaTeam, t1) -> (t1.team.getTotalScore()) - (teamArenaTeam.team.getTotalScore());
-		aliveFlags.sort(byScore);
+		return Collections.emptyList();
+	}
 
-		if(aliveFlags.size() <= 7)
+	@Override
+	public void updateSidebar(Player player, SidebarManager sidebar) {
+		var playerTeam = Main.getPlayerInfo(player).team;
+		sidebar.setTitle(player, GAME_NAME);
+		sidebarCache.forEach((team, entry) -> {
+			if (playerTeam == team) {
+				sidebar.addEntry(Component.textOfChildren(OWN_TEAM_PREFIX, entry));
+			} else {
+				sidebar.addEntry(entry);
+			}
+		});
+
+	}
+
+	@Override
+	public void updateLegacySidebar(Player player, SidebarManager sidebar) {
+		sidebar.setTitle(player, Component.text("CapsToWin: " + capsToWin, NamedTextColor.GOLD));
+		//update the sidebar every tick
+		byte numLines;
+		List<Flag> aliveFlags = teamToFlags.values().stream()
+				.filter(flag -> flag.team.isAlive())
+				.sorted(Flag.BY_SCORE_DESC)
+				.toList();
+
+		if (aliveFlags.size() <= 7)
 			numLines = 2;
 		else
 			numLines = 1;
 
-		lines = new Component[numLines * aliveFlags.size()];
+		Component[] lines = new Component[numLines * aliveFlags.size()];
 
 		int index = 0;
 		for (Flag flag : aliveFlags) {
 			Component first = flag.team.getComponentSimpleName();
-			if(numLines == 2) {
+			if (numLines == 2) {
 				Component flagStatus = Component.text("Flag ").color(NamedTextColor.WHITE);
-				if(flag.isAtBase)
+				if (flag.isAtBase)
 					flagStatus = flagStatus.append(Component.text("Safe").color(NamedTextColor.GREEN));
-				else if(flag.holdingTeam != null) {
+				else if (flag.holdingTeam != null) {
 					flagStatus = flagStatus.append(Component.text("Held by ")).append(flag.holdingTeam.getComponentSimpleName());
-				}
-				else {
+				} else {
 					flagStatus = flagStatus.append(flag.progressBarComponent);//Component.text("Unsafe").color(TextColor.color(255, 85, 0)));
 				}
 
 				lines[index] = first.append(Component.text(": " + flag.team.getTotalScore()).color(NamedTextColor.WHITE));
 				lines[index + 1] = flagStatus;
-			}
-			else {
+			} else {
 				Component flagStatus;
-				if(flag.isAtBase)
+				if (flag.isAtBase)
 					flagStatus = Component.text("Safe").color(NamedTextColor.GREEN);
-				else if(flag.holdingTeam != null) {
+				else if (flag.holdingTeam != null) {
 					flagStatus = Component.text("Held").color(flag.holdingTeam.getRGBTextColor());
-				}
-				else {
+				} else {
 					flagStatus = flag.progressBarComponent;//Component.text("Unsafe").color(TextColor.color(255, 85, 0));
 				}
 				lines[index] = first.append(Component.text(": " + flag.team.getTotalScore() + ' ').color(NamedTextColor.WHITE).append(flagStatus));
@@ -235,7 +272,9 @@ public class CaptureTheFlag extends TeamArena
 			index += numLines;
 		}
 
-		SidebarManager.setLines(lines);
+		for (var line : lines) {
+			sidebar.addEntry(line);
+		}
 	}
 
 	@Override
@@ -495,8 +534,6 @@ public class CaptureTheFlag extends TeamArena
 	}
 
 	public void flagPositionTick(Flag flag) {
-		if (CommandDebug.disableAnimations)
-			return;
 		ArmorStand stand = flag.getArmorStand();
 		Location loc;
 		if(flag.isAtBase)
@@ -635,9 +672,6 @@ public class CaptureTheFlag extends TeamArena
 	@Override
 	public void prepLive() {
 		super.prepLive();
-
-		SidebarManager.setTitle(Component.text("CapsToWin: " + capsToWin).color(NamedTextColor.GOLD));
-
 
 		// register flag cursors
 		for (var entry : teamToFlags.entrySet()) {

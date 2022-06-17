@@ -4,6 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.HoverEvent;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerPlayer;
@@ -22,6 +23,8 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -41,18 +44,19 @@ public class EntityUtils {
         }
     }
 
-    public static Component getName(Entity entity) {
-        Component entityName;
+	@NotNull
+    public static Component getComponent(@Nullable Entity entity) {
         if (entity == null)
-            entityName = Component.text("Unknown");
-        else if (entity instanceof Player p)
-            entityName = p.playerListName();
-        else if (entity.customName() != null)
-            entityName = entity.customName();
-        else
-            entityName = entity.name();
+            return Component.text("Unknown", TextUtils.ERROR_RED);
 
-        return entityName;
+        if (entity instanceof Player player) {
+			var uselessRGBName = player.playerListName();
+			var entityInfo = entity.asHoverEvent().value();
+			entityInfo.name(uselessRGBName);
+			return uselessRGBName.hoverEvent(HoverEvent.showEntity(entityInfo));
+		} else {
+			return entity.name();
+		}
     }
 
     public static Vector projectileLaunchVector(Entity shooter, Vector original, double spray) {

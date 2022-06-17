@@ -5,18 +5,23 @@ import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.minecraft.world.damagesource.DamageSource;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageByBlockEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 //partially from RedWarfare's AttackType class - credit libraryaddict
@@ -247,7 +252,7 @@ public class DamageType {
         switch (cause) {
             case CONTACT:
                 if(event instanceof EntityDamageByBlockEvent blockEvent) {
-                    if(blockEvent.getDamager().getBlockData().getMaterial() == Material.SWEET_BERRY_BUSH)
+                    if(blockEvent.getDamager() != null && blockEvent.getDamager().getType() == Material.SWEET_BERRY_BUSH)
                         return BERRY_BUSH;
                 }
                 return CACTUS;
@@ -311,36 +316,45 @@ public class DamageType {
         }
     }
 
-    public String getDeathMessage() {
-        return _deathMessages[MathUtils.randomMax(_deathMessages.length - 1)];
+    public String getRawDeathMessage() {
+        return _deathMessages[MathUtils.random.nextInt(_deathMessages.length)];
     }
 
-    public Component getDeathMessage(TextColor color, Entity victim, Entity killer, Entity cause) {
-        return getDeathMessage(color, EntityUtils.getName(victim), EntityUtils.getName(killer), EntityUtils.getName(cause));
+	@NotNull
+    public Component getDeathMessage(@Nullable Entity victim, @Nullable Entity killer, @Nullable Entity cause) {
+		return doPlaceholders(getRawDeathMessage(),
+				EntityUtils.getComponent(victim),
+				EntityUtils.getComponent(killer),
+				cause != null ? EntityUtils.getComponent(cause) : Component.empty()
+		);
     }
 
-    // precompile regular expressions
-    public static final Pattern KILLED_REGEX = Pattern.compile("%Killed%");
-    public static final Pattern KILLER_REGEX = Pattern.compile("%Killer%");
-    public static final Pattern CAUSE_REGEX = Pattern.compile("%Cause%");
-    public Component getDeathMessage(TextColor color, Component victim, Component killer, Component cause) {
-        String message = getDeathMessage();
-
-        Component component = Component.text(message).color(color);
-
-        if(victim != null) {
-            component = component.replaceText(TextReplacementConfig.builder().match(KILLED_REGEX).replacement(victim).build());
-        }
-        //%Cause% is never used, but eh
-        if(cause != null) {
-            component = component.replaceText(TextReplacementConfig.builder().match(CAUSE_REGEX).replacement(cause).build());
-        }
-        if(killer != null) {
-            component = component.replaceText(TextReplacementConfig.builder().match(KILLER_REGEX).replacement(killer).build());
-        }
-
-        return component;
-    }
+	private static final Pattern LEGACY_REGEX = Pattern.compile("%(Kille[dr]|Cause)%");
+	private static final TextColor MESSAGE_COLOR = NamedTextColor.YELLOW;
+	private static Component doPlaceholders(String message, Component victim, Component killer, Component cause) {
+		if (message.contains("%")) {
+			// old message format
+			return Component.text(message, MESSAGE_COLOR)
+					.replaceText(TextReplacementConfig.builder()
+							.match(LEGACY_REGEX)
+							.replacement((result, builder) -> {
+								String arg = result.group(1);
+								return switch (arg) {
+									case "Killed" -> victim;
+									case "Killer" -> killer;
+									case "Cause" -> cause;
+									default -> throw new Error();
+								};
+							})
+							.build());
+		} else {
+			return MiniMessage.miniMessage().deserialize(message,
+					Placeholder.component("victim", victim),
+					Placeholder.component("killer", killer),
+					Placeholder.component("cause", cause)
+			);
+		}
+	}
 
     public static DamageType getMelee(EntityDamageEvent event) {
         if(event instanceof EntityDamageByEntityEvent dEvent && dEvent.getDamager() instanceof org.bukkit.entity.LivingEntity living) {
@@ -434,14 +448,6 @@ public class DamageType {
     // is constructed.
     public boolean is(DamageType damageType) {
         return this.id == damageType.id;
-    }
-
-    private String replace(String message, String find, String replace) {
-        while (message.contains(find)) {
-            message = message.replaceFirst(find, replace + ChatColor.getLastColors(message.substring(0, message.indexOf(find))));
-        }
-
-        return message;
     }
 
     public DamageType setBurn() {
@@ -585,4 +591,16 @@ public class DamageType {
 
         entity.remove();
     }
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(id, nmsDamageSource);
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		return obj instanceof DamageType other &&
+				id == other.id &&
+				Objects.equals(nmsDamageSource, other.nmsDamageSource);
+	}
 }

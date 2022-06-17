@@ -77,8 +77,8 @@ public class TeamArenaTeam
 		score = 0;
 		score2 = 0;
 
-		if(SidebarManager.SCOREBOARD.getTeam(name) != null)
-			SidebarManager.SCOREBOARD.getTeam(name).unregister();
+		if(PlayerScoreboard.SCOREBOARD.getTeam(name) != null)
+			PlayerScoreboard.SCOREBOARD.getTeam(name).unregister();
 
 		this.componentName = colourWord(this.name);
 		this.componentSimpleName = colourWord(this.simpleName);
@@ -96,7 +96,7 @@ public class TeamArenaTeam
 		meta.displayName(componentName.decoration(TextDecoration.ITALIC, false));
 		iconItem.setItemMeta(meta);
 
-		paperTeam = SidebarManager.SCOREBOARD.registerNewTeam(name);
+		paperTeam = PlayerScoreboard.SCOREBOARD.registerNewTeam(name);
 		paperTeam.displayName(componentName);
 		//paperTeam.prefix(componentSimpleName.decorate(TextDecoration.BOLD));
 		paperTeam.setAllowFriendlyFire(true);

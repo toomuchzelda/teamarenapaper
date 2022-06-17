@@ -11,7 +11,6 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -39,8 +38,8 @@ public abstract class CustomCommand extends Command {
         }
     }
 
-    public static final Component NO_PERMISSION = Component.text("You do not have permission to run this command!").color(NamedTextColor.DARK_RED);
-    public static final Component PLAYER_ONLY = Component.text("You can't run this command from the console!").color(TextUtils.ERROR_RED);
+    public static final Component NO_PERMISSION = Component.text("You do not have permission to run this command!", NamedTextColor.DARK_RED);
+    public static final Component PLAYER_ONLY = Component.text("You can't run this command from the console!", NamedTextColor.RED);
     @Override
     public final boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         if (sender instanceof Player player) {
@@ -52,6 +51,8 @@ public abstract class CustomCommand extends Command {
         }
         try {
 			run(sender, commandLabel, args);
+		} catch (IllegalArgumentException e) {
+			sender.sendMessage(Component.text(e.toString(), TextUtils.ERROR_RED));
 		} catch (CommandException e) {
 			sender.sendMessage(e.message);
         } catch (Throwable e) {
@@ -96,12 +97,20 @@ public abstract class CustomCommand extends Command {
     }
 
     protected void showUsage(CommandSender sender, String usage) {
-        sender.sendMessage(Component.text("Usage: " + usage).color(TextUtils.ERROR_RED));
+        sender.sendMessage(Component.text("Usage: " + usage).color(NamedTextColor.RED));
     }
 
     protected void showUsage(CommandSender sender) {
         showUsage(sender, getUsage());
     }
+
+	protected CommandException throwUsage(String usage) {
+		return new CommandException(Component.text("Usage: " + usage, NamedTextColor.RED));
+	}
+
+	protected CommandException throwUsage() {
+		return throwUsage(getUsage());
+	}
 
     protected boolean hasPermission(CommandSender sender, PermissionLevel level) {
         if (sender instanceof Player player)
@@ -110,10 +119,13 @@ public abstract class CustomCommand extends Command {
             return sender instanceof ConsoleCommandSender;
     }
 
-	@Nullable
-	protected static Player getPlayerOrThrow(CommandSender sender, String[] args, int index) throws CommandException {
-		if (args.length > index + 1) {
-			return Bukkit.getPlayer(args[index]);
+	protected static @NotNull Player getPlayerOrThrow(CommandSender sender, String[] args, int index) throws CommandException {
+		if (args.length > index) {
+			var player = Bukkit.getPlayer(args[index]);
+			if (player == null) {
+				throw new CommandException(Component.text("Player " + args[index] + " not found!", TextUtils.ERROR_RED));
+			}
+			return player;
 		} else if (sender instanceof Player player) {
 			return player;
 		} else {

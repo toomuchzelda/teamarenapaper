@@ -2,7 +2,6 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
-import me.toomuchzelda.teamarenapaper.teamarena.SidebarManager;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
@@ -49,7 +48,7 @@ public abstract class DemoMine
 				NamedTextColor.BLUE, NamedTextColor.GREEN, NamedTextColor.GOLD};
 
 			for(int i = 0; i < 5; i++) {
-				COLOUR_TEAMS[i] = SidebarManager.SCOREBOARD.registerNewTeam(MINE_TEAM_NAME + matchingColours[i].value());
+				COLOUR_TEAMS[i] = PlayerScoreboard.SCOREBOARD.registerNewTeam(MINE_TEAM_NAME + matchingColours[i].value());
 				COLOUR_TEAMS[i].color(matchingColours[i]);
 				COLOUR_TEAMS[i].setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
 

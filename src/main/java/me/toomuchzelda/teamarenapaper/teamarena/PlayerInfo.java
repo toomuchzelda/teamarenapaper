@@ -7,6 +7,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.KillAssistTracker;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.PacketHologram;
 import org.bukkit.Location;
 import org.bukkit.entity.Damageable;
@@ -32,12 +33,12 @@ public class PlayerInfo
 	//todo: prob make a preference
 	public String defaultKit;
 
-	private HashMap<Preference<?>, Object> preferences = new HashMap<>();
-	
-	private final HashMap<String, Integer> messageCooldowns = new HashMap<>();
+	private Map<Preference<?>, Object> preferences = new HashMap<>();
+
+	private final Map<String, Integer> messageCooldowns = new HashMap<>();
 	private final LinkedList<DamageLogEntry> damageReceivedLog;
 	private final KillAssistTracker killAssistTracker;
-	
+
 	private final PlayerScoreboard scoreboard; //scoreboard they view
 
 	public double kills;
@@ -56,14 +57,14 @@ public class PlayerInfo
 		killAssistTracker = new KillAssistTracker(player);
 
 		kills = 0;
-		
+
 		this.scoreboard = new PlayerScoreboard(player);
 	}
-	
+
 	public void setPreferenceValues(Map<Preference<?>, ?> values) {
 		preferences = new HashMap<>(values); // disgusting and slow
 	}
-	
+
 	public <T> void setPreference(Preference<T> preference, T value) {
 		preferences.put(preference, value);
 	}
@@ -72,7 +73,7 @@ public class PlayerInfo
 	public <T> T getPreference(Preference<T> preference) {
 		return (T) preferences.getOrDefault(preference, preference.getDefaultValue());
 	}
-	
+
 	/**
 	 * see if enough time has passed for a message to be sent to player (no spam)
 	 * @param message message, or a key representing the message, to be sent
@@ -95,24 +96,24 @@ public class PlayerInfo
 			return true;
 		}
 	}
-	
+
 	public void clearMessageCooldowns() {
 		messageCooldowns.clear();
 	}
 
 	public void logDamageReceived(Damageable damaged, DamageType damageType, double damage, @Nullable Entity damager, int time) {
-		DamageLogEntry dinfo = new DamageLogEntry(damageType, damage, damager, time);
-		damageReceivedLog.add(dinfo);
+		var damagerComponent = damager == null ? null : EntityUtils.getComponent(damager);
+		damageReceivedLog.add(new DamageLogEntry(damageType, damage, damagerComponent, time));
 	}
 
 	public PlayerScoreboard getScoreboard() {
 		return scoreboard;
 	}
-	
+
 	public void clearDamageReceivedLog() {
 		damageReceivedLog.clear();
 	}
-	
+
 	public KillAssistTracker getKillAssistTracker() {
 		return killAssistTracker;
 	}

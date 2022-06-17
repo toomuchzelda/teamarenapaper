@@ -13,9 +13,9 @@ import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
@@ -220,8 +220,6 @@ public abstract class TeamArena
 		respawnTimers = new HashMap<>();
 		damageQueue = new LinkedList<>();
 
-		//list the teams in sidebar
-		SidebarManager.updatePreGameScoreboard(this);
 		PlayerListScoreManager.removeScores();
 
 		miniMap = new MiniMapManager(this);
@@ -290,6 +288,67 @@ public abstract class TeamArena
 		gameWorld = null;
 	}
 
+	public static final Component OWN_TEAM_PREFIX = Component.text("▶ ");
+	public final void tickSidebar() {
+		boolean showGameSidebar = gameState != GameState.PREGAME && gameState != GameState.TEAMS_CHOSEN;
+		boolean showTeamSize = gameState == GameState.TEAMS_CHOSEN;
+
+		Collection<Component> sharedSidebar = showGameSidebar ? updateSharedSidebar() : null;
+
+		for (var player : Bukkit.getOnlinePlayers()) {
+			var sidebar = SidebarManager.getInstance(player);
+			var style = Main.getPlayerInfo(player).getPreference(Preferences.SIDEBAR_STYLE);
+			if (style == SidebarManager.Style.HIDDEN) {
+				sidebar.clear(player);
+				continue;
+			}
+
+			if (!showGameSidebar) {
+				sidebar.setTitle(player, Component.text("Teams", NamedTextColor.GOLD));
+				for (var team : getTeams()) {
+					var builder = Component.text();
+					if (team.getPlayerMembers().contains(player)) {
+						builder.append(OWN_TEAM_PREFIX);
+					}
+					builder.append(team.getComponentName());
+					if (showTeamSize) {
+						builder.append(Component.text(": " + team.getPlayerMembers().size()));
+					}
+					sidebar.addEntry(builder.build());
+				}
+			} else {
+				sharedSidebar.forEach(sidebar::addEntry);
+				if (style == SidebarManager.Style.MODERN || style == SidebarManager.Style.RGB_MANIAC) {
+					updateSidebar(player, sidebar);
+				} else { // for conservatives like toomuchzelda
+					updateLegacySidebar(player, sidebar);
+				}
+			}
+
+			if (style == SidebarManager.Style.RGB_MANIAC || style == SidebarManager.Style.LEGACY_RGB_MANIAC) {
+				double progress = (int) (TeamArena.getGameTick() / 5 * 5) / 70d;
+				for (var iterator = sidebar.getEntries().listIterator(); iterator.hasNext(); ) {
+					var index = iterator.nextIndex();
+					var entry = iterator.next();
+					iterator.set(TextUtils.getRGBManiacComponent(entry, Style.empty(), progress + index / 7d));
+				}
+			}
+
+			sidebar.update(player);
+		}
+	}
+
+	public Collection<Component> updateSharedSidebar() {
+		return Collections.emptyList();
+	}
+
+	public abstract void updateSidebar(Player player, SidebarManager sidebar);
+
+	public void updateLegacySidebar(Player player, SidebarManager sidebar) {
+		sidebar.addEntry(Component.text("Warning: legacy unsupported", NamedTextColor.YELLOW));
+		updateSidebar(player, sidebar);
+	}
+
 	public void tick() {
 		gameTick++;
 
@@ -306,6 +365,7 @@ public abstract class TeamArena
 			endTick();
 		}
 
+		tickSidebar();
 	}
 
 	public void preGameTick() {
@@ -356,7 +416,6 @@ public abstract class TeamArena
 					}
 				}
 				Bukkit.broadcast(Component.text("Not enough players to start the game, game cancelled!").color(MathUtils.randomTextColor()));
-				SidebarManager.updatePreGameScoreboard(this);
 			}
 			//setGameState(GameState.PREGAME);
 		}
@@ -724,8 +783,6 @@ public abstract class TeamArena
 			makeSpectator(p);
 		}
 
-		SidebarManager.updateTeamsDecidedScoreboard(this);
-
 		sendCountdown(true);
 	}
 
@@ -838,29 +895,26 @@ public abstract class TeamArena
 		respawnTimers.clear();
 		damageQueue.clear();
 
-		Bukkit.getScheduler().runTaskLater(Main.getPlugin(), bukkitTask -> {
-			for (TeamArenaTeam team : teams) {
-				//team.removeAllMembers();
-				team.unregister();
-			}
-			//spectatorTeam.removeAllMembers();
-			spectatorTeam.unregister();
-			noTeamTeam.unregister();
-
-			for(Player p : Bukkit.getOnlinePlayers()) {
-				PlayerUtils.resetState(p);
-				for(TeamArenaTeam team : teams) {
-					p.hideBossBar(team.bossBar);
-				}
-			}
-		}, END_GAME_TIME - 3);
-
 		setGameState(GameState.END);
 		Bukkit.broadcastMessage("Game end");
 	}
 
 
 	public void prepDead() {
+		for (TeamArenaTeam team : teams) {
+			//team.removeAllMembers();
+			team.unregister();
+		}
+		//spectatorTeam.removeAllMembers();
+		spectatorTeam.unregister();
+		noTeamTeam.unregister();
+
+		for(Player p : Bukkit.getOnlinePlayers()) {
+			PlayerUtils.resetState(p);
+			for(TeamArenaTeam team : teams) {
+				p.hideBossBar(team.bossBar);
+			}
+		}
 		// remove map
 		miniMap.removeMapView();
 		setGameState(GameState.DEAD);
@@ -1089,7 +1143,7 @@ public abstract class TeamArena
 	}
 
 	public void handleDeath(DamageEvent event) {
-		Bukkit.broadcast(event.getDamageType().getDeathMessage(NamedTextColor.YELLOW, event.getVictim(),
+		Bukkit.broadcast(event.getDamageType().getDeathMessage(event.getVictim(),
 				event.getFinalAttacker(), event.getDamageTypeCause()));
 		Entity e = event.getVictim();
 		//if player make them a spectator and put them in queue to respawn if is a respawning game
@@ -1129,10 +1183,8 @@ public abstract class TeamArena
 
 			makeSpectator(p);
 
-			if(pinfo.getPreference(Preferences.RECEIVE_DAMAGE_RECEIVED_LIST))
-				DamageLogEntry.sendDamageLog(p, true);
-			else
-				pinfo.clearDamageReceivedLog();
+			DamageLogEntry.sendDamageLog(p);
+			pinfo.clearDamageReceivedLog();
 
 
 			//clear attack givers so they don't get falsely attributed on this next player's death
@@ -1481,8 +1533,10 @@ public abstract class TeamArena
 		//Map border
 		// Only supports rectangular prism borders as of now
 		ArrayList<String> borders = (ArrayList<String>) map.get("Border");
-		Vector corner1 = BlockUtils.parseCoordsToVec(borders.get(0), 0, 0, 0);
-		Vector corner2 = BlockUtils.parseCoordsToVec(borders.get(1), 0, 0, 0);
+		Vector vec1 = BlockUtils.parseCoordsToVec(borders.get(0), 0, 0, 0);
+		Vector vec2 = BlockUtils.parseCoordsToVec(borders.get(1), 0, 0, 0);
+		Vector corner1 = Vector.getMinimum(vec1, vec2);
+		Vector corner2 = Vector.getMaximum(vec1, vec2).add(new Vector(1, 1, 1));
 		border = BoundingBox.of(corner1, corner2);
 
 		//calculate spawnpoint based on map border
@@ -1502,11 +1556,10 @@ public abstract class TeamArena
 
 		//if both Y are 0 then have no ceiling
 		// do this after spawnpoint calculation otherwise it's trouble
-		if(corner1.getY() == 0 && corner2.getY() == 0) {
-			corner1.setY(1000d);
-			corner2.setY(-1000d);
+		if(vec1.getY() == vec2.getY()) {
+			corner1.setY(gameWorld.getMinHeight());
+			corner2.setY(gameWorld.getMaxHeight());
 			border = BoundingBox.of(corner1, corner2);
-			Main.logger().info("border has 1000 and -1000 Y limits");
 		}
 
 		//Create the teams
