@@ -29,7 +29,7 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.command.Command;
-import org.bukkit.craftbukkit.v1_18_R2.CraftWorldBorder;
+import org.bukkit.craftbukkit.v1_19_R1.CraftWorldBorder;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.LivingEntity;
@@ -727,10 +727,10 @@ public class EventListeners implements Listener
 	static final Component MOTD_SEPARATOR = Component.textOfChildren(Component.space(),
 			Component.text("|", NamedTextColor.DARK_RED, TextDecoration.BOLD), Component.space());
 	static final Component MOTD = Component.textOfChildren(
-			Component.text("             "),
+			Component.text("               "),
 			TextUtils.getUselessRGBText("Blue Warfare", TextColor.color(0x060894), TextColor.color(0x1ad3f0)),
 			Component.space(),
-			TextUtils.getUselessRainbowText("[1.18.2]"),
+			TextUtils.getUselessRainbowText("[1.19]"),
 			Component.newline(),
 			TextUtils.getUselessRGBText("King of the Hill", TextColor.color(0x595959), TextColor.color(0xadadad)),
 			MOTD_SEPARATOR,

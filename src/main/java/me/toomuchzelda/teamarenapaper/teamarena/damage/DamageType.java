@@ -11,6 +11,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.minecraft.world.damagesource.DamageSource;
 import org.bukkit.Material;
+import org.bukkit.craftbukkit.v1_19_R1.entity.CraftEntity;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageByBlockEvent;
@@ -120,6 +121,9 @@ public class DamageType {
     public static final DamageType PROJECTILE = new DamageType("Projectile", "%Killed% was shot by %Killer%").setProjectile();
 
     public static final DamageType QUIT = new DamageType("Quit", "%Killed% has left the game").setInstantDeath().setNoKnockback();
+
+	public static final DamageType SONIC_BOOM = new DamageType("Sonic Boom", "%Killed% was killed by admin abuse")
+			.setIgnoreArmor().setIgnoreArmorEnchants();
 
     public static final DamageType STARVATION = new DamageType("Starvation", "%Killed% died from starvation").setIgnoreArmor()
             .setNoKnockback().setDamageSource(DamageSource.STARVE);
@@ -311,6 +315,8 @@ public class DamageType {
                 return DRYOUT;
             case FREEZE:
                 return FREEZE;
+			case SONIC_BOOM:
+				return getSonicBoom(event);
             default:
                 return UNKNOWN;
         }
@@ -377,6 +383,15 @@ public class DamageType {
     public static DamageType getSweeping(LivingEntity living) {
         return new DamageType(SWEEP_ATTACK).setDamageSource(DamageSourceCreator.getMelee(living).sweep());
     }
+
+	public static DamageType getSonicBoom(EntityDamageEvent event) {
+		if (event instanceof EntityDamageByEntityEvent entityDamageByEntityEvent) {
+			return new DamageType(SONIC_BOOM).setDamageSource(
+					DamageSource.sonicBoom(((CraftEntity) entityDamageByEntityEvent.getDamager()).getHandle())
+			);
+		}
+		return SONIC_BOOM;
+	}
 
     public static DamageType getProjectile(EntityDamageEvent event) {
         if(event instanceof EntityDamageByEntityEvent dEvent) {
@@ -577,15 +592,14 @@ public class DamageType {
 
     public static void checkDamageTypes() {
         //Entity for the sake of constructing damage events
-        Pig entity = (Pig) Main.getGame().getWorld().spawnEntity(Main.getGame().getWorld().getSpawnLocation(), EntityType.PIG);
+        Pig entity = Main.getGame().getWorld().spawn(Main.getGame().getWorld().getSpawnLocation(), Pig.class);
 
         for (EntityDamageEvent.DamageCause cause : EntityDamageEvent.DamageCause.values()) {
-            EntityDamageEvent event = new EntityDamageEvent(entity, cause, 1);
+			EntityDamageEvent event = new EntityDamageEvent(entity, cause, 1);
             DamageType attack = DamageType.getAttack(event);
 
             if (attack == null || attack == DamageType.UNKNOWN) {
-                Main.logger().warning("The DamageCause '" + cause.name() +
-                        "' has not been registered as a DamageType");
+                Main.logger().warning("The DamageCause '" + cause.name() + "' has not been registered as a DamageType");
             }
         }
 

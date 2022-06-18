@@ -10,12 +10,12 @@ import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.minecraft.network.protocol.game.ClientboundAddMobPacket;
+import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import net.minecraft.world.entity.LivingEntity;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.craftbukkit.v1_18_R2.entity.CraftLivingEntity;
+import org.bukkit.craftbukkit.v1_19_R1.entity.CraftLivingEntity;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -182,9 +182,9 @@ public class Flag
 		return normalMetadataPacket;
 	}
 
-	public ClientboundAddMobPacket getSpawnPacket() {
+	public ClientboundAddEntityPacket getSpawnPacket() {
 		LivingEntity nmsLivingStand = ((CraftLivingEntity) stand).getHandle();
-		return new ClientboundAddMobPacket(nmsLivingStand);
+		return new ClientboundAddEntityPacket(nmsLivingStand);
 	}
 
 	public ClientboundRemoveEntitiesPacket getRemovePacket() {

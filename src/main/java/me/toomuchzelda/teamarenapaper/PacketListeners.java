@@ -23,8 +23,8 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
-import org.bukkit.craftbukkit.v1_18_R2.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_18_R2.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_19_R1.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -133,15 +133,15 @@ public class PacketListeners
 						if(disguise != null) {
 							if(action == ClientboundPlayerInfoPacket.Action.ADD_PLAYER) {
 
-								ClientboundPlayerInfoPacket.PlayerUpdate replacementUpdate =
+								var replacementUpdate =
 										new ClientboundPlayerInfoPacket.PlayerUpdate(disguise.disguisedGameProfile,
-												update.getLatency(), update.getGameMode(), update.getDisplayName());
+												update.getLatency(), update.getGameMode(), update.getDisplayName(), null);
 
 								iter.set(replacementUpdate);
 
-								ClientboundPlayerInfoPacket.PlayerUpdate tabListUpdate =
+								var tabListUpdate =
 										new ClientboundPlayerInfoPacket.PlayerUpdate(disguise.tabListGameProfile,
-												update.getLatency(), update.getGameMode(), update.getDisplayName());
+												update.getLatency(), update.getGameMode(), update.getDisplayName(), null);
 
 								//i think this will run after this packet listener
 								// remove the player info of the disguised player so they don't appear in tab list
@@ -155,9 +155,9 @@ public class PacketListeners
 							}
 							else {
 
-								ClientboundPlayerInfoPacket.PlayerUpdate tabListUpdate =
+								var tabListUpdate =
 										new ClientboundPlayerInfoPacket.PlayerUpdate(disguise.tabListGameProfile,
-												update.getLatency(), update.getGameMode(), update.getDisplayName());
+												update.getLatency(), update.getGameMode(), update.getDisplayName(), null);
 
 								iter.add(tabListUpdate);
 
