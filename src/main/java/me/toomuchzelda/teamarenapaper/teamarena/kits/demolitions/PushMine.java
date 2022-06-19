@@ -1,6 +1,8 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.metadata.MetadataBitfieldValue;
+import me.toomuchzelda.teamarenapaper.metadata.MetadataIndexes;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
@@ -13,6 +15,8 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
+
+import java.util.Collections;
 
 public class PushMine extends DemoMine
 {
@@ -36,6 +40,7 @@ public class PushMine extends DemoMine
 		ItemStack leatherHelmet = new ItemStack(Material.LEATHER_HELMET);
 		ItemUtils.colourLeatherArmor(color, leatherHelmet);
 		stands = new ArmorStand[1];
+		final MetadataBitfieldValue metadata = new MetadataBitfieldValue(Collections.singletonMap(MetadataIndexes.BITFIELD_GLOWING_INDEX, true));
 		org.bukkit.util.Consumer<ArmorStand> propApplier = stand -> {
 			stand.setGlowing(false);
 			stand.setSilent(true);
@@ -46,7 +51,11 @@ public class PushMine extends DemoMine
 			stand.setBasePlate(false);
 			stand.setInvisible(true);
 			stand.getEquipment().setHelmet(leatherHelmet, true);
-			KitDemolitions.DemolitionsAbility.ARMOR_STAND_ID_TO_DEMO_MINE.put(stand.getEntityId(), this);
+			//KitDemolitions.DemolitionsAbility.ARMOR_STAND_ID_TO_DEMO_MINE.put(stand.getEntityId(), this);
+
+			for(Player viewer : this.team.getPlayerMembers()) {
+				Main.getPlayerInfo(viewer).getMetadataViewer().setViewedValue(stand.getEntityId(), stand, 0, metadata);
+			}
 		};
 		stands[0] = world.spawn(spawnLoc, ArmorStand.class, propApplier);
 

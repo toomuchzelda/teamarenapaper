@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
+import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
@@ -33,12 +34,13 @@ public class PlayerInfo
 	public String defaultKit;
 
 	private HashMap<Preference<?>, Object> preferences = new HashMap<>();
-	
+
 	private final HashMap<String, Integer> messageCooldowns = new HashMap<>();
 	private final LinkedList<DamageLogEntry> damageReceivedLog;
 	private final KillAssistTracker killAssistTracker;
-	
 	private final PlayerScoreboard scoreboard; //scoreboard they view
+	private final MetadataViewer metadataViewer; //custom entity metadata tracker
+
 
 	public double kills;
 
@@ -54,16 +56,16 @@ public class PlayerInfo
 		damageReceivedLog = new LinkedList<>();
 
 		killAssistTracker = new KillAssistTracker(player);
-
 		kills = 0;
-		
+
 		this.scoreboard = new PlayerScoreboard(player);
+		this.metadataViewer = new MetadataViewer(player);
 	}
-	
+
 	public void setPreferenceValues(Map<Preference<?>, ?> values) {
 		preferences = new HashMap<>(values); // disgusting and slow
 	}
-	
+
 	public <T> void setPreference(Preference<T> preference, T value) {
 		preferences.put(preference, value);
 	}
@@ -72,7 +74,7 @@ public class PlayerInfo
 	public <T> T getPreference(Preference<T> preference) {
 		return (T) preferences.getOrDefault(preference, preference.getDefaultValue());
 	}
-	
+
 	/**
 	 * see if enough time has passed for a message to be sent to player (no spam)
 	 * @param message message, or a key representing the message, to be sent
@@ -95,7 +97,7 @@ public class PlayerInfo
 			return true;
 		}
 	}
-	
+
 	public void clearMessageCooldowns() {
 		messageCooldowns.clear();
 	}
@@ -105,14 +107,18 @@ public class PlayerInfo
 		damageReceivedLog.add(dinfo);
 	}
 
+	public MetadataViewer getMetadataViewer() {
+		return metadataViewer;
+	}
+
 	public PlayerScoreboard getScoreboard() {
 		return scoreboard;
 	}
-	
+
 	public void clearDamageReceivedLog() {
 		damageReceivedLog.clear();
 	}
-	
+
 	public KillAssistTracker getKillAssistTracker() {
 		return killAssistTracker;
 	}

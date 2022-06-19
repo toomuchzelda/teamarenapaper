@@ -10,10 +10,12 @@ import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Pair;
+import me.toomuchzelda.teamarenapaper.metadata.MetadataBitfieldValue;
+import me.toomuchzelda.teamarenapaper.metadata.MetadataValue;
+import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.DisguiseManager;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.DemoMine;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSpy;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
@@ -321,18 +323,52 @@ public class PacketListeners
 				PacketContainer packet = event.getPacket();
 				int id = packet.getIntegers().read(0);
 
-				DemoMine mine = DemoMine.getStandMine(id);
+				Player viewer = event.getPlayer();
+				MetadataViewer metadataViewer = Main.getPlayerInfo(viewer).getMetadataViewer();
+
+				//don't construct a new datawatcher if it's not needed
+				if(metadataViewer.hasMetadataFor(id)) {
+					StructureModifier<List<WrappedWatchableObject>> modifier = packet.getWatchableCollectionModifier();
+
+					WrappedDataWatcher watcher = new WrappedDataWatcher();
+					WrappedWatchableObject obj;
+					MetadataValue value;
+					ListIterator<WrappedWatchableObject> iter = modifier.read(0).listIterator();
+					while (iter.hasNext()) {
+						obj = iter.next();
+
+						WrappedDataWatcher.WrappedDataWatcherObject watcherObj =
+								new WrappedDataWatcher.WrappedDataWatcherObject(
+										obj.getIndex(), obj.getWatcherObject().getSerializer());
+
+						value = metadataViewer.getViewedValue(id, obj.getIndex());
+						if (value != null) {
+							//new watcher object to put into packet. Copy the properties of the old obj
+							Object newValue;
+							if (value instanceof MetadataBitfieldValue bitField) {
+								newValue = bitField.combine((Byte) obj.getValue());
+							}
+							else {
+								newValue = value.getValue();
+							}
+
+							watcher.setObject(watcherObj, newValue);
+						}
+						else {
+							watcher.setObject(watcherObj, obj.getValue());
+						}
+					}
+
+					modifier.write(0, watcher.getWatchableObjects());
+				}
+
+
+				/*DemoMine mine = DemoMine.getStandMine(id);
 				if(mine != null) {
 					boolean shouldSeeGlowing = mine.team.getPlayerMembers().contains(event.getPlayer());
 
-					StructureModifier<List<WrappedWatchableObject>> modifier = packet.getWatchableCollectionModifier();
 					List<WrappedWatchableObject> objects = modifier.read(0);
 
-					WrappedDataWatcher watcher = new WrappedDataWatcher();
-
-					ListIterator<WrappedWatchableObject> iter = objects.listIterator();
-
-					WrappedWatchableObject obj;
 					while(iter.hasNext()) {
 
 						obj = iter.next();
@@ -358,8 +394,8 @@ public class PacketListeners
 						}
 					}
 
-					modifier.write(0, watcher.getWatchableObjects());
-				}
+
+				}*/
 			}
 		});
 	}
