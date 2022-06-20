@@ -117,6 +117,8 @@ public class CommandDebug extends CustomCommand {
 					});
 				} else if ("clear".equalsIgnoreCase(args[1])) {
 					canvasOperations.clear();
+				} else if ("invalidatebase".equalsIgnoreCase(args[1])) {
+					((MiniMapManager.GameMapRenderer) Main.getGame().miniMap.view.getRenderers().get(0)).hasDrawn = false;
 				}
 				if (!Main.getGame().miniMap.hasCanvasOperation(operationExecutor)) {
 					Main.getGame().miniMap.registerCanvasOperation(operationExecutor);
@@ -250,7 +252,7 @@ public class CommandDebug extends CustomCommand {
 						.map(team -> team.getSimpleName().replace(' ', '_'))
 						.toList();
 				case "setgame", "setnextgame" -> Arrays.stream(GameType.values()).map(Enum::name).toList();
-				case "draw" -> Arrays.asList("text", "area");
+				case "draw" -> Arrays.asList("text", "area", "clear", "invalidatebase");
 				default -> Collections.emptyList();
 			};
 		} else if (args.length == 3) {

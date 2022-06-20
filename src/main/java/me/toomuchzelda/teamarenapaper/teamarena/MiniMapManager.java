@@ -1,20 +1,35 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
+import com.google.common.collect.Iterables;
+import com.google.common.collect.LinkedHashMultiset;
+import com.google.common.collect.Multiset;
+import com.google.common.collect.Multisets;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.ChunkStatus;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.MaterialColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.MapMeta;
 import org.bukkit.map.*;
 import org.bukkit.util.BoundingBox;
-import org.bukkit.util.NumberConversions;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -28,10 +43,11 @@ import java.util.function.BiPredicate;
 
 public class MiniMapManager {
     final TeamArena game;
-    final MapView view;
-    final Renderer renderer;
+    public final MapView view;
+    final GameRenderer renderer;
     final int mapWidth;
     final int centerX, centerZ;
+	final int scale;
     final ItemStack stack;
 
     private record CursorProvider(BiPredicate<Player, PlayerInfo> displayCondition,
@@ -47,7 +63,7 @@ public class MiniMapManager {
             this(location, directional, icon, null);
         }
 
-        MapCursor toMapCursor(Renderer renderer) {
+        MapCursor toMapCursor(GameRenderer renderer) {
             return new MapCursor(renderer.convertX(location), renderer.convertZ(location),
                     directional ? renderer.convertYaw(location) : (byte) 8, icon, true, caption);
         }
@@ -58,36 +74,13 @@ public class MiniMapManager {
     final List<CursorProvider> cursors = new ArrayList<>();
     final List<ComplexCursorProvider> complexCursors = new ArrayList<>();
 
-    // default cursors
-    // only used as an example, since these cursors are rendered on top of other cursors
-    private static final BiPredicate<Player, PlayerInfo> ALWAYS_SHOW_CURSOR = (ignored1, ignored2) -> true;
-    private static final CursorProvider PLAYER_CURSOR = new CursorProvider(ALWAYS_SHOW_CURSOR,
-            (player, ignored) -> new CursorInfo(player.getLocation(), true, MapCursor.Type.WHITE_POINTER));
-    private static final ComplexCursorProvider TEAMMATES_CURSOR = new ComplexCursorProvider(ALWAYS_SHOW_CURSOR,
-            null, // always show the location of every teammate
-            (player, playerInfo) -> {
-                if (playerInfo.team == Main.getGame().getSpectatorTeam()) {
-                    // spectator view
-                    return Main.getGame().getPlayers().stream()
-                            .filter(other -> !other.isInvisible())
-                            .map(other -> new CursorInfo(other.getLocation(), true, MapCursor.Type.GREEN_POINTER,
-                                    Main.getPlayerInfo(other).team.colourWord(other.getName())))
-                            .toArray(CursorInfo[]::new);
-                } else {
-                    // teammates view
-                    return playerInfo.team.getPlayerMembers().stream()
-                            .filter(teammate -> teammate != player) // don't show viewer
-                            .map(teammate -> new CursorInfo(teammate.getLocation(), true, MapCursor.Type.BLUE_POINTER,
-                                    player.isSneaking() ? teammate.name() : null)) // display teammate names if sneaking
-                            .toArray(CursorInfo[]::new);
-                }
-            }
-    );
+	// default cursors
+	private static final BiPredicate<Player, PlayerInfo> ALWAYS_SHOW_CURSOR = (ignored1, ignored2) -> true;
 
-    // canvas access
+	// canvas access
     @FunctionalInterface
     public interface CanvasOperation {
-        void render(Player player, PlayerInfo info, MapCanvas canvas, Renderer renderer);
+        void render(Player player, PlayerInfo info, MapCanvas canvas, GameRenderer renderer);
     }
 
     final List<CanvasOperation> canvasOperations = new ArrayList<>();
@@ -105,7 +98,7 @@ public class MiniMapManager {
         double side = Math.max(box.getWidthX(), box.getWidthZ());
         int log = (int) Math.ceil(Math.log(side) / Math.log(2));
         mapWidth = (int) Math.pow(2, log);
-        int scale = MathUtils.clamp(0, 4,  log - 7);
+        scale = MathUtils.clamp(0, 4,  log - 7);
         //noinspection deprecation,ConstantConditions
         view.setScale(MapView.Scale.valueOf((byte) scale));
         view.setTrackingPosition(false);
@@ -116,7 +109,9 @@ public class MiniMapManager {
 		mapDataFile.deleteOnExit();
 
         // our renderer
-        renderer = new Renderer();
+		view.removeRenderer(view.getRenderers().get(0));
+		view.addRenderer(new GameMapRenderer());
+        renderer = new GameRenderer();
         view.addRenderer(renderer);
 
         stack = ItemBuilder.of(Material.FILLED_MAP).meta(MapMeta.class, mapMeta -> mapMeta.setMapView(view)).build();
@@ -190,13 +185,179 @@ public class MiniMapManager {
     }
 
     // Utility
+	/**
+	 * Maps world X coordinates to -128 to 127 on the map
+	 */
+	public byte convertX(Location loc) {
+		return convertX(loc.getBlockX());
+	}
 
-    private static int floor(double num) {
-        return NumberConversions.floor(num);
-    }
+	/**
+	 * Maps world X coordinates to -128 to 127 on the map
+	 */
+	public byte convertX(int x) {
+		return (byte) ((x - centerX) * 128 / (mapWidth / 2));
+	}
 
-    public final class Renderer extends MapRenderer {
-        Renderer() {
+	/**
+	 * Maps world Z coordinates to -128 to 127 on the map
+	 */
+	public byte convertZ(Location loc) {
+		return convertZ(loc.getBlockZ());
+	}
+
+	/**
+	 * Maps world Z coordinates to -128 to 127 on the map
+	 */
+	public byte convertZ(int z) {
+		return (byte) ((z - centerZ) * 128 / (mapWidth / 2));
+	}
+
+	/**
+	 * Maps yaw to 0 to 15
+	 */
+	public byte convertYaw(Location loc) {
+		return convertYaw((int) loc.getYaw());
+	}
+
+	/**
+	 * Maps yaw to 0 to 15
+	 */
+	public byte convertYaw(int yaw) {
+		return (byte) (Math.floorMod(yaw, 360) * 16 / 360);
+	}
+
+	public final class GameMapRenderer extends MapRenderer {
+		GameMapRenderer() {
+			super(false);
+		}
+
+		private BlockState getCorrectStateForFluidBlock(Level world, BlockState state, BlockPos pos) {
+			FluidState fluid = state.getFluidState();
+
+			return !fluid.isEmpty() && !state.isFaceSturdy(world, pos, Direction.UP) ? fluid.createLegacyBlock() : state;
+		}
+
+		public boolean hasDrawn = false;
+
+		// adapted from MapItem#update
+		@Override
+		public void render(@NotNull MapView map, @NotNull MapCanvas canvas, @NotNull Player player) {
+			if (hasDrawn) {
+				return;
+			}
+			hasDrawn = true;
+
+			var box = Main.getGame().border;
+			var bukkitWorld = player.getWorld();
+			int minY = Math.max((int) box.getMinY(), bukkitWorld.getMinHeight());
+
+			var world = ((CraftWorld) bukkitWorld).getHandle();
+			int blocksPerPixel = 1 << scale;
+
+			for (int mapX = 0; mapX < 128; ++mapX) {
+				double d0 = 0.0D;
+
+				for (int mapZ = 0; mapZ < 128; ++mapZ) {
+					int blockX = (centerX / blocksPerPixel + mapX - 64) * blocksPerPixel;
+					int blockZ = (centerZ / blocksPerPixel + mapZ - 64) * blocksPerPixel;
+
+					// check if within map borders
+					boolean isOutsideBorder = blockX < box.getMinX() || blockX + blocksPerPixel > box.getMaxX() ||
+							blockZ < box.getMinZ() || blockZ + blocksPerPixel > box.getMaxZ();
+
+					Multiset<MaterialColor> multiset = LinkedHashMultiset.create();
+					var chunk = (LevelChunk) world.getChunk(blockX >> 4, blockZ >> 4, ChunkStatus.FULL, false);
+					if (chunk == null || chunk.isEmpty()) {
+						continue;
+					}
+					ChunkPos chunkPos = chunk.getPos();
+					int chunkBlockX = blockX & 15;
+					int chunkBlockZ = blockZ & 15;
+					int k3 = 0;
+					double d1 = 0.0D;
+
+					BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+					BlockPos.MutableBlockPos pos1 = new BlockPos.MutableBlockPos();
+
+					MaterialColor materialmapcolor;
+					for (int i = 0; i < blocksPerPixel; ++i) {
+						for (int j = 0; j < blocksPerPixel; ++j) {
+							if (isOutsideBorder) {
+								multiset.add(MaterialColor.NONE);
+								continue;
+							}
+
+
+							int surface = chunk.getHeight(Heightmap.Types.WORLD_SURFACE, i + chunkBlockX, j + chunkBlockZ) + 1;
+							int blockY = Math.min(surface, (int) box.getMaxY());
+							BlockState blockState;
+
+							if (blockY > minY + 1) {
+								do {
+									--blockY;
+									pos.set(chunkPos.getMinBlockX() + i + chunkBlockX, blockY, chunkPos.getMinBlockZ() + j + chunkBlockZ);
+									blockState = chunk.getBlockState(pos);
+								} while (blockState.getMapColor(world, pos) == MaterialColor.NONE && blockY > minY);
+
+								if (blockY > minY && !blockState.getFluidState().isEmpty()) {
+									int l4 = blockY - 1;
+
+									pos1.set(pos);
+
+									BlockState iblockdata1;
+
+									do {
+										pos1.setY(l4--);
+										iblockdata1 = chunk.getBlockState(pos1);
+										++k3;
+									} while (l4 > minY && !iblockdata1.getFluidState().isEmpty());
+
+									blockState = this.getCorrectStateForFluidBlock(world, blockState, pos);
+								}
+							} else {
+								blockState = Blocks.AIR.defaultBlockState();
+							}
+
+							d1 += (double) blockY / (double) (blocksPerPixel * blocksPerPixel);
+							multiset.add(blockState.getMapColor(world, pos));
+						}
+					}
+
+					k3 /= blocksPerPixel * blocksPerPixel;
+					materialmapcolor = Iterables.getFirst(Multisets.copyHighestCountFirst(multiset), MaterialColor.NONE);
+					double d2;
+					MaterialColor.Brightness materialmapcolor_a;
+
+					if (materialmapcolor == MaterialColor.WATER) {
+						d2 = (double) k3 * 0.1D + (double) (mapX + mapZ & 1) * 0.2D;
+						if (d2 < 0.5D) {
+							materialmapcolor_a = MaterialColor.Brightness.HIGH;
+						} else if (d2 > 0.9D) {
+							materialmapcolor_a = MaterialColor.Brightness.LOW;
+						} else {
+							materialmapcolor_a = MaterialColor.Brightness.NORMAL;
+						}
+					} else {
+						d2 = (d1 - d0) * 4.0D / (double) (blocksPerPixel + 4) + ((double) (mapX + mapZ & 1) - 0.5D) * 0.4D;
+						if (d2 > 0.6D) {
+							materialmapcolor_a = MaterialColor.Brightness.HIGH;
+						} else if (d2 < -0.6D) {
+							materialmapcolor_a = MaterialColor.Brightness.LOW;
+						} else {
+							materialmapcolor_a = MaterialColor.Brightness.NORMAL;
+						}
+					}
+
+					d0 = d1;
+					canvas.setPixel(mapX, mapZ, materialmapcolor.getPackedId(materialmapcolor_a));
+				}
+			}
+		}
+	}
+
+    public final class GameRenderer extends MapRenderer {
+        GameRenderer() {
             super(true);
         }
 

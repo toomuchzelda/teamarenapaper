@@ -84,7 +84,7 @@ public class PacketHologram
 	}*/
 
 	private void createSpawn() {
-		spawnPacket = new PacketContainer(PacketType.Play.Server.SPAWN_ENTITY_LIVING);
+		spawnPacket = new PacketContainer(PacketType.Play.Server.SPAWN_ENTITY);
 		StructureModifier<Integer> ints = spawnPacket.getIntegers();
 
 		ints.write(0, this.id);

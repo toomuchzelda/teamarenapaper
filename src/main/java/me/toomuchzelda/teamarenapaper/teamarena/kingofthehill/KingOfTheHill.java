@@ -477,7 +477,7 @@ public class KingOfTheHill extends TeamArena
 				// clear old overlay
 				BoundingBox oldBox = lastActiveHill.getBorder();
 				renderer.drawRect(canvas, oldBox.getMin(), oldBox.getMax(),
-						MiniMapManager.Renderer.TRANSPARENT, MiniMapManager.Renderer.TRANSPARENT);
+						MiniMapManager.GameRenderer.TRANSPARENT, MiniMapManager.GameRenderer.TRANSPARENT);
 				lastActiveHill = activeHill;
 			}
 
@@ -493,7 +493,7 @@ public class KingOfTheHill extends TeamArena
 				renderer.drawRect(canvas, box.getMin(), box.getMax(), color, borderColor);
 			} else {
 				renderer.drawRect(canvas, box.getMin(), box.getMax(),
-						MiniMapManager.Renderer.TRANSPARENT, MiniMapManager.Renderer.TRANSPARENT);
+						MiniMapManager.GameRenderer.TRANSPARENT, MiniMapManager.GameRenderer.TRANSPARENT);
 			}
 		});
 	}
