@@ -209,23 +209,6 @@ public abstract class DemoMine
 		Main.getPlayerInfo(owner).getScoreboard().addMembers(this.ownerGlowingTeam, stands);
 	}
 
-	public static DemoMine getStandMine(int id) {
-		return KitDemolitions.DemolitionsAbility.ARMOR_STAND_ID_TO_DEMO_MINE.get(id);
-	}
-
-	public static ArmorStand getMineStand(int id) {
-		DemoMine mine = getStandMine(id);
-		if(mine != null) {
-			ArmorStand[] stands = mine.stands;
-			for (ArmorStand stand : stands) {
-				if (stand.getEntityId() == id)
-					return stand;
-			}
-		}
-
-		return null;
-	}
-
 	static void clearTeams() {
 		for(Team team : COLOUR_TEAMS) {
 			PlayerScoreboard.removeEntriesAll(team, team.getEntries());

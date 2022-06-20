@@ -5,6 +5,8 @@ import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
+import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
@@ -80,6 +82,12 @@ public class MetadataViewer
 	public void removeViewedValue(Entity viewedEntity, int index) {
 		var values = entityValues.get(viewedEntity.getEntityId());
 		values.indexedValues().remove(index);
+	}
+
+	public static void removeAllValues(Entity... viewedEntities) {
+		for(PlayerInfo p : Main.getPlayerInfos()) {
+			p.getMetadataViewer().removeViewedValues(viewedEntities);
+		}
 	}
 
 	/**

@@ -89,7 +89,6 @@ public class KitDemolitions extends Kit
 		public static final Map<Player, List<RegeneratingMine>> REGENERATING_MINES = new LinkedHashMap<>();
 		public static final Map<Player, DemoMine> TARGETTED_MINE = new HashMap<>();
 
-		static final Map<Integer, DemoMine> ARMOR_STAND_ID_TO_DEMO_MINE = new HashMap<>(20, 0.4f);
 		public static final Map<Axolotl, DemoMine> AXOLOTL_TO_DEMO_MINE = new LinkedHashMap<>();
 		public static final Set<BlockVector> MINE_POSITIONS = new HashSet<>();
 
@@ -105,7 +104,6 @@ public class KitDemolitions extends Kit
 			PLAYER_MINES.clear();
 			REGENERATING_MINES.clear();
 			AXOLOTL_TO_DEMO_MINE.clear();
-			ARMOR_STAND_ID_TO_DEMO_MINE.clear();
 			TARGETTED_MINE.clear();
 			MINE_POSITIONS.clear();
 
@@ -153,8 +151,8 @@ public class KitDemolitions extends Kit
 				var iter = list.iterator();
 				while(iter.hasNext()) {
 					DemoMine mine = iter.next();
-					for(ArmorStand stand : mine.stands) {
-						ARMOR_STAND_ID_TO_DEMO_MINE.remove(stand.getEntityId());
+					for(Player viewer : mine.team.getPlayerMembers()) {
+						Main.getPlayerInfo(viewer).getMetadataViewer().removeViewedValues(mine.stands);
 					}
 
 					AXOLOTL_TO_DEMO_MINE.remove(mine.hitboxEntity);
@@ -175,8 +173,8 @@ public class KitDemolitions extends Kit
 				list.remove(mine);
 			}
 
-			for(ArmorStand stand : mine.stands) {
-				ARMOR_STAND_ID_TO_DEMO_MINE.remove(stand.getEntityId());
+			for(Player viewer : mine.team.getPlayerMembers()) {
+				Main.getPlayerInfo(viewer).getMetadataViewer().removeViewedValues(mine.stands);
 			}
 
 			AXOLOTL_TO_DEMO_MINE.remove(mine.hitboxEntity);
