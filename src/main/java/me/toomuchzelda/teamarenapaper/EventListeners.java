@@ -84,7 +84,6 @@ public class EventListeners implements Listener
 		//run this before the game tick so there is a whole tick after prepDead and construction of the next
 		// TeamArena instance
 		if(Main.getGame().getGameState() == DEAD) {
-
 			//use this opportunity to cleanup
 			Iterator<Map.Entry<Player, PlayerInfo>> pinfoIter = Main.getPlayersIter();
 			while(pinfoIter.hasNext()) {
@@ -94,7 +93,8 @@ public class EventListeners implements Listener
 					pinfoIter.remove();
 				}
 				else {
-					entry.getValue().clearMessageCooldowns();
+					PlayerInfo pinfo = entry.getValue();
+					pinfo.clearMessageCooldowns();
 				}
 			}
 			Main.playerIdLookup.entrySet().removeIf(idLookupEntry -> !idLookupEntry.getValue().isOnline());
@@ -134,8 +134,14 @@ public class EventListeners implements Listener
 		}*/
 
 		//every 3 minutes
-		if(event.getTickNumber() % (3 * 60 * 20) == 0) {
+		int count = event.getTickNumber() % (3 * 60  *20);
+		if(count == 0) {
 			ArrowPierceManager.cleanup();
+		}
+		else if(count == 10) {
+			for(PlayerInfo pinfo : Main.getPlayerInfos()) {
+				pinfo.getMetadataViewer().cleanUp();
+			}
 		}
 
 		PacketListeners.cancelDamageSounds = true;

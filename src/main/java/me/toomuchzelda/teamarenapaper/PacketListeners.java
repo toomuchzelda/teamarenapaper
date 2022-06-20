@@ -312,90 +312,15 @@ public class PacketListeners
 		});
 
 
-		/**
-		 * could optimise by caching WrappedDataWatchers inside DemoMine object
-		 */
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(Main.getPlugin(),
 				PacketType.Play.Server.ENTITY_METADATA)
 		{
 			@Override
 			public void onPacketSending(PacketEvent event) {
 				PacketContainer packet = event.getPacket();
-				int id = packet.getIntegers().read(0);
 
-				Player viewer = event.getPlayer();
-				MetadataViewer metadataViewer = Main.getPlayerInfo(viewer).getMetadataViewer();
-
-				//don't construct a new datawatcher if it's not needed
-				if(metadataViewer.hasMetadataFor(id)) {
-					StructureModifier<List<WrappedWatchableObject>> modifier = packet.getWatchableCollectionModifier();
-
-					WrappedDataWatcher watcher = new WrappedDataWatcher();
-					WrappedWatchableObject obj;
-					MetadataValue value;
-					ListIterator<WrappedWatchableObject> iter = modifier.read(0).listIterator();
-					while (iter.hasNext()) {
-						obj = iter.next();
-
-						WrappedDataWatcher.WrappedDataWatcherObject watcherObj =
-								new WrappedDataWatcher.WrappedDataWatcherObject(
-										obj.getIndex(), obj.getWatcherObject().getSerializer());
-
-						value = metadataViewer.getViewedValue(id, obj.getIndex());
-						if (value != null) {
-							//new watcher object to put into packet. Copy the properties of the old obj
-							Object newValue;
-							if (value instanceof MetadataBitfieldValue bitField) {
-								newValue = bitField.combine((Byte) obj.getValue());
-							}
-							else {
-								newValue = value.getValue();
-							}
-
-							watcher.setObject(watcherObj, newValue);
-						}
-						else {
-							watcher.setObject(watcherObj, obj.getValue());
-						}
-					}
-
-					modifier.write(0, watcher.getWatchableObjects());
-				}
-
-
-				/*DemoMine mine = DemoMine.getStandMine(id);
-				if(mine != null) {
-					boolean shouldSeeGlowing = mine.team.getPlayerMembers().contains(event.getPlayer());
-
-					List<WrappedWatchableObject> objects = modifier.read(0);
-
-					while(iter.hasNext()) {
-
-						obj = iter.next();
-
-						WrappedDataWatcher.WrappedDataWatcherObject watcherObj =
-								new WrappedDataWatcher.WrappedDataWatcherObject(
-										obj.getIndex(), obj.getWatcherObject().getSerializer());
-
-						if(obj.getIndex() == 0) {
-							byte meta = (Byte) obj.getValue();
-							if(shouldSeeGlowing)
-								// add glowing status to outgoing metadata
-								meta |= (byte) 0x40; //https://wiki.vg/Entity_metadata#Entity_Metadata_Format
-							else
-								meta = (byte) (meta & ~(1 << 6)); //MUST explicity set to 0
-
-							Byte b = meta;
-
-							watcher.setObject(watcherObj, b);
-						}
-						else {
-							watcher.setObject(watcherObj, obj.getValue());
-						}
-					}
-
-
-				}*/
+				MetadataViewer metadataViewer = Main.getPlayerInfo(event.getPlayer()).getMetadataViewer();
+				metadataViewer.adjustMetadataPacket(packet);
 			}
 		});
 	}
