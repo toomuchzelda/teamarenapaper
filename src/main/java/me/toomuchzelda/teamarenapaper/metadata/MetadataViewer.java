@@ -94,14 +94,12 @@ public class MetadataViewer
 	 * Clean up custom metadata for non-existent entities.
 	 */
 	public void cleanUp() {
-		//entityValues.entrySet().removeIf(entry -> !entry.getValue().entity().isValid());
-		Bukkit.broadcastMessage("Running cleanup");
 		var iter = entityValues.entrySet().iterator();
 		while(iter.hasNext()) {
 			var entry = iter.next();
 			if(!entry.getValue().entity().isValid()) {
 				iter.remove();
-				Bukkit.broadcastMessage("Cleaned up " + entry.getValue().entity().getName());
+				//Bukkit.broadcastMessage("Cleaned up " + entry.getValue().entity().getName());
 			}
 		}
 	}
