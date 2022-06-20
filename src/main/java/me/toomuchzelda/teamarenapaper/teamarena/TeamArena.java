@@ -1000,6 +1000,15 @@ public abstract class TeamArena
 		}
 	}
 
+	/**
+	 * Called anytime a player changes teams.
+	 */
+	public void onTeamSwitch(Player player, @Nullable TeamArenaTeam oldTeam, @Nullable TeamArenaTeam newTeam) {
+		for(Ability ability : Kit.getAbilities(player)) {
+			ability.onTeamSwitch(player, oldTeam, newTeam);
+		}
+	}
+
 	//switch a player between spectator and player
 	// teams stuff only, practical changes happen in makeSpectator(Player)
 	public void setSpectator(Player player, boolean spec, boolean shame) {

@@ -23,10 +23,10 @@ import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.Stack;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class TeamArenaTeam
 {
@@ -62,7 +62,7 @@ public class TeamArenaTeam
 	private Team paperTeam;
 
 	private Location[] spawns;
-	private final Set<Player> playerMembers = ConcurrentHashMap.newKeySet();
+	private final Set<Player> playerMembers = new LinkedHashSet<>();
 
 	//if someone needs to be booted out when a player leaves before game start
 	//only used before teams decided
@@ -212,79 +212,70 @@ public class TeamArenaTeam
 				TeamArenaTeam team = pinfo.team;
 
 				//if they're already on this team
-				// check both their reference and this Set as having the reference point here doesn't always mean
+				// check both their reference and this Set as having the reference point to `this` doesn't always mean
 				// being in the team yet i.e when player logging in
 				if(team == this && playerMembers.contains(player)) {
 					updateNametag(player);
 					continue;
 				}
 
-				team.removeMembers(player);
+				team.removeMembers(false, player);
 				pinfo.team = this;
 
 				//change tab list name to colour for RGB colours
 				// and armor stand nametag
 				updateNametag(player);
 
-				//paperTeam.addEntry(player.getName());
-
 				playerMembers.add(player);
 				lastIn.push(player);
-			}
-			else
-			{
-				//paperTeam.addEntry(entity.getUniqueId().toString());
+
+				Main.getGame().onTeamSwitch(player, team, this);
 			}
 		}
+
 		paperTeam.addEntities(entities);
 		PlayerScoreboard.addMembersAll(paperTeam, entities);
 	}
 
 	public void removeMembers(Entity... entities) {
+		removeMembers(true, entities);
+	}
+
+	/**
+	 * @param callEvent to avoid calling Main.getGame().onTeamSwitch() twice when adding a player to another team (
+	 *                  and removing them from this one)
+	 */
+	private void removeMembers(boolean callEvent, Entity... entities) {
+		paperTeam.removeEntities(entities);
+		PlayerScoreboard.removeMembersAll(paperTeam, entities);
+		Main.getGame().setLastHadLeft(this);
+
 		for (Entity entity : entities)
 		{
 			if (entity instanceof Player player)
 			{
-				//paperTeam.removeEntry(player.getName());
 				Main.getPlayerInfo(player).team = null;
-				//player.playerListName(Component.text(player.getName()).color(TeamArena.noTeamColour));
-				// name colour should be handled by the team they're put on
+				playerMembers.remove(player);
+				lastIn.remove(player);
+
+				if(callEvent)
+					Main.getGame().onTeamSwitch(player, this, null);
 			}
-			else
-			{
-				//paperTeam.removeEntry(entity.getUniqueId().toString());
-			}
-			playerMembers.remove(entity);
-			lastIn.remove(entity);
 		}
-		paperTeam.removeEntities(entities);
-		PlayerScoreboard.removeMembersAll(paperTeam, entities);
-		Main.getGame().setLastHadLeft(this);
 	}
 
 	public void removeAllMembers() {
 		//removeMembers(entityMembers.toArray(new Entity[0]));
 		for (Player player : playerMembers)
 		{
-			//if (entity instanceof Player player)
-			//{
-				//paperTeam.removeEntry(player.getName());
-				Main.getPlayerInfo(player).team = null;
-				//player.playerListName(Component.text(player.getName()).color(TeamArena.noTeamColour));
-				// name colour should be handled by the team they're put on
-			//}
-			//else
-			//{
-			//	paperTeam.removeEntry(entity.getUniqueId().toString());
-			//}
+			Main.getPlayerInfo(player).team = null;
 			playerMembers.remove(player);
 			lastIn.remove(player);
+
+			Main.getGame().onTeamSwitch(player, this, null);
 		}
 
 		//clear any non player entities in the paper team
-		/*for(String entry : paperTeam.getEntries()) {
-			paperTeam.removeEntry(entry);
-		}*/
 		paperTeam.removeEntries(paperTeam.getEntries());
 		PlayerScoreboard.removeEntriesAll(paperTeam, paperTeam.getEntries());
 		Main.getGame().setLastHadLeft(this);
