@@ -1,7 +1,10 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
+import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
@@ -15,7 +18,6 @@ import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Axolotl;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
@@ -86,7 +88,6 @@ public class KitDemolitions extends Kit
 		public static final Map<Player, List<RegeneratingMine>> REGENERATING_MINES = new LinkedHashMap<>();
 		public static final Map<Player, DemoMine> TARGETTED_MINE = new HashMap<>();
 
-		static final HashMap<Integer, DemoMine> ARMOR_STAND_ID_TO_DEMO_MINE = new HashMap<>(20, 0.4f);
 		public static final Map<Axolotl, DemoMine> AXOLOTL_TO_DEMO_MINE = new LinkedHashMap<>();
 		public static final Set<BlockVector> MINE_POSITIONS = new HashSet<>();
 
@@ -102,7 +103,6 @@ public class KitDemolitions extends Kit
 			PLAYER_MINES.clear();
 			REGENERATING_MINES.clear();
 			AXOLOTL_TO_DEMO_MINE.clear();
-			ARMOR_STAND_ID_TO_DEMO_MINE.clear();
 			TARGETTED_MINE.clear();
 			MINE_POSITIONS.clear();
 
@@ -127,16 +127,16 @@ public class KitDemolitions extends Kit
 		public static void addMine(@NotNull DemoMine mine) {
 			Player player = mine.owner;
 			List<DemoMine> fromPlayer = PLAYER_MINES.computeIfAbsent(player, demoMines -> {
-				return new ArrayList<>(4);
+				return new ArrayList<>(TNT_MINE_COUNT + PUSH_MINE_COUNT);
 			});
 			fromPlayer.add(mine);
 
 			//slightly hacky, but this is already done inside the DemoMine constructor.
 			// it needs to be put into this map before the armor stands are spawned so the
-			// Metadata packet listener for them will read from this map, and know that it's
+			// Metadata packet listener for them will read from it and know it's
 			// a mine that needs the glowing effect applied.
-			/*for(ArmorStand stand : mine.stands) {
-				ARMOR_STAND_ID_TO_DEMO_MINE.put(stand.getEntityId(), mine);
+			/*for(Player viewer : player's teammates) {
+				Main.getPlayerInfo(viewer).getMetadataViewer().setViewedValue(0, DemoMine.GLOWING_METADATA, armor stands);
 			}*/
 
 			AXOLOTL_TO_DEMO_MINE.put(mine.hitboxEntity, mine);
@@ -150,8 +150,8 @@ public class KitDemolitions extends Kit
 				var iter = list.iterator();
 				while(iter.hasNext()) {
 					DemoMine mine = iter.next();
-					for(ArmorStand stand : mine.stands) {
-						ARMOR_STAND_ID_TO_DEMO_MINE.remove(stand.getEntityId());
+					for(Player viewer : mine.team.getPlayerMembers()) {
+						Main.getPlayerInfo(viewer).getMetadataViewer().removeViewedValues(mine.stands);
 					}
 
 					AXOLOTL_TO_DEMO_MINE.remove(mine.hitboxEntity);
@@ -172,8 +172,8 @@ public class KitDemolitions extends Kit
 				list.remove(mine);
 			}
 
-			for(ArmorStand stand : mine.stands) {
-				ARMOR_STAND_ID_TO_DEMO_MINE.remove(stand.getEntityId());
+			for(Player viewer : mine.team.getPlayerMembers()) {
+				Main.getPlayerInfo(viewer).getMetadataViewer().removeViewedValues(mine.stands);
 			}
 
 			AXOLOTL_TO_DEMO_MINE.remove(mine.hitboxEntity);
@@ -294,7 +294,7 @@ public class KitDemolitions extends Kit
 				}
 
 				//get the one being closest pointed at
-				Double smallestAngle = 10000d;
+				double smallestAngle = 10000d;
 				DemoMine targettedMine = null;
 				for(targettedMinePair pair : targetCandidates) {
 					if(pair.angle() < smallestAngle) {
@@ -409,9 +409,33 @@ public class KitDemolitions extends Kit
 			}
 		}
 
+		/**
+		 * Add the appropriate metadata for glowing mines for players leaving and joining the team.
+		 */
+		@Override
+		public void onTeamSwitch(Player player, TeamArenaTeam oldTeam, TeamArenaTeam newTeam) {
+			//iterate through all mines.
+			// if it's old team's mines, make it un-glow.
+			// if new team's mines, make it glow
+			MetadataViewer metadataViewer = Main.getPlayerInfo(player).getMetadataViewer();
+			for(Map.Entry<Axolotl, DemoMine> entry : AXOLOTL_TO_DEMO_MINE.entrySet()) {
+				DemoMine mine = entry.getValue();
+
+				if(mine.team == oldTeam) {
+					metadataViewer.removeViewedValues(mine.stands);
+				}
+				else if(mine.team == newTeam) {
+					metadataViewer.setViewedValues(MetaIndex.BASE_ENTITY_META, MetaIndex.GLOWING_METADATA,
+							mine.stands);
+				}
+
+				metadataViewer.refreshViewer(mine.stands);
+			}
+		}
+
 		public void addRegeneratingMine(Player player, MineType type, int startTime) {
 			List<RegeneratingMine> regenningMines = REGENERATING_MINES.computeIfAbsent(player,
-					player1 -> new ArrayList<>(TNT_MINE_COUNT + TNT_MINE_COUNT));
+					player1 -> new ArrayList<>(TNT_MINE_COUNT + PUSH_MINE_COUNT));
 
 			regenningMines.add(new RegeneratingMine(type, startTime));
 

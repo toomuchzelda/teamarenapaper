@@ -19,10 +19,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.PreferenceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
-import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -30,15 +27,13 @@ import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.craftbukkit.v1_19_R1.CraftWorldBorder;
-import org.bukkit.entity.AbstractArrow;
-import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.*;
@@ -86,7 +81,6 @@ public class EventListeners implements Listener
 		//run this before the game tick so there is a whole tick after prepDead and construction of the next
 		// TeamArena instance
 		if(Main.getGame().getGameState() == DEAD) {
-
 			//use this opportunity to cleanup
 			Iterator<Map.Entry<Player, PlayerInfo>> pinfoIter = Main.getPlayersIter();
 			while(pinfoIter.hasNext()) {
@@ -123,21 +117,15 @@ public class EventListeners implements Listener
 			e.printStackTrace();
 		}
 
-		/*try {
-			//update nametag positions
-			for (PlayerInfo pinfo : Main.getPlayerInfos()) {
-				if (pinfo.nametag != null) {
-					pinfo.nametag.updatePosition();
-				}
-			}
-		}
-		catch(Exception e) {
-			e.printStackTrace();
-		}*/
-
 		//every 3 minutes
-		if(event.getTickNumber() % (3 * 60 * 20) == 0) {
+		int count = event.getTickNumber() % (3 * 60  *20);
+		if(count == 0) {
 			ArrowPierceManager.cleanup();
+		}
+		else if(count == 10) {
+			for(PlayerInfo pinfo : Main.getPlayerInfos()) {
+				pinfo.getMetadataViewer().cleanUp();
+			}
 		}
 
 		PacketListeners.cancelDamageSounds = true;
@@ -194,7 +182,7 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void playerJoin(PlayerJoinEvent event) {
-		var player = event.getPlayer();
+		Player player = event.getPlayer();
 		//disable yellow "Player has joined the game" messages
 		event.joinMessage(null);
 		Main.getPlayerInfo(player).getScoreboard().set();
@@ -361,16 +349,29 @@ public class EventListeners implements Listener
 		}
 	}
 
+	@EventHandler
+	public void blockPlace(BlockPlaceEvent event) {
+		if(event.getPlayer().getGameMode() != GameMode.CREATIVE) {
+			event.setCancelled(true);
+		}
+
+		Main.getGame().onPlaceBlock(event);
+
+		for(Ability ability : Kit.getAbilities(event.getPlayer())) {
+			ability.onPlaceBlock(event);
+		}
+	}
+
 	/**
 	 * prevent explosions from breaking blocks
 	 */
 	@EventHandler
-	public void entityExplodeEvent(EntityExplodeEvent event) {
+	public void entityExplode(EntityExplodeEvent event) {
 		event.blockList().clear();
 	}
 
 	@EventHandler
-	public void blockExplodeEvent(BlockExplodeEvent event) {
+	public void blockExplode(BlockExplodeEvent event) {
 		event.blockList().clear();
 	}
 
@@ -650,18 +651,16 @@ public class EventListeners implements Listener
 
 	@EventHandler(ignoreCancelled = true)
 	public void onPlayerArmorChange(InventoryClickEvent e) {
-		if (!(Main.getGame() instanceof CaptureTheFlag ctf))
-			return;
-		ItemStack toCheck = null;
+		TeamArena game = Main.getGame();
 		InventoryAction action = e.getAction();
 		// these two actions move the current item so check the current item
 		if (action == InventoryAction.MOVE_TO_OTHER_INVENTORY || action == InventoryAction.HOTBAR_SWAP) {
-			if (ctf.isFlagItem(e.getCurrentItem()))
+			if (!game.isWearableArmorPiece(e.getCurrentItem()))
 				e.setCancelled(true);
-			else if (e.getHotbarButton() != -1 && ctf.isFlagItem(e.getView().getBottomInventory().getItem(e.getHotbarButton())))
+			else if (e.getHotbarButton() != -1 && !game.isWearableArmorPiece(e.getView().getBottomInventory().getItem(e.getHotbarButton())))
 				e.setCancelled(true);
 		} else if (e.getSlotType() == InventoryType.SlotType.ARMOR) {
-			if (ctf.isFlagItem(e.getCursor())) {
+			if (!game.isWearableArmorPiece(e.getCursor())) {
 				e.setCancelled(true);
 			}
 		}
@@ -669,10 +668,19 @@ public class EventListeners implements Listener
 
 	@EventHandler(ignoreCancelled = true)
 	public void onPlayerArmorDrag(InventoryDragEvent e) {
-		if (!(Main.getGame() instanceof CaptureTheFlag ctf))
-			return;
+		ItemStack draggedItem = e.getOldCursor();
 
-		if (ctf.isFlagItem(e.getOldCursor())) {
+		boolean isDraggingOnArmorSlot = false;
+		if(e.getInventory().getHolder() instanceof HumanEntity) {
+			for(int i : e.getInventorySlots()) {
+				if(ItemUtils.isArmorSlotIndex(i)) {
+					isDraggingOnArmorSlot = true;
+					break;
+				}
+			}
+		}
+
+		if(isDraggingOnArmorSlot && !Main.getGame().isWearableArmorPiece(draggedItem)) {
 			e.setCancelled(true);
 		}
 	}

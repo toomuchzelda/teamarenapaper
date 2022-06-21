@@ -4,6 +4,8 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.inventory.KitInventory;
+import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
+import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
@@ -20,6 +22,8 @@ import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -273,6 +277,7 @@ public abstract class TeamArena
 		PlayerInventory inventory = player.getInventory();
 		inventory.clear();
 		inventory.setItem(8, miniMap.getMapItem(info.team));
+		inventory.setItem(7, info.team.getHotbarItem());
 		info.kit.giveKit(player, true, info);
 	}
 
@@ -679,10 +684,50 @@ public abstract class TeamArena
 			event.setUseItemInHand(Event.Result.DENY);
 			Inventories.openInventory(event.getPlayer(), new KitInventory());
 		}
+		else if (gameState == GameState.LIVE){
+			Player clicker = event.getPlayer();
+			PlayerInfo pinfo = Main.getPlayerInfo(clicker);
+			TeamArenaTeam team = pinfo.team;
+			//right click to glow teammates, left click to ping to nearby teammates
+			if(team.getHotbarItem().isSimilar(event.getItem())) {
+				Action action = event.getAction();
+				if(action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK) {
+					setViewingGlowingTeammates(pinfo, !pinfo.viewingGlowingTeammates);
+				}
+			}
+		}
+	}
+
+	public void setViewingGlowingTeammates(PlayerInfo pinfo, boolean glow) {
+		MetadataViewer meta = pinfo.getMetadataViewer();
+		pinfo.viewingGlowingTeammates = glow;
+
+		for (Player viewed : pinfo.team.getPlayerMembers()) {
+			if(glow) {
+				meta.updateBitfieldValue(viewed, MetaIndex.BASE_ENTITY_META,
+						MetaIndex.BITFIELD_GLOWING, glow);
+			}
+			else {
+				meta.removeBitfieldValue(viewed, MetaIndex.BASE_ENTITY_META,
+						MetaIndex.BITFIELD_GLOWING);
+			}
+
+			meta.refreshViewer(viewed);
+		}
+
+		Component text;
+		if(glow)
+			text = Component.text("Now seeing your teammates through walls", NamedTextColor.BLUE);
+		else
+			text = Component.text("Stopped seeing teammates through walls", NamedTextColor.BLUE);
+
+		meta.getViewer().sendMessage(text);
 	}
 
 	public void onInteractEntity(PlayerInteractEntityEvent event) {
 	}
+
+	public void onPlaceBlock(BlockPlaceEvent event) {}
 
 	public void regenTick() {
 		if(gameTick % 60 == 0) {
@@ -737,9 +782,6 @@ public abstract class TeamArena
 				if(time.getTimeGiven() == -1) {
 					time.setTimeGiven(currentTick);
 				}
-
-				//TODO: higher poison effect amplifier means faster damage?
-				//TODO: how often does poison deal damage?
 
 				poisonRate = poison.getAmplifier() > 0 ? 12 : 25;
 				if((currentTick - time.getTimeGiven()) % poisonRate == 0 && victim.getHealth() > 2d) { //must leave them at half a heart
@@ -878,6 +920,8 @@ public abstract class TeamArena
 				pinfo.activeKit.removeKit(p, pinfo);
 			}
 			pinfo.kit = null;
+			//unglow before setting pinfo.team to null as it needs that.
+			setViewingGlowingTeammates(pinfo, false);
 			pinfo.team = null;
 			pinfo.spawnPoint = null;
 		}
@@ -1050,6 +1094,15 @@ public abstract class TeamArena
 					.append(requestedTeam.getComponentName()));
 			player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.AMBIENT, 1f, 2f);*/
 			informOfTeam(player);
+		}
+	}
+
+	/**
+	 * Called anytime a player changes teams.
+	 */
+	public void onTeamSwitch(Player player, @Nullable TeamArenaTeam oldTeam, @Nullable TeamArenaTeam newTeam) {
+		for(Ability ability : Kit.getAbilities(player)) {
+			ability.onTeamSwitch(player, oldTeam, newTeam);
 		}
 	}
 
@@ -1644,6 +1697,19 @@ public abstract class TeamArena
 			return false;
 		}
 		return true;
+	}
+
+	public boolean isTeamHotbarItem(ItemStack item) {
+		for(TeamArenaTeam team : teams) {
+			if(team.getHotbarItem().isSimilar(item))
+				return true;
+		}
+
+		return false;
+	}
+
+	public boolean isWearableArmorPiece(ItemStack item) {
+		return !isTeamHotbarItem(item);
 	}
 
 	public void queueDamage(DamageEvent event) {

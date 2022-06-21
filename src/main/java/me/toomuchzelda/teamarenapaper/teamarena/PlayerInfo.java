@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
+import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
@@ -9,6 +10,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.PacketHologram;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.entity.Damageable;
 import org.bukkit.entity.Entity;
@@ -38,10 +40,12 @@ public class PlayerInfo
 	private final Map<String, Integer> messageCooldowns = new HashMap<>();
 	private final LinkedList<DamageLogEntry> damageReceivedLog;
 	private final KillAssistTracker killAssistTracker;
-
 	private final PlayerScoreboard scoreboard; //scoreboard they view
+	private final MetadataViewer metadataViewer; //custom entity metadata tracker
 
 	public double kills;
+	//for right clicking the leather chestplate
+	public boolean viewingGlowingTeammates;
 
 	public PlayerInfo(CustomCommand.PermissionLevel permissionLevel, Player player) {
 		team = null;
@@ -55,10 +59,11 @@ public class PlayerInfo
 		damageReceivedLog = new LinkedList<>();
 
 		killAssistTracker = new KillAssistTracker(player);
-
 		kills = 0;
+		viewingGlowingTeammates = false;
 
 		this.scoreboard = new PlayerScoreboard(player);
+		this.metadataViewer = new MetadataViewer(player);
 	}
 
 	public void setPreferenceValues(Map<Preference<?>, ?> values) {
@@ -102,8 +107,12 @@ public class PlayerInfo
 	}
 
 	public void logDamageReceived(Damageable damaged, DamageType damageType, double damage, @Nullable Entity damager, int time) {
-		var damagerComponent = damager == null ? null : EntityUtils.getComponent(damager);
+		Component damagerComponent = damager == null ? null : EntityUtils.getComponent(damager);
 		damageReceivedLog.add(new DamageLogEntry(damageType, damage, damagerComponent, time));
+	}
+
+	public MetadataViewer getMetadataViewer() {
+		return metadataViewer;
 	}
 
 	public PlayerScoreboard getScoreboard() {

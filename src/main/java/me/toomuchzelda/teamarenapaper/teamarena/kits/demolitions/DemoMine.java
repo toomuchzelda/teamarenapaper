@@ -118,6 +118,9 @@ public abstract class DemoMine
 		}
 
 		for(ArmorStand stand : stands) {
+			for(Player viewer : this.team.getPlayerMembers()) {
+				Main.getPlayerInfo(viewer).getMetadataViewer().removeViewedValues(stand);
+			}
 			stand.remove();
 		}
 		hitboxEntity.remove();
@@ -180,7 +183,7 @@ public abstract class DemoMine
 		return TeamArena.getGameTick() > this.creationTime + DemoMine.TIME_TO_ARM;
 	}
 
-	void tick() {};
+	void tick() {}
 
 	BlockVector getBlockVector() {
 		return blockVector;
@@ -198,23 +201,6 @@ public abstract class DemoMine
 	void unGlow() {
 		this.glowing = false;
 		Main.getPlayerInfo(owner).getScoreboard().addMembers(this.ownerGlowingTeam, stands);
-	}
-
-	public static DemoMine getStandMine(int id) {
-		return KitDemolitions.DemolitionsAbility.ARMOR_STAND_ID_TO_DEMO_MINE.get(id);
-	}
-
-	public static ArmorStand getMineStand(int id) {
-		DemoMine mine = getStandMine(id);
-		if(mine != null) {
-			ArmorStand[] stands = mine.stands;
-			for (ArmorStand stand : stands) {
-				if (stand.getEntityId() == id)
-					return stand;
-			}
-		}
-
-		return null;
 	}
 
 	static void clearTeams() {

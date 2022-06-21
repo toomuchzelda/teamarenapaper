@@ -1,6 +1,8 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
+import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import org.bukkit.Location;
@@ -53,7 +55,14 @@ public class TNTMine extends DemoMine
 			stand.setLeftLegPose(LEG_ANGLE);
 			stand.setRightLegPose(LEG_ANGLE);
 			stand.getEquipment().setBoots(leatherBoots, true);
-			KitDemolitions.DemolitionsAbility.ARMOR_STAND_ID_TO_DEMO_MINE.put(stand.getEntityId(), this);
+
+			for(Player viewer : this.team.getPlayerMembers()) {
+				MetadataViewer metaViewer = Main.getPlayerInfo(viewer).getMetadataViewer();
+				metaViewer.setViewedValue(MetaIndex.BASE_ENTITY_META,
+						MetaIndex.GLOWING_METADATA, stand.getEntityId(), stand);
+
+				//Don't need to refresh metaViewer as this has been put in before the metadata packet is sent
+			}
 		};
 		stands[0] = world.spawn(spawnLoc1, ArmorStand.class, propApplier);
 		stands[1] = world.spawn(spawnLoc2, ArmorStand.class, propApplier);

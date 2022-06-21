@@ -47,6 +47,10 @@ public class ItemUtils {
         return SWORD_ITEMS.isTagged(item.getType());
     }
 
+	public static boolean isArmorSlotIndex(int index) {
+		return index > 35 && index < 40;
+	}
+
 	/**
 	 * get the instance of this item that is in the inventory
 	 * @return

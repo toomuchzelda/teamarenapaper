@@ -122,7 +122,7 @@ public class DamageType {
 
     public static final DamageType QUIT = new DamageType("Quit", "%Killed% has left the game").setInstantDeath().setNoKnockback();
 
-	public static final DamageType SONIC_BOOM = new DamageType("Sonic Boom", "%Killed% was killed by admin abuse")
+	public static final DamageType SONIC_BOOM = new DamageType("Sonic Boom", "%Killed% was killed by %Killer%'s sonic boom")
 			.setIgnoreArmor().setIgnoreArmorEnchants();
 
     public static final DamageType STARVATION = new DamageType("Starvation", "%Killed% died from starvation").setIgnoreArmor()

@@ -10,10 +10,12 @@ import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Pair;
+import me.toomuchzelda.teamarenapaper.metadata.MetadataBitfieldValue;
+import me.toomuchzelda.teamarenapaper.metadata.MetadataValue;
+import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.DisguiseManager;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.DemoMine;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSpy;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
@@ -310,56 +312,15 @@ public class PacketListeners
 		});
 
 
-		/**
-		 * could optimise by caching WrappedDataWatchers inside DemoMine object
-		 */
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(Main.getPlugin(),
 				PacketType.Play.Server.ENTITY_METADATA)
 		{
 			@Override
 			public void onPacketSending(PacketEvent event) {
 				PacketContainer packet = event.getPacket();
-				int id = packet.getIntegers().read(0);
 
-				DemoMine mine = DemoMine.getStandMine(id);
-				if(mine != null) {
-					boolean shouldSeeGlowing = mine.team.getPlayerMembers().contains(event.getPlayer());
-
-					StructureModifier<List<WrappedWatchableObject>> modifier = packet.getWatchableCollectionModifier();
-					List<WrappedWatchableObject> objects = modifier.read(0);
-
-					WrappedDataWatcher watcher = new WrappedDataWatcher();
-
-					ListIterator<WrappedWatchableObject> iter = objects.listIterator();
-
-					WrappedWatchableObject obj;
-					while(iter.hasNext()) {
-
-						obj = iter.next();
-
-						WrappedDataWatcher.WrappedDataWatcherObject watcherObj =
-								new WrappedDataWatcher.WrappedDataWatcherObject(
-										obj.getIndex(), obj.getWatcherObject().getSerializer());
-
-						if(obj.getIndex() == 0) {
-							byte meta = (Byte) obj.getValue();
-							if(shouldSeeGlowing)
-								// add glowing status to outgoing metadata
-								meta |= (byte) 0x40; //https://wiki.vg/Entity_metadata#Entity_Metadata_Format
-							else
-								meta = (byte) (meta & ~(1 << 6)); //MUST explicity set to 0
-
-							Byte b = meta;
-
-							watcher.setObject(watcherObj, b);
-						}
-						else {
-							watcher.setObject(watcherObj, obj.getValue());
-						}
-					}
-
-					modifier.write(0, watcher.getWatchableObjects());
-				}
+				MetadataViewer metadataViewer = Main.getPlayerInfo(event.getPlayer()).getMetadataViewer();
+				event.setPacket(metadataViewer.adjustMetadataPacket(packet));
 			}
 		});
 	}

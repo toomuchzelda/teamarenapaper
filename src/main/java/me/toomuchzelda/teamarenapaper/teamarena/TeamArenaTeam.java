@@ -2,7 +2,9 @@ package me.toomuchzelda.teamarenapaper.teamarena;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
+import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -17,15 +19,21 @@ import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
 
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.Stack;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class TeamArenaTeam
 {
+	public static final Component SHOW_ALL_TEAMMATES = ItemUtils.noItalics(Component.text("Point at something and Left Click to ping", TextUtils.LEFT_CLICK_TO));
+	public static final Component PING = ItemUtils.noItalics(Component.text("Right click to see all your teammates", TextUtils.RIGHT_CLICK_TO));
+	public static final List<Component> HOTBAR_ITEM_LORE = List.of(SHOW_ALL_TEAMMATES, PING);
+
 	private final String name;
 	private final String simpleName;
 
@@ -38,6 +46,7 @@ public class TeamArenaTeam
 
 	private final DyeColor dyeColour;
 	private final TextColor RGBColour;
+	private final TextColor RGBSecondColor;
 
 	//BossBars are sent in prepLive() of each game class extending TeamArena
 	private final BossBar.Color barColor;
@@ -46,11 +55,14 @@ public class TeamArenaTeam
 	public final Material iconMaterial;
 	private final ItemStack iconItem;
 
+	//hotbar item players have during game
+	private final ItemStack hotbarItem;
+
 	//paper good spigot bad
 	private Team paperTeam;
 
 	private Location[] spawns;
-	private final Set<Player> playerMembers = ConcurrentHashMap.newKeySet();
+	private final Set<Player> playerMembers = new LinkedHashSet<>();
 
 	//if someone needs to be booted out when a player leaves before game start
 	//only used before teams decided
@@ -72,6 +84,7 @@ public class TeamArenaTeam
 		this.dyeColour = dyeColor;
 
 		this.RGBColour = TextColor.color(colour.asRGB());
+		this.RGBSecondColor = TextColor.color(colour.asRGB());
 
 		spawns = null;
 		score = 0;
@@ -95,6 +108,13 @@ public class TeamArenaTeam
 		ItemMeta meta = iconItem.getItemMeta();
 		meta.displayName(componentName.decoration(TextDecoration.ITALIC, false));
 		iconItem.setItemMeta(meta);
+
+		hotbarItem = new ItemStack(Material.LEATHER_CHESTPLATE);
+		LeatherArmorMeta leatherMeta = (LeatherArmorMeta) hotbarItem.getItemMeta();
+		leatherMeta.displayName(ItemUtils.noItalics(Component.text("You are on ", NamedTextColor.GOLD).append(componentName)));
+		leatherMeta.lore(HOTBAR_ITEM_LORE);
+		leatherMeta.setColor(this.colour);
+		hotbarItem.setItemMeta(leatherMeta);
 
 		paperTeam = PlayerScoreboard.SCOREBOARD.registerNewTeam(name);
 		paperTeam.displayName(componentName);
@@ -154,8 +174,16 @@ public class TeamArenaTeam
 		return RGBColour;
 	}
 
+	public TextColor getRGBSecondTextColor() {
+		return RGBSecondColor;
+	}
+
 	public ItemStack getIconItem() {
 		return this.iconItem.clone();
+	}
+
+	public ItemStack getHotbarItem() {
+		return this.hotbarItem.clone();
 	}
 
 	public static Color convert(NamedTextColor textColor) {
@@ -184,79 +212,70 @@ public class TeamArenaTeam
 				TeamArenaTeam team = pinfo.team;
 
 				//if they're already on this team
-				// check both their reference and this Set as having the reference point here doesn't always mean
+				// check both their reference and this Set as having the reference point to `this` doesn't always mean
 				// being in the team yet i.e when player logging in
 				if(team == this && playerMembers.contains(player)) {
 					updateNametag(player);
 					continue;
 				}
 
-				team.removeMembers(player);
+				team.removeMembers(false, player);
 				pinfo.team = this;
 
 				//change tab list name to colour for RGB colours
 				// and armor stand nametag
 				updateNametag(player);
 
-				//paperTeam.addEntry(player.getName());
-
 				playerMembers.add(player);
 				lastIn.push(player);
-			}
-			else
-			{
-				//paperTeam.addEntry(entity.getUniqueId().toString());
+
+				Main.getGame().onTeamSwitch(player, team, this);
 			}
 		}
+
 		paperTeam.addEntities(entities);
 		PlayerScoreboard.addMembersAll(paperTeam, entities);
 	}
 
 	public void removeMembers(Entity... entities) {
+		removeMembers(true, entities);
+	}
+
+	/**
+	 * @param callEvent to avoid calling Main.getGame().onTeamSwitch() twice when adding a player to another team (
+	 *                  and removing them from this one)
+	 */
+	private void removeMembers(boolean callEvent, Entity... entities) {
+		paperTeam.removeEntities(entities);
+		PlayerScoreboard.removeMembersAll(paperTeam, entities);
+		Main.getGame().setLastHadLeft(this);
+
 		for (Entity entity : entities)
 		{
 			if (entity instanceof Player player)
 			{
-				//paperTeam.removeEntry(player.getName());
 				Main.getPlayerInfo(player).team = null;
-				//player.playerListName(Component.text(player.getName()).color(TeamArena.noTeamColour));
-				// name colour should be handled by the team they're put on
+				playerMembers.remove(player);
+				lastIn.remove(player);
+
+				if(callEvent)
+					Main.getGame().onTeamSwitch(player, this, null);
 			}
-			else
-			{
-				//paperTeam.removeEntry(entity.getUniqueId().toString());
-			}
-			playerMembers.remove(entity);
-			lastIn.remove(entity);
 		}
-		paperTeam.removeEntities(entities);
-		PlayerScoreboard.removeMembersAll(paperTeam, entities);
-		Main.getGame().setLastHadLeft(this);
 	}
 
 	public void removeAllMembers() {
 		//removeMembers(entityMembers.toArray(new Entity[0]));
 		for (Player player : playerMembers)
 		{
-			//if (entity instanceof Player player)
-			//{
-				//paperTeam.removeEntry(player.getName());
-				Main.getPlayerInfo(player).team = null;
-				//player.playerListName(Component.text(player.getName()).color(TeamArena.noTeamColour));
-				// name colour should be handled by the team they're put on
-			//}
-			//else
-			//{
-			//	paperTeam.removeEntry(entity.getUniqueId().toString());
-			//}
+			Main.getPlayerInfo(player).team = null;
 			playerMembers.remove(player);
 			lastIn.remove(player);
+
+			Main.getGame().onTeamSwitch(player, this, null);
 		}
 
 		//clear any non player entities in the paper team
-		/*for(String entry : paperTeam.getEntries()) {
-			paperTeam.removeEntry(entry);
-		}*/
 		paperTeam.removeEntries(paperTeam.getEntries());
 		PlayerScoreboard.removeEntriesAll(paperTeam, paperTeam.getEntries());
 		Main.getGame().setLastHadLeft(this);
@@ -319,10 +338,10 @@ public class TeamArenaTeam
 
 	//create gradient component word like player name or team name
 	public Component colourWord(String str) {
-		Component component = Component.empty();
-
+		Component component;
 		if(secondColour != null) {
-			for (float i = 0; i < str.length(); i++) {
+			component = TextUtils.getUselessRGBText(str, getRGBTextColor(), getRGBSecondTextColor());
+			/*for (float i = 0; i < str.length(); i++) {
 				//percentage of second colour to use, leftover is percentage of first colour
 				// from 0 to 1
 				float percentage = (i / (float) str.length());
@@ -339,10 +358,10 @@ public class TeamArenaTeam
 
 
 				component = component.append(Component.text(str.charAt((int) i)).color(result));
-			}
+			}*/
 		}
 		else {
-			component = Component.text(str).color(getRGBTextColor());
+			component = Component.text(str, getRGBTextColor());
 		}
 		return component;
 	}
