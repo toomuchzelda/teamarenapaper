@@ -4,6 +4,9 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.inventory.KitInventory;
+import me.toomuchzelda.teamarenapaper.metadata.MetadataBitfieldValue;
+import me.toomuchzelda.teamarenapaper.metadata.MetadataIndexes;
+import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
@@ -20,6 +23,7 @@ import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
@@ -621,6 +625,27 @@ public abstract class TeamArena
 		} else if (kitMenuItem.isSimilar(event.getItem())) {
 			event.setUseItemInHand(Event.Result.DENY);
 			Inventories.openInventory(event.getPlayer(), new KitInventory());
+		}
+		else if (gameState == GameState.LIVE){
+			Player clicker = event.getPlayer();
+			PlayerInfo pinfo = Main.getPlayerInfo(clicker);
+			TeamArenaTeam team = pinfo.team;
+			//right click to glow teammates, left click to ping to nearby teammates
+			if(team.getHotbarItem().isSimilar(event.getItem())) {
+				Action action = event.getAction();
+				if(action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK) {
+					MetadataViewer meta = pinfo.getMetadataViewer();
+					boolean view = !pinfo.viewingGlowingTeammates;
+					pinfo.viewingGlowingTeammates = view;
+
+					for (Player viewed : team.getPlayerMembers()) {
+						meta.updateBitfieldValue(viewed, MetadataIndexes.BASE_ENTITY_META_INDEX,
+								MetadataIndexes.BITFIELD_GLOWING_INDEX, view);
+
+						meta.refreshViewer(viewed);
+					}
+				}
+			}
 		}
 	}
 

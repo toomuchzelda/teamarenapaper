@@ -59,7 +59,7 @@ public class TNTMine extends DemoMine
 			for(Player viewer : this.team.getPlayerMembers()) {
 				MetadataViewer metaViewer = Main.getPlayerInfo(viewer).getMetadataViewer();
 				metaViewer.setViewedValue(MetadataIndexes.BASE_ENTITY_META_INDEX,
-						DemoMine.GLOWING_METADATA, stand.getEntityId(), stand);
+						MetadataIndexes.GLOWING_METADATA, stand.getEntityId(), stand);
 
 				//Don't need to refresh metaViewer as this has been put in before the metadata packet is sent
 			}

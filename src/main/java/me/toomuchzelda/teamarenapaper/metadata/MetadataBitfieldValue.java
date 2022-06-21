@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.metadata;
 
 import java.util.BitSet;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -8,8 +9,13 @@ import java.util.Map;
  */
 public class MetadataBitfieldValue extends MetadataValue<Map<Integer, Boolean>>
 {
-	public MetadataBitfieldValue(Map<Integer, Boolean> value) {
+	private MetadataBitfieldValue(Map<Integer, Boolean> value) {
 		super(value);
+	}
+
+	public static MetadataBitfieldValue create(Map<Integer, Boolean> value) {
+		Map<Integer, Boolean> newMap = new HashMap<>(value);
+		return new MetadataBitfieldValue(newMap);
 	}
 
 	public byte combine(byte other) {

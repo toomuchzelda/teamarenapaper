@@ -41,8 +41,9 @@ public class PlayerInfo
 	private final PlayerScoreboard scoreboard; //scoreboard they view
 	private final MetadataViewer metadataViewer; //custom entity metadata tracker
 
-
 	public double kills;
+	//for right clicking the leather chestplate
+	public boolean viewingGlowingTeammates;
 
 	public PlayerInfo(CustomCommand.PermissionLevel permissionLevel, Player player) {
 		team = null;
@@ -57,6 +58,7 @@ public class PlayerInfo
 
 		killAssistTracker = new KillAssistTracker(player);
 		kills = 0;
+		viewingGlowingTeammates = false;
 
 		this.scoreboard = new PlayerScoreboard(player);
 		this.metadataViewer = new MetadataViewer(player);

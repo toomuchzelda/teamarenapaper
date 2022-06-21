@@ -1,8 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.metadata.MetadataBitfieldValue;
-import me.toomuchzelda.teamarenapaper.metadata.MetadataIndexes;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.SidebarManager;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
@@ -19,15 +17,12 @@ import org.bukkit.scoreboard.Team;
 import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
 
-import java.util.Collections;
-
 public abstract class DemoMine
 {
 	public static final int TIME_TO_ARM = 30;
 	public static final double REMOTE_ARMING_DISTANCE = 1000d;
 	public static final double REMOTE_ARMING_DISTANCE_SQRD = REMOTE_ARMING_DISTANCE * REMOTE_ARMING_DISTANCE;
 	public static final double TARGETTING_ANGLE = Math.PI / 4;
-	public static final MetadataBitfieldValue GLOWING_METADATA = new MetadataBitfieldValue(Collections.singletonMap(MetadataIndexes.BITFIELD_GLOWING_INDEX, true));
 
 	//used to set the colour of the glowing effect on the mine armor stand's armor
 	// actual game teams don't matter, just need for the colour
@@ -189,7 +184,7 @@ public abstract class DemoMine
 		return TeamArena.getGameTick() > this.creationTime + DemoMine.TIME_TO_ARM;
 	}
 
-	void tick() {};
+	void tick() {}
 
 	BlockVector getBlockVector() {
 		return blockVector;

@@ -121,18 +121,6 @@ public class EventListeners implements Listener
 			e.printStackTrace();
 		}
 
-		/*try {
-			//update nametag positions
-			for (PlayerInfo pinfo : Main.getPlayerInfos()) {
-				if (pinfo.nametag != null) {
-					pinfo.nametag.updatePosition();
-				}
-			}
-		}
-		catch(Exception e) {
-			e.printStackTrace();
-		}*/
-
 		//every 3 minutes
 		int count = event.getTickNumber() % (3 * 60  *20);
 		if(count == 0) {

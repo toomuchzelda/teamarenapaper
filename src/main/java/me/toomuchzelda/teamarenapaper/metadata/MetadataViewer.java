@@ -48,25 +48,52 @@ public class MetadataViewer
 		setViewedValue(index, value, viewedEntity.getEntityId(), viewedEntity);
 	}
 
+	/**
+	 * Assumes all args are correct as given. Bitfield values will stack onto previous values if any.
+	 * @param index Index of metadata
+	 * @param value Value to put there
+	 */
 	public void setViewedValue(int index, MetadataValue value, int entityId, Entity viewedEntity) {
 		EntityMetaValue viewedValues = entityValues.computeIfAbsent(entityId,
 				integer -> new EntityMetaValue(viewedEntity, new HashMap<>(1)));
 
-		viewedValues.indexedValues().put(index, value);
+		MetadataValue origValue = viewedValues.indexedValues().get(index);
+		if(value instanceof MetadataBitfieldValue bitfield && origValue instanceof MetadataBitfieldValue origBitfield) {
+			Map<Integer, Boolean> originalMap = origBitfield.getValue();
+			//add the values of the new bitfield, overriding old ones
+			originalMap.putAll(bitfield.getValue());
+		}
+		else {
+			viewedValues.indexedValues().put(index, value);
+		}
 	}
 
 	public boolean hasMetadataFor(int entityId) {
 		return entityValues.containsKey(entityId);
 	}
 
+	public @Nullable MetadataValue getViewedValue(Entity entity, int index) {
+		return getViewedValue(entity.getEntityId(), index);
+	}
+
 	public @Nullable MetadataValue getViewedValue(int entityId, int index) {
-		var viewedValues = entityValues.get(entityId);
+		EntityMetaValue viewedValues = entityValues.get(entityId);
 		if(viewedValues != null) {
 			return viewedValues.indexedValues().get(index);
 		}
 		else {
 			return null;
 		}
+	}
+
+	public void updateBitfieldValue(Entity viewedEntity, int index, int bitIndex, boolean bit) {
+		EntityMetaValue viewedValues = entityValues.computeIfAbsent(viewedEntity.getEntityId(),
+				integer -> new EntityMetaValue(viewedEntity, new HashMap<>(1)));
+
+		MetadataBitfieldValue bitfield = (MetadataBitfieldValue) viewedValues.indexedValues().computeIfAbsent(
+				index, integer -> MetadataBitfieldValue.create(new HashMap<>(1)));
+
+		bitfield.getValue().put(bitIndex, bit);
 	}
 
 	public void removeViewedValues(Entity... viewedEntities) {

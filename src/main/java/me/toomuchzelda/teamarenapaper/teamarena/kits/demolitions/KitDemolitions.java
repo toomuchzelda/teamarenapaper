@@ -18,7 +18,6 @@ import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Axolotl;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
@@ -426,7 +425,7 @@ public class KitDemolitions extends Kit
 					metadataViewer.removeViewedValues(mine.stands);
 				}
 				else if(mine.team == newTeam) {
-					metadataViewer.setViewedValues(MetadataIndexes.BASE_ENTITY_META_INDEX, DemoMine.GLOWING_METADATA,
+					metadataViewer.setViewedValues(MetadataIndexes.BASE_ENTITY_META_INDEX, MetadataIndexes.GLOWING_METADATA,
 							mine.stands);
 				}
 
