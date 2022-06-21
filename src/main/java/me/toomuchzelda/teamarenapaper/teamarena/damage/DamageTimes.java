@@ -2,7 +2,9 @@ package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
 
+import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -41,7 +43,7 @@ public class DamageTimes {
 	}
 
 	/**
-	 * Get most recently occuring DamageTime thing
+	 * Get most recently occuring DamageTime
 	 */
 	public static DamageTime getLastDamageTime(LivingEntity victim) {
 		DamageTime[] arr = ENTITY_DAMAGE_TIMES.computeIfAbsent(victim, living -> newTimesArray(victim));
@@ -54,6 +56,26 @@ public class DamageTimes {
 		}
 
 		return mostRecent;
+	}
+
+	/**
+	 * Get most recently occuring DamageTime caused by a Player.
+	 * @return null if none have been caused by players.
+	 */
+	public static @Nullable DamageTime getLastPlayerDamageTime(LivingEntity victim) {
+		DamageTime[] arr = ENTITY_DAMAGE_TIMES.computeIfAbsent(victim, living -> newTimesArray(victim));
+
+		DamageTime mostRecent = arr[0];
+		for(DamageTime time : arr) {
+			if(time.getLastTimeDamaged() > mostRecent.getLastTimeDamaged() && time.getGiver() instanceof Player) {
+				mostRecent = time;
+			}
+		}
+
+		if(mostRecent.getGiver() != null)
+			return mostRecent;
+		else
+			return null;
 	}
 
 	public static void clearDamageTimes(LivingEntity victim) {

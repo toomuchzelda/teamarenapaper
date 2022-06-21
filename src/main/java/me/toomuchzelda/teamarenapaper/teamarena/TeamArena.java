@@ -1198,20 +1198,20 @@ public abstract class TeamArena
 	public void handleDeath(DamageEvent event) {
 		Bukkit.broadcast(event.getDamageType().getDeathMessage(event.getVictim(),
 				event.getFinalAttacker(), event.getDamageTypeCause()));
-		Entity e = event.getVictim();
+		Entity victim = event.getVictim();
 		//if player make them a spectator and put them in queue to respawn if is a respawning game
-		if(e instanceof Player p) {
-			PlayerUtils.sendTitle(p, Component.empty(), Component.text("You died!").color(TextColor.color(255, 0, 0)), 0, 30, 20);
+		if(victim instanceof Player playerVictim) {
+			PlayerUtils.sendTitle(playerVictim, Component.empty(), Component.text("You died!").color(TextColor.color(255, 0, 0)), 0, 30, 20);
 
 			//Give out kill assists on the victim
 			Player killer = null;
-			DamageTimes.DamageTime dTimes = DamageTimes.getLastDamageTime(p);
 			if(event.getFinalAttacker() instanceof Player finalAttacker) {
 				killer = finalAttacker;
 			}
 			else {
-				if(dTimes.getGiver() instanceof Player finalAttacker)
-					killer = finalAttacker;
+				DamageTimes.DamageTime dTime = DamageTimes.getLastPlayerDamageTime(playerVictim);
+				if(dTime != null)
+					killer = (Player) dTime.getGiver();
 			}
 			//killer's onKill ability
 			if(killer != null) {
@@ -1220,40 +1220,40 @@ public abstract class TeamArena
 				}
 			}
 
-			PlayerInfo pinfo = Main.getPlayerInfo(p);
+			PlayerInfo pinfo = Main.getPlayerInfo(playerVictim);
 
-			attributeKillAndAssists(p, pinfo, killer);
+			attributeKillAndAssists(playerVictim, pinfo, killer);
 
 			for(Ability a : pinfo.activeKit.getAbilities()) {
 				a.onDeath(event);
 			}
-			pinfo.activeKit.removeKit(p, pinfo);
+			pinfo.activeKit.removeKit(playerVictim, pinfo);
 
-			PlayerUtils.resetState(p);
+			PlayerUtils.resetState(playerVictim);
 
-			players.remove(p);
-			spectators.add(p);
+			players.remove(playerVictim);
+			spectators.add(playerVictim);
 
-			makeSpectator(p);
+			makeSpectator(playerVictim);
 
-			DamageLogEntry.sendDamageLog(p);
+			DamageLogEntry.sendDamageLog(playerVictim);
 			pinfo.clearDamageReceivedLog();
 
 
 			//clear attack givers so they don't get falsely attributed on this next player's death
-			DamageTimes.clearDamageTimes(p);
+			DamageTimes.clearDamageTimes(playerVictim);
 
 			if(this.isRespawningGame()) {
-				respawnTimers.put(p, new RespawnInfo(gameTick));
-				p.getInventory().addItem(kitMenuItem.clone());
+				respawnTimers.put(playerVictim, new RespawnInfo(gameTick));
+				playerVictim.getInventory().addItem(kitMenuItem.clone());
 			}
 		}
 		else {
-			if(e instanceof Damageable dam) {
+			if(victim instanceof Damageable dam) {
 				dam.setHealth(0);
 			}
 			else {
-				e.remove();
+				victim.remove();
 			}
 		}
 	}
