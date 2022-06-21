@@ -6,10 +6,13 @@ import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.AdventureComponentConverter;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
+import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import net.kyori.adventure.text.Component;
+import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 
 import java.util.*;
@@ -21,7 +24,6 @@ public class PacketHologram
 {
 
 	private final int id;
-	public static final int armorStandID = 1;
 	private PacketContainer spawnPacket;
 	private PacketContainer deletePacket;
 	private PacketContainer metadataPacket;
@@ -34,8 +36,6 @@ public class PacketHologram
 	private WrappedDataWatcher.WrappedDataWatcherObject metadata;
 	private WrappedDataWatcher.WrappedDataWatcherObject customNameMetadata;
 
-	public static final int metadataIndex = 0;
-	public static final byte sneakingBitMask = 2;
 	public static final byte invisBitMask = 0x20;
 	public static final int customNameIndex = 2;
 	public static final int customNameVisibleIndex = 3;
@@ -89,13 +89,15 @@ public class PacketHologram
 
 		ints.write(0, this.id);
 		//entity type
-		ints.write(1, armorStandID);
+		//ints.write(1, ARMOR_STAND_ID);
+		spawnPacket.getEntityTypeModifier().write(0, EntityType.ARMOR_STAND);
 		StructureModifier<Double> doubles = spawnPacket.getDoubles();
 		doubles.write(0, location.getX());
 		doubles.write(1, location.getY());
 		doubles.write(2, location.getZ());
 
-		spawnPacket.getModifier().write(1, UUID.randomUUID());
+		//spawnPacket.getModifier().write(1, UUID.randomUUID());
+		spawnPacket.getUUIDs().write(0, UUID.randomUUID());
 	}
 
 	private void createDelete() {
@@ -117,7 +119,7 @@ public class PacketHologram
 
 		//metaObject: implies a field with index 0 and type of byte, i think
 		WrappedDataWatcher.WrappedDataWatcherObject metaObject = new WrappedDataWatcher.WrappedDataWatcherObject(
-				metadataIndex, WrappedDataWatcher.Registry.get(Byte.class));
+				MetaIndex.BASE_ENTITY_META, WrappedDataWatcher.Registry.get(Byte.class));
 		this.metadata = metaObject;
 
 		//metaObject the field, byte the value
