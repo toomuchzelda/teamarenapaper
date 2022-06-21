@@ -11,6 +11,7 @@ import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -22,6 +23,10 @@ import java.util.*;
  */
 public class MetadataViewer
 {
+	/**
+	 * @param entity Reference to the Entity object.
+	 * @param indexedValues Integer = metadata index, MetadataValue = the value.
+	 */
 	record EntityMetaValue(Entity entity, Map<Integer, MetadataValue> indexedValues) {}
 
 	private final Player player;
@@ -29,7 +34,6 @@ public class MetadataViewer
 	/**
 	 * The custom metadatas they are seeing
 	 * First Integer - entity ID
-	 * Second Integer - the index of the metadata value in metadata packet
 	 */
 	private final Map<Integer, EntityMetaValue> entityValues;
 
@@ -138,28 +142,54 @@ public class MetadataViewer
 	}
 
 	/**
-	 * Re-send metadata for an entity for this viewer with all custom stuff applied.
+	 * Re-send metadata for an entity for this viewer with all custom stuff applied (or full original data if no
+	 * modified data exists).
+	 * If sending modified data, only sends the modified data.
 	 */
 	public void refreshViewer(Entity viewedEntity) {
-		WrappedDataWatcher entityData = WrappedDataWatcher.getEntityWatcher(viewedEntity);
 		PacketContainer metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
 		metadataPacket.getIntegers().write(0, viewedEntity.getEntityId());
-		metadataPacket.getWatchableCollectionModifier().write(0, entityData.getWatchableObjects());
 
-		adjustMetadataPacket(metadataPacket);
+		WrappedDataWatcher originalData = WrappedDataWatcher.getEntityWatcher(viewedEntity);
+		WrappedDataWatcher modifiedData;
 
+		EntityMetaValue meta = entityValues.get(viewedEntity.getEntityId());
+		if(meta != null) {
+			modifiedData = new WrappedDataWatcher();
+
+			WrappedWatchableObject obj;
+			for (Map.Entry<Integer, MetadataValue> entry : meta.indexedValues().entrySet()) {
+				obj = originalData.getWatchableObject(entry.getKey());
+
+				WrappedDataWatcher.WrappedDataWatcherObject watcherObj =
+						new WrappedDataWatcher.WrappedDataWatcherObject(
+								obj.getIndex(), obj.getWatcherObject().getSerializer());
+
+				Object newValue;
+				MetadataValue metadataValue = entry.getValue();
+				if(metadataValue instanceof MetadataBitfieldValue bitfield) {
+					newValue = bitfield.combine((Byte) obj.getValue());
+				}
+				else {
+					newValue = metadataValue.getValue();
+				}
+
+				modifiedData.setObject(watcherObj, newValue);
+			}
+		}
+		else {
+			modifiedData = originalData;
+		}
+
+		metadataPacket.getWatchableCollectionModifier().write(0, modifiedData.getWatchableObjects());
 		PlayerUtils.sendPacket(this.player, metadataPacket);
 	}
 
 	/**
-	 * @param metadataPacket If null, returns a new PacketContainer, else modifies the original and returns it.
-	 *                       Packet needs the entity ID already in it.
+	 * For use in packet listeners.
+	 * @param metadataPacket A vanilla generated metadata packet.
 	 */
-	public PacketContainer adjustMetadataPacket(@Nullable PacketContainer metadataPacket) {
-		if(metadataPacket == null) {
-			metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
-		}
-
+	public PacketContainer adjustMetadataPacket(@NotNull PacketContainer metadataPacket) {
 		int id = metadataPacket.getIntegers().read(0);
 		//don't construct a new datawatcher if it's not needed
 		if(this.hasMetadataFor(id)) {
