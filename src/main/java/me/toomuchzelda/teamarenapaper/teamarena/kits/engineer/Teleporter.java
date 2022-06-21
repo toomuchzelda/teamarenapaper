@@ -14,20 +14,15 @@ public class Teleporter extends Building{
 	Location teleLoc;
 	BlockData prevBlockData;
 
-    public Teleporter(Player player, Location loc){
-        super(player, loc);
+    public Teleporter(Player player, Location loc) {
+		super(player, loc);
 		this.name = "Teleporter";
 		this.type = BuildingType.TELEPORTER;
 		this.prevBlockData = loc.clone().getBlock().getBlockData().clone();
-        this.lastUsedTick = TeamArena.getGameTick();
-		this.teleLoc = loc.clone().toCenterLocation().add(0,0.5,0);
+		this.lastUsedTick = TeamArena.getGameTick();
+		this.teleLoc = loc.clone().toCenterLocation().add(0, 0.5, 0);
 		this.loc.getBlock().setType(Material.HONEYCOMB_BLOCK);
-		this.holo = new RealHologram(this.loc.clone().toCenterLocation().add(0,1.5,0), this.holoText);
-    }
-
-	public void setText(Component newText){
-		this.holoText = newText.color(teamColor);
-		this.holo.setText(this.holoText);
+		this.holo = new RealHologram(this.loc.clone().toCenterLocation().add(0, 1.5, 0), this.holoText);
 	}
 
 	public BlockData getPrevBlockData() {

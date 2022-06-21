@@ -217,7 +217,7 @@ public class PlayerUtils {
 
 	/**
 	 * Check whether the viewer sees the enemySpy as an ally or not.
-	 * Defaults to false if enemySpy does not have active kit, is not spy, or is not disguised currently
+	 * Defaults to false if enemySpy is not alive, is not spy, or is not disguised currently
 	 */
 	public static boolean isDisguisedAsAlly(Player viewer, Player enemySpy){
 		TeamArenaTeam viewerTeam = Main.getPlayerInfo(viewer).team;
@@ -232,7 +232,6 @@ public class PlayerUtils {
 					return disguisedTeam.equals(viewerTeam);
 		}
 		else{
-			//If enemySpy param is inaccurate or enemySpy is not disguised, default to return false
 			return false;
 		}
 	}

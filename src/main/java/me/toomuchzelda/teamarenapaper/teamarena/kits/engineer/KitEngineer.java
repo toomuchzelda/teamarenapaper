@@ -8,6 +8,7 @@ import me.toomuchzelda.teamarenapaper.inventory.InventoryProvider;
 import me.toomuchzelda.teamarenapaper.inventory.PagedInventory;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.SidebarManager;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSpy;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -44,7 +45,7 @@ import net.kyori.adventure.text.format.TextColor;
 //Kit Description:
 /*
     Kit Goal: Utility/Ranged
-    Defensive + Offensive play should be equally viable
+    Ideally, Defensive and Offensive play should be equally viable
 
     Main Ability: Sentry
         Active Time / CD = 20 seconds
@@ -53,33 +54,33 @@ import net.kyori.adventure.text.format.TextColor;
         Initial angle at which sentry is placed is determined by where the builder is looking.
         Turret will target the closest enemy within its sight
 
-        Upon placement, the turret will self destruct after its Active Time/ CD is up.
-        By itself, Turret is quite weak, but with wrangler it has substantial damage.
+        Upon placement, the turret will self-destruct after its Active Time is up.
+
+        Active sentry(s) can be manually aimed and fired with the Wrangler
 
         Turret Further Details:
             -Visible Angle: 90 Degrees (Able to turn 360 degrees to track a locked-on enemy)
             -Health: 20 Hearts + Full Leather Armor
             -Fire-Rate: 1 shot every second (20 ticks)
             -DMG: 2 DMG per shot
-            -DPS: 2 DPS
             -Completely impervious to Invis (Give ghost some usefulness back)
-
 
     Sub Ability: Teleporter
         RWF Tele, but no more remote teleporter
-        Add set-up time and cooldown to building TPs
+        Added set-up time and cooldown to building TPs
+
+    Sub Ability: Destruction PDA
+    	Instantly destroy buildings remotely.
+
+    Note: Spies disguised as allies are seen as teammates by buildings as well
+    (Spies can use teleporters and will not be targetted by sentries if disguised)
 */
 /**
  * @author onett425
  */
 public class KitEngineer extends Kit{
-
     public static final ItemStack SENTRY;
     public static final ItemStack WRANGLER;
-	//I had an idea for manual burst fire, but scrapped it. ACTIVE_WRANGLER is not used currently.
-    public static final ItemStack ACTIVE_WRANGLER;
-	//ABILITY_ITEMS tracks which items have abilities for scenarios where ability items are in main and offhand
-	public static final Set<Material> ABILITY_ITEMS = new HashSet<>();
 	static final Team[] COLOUR_TEAMS;
 	static final Team RED_GLOWING_TEAM;
 	static final Team GREEN_GLOWING_TEAM;
@@ -95,17 +96,6 @@ public class KitEngineer extends Kit{
         ItemMeta wranglerMeta = WRANGLER.getItemMeta();
         wranglerMeta.displayName(ItemUtils.noItalics(Component.text("Manual Sentry Fire")));
         WRANGLER.setItemMeta(wranglerMeta);
-
-        ACTIVE_WRANGLER = new ItemStack(Material.BLAZE_ROD);
-        ItemMeta activeWranglerMeta = ACTIVE_WRANGLER.getItemMeta();
-        activeWranglerMeta.displayName(ItemUtils.noItalics(Component.text("Manual Sentry Fire")));
-        ACTIVE_WRANGLER.setItemMeta(activeWranglerMeta);
-
-		ABILITY_ITEMS.add(SENTRY.getType());
-		ABILITY_ITEMS.add(WRANGLER.getType());
-		ABILITY_ITEMS.add(ACTIVE_WRANGLER.getType());
-		ABILITY_ITEMS.add(Material.QUARTZ);
-		ABILITY_ITEMS.add(Material.BOOK);
 
 		//Stolen from toomuchzelda
 		//Sentry Projection changes color based on whether it is a valid spot or not
@@ -194,6 +184,7 @@ public class KitEngineer extends Kit{
 			}
 		}
         public void giveAbility(Player player) {
+			//Initializes the lists that store active buildings
             if(!ACTIVE_TELEPORTERS.containsKey(player)){
                 List<Teleporter> teleporters = new LinkedList<>();
                 ACTIVE_TELEPORTERS.put(player, teleporters);
@@ -224,6 +215,7 @@ public class KitEngineer extends Kit{
             Block block = event.getClickedBlock();
             BlockFace blockFace = event.getBlockFace();
 
+			//Preventing vanilla uses of items
 			if(event.useItemInHand() != Event.Result.DENY && (mat == Material.CHEST_MINECART ||
 																mat == Material.BOOK ||
 																mat == Material.IRON_SHOVEL) &&
@@ -232,46 +224,47 @@ public class KitEngineer extends Kit{
 			}
 
 			//Creating / Destroying Teleporters
-            if(mat == Material.QUARTZ && block != null && block.isSolid() &&
-            blockFace == BlockFace.UP &&
+            if(mat == Material.QUARTZ &&
+					block != null && block.isSolid() &&
+            		blockFace == BlockFace.UP &&
 					(block.getLocation().clone().add(0, 1, 0).getBlock().getType() == Material.AIR ||
 							block.getLocation().clone().add(0, 1, 0).getBlock().isLiquid())){
-                List<Teleporter> teleporters = ACTIVE_TELEPORTERS.get(player);
-                List<Building> buildings = ACTIVE_BUILDINGS.get(player);
-				Location tpLoc = block.getLocation().clone();
-                //Breaking TP
-                if(findDuplicateTele(teleporters, tpLoc) != null){
-                    Teleporter dupeTele = findDuplicateTele(teleporters, tpLoc);
-                    dupeTele.destroy();
-                    teleporters.remove(dupeTele);
-                    buildings.remove(dupeTele);
-                }
-                else{
-                //Creating TP
-                    if(teleporters.size() >= 2){
-                        //Failure: 2 TPs already exist
-                        player.sendMessage(Component.text("Two teleporters are already active! Destroy one with your Destruction PDA!"));
-                    }
-                    else{
-						//Ensuring that 2 TPs cannot exist on the same block
-						if(findDuplicateAllTele(tpLoc) == null){
-							//Success: TP is created
-							Teleporter newTP = new Teleporter(player, tpLoc);
-							teleporters.add(newTP);
-							buildings.add(newTP);
-							if(teleporters.size() == 2){
-								//Syncing the Cooldowns for the newly created TP.
-								int lastUsedTick = newTP.getLastUsedTick();
-								teleporters.get(0).setLastUsedTick(lastUsedTick);
-							}
+						List<Teleporter> teleporters = ACTIVE_TELEPORTERS.get(player);
+						List<Building> buildings = ACTIVE_BUILDINGS.get(player);
+						Location tpLoc = block.getLocation().clone();
+						//Breaking TP
+						if(findDuplicateTele(teleporters, tpLoc) != null){
+							Teleporter dupeTele = findDuplicateTele(teleporters, tpLoc);
+							dupeTele.destroy();
+							teleporters.remove(dupeTele);
+							buildings.remove(dupeTele);
 						}
 						else{
-							//Failure: Another TP exists at that spot
-							player.sendMessage(Component.text("Another teleporter already exists as this spot."));
-						}
+						//Creating TP
+							if(teleporters.size() >= 2){
+								//Failure: 2 TPs already exist
+								player.sendMessage(Component.text("Two teleporters are already active! Destroy one with your Destruction PDA!"));
+							}
+							else{
+								//Ensuring that 2 TPs cannot exist on the same block
+								if(findDuplicateAllTele(tpLoc) == null){
+									//Success: TP is created
+									Teleporter newTP = new Teleporter(player, tpLoc);
+									teleporters.add(newTP);
+									buildings.add(newTP);
+									if(teleporters.size() == 2){
+										//Syncing the Cooldowns for the newly created TP.
+										int lastUsedTick = newTP.getLastUsedTick();
+										teleporters.get(0).setLastUsedTick(lastUsedTick);
+									}
+								}
+								else{
+									//Failure: Another TP from an enemy engineer exists at that spot
+									player.sendMessage(Component.text("Another teleporter already exists as this spot."));
+								}
 
-                    }
-                }
+							}
+						}
             }
 
 			//Initializing Sentry Build
@@ -282,22 +275,21 @@ public class KitEngineer extends Kit{
 				createSentry(player, item);
 			}
 
-			if(mat == Material.STICK &&
-					!player.hasCooldown(Material.STICK) &&
+			//Manual Fire using Wrangler
+			if(mat == Material.STICK && !player.hasCooldown(Material.STICK) &&
 					ACTIVE_SENTRY.containsKey(player)){
-				List<Sentry> sentries = ACTIVE_SENTRY.get(player);
-				sentries.stream().filter(sentry -> sentry.currState != Sentry.State.STARTUP)
-						.forEach(sentry -> {
-							sentry.shoot(sentry.sentry.getLocation().getDirection());
-						});
-				player.setCooldown(Material.STICK, Sentry.SENTRY_FIRE_RATE);
+					List<Sentry> sentries = ACTIVE_SENTRY.get(player);
+					sentries.stream().filter(sentry -> sentry.currState != Sentry.State.STARTUP)
+							.forEach(sentry -> {
+								sentry.shoot(sentry.sentry.getLocation().getDirection());
+							});
+					player.setCooldown(Material.STICK, Sentry.SENTRY_FIRE_RATE);
 			}
 
 			//Destruction PDA
 			if(mat == Material.BOOK){
 				Inventories.openInventory(event.getPlayer(), new EngineerInventory());
 			}
-
         }
 
 		//Converts the Projection into a Sentry
@@ -317,18 +309,20 @@ public class KitEngineer extends Kit{
 
 			if(isMainHand){
 				inv.setItemInMainHand(currItem.subtract());
-				if(!inv.contains(WRANGLER) || inv.contains(ACTIVE_WRANGLER)){
+				if(!inv.contains(WRANGLER)){
 					inv.setItemInMainHand(WRANGLER);
 				}
 			}
 			else{
 				inv.setItemInOffHand(currItem.subtract());
-				if(!inv.contains(WRANGLER) || inv.contains(ACTIVE_WRANGLER)){
+				if(!inv.contains(WRANGLER)){
 					inv.setItemInOffHand(WRANGLER);
 				}
 			}
 		}
 
+		//Buildings have a destroy method, but this method is necessary to manage static hashmaps
+		//and player inventory/items
 		public void destroySentry(Player player, Sentry sentry){
 			PlayerInventory inv = player.getInventory();
 			List<Building> buildings = ACTIVE_BUILDINGS.get(player);
@@ -339,19 +333,15 @@ public class KitEngineer extends Kit{
 
 			if(sentries.isEmpty()){
 				//No more sentries are active, so wrangler can now be replaced
-				if(inv.getItemInOffHand().equals(WRANGLER) || inv.getItemInOffHand().equals(ACTIVE_WRANGLER)){
-					//Must make seperate case for when sentry is in offhand :(
+				if(inv.getItemInOffHand().equals(WRANGLER)){
+					//Must make seperate case for when sentry is in offhand
 					inv.setItemInOffHand(SENTRY);
 				}
 				else {
 					int wranglerSlot = inv.first(WRANGLER);
-					int activeWranglerSlot = inv.first(ACTIVE_WRANGLER);
 					if (wranglerSlot != -1) {
-						//wrangler found
+						//wrangler found, so replace it with sentry
 						inv.setItem(wranglerSlot, SENTRY);
-					} else {
-						//ActiveWrangler Found
-						inv.setItem(activeWranglerSlot, SENTRY);
 					}
 				}
 			}
@@ -362,6 +352,7 @@ public class KitEngineer extends Kit{
 		}
 
         //Finding Duplicates for a given engineer
+		//returns null if none are found
 		public Teleporter findDuplicateTele(List<Teleporter> teleporters, Location loc){
             Teleporter dupeTele = null;
             for(Teleporter tele: teleporters){
@@ -373,6 +364,7 @@ public class KitEngineer extends Kit{
         }
 
 		//Finding Duplicates for all currently existing engineers
+		//returns null if none are found
 		public Teleporter findDuplicateAllTele(Location loc){
 			Teleporter dupeTele = null;
 			for(Map.Entry<Player, List<Teleporter>> entry : ACTIVE_TELEPORTERS.entrySet()){
@@ -390,8 +382,8 @@ public class KitEngineer extends Kit{
         public void onPlayerTick(Player player) {
             List<Teleporter> teleporters = ACTIVE_TELEPORTERS.get(player);
             Component holoText;
-            //2 Teleporters exist, so teleporter is active
-            //Handling Teleporting teammates
+
+			//Handling teleporting allies
             if(teleporters.size() == 2){
                 for(Teleporter teleporter : teleporters){
 					if(!teleporter.hasCD()){
@@ -399,6 +391,7 @@ public class KitEngineer extends Kit{
 						Collection<Player> players = teleLoc.getNearbyPlayers(0.30);
 						players.stream()
 								//Allies and spies disguised as allies can use
+								//User must be sneaking and be on top of the teleporter block
 								.filter((user ->
 										(!Main.getGame().canAttack(player, user) ||
 												PlayerUtils.isDisguisedAsAlly(player, user)) &&
@@ -419,6 +412,7 @@ public class KitEngineer extends Kit{
                     teleporters.get(0).setText(holoText);
                 }
                 else if(teleporters.size() == 2){
+					//Since cooldowns are synced between teleporters, only 1 teleporter must be considered
 					Teleporter tele = teleporters.get(0);
                     if(!tele.hasCD()){
                         holoText = Component.text("Teleport Ready");
@@ -431,24 +425,20 @@ public class KitEngineer extends Kit{
                 }
 
 			//Initializing Sentry Projection
-			if((player.getInventory().getItemInMainHand().getType() == Material.CHEST_MINECART ||
-					player.getInventory().getItemInOffHand().getType() == Material.CHEST_MINECART) &&
+			if(PlayerUtils.isHolding(player, SENTRY) &&
 									!ACTIVE_PROJECTION.containsKey(player) &&
 										!player.hasCooldown(Material.CHEST_MINECART)){
 				createProjection(player);
 			}
 
-			//Cancel Sentry Projection bc...
-			//1) No Sentry is being held in main hand
-			//2) Sentry is on CD
-			if((player.getInventory().getItemInMainHand().getType() != Material.CHEST_MINECART &&
-					player.getInventory().getItemInOffHand().getType() != Material.CHEST_MINECART) &&
-					ACTIVE_PROJECTION.containsKey(player) &&
-								!player.hasCooldown(Material.CHEST_MINECART)){
+			//Cancel Sentry Projection
+			if((!PlayerUtils.isHolding(player, SENTRY) ||
+					player.hasCooldown(Material.CHEST_MINECART)) &&
+						ACTIVE_PROJECTION.containsKey(player)){
 				destroyProjection(player);
 			}
 
-			//Controlling projection of Sentry
+			//Controlling position of Sentry Projection
 			if(ACTIVE_PROJECTION.containsKey(player) &&
 					!player.hasCooldown(Material.CHEST_MINECART)){
 				LivingEntity projection = ACTIVE_PROJECTION.get(player);
@@ -477,10 +467,8 @@ public class KitEngineer extends Kit{
 				});
 			}
 
-			//Controlling Wrangler
-			Material mainMat = player.getInventory().getItemInMainHand().getType();
-			Material offMat = player.getInventory().getItemInOffHand().getType();
-			if((mainMat == Material.STICK || offMat == Material.STICK)){
+			//Creating Wrangler "laser beam" and manipulating sentry direction
+			if(PlayerUtils.isHolding(player, WRANGLER)){
 				wranglerProjection(player);
 			}
         }
@@ -528,15 +516,13 @@ public class KitEngineer extends Kit{
 		}
 
 		public boolean isValidProjection(Location projPos){
-			Block projBlock = projPos.getBlock();
 			return !projPos.clone().add(0,2,0).getBlock().isCollidable() &&
 					!projPos.clone().add(0,1,0).getBlock().isCollidable() &&
-					!projPos.clone().getBlock().isCollidable() &&
 					projPos.clone().add(0,-0.10,0).getBlock().isCollidable();
 		}
 
 		public void createProjection(Player player){
-			Location loc = projectSentry(player.getLocation().clone(), player);
+			Location loc = projectSentry(player.getEyeLocation().clone().add(0,-.8,0), player);
 			TextColor teamColorText = Main.getPlayerInfo(player).team.getRGBTextColor();
 			LivingEntity projection = player.getWorld().spawn(loc, Skeleton.class, entity ->{
 				entity.setAI(false);
@@ -566,6 +552,7 @@ public class KitEngineer extends Kit{
 			return PROJECTION_ID.get(id);
 		}
 
+		//From entity's eyes, find the location in their line of sight that is within range
 		public Location findBlock(Location loc, int range){
 			//loc is the eye location of the entity
 			Location initLoc = loc.clone();
@@ -645,7 +632,6 @@ public class KitEngineer extends Kit{
 				}
 			}
 
-			//Stolen from jack
 			public void buildPDA (Player player, InventoryAccessor inventory) {
 				ArrayList<ClickableItem> items = new ArrayList<>();
 				List<Building> buildings = ACTIVE_BUILDINGS.get(player);
@@ -661,7 +647,7 @@ public class KitEngineer extends Kit{
 						item = new ItemStack(Material.HONEYCOMB_BLOCK);
 					}
 					ItemMeta meta = item.getItemMeta();
-					meta.displayName(Component.text(building.name));
+					meta.displayName(ItemUtils.noItalics(Component.text(building.name)));
 					Component buildingInfo = Component.text(
 							String.format("%.2f", player.getLocation().distance(building.getLoc())) + " blocks away");
 					meta.lore(Collections.singletonList(buildingInfo));
@@ -680,6 +666,7 @@ public class KitEngineer extends Kit{
 						items.remove(e.getCurrentItem());
 						Inventories.closeInventory(player);
 							}));
+
 						}
 				setPageItems(items, inventory, 0, 9);
 			}

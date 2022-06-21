@@ -28,13 +28,10 @@ import java.util.Collection;
 import java.util.Optional;
 
 public class Sentry extends Building{
-
-	//Recovery represents downtime after wrangler is used
 	enum State{
 		STARTUP,
 		NEUTRAL,
 		LOCKED,
-		RECOVERY,
 		WRANGLED
 	}
 
@@ -43,17 +40,15 @@ public class Sentry extends Building{
 	LivingEntity sentry;
 	int initTick;
 	int creationTick;
-	int downTimeTick;
 	boolean isDead;
 	ItemStack[] armor;
 	//public static final int SENTRY_LIFETIME = KitEngineer.EngineerAbility.SENTRY_CD;
 	public static final int SENTRY_LIFETIME = 300;
 	public static final int SENTRY_STARTUP_TIME = 40;
-	public static final int SENTRY_DOWN_TIME = 40;
 	public static final int SENTRY_CYCLE_TIME = 120;
 	public static final int SENTRY_SIGHT_RANGE = 15;
 	//degree rotation = how much the sentry will rotate
-	//degree view = the sentry's cone of vision
+	//yaw and pitch view = the sentry's cone of vision
 	public static final int SENTRY_DEGREE_ROTATION = 90;
 	public static final double SENTRY_YAW_VIEW = 15.0;
 	public static final double SENTRY_PITCH_VIEW = 70.0;
@@ -68,11 +63,9 @@ public class Sentry extends Building{
 		this.initYaw = this.loc.getYaw();
 		this.initTick = TeamArena.getGameTick();
 		this.creationTick = TeamArena.getGameTick() + SENTRY_STARTUP_TIME;
-		this.downTimeTick = -1;
 		this.isDead = false;
 		this.holo = new RealHologram(this.loc.clone().add(0,2.0,0), this.holoText);
 
-		TextColor teamColorText = Main.getPlayerInfo(player).team.getRGBTextColor();
 		Color teamColor = Main.getPlayerInfo(player).team.getColour();
 		this.setText(Component.text(player.getName() + "'s Sentry").color(teamColorText));
 
@@ -97,60 +90,33 @@ public class Sentry extends Building{
 		bowMeta.addEnchant(Enchantment.ARROW_INFINITE, 1, true);
 		sentryBow.setItemMeta(bowMeta);
 		sentry.getEquipment().setItemInMainHand(sentryBow, true);
-		this.loc.setPitch(0);
 	}
 
 	public boolean isDestroyed(){
 		return isDead;
 	}
 	public boolean isExpired(){
-		return TeamArena.getGameTick() - creationTick > SENTRY_LIFETIME || isDead;
-	}
-
-	public void setText(Component newText){
-		this.holoText = newText.color(teamColor);
-		this.holo.setText(this.holoText);
+		return TeamArena.getGameTick() - creationTick > SENTRY_LIFETIME;
 	}
 
 	public boolean sentryCanSee(LivingEntity sentry, Player target){
-		//Since AI is disabled, line of sight must be calculated manually
 		Vector sentryToTarget = target.getEyeLocation().clone().subtract(sentry.getEyeLocation()).clone().toVector();
-		sentryToTarget.normalize(); //set to a distance of 1
-		Location relAngle = sentry.getEyeLocation();
+		sentryToTarget.normalize();
+		Location relAngle = sentry.getEyeLocation().clone();
 		relAngle.setDirection(sentryToTarget);
+
 		double yawAngle = relAngle.getYaw();
 		double currYaw = sentry.getLocation().getYaw();
-
 		double pitchAngle = relAngle.getPitch();
 		double currPitch = sentry.getLocation().getPitch();
-		//line of sight rn is not smart, cannot detect player if they are above/below
-		//This is an "intended feature" to prevent camping
+
 		return (Math.abs(yawAngle - currYaw) <= SENTRY_YAW_VIEW &&
-				//Math.abs(pitchAngle - currPitch) <= SENTRY_PITCH_VIEW &&
+				Math.abs(pitchAngle - currPitch) <= SENTRY_PITCH_VIEW &&
 						sentry.hasLineOfSight(target));
 	}
 
-	//WIP custom line of sight, currently unused
-	public boolean hasObstruction(LivingEntity sentry, Player target, Vector lineOfSight){
-		Vector terminationPoint = target.getEyeLocation().toVector();
-		Vector startingPoint = sentry.getEyeLocation().toVector();
-		Vector inc = lineOfSight.clone().multiply(0.1);
-		while(startingPoint.distanceSquared(terminationPoint) >= 0.2){
-			startingPoint.add(inc);
-			Block currBlock = startingPoint.toLocation(target.getWorld()).getBlock();
-			Material currBlockType = startingPoint.toLocation(target.getWorld()).getBlock().getType();
-			if(currBlockType != Material.AIR ||
-					currBlock.isCollidable() ||
-						!currBlock.isLiquid()
-				){
-				return true;
-			}
-		}
-		return false;
-	}
-
+	//Handling idle rotation of Sentry in NEUTRAL state
 	public void setIdleRotation(){
-		//Handling idle rotation of Sentry
 		int elapsedTick = (TeamArena.getGameTick() - creationTick) % SENTRY_CYCLE_TIME;
 		double degInc = ((SENTRY_DEGREE_ROTATION/2.0) / (SENTRY_CYCLE_TIME/6.0));
 		Location sentryLoc = sentry.getLocation().clone();
@@ -175,38 +141,31 @@ public class Sentry extends Building{
 			sentryLoc.setYaw((float) (sentryLoc.getYaw() - degInc));
 		}
 
-		//Handling Pitch, should only be changed during RECOVERY state
+		//Handling Pitch, reverting to pitch = 0 when returning to neutral state after locking on
 		if(sentryLoc.getPitch() != 0){
 			sentryLoc.setPitch((float) Math.max(0, sentryLoc.getPitch() - 10.0));
 		}
 		sentry.teleport(sentryLoc);
 	}
 
+	//Checks within sight range for possible targets, then locks on the closest target
 	public void findTarget(){
 		TeamArenaTeam ownerTeam = Main.getPlayerInfo(owner).team;
 		Location sentryLoc = sentry.getLocation().clone();
 		Mob sentryCasted = (Mob) sentry;
 		Collection<Player> nearbyTargets = sentryLoc.getNearbyPlayers(SENTRY_SIGHT_RANGE);
-		Optional<Player> nearestPlayer = nearbyTargets.stream()
+		Player nearestPlayer = nearbyTargets.stream()
 				//Always ignore teammates and players who are invisible or are obstructed from view
 				.filter(player -> !player.isInvisible()
 						&& sentryCanSee(sentry, player)
 						&& Main.getGame().canAttack(player, owner))
 				//Ignore spies who are disguised as allies
-				.filter(enemy -> {
-					//If enemy has no kit, or they
-					if(Main.getPlayerInfo(enemy).activeKit != null &&
-							Main.getPlayerInfo(enemy).activeKit.getName().equalsIgnoreCase("Spy") &&
-							Main.getPlayerInfo(enemy).activeKit.getActiveUsers().contains(enemy)){
-							//If enemy is disguised, but is not disguised as an ally, it is a valid target.
-								return !PlayerUtils.isDisguisedAsAlly(owner, enemy);
+				.filter(enemy -> !PlayerUtils.isDisguisedAsAlly(owner, enemy))
+				.reduce(null, (currClosest, currPlayer) -> {
+					if(currClosest == null){
+						return currPlayer;
 					}
-					//If any of the above properties is false, the enemy is a valid target
-					else{
-						return true;
-					}
-				})
-				.reduce((currClosest, currPlayer) -> {
+
 					if(loc.distanceSquared(currPlayer.getLocation()) <
 							loc.distanceSquared(currClosest.getLocation())){
 						//If currPlayer is closer than currMax, it is the new closest
@@ -217,17 +176,19 @@ public class Sentry extends Building{
 					}
 				});
 
-		if(nearestPlayer.isPresent()){
-			//sentryCasted.lookAt(nearestPlayer.get(), 1.0f, 90.0f);
-			sentryCasted.setTarget(nearestPlayer.get());
+		if(nearestPlayer != null){
+			//Success: Player is found, so lock on
+			sentryCasted.setTarget(nearestPlayer);
 			this.currState = State.LOCKED;
 		}
 		else{
+			//Failure: Player not found, return/stay in neutral state
 			sentryCasted.setTarget(null);
 			this.currState = State.NEUTRAL;
 		}
 	}
 
+	//Makes sentry look at its current target
 	public void lockOn(){
 		if(((Mob) sentry).getTarget() != null){
 			Mob sentryCasted = (Mob) sentry;
@@ -240,6 +201,7 @@ public class Sentry extends Building{
 		}
 	}
 
+	//Animation during STARTUP
 	public void construction(){
 		int elapsedTick = TeamArena.getGameTick() - this.initTick;
 		long percCD = Math.round(100 * (double)(elapsedTick) / SENTRY_STARTUP_TIME);
@@ -268,16 +230,15 @@ public class Sentry extends Building{
 		}
 		else{
 			this.currState = State.NEUTRAL;
-			TextColor teamColorText = Main.getPlayerInfo(owner).team.getRGBTextColor();
 			Color teamColor = Main.getPlayerInfo(owner).team.getColour();
-			this.setText(Component.text(owner.getName() + "'s Sentry").color(teamColorText));
+			this.setText(Component.text(owner.getName() + "'s Sentry").color(this.teamColorText));
 		}
 	}
 
 	public void shoot(Vector direction){
 		AbstractArrow sentryFire = sentry.launchProjectile(Arrow.class);
-		sentryFire.setVelocity(direction.multiply(2));
-		sentryFire.setDamage(2.0);
+		sentryFire.setVelocity(direction.multiply(4));
+		sentryFire.setDamage(1.0);
 		sentryFire.setKnockbackStrength(0);
 		sentryFire.setShooter(owner);
 		sentryFire.setCritical(false);
@@ -285,11 +246,11 @@ public class Sentry extends Building{
 	}
 
 	public void tick(){
-
 		if(sentry.isDead()){
 			this.destroy();
 			this.isDead = true;
 		}
+
 		if(this.currState == State.STARTUP){
 			construction();
 		}
@@ -300,7 +261,7 @@ public class Sentry extends Building{
 		}
 		else if(this.currState == State.LOCKED){
 			Mob sentryCasted = (Mob) sentry;
-			//Sentry periodically checks its current target is the one closest to itself
+			//Sentry periodically "refreshes" to find the closest target
 			if(TeamArena.getGameTick() % 5 == 0){
 				findTarget();
 			}
@@ -313,21 +274,16 @@ public class Sentry extends Building{
 				}
 				lockOn();
 			}
-			//View is now obstructed, enter recovery state
+			//View is now obstructed, return to NEUTRAL state
 			else{
 				sentryCasted.setTarget(null);
 				this.currState = State.NEUTRAL;
 			}
 		}
 		else if(this.currState == State.WRANGLED){
-			if((owner.getInventory().getItemInMainHand().getType() != Material.STICK &&
-					owner.getInventory().getItemInOffHand().getType() != Material.STICK) ||
-						owner.hasCooldown(Material.STICK)){
+			if(!PlayerUtils.isHolding(owner, KitEngineer.WRANGLER) || owner.hasCooldown(Material.STICK)){
 				this.currState = State.NEUTRAL;
 			}
-		}
-		else if(this.currState == State.RECOVERY){
-
 		}
 	}
 	@Override

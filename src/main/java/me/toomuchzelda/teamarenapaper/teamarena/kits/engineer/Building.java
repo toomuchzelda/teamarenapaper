@@ -16,7 +16,7 @@ public class Building {
     Location loc;
     RealHologram holo;
     BlockData prevBlockData;
-    TextColor teamColor;
+    TextColor teamColorText;
     Component holoText;
 	BuildingType type;
 	String name;
@@ -29,7 +29,7 @@ public class Building {
     public Building(Player player, Location loc){
         this.loc = loc.clone();
         this.owner = player;
-        this.teamColor = Main.getPlayerInfo(player).team.getRGBTextColor();
+        this.teamColorText = Main.getPlayerInfo(player).team.getRGBTextColor();
     }
 
     public Location getLoc(){
@@ -39,6 +39,11 @@ public class Building {
     public void setLoc(Location newLoc){
         this.loc = newLoc;
     }
+
+	public void setText(Component newText){
+		this.holoText = newText.color(teamColorText);
+		this.holo.setText(this.holoText);
+	}
 
     public void destroy(){
 		holo.remove();
