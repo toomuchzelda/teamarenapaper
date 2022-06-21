@@ -4,7 +4,6 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.inventory.KitInventory;
-import me.toomuchzelda.teamarenapaper.metadata.MetadataBitfieldValue;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataIndexes;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
@@ -18,7 +17,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
@@ -634,19 +632,30 @@ public abstract class TeamArena
 			if(team.getHotbarItem().isSimilar(event.getItem())) {
 				Action action = event.getAction();
 				if(action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK) {
-					MetadataViewer meta = pinfo.getMetadataViewer();
-					boolean view = !pinfo.viewingGlowingTeammates;
-					pinfo.viewingGlowingTeammates = view;
-
-					for (Player viewed : team.getPlayerMembers()) {
-						meta.updateBitfieldValue(viewed, MetadataIndexes.BASE_ENTITY_META_INDEX,
-								MetadataIndexes.BITFIELD_GLOWING_INDEX, view);
-
-						meta.refreshViewer(viewed);
-					}
+					setViewingGlowingTeammates(pinfo, !pinfo.viewingGlowingTeammates);
 				}
 			}
 		}
+	}
+
+	public void setViewingGlowingTeammates(PlayerInfo pinfo, boolean glow) {
+		MetadataViewer meta = pinfo.getMetadataViewer();
+		pinfo.viewingGlowingTeammates = glow;
+
+		for (Player viewed : pinfo.team.getPlayerMembers()) {
+			meta.updateBitfieldValue(viewed, MetadataIndexes.BASE_ENTITY_META_INDEX,
+					MetadataIndexes.BITFIELD_GLOWING_INDEX, glow);
+
+			meta.refreshViewer(viewed);
+		}
+
+		Component text;
+		if(glow)
+			text = Component.text("Now seeing your teammates through walls", NamedTextColor.BLUE);
+		else
+			text = Component.text("Stopped seeing teammates through walls", NamedTextColor.BLUE);
+
+		meta.getViewer().sendMessage(text);
 	}
 
 	public void onInteractEntity(PlayerInteractEntityEvent event) {
@@ -847,6 +856,8 @@ public abstract class TeamArena
 				pinfo.activeKit.removeKit(p, pinfo);
 			}
 			pinfo.kit = null;
+			//unglow before setting pinfo.team to null as it needs that.
+			setViewingGlowingTeammates(pinfo, false);
 			pinfo.team = null;
 			pinfo.spawnPoint = null;
 		}

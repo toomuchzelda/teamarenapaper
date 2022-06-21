@@ -229,4 +229,8 @@ public class MetadataViewer
 
 		return metadataPacket;
 	}
+
+	public Player getViewer() {
+		return player;
+	}
 }
