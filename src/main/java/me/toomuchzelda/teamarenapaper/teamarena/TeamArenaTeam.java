@@ -30,8 +30,8 @@ import java.util.Stack;
 
 public class TeamArenaTeam
 {
-	public static final Component SHOW_ALL_TEAMMATES = ItemUtils.noItalics(Component.text("Left click to show all teammates", TextUtils.LEFT_CLICK_TO));
-	public static final Component PING = ItemUtils.noItalics(Component.text("Point at something and right click to ping!", TextUtils.RIGHT_CLICK_TO));
+	public static final Component SHOW_ALL_TEAMMATES = ItemUtils.noItalics(Component.text("Point at something and Left Click to ping", TextUtils.LEFT_CLICK_TO));
+	public static final Component PING = ItemUtils.noItalics(Component.text("Right click to see all your teammates", TextUtils.RIGHT_CLICK_TO));
 	public static final List<Component> HOTBAR_ITEM_LORE = List.of(SHOW_ALL_TEAMMATES, PING);
 
 	private final String name;
