@@ -111,7 +111,6 @@ public class PacketHologram
 		metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
 		metadataPacket.getIntegers().write(0, id);
 
-		//this shit does not make any sense
 		//https://www.spigotmc.org/threads/simulating-potion-effect-glowing-with-protocollib.218828/#post-2246160
 		// and https://www.spigotmc.org/threads/protocollib-entity-metadata-packet.219146/
 		WrappedDataWatcher data = new WrappedDataWatcher();

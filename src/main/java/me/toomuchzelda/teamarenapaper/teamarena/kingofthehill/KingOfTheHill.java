@@ -208,12 +208,14 @@ public class KingOfTheHill extends TeamArena
 
 		//no team owns the hill; do anti-stalling mechanism
 		if(owningTeam == null) {
-			//every two minutes
+			//no hill caps for 5 minutes, end the game
 			if(gameTick - lastHillChangeTime >= 5 * 60 * 20) {
-				Bukkit.broadcast(Component.text("Too slow! It's been 5 minutes!!").color(NamedTextColor.RED));
-				//nextHillOrEnd();
-				nextHill();
+				for(int i = 0; i < 5; i++) {
+					Bukkit.broadcast(Component.text("Too slow! It's been 5 minutes!!", NamedTextColor.RED));
+				}
+				nextHillOrEnd(true);
 			}
+			//every two minutes
 			else if((gameTick - lastHillChangeTime) % (120 * 20) == 0 && lastHillChangeTime != gameTick) {
 				String s = "The time to capture the Hill has been halved";
 				if(ticksAndPlayersToCaptureHill != INITIAL_CAP_TIME)
@@ -231,10 +233,10 @@ public class KingOfTheHill extends TeamArena
 		}
 		//process hill change
 		else if(owningTeam.score / 20 >= activeHill.getHillTime() || owningTeam.getTotalScore() >= TICKS_TO_WIN) {
-			nextHillOrEnd();
+			nextHillOrEnd(false);
 		}
 
-		for (var team : teams) {
+		for (TeamArenaTeam team : teams) {
 			if (team.isAlive()) {
 				team.bossBar.progress(Math.min(((float) team.getTotalScore() / TICKS_TO_WIN), 1f));
 			}
@@ -375,8 +377,10 @@ public class KingOfTheHill extends TeamArena
 			MathUtils.shuffleArray(hills);
 		}
 		Hill nextHill = hills[hillIndex % hills.length];
-		Component hillChangeMsg = Component.text("The Hill has moved to " + nextHill.getName()).color(NamedTextColor.GOLD);
+
+		Component hillChangeMsg = Component.text("The Hill has moved to " + nextHill.getName(), NamedTextColor.GOLD);
 		Bukkit.broadcast(hillChangeMsg);
+
 		Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
 		Location soundLoc = nextHill.getBorder().getCenter().toLocation(gameWorld);
 		while(iter.hasNext()) {
@@ -397,7 +401,7 @@ public class KingOfTheHill extends TeamArena
 		ticksAndPlayersToCaptureHill = INITIAL_CAP_TIME;
 	}
 
-	public void nextHillOrEnd() {
+	public void nextHillOrEnd(boolean forceEnd) {
 		activeHill.setDone();
 
 		//add their current hill points to total
@@ -409,7 +413,8 @@ public class KingOfTheHill extends TeamArena
 		//no more hills, game is over
 		//if(hillIndex == hills.length - 1) {
 		//change to if no team has won yet, keep rotating forever
-		if (!CommandDebug.ignoreWinConditions && owningTeam.getTotalScore() >= TICKS_TO_WIN) {
+		if (!CommandDebug.ignoreWinConditions &&
+				((owningTeam != null && owningTeam.getTotalScore() >= TICKS_TO_WIN) || forceEnd)) {
 
 			TeamArenaTeam winner = null;
 			int highestScore = 0;
