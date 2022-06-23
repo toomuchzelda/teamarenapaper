@@ -4,6 +4,7 @@ import io.netty.buffer.Unpooled;
 import io.papermc.paper.adventure.PaperAdventure;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundSetDisplayObjectivePacket;
@@ -12,6 +13,7 @@ import net.minecraft.network.protocol.game.ClientboundSetPlayerTeamPacket;
 import net.minecraft.network.protocol.game.ClientboundSetScorePacket;
 import net.minecraft.server.ServerScoreboard;
 import net.minecraft.world.scores.Objective;
+import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftEntity;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
@@ -21,10 +23,7 @@ import org.bukkit.scoreboard.DisplaySlot;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Constructor;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * @author jacky
@@ -48,20 +47,53 @@ public class ScoreboardUtils {
 		}
 	}
 
+	private static ClientboundSetPlayerTeamPacket.Parameters createParameter(Component displayName, NamedTextColor color,
+																			 Component prefix, Component suffix) {
+		// create a fake scoreboard team to return desired values
+		return new ClientboundSetPlayerTeamPacket.Parameters(new PlayerTeam(null, "") {
+			@Override
+			public net.minecraft.network.chat.Component getDisplayName() {
+				return PaperAdventure.asVanilla(displayName);
+			}
+
+			@Override
+			public int packOptions() {
+				return 3;
+			}
+
+			@Override
+			public Visibility getNameTagVisibility() {
+				return Visibility.NEVER;
+			}
+
+			@Override
+			public CollisionRule getCollisionRule() {
+				return CollisionRule.NEVER;
+			}
+
+			@Override
+			public ChatFormatting getColor() {
+				return ChatFormatting.valueOf(color.toString().toUpperCase(Locale.ENGLISH));
+			}
+
+			@Override
+			public net.minecraft.network.chat.Component getPlayerPrefix() {
+				return PaperAdventure.asVanilla(prefix);
+			}
+
+			@Override
+			public net.minecraft.network.chat.Component getPlayerSuffix() {
+				return PaperAdventure.asVanilla(suffix);
+			}
+		});
+	}
+
 	public static void sendTeamInfoPacket(Player player, String name, boolean update,
 										  Component displayName, NamedTextColor color,
 										  Component prefix, Component suffix, Collection<String> entries) {
 		initTeamPacketConstructor();
 		// thats crazy
-		var parametersBuf = new FriendlyByteBuf(Unpooled.buffer());
-		parametersBuf.writeComponent(displayName);
-		parametersBuf.writeByte(3);
-		parametersBuf.writeUtf("never");
-		parametersBuf.writeUtf("never");
-		parametersBuf.writeEnum(PaperAdventure.asVanilla(color));
-		parametersBuf.writeComponent(prefix);
-		parametersBuf.writeComponent(suffix);
-		var parameters = new ClientboundSetPlayerTeamPacket.Parameters(parametersBuf);
+		var parameters = createParameter(displayName, color, prefix, suffix);
 		try {
 			var packet = TEAM_PACKET_CTOR.newInstance(name, update ? 2 : 0, Optional.of(parameters), entries);
 			sendPacket(player, packet);

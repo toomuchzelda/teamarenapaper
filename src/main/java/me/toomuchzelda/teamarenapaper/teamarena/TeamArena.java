@@ -330,11 +330,12 @@ public abstract class TeamArena
 			}
 
 			if (style == SidebarManager.Style.RGB_MANIAC || style == SidebarManager.Style.LEGACY_RGB_MANIAC) {
-				double progress = (int) (TeamArena.getGameTick() / 5 * 5) / 70d;
+				double progress = (TeamArena.getGameTick() / 5 * 5) / 70d;
 				for (var iterator = sidebar.getEntries().listIterator(); iterator.hasNext(); ) {
 					var index = iterator.nextIndex();
 					var entry = iterator.next();
-					iterator.set(TextUtils.getRGBManiacComponent(entry, Style.empty(), progress + index / 7d));
+					var component = TextUtils.getRGBManiacComponent(entry, Style.empty(), progress + index / 7d);
+					sidebar.setEntry(index, component);
 				}
 			}
 

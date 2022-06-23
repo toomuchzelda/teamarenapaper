@@ -1,6 +1,5 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
-import com.google.common.base.Strings;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Player;
@@ -31,9 +30,10 @@ public class SidebarManager {
 
 	private static final int MAX_ENTRIES = 15; // max entries the minecraft client will display
 
-	private record Entry(String teamName, String entryName) {}
+	private record Line(String teamName, String scoreboardName) {}
 
-	private Entry[] team1, team2;
+	private final Line[] team1 = new Line[MAX_ENTRIES];
+	private final Line[] team2 = new Line[MAX_ENTRIES];
 	private static final String ALPHANUMERIC = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 	private static final Random RANDOM = new Random();
 
@@ -44,25 +44,17 @@ public class SidebarManager {
 		return sb.toString();
 	}
 
-	public void registerObjectives(Player player) {
-		team1 = new Entry[MAX_ENTRIES];
-		for (int i = 0; i < MAX_ENTRIES; i++) {
-			var teamName = getRandomString();
-			var entryName = Strings.repeat("\u00A70", i + 1);
-			team1[i] = new Entry(teamName, entryName);
-			sendTeamInfoPacket(player, teamName, false,
-					Component.empty(), NamedTextColor.WHITE, Component.empty(), Component.empty(),
-					Collections.singletonList(entryName));
-		}
+	private static void sendCreateLinePacket(Player player, Line line) {
+		sendTeamInfoPacket(player, line.teamName, false, Component.empty(), NamedTextColor.WHITE,
+				Component.empty(), Component.empty(), Collections.singletonList(line.scoreboardName));
+	}
 
-		team2 = new Entry[MAX_ENTRIES];
+	public void registerObjectives(Player player) {
 		for (int i = 0; i < MAX_ENTRIES; i++) {
-			var teamName = getRandomString();
-			var entryName = Strings.repeat("\u00A7f", i + 1);
-			team2[i] = new Entry(teamName, entryName);
-			sendTeamInfoPacket(player, teamName, false,
-					Component.empty(), NamedTextColor.WHITE, Component.empty(), Component.empty(),
-					Collections.singletonList(entryName));
+			team1[i] = new Line(getRandomString(), "\u00A70".repeat(i + 1));
+			team2[i] = new Line(getRandomString(), "\u00A7f".repeat(i + 1));
+			sendCreateLinePacket(player, team1[i]);
+			sendCreateLinePacket(player, team2[i]);
 		}
 
 		sendObjectivePacket(player, "sidebar1", title, false);
@@ -78,7 +70,7 @@ public class SidebarManager {
 	}
 
 	public List<Component> getEntries() {
-		return entries;
+		return new ArrayList<>(entries);
 	}
 
 	public void setEntry(int index, Component entry) {
@@ -90,26 +82,35 @@ public class SidebarManager {
 	// whether entry changes should be written to the second sidebar
 	private boolean isSidebar2 = true;
 	private int sidebar1LastSize = 0, sidebar2LastSize = 0;
+	// latest displayed entries
+	private final Component[] sidebar1LastEntries = new Component[MAX_ENTRIES];
+	private final Component[] sidebar2LastEntries = new Component[MAX_ENTRIES];
 
 	public void update(Player player) {
 		String objective = isSidebar2 ? "sidebar2" : "sidebar1";
-		Entry[] bufferEntries = isSidebar2 ? team2 : team1;
+		Line[] bufferLines = isSidebar2 ? team2 : team1;
 		int listSize = entries.size();
+		Component[] lastList = isSidebar2 ? sidebar2LastEntries : sidebar1LastEntries;
 		int lastListSize = isSidebar2 ? sidebar2LastSize : sidebar1LastSize;
 		boolean shouldSetScore = listSize != lastListSize;
 		var iterator = entries.listIterator(listSize);
-		// calc score
+		// calculate score
 		for (int i = 0; i < MAX_ENTRIES; i++) {
-			Entry entry = bufferEntries[i];
+			Line line = bufferLines[i];
 			if (iterator.previousIndex() != -1) {
-				sendTeamInfoPacket(player, entry.teamName, true, Component.empty(), NamedTextColor.WHITE,
-						iterator.previous(), Component.empty(), Collections.emptyList());
+				var toSet = iterator.previous();
+				// only send packet when the line text differs
+				if (!Objects.equals(toSet, lastList[i])) {
+					sendTeamInfoPacket(player, line.teamName, true, Component.empty(),
+							NamedTextColor.WHITE, toSet, Component.empty(), Collections.emptyList());
+				}
+				lastList[i] = toSet;
 				if (shouldSetScore) {
-					sendSetScorePacket(player, false, objective, entry.entryName, i);
+					sendSetScorePacket(player, false, objective, line.scoreboardName, i);
 				}
 			} else if (shouldSetScore) {
-				// should reset all indices >= listSize
-				sendSetScorePacket(player, true, objective, entry.entryName, 0);
+				// should reset (remove from sidebar) all indices >= listSize
+				sendSetScorePacket(player, true, objective, line.scoreboardName, 0);
 			}
 		}
 		// swap objectives
