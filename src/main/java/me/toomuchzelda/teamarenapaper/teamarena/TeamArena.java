@@ -1201,28 +1201,28 @@ public abstract class TeamArena
 		Entity victim = event.getVictim();
 		//if player make them a spectator and put them in queue to respawn if is a respawning game
 		if(victim instanceof Player playerVictim) {
-			PlayerUtils.sendTitle(playerVictim, Component.empty(), Component.text("You died!").color(TextColor.color(255, 0, 0)), 0, 30, 20);
+			PlayerUtils.sendTitle(playerVictim, Component.empty(), Component.text("You died!", TextColor.color(255, 0, 0)), 0, 30, 20);
 
 			//Give out kill assists on the victim
-			Player killer = null;
+			Entity killer = null;
 			if(event.getFinalAttacker() instanceof Player finalAttacker) {
 				killer = finalAttacker;
 			}
 			else {
-				DamageTimes.DamageTime dTime = DamageTimes.getLastPlayerDamageTime(playerVictim);
+				DamageTimes.DamageTime dTime = DamageTimes.getLastEntityDamageTime(playerVictim);
 				if(dTime != null)
-					killer = (Player) dTime.getGiver();
-			}
-			//killer's onKill ability
-			if(killer != null) {
-				for (Ability a : Kit.getAbilities(killer)) {
-					a.onKill(event);
-				}
+					killer = dTime.getGiver();
 			}
 
 			PlayerInfo pinfo = Main.getPlayerInfo(playerVictim);
-
-			attributeKillAndAssists(playerVictim, pinfo, killer);
+			//if not null and player
+			if(killer instanceof Player playerKiller) {
+				//killer's onKill ability
+				for (Ability a : Kit.getAbilities(playerKiller)) {
+					a.onKill(event);
+				}
+				attributeKillAndAssists(playerVictim, pinfo, playerKiller);
+			}
 
 			for(Ability a : pinfo.activeKit.getAbilities()) {
 				a.onDeath(event);
