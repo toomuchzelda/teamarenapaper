@@ -691,6 +691,7 @@ public abstract class TeamArena
 			if(team.getHotbarItem().isSimilar(event.getItem())) {
 				Action action = event.getAction();
 				if(action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK) {
+					event.setUseItemInHand(Event.Result.DENY);
 					setViewingGlowingTeammates(pinfo, !pinfo.viewingGlowingTeammates, true);
 				}
 			}
