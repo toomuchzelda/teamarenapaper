@@ -97,7 +97,8 @@ public class EventListeners implements Listener
 
 			// initialize next game
 			if (TeamArena.nextGameType == null) {
-				TeamArena.nextGameType = GameType.values()[MathUtils.random.nextInt(GameType.values().length)];
+				//TeamArena.nextGameType = GameType.values()[MathUtils.random.nextInt(GameType.values().length)];
+				TeamArena.nextGameType = GameType.SND;
 			}
 
 			try {
