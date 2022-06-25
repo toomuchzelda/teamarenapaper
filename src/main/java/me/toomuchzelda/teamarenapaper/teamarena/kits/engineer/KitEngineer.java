@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.engineer;
 
 import java.util.*;
+import java.util.stream.Stream;
 
 import me.toomuchzelda.teamarenapaper.inventory.ClickableItem;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
@@ -11,6 +12,7 @@ import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.SidebarManager;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSpy;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.DemoMine;
@@ -393,7 +395,7 @@ public class KitEngineer extends Kit{
 					if(!teleporter.hasCD()){
 						Location teleLoc = teleporter.getTPLoc();
 						Collection<Player> players = teleLoc.getNearbyPlayers(0.30);
-						players.stream()
+						Stream<Player> playerStream = players.stream()
 								//Allies and spies disguised as allies can use
 								//User must be sneaking and be on top of the teleporter block
 								.filter((user ->
@@ -401,8 +403,14 @@ public class KitEngineer extends Kit{
 												PlayerUtils.isDisguisedAsAlly(player, user)) &&
 														user.isSneaking() &&
 														user.getLocation().getY() == teleLoc.getY()
-									))
-								.forEach(user -> {
+									));
+
+						if(Main.getGame() instanceof CaptureTheFlag ctf){
+							//If it is CTF, players with flag cannot use TP
+							playerStream = playerStream.filter(user -> !ctf.isFlagCarrier(player));
+						}
+
+							playerStream.forEach(user -> {
 											useTeleporter(player, user, teleLoc);
 										}
 								);
