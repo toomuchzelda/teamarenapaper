@@ -107,11 +107,13 @@ public abstract class TeamArena
 					.decoration(TextDecoration.ITALIC, false))
 			.build();
 
+	public static final Component OWN_TEAM_PREFIX = Component.text("▶ ");
+
 	protected MapInfo mapInfo;
 
 	protected Queue<DamageEvent> damageQueue;
 
-	private final LinkedList<DamageIndicatorHologram> activeDamageIndicators = new LinkedList<>();
+	private final List<DamageIndicatorHologram> activeDamageIndicators = new LinkedList<>();
 
 	public final MiniMapManager miniMap;
 
@@ -271,10 +273,12 @@ public abstract class TeamArena
 	}
 
 	// player as in players in the players set
-	protected void givePlayerItems(Player player, PlayerInfo info) {
+	protected void givePlayerItems(Player player, PlayerInfo info, boolean clear) {
 		player.sendMap(miniMap.view);
 		PlayerInventory inventory = player.getInventory();
-		inventory.clear();
+		if(clear)
+			inventory.clear();
+
 		inventory.setItem(8, miniMap.getMapItem(info.team));
 		inventory.setItem(7, info.team.getHotbarItem());
 		info.kit.giveKit(player, true, info);
@@ -292,7 +296,6 @@ public abstract class TeamArena
 		gameWorld = null;
 	}
 
-	public static final Component OWN_TEAM_PREFIX = Component.text("▶ ");
 	public final void tickSidebar() {
 		boolean showGameSidebar = gameState != GameState.PREGAME && gameState != GameState.TEAMS_CHOSEN;
 		boolean showTeamSize = gameState == GameState.TEAMS_CHOSEN;
@@ -864,7 +867,7 @@ public abstract class TeamArena
 			player.setSaturatedRegenRate(0);
 			PlayerListScoreManager.setKills(player, 0);
 
-			givePlayerItems(player, entry.getValue());
+			givePlayerItems(player, entry.getValue(), true);
 
 			for(TeamArenaTeam team : teams) {
 				if(team.isAlive())
@@ -1181,7 +1184,7 @@ public abstract class TeamArena
 
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
 		player.teleport(pinfo.team.getNextSpawnpoint());
-		givePlayerItems(player, pinfo);
+		givePlayerItems(player, pinfo, true);
 		pinfo.kills = 0;
 		PlayerListScoreManager.setKills(player, 0);
 

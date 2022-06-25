@@ -9,28 +9,49 @@ import java.util.ListIterator;
 import java.util.Objects;
 
 /**
- * A hologram that's a real armor stand that exists in a world, not packets only
- * easier than refactoring Hologram.java lel
+ * A hologram that's a real armor stand(s) that exists in a world, not packets only
+ * More convenient than PacketHologram as it manages trackers and such itself
  */
 public class RealHologram {
 
-    //public static final HashMap<Integer, RealHologram> allHolograms = new HashMap<>();
+	public static final double NEXT_LINE_VERTICAL_OFFSET = 0.33;
 
-    public ArrayList<HologramLine> lines;
-    public Location baseLoc;
+    private final ArrayList<HologramLine> lines;
+    private final Location baseLoc;
+	private Alignment alignment;
 
-    public RealHologram(Location location, Component... text) {
+    public RealHologram(Location location, Alignment alignment, Component... text) {
         lines = new ArrayList<>();
         baseLoc = location.clone();
 
-        for (int i = 0; i < text.length; i++) {
-            Location lineLoc = location.clone();
-            double decreaseHeight = (double) i * -0.33;
-            lineLoc.setY(lineLoc.getY() + decreaseHeight);
+		for (Component component : text) {
+			lines.add(new HologramLine(component, baseLoc));
+		}
 
-            lines.add(new HologramLine(text[i], lineLoc));
-        }
+		//move into correct positions here
+		setVerticalAlignment(alignment);
     }
+
+	public void setVerticalAlignment(Alignment alignment) {
+		int i = 0;
+		for(HologramLine line : lines) {
+			Location newLoc = getLocationForIter(baseLoc, alignment, i);
+			line.moveTo(newLoc);
+			i++;
+		}
+
+		this.alignment = alignment;
+	}
+
+	private static Location getLocationForIter(Location loc, Alignment alignment, int i) {
+		double offset;
+		if(alignment == Alignment.TOP)
+			offset = -NEXT_LINE_VERTICAL_OFFSET;
+		else
+			offset = NEXT_LINE_VERTICAL_OFFSET;
+
+		return loc.clone().add(0, i * offset, 0);
+	}
 
     public void setText(Component... newText) {
         int max = Math.max(newText.length, lines.size());
@@ -48,7 +69,7 @@ public class RealHologram {
             }
             //we need to add more lines
             else if (i < newText.length) {
-                lines.add(new HologramLine(newText[i], baseLoc.clone().add(0, i * -0.33, 0)));
+                lines.add(new HologramLine(newText[i], getLocationForIter(baseLoc, this.alignment, i)));
             }
         }
 
@@ -85,8 +106,16 @@ public class RealHologram {
             bukkitStand.customName(text);
         }
 
+		public void moveTo(Location location) {
+			bukkitStand.teleport(location);
+		}
+
         public void kill() {
             bukkitStand.remove();
         }
     }
+
+	public enum Alignment {
+		TOP, BOTTOM
+	}
 }
