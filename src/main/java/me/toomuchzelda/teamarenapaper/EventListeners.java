@@ -282,7 +282,7 @@ public class EventListeners implements Listener
 		if (from.distanceSquared(to) != 0) {
 			BoundingBox border = game.getBorder();
 			// only display when distance to border <= 10 blocks
-			if (MathUtils.distanceBetween(border, from) <= 10) {
+			if (MathUtils.distanceBetween(border, from, true) <= 10) {
 				Vector closest = new Vector(
 						from.getX() > border.getCenterX() ? border.getMaxX() : border.getMinX(),
 						0,

@@ -184,6 +184,9 @@ public class PlayerUtils {
 		for (PotionEffect effect : player.getActivePotionEffects()) {
 			player.removePotionEffect(effect.getType());
 		}
+
+		// remove all queued damage
+		Main.getGame().damageQueue.removeIf(damageEvent -> damageEvent.getVictim() == player);
 	}
 
 	public static void sendKitMessage(Player player, Component chat, Component actionBar) {

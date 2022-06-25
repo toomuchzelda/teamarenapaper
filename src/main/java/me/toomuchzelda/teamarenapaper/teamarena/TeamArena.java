@@ -109,7 +109,7 @@ public abstract class TeamArena
 
 	protected MapInfo mapInfo;
 
-	protected Queue<DamageEvent> damageQueue;
+	public Queue<DamageEvent> damageQueue;
 
 	private final LinkedList<DamageIndicatorHologram> activeDamageIndicators = new LinkedList<>();
 
@@ -271,7 +271,6 @@ public abstract class TeamArena
 	}
 
 	// player as in players in the players set
-	// infer the meaning yourself
 	protected void givePlayerItems(Player player, PlayerInfo info) {
 		player.sendMap(miniMap.view);
 		PlayerInventory inventory = player.getInventory();
@@ -331,11 +330,12 @@ public abstract class TeamArena
 			}
 
 			if (style == SidebarManager.Style.RGB_MANIAC || style == SidebarManager.Style.LEGACY_RGB_MANIAC) {
-				double progress = (int) (TeamArena.getGameTick() / 5 * 5) / 70d;
+				double progress = (TeamArena.getGameTick() / 5 * 5) / 70d;
 				for (var iterator = sidebar.getEntries().listIterator(); iterator.hasNext(); ) {
 					var index = iterator.nextIndex();
 					var entry = iterator.next();
-					iterator.set(TextUtils.getRGBManiacComponent(entry, Style.empty(), progress + index / 7d));
+					var component = TextUtils.getRGBManiacComponent(entry, Style.empty(), progress + index / 7d);
+					sidebar.setEntry(index, component);
 				}
 			}
 
@@ -692,13 +692,13 @@ public abstract class TeamArena
 			if(team.getHotbarItem().isSimilar(event.getItem())) {
 				Action action = event.getAction();
 				if(action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK) {
-					setViewingGlowingTeammates(pinfo, !pinfo.viewingGlowingTeammates);
+					setViewingGlowingTeammates(pinfo, !pinfo.viewingGlowingTeammates, true);
 				}
 			}
 		}
 	}
 
-	public void setViewingGlowingTeammates(PlayerInfo pinfo, boolean glow) {
+	public void setViewingGlowingTeammates(PlayerInfo pinfo, boolean glow, boolean message) {
 		MetadataViewer meta = pinfo.getMetadataViewer();
 		pinfo.viewingGlowingTeammates = glow;
 
@@ -715,13 +715,15 @@ public abstract class TeamArena
 			meta.refreshViewer(viewed);
 		}
 
-		Component text;
-		if(glow)
-			text = Component.text("Now seeing your teammates through walls", NamedTextColor.BLUE);
-		else
-			text = Component.text("Stopped seeing teammates through walls", NamedTextColor.BLUE);
+		if(message) {
+			Component text;
+			if (glow)
+				text = Component.text("Now seeing your teammates through walls", NamedTextColor.BLUE);
+			else
+				text = Component.text("Stopped seeing teammates through walls", NamedTextColor.BLUE);
 
-		meta.getViewer().sendMessage(text);
+			meta.getViewer().sendMessage(text);
+		}
 	}
 
 	public void onInteractEntity(PlayerInteractEntityEvent event) {
@@ -921,7 +923,7 @@ public abstract class TeamArena
 			}
 			pinfo.kit = null;
 			//unglow before setting pinfo.team to null as it needs that.
-			setViewingGlowingTeammates(pinfo, false);
+			setViewingGlowingTeammates(pinfo, false, false);
 			pinfo.team = null;
 			pinfo.spawnPoint = null;
 		}
@@ -1171,14 +1173,16 @@ public abstract class TeamArena
 	}
 
 	public void respawnPlayer(Player player) {
+		// teleport first to avoid double void damage
+		PlayerInfo pinfo = Main.getPlayerInfo(player);
+		player.teleport(pinfo.team.getNextSpawnpoint());
+
 		players.add(player);
 		spectators.remove(player);
 
 		player.setAllowFlight(false);
 		PlayerUtils.resetState(player);
 
-		PlayerInfo pinfo = Main.getPlayerInfo(player);
-		player.teleport(pinfo.team.getNextSpawnpoint());
 		givePlayerItems(player, pinfo);
 		pinfo.kills = 0;
 		PlayerListScoreManager.setKills(player, 0);

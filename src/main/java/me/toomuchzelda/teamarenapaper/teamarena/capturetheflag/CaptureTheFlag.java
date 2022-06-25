@@ -1,20 +1,20 @@
 package me.toomuchzelda.teamarenapaper.teamarena.capturetheflag;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
-import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
-import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -39,11 +39,18 @@ public class CaptureTheFlag extends TeamArena
 	public HashMap<ArmorStand, Flag> flagStands; // this too
 	public HashMap<Player, Set<Flag>> flagHolders = new HashMap<>();
 	public HashSet<String> flagItems;
-	public int capsToWin;
+	protected static final AttributeModifier SPEED_ATTR = new AttributeModifier("CTFSpeedBoost", 0.2d, AttributeModifier.Operation.ADD_SCALAR);
+	protected Set<Player> currentSpeeders = new HashSet<>();
+	protected int capsToWin;
+	public static final int TIME_TO_SPEED_BOOST = 5 * 60 * 20;
+	protected int timeToSpeed = TIME_TO_SPEED_BOOST;
+	public static final int TIME_TO_END_AFTER_SPEED = 3 * 60 * 20;
+	public static final int TIME_TO_END_MINUTES = (TIME_TO_END_AFTER_SPEED / 60) / 20;
+
 	public static final int TAKEN_FLAG_RETURN_TIME = 3 * 60 * 20;
 	public static final int DROPPED_TIME_PER_TICK = TAKEN_FLAG_RETURN_TIME / (5 * 20);
 	public static final int DROPPED_PROGRESS_BAR_LENGTH = 10;
-	public static final String DROPPED_PROGRESS_STRING;
+	public static final String DROPPED_PROGRESS_STRING = "█".repeat(DROPPED_PROGRESS_BAR_LENGTH);
 
 	public static final Component PICK_UP_MESSAGE = Component.text("%holdingTeam% has picked up %team%'s flag").color(NamedTextColor.GOLD);
 	public static final Component DROP_MESSAGE = Component.text("%holdingTeam% has dropped %team%'s flag").color(NamedTextColor.GOLD);
@@ -57,23 +64,19 @@ public class CaptureTheFlag extends TeamArena
 	public static final Component CAPTURED_TITLE = Component.text("%holdingTeam% captured %team%'s flag!").color(NamedTextColor.GOLD);
 	public static final Component PASSED_TITLE = Component.text("%holdingTeam% gave %team%'s flag to %otherTeam%").color(NamedTextColor.GOLD);
 
-	public static final Component CANT_CAPTURE_YOUR_FLAG_NOT_AT_BASE = Component.text("You can't capture until your flag is safely at your base!").color(TextColor.color(255, 20, 20));
+	public static final Component CANT_CAPTURE_YOUR_FLAG_NOT_AT_BASE = Component.text("You can't capture until your flag is safely at your base!", TextUtils.ERROR_RED);
 	public static final String CANT_CAPTURE_KEY = "yrflagnotatbase";
 
-	public static final Component CANT_TELEPORT_HOLDING_FLAG_MESSAGE = Component.text("You can't teleport while holding the flag!").color(TextColor.color(255, 20, 20));
-	public static final Component CANT_TELEPORT_HOLDING_FLAG_TITLE = Component.text("Can't teleport with the flag!").color(TextColor.color(255, 20, 20));
+	public static final Component CANT_TELEPORT_HOLDING_FLAG_MESSAGE = Component.text("You can't teleport while holding the flag!", TextUtils.ERROR_RED);
+	public static final Component CANT_TELEPORT_HOLDING_FLAG_TITLE = Component.text("Can't teleport with the flag!", TextUtils.ERROR_RED);
 
-	static {
-		StringBuilder builder = new StringBuilder(DROPPED_PROGRESS_BAR_LENGTH);
-		for(int i = 0; i < DROPPED_PROGRESS_BAR_LENGTH; i++) {
-			builder.append('█');
-		}
-		DROPPED_PROGRESS_STRING = builder.toString();
-	}
-
-	private Set<Flag> getFlagsHeld(Player player) {
-		return flagHolders.get(player);
-	}
+	public static final Component ONE_MINUTE_LEFT_SPEED_MESSAGE = Component.text("In one minute flag takers will get a speed bonus! Hurry it up!", TextUtils.ERROR_RED);
+	public static final Component ONE_MINUTE_LEFT_SPEED_TITLE = Component.text("Flag takers get speed in 1 minute!", TextUtils.ERROR_RED);
+	public static final Component SPEED_NOW_MESSAGE = Component.text("Anyone who carries a flag will now run faster! This bonus will end once any flag is captured!" +
+			" If you don't end the game in " + TIME_TO_END_MINUTES + " minutes, I will!!", TextUtils.ERROR_RED);
+	public static final Component SPEED_NOW_TITLE = Component.text("Flag takers will now run faster!", TextUtils.ERROR_RED);
+	public static final Component SPEED_DONE_MESSAGE = Component.text("Speed bonus for carrying a flag is gone! Game proceeds as normal.", TextUtils.ERROR_RED);
+	public static final Component TOOK_TOO_LONG = Component.text("Too slow! Game ended!", TextUtils.ERROR_RED);
 
 	private void addFlagHeld(Player player, Flag flag) {
 		Set<Flag> flags = flagHolders.computeIfAbsent(player, k -> new HashSet<>()); //put new HashSet if no value and also return it
@@ -174,6 +177,74 @@ public class CaptureTheFlag extends TeamArena
 						meta.setDamage(durability);
 						invFlag.setItemMeta(meta);
 					}
+				}
+			}
+		}
+
+		this.timeToSpeed--;
+		//one minute left, announce
+		Component announcementMsg = null;
+		Component announcementTitle = null;
+		if(this.timeToSpeed == 60 * 20) {
+			announcementMsg = ONE_MINUTE_LEFT_SPEED_MESSAGE;
+			announcementTitle = ONE_MINUTE_LEFT_SPEED_TITLE;
+		}
+		else if(this.timeToSpeed == 0) {
+			announcementMsg = SPEED_NOW_MESSAGE;
+			announcementTitle = SPEED_NOW_TITLE;
+
+			for(Player carrier : flagHolders.keySet()) {
+				carrier.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).addModifier(SPEED_ATTR);
+			}
+		}
+		// out of time, end the game.
+		else if(this.timeToSpeed == -TIME_TO_END_AFTER_SPEED) {
+			int score = 0;
+			List<TeamArenaTeam> drawList = new ArrayList<>(teams.length);
+			for(TeamArenaTeam team : teams) {
+				if(team.getTotalScore() > score) {
+					score = team.getTotalScore();
+					drawList.clear();
+					drawList.add(team);
+				}
+				else if(team.getTotalScore() == score) {
+					drawList.add(team);
+				}
+
+				//only 1 winner
+				if(drawList.size() == 1) {
+					this.winningTeam = drawList.get(0);
+				}
+
+				Bukkit.broadcast(TOOK_TOO_LONG);
+				for(Player p : Bukkit.getOnlinePlayers()) {
+					for(int i = 0; i < 10; i++) {
+						p.playSound(p.getLocation(), SoundUtils.getRandomObnoxiousSound(), 9999f, (float) MathUtils.randomRange(-0.5, 2d));
+					}
+				}
+
+				prepEnd();
+
+				//Don't do the rest of the tick.
+				return;
+			}
+		}
+
+		if(announcementMsg != null) {
+			Bukkit.broadcast(announcementMsg);
+			var iter = Main.getPlayersIter();
+			while (iter.hasNext()) {
+				var entry = iter.next();
+				Player p = entry.getKey();
+
+				for(int i = 0; i < 5; i++) {
+					Bukkit.getScheduler().runTaskLater(Main.getPlugin(), bukkitTask ->
+							p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_CLUSTER_BREAK, SoundCategory.AMBIENT, 999f, 1f),
+							i);
+				}
+
+				if (entry.getValue().getPreference(Preferences.RECEIVE_GAME_TITLES)) {
+					PlayerUtils.sendTitle(p, Component.empty(), announcementTitle, 10, 40, 10);
 				}
 			}
 		}
@@ -376,6 +447,12 @@ public class CaptureTheFlag extends TeamArena
 		//give them the inventory item
 		player.getInventory().addItem(flag.item);
 
+		//give speed boost if appropriate
+		if(this.timeToSpeed <= 0) {
+			player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).addModifier(SPEED_ATTR);
+			currentSpeeders.add(player);
+		}
+
 		if(broadcast) {
 			final TextReplacementConfig playerConfig = TextReplacementConfig.builder().match("%holdingTeam%")
 					.replacement(player.playerListName()).build();
@@ -427,6 +504,12 @@ public class CaptureTheFlag extends TeamArena
 		if(BlockUtils.getFloor(flag.currentLoc) == null) {
 			flag.teleportToBase();
 		}
+
+		AttributeInstance aInst = player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
+		if(aInst.getModifiers().contains(SPEED_ATTR)) {
+			aInst.removeModifier(SPEED_ATTR);
+		}
+		currentSpeeders.remove(player);
 
 		if(broadcast) {
 			Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
@@ -517,6 +600,17 @@ public class CaptureTheFlag extends TeamArena
 
 		Bukkit.broadcast(chatText);
 
+		if(this.timeToSpeed <= 0) {
+			Bukkit.broadcast(SPEED_DONE_MESSAGE);
+		}
+		//reset speed timer and remove speed from current flag holders
+		this.timeToSpeed = TIME_TO_SPEED_BOOST;
+		Iterator<Player> speedersIter = currentSpeeders.iterator();
+		while(speedersIter.hasNext()) {
+			speedersIter.next().getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).removeModifier(SPEED_ATTR);
+			speedersIter.remove();
+		}
+
 		//end the game if win
 		if (!CommandDebug.ignoreWinConditions && capturingTeam.score >= capsToWin) {
 			winningTeam = capturingTeam;
@@ -536,9 +630,9 @@ public class CaptureTheFlag extends TeamArena
 	public void flagPositionTick(Flag flag) {
 		ArmorStand stand = flag.getArmorStand();
 		Location loc;
-		if(flag.isAtBase)
+		if(flag.isAtBase) {
 			loc = flag.baseLoc.clone();
-		else {
+		} else {
 			RayTraceResult result = flag.currentLoc.getWorld().rayTraceBlocks(flag.currentLoc,
 					new Vector(0, -1, 0), 383, FluidCollisionMode.SOURCE_ONLY, true);
 
@@ -558,11 +652,9 @@ public class CaptureTheFlag extends TeamArena
 			}
 			loc = flag.currentLoc.clone();
 		}
-		loc.setY(loc.getY() + (Math.sin((double) System.currentTimeMillis() / 2) / 5));
-		loc.setYaw(((stand.getLocation().getYaw() + 5f) % 360));//- 180f);
+		loc.setY(loc.getY() + Math.sin(TeamArena.getGameTick() / 5d) / 10);
+		loc.setYaw((stand.getLocation().getYaw() + 5f) % 360);
 		stand.teleport(loc);
-		//net.minecraft.world.entity.decoration.ArmorStand nmsStand = ((CraftArmorStand) stand).getHandle();
-		//nmsStand.moveTo(loc.getX(), loc.getY(), loc.getZ(), loc.getYaw(), loc.getPitch());
 	}
 
 	@Override
@@ -708,7 +800,6 @@ public class CaptureTheFlag extends TeamArena
 
 		flagItems.clear();
 
-
 		Bukkit.getScheduler().runTaskLater(Main.getPlugin(), bukkitTask -> {
 
 			for(Flag flag : flagStands.values()) {
@@ -718,8 +809,6 @@ public class CaptureTheFlag extends TeamArena
 
 		}, END_GAME_TIME - 4); //one tick before the scheduled tasks in super
 	}
-
-
 
 	@Override
 	public boolean canSelectKitNow() {
