@@ -1,11 +1,11 @@
 package me.toomuchzelda.teamarenapaper.teamarena.capturetheflag;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
-import me.toomuchzelda.teamarenapaper.utils.*;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
+import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -50,7 +50,7 @@ public class CaptureTheFlag extends TeamArena
 	public static final int TAKEN_FLAG_RETURN_TIME = 3 * 60 * 20;
 	public static final int DROPPED_TIME_PER_TICK = TAKEN_FLAG_RETURN_TIME / (5 * 20);
 	public static final int DROPPED_PROGRESS_BAR_LENGTH = 10;
-	public static final String DROPPED_PROGRESS_STRING;
+	public static final String DROPPED_PROGRESS_STRING = "█".repeat(DROPPED_PROGRESS_BAR_LENGTH);
 
 	public static final Component PICK_UP_MESSAGE = Component.text("%holdingTeam% has picked up %team%'s flag").color(NamedTextColor.GOLD);
 	public static final Component DROP_MESSAGE = Component.text("%holdingTeam% has dropped %team%'s flag").color(NamedTextColor.GOLD);
@@ -77,14 +77,6 @@ public class CaptureTheFlag extends TeamArena
 	public static final Component SPEED_NOW_TITLE = Component.text("Flag takers will now run faster!", TextUtils.ERROR_RED);
 	public static final Component SPEED_DONE_MESSAGE = Component.text("Speed bonus for carrying a flag is gone! Game proceeds as normal.", TextUtils.ERROR_RED);
 	public static final Component TOOK_TOO_LONG = Component.text("Too slow! Game ended!", TextUtils.ERROR_RED);
-
-	static {
-		StringBuilder builder = new StringBuilder(DROPPED_PROGRESS_BAR_LENGTH);
-		for(int i = 0; i < DROPPED_PROGRESS_BAR_LENGTH; i++) {
-			builder.append('█');
-		}
-		DROPPED_PROGRESS_STRING = builder.toString();
-	}
 
 	private void addFlagHeld(Player player, Flag flag) {
 		Set<Flag> flags = flagHolders.computeIfAbsent(player, k -> new HashSet<>()); //put new HashSet if no value and also return it
@@ -638,9 +630,9 @@ public class CaptureTheFlag extends TeamArena
 	public void flagPositionTick(Flag flag) {
 		ArmorStand stand = flag.getArmorStand();
 		Location loc;
-		if(flag.isAtBase)
+		if(flag.isAtBase) {
 			loc = flag.baseLoc.clone();
-		else {
+		} else {
 			RayTraceResult result = flag.currentLoc.getWorld().rayTraceBlocks(flag.currentLoc,
 					new Vector(0, -1, 0), 383, FluidCollisionMode.SOURCE_ONLY, true);
 
@@ -660,11 +652,9 @@ public class CaptureTheFlag extends TeamArena
 			}
 			loc = flag.currentLoc.clone();
 		}
-		loc.setY(loc.getY() + (Math.sin((double) System.currentTimeMillis() / 2) / 5));
-		loc.setYaw(((stand.getLocation().getYaw() + 5f) % 360));//- 180f);
+		loc.setY(loc.getY() + Math.sin(TeamArena.getGameTick() / 5d) / 10);
+		loc.setYaw((stand.getLocation().getYaw() + 5f) % 360);
 		stand.teleport(loc);
-		//net.minecraft.world.entity.decoration.ArmorStand nmsStand = ((CraftArmorStand) stand).getHandle();
-		//nmsStand.moveTo(loc.getX(), loc.getY(), loc.getZ(), loc.getYaw(), loc.getPitch());
 	}
 
 	@Override

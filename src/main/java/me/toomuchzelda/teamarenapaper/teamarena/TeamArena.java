@@ -109,7 +109,7 @@ public abstract class TeamArena
 
 	protected MapInfo mapInfo;
 
-	protected Queue<DamageEvent> damageQueue;
+	public Queue<DamageEvent> damageQueue;
 
 	private final LinkedList<DamageIndicatorHologram> activeDamageIndicators = new LinkedList<>();
 
@@ -1173,14 +1173,16 @@ public abstract class TeamArena
 	}
 
 	public void respawnPlayer(Player player) {
+		// teleport first to avoid double void damage
+		PlayerInfo pinfo = Main.getPlayerInfo(player);
+		player.teleport(pinfo.team.getNextSpawnpoint());
+
 		players.add(player);
 		spectators.remove(player);
 
 		player.setAllowFlight(false);
 		PlayerUtils.resetState(player);
 
-		PlayerInfo pinfo = Main.getPlayerInfo(player);
-		player.teleport(pinfo.team.getNextSpawnpoint());
 		givePlayerItems(player, pinfo);
 		pinfo.kills = 0;
 		PlayerListScoreManager.setKills(player, 0);

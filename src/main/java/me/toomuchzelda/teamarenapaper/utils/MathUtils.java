@@ -78,17 +78,20 @@ public class MathUtils
 		return Math.round(value * Math.pow(10, scale)) / Math.pow(10, scale);
 	}
 
-	public static double distanceBetween(BoundingBox box, Vector point) {
+	public static double distanceBetween(BoundingBox box, Vector point, boolean ignoreY) {
 		if (box.contains(point)) {
 			double[] distances = {
-					point.getX() - box.getMinX(), box.getMaxX() - point.getX(),
-					point.getY() - box.getMinY(), box.getMaxY() - point.getY(),
-					point.getZ() - box.getMinZ(), box.getMaxZ() - point.getZ()
+					point.getX() - box.getMinX(),
+					box.getMaxX() - point.getX(),
+					ignoreY ? Double.MAX_VALUE : point.getY() - box.getMinY(),
+					ignoreY ? Double.MAX_VALUE : box.getMaxY() - point.getY(),
+					point.getZ() - box.getMinZ(),
+					box.getMaxZ() - point.getZ()
 			};
 			return Doubles.min(distances);
 		} else {
 			double dx = Math.max(Math.abs(point.getX() - box.getCenterX()) - box.getWidthX() / 2, 0);
-			double dy = Math.max(Math.abs(point.getY() - box.getCenterY()) - box.getHeight() / 2, 0);
+			double dy = ignoreY ? 0 : Math.max(Math.abs(point.getY() - box.getCenterY()) - box.getHeight() / 2, 0);
 			double dz = Math.max(Math.abs(point.getZ() - box.getCenterZ()) - box.getWidthZ() / 2, 0);
 			return Math.sqrt(dx * dx + dy * dy + dz * dz);
 		}

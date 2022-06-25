@@ -23,7 +23,7 @@ public class Preferences {
 	public static final Preference<Boolean> KIT_CHAT_MESSAGES = SimplePreference.of("kit_chat_messages",
 			"Receive kit-related messages in chat", true);
 	public static final Preference<Integer> KOTH_HILL_PARTICLES = SimplePreference.of("koth_hill_particles",
-			"The number of ticks in between each spawning of particles along the Hill border in King of the Hill. (0 to 10)", Integer.class, 1,
+			"The number of ticks in between each spawning of particles along the Hill border in King of the Hill. (0 to 10)", Integer.class, 5,
 			value -> value >= 0 && value <= 10);
 
 	public static final Preference<Boolean> RECEIVE_GAME_TITLES = SimplePreference.of("receive_game_titles",
