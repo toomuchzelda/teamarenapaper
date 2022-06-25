@@ -6,18 +6,22 @@ import me.toomuchzelda.teamarenapaper.inventory.ClickableItem;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.InventoryProvider;
 import me.toomuchzelda.teamarenapaper.inventory.PagedInventory;
+import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
+import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.SidebarManager;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSpy;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.DemoMine;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.Color;
-import org.bukkit.Material;
-import org.bukkit.Particle;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.entity.Axolotl;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Skeleton;
@@ -31,8 +35,6 @@ import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
-
-import org.bukkit.Location;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
@@ -48,7 +50,7 @@ import net.kyori.adventure.text.format.TextColor;
     Ideally, Defensive and Offensive play should be equally viable
 
     Main Ability: Sentry
-        Active Time / CD = 20 seconds
+        Active Time / CD = ~15 seconds
         Similar to TF2 Sentry, Sentry will rotate 90 degrees total.
         Turret will slowly rotate back and forth within its range.
         Initial angle at which sentry is placed is determined by where the builder is looking.
@@ -62,7 +64,7 @@ import net.kyori.adventure.text.format.TextColor;
             -Visible Angle: 90 Degrees (Able to turn 360 degrees to track a locked-on enemy)
             -Health: 20 Hearts + Full Leather Armor
             -Fire-Rate: 1 shot every second (20 ticks)
-            -DMG: 2 DMG per shot
+            -DMG: 1.35 DMG per shot
             -Completely impervious to Invis (Give ghost some usefulness back)
 
     Sub Ability: Teleporter
@@ -104,7 +106,7 @@ public class KitEngineer extends Kit{
 		NamedTextColor[] matchingColours = new NamedTextColor[] {NamedTextColor.RED, NamedTextColor.GREEN};
 
 		for(int i = 0; i < 2; i++) {
-			COLOUR_TEAMS[i] = SidebarManager.SCOREBOARD.registerNewTeam(PROJECTION_STATUS + matchingColours[i].value());
+			COLOUR_TEAMS[i] = PlayerScoreboard.SCOREBOARD.registerNewTeam(PROJECTION_STATUS + matchingColours[i].value());
 			COLOUR_TEAMS[i].color(matchingColours[i]);
 			COLOUR_TEAMS[i].setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
 
@@ -117,7 +119,9 @@ public class KitEngineer extends Kit{
     }
 
     public KitEngineer(){
-        super("Engineer", "Wrench and Turret and Teleporter", Material.IRON_SHOVEL);
+        super("Engineer", "A utility kit that uses its buildings to support its team. " +
+				"Gun down enemies with your automatic sentry and set up teleporters to " +
+				"transport your allies across the map!", Material.IRON_SHOVEL);
 
         ItemStack pants = new ItemStack(Material.LEATHER_LEGGINGS);
         LeatherArmorMeta pantsMeta = (LeatherArmorMeta) pants.getItemMeta();
@@ -151,11 +155,10 @@ public class KitEngineer extends Kit{
         public static final HashMap<Player, List<Teleporter>> ACTIVE_TELEPORTERS = new HashMap<>();
 		public static final HashMap<Player, List<Sentry>> ACTIVE_SENTRY = new HashMap<>();
 		public static final HashMap<Player, LivingEntity> ACTIVE_PROJECTION = new HashMap<>();
-		static final HashMap<Integer, Player> PROJECTION_ID = new HashMap<>(20, 0.4f);
-
+		public static final Map<Skeleton, Sentry> SKELE_TO_SENTRY = new LinkedHashMap<>();
         public static final int TP_CD = 30;
-		//SENTRY_CD should be 400, it is altered for testing purposes
-		public static final int SENTRY_CD = 100;
+		//SENTRY_CD should be 300, it may be altered for testing purposes
+		public static final int SENTRY_CD = 300;
 		public static final int SENTRY_PLACEMENT_RANGE = 3;
 
 
@@ -172,7 +175,7 @@ public class KitEngineer extends Kit{
 			ACTIVE_SENTRY.clear();
 			ACTIVE_TELEPORTERS.clear();
 			ACTIVE_PROJECTION.clear();
-			PROJECTION_ID.clear();
+			SKELE_TO_SENTRY.clear();
 		}
 
 		@Override
@@ -259,7 +262,7 @@ public class KitEngineer extends Kit{
 									}
 								}
 								else{
-									//Failure: Another TP from an enemy engineer exists at that spot
+									//Failure: Another TP from a different engineer exists at that spot
 									player.sendMessage(Component.text("Another teleporter already exists as this spot."));
 								}
 
@@ -277,7 +280,7 @@ public class KitEngineer extends Kit{
 
 			//Manual Fire using Wrangler
 			if(mat == Material.STICK && !player.hasCooldown(Material.STICK) &&
-					ACTIVE_SENTRY.containsKey(player)){
+					!ACTIVE_SENTRY.get(player).isEmpty()){
 					List<Sentry> sentries = ACTIVE_SENTRY.get(player);
 					sentries.stream().filter(sentry -> sentry.currState != Sentry.State.STARTUP)
 							.forEach(sentry -> {
@@ -292,7 +295,7 @@ public class KitEngineer extends Kit{
 			}
         }
 
-		//Converts the Projection into a Sentry
+		//Converts the Projection into a Sentry + Handles static hashmaps + Inventory
 		public void createSentry(Player player, ItemStack currItem){
 			PlayerInventory inv = player.getInventory();
 			boolean isMainHand = inv.getItemInMainHand().equals(currItem);
@@ -303,8 +306,9 @@ public class KitEngineer extends Kit{
 			sentries.add(sentry);
 			buildings.add(sentry);
 
+			SKELE_TO_SENTRY.put((Skeleton) projection, sentry);
 			ACTIVE_PROJECTION.remove(player);
-			PROJECTION_ID.remove(projection.getEntityId());
+			Main.getPlayerInfo(player).getMetadataViewer().removeViewedValues(projection);
 			player.setCooldown(Material.CHEST_MINECART, SENTRY_CD);
 
 			if(isMainHand){
@@ -321,14 +325,14 @@ public class KitEngineer extends Kit{
 			}
 		}
 
-		//Buildings have a destroy method, but this method is necessary to manage static hashmaps
-		//and player inventory/items
+		//Destroys sentry + Handles static hashmaps + Inventory
 		public void destroySentry(Player player, Sentry sentry){
 			PlayerInventory inv = player.getInventory();
 			List<Building> buildings = ACTIVE_BUILDINGS.get(player);
 			List<Sentry> sentries = ACTIVE_SENTRY.get(player);
 			sentries.remove(sentry);
 			buildings.remove(sentry);
+			SKELE_TO_SENTRY.remove((Skeleton) sentry.sentry);
 			sentry.destroy();
 
 			if(sentries.isEmpty()){
@@ -365,7 +369,7 @@ public class KitEngineer extends Kit{
 
 		//Finding Duplicates for all currently existing engineers
 		//returns null if none are found
-		public Teleporter findDuplicateAllTele(Location loc){
+		public static Teleporter findDuplicateAllTele(Location loc){
 			Teleporter dupeTele = null;
 			for(Map.Entry<Player, List<Teleporter>> entry : ACTIVE_TELEPORTERS.entrySet()){
 				List<Teleporter> activeTPs = entry.getValue();
@@ -457,7 +461,7 @@ public class KitEngineer extends Kit{
 			}
 
 			//Sentry behavior is handled in Sentry class
-			if(ACTIVE_SENTRY.containsKey(player)){
+			if(!ACTIVE_SENTRY.get(player).isEmpty()){
 				List<Sentry> activeSentries = ACTIVE_SENTRY.get(player);
 				activeSentries.forEach(Sentry::tick);
 				activeSentries.forEach(sentry -> {
@@ -470,6 +474,25 @@ public class KitEngineer extends Kit{
 			//Creating Wrangler "laser beam" and manipulating sentry direction
 			if(PlayerUtils.isHolding(player, WRANGLER)){
 				wranglerProjection(player);
+			}
+
+			//Extra check to ensure wrangler is replaced if there are no active sentries
+			if(player.getInventory().getItemInOffHand().equals(WRANGLER) ||
+					player.getInventory().contains(WRANGLER) &&
+							ACTIVE_SENTRY.get(player).isEmpty()){
+
+						PlayerInventory inv = player.getInventory();
+							if(inv.getItemInOffHand().equals(WRANGLER)){
+								//Must make seperate case for when sentry is in offhand
+								inv.setItemInOffHand(SENTRY);
+							}
+							else {
+								int wranglerSlot = inv.first(WRANGLER);
+								if (wranglerSlot != -1) {
+									//wrangler found, so replace it with sentry
+									inv.setItem(wranglerSlot, SENTRY);
+								}
+							}
 			}
         }
 
@@ -535,7 +558,10 @@ public class KitEngineer extends Kit{
 				entity.setCanPickupItems(false);
 				entity.setSilent(true);
 
-				PROJECTION_ID.put(entity.getEntityId(), player);
+				MetadataViewer metaViewer = Main.getPlayerInfo(player).getMetadataViewer();
+				metaViewer.setViewedValue(MetaIndex.BASE_ENTITY_META,
+						MetaIndex.GLOWING_METADATA, entity.getEntityId(), entity);
+
 				ACTIVE_PROJECTION.put(player, entity);
 			});
 		}
@@ -545,11 +571,7 @@ public class KitEngineer extends Kit{
 			projection.setInvulnerable(false);
 			projection.remove();
 			ACTIVE_PROJECTION.remove(player);
-			PROJECTION_ID.remove(projection.getEntityId());
-		}
-
-		public static Player getProjection(int id) {
-			return PROJECTION_ID.get(id);
+			Main.getPlayerInfo(player).getMetadataViewer().removeViewedValues(projection);
 		}
 
 		//From entity's eyes, find the location in their line of sight that is within range
@@ -592,8 +614,22 @@ public class KitEngineer extends Kit{
 					ACTIVE_BUILDINGS.remove(p);
 					ACTIVE_SENTRY.remove(p);
 					ACTIVE_TELEPORTERS.remove(p);
+					ACTIVE_PROJECTION.remove(p);
+					SKELE_TO_SENTRY.remove(p);
 				}
 			});
+		}
+
+		//Cancel damage events where the attacker is an ally of the engineer
+		public static void handleSentryAttemptDamage(DamageEvent event) {
+			Skeleton skele = (Skeleton) event.getVictim();
+			Sentry sentry = SKELE_TO_SENTRY.get(skele);
+			if(sentry != null){
+				if(event.getFinalAttacker() instanceof Player attacker &&
+						!Main.getGame().canAttack(attacker, sentry.owner)){
+					event.setCancelled(true);
+				}
+			}
 		}
 
         //Assume there are 2 active TPs
@@ -606,7 +642,11 @@ public class KitEngineer extends Kit{
 			destination.setYaw(teleporting.getLocation().getYaw());
 			destination.setPitch(teleporting.getLocation().getPitch());
 			teleporting.teleport(destination);
-            teleporters.forEach((teleporter) -> teleporter.setLastUsedTick(TeamArena.getGameTick()));
+            teleporters.forEach((teleporter) -> {
+				teleporter.setLastUsedTick(TeamArena.getGameTick());
+				owner.getWorld().playSound(teleporter.getLoc(),
+						Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+			});
         }
 		public class EngineerInventory extends PagedInventory {
 

@@ -12,10 +12,9 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 
 public class Building {
-    Player owner;
+    public Player owner;
     Location loc;
     RealHologram holo;
-    BlockData prevBlockData;
     TextColor teamColorText;
     Component holoText;
 	BuildingType type;
