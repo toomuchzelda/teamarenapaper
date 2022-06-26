@@ -1,20 +1,18 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.engineer;
 
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.RealHologram;
-import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
 
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-
-public class Teleporter extends Building{
-    int lastUsedTick;
+public class Teleporter extends Building {
+	int lastUsedTick;
 	Location teleLoc;
 	BlockData prevBlockData;
 
-    public Teleporter(Player player, Location loc) {
+	public Teleporter(Player player, Location loc) {
 		super(player, loc);
 		this.name = "Teleporter";
 		this.type = BuildingType.TELEPORTER;
@@ -28,29 +26,30 @@ public class Teleporter extends Building{
 	public BlockData getPrevBlockData() {
 		return this.prevBlockData;
 	}
-    public int getLastUsedTick(){
-        return lastUsedTick;
-    }
 
-    public void setLastUsedTick(int newTick){
-        this.lastUsedTick = newTick;
-    }
+	public int getLastUsedTick() {
+		return lastUsedTick;
+	}
 
-	public Location getTPLoc(){
+	public void setLastUsedTick(int newTick) {
+		this.lastUsedTick = newTick;
+	}
+
+	public Location getTPLoc() {
 		return this.teleLoc;
 	}
 
-	public int getRemainingCD(){
+	public int getRemainingCD() {
 		return TeamArena.getGameTick() - lastUsedTick;
 	}
 
-	public boolean hasCD(){
+	public boolean hasCD() {
 		return !(TeamArena.getGameTick() - lastUsedTick > KitEngineer.EngineerAbility.TP_CD);
 	}
 
-    @Override
-    public void destroy(){
-        this.loc.getBlock().setBlockData(this.getPrevBlockData());
-        holo.remove();
-    }
+	@Override
+	public void destroy() {
+		this.loc.getBlock().setBlockData(this.getPrevBlockData());
+		holo.remove();
+	}
 }
