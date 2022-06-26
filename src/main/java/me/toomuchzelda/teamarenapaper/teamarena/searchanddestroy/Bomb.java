@@ -14,6 +14,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.Vector;
 
 import java.util.*;
 
@@ -25,6 +26,9 @@ public class Bomb
 	public static final int VALID_TICKS_SINCE_LAST_CLICK = 20;
 	public static final String PROGRESS_BAR_STRING = "█".repeat(10);
 
+	public static final int JUST_BEEN_DISARMED = -2;
+	public static final int NULL_ARMED_TIME = -1;
+
 	private final TeamArenaTeam owningTeam;
 	private final Location spawnLoc;
 	private RealHologram hologram;
@@ -33,6 +37,8 @@ public class Bomb
 
 	private TNTPrimed tnt;
 	private boolean armed = false;
+	private int armedTime;
+	private TeamArenaTeam armingTeam;
 
 	public Bomb(TeamArenaTeam team, Location spawnLoc) {
 		this.owningTeam = team;
@@ -46,6 +52,8 @@ public class Bomb
 		spawnLoc.getBlock().setType(Material.TNT);
 		//add half block XZ offsets to put it above centre of block
 		this.hologram = new RealHologram(spawnLoc.clone().add(0.5d, 1d, 0.5d), RealHologram.Alignment.BOTTOM, this.title);
+		//add offsets for tnt spawning/despawning
+		spawnLoc.add(0.5d, 0d, 0.5d);
 	}
 
 	public void addClicker(TeamArenaTeam clickersTeam, Player clicker, int clickTime, float power) {
@@ -54,22 +62,40 @@ public class Bomb
 		teamClickers.currentlyClicking.put(clicker, new PlayerArmInfo(clickTime, power));
 	}
 
-	public void arm() {
+	public void arm(TeamArenaTeam armingTeam) {
 		Bukkit.broadcastMessage("Armed");
+		this.spawnLoc.getBlock().setType(Material.AIR);
+
+		this.tnt = spawnLoc.getWorld().spawn(spawnLoc, TNTPrimed.class);
+		tnt.setFuseTicks(Integer.MAX_VALUE);
+		tnt.setVelocity(new Vector(0d, 0.4d, 0d));
+
+		this.armingTeam = armingTeam;
+		this.armedTime = TeamArena.getGameTick();
 		this.armed = true;
 	}
 
-	public void disarm() {
+	public void disarm(TeamArenaTeam disarmingTeam) {
 		Bukkit.broadcastMessage("disarmed");
+		this.spawnLoc.getBlock().setType(Material.TNT);
+
+		this.tnt.remove();
+
+		this.armingTeam = null;
+		this.armedTime = JUST_BEEN_DISARMED;
 		this.armed = false;
 	}
 
 	public void tick() {
+		if(!this.isArmed() && this.armedTime == JUST_BEEN_DISARMED) {
+			this.armedTime = NULL_ARMED_TIME;
+		}
+
 		ArrayList<Component> lines = new ArrayList<>(currentArmers.size() + 1);
 		lines.add(0, this.title);
 		int i = 1;
 		final int currentTime = TeamArena.getGameTick();
-		boolean arm = false;
+		TeamArenaTeam armingTeam = null;
 		for(Map.Entry<TeamArenaTeam, TeamArmInfo> entry : currentArmers.entrySet()) {
 			TeamArmInfo teamInfo = entry.getValue();
 			float progressToAdd = 0f;
@@ -108,7 +134,7 @@ public class Bomb
 				//arm if done
 				if(totalProgress >= 1f) {
 					//break out of iterator first before arming
-					arm = true;
+					armingTeam = entry.getKey();
 					break;
 				}
 			}
@@ -117,17 +143,21 @@ public class Bomb
 		Component[] finalLines = lines.toArray(new Component[0]);
 		this.hologram.setText(finalLines);
 
-		if(arm) {
+		if(armingTeam != null) {
 			currentArmers.clear();
 			if(this.isArmed())
-				this.disarm();
+				this.disarm(armingTeam);
 			else
-				this.arm();
+				this.arm(armingTeam);
 		}
 	}
 
 	public boolean isArmed() {
 		return this.armed;
+	}
+
+	public int getArmedTime() {
+		return this.armedTime;
 	}
 
 	private TeamArmInfo getClickers(TeamArenaTeam team) {
@@ -136,6 +166,14 @@ public class Bomb
 
 	public TeamArenaTeam getTeam() {
 		return this.owningTeam;
+	}
+
+	public TeamArenaTeam getArmingTeam() {
+		return this.armingTeam;
+	}
+
+	public TNTPrimed getTNT() {
+		return this.tnt;
 	}
 
 	public void kill() {

@@ -729,8 +729,7 @@ public abstract class TeamArena
 		}
 	}
 
-	public void onInteractEntity(PlayerInteractEntityEvent event) {
-	}
+	public void onInteractEntity(PlayerInteractEntityEvent event) {}
 
 	public void onPlaceBlock(BlockPlaceEvent event) {}
 

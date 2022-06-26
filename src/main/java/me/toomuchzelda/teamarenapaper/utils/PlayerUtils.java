@@ -103,6 +103,22 @@ public class PlayerUtils {
 	}
 
 	/**
+	 * Send a title to all players, respecting their RECEIVE_GAME_TITLES preference.
+	 * Method for convenience.
+	 * @param title The title.
+	 */
+	public static void sendOptionalTitle(Component title, Component subtitle, int fadeInTicks, int stayTicks,
+										 int fadeOutTicks) {
+		var iter = Main.getPlayersIter();
+		while(iter.hasNext()) {
+			var entry = iter.next();
+			if(entry.getValue().getPreference(Preferences.RECEIVE_GAME_TITLES)) {
+				PlayerUtils.sendTitle(entry.getKey(), title, subtitle, fadeInTicks, stayTicks, fadeOutTicks);
+			}
+		}
+	}
+
+	/**
 	 * untested
 	 * @param player
 	 * @return
