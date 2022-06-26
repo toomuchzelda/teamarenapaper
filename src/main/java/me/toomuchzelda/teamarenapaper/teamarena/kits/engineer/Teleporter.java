@@ -16,19 +16,26 @@ import org.bukkit.block.BlockState;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.BoundingBox;
+import org.jetbrains.annotations.Nullable;
+
 
 public class Teleporter extends Building {
 	public static final int TELEPORT_COOLDOWN = 30;
 
 	int lastUsedTick;
+	@Nullable
 	Block linkedTeleporter;
 	BlockState originalBlockState;
 	BoundingBox hitBox;
 
+	private static final ItemStack ICON = new ItemStack(Material.HONEYCOMB_BLOCK);
+
 	public Teleporter(Player player, Location loc) {
 		super(player, loc);
 		setName("Teleporter");
+		setIcon(ICON);
 		Block block = loc.getBlock();
 		hitBox = BoundingBox.of(block.getRelative(-1, 1, -1), block.getRelative(1, 2, 1));
 	}
@@ -36,10 +43,6 @@ public class Teleporter extends Building {
 	@Override
 	protected Location getHologramLocation() {
 		return getLocation().add(0.5, 1.5, 0.5);
-	}
-
-	public BlockState getOriginalBlockState() {
-		return this.originalBlockState;
 	}
 
 	public int getLastUsedTick() {
@@ -54,10 +57,11 @@ public class Teleporter extends Building {
 		return TeamArena.getGameTick() - lastUsedTick;
 	}
 
-	public boolean isOnCooldown() {
-		return TeamArena.getGameTick() - lastUsedTick <= TELEPORT_COOLDOWN;
+	public boolean isReady() {
+		return TeamArena.getGameTick() - lastUsedTick > TELEPORT_COOLDOWN;
 	}
 
+	@Nullable
 	public Block getLinkedTeleporter() {
 		return linkedTeleporter;
 	}
@@ -132,10 +136,8 @@ public class Teleporter extends Building {
 
 		//Allies and spies disguised as allies can use
 		//User must be sneaking and be on top of the teleporter block
-		return (!Main.getGame().canAttack(player, player) ||
-						PlayerUtils.isDisguisedAsAlly(player, player)) &&
-				player.isSneaking() &&
-				player.getLocation().getY() - 1 == location.getY();
+		return player.isSneaking() && player.getLocation().getY() - 1 == location.getY() &&
+			(!Main.getGame().canAttack(player, player) || PlayerUtils.isDisguisedAsAlly(player, player));
 	}
 
 	static final Component NOT_CONNECTED = Component.text("Not Connected", NamedTextColor.GRAY);
@@ -150,13 +152,13 @@ public class Teleporter extends Building {
 
 		Component hologramText;
 		if (linkedBuilding instanceof Teleporter other) { // has link
-
 			// update hologram
-			if (!other.isOnCooldown()) {
+			if (isReady() && other.isReady()) {
 				hologramText = Component.text("Teleport Ready");
 				// teleport eligible entities
-				location.getWorld().getNearbyEntities(hitBox, this::checkCanTeleport)
-						.forEach(entity -> teleport((Player) entity, other));
+				var nearbyEntities = location.getWorld().getNearbyEntities(hitBox, this::checkCanTeleport);
+				if (nearbyEntities.size() != 0)
+					teleport((Player) nearbyEntities.iterator().next(), other);
 			} else {
 				long percCD = Math.round(100d * (double) other.getRemainingCD() / TELEPORT_COOLDOWN);
 				hologramText = Component.text("Recharging... " + percCD + "%");
@@ -169,14 +171,16 @@ public class Teleporter extends Building {
 
 	public void teleport(Player player, Teleporter destination) {
 		// offset the destination relative to player's location on the teleporter
-		Location actualDestination = player.getLocation().subtract(location).add(destination.getLocation());
+		Location actualDestination = player.getLocation().subtract(location).add(destination.location);
 		player.teleport(actualDestination);
 
 		int currentTick = TeamArena.getGameTick();
 		setLastUsedTick(currentTick);
 		destination.setLastUsedTick(currentTick);
 
-		owner.getWorld().playSound(location, Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 1.0f);
+		var world = owner.getWorld();
+		world.playSound(location, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
+		world.playSound(destination.location, Sound.ENTITY_ENDERMAN_TELEPORT, 1, 1);
 	}
 
 	@Override

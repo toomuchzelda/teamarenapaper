@@ -41,15 +41,8 @@ public class BuildingInventory implements InventoryProvider {
 		var playerLocation = player.getLocation();
 		int slot = 0;
 		for (Building building : BuildingManager.getAllPlayerBuildings(player)) {
-			var material = Material.BARRIER;
-			if (building instanceof Sentry) {
-				material = Material.BOW;
-			} else if (building instanceof Teleporter) {
-				material = Material.HONEYCOMB_BLOCK;
-			}
-
 			double distance = playerLocation.distance(building.getLocation());
-			var itemStack = ItemBuilder.of(material)
+			var itemStack = ItemBuilder.from(building.getIcon())
 					.displayName(Component.text(building.name, NamedTextColor.BLUE))
 					.lore(Component.text(
 							TextUtils.TWO_DECIMAL_POINT.format(distance) + " blocks away", NamedTextColor.WHITE

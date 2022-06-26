@@ -20,15 +20,22 @@ public final class BuildingManager {
 
 	}
 
-	public static final Map<BlockCoords, Building> buildings = new LinkedHashMap<>();
-	public static final Map<Player, Map<Class<? extends Building>, List<Building>>> playerBuildings = new HashMap<>();
+	private static final Map<BlockCoords, Building> buildings = new LinkedHashMap<>();
+	private static final Map<Player, Map<Class<? extends Building>, List<Building>>> playerBuildings = new HashMap<>();
 
 	public static void init() {
 
 	}
 
 	public static void tick() {
-		buildings.values().forEach(Building::onTick);
+		List<Building> staleBuildings = new ArrayList<>();
+		buildings.values().forEach(building -> {
+			if (building.invalid)
+				staleBuildings.add(building);
+			else
+				building.onTick();
+		});
+		staleBuildings.forEach(BuildingManager::destroyBuilding);
 	}
 
 	public static void cleanUp() {
@@ -67,6 +74,14 @@ public final class BuildingManager {
 		playerBuildings.get(building.owner)
 				.get(building.getClass())
 				.remove(building);
+	}
+
+	/**
+	 * Returns an unmodifiable list of all buildings currently managed.
+	 */
+	@NotNull
+	public static Collection<Building> getAllBuildings() {
+		return Collections.unmodifiableCollection(buildings.values());
 	}
 
 	/**

@@ -17,13 +17,11 @@ import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
-import org.bukkit.Color;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Particle;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Skeleton;
 import org.bukkit.event.Event;
@@ -33,6 +31,7 @@ import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.scoreboard.Team;
+import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
@@ -147,10 +146,9 @@ public class KitEngineer extends Kit {
 
 	public static class EngineerAbility extends Ability {
 
-		public static final Map<Player, LivingEntity> activePlayerProjections = new HashMap<>();
+		public static final Map<Player, Mob> activePlayerProjections = new HashMap<>();
 		@Deprecated // temporary API
 		public static final Map<LivingEntity, Sentry> sentryEntityToSentryMap = new HashMap<>();
-		public static final int TP_CD = 30;
 		//SENTRY_CD should be 300, it may be altered for testing purposes
 		public static final int SENTRY_CD = 300;
 		public static final int SENTRY_PLACEMENT_RANGE = 3;
@@ -161,9 +159,6 @@ public class KitEngineer extends Kit {
 		@Override
 		public void registerAbility() {
 			//Cleaning up is done in registerAbility so structures remain after game ends
-			BuildingManager.buildings.values().forEach(Building::onDestroy);
-			BuildingManager.buildings.clear();
-			BuildingManager.playerBuildings.clear();
 			activePlayerProjections.clear();
 			sentryEntityToSentryMap.clear();
 		}
@@ -198,7 +193,6 @@ public class KitEngineer extends Kit {
 				return;
 
 			Player player = event.getPlayer();
-			PlayerInventory inv = player.getInventory();
 			ItemStack item = event.getItem();
 			Material mat = event.getMaterial();
 			Block block = event.getClickedBlock();
@@ -206,6 +200,7 @@ public class KitEngineer extends Kit {
 
 			// will be uncancelled later if not handled
 			event.setUseItemInHand(Event.Result.DENY);
+			event.setUseInteractedBlock(Event.Result.DENY);
 			if (mat == Material.QUARTZ) {
 				// Creating / Destroying Teleporters
 				// validate placement first
@@ -261,10 +256,10 @@ public class KitEngineer extends Kit {
 			} else if (mat == Material.BOOK) {
 				// Destruction PDA
 				Inventories.openInventory(player, new BuildingInventory());
-
 			} else {
 				// undo cancelling if not handled
 				event.setUseItemInHand(Event.Result.DEFAULT);
+				event.setUseInteractedBlock(Event.Result.DEFAULT);
 			}
 
 		}
@@ -273,7 +268,7 @@ public class KitEngineer extends Kit {
 		public void createSentry(Player player, ItemStack currItem) {
 			PlayerInventory inv = player.getInventory();
 			boolean isMainHand = inv.getItemInMainHand().equals(currItem);
-			LivingEntity projection = activePlayerProjections.get(player);
+			Mob projection = activePlayerProjections.get(player);
 			Sentry sentry = new Sentry(player, projection);
 			BuildingManager.placeBuilding(sentry);
 
@@ -282,17 +277,7 @@ public class KitEngineer extends Kit {
 			Main.getPlayerInfo(player).getMetadataViewer().removeViewedValues(projection);
 			player.setCooldown(Material.CHEST_MINECART, SENTRY_CD);
 
-			if (isMainHand) {
-				inv.setItemInMainHand(currItem.subtract());
-				if (!inv.contains(WRANGLER)) {
-					inv.setItemInMainHand(WRANGLER);
-				}
-			} else {
-				inv.setItemInOffHand(currItem.subtract());
-				if (!inv.contains(WRANGLER)) {
-					inv.setItemInOffHand(WRANGLER);
-				}
-			}
+			toggleWranglerItem(player, true);
 		}
 
 		//Destroys sentry + Handles static hashmaps + Inventory
@@ -300,29 +285,31 @@ public class KitEngineer extends Kit {
 			BuildingManager.destroyBuilding(sentry);
 			sentryEntityToSentryMap.remove(sentry.sentry);
 
-			PlayerInventory inv = player.getInventory();
-
-			if (BuildingManager.getPlayerBuildings(player, Sentry.class).isEmpty()) {
-				//No more sentries are active, so wrangler can now be replaced
-				if (inv.getItemInOffHand().equals(WRANGLER)) {
-					//Must make seperate case for when sentry is in offhand
-					inv.setItemInOffHand(SENTRY);
-				} else {
-					int wranglerSlot = inv.first(WRANGLER);
-					if (wranglerSlot != -1) {
-						//wrangler found, so replace it with sentry
-						inv.setItem(wranglerSlot, SENTRY);
-					}
-				}
-			} else {
-				//Active sentries still exist, so do not replace wrangler.
-				inv.addItem(SENTRY);
-			}
+			toggleWranglerItem(player, false);
 		}
 
-		@Override
-		public void onTick() {
-			BuildingManager.buildings.values().forEach(Building::onTick);
+		public void toggleWranglerItem(Player player, boolean show) {
+			PlayerInventory inventory = player.getInventory();
+			boolean hasActiveSentries = BuildingManager.getPlayerBuildings(player, Sentry.class).size() != 0;
+			boolean hasSentryItem = false;
+			for (var iterator = inventory.iterator(); iterator.hasNext(); ) {
+				var stack = iterator.next();
+				if (stack.isSimilar(SENTRY)) {
+					hasSentryItem = true;
+					if (show) { // show wrangler item, replace
+						iterator.set(WRANGLER);
+					}
+				} else if (stack.isSimilar(WRANGLER)) {
+					if (!show && !hasActiveSentries) { // only replace when no active sentries exist
+						iterator.set(SENTRY);
+					}
+				}
+			}
+
+			if (!show && hasActiveSentries && !hasSentryItem) {
+				// only add item if not already there
+				inventory.addItem(SENTRY);
+			}
 		}
 
 		@Override
@@ -346,7 +333,7 @@ public class KitEngineer extends Kit {
 					!player.hasCooldown(Material.CHEST_MINECART)) {
 				LivingEntity projection = activePlayerProjections.get(player);
 				//Y Coordinate is lowered so the projection doesn't obstruct the Engineer's view
-				Location playerLoc = player.getEyeLocation().clone().add(0, -.8, 0);
+				Location playerLoc = player.getEyeLocation().clone().add(0, -0.8, 0);
 				Location projPos = projectSentry(playerLoc, player);
 				projection.teleport(projPos);
 
@@ -358,84 +345,33 @@ public class KitEngineer extends Kit {
 				}
 			}
 
-			//Sentry behavior is handled in Sentry class
-			var toRemove = new ArrayList<Sentry>();
-			BuildingManager.getPlayerBuildings(player, Sentry.class).forEach(sentry -> {
-				if (sentry.isExpired() || sentry.isDestroyed()) {
-					toRemove.add(sentry);
-				}
-			});
-			toRemove.forEach(sentry -> destroySentry(player, sentry));
-
 			//Creating Wrangler "laser beam" and manipulating sentry direction
 			if (PlayerUtils.isHolding(player, WRANGLER)) {
 				wranglerProjection(player);
 			}
 
 			//Extra check to ensure wrangler is replaced if there are no active sentries
-			if (player.getInventory().getItemInOffHand().equals(WRANGLER) ||
-					player.getInventory().contains(WRANGLER) &&
-							BuildingManager.getPlayerBuildings(player, Sentry.class).isEmpty()) {
-
-				PlayerInventory inv = player.getInventory();
-				if (inv.getItemInOffHand().equals(WRANGLER)) {
-					//Must make seperate case for when sentry is in offhand
-					inv.setItemInOffHand(SENTRY);
-				} else {
-					int wranglerSlot = inv.first(WRANGLER);
-					if (wranglerSlot != -1) {
-						//wrangler found, so replace it with sentry
-						inv.setItem(wranglerSlot, SENTRY);
-					}
-				}
-			}
+			toggleWranglerItem(player, false);
 		}
 
 		public void wranglerProjection(Player player) {
-			Color teamColor = Main.getPlayerInfo(player).team.getColour();
-			float currPitch = player.getLocation().getPitch();
-			float currYaw = player.getLocation().getYaw();
+			Location playerTarget = findBlock(player.getEyeLocation(), 100);
 
 			BuildingManager.getPlayerBuildings(player, Sentry.class).stream()
 					//First remove sentries that are currently starting up
 					.filter(sentry -> sentry.currState != Sentry.State.STARTUP)
 					//Calculate projected path for each sentry and make them look at that spot
-					.forEach(
-							sentry -> {
-								sentry.currState = Sentry.State.WRANGLED;
-
-								//Making sentry look at the same block as player
-								Location terminatingPoint = findBlock(player.getEyeLocation(), 100);
-								Location initLoc = sentry.sentry.getEyeLocation().clone();
-								//sentryLoc is for calculating the beam, sentryPosLoc is for altering pitch + yaw of sentry itself
-								Location sentryLoc = sentry.sentry.getEyeLocation().clone();
-								Location sentryPosLoc = sentry.sentry.getLocation().clone();
-								Vector sentryToTermDir = terminatingPoint.subtract(sentryLoc).toVector().normalize();
-								sentryPosLoc.setDirection(sentryToTermDir);
-								sentry.sentry.teleport(sentryPosLoc);
-
-								//Creating particle beam
-								Vector inc = sentryToTermDir.multiply(0.5);
-								Block currBlock = sentryLoc.getBlock();
-								Material blockType = currBlock.getType();
-
-								while ((blockType == Material.AIR || currBlock.isLiquid() || !currBlock.isCollidable()) &&
-										initLoc.distanceSquared(sentryLoc) < Math.pow(100, 2)) {
-									sentryLoc.add(inc);
-									currBlock = sentryLoc.getBlock();
-									blockType = currBlock.getType();
-									player.getWorld().spawnParticle(Particle.REDSTONE,
-											sentryLoc, 1, 0, 0, 0,
-											new Particle.DustOptions(teamColor, 0.7f));
-								}
-							}
-					);
+					.forEach(sentry -> {
+						sentry.currState = Sentry.State.WRANGLED;
+						sentry.forceTarget(playerTarget);
+					});
 		}
 
 		public boolean isValidProjection(Location projPos) {
-			return !projPos.clone().add(0, 2, 0).getBlock().isCollidable() &&
-					!projPos.clone().add(0, 1, 0).getBlock().isCollidable() &&
-					projPos.clone().add(0, -0.10, 0).getBlock().isCollidable();
+			Block baseBlock = projPos.clone().add(0, -0.1, 0).getBlock();
+			return baseBlock.getRelative(0, 2, 0).isReplaceable() &&
+					baseBlock.getRelative(0, 1, 0).isReplaceable() &&
+					baseBlock.isSolid();
 		}
 
 		public void createProjection(Player player) {
@@ -469,24 +405,14 @@ public class KitEngineer extends Kit {
 		}
 
 		//From entity's eyes, find the location in their line of sight that is within range
-		public Location findBlock(Location loc, int range) {
-			//loc is the eye location of the entity
-			Location initLoc = loc.clone();
-			Vector direction = loc.getDirection().clone();
-			Location distance;
-			Vector increment = direction.clone().multiply(0.05);
-			Location projLoc = initLoc.clone();
-			Block currBlock = loc.getBlock();
-			Material blockType = currBlock.getType();
-			while ((blockType == Material.AIR || currBlock.isLiquid() || !currBlock.isCollidable()) &&
-					initLoc.distanceSquared(projLoc) < Math.pow(range, 2)
-					&& !isValidProjection(projLoc)) {
-				projLoc.add(increment);
-				currBlock = projLoc.getBlock();
-				blockType = currBlock.getType();
+		public Location findBlock(Location loc, double range) {
+			var world = loc.getWorld();
+			RayTraceResult rayTraceResult = world.rayTraceBlocks(loc, loc.getDirection(), range, FluidCollisionMode.NEVER);
+			if (rayTraceResult == null) {
+				return loc.clone().add(loc.getDirection().multiply(range));
+			} else {
+				return rayTraceResult.getHitPosition().toLocation(world);
 			}
-			distance = projLoc.clone();
-			return distance;
 		}
 
 		public Location projectSentry(Location loc, Player player) {
