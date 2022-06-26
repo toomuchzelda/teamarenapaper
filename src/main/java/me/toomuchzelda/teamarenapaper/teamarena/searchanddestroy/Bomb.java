@@ -22,7 +22,7 @@ public class Bomb
 	//number of ticks to keep a player 'arming' since their last interaction with the tnt block.
 	//needed because: 1. holding right click only sends clicks 5 times/second
 	// 2. lag can interrupt the receiving of right click packets which may interrupt arming which is undesirable.
-	public static final int VALID_TICKS_SINCE_LAST_CLICK = 15;
+	public static final int VALID_TICKS_SINCE_LAST_CLICK = 20;
 	public static final String PROGRESS_BAR_STRING = "█".repeat(10);
 
 	private final TeamArenaTeam owningTeam;
@@ -50,7 +50,7 @@ public class Bomb
 
 	public void addClicker(TeamArenaTeam clickersTeam, Player clicker, int clickTime, float power) {
 		TeamArmInfo teamClickers = getClickers(clickersTeam);
-		Bukkit.broadcastMessage("power: " + power);
+		//Bukkit.broadcastMessage("power: " + power);
 		teamClickers.currentlyClicking.put(clicker, new PlayerArmInfo(clickTime, power));
 	}
 
@@ -100,8 +100,8 @@ public class Bomb
 				//if there's any arming progress display the bar
 				if(totalProgress > 0f) {
 					TextColor teamColor = entry.getKey().getRGBTextColor();
-					Component progressBar = TextUtils.getProgressText(PROGRESS_BAR_STRING, NamedTextColor.DARK_RED, teamColor,
-							teamColor, totalProgress);
+					Component progressBar = TextUtils.getProgressText(PROGRESS_BAR_STRING, NamedTextColor.DARK_RED, NamedTextColor.DARK_RED,
+							teamColor, totalProgress + -0.1f);
 					lines.add(i++,  progressBar);
 				}
 
@@ -164,5 +164,9 @@ public class Bomb
 
 			this.currentlyClicking = new LinkedHashMap<>();
 		}
+	}
+
+	public String toString() {
+		return owningTeam.getName() + ' ' + spawnLoc.toString();
 	}
 }

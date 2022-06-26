@@ -133,10 +133,9 @@ public class SearchAndDestroy extends TeamArena
 		Main.logger().info("Custom Info: ");
 		Main.logger().info(customFlags.toString());
 
+		this.teamBombs = new HashMap<>(customFlags.size());
+		this.bombPositions = new HashMap<>();
 		for (Map.Entry<String, Object> entry : customFlags.entrySet()) {
-			this.teamBombs = new HashMap<>(customFlags.size());
-			this.bombPositions = new HashMap<>();
-
 			if (entry.getKey().equalsIgnoreCase("Random Base")) {
 				try {
 					randomBases = (boolean) entry.getValue();
@@ -156,6 +155,8 @@ public class SearchAndDestroy extends TeamArena
 					BlockVector blockVector = BlockUtils.parseCoordsToVec(bombCoords, 0, 0, 0).toBlockVector();
 					Bomb bomb = new Bomb(team, blockVector.toLocation(this.gameWorld));
 					bombs.add(bomb);
+
+					Main.logger().info("Adding " + bomb.toString());
 
 					if(bombPositions.put(blockVector, bomb) != null) {
 						throw new IllegalArgumentException("Two bombs are in the same position! Check the map's config.yml");
