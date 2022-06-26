@@ -9,6 +9,7 @@ import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
@@ -16,9 +17,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.engineer.Building;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.engineer.KitEngineer;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.engineer.Teleporter;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.PreferenceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
@@ -346,55 +344,14 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void blockBreak(BlockBreakEvent event) {
+		//Handling breaking teleporter blocks
+		if(Main.getGame() != null && Main.getGame().getGameState() == LIVE){
+			BuildingManager.EventListener.onBlockBreak(event);
+		}
+
 		if((Main.getGame() != null && Main.getGame().getGameState() != LIVE &&
 				!BREAKABLE_BLOCKS.containsKey(event.getBlock().getType())) || event.getPlayer().getGameMode() != GameMode.CREATIVE) {
 			event.setCancelled(true);
-		}
-
-		//Handling breaking teleporter blocks
-		if(Main.getGame() != null && Main.getGame().getGameState() == LIVE &&
-				event.getBlock().getType() == Material.HONEYCOMB_BLOCK){
-
-			Location blockLoc = event.getBlock().getLocation().clone();
-			Player breaker = event.getPlayer();
-
-			if(KitEngineer.EngineerAbility.findDuplicateAllTele(blockLoc) != null){
-				Teleporter tele = KitEngineer.EngineerAbility.findDuplicateAllTele(blockLoc);
-				TextColor teamColorText = Main.getPlayerInfo(tele.owner).team.getRGBTextColor();
-				TextColor breakerColorText = Main.getPlayerInfo(breaker).team.getRGBTextColor();
-
-				//Actual breaking of the block is handled by destroy method
-				event.setCancelled(true);
-
-				//Success: Breaker is an enemy or is the owner of the teleporter
-				if(Main.getGame().canAttack(tele.owner, breaker) ||
-					tele.owner.equals(breaker)){
-					List<Building> buildings = KitEngineer.EngineerAbility.ACTIVE_BUILDINGS.get(tele.owner);
-					List<Teleporter> teleporters = KitEngineer.EngineerAbility.ACTIVE_TELEPORTERS.get(tele.owner);
-					tele.destroy();
-					buildings.remove(tele);
-					teleporters.remove(tele);
-
-					//If an enemy breaks tele, send owner a message
-					if(Main.getGame().canAttack(tele.owner, breaker)){
-						Component breakerName = Component.text(breaker.getName()).color(breakerColorText);
-						tele.owner.sendMessage((breakerName)
-								.append(Component.text(" broke your Teleporter!").color(TextColor.color(255,255,255))));
-					}
-				}
-				//Else, if a teammate tries to break your teleporter
-				else if(!Main.getGame().canAttack(tele.owner, breaker)){
-					Component ownerName = Component.text(tele.owner.getName() + "'s").color(teamColorText);
-					breaker.sendMessage(Component.text("This is ")
-							.append(ownerName)
-							.append(Component.text(" Teleporter!")));
-				}
-			}
-			else{
-				if(breaker.getGameMode() != GameMode.CREATIVE){
-					event.setCancelled(true);
-				}
-			}
 		}
 	}
 

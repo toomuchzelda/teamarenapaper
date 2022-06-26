@@ -6,6 +6,7 @@ import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.inventory.KitInventory;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
@@ -428,6 +429,8 @@ public abstract class TeamArena
 	}
 
 	public void liveTick() {
+		BuildingManager.tick();
+
 		//checking team states (win/lose) done in liveTick() per-game
 
 		//process players waiting to respawn if a respawning game
@@ -968,6 +971,9 @@ public abstract class TeamArena
 		}
 		// remove map
 		miniMap.removeMapView();
+
+		BuildingManager.cleanUp();
+
 		setGameState(GameState.DEAD);
 	}
 

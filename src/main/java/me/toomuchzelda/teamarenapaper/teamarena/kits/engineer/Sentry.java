@@ -3,9 +3,9 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.engineer;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.building.Building;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
-import me.toomuchzelda.teamarenapaper.utils.RealHologram;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Color;
 import org.bukkit.FluidCollisionMode;
@@ -48,18 +48,17 @@ public class Sentry extends Building {
 
 	public Sentry(Player player, LivingEntity sentry) {
 		super(player, sentry.getLocation());
-		this.name = "Sentry";
-		this.type = BuildingType.SENTRY;
+		setName("Sentry");
 		this.currState = State.STARTUP;
 		this.sentry = sentry;
-		this.initYaw = this.loc.getYaw();
+		this.initYaw = this.location.getYaw();
 		this.initTick = TeamArena.getGameTick();
 		this.creationTick = TeamArena.getGameTick() + SENTRY_STARTUP_TIME;
 		this.isDead = false;
-		this.holo = new RealHologram(this.loc.clone().add(0, 2.0, 0), this.holoText);
 
-		Color teamColor = Main.getPlayerInfo(player).team.getColour();
-		this.setText(Component.text(player.getName() + "'s Sentry").color(teamColorText));
+		var playerTeam = Main.getPlayerInfo(player).team;
+		Color teamColor = playerTeam.getColour();
+		this.setText(playerTeam.colourWord(player.getName() + "'s Sentry"));
 
 		//Changing properties from Projection state to Active state
 
@@ -81,6 +80,11 @@ public class Sentry extends Building {
 		sentry.getEquipment().setItemInMainHand(sentryBow, true);
 
 		//player.getWorld().playSound(sentry, Sound.BLOCK_ANVIL_USE, 1.0f, 0.8f);
+	}
+
+	@Override
+	protected Location getHologramLocation() {
+		return getLocation().add(0, 2, 0);
 	}
 
 	public boolean isDestroyed() {
@@ -220,8 +224,7 @@ public class Sentry extends Building {
 		int elapsedTick = TeamArena.getGameTick() - this.initTick;
 		long percCD = Math.round(100 * (double) (elapsedTick) / SENTRY_STARTUP_TIME);
 		EntityEquipment equipment = sentry.getEquipment();
-		holoText = Component.text("Building... " + percCD + "%");
-		this.setText(this.holoText);
+		this.setText(Component.text("Building... " + percCD + "%"));
 
 		if (elapsedTick < SENTRY_STARTUP_TIME / 4.0) {
 			if (equipment.getBoots().getType() == Material.AIR) {
@@ -241,8 +244,8 @@ public class Sentry extends Building {
 			}
 		} else {
 			this.currState = State.NEUTRAL;
-			Color teamColor = Main.getPlayerInfo(owner).team.getColour();
-			this.setText(Component.text(owner.getName() + "'s Sentry").color(this.teamColorText));
+			var ownerTeam = Main.getPlayerInfo(owner).team;
+			this.setText(ownerTeam.colourWord(owner.getName() + "'s Sentry"));
 		}
 	}
 
@@ -257,9 +260,10 @@ public class Sentry extends Building {
 		sentryFire.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
 	}
 
-	public void tick() {
+	@Override
+	public void onTick() {
 		if (sentry.isDead()) {
-			this.destroy();
+			this.onDestroy();
 			this.isDead = true;
 		}
 
@@ -300,9 +304,10 @@ public class Sentry extends Building {
 	}
 
 	@Override
-	public void destroy() {
+	public void onDestroy() {
+		super.onDestroy();
+
 		sentry.remove();
-		holo.remove();
 		this.isDead = true;
 	}
 }
