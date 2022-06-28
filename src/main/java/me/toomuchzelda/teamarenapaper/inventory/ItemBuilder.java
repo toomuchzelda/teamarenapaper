@@ -6,6 +6,7 @@ import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Color;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -97,4 +98,12 @@ public final class ItemBuilder {
         stack.setItemMeta(meta);
         return stack;
     }
+
+	public ClickableItem toClickableItem(Consumer<InventoryClickEvent> handler) {
+		return ClickableItem.of(build(), handler);
+	}
+
+	public ClickableItem toEmptyClickableItem() {
+		return ClickableItem.empty(build());
+	}
 }
