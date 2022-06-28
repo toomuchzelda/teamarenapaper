@@ -28,6 +28,7 @@ public class KitInventory extends TabInventory<KitInventory.KitCategory> {
 	private final ArrayList<Kit> kits;
 
 	public KitInventory(Collection<? extends Kit> kits) {
+		super(null);
 		setClickSound(Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.BLOCKS, 0.5f, 1);
 
 		this.kits = new ArrayList<>(kits);

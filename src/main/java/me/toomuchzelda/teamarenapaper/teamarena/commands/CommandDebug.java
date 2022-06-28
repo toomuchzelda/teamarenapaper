@@ -2,14 +2,19 @@ package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
+import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
+import me.toomuchzelda.teamarenapaper.inventory.TabInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
+import org.bukkit.Tag;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.MapPalette;
 import org.bukkit.map.MinecraftFont;
 import org.jetbrains.annotations.NotNull;
@@ -226,6 +231,13 @@ public class CommandDebug extends CustomCommand {
 		}
 
 		switch (args[0]) {
+			case "guitest" -> {
+				if (args.length < 2)
+					throw throwUsage("/debug guitest tab");
+				switch (args[1]) {
+					case "tab" -> Inventories.openInventory(player, new TabTest());
+				}
+			}
 			case "hide" -> {
 				for (Player viewer : Bukkit.getOnlinePlayers()) {
 					if (viewer.canSee(player)) {
@@ -273,5 +285,44 @@ public class CommandDebug extends CustomCommand {
 			};
 		}
 		return Collections.emptyList();
+	}
+
+	static class TabTest extends TabInventory<@NotNull Material> {
+		boolean extended = false;
+
+		TabTest() {
+			super(Material.BLACK_WOOL);
+		}
+
+		@Override
+		public Component getTitle(Player player) {
+			return Component.text("Tab test");
+		}
+
+		@Override
+		public int getRows() {
+			return 6;
+		}
+
+		@Override
+		public void init(Player player, InventoryAccessor inventory) {
+			showTabs(inventory, new ArrayList<>(Tag.WOOL.getValues()), highlightWhenSelected(ItemStack::new),
+					0, extended ? 3 : 7, true);
+
+			if (extended) {
+				for (int i = 4; i < 8; i++) {
+					inventory.set(i, new ItemStack(Material.CLOCK));
+				}
+			}
+
+			inventory.set(8, ItemBuilder.of(Material.PAPER)
+					.displayName(Component.text("Toggle ADVANCED options", NamedTextColor.YELLOW))
+					.toClickableItem(e -> {
+						extended = !extended;
+						inventory.invalidate();
+					}));
+
+			inventory.set(9, new ItemStack(getCurrentTab()));
+		}
 	}
 }

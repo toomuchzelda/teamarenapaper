@@ -51,11 +51,10 @@ public abstract class CustomCommand extends Command {
         }
         try {
 			run(sender, commandLabel, args);
-		} catch (IllegalArgumentException e) {
-			sender.sendMessage(Component.text(e.toString(), TextUtils.ERROR_RED));
 		} catch (CommandException e) {
 			sender.sendMessage(e.message);
         } catch (Throwable e) {
+			sender.sendMessage(Component.text("Internal error", TextUtils.ERROR_RED));
             Main.logger().severe("Command " + getClass().getSimpleName() + " finished execution exceptionally " +
                     "for input /" + commandLabel + " " + String.join(" ", args));
             e.printStackTrace();
