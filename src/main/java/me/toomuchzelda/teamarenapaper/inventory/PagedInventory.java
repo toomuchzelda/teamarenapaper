@@ -24,6 +24,11 @@ public abstract class PagedInventory implements InventoryProvider {
         return page;
     }
 
+	public void goToPage(int page, InventoryAccessor inventory) {
+		setPage(page);
+		inventory.invalidate();
+	}
+
     public int getMaxPage() {
         return maxPage;
     }
@@ -68,28 +73,21 @@ public abstract class PagedInventory implements InventoryProvider {
 
     public ItemStack getPageItem() {
         return ItemBuilder.of(Material.PAPER)
-                .displayName(Component.text(page + "/" + maxPage).color(NamedTextColor.WHITE)).build();
+                .displayName(Component.text(page + "/" + maxPage, NamedTextColor.WHITE)).build();
     }
 
+	private static final ItemStack NEXT_PAGE_ITEM = ItemBuilder.of(Material.ARROW)
+			.displayName(Component.text("Next page", NamedTextColor.YELLOW))
+			.build();
+	private static final ItemStack PREVIOUS_PAGE_ITEM = ItemBuilder.of(Material.ARROW)
+			.displayName(Component.text("Previous page", NamedTextColor.YELLOW))
+			.build();
+
     public ClickableItem getNextPageItem(InventoryAccessor inventory) {
-        return ClickableItem.of(ItemBuilder.of(Material.ARROW)
-                        .displayName(Component.text("Next page").color(NamedTextColor.YELLOW))
-                        .build(),
-                e -> {
-                    setPage(getPage() + 1);
-                    inventory.invalidate();
-                }
-        );
+        return ClickableItem.of(NEXT_PAGE_ITEM, e -> goToPage(getPage() + 1, inventory));
     }
 
     public ClickableItem getPreviousPageItem(InventoryAccessor inventory) {
-        return ClickableItem.of(ItemBuilder.of(Material.ARROW)
-                        .displayName(Component.text("Previous page").color(NamedTextColor.YELLOW))
-                        .build(),
-                e -> {
-                    setPage(getPage() - 1);
-                    inventory.invalidate();
-                }
-        );
+        return ClickableItem.of(PREVIOUS_PAGE_ITEM, e -> goToPage(getPage() - 1, inventory));
     }
 }

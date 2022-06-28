@@ -1359,6 +1359,7 @@ public abstract class TeamArena
 		RespawnInfo rinfo = respawnTimers.get(player);
 		if(rinfo != null) {
 			rinfo.interrupted = false;
+			player.getInventory().removeItem(respawnItem);
 		}
 	}
 
