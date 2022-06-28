@@ -18,6 +18,9 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+/**
+ * @author jacky
+ */
 @ParametersAreNonnullByDefault
 public abstract class TabInventory<T> extends PagedInventory {
 	private T currentTab;
@@ -97,7 +100,7 @@ public abstract class TabInventory<T> extends PagedInventory {
 		for (int i = 0; i < end - start; i++) {
 			ClickableItem item;
 			// page buttons if there is more than one page
-			if (showButtons && i == offset - 1) {
+			if (showButtons && i == offset) {
 				if (indexOffset != 0) { // if previous page available
 					item = ClickableItem.of(PREVIOUS_PAGE, e -> {
 						playSound(e);
@@ -107,7 +110,7 @@ public abstract class TabInventory<T> extends PagedInventory {
 				} else {
 					item = BORDER_ITEM;
 				}
-			} else if (showButtons && i == offset + sliceSize) {
+			} else if (showButtons && i == end - start - 1) {
 				if (indexOffset < tabs.size() - sliceSize) { // if next page available
 					item = ClickableItem.of(NEXT_PAGE, e -> {
 						playSound(e);
@@ -117,7 +120,7 @@ public abstract class TabInventory<T> extends PagedInventory {
 				} else {
 					item = BORDER_ITEM;
 				}
-			} else if (i >= offset && i < offset + sliceSize) {
+			} else if (i >= offset && i <= offset + sliceSize) {
 				if (!iterator.hasNext()) {
 					inventory.set(start + i, BORDER_ITEM);
 					continue;

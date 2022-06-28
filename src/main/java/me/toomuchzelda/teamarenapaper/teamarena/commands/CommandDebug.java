@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.commands;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
+import me.toomuchzelda.teamarenapaper.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.inventory.TabInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
@@ -233,10 +234,13 @@ public class CommandDebug extends CustomCommand {
 		switch (args[0]) {
 			case "guitest" -> {
 				if (args.length < 2)
-					throw throwUsage("/debug guitest tab");
-				switch (args[1]) {
-					case "tab" -> Inventories.openInventory(player, new TabTest());
-				}
+					throw throwUsage("/debug guitest <tab/spectate>");
+				var inventory = switch (args[1]) {
+					case "tab" -> new TabTest();
+					case "spectate" -> new SpectateInventory(null);
+					default -> throw throwUsage("/debug guitest <tab/spectate>");
+				};
+				Inventories.openInventory(player, inventory);
 			}
 			case "hide" -> {
 				for (Player viewer : Bukkit.getOnlinePlayers()) {
@@ -254,10 +258,11 @@ public class CommandDebug extends CustomCommand {
 	@Override
 	public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
 		if (args.length == 1) {
-			return Arrays.asList("hide", "gui", "game", "setrank", "setteam", "setgame", "setnextgame", "votetest", "draw");
+			return Arrays.asList("hide", "gui", "guitest", "game", "setrank", "setteam", "setgame", "setnextgame", "votetest", "draw");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");
+				case "guitest" -> Arrays.asList("tab", "spectate");
 				case "game" -> Arrays.asList("start", "ignorewinconditions", "sniperaccuracy");
 				case "setrank" -> Arrays.stream(PermissionLevel.values()).map(Enum::name).toList();
 				case "setteam" -> Arrays.stream(Main.getGame().getTeams())
