@@ -96,7 +96,7 @@ public abstract class TabInventory<T> extends PagedInventory {
 			sliceSize = tabs.size();
 		}
 		int offset = centered ? (maxTabs - sliceSize) / 2 : 0;
-		var iterator = tabs.listIterator(indexOffset);
+		var iterator = tabs.subList(indexOffset, Math.min(tabs.size(), indexOffset + sliceSize)).iterator();
 		for (int i = 0; i < end - start; i++) {
 			ClickableItem item;
 			// page buttons if there is more than one page
@@ -120,19 +120,17 @@ public abstract class TabInventory<T> extends PagedInventory {
 				} else {
 					item = BORDER_ITEM;
 				}
-			} else if (i >= offset && i <= offset + sliceSize) {
-				if (!iterator.hasNext()) {
-					inventory.set(start + i, BORDER_ITEM);
-					continue;
-				}
-				T tab = iterator.next();
-				boolean isTabSelected = Objects.equals(tab, currentTab);
-				item = ClickableItem.of(itemFunction.apply(tab, isTabSelected), e -> {
-					playSound(e);
-					goToTab(tab, inventory);
-				});
 			} else {
-				item = BORDER_ITEM;
+				if (i >= offset && iterator.hasNext()) {
+					T tab = iterator.next();
+					boolean isTabSelected = Objects.equals(tab, currentTab);
+					item = ClickableItem.of(itemFunction.apply(tab, isTabSelected), e -> {
+						playSound(e);
+						goToTab(tab, inventory);
+					});
+				} else {
+					item = BORDER_ITEM;
+				}
 			}
 
 			inventory.set(start + i, item);

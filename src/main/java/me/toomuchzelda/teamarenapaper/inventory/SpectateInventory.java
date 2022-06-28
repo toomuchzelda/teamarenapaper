@@ -113,7 +113,8 @@ public class SpectateInventory extends TabInventory<TeamArenaTeam> {
 			teams.add(priority);
 		Arrays.stream(gameTeams)
 				.filter(team -> team != priority) // the prioritized team will be already added
-				.sorted(Comparator.comparing(TeamArenaTeam::getSimpleName))
+				.sorted(Comparator.comparing(TeamArenaTeam::isAlive)
+						.thenComparing(TeamArenaTeam::getName))
 				.forEachOrdered(teams::add);
 
 		return teams;
@@ -168,7 +169,7 @@ public class SpectateInventory extends TabInventory<TeamArenaTeam> {
 			return Comparator.comparingDouble(player -> player.getLocation().distance(viewerLocation));
 		}, Component.text("their distance to you", NamedTextColor.WHITE)),
 		BY_KIT(ignored -> Comparator.comparing(player -> Main.getPlayerInfo(player).activeKit, Kit.COMPARATOR),
-				Component.text("their selected kit"));
+				Component.text("their selected kit", NamedTextColor.WHITE));
 
 		final Function<Player, Comparator<Player>> comparator;
 		final Component display;

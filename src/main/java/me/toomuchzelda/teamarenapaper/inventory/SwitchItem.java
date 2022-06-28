@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.inventory;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
@@ -69,7 +70,10 @@ public class SwitchItem<T> {
 			var newLoreList = loreList != null ? new ArrayList<>(loreList) : new ArrayList<Component>();
 			for (int i = 0; i < state.values.size(); i++) {
 				boolean isCurrentState = i == state.index;
-				newLoreList.add(lineFunction.apply(state.values.get(i), isCurrentState));
+				var lineComponent = lineFunction.apply(state.values.get(i), isCurrentState);
+				if (lineComponent.decoration(TextDecoration.ITALIC) == TextDecoration.State.NOT_SET)
+					lineComponent = lineComponent.decoration(TextDecoration.ITALIC, false);
+				newLoreList.add(lineComponent);
 			}
 			meta.lore(newLoreList);
 			stack.setItemMeta(meta);
