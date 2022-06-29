@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
@@ -24,6 +25,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.BlockVector;
+import org.intellij.lang.annotations.RegExp;
 
 import java.io.File;
 import java.util.*;
@@ -49,7 +51,9 @@ public class SearchAndDestroy extends TeamArena
 
 
 	//===========MESSAGE STUFF
+	@RegExp
 	public static final String BOMB_TEAM_KEY = "%bombTeam%";
+	@RegExp
 	public static final String ARMING_TEAM_KEY = "%armingTeam%";
 
 	public static final Component TEAM_ARMED_TEAM_MESSAGE;
@@ -57,6 +61,9 @@ public class SearchAndDestroy extends TeamArena
 
 	public static final Component TEAM_DEFUSED_MESSAGE = Component.text(BOMB_TEAM_KEY + " has just defused their bomb!", NamedTextColor.GOLD);
 	public static final Component TEAM_DEFUSED_TITLE = Component.text(BOMB_TEAM_KEY + " defused their bomb!", NamedTextColor.GOLD);
+
+	public static final Component TEAM_EXPLODED_MESSAGE;
+	public static final Component TEAM_EXPLODED_TITLE;
 	//===========MESSAGE STUFF
 
 	static {
@@ -75,6 +82,18 @@ public class SearchAndDestroy extends TeamArena
 		TEAM_ARMED_TEAM_TITLE = Component.text().append(
 				obfuscated,
 				Component.text(" " + ARMING_TEAM_KEY + " armed " + BOMB_TEAM_KEY + "'s bomb! ", NamedTextColor.GOLD),
+				obfuscated
+		).build();
+
+
+		TEAM_EXPLODED_MESSAGE = Component.text().append(
+				obfuscated,
+				Component.text(" " + BOMB_TEAM_KEY + "'s bomb has exploded! ", NamedTextColor.GOLD),
+				obfuscated
+		).build();
+		TEAM_EXPLODED_TITLE = Component.text().append(
+				obfuscated,
+				Component.text(" " + BOMB_TEAM_KEY + "'s bomb exploded! ", NamedTextColor.GOLD),
 				obfuscated
 		).build();
 	}
@@ -105,14 +124,20 @@ public class SearchAndDestroy extends TeamArena
 			//if armed now announce it and all
 			int armedTime = bomb.getArmedTime();
 			if(armedTime == currentTick) {
-				announceBombArmed(bomb);
+				announceBombEvent(bomb, BOMB_EVENT_ARMED);
 				//record the tnt block so can check it in entityInteract events
 				this.bombTNTs.put(bomb.getTNT(), bomb);
 			}
 			//just been disarmed, remove TNT from map
 			else if(armedTime == Bomb.JUST_BEEN_DISARMED) {
-				announceBombDisarmed(bomb);
+				announceBombEvent(bomb, BOMB_EVENT_DISARMED);
 				this.bombTNTs.remove(bomb.getTNT());
+			}
+			else if(armedTime == Bomb.JUST_EXPLODED) {
+				announceBombEvent(bomb, BOMB_EVENT_EXPLODED);
+				bomb.setGrave();
+				//leave it in the Map so we can cancel the DamageEvents from it
+				//this.bombTNTs.remove(bomb.getTNT());
 			}
 		}
 
@@ -153,13 +178,6 @@ public class SearchAndDestroy extends TeamArena
 						}
 					}
 				}
-				else {
-					//removed as right clicking on bomb TNT entity would trigger it.
-					/*final String key = "sndSpamFuseAirCooldown";
-					if(Main.getPlayerInfo(event.getPlayer()).messageHasCooldowned(key, SPAM_PERIOD)) {
-						event.getPlayer().sendMessage(Component.text("Use this on a bomb to arm or disarm it!", TextUtils.ERROR_RED));
-					}*/
-				}
 			}
 		}
 	}
@@ -193,6 +211,15 @@ public class SearchAndDestroy extends TeamArena
 	}
 
 	@Override
+	public void onDamage(DamageEvent event) {
+		super.onDamage(event);
+
+		if(event.getAttacker() instanceof TNTPrimed tnt && bombTNTs.containsKey(tnt)) {
+			event.setCancelled(true);
+		}
+	}
+
+	@Override
 	protected void givePlayerItems(Player player, PlayerInfo pinfo, boolean clear) {
 		//need to clear and give the fuse first to put it in 1st slot
 		player.getInventory().clear();
@@ -200,49 +227,56 @@ public class SearchAndDestroy extends TeamArena
 		super.givePlayerItems(player, pinfo, false);
 	}
 
-	public static void announceBombArmed(Bomb bomb) {
-		TeamArenaTeam armingTeam = bomb.getArmingTeam();
+	public static final byte BOMB_EVENT_ARMED = 0;
+	public static final byte BOMB_EVENT_DISARMED = 1;
+	public static final byte BOMB_EVENT_EXPLODED = 2;
 
-		final TextReplacementConfig bombTeamConfig = TextReplacementConfig.builder().match(BOMB_TEAM_KEY)
-				.replacement(bomb.getTeam().getComponentName()).build();
-		final TextReplacementConfig armingTeamConfig = TextReplacementConfig.builder().match(ARMING_TEAM_KEY)
-				.replacement(armingTeam.getComponentName()).build();
+	public static void announceBombEvent(Bomb bomb, byte bombEvent) {
+		final Component message;
+		final Component title;
+		//sounds to play and the pitches to play them at
+		final Sound[] sounds = new Sound[2]; // 0 = sound heard by bomb team, 1 = sound heard by others
+		final float[] pitches = new float[2];
+		final float volume = 99f;
+		final TextReplacementConfig bombTeamConfig;
 
-		Component message = TEAM_ARMED_TEAM_MESSAGE.replaceText(bombTeamConfig).replaceText(armingTeamConfig);
-		Component title = TEAM_ARMED_TEAM_TITLE.replaceText(bombTeamConfig).replaceText(armingTeamConfig);
+		if(bombEvent == BOMB_EVENT_ARMED) {
+			TeamArenaTeam armingTeam = bomb.getArmingTeam();
 
-		Bukkit.broadcast(message);
-		//play sounds and put title on screens
-		var iter = Main.getPlayersIter();
-		while(iter.hasNext()) {
-			var entry = iter.next();
-			Player receiver = entry.getKey();
-			PlayerInfo pinfo = entry.getValue();
-			if(pinfo.getPreference(Preferences.RECEIVE_GAME_TITLES)) {
-				PlayerUtils.sendTitle(receiver, Component.empty(), title, 10, 30, 10);
-			}
+			bombTeamConfig = TextReplacementConfig.builder().match(BOMB_TEAM_KEY).replacement(bomb.getTeam().getComponentName()).build();
+			final TextReplacementConfig armingTeamConfig = TextReplacementConfig.builder().match(ARMING_TEAM_KEY).replacement(armingTeam.getComponentName()).build();
 
-			Sound sound;
-			float pitch;
-			if(pinfo.team == bomb.getTeam()) {
-				sound = Sound.ENTITY_BLAZE_DEATH;
-				pitch = 0.5f;
-			}
-			else {
-				sound = Sound.ENTITY_LIGHTNING_BOLT_THUNDER;
-				pitch = 1.0f;
-			}
+			message = TEAM_ARMED_TEAM_MESSAGE.replaceText(bombTeamConfig).replaceText(armingTeamConfig);
+			title = TEAM_ARMED_TEAM_TITLE.replaceText(bombTeamConfig).replaceText(armingTeamConfig);
 
-			receiver.playSound(receiver.getLocation(), sound, SoundCategory.AMBIENT, 99f, pitch);
+			sounds[0] = Sound.ENTITY_BLAZE_DEATH;
+			sounds[1] = Sound.ENTITY_LIGHTNING_BOLT_THUNDER;
+			pitches[0] = 0.5f;
+			pitches[1] = 1f;
 		}
-	}
+		else if(bombEvent == BOMB_EVENT_DISARMED) {
+			bombTeamConfig = TextReplacementConfig.builder().match(BOMB_TEAM_KEY)
+					.replacement(bomb.getTeam().getComponentName()).build();
 
-	public static void announceBombDisarmed(Bomb bomb) {
-		final TextReplacementConfig bombTeamConfig = TextReplacementConfig.builder().match(BOMB_TEAM_KEY)
-				.replacement(bomb.getTeam().getComponentName()).build();
+			message = TEAM_DEFUSED_MESSAGE.replaceText(bombTeamConfig);
+			title = TEAM_DEFUSED_TITLE.replaceText(bombTeamConfig);
 
-		Component message = TEAM_DEFUSED_MESSAGE.replaceText(bombTeamConfig);
-		Component title = TEAM_DEFUSED_TITLE.replaceText(bombTeamConfig);
+			sounds[0] = Sound.ENTITY_AXOLOTL_SPLASH;
+			sounds[1] = Sound.BLOCK_BAMBOO_HIT;
+			pitches[0] = 1f;
+			pitches[1] = 0.5f;
+		}
+		else {
+			bombTeamConfig = TextReplacementConfig.builder().match(BOMB_TEAM_KEY)
+					.replacement(bomb.getTeam().getComponentName()).build();
+
+			message = TEAM_EXPLODED_MESSAGE.replaceText(bombTeamConfig);
+			title = TEAM_EXPLODED_TITLE.replaceText(bombTeamConfig);
+
+			sounds[0] = Sound.BLOCK_IRON_DOOR_CLOSE;
+			sounds[1] = null;
+			pitches[0] = 0.5f;
+		}
 
 		Bukkit.broadcast(message);
 		//play sounds and put title on screens
@@ -252,21 +286,19 @@ public class SearchAndDestroy extends TeamArena
 			Player receiver = entry.getKey();
 			PlayerInfo pinfo = entry.getValue();
 			if(pinfo.getPreference(Preferences.RECEIVE_GAME_TITLES)) {
-				PlayerUtils.sendTitle(receiver, Component.empty(), title, 10, 30, 10);
+				PlayerUtils.sendTitle(receiver, Component.empty(), title, 10, 40, 10);
 			}
 
-			Sound sound;
-			float pitch;
+			int idx;
 			if(pinfo.team == bomb.getTeam()) {
-				sound = Sound.ENTITY_AXOLOTL_SPLASH;
-				pitch = 1f;
+				idx = 0;
 			}
 			else {
-				sound = Sound.BLOCK_BAMBOO_BREAK;
-				pitch = 0.5f;
+				idx = 1;
 			}
 
-			receiver.playSound(receiver.getLocation(), sound, SoundCategory.AMBIENT, 99f, pitch);
+			if(sounds[idx] != null)
+				receiver.playSound(receiver.getLocation(), sounds[idx], SoundCategory.AMBIENT, volume, pitches[idx]);
 		}
 	}
 

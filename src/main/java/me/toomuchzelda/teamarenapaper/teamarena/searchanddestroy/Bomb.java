@@ -1,22 +1,25 @@
 package me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy;
 
+import me.toomuchzelda.teamarenapaper.teamarena.ExplosionManager;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.RealHologram;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
+import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class Bomb
 {
@@ -24,10 +27,14 @@ public class Bomb
 	//needed because: 1. holding right click only sends clicks 5 times/second
 	// 2. lag can interrupt the receiving of right click packets which may interrupt arming which is undesirable.
 	public static final int VALID_TICKS_SINCE_LAST_CLICK = 20;
+	public static final int BOMB_DETONATION_TIME = 60;// * 20;
 	public static final String PROGRESS_BAR_STRING = "█".repeat(10);
+	public static final int BOMB_CHARCOAL_RADIUS = 5;
+	public static final float BOMB_DESTROY_RADIUS = 10f;
 
 	public static final int JUST_BEEN_DISARMED = -2;
 	public static final int NULL_ARMED_TIME = -1;
+	public static final int JUST_EXPLODED = -3;
 
 	private final TeamArenaTeam owningTeam;
 	private final Location spawnLoc;
@@ -39,6 +46,7 @@ public class Bomb
 	private boolean armed = false;
 	private int armedTime;
 	private TeamArenaTeam armingTeam;
+	private byte explodeMode = BOMB_EXPLODE_CHARCOAL_MODE;
 
 	public Bomb(TeamArenaTeam team, Location spawnLoc) {
 		this.owningTeam = team;
@@ -67,7 +75,7 @@ public class Bomb
 		this.spawnLoc.getBlock().setType(Material.AIR);
 
 		this.tnt = spawnLoc.getWorld().spawn(spawnLoc, TNTPrimed.class);
-		tnt.setFuseTicks(Integer.MAX_VALUE);
+		tnt.setFuseTicks(BOMB_DETONATION_TIME - 5);
 		tnt.setVelocity(new Vector(0d, 0.4d, 0d));
 
 		this.armingTeam = armingTeam;
@@ -86,13 +94,37 @@ public class Bomb
 		this.armed = false;
 	}
 
+	public static final byte BOMB_EXPLODE_NOTHING_MODE = 0;
+	public static final byte BOMB_EXPLODE_DESTROY_MODE = 1;
+	public static final byte BOMB_EXPLODE_CHARCOAL_MODE = 2;
+
+	/**
+	 * @param bombExplodeMode
+	 */
+	public void detonate(byte bombExplodeMode) {
+		if(bombExplodeMode == BOMB_EXPLODE_DESTROY_MODE) {
+			ExplosionManager.EntityExplosionInfo exInfo = new ExplosionManager.EntityExplosionInfo(false, ExplosionManager.NO_FIRE,
+					10f, ExplosionManager.DEFAULT_FLOAT_VALUE, true, null);
+
+			ExplosionManager.setEntityInfo(this.tnt, exInfo);
+		}
+		else if (bombExplodeMode == BOMB_EXPLODE_CHARCOAL_MODE) {
+			this.charExplosion();
+		}
+
+		this.armedTime = JUST_EXPLODED;
+		this.armed = false;
+	}
+
 	public void tick() {
-		if(!this.isArmed() && this.armedTime == JUST_BEEN_DISARMED) {
+		if(!this.isArmed() && (this.armedTime == JUST_BEEN_DISARMED || this.armedTime == JUST_EXPLODED)) {
 			this.armedTime = NULL_ARMED_TIME;
 		}
 
-		ArrayList<Component> lines = new ArrayList<>(currentArmers.size() + 1);
-		lines.add(0, this.title);
+		ArrayList<Component> hologramLines = new ArrayList<>(currentArmers.size() + 1);
+
+		//tick current clickers and update the hologram
+		hologramLines.add(0, this.title);
 		int i = 1;
 		final int currentTime = TeamArena.getGameTick();
 		TeamArenaTeam armingTeam = null;
@@ -128,7 +160,7 @@ public class Bomb
 					TextColor teamColor = entry.getKey().getRGBTextColor();
 					Component progressBar = TextUtils.getProgressText(PROGRESS_BAR_STRING, NamedTextColor.DARK_RED, NamedTextColor.DARK_RED,
 							teamColor, totalProgress + -0.1f);
-					lines.add(i++,  progressBar);
+					hologramLines.add(i++,  progressBar);
 				}
 
 				//arm if done
@@ -140,9 +172,6 @@ public class Bomb
 			}
 		}
 
-		Component[] finalLines = lines.toArray(new Component[0]);
-		this.hologram.setText(finalLines);
-
 		if(armingTeam != null) {
 			currentArmers.clear();
 			if(this.isArmed())
@@ -150,6 +179,81 @@ public class Bomb
 			else
 				this.arm(armingTeam);
 		}
+
+		//process bomb countdown
+		if(this.isArmed()) {
+			int timeDiff = currentTime - this.armedTime;
+			if(timeDiff % 20 == 0) {
+				this.tnt.getWorld().playSound(tnt.getLocation(), Sound.ENTITY_CREEPER_DEATH, SoundCategory.AMBIENT, 0.8f, 1f);
+			}
+
+			timeDiff = BOMB_DETONATION_TIME - timeDiff;
+			timeDiff /= 20;
+			Component detonatingIn = Component.text().append(Component.text("Explodes in ", owningTeam.getRGBTextColor()))
+					.append(Component.text(timeDiff + "s", NamedTextColor.DARK_RED)).build();
+
+			hologramLines.set(0, detonatingIn);
+
+			if(timeDiff <= 0) {
+				this.detonate(this.explodeMode);
+			}
+		}
+
+		Component[] finalLines = hologramLines.toArray(new Component[0]);
+		this.hologram.setText(finalLines);
+	}
+
+	/**
+	 * Replace nearby blocks with coal and similarly coloured blocks.
+	 */
+	public void charExplosion() {
+		final int boxLength = BOMB_CHARCOAL_RADIUS * 2;
+		final double maxRadiusSqr = BOMB_CHARCOAL_RADIUS * BOMB_CHARCOAL_RADIUS;
+		final Location originalLoc = tnt.getLocation();
+
+		Location currentLoc = originalLoc.clone();
+		currentLoc.subtract(BOMB_CHARCOAL_RADIUS, BOMB_CHARCOAL_RADIUS, BOMB_CHARCOAL_RADIUS);
+		Location startLoc = currentLoc.clone();
+		//loop through a cube area, but only affect blocks in a sphere of sqrt(maxRadiusSqr) radius
+		for(int x = 0; x < boxLength; x++) {
+			for(int y = 0; y < boxLength; y++) {
+				for (int z = 0; z < boxLength; z++) {
+					Block block = currentLoc.getBlock();
+					if (!block.getType().isAir() && block.isSolid()) {
+						double distSqr = currentLoc.distanceSquared(originalLoc);
+						if (distSqr <= maxRadiusSqr) {
+							block.setType(getCharMaterial(block.getType()));
+						}
+					}
+					currentLoc.add(0d, 0d, 1d);
+				}
+				currentLoc.setZ(startLoc.getZ());
+				currentLoc.add(0d, 1d, 0d);
+			}
+			currentLoc.setY(startLoc.getY());
+			currentLoc.add(1d, 0d, 0d);
+		}
+	}
+
+	/**
+	 * Get a replacement Material to char a block
+	 */
+	public static Material getCharMaterial(Material block) {
+		if(block.isOccluding())
+			return Material.COAL_BLOCK;
+
+		String name = block.name().toLowerCase();
+		boolean rand = MathUtils.random.nextBoolean();
+
+		if(name.contains("slab")) {
+			return rand ? Material.BLACKSTONE_SLAB : Material.COBBLED_DEEPSLATE_SLAB;
+		}
+		else if(name.contains("stair")) {
+			return rand ? Material.BLACKSTONE_STAIRS : Material.COBBLED_DEEPSLATE_STAIRS;
+		}
+
+		//default: don't know, just return itself.
+		return block;
 	}
 
 	public boolean isArmed() {
@@ -176,8 +280,8 @@ public class Bomb
 		return this.tnt;
 	}
 
-	public void kill() {
-		this.hologram.remove(); //shouldn't be null if init'd
+	public void setGrave() {
+		this.hologram.setText(Component.text("R.I.P " + owningTeam.getName(), owningTeam.getRGBTextColor()));
 	}
 
 	/**

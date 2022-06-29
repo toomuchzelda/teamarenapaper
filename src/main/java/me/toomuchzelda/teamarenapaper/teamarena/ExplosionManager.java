@@ -1,4 +1,4 @@
-package me.toomuchzelda.teamarenapaper;
+package me.toomuchzelda.teamarenapaper.teamarena;
 
 import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
