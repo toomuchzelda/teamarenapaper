@@ -12,6 +12,9 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.type.Slab;
+import org.bukkit.block.data.type.Stairs;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
 import org.bukkit.inventory.ItemStack;
@@ -46,7 +49,7 @@ public class Bomb
 	private boolean armed = false;
 	private int armedTime;
 	private TeamArenaTeam armingTeam;
-	private byte explodeMode = BOMB_EXPLODE_CHARCOAL_MODE;
+	private ExplosionEffect explodeMode = ExplosionEffect.CARBONIZE_BLOCKS;
 
 	public Bomb(TeamArenaTeam team, Location spawnLoc) {
 		this.owningTeam = team;
@@ -94,21 +97,16 @@ public class Bomb
 		this.armed = false;
 	}
 
-	public static final byte BOMB_EXPLODE_NOTHING_MODE = 0;
-	public static final byte BOMB_EXPLODE_DESTROY_MODE = 1;
-	public static final byte BOMB_EXPLODE_CHARCOAL_MODE = 2;
-
 	/**
-	 * @param bombExplodeMode
+	 * @param effect
 	 */
-	public void detonate(byte bombExplodeMode) {
-		if(bombExplodeMode == BOMB_EXPLODE_DESTROY_MODE) {
+	public void detonate(ExplosionEffect effect) {
+		if (effect == ExplosionEffect.DESTROY_BLOCKS) {
 			ExplosionManager.EntityExplosionInfo exInfo = new ExplosionManager.EntityExplosionInfo(false, ExplosionManager.NO_FIRE,
 					10f, ExplosionManager.DEFAULT_FLOAT_VALUE, true, null);
 
 			ExplosionManager.setEntityInfo(this.tnt, exInfo);
-		}
-		else if (bombExplodeMode == BOMB_EXPLODE_CHARCOAL_MODE) {
+		} else if (effect == ExplosionEffect.CARBONIZE_BLOCKS) {
 			this.charExplosion();
 		}
 
@@ -218,42 +216,49 @@ public class Bomb
 		for(int x = 0; x < boxLength; x++) {
 			for(int y = 0; y < boxLength; y++) {
 				for (int z = 0; z < boxLength; z++) {
+					currentLoc.set(startLoc.getX() + x, startLoc.getY() + y, startLoc.getZ() + z);
 					Block block = currentLoc.getBlock();
+					BlockData blockData = block.getBlockData();
 					if (!block.getType().isAir() && block.isSolid()) {
 						double distSqr = currentLoc.distanceSquared(originalLoc);
 						if (distSqr <= maxRadiusSqr) {
-							block.setType(getCharMaterial(block.getType()));
+							block.setBlockData(getCharredState(blockData));
 						}
 					}
-					currentLoc.add(0d, 0d, 1d);
 				}
-				currentLoc.setZ(startLoc.getZ());
-				currentLoc.add(0d, 1d, 0d);
 			}
-			currentLoc.setY(startLoc.getY());
-			currentLoc.add(1d, 0d, 0d);
 		}
 	}
 
 	/**
 	 * Get a replacement Material to char a block
 	 */
-	public static Material getCharMaterial(Material block) {
-		if(block.isOccluding())
-			return Material.COAL_BLOCK;
+	public static BlockData getCharredState(BlockData blockData) {
+		if (blockData.getMaterial().isOccluding())
+			return Material.COAL_BLOCK.createBlockData();
 
-		String name = block.name().toLowerCase();
 		boolean rand = MathUtils.random.nextBoolean();
-
-		if(name.contains("slab")) {
-			return rand ? Material.BLACKSTONE_SLAB : Material.COBBLED_DEEPSLATE_SLAB;
+		Material material;
+		if (blockData instanceof Slab slabData) {
+			material = rand ? Material.BLACKSTONE_SLAB : Material.COBBLED_DEEPSLATE_SLAB;
+			return material.createBlockData(newBlockData -> {
+				Slab newSlabData = (Slab) newBlockData;
+				newSlabData.setType(slabData.getType());
+				newSlabData.setWaterlogged(slabData.isWaterlogged());
+			});
+		} else if (blockData instanceof Stairs stairsData) {
+			material = rand ? Material.BLACKSTONE_STAIRS : Material.COBBLED_DEEPSLATE_STAIRS;
+			return material.createBlockData(newBlockData -> {
+				Stairs newStairsData = (Stairs) newBlockData;
+				newStairsData.setShape(stairsData.getShape());
+				newStairsData.setHalf(stairsData.getHalf());
+				newStairsData.setFacing(stairsData.getFacing());
+				newStairsData.setWaterlogged(stairsData.isWaterlogged());
+			});
+		} else {
+			//default: don't know, just return itself.
+			return blockData;
 		}
-		else if(name.contains("stair")) {
-			return rand ? Material.BLACKSTONE_STAIRS : Material.COBBLED_DEEPSLATE_STAIRS;
-		}
-
-		//default: don't know, just return itself.
-		return block;
 	}
 
 	public boolean isArmed() {
@@ -310,5 +315,11 @@ public class Bomb
 
 	public String toString() {
 		return owningTeam.getName() + ' ' + spawnLoc.toString();
+	}
+
+	public enum ExplosionEffect {
+		DO_NOTHING,
+		DESTROY_BLOCKS,
+		CARBONIZE_BLOCKS
 	}
 }
