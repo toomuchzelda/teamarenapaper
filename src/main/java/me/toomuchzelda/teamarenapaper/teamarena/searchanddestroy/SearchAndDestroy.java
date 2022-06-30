@@ -28,7 +28,10 @@ import org.bukkit.util.BlockVector;
 import org.intellij.lang.annotations.RegExp;
 
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Search and destroy implementation class.
@@ -194,7 +197,7 @@ public class SearchAndDestroy extends TeamArena
 					if(clickedBomb.isArmed()) {
 						clickedBomb.addClicker(pinfo.team, clicker, getGameTick(), Bomb.getArmProgressPerTick(item));
 					}
-					//else Shouldn't be possible to interact with bomb as a TNT in disarmed state.
+					//else Shouldn't be possible to interact with bomb as a TNTPrimed in disarmed state.
 				}
 				else {
 					if(clickedBomb.isArmed()) {
@@ -237,16 +240,17 @@ public class SearchAndDestroy extends TeamArena
 		final Sound[] sounds = new Sound[2]; // 0 = sound heard by bomb team, 1 = sound heard by others
 		final float[] pitches = new float[2];
 		final float volume = 99f;
-		final TextReplacementConfig bombTeamConfig;
+		final TextReplacementConfig bombTeamConfig = TextReplacementConfig.builder().match(BOMB_TEAM_KEY).replacement(bomb.getTeam().getComponentName()).build();;
+		final TextReplacementConfig bombTeamTitleConfig = TextReplacementConfig.builder().match(BOMB_TEAM_KEY).replacement(bomb.getTeam().getComponentSimpleName()).build();
 
 		if(bombEvent == BOMB_EVENT_ARMED) {
 			TeamArenaTeam armingTeam = bomb.getArmingTeam();
 
-			bombTeamConfig = TextReplacementConfig.builder().match(BOMB_TEAM_KEY).replacement(bomb.getTeam().getComponentName()).build();
 			final TextReplacementConfig armingTeamConfig = TextReplacementConfig.builder().match(ARMING_TEAM_KEY).replacement(armingTeam.getComponentName()).build();
+			final TextReplacementConfig armingTeamTitleConfig = TextReplacementConfig.builder().match(ARMING_TEAM_KEY).replacement(armingTeam.getComponentSimpleName()).build();
 
 			message = TEAM_ARMED_TEAM_MESSAGE.replaceText(bombTeamConfig).replaceText(armingTeamConfig);
-			title = TEAM_ARMED_TEAM_TITLE.replaceText(bombTeamConfig).replaceText(armingTeamConfig);
+			title = TEAM_ARMED_TEAM_TITLE.replaceText(bombTeamTitleConfig).replaceText(armingTeamTitleConfig);
 
 			sounds[0] = Sound.ENTITY_BLAZE_DEATH;
 			sounds[1] = Sound.ENTITY_LIGHTNING_BOLT_THUNDER;
@@ -254,11 +258,9 @@ public class SearchAndDestroy extends TeamArena
 			pitches[1] = 1f;
 		}
 		else if(bombEvent == BOMB_EVENT_DISARMED) {
-			bombTeamConfig = TextReplacementConfig.builder().match(BOMB_TEAM_KEY)
-					.replacement(bomb.getTeam().getComponentName()).build();
 
 			message = TEAM_DEFUSED_MESSAGE.replaceText(bombTeamConfig);
-			title = TEAM_DEFUSED_TITLE.replaceText(bombTeamConfig);
+			title = TEAM_DEFUSED_TITLE.replaceText(bombTeamTitleConfig);
 
 			sounds[0] = Sound.ENTITY_AXOLOTL_SPLASH;
 			sounds[1] = Sound.BLOCK_BAMBOO_HIT;
@@ -266,11 +268,9 @@ public class SearchAndDestroy extends TeamArena
 			pitches[1] = 0.5f;
 		}
 		else {
-			bombTeamConfig = TextReplacementConfig.builder().match(BOMB_TEAM_KEY)
-					.replacement(bomb.getTeam().getComponentName()).build();
 
 			message = TEAM_EXPLODED_MESSAGE.replaceText(bombTeamConfig);
-			title = TEAM_EXPLODED_TITLE.replaceText(bombTeamConfig);
+			title = TEAM_EXPLODED_TITLE.replaceText(bombTeamTitleConfig);
 
 			sounds[0] = null;
 			sounds[1] = null;
@@ -284,7 +284,7 @@ public class SearchAndDestroy extends TeamArena
 			Player receiver = entry.getKey();
 			PlayerInfo pinfo = entry.getValue();
 			if(pinfo.getPreference(Preferences.RECEIVE_GAME_TITLES)) {
-				PlayerUtils.sendTitle(receiver, Component.empty(), title, 10, 40, 10);
+				PlayerUtils.sendTitle(receiver, Component.empty(), title, 5, 40, 10);
 			}
 
 			int idx;

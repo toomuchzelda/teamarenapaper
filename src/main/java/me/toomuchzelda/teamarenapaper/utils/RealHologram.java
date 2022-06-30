@@ -17,7 +17,7 @@ public class RealHologram {
 	public static final double NEXT_LINE_VERTICAL_OFFSET = 0.33;
 
     private final ArrayList<HologramLine> lines;
-    private final Location baseLoc;
+    private Location baseLoc;
 	private Alignment alignment;
 
     public RealHologram(Location location, Alignment alignment, Component... text) {
@@ -51,6 +51,17 @@ public class RealHologram {
 			offset = NEXT_LINE_VERTICAL_OFFSET;
 
 		return loc.clone().add(0, i * offset, 0);
+	}
+
+	public void moveTo(Location location) {
+		if(!this.baseLoc.equals(location)) {
+			int i = 0;
+
+			for (HologramLine line : lines) {
+				line.moveTo(getLocationForIter(location, this.alignment, i++));
+			}
+			this.baseLoc = location;
+		}
 	}
 
     public void setText(Component... newText) {

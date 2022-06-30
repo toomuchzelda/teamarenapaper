@@ -30,7 +30,7 @@ public class Bomb
 	//needed because: 1. holding right click only sends clicks 5 times/second
 	// 2. lag can interrupt the receiving of right click packets which may interrupt arming which is undesirable.
 	public static final int VALID_TICKS_SINCE_LAST_CLICK = 20;
-	public static final int BOMB_DETONATION_TIME = 20 * 20;// * 20;
+	public static final int BOMB_DETONATION_TIME = 60 * 20;
 	public static final String PROGRESS_BAR_STRING = "█".repeat(10);
 	public static final int BOMB_CHARCOAL_RADIUS = 10;
 	public static final float BOMB_DESTROY_RADIUS = 10f;
@@ -38,6 +38,8 @@ public class Bomb
 	public static final int JUST_BEEN_DISARMED = -2;
 	public static final int NULL_ARMED_TIME = -1;
 	public static final int JUST_EXPLODED = -3;
+
+	private static final Vector TNT_HOLOGRAM_OFFSET = new Vector(0d, 1d, 0d);
 
 	private final TeamArenaTeam owningTeam;
 	private final Location spawnLoc;
@@ -51,6 +53,7 @@ public class Bomb
 	private int armedTime;
 	private TeamArenaTeam armingTeam;
 	private ExplosionEffect explodeMode = ExplosionEffect.CARBONIZE_BLOCKS;
+	private int lastHissTime = 0;
 
 	public Bomb(TeamArenaTeam team, Location spawnLoc) {
 		this.owningTeam = team;
@@ -68,6 +71,14 @@ public class Bomb
 		spawnLoc.add(0.5d, 0d, 0.5d);
 	}
 
+	public void removeEntities() {
+		if(this.tnt != null) {
+			this.tnt.remove();
+		}
+
+		this.hologram.remove();
+	}
+
 	public void addClicker(TeamArenaTeam clickersTeam, Player clicker, int clickTime, float power) {
 		TeamArmInfo teamClickers = getClickers(clickersTeam);
 		//Bukkit.broadcastMessage("power: " + power);
@@ -75,7 +86,6 @@ public class Bomb
 	}
 
 	public void arm(TeamArenaTeam armingTeam) {
-		Bukkit.broadcastMessage("Armed");
 		this.spawnLoc.getBlock().setType(Material.AIR);
 
 		this.tnt = spawnLoc.getWorld().spawn(spawnLoc, TNTPrimed.class);
@@ -88,8 +98,8 @@ public class Bomb
 	}
 
 	public void disarm() {
-		Bukkit.broadcastMessage("disarmed");
 		this.spawnLoc.getBlock().setType(Material.TNT);
+		this.hologram.moveTo(spawnLoc.clone().add(TNT_HOLOGRAM_OFFSET));
 
 		this.tnt.remove();
 
@@ -126,7 +136,7 @@ public class Bomb
 		//tick current clickers and update the hologram
 		hologramLines.add(0, this.title);
 		int i = 1;
-		final int currentTime = TeamArena.getGameTick();
+		final int currentTick = TeamArena.getGameTick();
 		TeamArenaTeam armingTeam = null;
 		for(Map.Entry<TeamArenaTeam, TeamArmInfo> entry : currentArmers.entrySet()) {
 			TeamArmInfo teamInfo = entry.getValue();
@@ -138,7 +148,7 @@ public class Bomb
 				Map.Entry<Player, PlayerArmInfo> clicker = iter.next();
 				PlayerArmInfo pArmInfo = clicker.getValue();
 
-				if (currentTime - pArmInfo.startTime() <= VALID_TICKS_SINCE_LAST_CLICK) {
+				if (currentTick - pArmInfo.startTime() <= VALID_TICKS_SINCE_LAST_CLICK) {
 					progressToAdd += pArmInfo.armingPower();
 				}
 				else {
@@ -179,22 +189,50 @@ public class Bomb
 			else
 				this.arm(armingTeam);
 		}
+		// if there is anyone clicking the bomb
+		else if(i > 1){
+			Location loc;
+			if(this.isArmed())
+				loc = this.tnt.getLocation();
+			else
+				loc = this.spawnLoc;
 
-		//process bomb countdown
+			if(currentTick - lastHissTime > 10) {
+				lastHissTime = currentTick;
+				loc.getWorld().playSound(loc, Sound.BLOCK_FIRE_EXTINGUISH, SoundCategory.AMBIENT, 1f, 0f);
+			}
+		}
+
+		//process bomb countdown and move the hologram
 		if(this.isArmed()) {
-			int timeDiff = currentTime - this.armedTime;
-			if(timeDiff % 20 == 0) {
-				this.tnt.getWorld().playSound(tnt.getLocation(), Sound.ENTITY_CREEPER_DEATH, SoundCategory.AMBIENT, 0.8f, 1f);
+			this.hologram.moveTo(this.tnt.getLocation().add(TNT_HOLOGRAM_OFFSET));
+
+			int timeLeft = BOMB_DETONATION_TIME - (currentTick - this.armedTime);
+			final int secondsLeft = timeLeft / 20;
+
+			if(timeLeft % 20 == 0) {
+				this.tnt.getWorld().playSound(tnt.getLocation(), Sound.ENTITY_CREEPER_DEATH, SoundCategory.AMBIENT, 1.9f, 1.2f);
+				//not when the bomb explodes, if 30 seconds or less, every 10 seconds, or if 5 seconds or less, every 5 seconds
+				if(timeLeft > 0 && (timeLeft <= 5 * 20 || (timeLeft <= 30 * 20 && timeLeft % (10 * 20) == 0))) {
+					this.owningTeam.getPlayerMembers().forEach(player ->
+							player.playSound(player.getLocation(), Sound.ENTITY_BLAZE_DEATH, SoundCategory.AMBIENT, 10000f, 2f));
+
+					Component text = Component.text().append(
+							Component.text(secondsLeft + " seconds left until ", NamedTextColor.GOLD),
+							owningTeam.getComponentName(),
+							Component.text("'s bomb goes off!", NamedTextColor.GOLD))
+							.build();
+
+					Bukkit.broadcast(text);
+				}
 			}
 
-			timeDiff = BOMB_DETONATION_TIME - timeDiff;
-			int secondsLeft = timeDiff / 20;
 			Component detonatingIn = Component.text().append(Component.text("Explodes in ", owningTeam.getRGBTextColor()))
 					.append(Component.text(secondsLeft + "s", NamedTextColor.DARK_RED)).build();
 
 			hologramLines.set(0, detonatingIn);
 
-			if(timeDiff <= 0) {
+			if(timeLeft <= 0) {
 				this.detonate(this.explodeMode);
 			}
 		}
@@ -283,6 +321,10 @@ public class Bomb
 
 	public boolean isDetonated() {
 		return this.detonated;
+	}
+
+	public void setExplodeMode(ExplosionEffect effect) {
+		this.explodeMode = effect;
 	}
 
 	private TeamArmInfo getClickers(TeamArenaTeam team) {
