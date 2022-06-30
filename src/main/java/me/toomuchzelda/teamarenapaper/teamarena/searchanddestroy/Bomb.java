@@ -30,7 +30,7 @@ public class Bomb
 	//needed because: 1. holding right click only sends clicks 5 times/second
 	// 2. lag can interrupt the receiving of right click packets which may interrupt arming which is undesirable.
 	public static final int VALID_TICKS_SINCE_LAST_CLICK = 20;
-	public static final int BOMB_DETONATION_TIME = 60;// * 20;
+	public static final int BOMB_DETONATION_TIME = 20 * 20;// * 20;
 	public static final String PROGRESS_BAR_STRING = "█".repeat(10);
 	public static final int BOMB_CHARCOAL_RADIUS = 10;
 	public static final float BOMB_DESTROY_RADIUS = 10f;
@@ -79,7 +79,7 @@ public class Bomb
 		this.spawnLoc.getBlock().setType(Material.AIR);
 
 		this.tnt = spawnLoc.getWorld().spawn(spawnLoc, TNTPrimed.class);
-		tnt.setFuseTicks(BOMB_DETONATION_TIME - 20);
+		tnt.setFuseTicks(BOMB_DETONATION_TIME);
 		tnt.setVelocity(new Vector(0d, 0.4d, 0d));
 
 		this.armingTeam = armingTeam;
@@ -87,7 +87,7 @@ public class Bomb
 		this.armed = true;
 	}
 
-	public void disarm(TeamArenaTeam disarmingTeam) {
+	public void disarm() {
 		Bukkit.broadcastMessage("disarmed");
 		this.spawnLoc.getBlock().setType(Material.TNT);
 
@@ -98,12 +98,8 @@ public class Bomb
 		this.armed = false;
 	}
 
-	public static final byte BOMB_EXPLODE_NOTHING_MODE = 0;
-	public static final byte BOMB_EXPLODE_DESTROY_MODE = 1;
-	public static final byte BOMB_EXPLODE_CHARCOAL_MODE = 2;
-
 	/**
-	 * @param effect
+	 * @param effect Type of effect for explosion
 	 */
 	public void detonate(ExplosionEffect effect) {
 		if (effect == ExplosionEffect.DESTROY_BLOCKS) {
@@ -179,7 +175,7 @@ public class Bomb
 		if(armingTeam != null) {
 			currentArmers.clear();
 			if(this.isArmed())
-				this.disarm(armingTeam);
+				this.disarm();
 			else
 				this.arm(armingTeam);
 		}
@@ -192,9 +188,9 @@ public class Bomb
 			}
 
 			timeDiff = BOMB_DETONATION_TIME - timeDiff;
-			timeDiff /= 20;
+			int secondsLeft = timeDiff / 20;
 			Component detonatingIn = Component.text().append(Component.text("Explodes in ", owningTeam.getRGBTextColor()))
-					.append(Component.text(timeDiff + "s", NamedTextColor.DARK_RED)).build();
+					.append(Component.text(secondsLeft + "s", NamedTextColor.DARK_RED)).build();
 
 			hologramLines.set(0, detonatingIn);
 
@@ -247,11 +243,14 @@ public class Bomb
 	 * Get a replacement BlockData to char a block
 	 */
 	public static BlockData getCharredState(BlockData blockData) {
-		if (blockData.getMaterial().isOccluding())
-			return Material.COAL_BLOCK.createBlockData();
-
 		boolean rand = MathUtils.random.nextBoolean();
 		Material material;
+
+		if (blockData.getMaterial().isOccluding()) {
+			material = rand ? Material.COAL_BLOCK : Material.BLACKSTONE;
+			return material.createBlockData();
+		}
+
 		if (blockData instanceof Slab slabData) {
 			material = rand ? Material.BLACKSTONE_SLAB : Material.COBBLED_DEEPSLATE_SLAB;
 			return material.createBlockData(newBlockData -> {
