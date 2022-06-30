@@ -126,7 +126,7 @@ public class KitSniper extends Kit {
 					} else {
 						//On the ground
 						world.spawnParticle(Particle.REDSTONE, grenade.getLocation(),
-								2, 2, 2,2, particleOptions);
+								2, 0.5, 0.5,0.5, particleOptions);
 					}
 					if (timer <= 0) {
 						world.createExplosion(grenade.getLocation(), 1.7f, false, false);
@@ -198,7 +198,7 @@ public class KitSniper extends Kit {
 				}
 				//Disabled headshot if you are too close since it was buggy
 				if (projectileHitY - headLocation > headshotThresh && projectile.getOrigin().distance(projectile.getLocation()) > 10) {
-					DamageEvent dEvent = DamageEvent.newDamageEvent(player, 999d, DamageType.PROJECTILE, shooter, false);
+					DamageEvent dEvent = DamageEvent.newDamageEvent(player, 999d, DamageType.SNIPER_HEADSHOT, shooter, false);
 					Main.getGame().queueDamage(dEvent);
 
 					//Hitmarker Sound effect

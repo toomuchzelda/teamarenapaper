@@ -4,7 +4,6 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
@@ -45,7 +44,7 @@ import java.util.*;
                 Night: Knockback (KB Explosion)
 	Sub Ability: Stasis
 		CD: 12 sec
-        Active Duration: 0.7 sec
+        Active Duration: 14 ticks
             Provides Rewind with temporary invulnerability, but it is unable to attack during this time
 */
 
@@ -133,6 +132,8 @@ public class KitRewind extends Kit {
 				if (tickElapsed >= STASIS_DURATION) {
 					player.setInvisible(false);
 					inventory.setArmorContents(stasisInfo.armor());
+					player.getWorld().stopSound(SoundStop.named(Sound.ITEM_ARMOR_EQUIP_IRON));
+					player.getWorld().stopSound(SoundStop.named(Sound.ITEM_ARMOR_EQUIP_CHAIN));
 					//Replacing the barriers with swords again
 					for (var sword : stasisInfo.swords().entrySet()) {
 						inventory.setItem(sword.getKey(), sword.getValue());
@@ -148,10 +149,14 @@ public class KitRewind extends Kit {
 							16, new Particle.DustOptions(Main.getPlayerInfo(player).team.getColour(), 2));
 					if (tickElapsed % 2 == 0) {
 						player.setInvisible(true);
-						player.getInventory().setArmorContents(null);
+						inventory.setArmorContents(null);
+						player.getWorld().stopSound(SoundStop.named(Sound.ITEM_ARMOR_EQUIP_IRON));
+						player.getWorld().stopSound(SoundStop.named(Sound.ITEM_ARMOR_EQUIP_CHAIN));
 					} else {
 						player.setInvisible(false);
-						player.getInventory().setArmorContents(stasisInfo.armor());
+						inventory.setArmorContents(stasisInfo.armor());
+						player.getWorld().stopSound(SoundStop.named(Sound.ITEM_ARMOR_EQUIP_IRON));
+						player.getWorld().stopSound(SoundStop.named(Sound.ITEM_ARMOR_EQUIP_CHAIN));
 					}
 				}
 			}
@@ -298,7 +303,6 @@ public class KitRewind extends Kit {
 					player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.AMBIENT, 2, 0.5f);
 				} else {
 					//"Glitching" aesthetic effect + particles
-					TeamArenaTeam team = Main.getPlayerInfo(player).team;
 					ItemStack[] armor = player.getInventory().getArmorContents();
 					var swordSlots = player.getInventory().all(Material.IRON_SWORD);
 
@@ -308,7 +312,9 @@ public class KitRewind extends Kit {
 					}
 
 					player.setInvisible(true);
-					player.getInventory().setArmorContents(null);
+					inventory.setArmorContents(null);
+					player.getWorld().stopSound(SoundStop.named(Sound.ITEM_ARMOR_EQUIP_IRON));
+					player.getWorld().stopSound(SoundStop.named(Sound.ITEM_ARMOR_EQUIP_CHAIN));
 					world.playSound(player, Sound.BLOCK_BELL_RESONATE, 1f, 1.8f);
 
 					stasisInfo.put(player, new StasisInfo(TeamArena.getGameTick(), armor, swordSlots));
