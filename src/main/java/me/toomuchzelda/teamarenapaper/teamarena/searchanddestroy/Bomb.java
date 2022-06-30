@@ -50,7 +50,7 @@ public class Bomb
 	private boolean detonated = false;
 	private int armedTime;
 	private TeamArenaTeam armingTeam;
-	private ExplodeMode explodeMode = ExplodeMode.CHAR;
+	private ExplosionEffect explodeMode = ExplosionEffect.CARBONIZE_BLOCKS;
 
 	public Bomb(TeamArenaTeam team, Location spawnLoc) {
 		this.owningTeam = team;
@@ -98,17 +98,20 @@ public class Bomb
 		this.armed = false;
 	}
 
+	public static final byte BOMB_EXPLODE_NOTHING_MODE = 0;
+	public static final byte BOMB_EXPLODE_DESTROY_MODE = 1;
+	public static final byte BOMB_EXPLODE_CHARCOAL_MODE = 2;
+
 	/**
-	 * @param bombExplodeMode
+	 * @param effect
 	 */
-	public void detonate(ExplodeMode bombExplodeMode) {
-		if(bombExplodeMode == ExplodeMode.DESTROY) {
+	public void detonate(ExplosionEffect effect) {
+		if (effect == ExplosionEffect.DESTROY_BLOCKS) {
 			ExplosionManager.EntityExplosionInfo exInfo = new ExplosionManager.EntityExplosionInfo(false, ExplosionManager.NO_FIRE,
 					BOMB_DESTROY_RADIUS, ExplosionManager.DEFAULT_FLOAT_VALUE, true, null);
 
 			ExplosionManager.setEntityInfo(this.tnt, exInfo);
-		}
-		else if (bombExplodeMode == ExplodeMode.CHAR) {
+		} else if (effect == ExplosionEffect.CARBONIZE_BLOCKS) {
 			this.charExplosion();
 		}
 
@@ -223,13 +226,11 @@ public class Bomb
 			for(int y = 0; y < boxLength; y++) {
 				for (int z = 0; z < boxLength; z++) {
 					Block block = currentLoc.getBlock();
+					BlockData blockData = block.getBlockData();
 					if (!block.getType().isAir() && block.isSolid()) {
 						double distSqr = currentLoc.distanceSquared(originalLoc);
 						if (distSqr <= maxRadiusSqr) {
-							BlockData newData = getCharBlockData(block.getBlockData());
-							if(newData != null) {
-								block.setBlockData(newData, false);
-							}
+							block.setBlockData(getCharredState(blockData));
 						}
 					}
 					currentLoc.add(0d, 0d, 1d);
@@ -244,54 +245,33 @@ public class Bomb
 
 	/**
 	 * Get a replacement BlockData to char a block
-	 * returns null if no appropriate data could be made
 	 */
-	public static BlockData getCharBlockData(BlockData blockData) {
-		Material mat = blockData.getMaterial();
-		BlockData newData;
+	public static BlockData getCharredState(BlockData blockData) {
+		if (blockData.getMaterial().isOccluding())
+			return Material.COAL_BLOCK.createBlockData();
 
-		try {
-			if(mat.isOccluding()) {
-				newData = Bukkit.getServer().createBlockData(Material.COAL_BLOCK);
-			}
-			else {
-				String name = mat.name().toLowerCase();
-				boolean rand = MathUtils.random.nextBoolean();
-
-				if (name.contains("slab")) {
-					mat = rand ? Material.BLACKSTONE_SLAB : Material.COBBLED_DEEPSLATE_SLAB;
-
-					Slab oldSlab = (Slab) blockData;
-					Slab newSlab = (Slab) Bukkit.getServer().createBlockData(mat);
-
-					newSlab.setType(oldSlab.getType());
-					newSlab.setWaterlogged(oldSlab.isWaterlogged());
-
-					newData = newSlab;
-				}
-				else if (name.contains("stairs")) {
-					mat = rand ? Material.BLACKSTONE_STAIRS : Material.COBBLED_DEEPSLATE_STAIRS;
-					Stairs oldStairs = (Stairs) blockData;
-					Stairs newStairs = (Stairs) Bukkit.getServer().createBlockData(mat);
-
-					newStairs.setWaterlogged(oldStairs.isWaterlogged());
-					newStairs.setFacing(oldStairs.getFacing());
-					newStairs.setHalf(oldStairs.getHalf());
-					newStairs.setShape(oldStairs.getShape());
-
-					newData = newStairs;
-				}
-				else {
-					newData = null;
-				}
-			}
+		boolean rand = MathUtils.random.nextBoolean();
+		Material material;
+		if (blockData instanceof Slab slabData) {
+			material = rand ? Material.BLACKSTONE_SLAB : Material.COBBLED_DEEPSLATE_SLAB;
+			return material.createBlockData(newBlockData -> {
+				Slab newSlabData = (Slab) newBlockData;
+				newSlabData.setType(slabData.getType());
+				newSlabData.setWaterlogged(slabData.isWaterlogged());
+			});
+		} else if (blockData instanceof Stairs stairsData) {
+			material = rand ? Material.BLACKSTONE_STAIRS : Material.COBBLED_DEEPSLATE_STAIRS;
+			return material.createBlockData(newBlockData -> {
+				Stairs newStairsData = (Stairs) newBlockData;
+				newStairsData.setShape(stairsData.getShape());
+				newStairsData.setHalf(stairsData.getHalf());
+				newStairsData.setFacing(stairsData.getFacing());
+				newStairsData.setWaterlogged(stairsData.isWaterlogged());
+			});
+		} else {
+			//default: don't know, just return itself.
+			return blockData;
 		}
-		catch(ClassCastException | IllegalArgumentException e) {
-			e.printStackTrace();
-			newData = null;
-		}
-
-		return newData;
 	}
 
 	public boolean isArmed() {
@@ -350,9 +330,9 @@ public class Bomb
 		return owningTeam.getName() + ' ' + spawnLoc.toString();
 	}
 
-	public enum ExplodeMode {
-		NOTHING,
-		CHAR,
-		DESTROY
+	public enum ExplosionEffect {
+		DO_NOTHING,
+		DESTROY_BLOCKS,
+		CARBONIZE_BLOCKS
 	}
 }
