@@ -12,6 +12,9 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.type.Slab;
+import org.bukkit.block.data.type.Stairs;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
 import org.bukkit.inventory.ItemStack;
@@ -29,7 +32,7 @@ public class Bomb
 	public static final int VALID_TICKS_SINCE_LAST_CLICK = 20;
 	public static final int BOMB_DETONATION_TIME = 60;// * 20;
 	public static final String PROGRESS_BAR_STRING = "█".repeat(10);
-	public static final int BOMB_CHARCOAL_RADIUS = 5;
+	public static final int BOMB_CHARCOAL_RADIUS = 10;
 	public static final float BOMB_DESTROY_RADIUS = 10f;
 
 	public static final int JUST_BEEN_DISARMED = -2;
@@ -44,9 +47,10 @@ public class Bomb
 
 	private TNTPrimed tnt;
 	private boolean armed = false;
+	private boolean detonated = false;
 	private int armedTime;
 	private TeamArenaTeam armingTeam;
-	private byte explodeMode = BOMB_EXPLODE_CHARCOAL_MODE;
+	private ExplodeMode explodeMode = ExplodeMode.CHAR;
 
 	public Bomb(TeamArenaTeam team, Location spawnLoc) {
 		this.owningTeam = team;
@@ -75,7 +79,7 @@ public class Bomb
 		this.spawnLoc.getBlock().setType(Material.AIR);
 
 		this.tnt = spawnLoc.getWorld().spawn(spawnLoc, TNTPrimed.class);
-		tnt.setFuseTicks(BOMB_DETONATION_TIME - 5);
+		tnt.setFuseTicks(BOMB_DETONATION_TIME - 20);
 		tnt.setVelocity(new Vector(0d, 0.4d, 0d));
 
 		this.armingTeam = armingTeam;
@@ -94,26 +98,23 @@ public class Bomb
 		this.armed = false;
 	}
 
-	public static final byte BOMB_EXPLODE_NOTHING_MODE = 0;
-	public static final byte BOMB_EXPLODE_DESTROY_MODE = 1;
-	public static final byte BOMB_EXPLODE_CHARCOAL_MODE = 2;
-
 	/**
 	 * @param bombExplodeMode
 	 */
-	public void detonate(byte bombExplodeMode) {
-		if(bombExplodeMode == BOMB_EXPLODE_DESTROY_MODE) {
+	public void detonate(ExplodeMode bombExplodeMode) {
+		if(bombExplodeMode == ExplodeMode.DESTROY) {
 			ExplosionManager.EntityExplosionInfo exInfo = new ExplosionManager.EntityExplosionInfo(false, ExplosionManager.NO_FIRE,
-					10f, ExplosionManager.DEFAULT_FLOAT_VALUE, true, null);
+					BOMB_DESTROY_RADIUS, ExplosionManager.DEFAULT_FLOAT_VALUE, true, null);
 
 			ExplosionManager.setEntityInfo(this.tnt, exInfo);
 		}
-		else if (bombExplodeMode == BOMB_EXPLODE_CHARCOAL_MODE) {
+		else if (bombExplodeMode == ExplodeMode.CHAR) {
 			this.charExplosion();
 		}
 
 		this.armedTime = JUST_EXPLODED;
 		this.armed = false;
+		this.detonated = true;
 	}
 
 	public void tick() {
@@ -198,6 +199,9 @@ public class Bomb
 				this.detonate(this.explodeMode);
 			}
 		}
+		else if(this.isDetonated()){
+			hologramLines.set(0, Component.text("R.I.P " + owningTeam.getName(), owningTeam.getRGBTextColor()));
+		}
 
 		Component[] finalLines = hologramLines.toArray(new Component[0]);
 		this.hologram.setText(finalLines);
@@ -222,7 +226,10 @@ public class Bomb
 					if (!block.getType().isAir() && block.isSolid()) {
 						double distSqr = currentLoc.distanceSquared(originalLoc);
 						if (distSqr <= maxRadiusSqr) {
-							block.setType(getCharMaterial(block.getType()));
+							BlockData newData = getCharBlockData(block.getBlockData());
+							if(newData != null) {
+								block.setBlockData(newData, false);
+							}
 						}
 					}
 					currentLoc.add(0d, 0d, 1d);
@@ -236,24 +243,55 @@ public class Bomb
 	}
 
 	/**
-	 * Get a replacement Material to char a block
+	 * Get a replacement BlockData to char a block
+	 * returns null if no appropriate data could be made
 	 */
-	public static Material getCharMaterial(Material block) {
-		if(block.isOccluding())
-			return Material.COAL_BLOCK;
+	public static BlockData getCharBlockData(BlockData blockData) {
+		Material mat = blockData.getMaterial();
+		BlockData newData;
 
-		String name = block.name().toLowerCase();
-		boolean rand = MathUtils.random.nextBoolean();
+		try {
+			if(mat.isOccluding()) {
+				newData = Bukkit.getServer().createBlockData(Material.COAL_BLOCK);
+			}
+			else {
+				String name = mat.name().toLowerCase();
+				boolean rand = MathUtils.random.nextBoolean();
 
-		if(name.contains("slab")) {
-			return rand ? Material.BLACKSTONE_SLAB : Material.COBBLED_DEEPSLATE_SLAB;
+				if (name.contains("slab")) {
+					mat = rand ? Material.BLACKSTONE_SLAB : Material.COBBLED_DEEPSLATE_SLAB;
+
+					Slab oldSlab = (Slab) blockData;
+					Slab newSlab = (Slab) Bukkit.getServer().createBlockData(mat);
+
+					newSlab.setType(oldSlab.getType());
+					newSlab.setWaterlogged(oldSlab.isWaterlogged());
+
+					newData = newSlab;
+				}
+				else if (name.contains("stairs")) {
+					mat = rand ? Material.BLACKSTONE_STAIRS : Material.COBBLED_DEEPSLATE_STAIRS;
+					Stairs oldStairs = (Stairs) blockData;
+					Stairs newStairs = (Stairs) Bukkit.getServer().createBlockData(mat);
+
+					newStairs.setWaterlogged(oldStairs.isWaterlogged());
+					newStairs.setFacing(oldStairs.getFacing());
+					newStairs.setHalf(oldStairs.getHalf());
+					newStairs.setShape(oldStairs.getShape());
+
+					newData = newStairs;
+				}
+				else {
+					newData = null;
+				}
+			}
 		}
-		else if(name.contains("stair")) {
-			return rand ? Material.BLACKSTONE_STAIRS : Material.COBBLED_DEEPSLATE_STAIRS;
+		catch(ClassCastException | IllegalArgumentException e) {
+			e.printStackTrace();
+			newData = null;
 		}
 
-		//default: don't know, just return itself.
-		return block;
+		return newData;
 	}
 
 	public boolean isArmed() {
@@ -262,6 +300,10 @@ public class Bomb
 
 	public int getArmedTime() {
 		return this.armedTime;
+	}
+
+	public boolean isDetonated() {
+		return this.detonated;
 	}
 
 	private TeamArmInfo getClickers(TeamArenaTeam team) {
@@ -278,10 +320,6 @@ public class Bomb
 
 	public TNTPrimed getTNT() {
 		return this.tnt;
-	}
-
-	public void setGrave() {
-		this.hologram.setText(Component.text("R.I.P " + owningTeam.getName(), owningTeam.getRGBTextColor()));
 	}
 
 	/**
@@ -310,5 +348,11 @@ public class Bomb
 
 	public String toString() {
 		return owningTeam.getName() + ' ' + spawnLoc.toString();
+	}
+
+	public enum ExplodeMode {
+		NOTHING,
+		CHAR,
+		DESTROY
 	}
 }

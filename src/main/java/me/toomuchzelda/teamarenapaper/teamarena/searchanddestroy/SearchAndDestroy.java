@@ -135,7 +135,6 @@ public class SearchAndDestroy extends TeamArena
 			}
 			else if(armedTime == Bomb.JUST_EXPLODED) {
 				announceBombEvent(bomb, BOMB_EVENT_EXPLODED);
-				bomb.setGrave();
 				//leave it in the Map so we can cancel the DamageEvents from it
 				//this.bombTNTs.remove(bomb.getTNT());
 			}
@@ -273,9 +272,8 @@ public class SearchAndDestroy extends TeamArena
 			message = TEAM_EXPLODED_MESSAGE.replaceText(bombTeamConfig);
 			title = TEAM_EXPLODED_TITLE.replaceText(bombTeamConfig);
 
-			sounds[0] = Sound.BLOCK_IRON_DOOR_CLOSE;
+			sounds[0] = null;
 			sounds[1] = null;
-			pitches[0] = 0.5f;
 		}
 
 		Bukkit.broadcast(message);
