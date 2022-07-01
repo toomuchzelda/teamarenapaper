@@ -183,6 +183,9 @@ public class DamageType {
 
 	public static final DamageType BOMB_EXPLODED = new DamageType("Team Bomb" ).setInstantDeath().setIgnoreRate();
 
+	public static final DamageType END_GAME_LIGHTNING = new DamageType("Herobrine", "%Killed% was killed by Herobrine")
+			.setIgnoreArmor().setIgnoreArmorEnchants().setNoKnockback().setIgnoreRate().setDamageSource(DamageSource.LIGHTNING_BOLT);
+
 	private static int idCounter = 0;
 
     //a constant identifier for same types, to compare for same types across separate instances of this class

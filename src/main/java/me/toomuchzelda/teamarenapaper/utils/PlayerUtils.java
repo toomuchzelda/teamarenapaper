@@ -192,7 +192,10 @@ public class PlayerUtils {
 		player.setLevel(0);
 		player.setExp(0);
 		player.setGameMode(GameMode.SURVIVAL);
+		EntityUtils.removeAllModifiers(player);
+		player.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(20d);
 		player.setHealth(player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
+		player.getAttribute(Attribute.GENERIC_ATTACK_SPEED).setBaseValue(99999d);
 		player.setSaturation(5f);
 		player.setFoodLevel(20);
 		player.setAbsorptionAmount(0);

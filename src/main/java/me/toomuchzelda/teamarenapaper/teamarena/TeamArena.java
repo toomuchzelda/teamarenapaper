@@ -65,7 +65,8 @@ public abstract class TeamArena
 
 	//init to this, don't want negative numbers when waitingSince is set to the past in the prepGamestate() methods
 	protected static int gameTick = TOTAL_WAITING_TIME * 3;
-	protected long waitingSince;
+	private int waitingSince;
+	protected int gameLiveTime;
 	protected GameState gameState;
 
 	protected BoundingBox border;
@@ -856,6 +857,7 @@ public abstract class TeamArena
 
 	public void prepLive() {
 		setGameState(GameState.LIVE);
+		gameLiveTime = gameTick;
 
 		Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
 		while(iter.hasNext()) {

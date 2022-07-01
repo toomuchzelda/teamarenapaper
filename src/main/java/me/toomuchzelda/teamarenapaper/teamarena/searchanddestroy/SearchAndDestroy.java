@@ -5,11 +5,9 @@ import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
-import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
-import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -24,15 +22,15 @@ import org.bukkit.event.Event;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.BlockVector;
 import org.intellij.lang.annotations.RegExp;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Search and destroy implementation class.
@@ -47,6 +45,16 @@ public class SearchAndDestroy extends TeamArena
 	protected Map<TeamArenaTeam, List<Bomb>> teamBombs;
 	protected Map<BlockVector, Bomb> bombPositions;
 	protected Map<TNTPrimed, Bomb> bombTNTs;
+	public static final int POISON_TIME = 10 * 20;//60 * 5 * 20;
+	//starts counting down when game is live
+	// is increased by player death and bomb arms
+	protected int poisonTimeLeft = POISON_TIME;
+	protected int bombAddPoison = 60 * 20;
+	protected boolean isPoison = false;
+	//keeps track of which player to next strike with lightning
+	protected ArrayList<Player> poisonVictims;
+	protected int poisonRingIndex = 0;
+	protected double poisonDamage = 1d;
 
 	protected final ItemStack BASE_FUSE;
 	public static final Component FUSE_NAME = ItemUtils.noItalics(Component.text("Bomb Fuse", NamedTextColor.GOLD));
@@ -71,6 +79,12 @@ public class SearchAndDestroy extends TeamArena
 	public static final Component TEAM_EXPLODED_TITLE;
 
 	public static final Component TEAM_DEFEATED_MESSAGE = Component.text(BOMB_TEAM_KEY + " has been defeated!", NamedTextColor.GOLD);
+
+	public static final Component MIN_TO_POISON_MESSAGE;
+	public static final Component MIN_TO_POISON_TITLE;
+
+	public static final Component POISON_NOW_TITLE;
+	public static final Component POISON_NOW_MESSAGE;
 	//===========MESSAGE STUFF
 
 	static {
@@ -103,6 +117,19 @@ public class SearchAndDestroy extends TeamArena
 				Component.text(" " + BOMB_TEAM_KEY + "'s bomb exploded! ", NamedTextColor.GOLD),
 				obfuscated
 		).build();
+
+		Component longObf = Component.text("Herobrine", NamedTextColor.DARK_RED, TextDecoration.OBFUSCATED);
+		MIN_TO_POISON_MESSAGE = Component.text("One minute until ", NamedTextColor.DARK_RED).append(longObf).append(Component.text(" appears.", NamedTextColor.DARK_RED));
+		MIN_TO_POISON_TITLE = Component.text("One minute until ", NamedTextColor.DARK_RED).append(longObf);
+
+		POISON_NOW_TITLE = Component.text("abcdefghijklmnopqrstuvwxyz", NamedTextColor.DARK_RED, TextDecoration.OBFUSCATED);
+		TextComponent.Builder builder = Component.text();
+		for(int i = 0; i < 5; i++) {
+			builder.append(POISON_NOW_TITLE);
+			if(i != 4)
+				builder.append(Component.newline());
+		}
+		POISON_NOW_MESSAGE = builder.build();
 	}
 
 	public SearchAndDestroy() {
@@ -121,6 +148,7 @@ public class SearchAndDestroy extends TeamArena
 		BASE_FUSE.setItemMeta(meta);
 
 		this.bombTNTs = new HashMap<>();
+		this.poisonVictims = null;
 	}
 
 	public void liveTick() {
@@ -134,6 +162,8 @@ public class SearchAndDestroy extends TeamArena
 				announceBombEvent(bomb, BombEvent.ARMED);
 				//record the tnt block so can check it in entityInteract events
 				this.bombTNTs.put(bomb.getTNT(), bomb);
+				this.poisonTimeLeft += bombAddPoison;
+				bombAddPoison /= 2;
 			}
 			//just been disarmed, remove TNT from map
 			else if(armedTime == Bomb.JUST_BEEN_DISARMED) {
@@ -157,6 +187,42 @@ public class SearchAndDestroy extends TeamArena
 		super.liveTick();
 
 		this.checkWinner();
+
+		//end-game poison
+		this.poisonTimeLeft--;
+		if(this.poisonTimeLeft <= 0) {
+			if(!isPoison) {
+				this.isPoison = true;
+				Bukkit.broadcast(POISON_NOW_MESSAGE);
+				PlayerUtils.sendOptionalTitle(Component.empty(), POISON_NOW_TITLE, 0, 30, 30);
+				for(Player p : players) {
+					removeHealing(p);
+				}
+			}
+		}
+		else if(this.poisonTimeLeft == 60 * 20) {
+			Bukkit.broadcast(MIN_TO_POISON_MESSAGE);
+			PlayerUtils.sendOptionalTitle(Component.empty(), MIN_TO_POISON_TITLE, 30, 30, 30);
+		}
+
+		if(isPoison && currentTick % 3 == 0) {
+			if(poisonVictims == null) {
+				poisonVictims = new ArrayList<>(this.players);
+			}
+
+			//increase damage on every cycle
+			int idx = poisonRingIndex++ % poisonVictims.size();
+			if(idx == 0) {
+				poisonDamage += 1d;
+				Collections.shuffle(poisonVictims, MathUtils.random);
+			}
+
+			Player unfortunateVictim = poisonVictims.get(idx);
+
+			gameWorld.strikeLightningEffect(unfortunateVictim.getLocation());
+			DamageEvent damage = DamageEvent.newDamageEvent(unfortunateVictim, poisonDamage, DamageType.END_GAME_LIGHTNING, null, false);
+			queueDamage(damage);
+		}
 	}
 
 	/**
@@ -282,11 +348,39 @@ public class SearchAndDestroy extends TeamArena
 	}
 
 	@Override
+	public void handleDeath(DamageEvent event) {
+		super.handleDeath(event);
+
+		this.poisonTimeLeft += 10 * 20;
+		if(isPoison && event.getVictim() instanceof Player p) {
+			poisonVictims.remove(p);
+		}
+	}
+
+	@Override
 	protected void givePlayerItems(Player player, PlayerInfo pinfo, boolean clear) {
 		//need to clear and give the fuse first to put it in 1st slot
 		player.getInventory().clear();
 		player.getInventory().addItem(BASE_FUSE);
 		super.givePlayerItems(player, pinfo, false);
+	}
+
+	protected void removeHealing(Player player) {
+		PlayerInventory inventory = player.getInventory();
+		inventory.remove(Material.GOLDEN_APPLE);
+		inventory.remove(Material.ENCHANTED_GOLDEN_APPLE);
+		inventory.remove(Material.COOKED_BEEF);
+		//TODO: medic healing wand
+		inventory.remove(Material.BLAZE_ROD);
+
+		player.setAbsorptionAmount(0d);
+
+		PotionEffect effect = player.getPotionEffect(PotionEffectType.REGENERATION);
+		if(effect != null) {
+			player.sendMessage(Component.text("Think regeneration will help you? Lose half your health and think twice!", NamedTextColor.DARK_RED));
+			player.removePotionEffect(PotionEffectType.REGENERATION);
+			EntityUtils.setMaxHealth(player, 10d);
+		}
 	}
 
 	public static void announceBombEvent(Bomb bomb, BombEvent bombEvent) {
