@@ -27,5 +27,7 @@ public class KitTrooper extends Kit {
         gapples.setAmount(5);
 
         setItems(sword, gapples);
+
+		setCategory(KitCategory.FIGHTER);
     }
 }

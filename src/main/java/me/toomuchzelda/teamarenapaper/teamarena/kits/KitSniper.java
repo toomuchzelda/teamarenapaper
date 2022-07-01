@@ -18,8 +18,6 @@ import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.AbstractArrow.PickupStatus;
 import org.bukkit.entity.*;
 import org.bukkit.event.block.Action;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -69,6 +67,8 @@ public class KitSniper extends Kit {
 
 		setItems(sword, SNIPER, GRENADE);
 		setAbilities(new SniperAbility());
+
+		setCategory(KitCategory.RANGED);
 	}
 
 	public static class SniperAbility extends Ability {

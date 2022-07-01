@@ -9,31 +9,26 @@ import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.DyeColor;
-import org.bukkit.Material;
-import org.bukkit.Sound;
-import org.bukkit.SoundCategory;
-import org.bukkit.block.banner.Pattern;
-import org.bukkit.block.banner.PatternType;
+import org.bukkit.*;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.BannerMeta;
 
 import java.util.*;
 
 public class KitInventory implements InventoryProvider {
 
-	private final ArrayList<Kit> kits;
+	private final List<Kit> kits;
 	private final TabBar<KitCategory> categoryTab = new TabBar<>(null);
 	private final Pagination pagination = new Pagination();
 
 	public KitInventory(Collection<? extends Kit> kits) {
 		categoryTab.setClickSound(Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.BLOCKS, 0.5f, 1);
 
-		this.kits = new ArrayList<>(kits);
-		this.kits.sort(Kit.COMPARATOR);
+		var temp = new ArrayList<>(kits);
+		temp.sort(Kit.COMPARATOR);
+		this.kits = List.copyOf(temp);
 	}
 
 	public KitInventory() {
@@ -105,7 +100,7 @@ public class KitInventory implements InventoryProvider {
 		}
 		KitCategory filter = categoryTab.getCurrentTab();
 		List<ClickableItem> kitItems = kits.stream()
-				.filter(kit -> filter == null || KIT_CATEGORIES.get(filter).contains(kit.getClass()))
+				.filter(kit -> filter == null || kit.getCategory() == filter)
 				.map(kit -> getKitItem(kit, kit == selected))
 				.toList();
 		pagination.showPageItems(kitItems, inventory, 9, 45);
@@ -120,96 +115,6 @@ public class KitInventory implements InventoryProvider {
 			.displayName(Component.text("All kits", NamedTextColor.WHITE))
 			.lore(Component.text("Show all kits in Team Arena", NamedTextColor.GRAY))
 			.build();
-
-	private static final ItemStack HEALER_BANNER = ItemBuilder.of(Material.WHITE_BANNER)
-			// blatant violation of the Geneva Conventions
-			.meta(BannerMeta.class, bannerMeta -> bannerMeta.setPatterns(Arrays.asList(
-					new Pattern(DyeColor.WHITE, PatternType.HALF_HORIZONTAL_MIRROR),
-					new Pattern(DyeColor.WHITE, PatternType.HALF_HORIZONTAL),
-					new Pattern(DyeColor.RED, PatternType.STRAIGHT_CROSS),
-					new Pattern(DyeColor.WHITE, PatternType.STRIPE_TOP),
-					new Pattern(DyeColor.WHITE, PatternType.STRIPE_BOTTOM),
-					new Pattern(DyeColor.WHITE, PatternType.BORDER)
-			)))
-			.hide(ItemFlag.values())
-			.build();
-
-	private static final ItemStack HEALER_BANNER_INVERTED = ItemBuilder.of(Material.RED_BANNER)
-			.meta(BannerMeta.class, bannerMeta -> bannerMeta.setPatterns(Arrays.asList(
-					new Pattern(DyeColor.RED, PatternType.HALF_HORIZONTAL_MIRROR),
-					new Pattern(DyeColor.RED, PatternType.HALF_HORIZONTAL),
-					new Pattern(DyeColor.WHITE, PatternType.STRAIGHT_CROSS),
-					new Pattern(DyeColor.RED, PatternType.STRIPE_TOP),
-					new Pattern(DyeColor.RED, PatternType.STRIPE_BOTTOM),
-					new Pattern(DyeColor.RED, PatternType.BORDER)
-			)))
-			.hide(ItemFlag.values())
-			.build();
-
-	enum KitCategory {
-		FIGHTER(ItemBuilder.of(Material.IRON_SWORD)
-				.displayName(Component.text("Fighter", NamedTextColor.RED))
-				.lore(TextUtils.toLoreList("""
-						Kits that mainly engage in
-						head-on melee combat.
-						""", NamedTextColor.GRAY))
-				.hide(ItemFlag.HIDE_ATTRIBUTES)
-				.build()
-		),
-		RANGED(ItemBuilder.of(Material.BOW)
-				.displayName(Component.text("Ranged", NamedTextColor.BLUE))
-				.lore(TextUtils.toLoreList("""
-						Kits that mainly deal damage
-						from a range.
-						""", NamedTextColor.GRAY))
-				.build()),
-		SUPPORT(
-				ItemBuilder.from(HEALER_BANNER.clone())
-						.displayName(Component.text("Support", NamedTextColor.YELLOW))
-						.lore(TextUtils.toLoreList("""
-								Kits that provide buffs for
-								teammates / defensive potential
-								""", NamedTextColor.GRAY))
-						.build(),
-				ItemBuilder.from(HEALER_BANNER_INVERTED)
-						.displayName(Component.text("Support", NamedTextColor.YELLOW))
-						.lore(TextUtils.toLoreList("""
-								Kits that provide buffs for
-								teammates / defensive potential
-								""", NamedTextColor.GRAY))
-						.build()
-		),
-		STEALTH(ItemBuilder.of(Material.SPYGLASS)
-				.displayName(Component.text("Stealth", NamedTextColor.GRAY))
-				.lore(TextUtils.toLoreList("""
-						Kits that use stealth to
-						gain information or to
-						pick off enemies.
-						""", NamedTextColor.GRAY))
-				.build()),
-		UTILITY(ItemBuilder.of(Material.POTION)
-				.displayName(Component.text("Utility", NamedTextColor.GOLD))
-				.lore(TextUtils.toLoreList("""
-						Kits that debuff enemies/
-						disorients enemy positioning""", NamedTextColor.GRAY))
-				.hide(ItemFlag.HIDE_POTION_EFFECTS)
-				.build());
-
-		final ItemStack display, displaySelected;
-
-		KitCategory(ItemStack display) {
-			this(display, TabBar.highlight(display));
-		}
-
-		KitCategory(ItemStack display, ItemStack displaySelected) {
-			this.display = display;
-			this.displaySelected = displaySelected;
-		}
-
-		ItemStack display(boolean selected) {
-			return selected ? this.displaySelected : this.display;
-		}
-	}
 
 	static final Map<KitCategory, Set<Class<? extends Kit>>> KIT_CATEGORIES = Map.of(
 			KitCategory.FIGHTER, Set.of(

@@ -81,6 +81,8 @@ public class KitPyro extends Kit
 		this.setItems(sword, bow, FIRE_ARROW, MOLOTOV_ARROW);
 
 		this.setAbilities(new PyroAbility());
+
+		setCategory(KitCategory.RANGED);
 	}
 
 	public static class PyroAbility extends Ability

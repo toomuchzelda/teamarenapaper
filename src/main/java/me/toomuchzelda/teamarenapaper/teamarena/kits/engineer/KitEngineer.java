@@ -5,11 +5,11 @@ import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
-import me.toomuchzelda.teamarenapaper.teamarena.building.Building;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
@@ -17,7 +17,10 @@ import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
-import org.bukkit.*;
+import org.bukkit.Color;
+import org.bukkit.FluidCollisionMode;
+import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.LivingEntity;
@@ -32,9 +35,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.RayTraceResult;
-import org.bukkit.util.Vector;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -142,6 +143,8 @@ public class KitEngineer extends Kit {
 
 		setItems(wrench, SENTRY, tele, pda);
 		setAbilities(new EngineerAbility());
+
+		setCategory(KitCategory.SUPPORT);
 	}
 
 	public static class EngineerAbility extends Ability {

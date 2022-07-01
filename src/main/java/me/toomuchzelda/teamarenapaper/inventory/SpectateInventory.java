@@ -6,6 +6,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
@@ -84,13 +85,13 @@ public class SpectateInventory implements InventoryProvider {
 		int end = 8 - (showOptions ? 2 /* number of options */ : 0);
 
 		if (teamFilter != null) {
-			inventory.set(0, teamToItem(teamFilter));
+			inventory.set(0, teamToItem(teamFilter, true));
 			for (int i = 1; i < end; i++) {
 				inventory.set(i, BORDER);
 			}
 		} else {
 			teamFilterTab.showTabs(inventory, getTeams(playerTeam),
-					TabBar.highlightWhenSelected(SpectateInventory::teamToItem),
+					SpectateInventory::teamToItem,
 					0, end, false);
 		}
 
@@ -142,18 +143,30 @@ public class SpectateInventory implements InventoryProvider {
 	}
 
 	private static final ItemStack ALL_PLAYERS = ItemBuilder.of(Material.PLAYER_HEAD)
-			.displayName(Component.text("Show all players"))
+			.displayName(Component.text("Show all players", NamedTextColor.YELLOW))
+			.build();
+	private static final ItemStack ALL_PLAYERS_SELECTED = ItemBuilder.of(Material.ZOMBIE_HEAD)
+			.displayName(Component.text("Show all players", NamedTextColor.AQUA))
 			.build();
 
-	private static ItemStack teamToItem(@Nullable TeamArenaTeam team) {
+	private static ItemStack teamToItem(@Nullable TeamArenaTeam team, boolean selected) {
 		if (team == null) {
-			return ALL_PLAYERS;
+			return selected ? ALL_PLAYERS_SELECTED : ALL_PLAYERS;
 		} else {
-			return ItemBuilder.of(team.isAlive() ? team.getIconItem().getType() : Material.SKELETON_SKULL)
-					.displayName(team.getComponentName())
-					.lore(Component.text("Players: " + team.getPlayerMembers().size(), NamedTextColor.GRAY),
-							Component.text("Score: " + team.getTotalScore(), NamedTextColor.GRAY))
-					.build();
+			if (team.isAlive()) {
+				var stack = ItemBuilder.of(team.getIconItem().getType())
+						.displayName(team.getComponentName())
+						.lore(Component.text("Players: " + team.getPlayerMembers().size(), NamedTextColor.GRAY),
+								Component.text("Score: " + team.getTotalScore(), NamedTextColor.GRAY))
+						.build();
+				return TabBar.highlightIfSelected(stack, selected);
+			} else {
+				return ItemBuilder.of(selected ? Material.WITHER_SKELETON_SKULL : Material.SKELETON_SKULL)
+						.displayName(team.getComponentName().decorate(TextDecoration.STRIKETHROUGH))
+						.lore(Component.text("Team eliminated!", NamedTextColor.DARK_RED, TextDecoration.BOLD),
+								Component.text("Score: " + team.getTotalScore(), NamedTextColor.GRAY))
+						.build();
+			}
 		}
 	}
 
@@ -163,24 +176,26 @@ public class SpectateInventory implements InventoryProvider {
 
 		double distance = player.getLocation().distance(distanceOrigin);
 
-		var builder = ItemBuilder.of(showKit ? kit.getIcon().getType() : Material.PLAYER_HEAD)
+		var uuid = player.getUniqueId();
+		return ItemBuilder.of(showKit ? kit.getIcon().getType() : Material.PLAYER_HEAD)
 				.displayName(playerInfo.team.colourWord(player.getName()))
-				.lore(Component.text("Kit: " + kit.getName(), NamedTextColor.GRAY),
+				.lore(Component.textOfChildren(
+								Component.text("Kit: ", NamedTextColor.GRAY),
+								Component.text(kit.getName(), kit.getCategory().textColor())
+						),
 						Component.textOfChildren(
 								Component.text("Distance: ", NamedTextColor.GRAY),
 								Component.text(TextUtils.ONE_DECIMAL_POINT.format(distance) + " block(s)", NamedTextColor.YELLOW)
 						)
 				)
-				.meta(SkullMeta.class, skullMeta -> skullMeta.setOwningPlayer(player));
-		// try not to capture player
-		var uuid = player.getUniqueId();
-		return builder.toClickableItem(e -> {
-			Player destination = Bukkit.getPlayer(uuid);
-			Player viewer = (Player) e.getWhoClicked();
-			if (Main.getGame().isSpectator(viewer) && destination != null) {
-				viewer.teleport(destination);
-			}
-		});
+				.meta(SkullMeta.class, skullMeta -> skullMeta.setOwningPlayer(player))
+				.toClickableItem(e -> {
+					Player destination = Bukkit.getPlayer(uuid);
+					Player viewer = (Player) e.getWhoClicked();
+					if (Main.getGame().isSpectator(viewer) && destination != null) {
+						viewer.teleport(destination);
+					}
+				});
 	}
 
 	enum SortOption {

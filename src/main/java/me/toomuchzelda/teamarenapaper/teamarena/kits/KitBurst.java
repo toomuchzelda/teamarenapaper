@@ -18,49 +18,51 @@ public class KitBurst extends Kit
 {
 	public KitBurst() {
 		super("Burst", "firework shooty shooty", Material.FIREWORK_ROCKET);
-		
+
 		ItemStack[] armour = new ItemStack[4];
 		armour[3] = new ItemStack(Material.CHAINMAIL_HELMET);
 		armour[2] = new ItemStack(Material.IRON_CHESTPLATE);
 		armour[1] = new ItemStack(Material.CHAINMAIL_LEGGINGS);
 		armour[0] = new ItemStack(Material.CHAINMAIL_BOOTS);
 		this.setArmour(armour);
-		
+
 		ItemStack sword = new ItemStack(Material.WOODEN_SWORD);
-		
+
 		ItemStack crossbow = new ItemStack(Material.CROSSBOW);
-		
+
 		ItemStack firework = new ItemStack(Material.FIREWORK_ROCKET);
 
 		setItems(sword, firework, crossbow);
-		
+
 		setAbilities(new BurstAbility());
+
+		setCategory(KitCategory.RANGED);
 	}
-	
+
 	public static class BurstAbility extends Ability
 	{
 		@Override
 		public void onShootBow(EntityShootBowEvent event) {
 			if(event.getProjectile() instanceof Firework firework && event.getEntity() instanceof Player p) {
 				TeamArenaTeam team = Main.getPlayerInfo(p).team;
-				
+
 				FireworkMeta meta = firework.getFireworkMeta();
 				meta.clearEffects();
 				FireworkEffect effect = FireworkEffect.builder().trail(true).with(FireworkEffect.Type.BALL)
 						.flicker(true).withColor(team.getColour()).build();
-				
+
 				meta.addEffect(effect);
 				//meta.setPower(1);
 				firework.setFireworkMeta(meta);
 			}
 		}
-		
+
 		@Override
 		public void onLoadCrossbow(EntityLoadCrossbowEvent event) {
 			event.setConsumeItem(false);
 			((Player) event.getEntity()).updateInventory(); //do this to undo client prediction of using the firework
 		}
-		
+
 		//stop them from accidentally placing the firework down and using it
 		@Override
 		public void onInteract(PlayerInteractEvent event) {

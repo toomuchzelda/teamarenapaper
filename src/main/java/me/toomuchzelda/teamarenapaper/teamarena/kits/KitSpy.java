@@ -94,6 +94,8 @@ public class KitSpy extends Kit
 
 		setAbilities(new SpyAbility());
 
+		setCategory(KitCategory.STEALTH);
+
 		currentlyDisguised = new HashMap<>();
 	}
 

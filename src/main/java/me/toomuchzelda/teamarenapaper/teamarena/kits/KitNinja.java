@@ -45,6 +45,8 @@ public class KitNinja extends Kit
 		setItems(sword, new ItemStack(Material.ENDER_PEARL));
 
 		setAbilities(new NinjaAbility());
+
+		setCategory(KitCategory.STEALTH);
 	}
 
 	public static class NinjaAbility extends Ability

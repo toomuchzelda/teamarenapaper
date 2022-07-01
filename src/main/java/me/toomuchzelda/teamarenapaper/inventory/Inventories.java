@@ -200,6 +200,7 @@ public final class Inventories implements Listener {
         public void invalidate() {
             Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
                 inv.clear();
+				Collections.fill(eventHandlers, null);
                 provider.init((Player) inv.getHolder(), this);
             });
         }
