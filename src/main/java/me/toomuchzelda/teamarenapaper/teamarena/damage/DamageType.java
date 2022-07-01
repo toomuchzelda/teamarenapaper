@@ -13,7 +13,10 @@ import net.minecraft.world.damagesource.DamageSource;
 import org.bukkit.Material;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftEntity;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.*;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Pig;
+import org.bukkit.entity.Projectile;
 import org.bukkit.event.entity.EntityDamageByBlockEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
@@ -610,13 +613,13 @@ public class DamageType {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, nmsDamageSource);
+		return Objects.hash(id, getDamageSource().getEntity());
 	}
 
 	@Override
 	public boolean equals(Object obj) {
 		return obj instanceof DamageType other &&
 				id == other.id &&
-				Objects.equals(nmsDamageSource, other.nmsDamageSource);
+				Objects.equals(getDamageSource().getEntity(), other.getDamageSource().getEntity());
 	}
 }

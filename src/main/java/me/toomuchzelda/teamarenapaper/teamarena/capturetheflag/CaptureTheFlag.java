@@ -180,71 +180,72 @@ public class CaptureTheFlag extends TeamArena
 				}
 			}
 		}
+		if (!CommandDebug.ignoreWinConditions) { // disable anti-stall if debug
 
-		this.timeToSpeed--;
-		//one minute left, announce
-		Component announcementMsg = null;
-		Component announcementTitle = null;
-		if(this.timeToSpeed == 60 * 20) {
-			announcementMsg = ONE_MINUTE_LEFT_SPEED_MESSAGE;
-			announcementTitle = ONE_MINUTE_LEFT_SPEED_TITLE;
-		}
-		else if(this.timeToSpeed == 0) {
-			announcementMsg = SPEED_NOW_MESSAGE;
-			announcementTitle = SPEED_NOW_TITLE;
+			this.timeToSpeed--;
+			//one minute left, announce
+			Component announcementMsg = null;
+			Component announcementTitle = null;
+			if (this.timeToSpeed == 60 * 20) {
+				announcementMsg = ONE_MINUTE_LEFT_SPEED_MESSAGE;
+				announcementTitle = ONE_MINUTE_LEFT_SPEED_TITLE;
+			} else if (this.timeToSpeed == 0) {
+				announcementMsg = SPEED_NOW_MESSAGE;
+				announcementTitle = SPEED_NOW_TITLE;
 
-			for(Player carrier : flagHolders.keySet()) {
-				carrier.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).addModifier(SPEED_ATTR);
+				for (Player carrier : flagHolders.keySet()) {
+					carrier.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).addModifier(SPEED_ATTR);
+				}
 			}
-		}
-		// out of time, end the game.
-		else if(this.timeToSpeed == -TIME_TO_END_AFTER_SPEED) {
-			int score = 0;
-			List<TeamArenaTeam> drawList = new ArrayList<>(teams.length);
-			for(TeamArenaTeam team : teams) {
-				if(team.getTotalScore() > score) {
-					score = team.getTotalScore();
-					drawList.clear();
-					drawList.add(team);
-				}
-				else if(team.getTotalScore() == score) {
-					drawList.add(team);
-				}
-
-				//only 1 winner
-				if(drawList.size() == 1) {
-					this.winningTeam = drawList.get(0);
-				}
-
-				Bukkit.broadcast(TOOK_TOO_LONG);
-				for(Player p : Bukkit.getOnlinePlayers()) {
-					for(int i = 0; i < 10; i++) {
-						p.playSound(p.getLocation(), SoundUtils.getRandomObnoxiousSound(), 9999f, (float) MathUtils.randomRange(-0.5, 2d));
+			// out of time, end the game.
+			else if (this.timeToSpeed == -TIME_TO_END_AFTER_SPEED) {
+				int score = 0;
+				List<TeamArenaTeam> drawList = new ArrayList<>(teams.length);
+				for (TeamArenaTeam team : teams) {
+					if (team.getTotalScore() > score) {
+						score = team.getTotalScore();
+						drawList.clear();
+						drawList.add(team);
+					} else if (team.getTotalScore() == score) {
+						drawList.add(team);
 					}
+
+					//only 1 winner
+					if (drawList.size() == 1) {
+						this.winningTeam = drawList.get(0);
+					}
+
+					Bukkit.broadcast(TOOK_TOO_LONG);
+					for (Player p : Bukkit.getOnlinePlayers()) {
+						for (int i = 0; i < 10; i++) {
+							p.playSound(p.getLocation(), SoundUtils.getRandomObnoxiousSound(), 9999f, (float) MathUtils.randomRange(-0.5, 2d));
+						}
+					}
+
+					prepEnd();
+
+					//Don't do the rest of the tick.
+					return;
 				}
-
-				prepEnd();
-
-				//Don't do the rest of the tick.
-				return;
 			}
-		}
 
-		if(announcementMsg != null) {
-			Bukkit.broadcast(announcementMsg);
-			var iter = Main.getPlayersIter();
-			while (iter.hasNext()) {
-				var entry = iter.next();
-				Player p = entry.getKey();
+			if (announcementMsg != null) {
+				Bukkit.broadcast(announcementMsg);
 
-				for(int i = 0; i < 5; i++) {
-					Bukkit.getScheduler().runTaskLater(Main.getPlugin(), bukkitTask ->
-							p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_CLUSTER_BREAK, SoundCategory.AMBIENT, 999f, 1f),
-							i);
-				}
+				var title = TextUtils.createTitle(Component.empty(), announcementTitle, 10, 40, 10);
+				Main.getPlayerInfoMap().forEach((player, playerInfo) -> {
+					if (playerInfo.getPreference(Preferences.RECEIVE_GAME_TITLES)) {
+						player.showTitle(title);
+					}
+				});
 
-				if (entry.getValue().getPreference(Preferences.RECEIVE_GAME_TITLES)) {
-					PlayerUtils.sendTitle(p, Component.empty(), announcementTitle, 10, 40, 10);
+				// annoy players
+				for (int i = 0; i < 5; i++) {
+					Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
+						for (var player : Bukkit.getOnlinePlayers()) {
+							player.playSound(player, Sound.BLOCK_AMETHYST_CLUSTER_BREAK, SoundCategory.AMBIENT, 1, 1);
+						}
+					}, i);
 				}
 			}
 		}

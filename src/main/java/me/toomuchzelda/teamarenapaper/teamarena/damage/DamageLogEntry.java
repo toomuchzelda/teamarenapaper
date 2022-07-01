@@ -34,7 +34,7 @@ public record DamageLogEntry(DamageType damageType, double damage, @Nullable Com
 			return Component.text("❄ " + type.getName(), NamedTextColor.AQUA);
 		} else if (type.is(DamageType.POISON)) {
 			return Component.text("☠ " + type.getName(), NamedTextColor.GREEN);
-		} else if (type.isFire()) {
+		} else if (type.isFire() || type.isBurn()) {
 			return Component.text("\uD83D\uDD25 " + type.getName(), NamedTextColor.RED); // lol emoji
 		} else {
 			return Component.text(type.getName(), NamedTextColor.DARK_GREEN);
@@ -82,7 +82,7 @@ public record DamageLogEntry(DamageType damageType, double damage, @Nullable Com
 		var damageTypes = entries.stream()
 				.sorted(DESCENDING)
 				.collect(Collectors.groupingBy(
-						entry -> entry.damageType,
+						DamageLogEntry::damageType,
 						LinkedHashMap::new,
 						Collectors.toList()
 				));
@@ -97,8 +97,8 @@ public record DamageLogEntry(DamageType damageType, double damage, @Nullable Com
 
 			summary.put(type, new DamageSummary(
 					new DamageLogEntry(type, totalDamage, firstEntry.damager, firstEntry.time),
-					Collections.unmodifiableList(list))
-			);
+					Collections.unmodifiableList(list)
+			));
 		});
 		return Collections.unmodifiableMap(summary);
 	}

@@ -206,28 +206,30 @@ public class KingOfTheHill extends TeamArena
 
 		activeHill.playParticles(coloursList.toArray(new Color[0]));
 
-		//no team owns the hill; do anti-stalling mechanism
-		if(owningTeam == null) {
-			//no hill caps for 5 minutes, end the game
-			if(gameTick - lastHillChangeTime >= 5 * 60 * 20) {
-				for(int i = 0; i < 5; i++) {
-					Bukkit.broadcast(Component.text("Too slow! It's been 5 minutes!!", NamedTextColor.RED));
+		if (!CommandDebug.ignoreWinConditions) { // disable anti-stall if debug
+			//no team owns the hill; do anti-stalling mechanism
+			if (owningTeam == null) {
+				//no hill caps for 5 minutes, end the game
+				if (gameTick - lastHillChangeTime >= 5 * 60 * 20) {
+					for (int i = 0; i < 5; i++) {
+						Bukkit.broadcast(Component.text("Too slow! It's been 5 minutes!!", NamedTextColor.RED));
+					}
+					nextHillOrEnd(true);
 				}
-				nextHillOrEnd(true);
-			}
-			//every two minutes
-			else if((gameTick - lastHillChangeTime) % (120 * 20) == 0 && lastHillChangeTime != gameTick) {
-				String s = "The time to capture the Hill has been halved";
-				if(ticksAndPlayersToCaptureHill != INITIAL_CAP_TIME)
-					s += " again";
+				//every two minutes
+				else if ((gameTick - lastHillChangeTime) % (120 * 20) == 0 && lastHillChangeTime != gameTick) {
+					String s = "The time to capture the Hill has been halved";
+					if (ticksAndPlayersToCaptureHill != INITIAL_CAP_TIME)
+						s += " again";
 
-				s += "! It will reset when one team captures the hill";
-				Bukkit.broadcast(Component.text(s).color(TextColor.color(255, 10, 10)));
+					s += "! It will reset when one team captures the hill";
+					Bukkit.broadcast(Component.text(s).color(TextColor.color(255, 10, 10)));
 
-				ticksAndPlayersToCaptureHill /= 2;
+					ticksAndPlayersToCaptureHill /= 2;
 
-				for(Player p : Bukkit.getOnlinePlayers()) {
-					p.playSound(p.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.AMBIENT, 99999, 0.6f);
+					for (Player p : Bukkit.getOnlinePlayers()) {
+						p.playSound(p.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.AMBIENT, 99999, 0.6f);
+					}
 				}
 			}
 		}

@@ -7,6 +7,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.title.Title;
 import net.kyori.adventure.util.HSVLike;
 import org.bukkit.map.MinecraftFont;
 import org.jetbrains.annotations.NotNull;
@@ -230,6 +231,14 @@ public class TextUtils {
 			builder.append(newChild);
 		}
 		return builder.build();
+	}
+
+	public static Title createTitle(Component title, Component subtitle, int fadeInTicks, int stayTicks, int fadeOutTicks) {
+		return Title.title(title, subtitle, Title.Times.times(
+				Duration.ofMillis(fadeInTicks * 50L),
+				Duration.ofMillis(stayTicks * 50L),
+				Duration.ofMillis(fadeOutTicks * 50L)
+		));
 	}
 
 }
