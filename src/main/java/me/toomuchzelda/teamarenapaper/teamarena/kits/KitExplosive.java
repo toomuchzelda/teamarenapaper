@@ -126,6 +126,14 @@ public class KitExplosive extends Kit{
 		}
 
 		@Override
+		public void onAttemptedAttack(DamageEvent event) {
+			if(event.getDamageType().is(DamageType.PROJECTILE)){
+				event.setCancelled(true);
+				event.getAttacker().remove();
+			}
+		}
+
+		@Override
 		public void onTick() {
 			List<GrenadeInfo> staleGrenades = new ArrayList<>();
 			List<RPGInfo> staleRPG = new ArrayList<>();
