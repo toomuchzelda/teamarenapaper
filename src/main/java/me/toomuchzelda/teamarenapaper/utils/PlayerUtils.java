@@ -9,7 +9,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSpy;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.title.Title;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.network.protocol.game.ClientboundSetHealthPacket;
@@ -30,7 +29,6 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.InvocationTargetException;
-import java.time.Duration;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -159,16 +157,9 @@ public class PlayerUtils {
 		PlayerUtils.sendPacket(player, packet);
 	}
 
-	//fuck paper, this is fucking insanity
 	public static void sendTitle(Player player, @NotNull Component title, @NotNull Component subtitle, int fadeInTicks,
 								 int stayTicks, int fadeOutTicks) {
-
-		Title.Times times = Title.Times.times(Duration.ofMillis(fadeInTicks * 50L), Duration.ofMillis(stayTicks * 50L),
-				Duration.ofMillis(fadeOutTicks * 50L));
-
-		Title fucktitle = Title.title(title, subtitle, times);
-
-		player.showTitle(fucktitle);
+		player.showTitle(TextUtils.createTitle(title, subtitle, fadeInTicks, stayTicks, fadeOutTicks));
 	}
 
 	public static void resetState(Player player) {
