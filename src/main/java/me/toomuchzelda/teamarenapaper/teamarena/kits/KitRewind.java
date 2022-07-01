@@ -4,7 +4,6 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
@@ -45,7 +44,7 @@ import java.util.*;
                 Night: Knockback (KB Explosion)
 	Sub Ability: Stasis
 		CD: 12 sec
-        Active Duration: 0.7 sec
+        Active Duration: 14 ticks
             Provides Rewind with temporary invulnerability, but it is unable to attack during this time
 */
 
@@ -85,13 +84,15 @@ public class KitRewind extends Kit {
 		setItems(new ItemStack(Material.IRON_SWORD), TIME_MACHINE, timeStasis);
 
 		setAbilities(new RewindAbility());
+
+		setCategory(KitCategory.FIGHTER);
 	}
 
 	public static class RewindAbility extends Ability {
 
 		public static final int TICK_CYCLE = 15 * 20;
 
-		record RewindInfo(int startingTick, Queue<Vector> rewindLocations) {}
+		record RewindInfo(int startingTick, Queue<Location> rewindLocations) {}
 		public final WeakHashMap<Player, RewindInfo> rewindInfo = new WeakHashMap<>();
 
 		record StasisInfo(int startingTick, ItemStack[] armor, HashMap<Integer, ? extends ItemStack> swords) {}
@@ -107,7 +108,7 @@ public class KitRewind extends Kit {
 		public void giveAbility(Player player) {
 			player.setCooldown(Material.CLOCK, TICK_CYCLE);
 			// can only rewind to TICK_CYCLE ticks away, so only TICK_CYCLE locations will be stored
-			rewindInfo.put(player, new RewindInfo(TeamArena.getGameTick(), new LinkedList<>()));
+			rewindInfo.put(player, new RewindInfo(TeamArena.getGameTick(), new ArrayDeque<>()));
 		}
 
 		@Override
@@ -133,6 +134,8 @@ public class KitRewind extends Kit {
 				if (tickElapsed >= STASIS_DURATION) {
 					player.setInvisible(false);
 					inventory.setArmorContents(stasisInfo.armor());
+					player.stopSound(Sound.ITEM_ARMOR_EQUIP_IRON);
+					player.stopSound(Sound.ITEM_ARMOR_EQUIP_CHAIN);
 					//Replacing the barriers with swords again
 					for (var sword : stasisInfo.swords().entrySet()) {
 						inventory.setItem(sword.getKey(), sword.getValue());
@@ -148,11 +151,13 @@ public class KitRewind extends Kit {
 							16, new Particle.DustOptions(Main.getPlayerInfo(player).team.getColour(), 2));
 					if (tickElapsed % 2 == 0) {
 						player.setInvisible(true);
-						player.getInventory().setArmorContents(null);
+						inventory.setArmorContents(null);
 					} else {
 						player.setInvisible(false);
-						player.getInventory().setArmorContents(stasisInfo.armor());
+						inventory.setArmorContents(stasisInfo.armor());
 					}
+					player.stopSound(Sound.ITEM_ARMOR_EQUIP_IRON);
+					player.stopSound(Sound.ITEM_ARMOR_EQUIP_CHAIN);
 				}
 			}
 
@@ -173,13 +178,13 @@ public class KitRewind extends Kit {
 
 			//Checking that the current location is a valid rewind location, if it is, add it to possible rewind locations.
 			if (player.isFlying() || player.isGliding() || (!currBlock.isEmpty() && currBlock.getType() != Material.LAVA)) {
-				info.rewindLocations().add(player.getLocation().toVector());
-				if(info.rewindLocations().size() >= TICK_CYCLE)
+				info.rewindLocations().add(player.getLocation().clone());
+				if (info.rewindLocations().size() >= TICK_CYCLE)
 					info.rewindLocations().remove();
 			}
 
 			//Sound to signify a time-cycle change
-			if(elapsedTick % (TICK_CYCLE/3) == 99){
+			if (elapsedTick % (TICK_CYCLE / 3) == 99) {
 				player.playSound(player, Sound.ITEM_LODESTONE_COMPASS_LOCK, SoundCategory.MASTER, 1.0f, 1.0f);
 			}
 
@@ -187,46 +192,44 @@ public class KitRewind extends Kit {
 			if (pinfo.getPreference(Preferences.KIT_ACTION_BAR)) {
 				Component currState;
 				if (elapsedTick >= 0 && elapsedTick < 5 * 20) {
-					currState = Component.text("Current State: Regeneration").color(REGEN_COLOR);
+					currState = Component.text("Current State: Regeneration", REGEN_COLOR);
 				} else if (elapsedTick < 10 * 20) {
-					currState = Component.text("Current State: Time Dilation").color(DILATE_COLOR);
+					currState = Component.text("Current State: Time Dilation", DILATE_COLOR);
 				} else {
-					currState = Component.text("Current State: Knockback").color(KB_COLOR);
+					currState = Component.text("Current State: Knockback", KB_COLOR);
 				}
 				player.sendActionBar(currState);
 
-				//Resetting clock name if the preference is changed mid-game
-				ItemStack clockCheck = inv.getItem((inv.first(Material.CLOCK)));
-				if(!clockCheck.displayName().contains(TIME_MACHINE.displayName().asComponent())){
-					HashMap<Integer, ? extends ItemStack> clocks = player.getInventory().all(Material.CLOCK);
-					clocks.forEach(
-							(k, v)
-									-> {inv.setItem(k, TIME_MACHINE);
-							}
-					);
+				// Update all clikc items if the preference is changed mid-game
+				var timeMachineDisplayName = TIME_MACHINE.displayName();
+				for (var iterator = inv.iterator(); iterator.hasNext(); ) {
+					var stack = iterator.next();
+					if (stack == null || stack.getType() != Material.CLOCK)
+						continue;
+					var meta = stack.getItemMeta();
+					var displayName = meta.displayName();
+					if (!timeMachineDisplayName.equals(displayName)) {
+						iterator.set(TIME_MACHINE);
+					}
 				}
 			}
 			//Those who disable action bar can see state based on the name of clock in hand
-			else{
-				if(player.getInventory().contains(Material.CLOCK)){
-					Component currState;
-					if (elapsedTick >= 0 && elapsedTick < 5 * 20) {
-						currState = ItemUtils.noItalics(Component.text("Regeneration").color(REGEN_COLOR));
-					} else if (elapsedTick < 10 * 20) {
-						currState = ItemUtils.noItalics(Component.text("Time Dilation").color(DILATE_COLOR));
-					} else {
-						currState = ItemUtils.noItalics(Component.text("Knockback").color(KB_COLOR));
-					}
-
-					HashMap<Integer, ? extends ItemStack> clocks = player.getInventory().all(Material.CLOCK);
-					clocks.forEach(
-							(k, v)
-									-> {ItemMeta clockMeta = v.getItemMeta();
-								clockMeta.displayName(currState);
-								v.setItemMeta(clockMeta);
-							}
-					);
+			else if (player.getInventory().contains(Material.CLOCK)) {
+				Component currState;
+				if (elapsedTick >= 0 && elapsedTick < 5 * 20) {
+					currState = ItemUtils.noItalics(Component.text("Regeneration", REGEN_COLOR));
+				} else if (elapsedTick < 10 * 20) {
+					currState = ItemUtils.noItalics(Component.text("Time Dilation", DILATE_COLOR));
+				} else {
+					currState = ItemUtils.noItalics(Component.text("Knockback", KB_COLOR));
 				}
+
+				HashMap<Integer, ? extends ItemStack> clocks = player.getInventory().all(Material.CLOCK);
+				clocks.forEach((k, v) -> {
+					ItemMeta clockMeta = v.getItemMeta();
+					clockMeta.displayName(currState);
+					v.setItemMeta(clockMeta);
+				});
 			}
 
 		}
@@ -270,12 +273,12 @@ public class KitRewind extends Kit {
 					int currTick = TeamArena.getGameTick();
 					RewindInfo info = rewindInfo.get(player);
 
-					Vector dest = info.rewindLocations().poll();
+					Location dest = info.rewindLocations().poll();
 					if (dest != null) {
 						//Past Location succesfully found
 						//Apply buff at departure AND arrival location
 						rewindBuff(player, info, currTick);
-						player.teleport(dest.toLocation(world));
+						player.teleport(dest);
 						world.playSound(player, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1.5f);
 						rewindBuff(player, info, currTick);
 						player.setCooldown(Material.CLOCK, 15 * 20);
@@ -298,7 +301,6 @@ public class KitRewind extends Kit {
 					player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.AMBIENT, 2, 0.5f);
 				} else {
 					//"Glitching" aesthetic effect + particles
-					TeamArenaTeam team = Main.getPlayerInfo(player).team;
 					ItemStack[] armor = player.getInventory().getArmorContents();
 					var swordSlots = player.getInventory().all(Material.IRON_SWORD);
 
@@ -308,7 +310,9 @@ public class KitRewind extends Kit {
 					}
 
 					player.setInvisible(true);
-					player.getInventory().setArmorContents(null);
+					inventory.setArmorContents(null);
+					player.stopSound(Sound.ITEM_ARMOR_EQUIP_IRON);
+					player.stopSound(Sound.ITEM_ARMOR_EQUIP_CHAIN);
 					world.playSound(player, Sound.BLOCK_BELL_RESONATE, 1f, 1.8f);
 
 					stasisInfo.put(player, new StasisInfo(TeamArena.getGameTick(), armor, swordSlots));
@@ -363,7 +367,6 @@ public class KitRewind extends Kit {
 				}
 
 				player.stopSound(Sound.ENTITY_GENERIC_EXPLODE);
-				player.getWorld().stopSound(SoundStop.named(Sound.ENTITY_GENERIC_EXPLODE));
 				player.getWorld().playSound(player.getLocation(), Sound.ITEM_FIRECHARGE_USE, 0.4f, 1.3f);
 			}
 		}

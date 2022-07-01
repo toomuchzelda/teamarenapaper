@@ -4,10 +4,12 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
@@ -19,10 +21,12 @@ public abstract class Kit {
     public static final Comparator<Kit> COMPARATOR = Comparator.comparing(Kit::getName);
 
     private static final Ability[] EMPTY_ABILITIES = new Ability[0];
-    
-    private final String name;
+
+	private final String name;
     private final String description;
     private final ItemStack display;
+	@NotNull
+	private KitCategory category = KitCategory.FIGHTER;
     //0: boots, 1: leggings, 2: chestplate, 3: helmet
     private ItemStack[] armour;
     private ItemStack[] items;
@@ -51,18 +55,32 @@ public abstract class Kit {
         activeUsers = ConcurrentHashMap.newKeySet();
     }
 
+	public Kit setCategory(@NotNull KitCategory category) {
+		this.category = category;
+		return this;
+	}
+
+	@NotNull
+	public KitCategory getCategory() {
+		return category;
+	}
+
+	public Component getDisplayName() {
+		return Component.text(getName(), category.textColor());
+	}
+
     //clearInventory and updateInventory happens outside the following two methods
     //give kit and it's abilities to player
     public void giveKit(Player player, boolean update) {
         giveKit(player, update, Main.getPlayerInfo(player));
     }
-    
+
     public void giveKit(Player player, boolean update, PlayerInfo pinfo) {
         activeUsers.add(player);
-    
+
         PlayerInventory inventory = player.getInventory();
         inventory.setArmorContents(armour);
-    
+
         //only give items if there are items
         if(items.length > 0) {
             //fill up from empty slots only
@@ -76,13 +94,13 @@ public abstract class Kit {
                 }
             }
         }
-    
+
         for(Ability ability : abilities) {
             ability.giveAbility(player);
         }
-        
+
         pinfo.activeKit = this;
-    
+
         if(update)
             player.updateInventory();
     }
@@ -91,14 +109,14 @@ public abstract class Kit {
     public void removeKit(Player player) {
         removeKit(player, Main.getPlayerInfo(player));
     }
-    
+
     public void removeKit(Player player, PlayerInfo pinfo) {
         activeUsers.remove(player);
-    
+
         for(Ability a : abilities) {
             a.removeAbility(player);
         }
-        
+
         pinfo.activeKit = null;
     }
 
@@ -121,7 +139,7 @@ public abstract class Kit {
     public ItemStack[] getArmour() {
         return armour;
     }
-    
+
     public void setItems(ItemStack... items) {
         this.items = items;
     }
@@ -133,12 +151,12 @@ public abstract class Kit {
     public ItemStack getIcon() {
         return display.clone();
     }
-    
+
     public static @Nullable Kit getActiveKit(Player player) {
         Kit kit = Main.getPlayerInfo(player).activeKit;
         return kit;
     }
-    
+
     /**
      * for spy
      * @return
@@ -147,19 +165,19 @@ public abstract class Kit {
         Kit kit = getActiveKit(player);
         if(kit == null)
             return null;
-        
+
         while(kit.isInvisKit()) {
             kit = getRandomKit();
         }
-    
+
         return kit;
     }
-    
+
     public static Kit getRandomKit() {
         Kit[] kits = Main.getGame().getKits().toArray(new Kit[0]);
         return kits[MathUtils.randomMax(kits.length - 1)];
     }
-    
+
     public String getName() {
         return name;
     }
@@ -175,11 +193,11 @@ public abstract class Kit {
     public Ability[] getAbilities() {
         return abilities;
     }
-    
+
     public boolean isInvisKit() {
         return false;
     }
-    
+
     /**
      * get abilities of the kit the player is actively using
      */
@@ -192,12 +210,12 @@ public abstract class Kit {
             return EMPTY_ABILITIES;
         }
     }
-    
+
     public static boolean hasAbility(Player player, Class<? extends Ability> ability) {
         Kit kit = getActiveKit(player);
         return hasAbility(kit, ability);
     }
-    
+
     public static boolean hasAbility(Kit kit, Class<? extends Ability> ability) {
         if(kit != null) {
             for (Ability a : kit.getAbilities()) {
@@ -205,7 +223,7 @@ public abstract class Kit {
                     return true;
             }
         }
-        
+
         return false;
     }
 }

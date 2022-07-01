@@ -91,6 +91,8 @@ public class KitVenom extends Kit
 
 		setItems(sword, leap);
 		setAbilities(new VenomAbility());
+
+		setCategory(KitCategory.UTILITY);
 	}
 
 	public static class VenomAbility extends Ability

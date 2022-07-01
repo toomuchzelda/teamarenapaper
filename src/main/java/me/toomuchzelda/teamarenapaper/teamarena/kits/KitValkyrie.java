@@ -1,37 +1,5 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
-import java.util.*;
-
-import org.bukkit.Bukkit;
-import org.bukkit.Color;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Particle;
-import org.bukkit.Sound;
-import org.bukkit.World;
-import org.bukkit.Particle.DustOptions;
-import org.bukkit.Particle.DustTransition;
-import org.bukkit.attribute.Attribute;
-import org.bukkit.attribute.AttributeInstance;
-import org.bukkit.attribute.AttributeModifier;
-import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Item;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
-import org.bukkit.event.block.Action;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.ItemFlag;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.MainHand;
-import org.bukkit.inventory.PlayerInventory;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.scheduler.BukkitScheduler;
-import org.bukkit.scheduler.BukkitTask;
-import org.bukkit.util.Vector;
-
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
@@ -39,17 +7,34 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.sound.SoundStop;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
+import org.bukkit.*;
+import org.bukkit.Particle.DustTransition;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.attribute.AttributeModifier;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.*;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.ItemFlag;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.RayTraceResult;
+import org.bukkit.util.Vector;
+
+import java.util.*;
 
 //Kit Description:
 /*
-// https://athiosmc.com/threads/kit-valkiryie.411/
     Kit Goal: Initiator / Fighter kit w/ cool melee mechanics
 
-    Weapon: Netherite Axe w/ Sharp 3 + KB 1
-    ~ 5 DMG
     Slowed while holding axe
 
     Sub-Ability: Spin Attack
@@ -92,14 +77,13 @@ public class KitValkyrie extends Kit{
     public static final int BOMB_CD = 12 * 20;
     public static final int DETONATION_TIME = 30;
     public static final double PULL_AMP = 0.2;
-    public static final double KB_AMP = 0.5;
     public static final Component BOMB_LORE = ItemUtils.noItalics(Component.text("Left Click to throw with high velocity"));
     public static final Component BOMB_LORE2 = ItemUtils.noItalics(Component.text("Right Click to toss with low velocity"));
 
     public static final Set<BukkitTask> VALK_TASKS = new HashSet<>();
 
     static{
-        VALK_AXE = new ItemStack(Material.NETHERITE_AXE);
+        VALK_AXE = new ItemStack(Material.DIAMOND_AXE);
         ItemMeta valkMeta = VALK_AXE.getItemMeta();
         valkMeta.addEnchant(Enchantment.DAMAGE_ALL, AXE_SHARP, true);
         valkMeta.addEnchant(Enchantment.KNOCKBACK, 1, false);
@@ -118,8 +102,8 @@ public class KitValkyrie extends Kit{
     }
 
     public KitValkyrie(){
-        super("Valkyrie", "A tanky melee kit which much pay special attention to timing and spacing. The Battle Axe takes a while to swing, but hits all enemies in an area around you! Hit your enemies at the very edge of your attack radius to maximize damage!",
-				Material.NETHERITE_AXE);
+        super("Valkyrie", "A tanky melee kit which must pay special attention to timing and spacing. The Battle Axe takes a while to swing, but hits all enemies in an area around you! Hit your enemies at the very edge of your attack radius to maximize damage!",
+				Material.DIAMOND_AXE);
         ItemStack helm = new ItemStack(Material.IRON_HELMET);
         ItemStack chest = new ItemStack(Material.DIAMOND_CHESTPLATE);
         ItemMeta chestMeta = chest.getItemMeta();
@@ -134,6 +118,8 @@ public class KitValkyrie extends Kit{
         this.setArmor(helm, chest, legs, boots);
         setItems(VALK_AXE, GRAV_BOMB);
         setAbilities(new ValkyrieAbility());
+
+		setCategory(KitCategory.FIGHTER);
     }
 
     public static class ValkyrieAbility extends Ability{
@@ -142,6 +128,7 @@ public class KitValkyrie extends Kit{
         //If it contains a player, they are allowed to attack with axe
         public static final Set<Player> ACTIVE_AXE = new HashSet<>();
         public final HashMap<Player, Integer> BOMB_RECHARGES = new HashMap<>();
+		private final Set<Player> RECEIVED_AXE_CHAT_MESSAGE = new HashSet<>();
 
         public void unregisterAbility() {
 			Iterator<BukkitTask> iter = VALK_TASKS.iterator();
@@ -156,20 +143,25 @@ public class KitValkyrie extends Kit{
 			player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).removeModifier(AXE_SLOW);
             player.setExp(0);
             ACTIVE_AXE.remove(player);
+			RECEIVED_AXE_CHAT_MESSAGE.remove(player);
 		}
 
         public void onAttemptedAttack(DamageEvent event) {
             Player player = (Player) event.getAttacker();
             ItemStack item = player.getInventory().getItemInMainHand();
-            if(item.getType() == Material.NETHERITE_AXE){
+            if(item.getType() == Material.DIAMOND_AXE){
                 //This means an attack is being initialized,
                 //Wind up is called, no damage is dealt by the actual hit.
-                if(player.getExp() == 0 && !player.hasCooldown(Material.NETHERITE_AXE)){
+                if(player.getExp() == 0 && !player.hasCooldown(Material.DIAMOND_AXE)){
                     windUp(player);
                     event.setCancelled(true);
                 }
                 if(!ACTIVE_AXE.contains(player)){
                     event.setCancelled(true);
+					//O
+					if(RECEIVED_AXE_CHAT_MESSAGE.add(player)){
+						player.sendMessage(Component.text("Damage can only be dealt with your spin attack!").color(TextUtils.ERROR_RED));
+					}
                 }
             }
             //Preventing friendly-fire from explosion
@@ -182,7 +174,7 @@ public class KitValkyrie extends Kit{
             //stolen from jacky, applies slow when axe is held
             AttributeInstance instance = player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
             World world = player.getWorld();
-			if(player.getInventory().getItemInMainHand().getType() == Material.NETHERITE_AXE){
+			if(player.getInventory().getItemInMainHand().getType() == Material.DIAMOND_AXE){
 				if(!instance.getModifiers().contains(AXE_SLOW)) {
 					instance.addModifier(AXE_SLOW);
 				}
@@ -194,16 +186,16 @@ public class KitValkyrie extends Kit{
 			}
 
             //Controls when Axe is allowed to attack
-            if(player.getCooldown(Material.NETHERITE_AXE) <= AXE_CD - 3 && ACTIVE_AXE.contains(player)){
+            if(player.getCooldown(Material.DIAMOND_AXE) <= AXE_CD - 3 && ACTIVE_AXE.contains(player)){
                 ACTIVE_AXE.remove(player);
             }
 
             //Particle effect: Indicator that Axe is off CD
-            if(player.getInventory().getItemInMainHand().getType() == Material.NETHERITE_AXE && !player.hasCooldown(Material.NETHERITE_AXE)){
+            if(player.getInventory().getItemInMainHand().getType() == Material.DIAMOND_AXE && !player.hasCooldown(Material.DIAMOND_AXE)){
                 world.spawnParticle(Particle.CRIT, player.getLocation().add(0, 1, 0), 1);
             }
             //Sound Effect: Indicates Axe is now off CD
-            if(player.getCooldown(Material.NETHERITE_AXE) == 1){
+            if(player.getCooldown(Material.DIAMOND_AXE) == 1){
                 player.playSound(player, Sound.ITEM_AXE_SCRAPE, 1.0f, 1.3f);
             }
 
@@ -233,12 +225,11 @@ public class KitValkyrie extends Kit{
         public void onInteract(PlayerInteractEvent event) {
             Player player = event.getPlayer();
             PlayerInventory inv = player.getInventory();
-            ItemStack item = event.getItem();
             Material mat = event.getMaterial();
             Action action = event.getAction();
 
             //Initializes Wind-Up when an attack does not hit a player
-            if((action == Action.LEFT_CLICK_AIR || action == Action.LEFT_CLICK_BLOCK) && mat == Material.NETHERITE_AXE && player.getExp() == 0 && !player.hasCooldown(Material.NETHERITE_AXE)){
+            if((action == Action.LEFT_CLICK_AIR || action == Action.LEFT_CLICK_BLOCK) && mat == Material.DIAMOND_AXE && player.getExp() == 0 && !player.hasCooldown(Material.DIAMOND_AXE)){
                     windUp(player);
             }
 
@@ -273,7 +264,7 @@ public class KitValkyrie extends Kit{
                     }
                     else{
                         duration--;
-                        isAxe = player.getInventory().getItemInMainHand().getType() == Material.NETHERITE_AXE;
+                        isAxe = player.getInventory().getItemInMainHand().getType() == Material.DIAMOND_AXE;
                         //Exp bar visually indicates time until hit is initiated
                         if(player.getExp() + expInc >= 1){
                             player.setExp(0.999f);
@@ -295,38 +286,50 @@ public class KitValkyrie extends Kit{
         //An AOE attack that follows a succesful windup, hits all enemies within an area, applies bonus damage based on distance
         public void valkAttack(Player player){
             List<Entity> nearbyEnt = player.getNearbyEntities(ATTACK_RADIUS, ATTACK_RADIUS, ATTACK_RADIUS);
-            Location loc = player.getLocation();
+            Location playerLoc = player.getLocation();
             ItemStack item = player.getInventory().getItemInMainHand();
             ItemMeta meta = item.getItemMeta();
             World world = player.getWorld();
             Iterator<Entity> iter = nearbyEnt.iterator();
             while(iter.hasNext()){
                 Entity entity = iter.next();
-                if (entity instanceof LivingEntity victim && !victim.getType().equals(EntityType.ARMOR_STAND)){
-                    double distance = victim.getLocation().distance(loc);
-                    ACTIVE_AXE.add(player);
+				double distance = entity.getLocation().distance(playerLoc);
+                if (entity instanceof LivingEntity victim && !victim.getType().equals(EntityType.ARMOR_STAND) &&
+						distance <= ATTACK_RADIUS){
 
-                    //If distance is < 1, it is a "sour hit" and no bonus damage is given
-                    if(distance < 1){
+					Vector attackerToVictim = victim.getEyeLocation().subtract(player.getEyeLocation()).toVector().normalize();
+					//Raytrace checks for blocks between attacker and victim,
+					//if collidable block is found, the attack is cancelled
+					RayTraceResult rayTrace = null;
+					//When distance = 0, rayTrace throws exception (i.e. you TP to someone and are in the exact same spot)
+					if(distance != 0){
+						rayTrace = player.getWorld().rayTraceBlocks(
+								player.getEyeLocation(), attackerToVictim, distance,
+								FluidCollisionMode.NEVER, true);
+					}
 
-                    }
-                    else if(distance >= 1 && distance < 3){
-                        meta.addEnchant(Enchantment.DAMAGE_ALL, AXE_SHARP + NORMAL_BONUS, true);
-                    }
-                    else{
-                        meta.addEnchant(Enchantment.DAMAGE_ALL, AXE_SHARP + SWEET_SPOT_BONUS, true);
-                        player.playSound(player, Sound.BLOCK_GRINDSTONE_USE, 1.0f, 1.9f);
-                    }
-                    item.setItemMeta(meta);
-                    player.attack(victim);
-                    item.addEnchantment(Enchantment.DAMAGE_ALL, AXE_SHARP);
+					if(rayTrace == null){
+						ACTIVE_AXE.add(player);
 
-                }
+						//If distance is < 1, it is a "sour hit" and no bonus damage is given
+						if (distance < 1) {
+
+						} else if (distance < 2.6) {
+							meta.addEnchant(Enchantment.DAMAGE_ALL, AXE_SHARP + NORMAL_BONUS, true);
+						} else {
+							meta.addEnchant(Enchantment.DAMAGE_ALL, AXE_SHARP + SWEET_SPOT_BONUS, true);
+							player.playSound(player, Sound.BLOCK_GRINDSTONE_USE, 1.0f, 1.9f);
+						}
+						item.setItemMeta(meta);
+						player.attack(victim);
+						item.addEnchantment(Enchantment.DAMAGE_ALL, AXE_SHARP);
+					}
+				}
                 iter.remove();
             }
             axeParticles(player);
             world.playSound(player, Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1.0f, 1.6f);
-            player.setCooldown(Material.NETHERITE_AXE, AXE_CD);
+            player.setCooldown(Material.DIAMOND_AXE, AXE_CD);
         }
 
         //Particle effect to show the effective range of valkAttack
@@ -366,15 +369,16 @@ public class KitValkyrie extends Kit{
 
         public void throwGrenade(Player player, double amp){
 			World world = player.getWorld();
-            Vector direction = player.getLocation().getDirection();
+			Location location = player.getEyeLocation();
             final TeamArenaTeam team = Main.getPlayerInfo(player).team;
 			Color teamColor = team.getColour();
 
-			Item activeGrenade = world.dropItem(player.getLocation(), new ItemStack(Material.HEART_OF_THE_SEA));
-            activeGrenade.setCanPlayerPickup(false);
-			activeGrenade.setCanMobPickup(false);
-		    activeGrenade.setVelocity(direction.multiply(amp));
-		    world.playSound(activeGrenade.getLocation(), Sound.ENTITY_CREEPER_PRIMED, 1f, 1.1f);
+			Item activeGrenade = world.dropItem(location, new ItemStack(Material.HEART_OF_THE_SEA), item -> {
+				item.setCanPlayerPickup(false);
+				item.setCanMobPickup(false);
+				item.setVelocity(location.getDirection().multiply(amp));
+			});
+		    world.playSound(activeGrenade, Sound.ENTITY_CREEPER_PRIMED, 1f, 1.1f);
 
 			BukkitTask runnable = new BukkitRunnable(){
 				//Grenade explosion
@@ -409,7 +413,7 @@ public class KitValkyrie extends Kit{
                                     player.stopSound(Sound.ENTITY_GENERIC_EXPLODE);
                                     player.getWorld().stopSound(SoundStop.named(Sound.ENTITY_GENERIC_EXPLODE));
                                     activeGrenade.remove();
-                                    BOMB_RECHARGES.put((Player) player, TeamArena.getGameTick());
+                                    BOMB_RECHARGES.put(player, TeamArena.getGameTick());
                                     cancel();
                                 }
                                 else{

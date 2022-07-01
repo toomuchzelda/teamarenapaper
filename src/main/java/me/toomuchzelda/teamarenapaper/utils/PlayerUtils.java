@@ -4,9 +4,11 @@ import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSpy;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.title.Title;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.network.protocol.game.ClientboundSetHealthPacket;
@@ -19,6 +21,8 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_19_R1.util.CraftVector;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
@@ -27,7 +31,6 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.InvocationTargetException;
-import java.time.Duration;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -101,6 +104,22 @@ public class PlayerUtils {
 	}
 
 	/**
+	 * Send a title to all players, respecting their RECEIVE_GAME_TITLES preference.
+	 * Method for convenience.
+	 * @param title The title.
+	 */
+	public static void sendOptionalTitle(Component title, Component subtitle, int fadeInTicks, int stayTicks,
+										 int fadeOutTicks) {
+		var iter = Main.getPlayersIter();
+		while(iter.hasNext()) {
+			var entry = iter.next();
+			if(entry.getValue().getPreference(Preferences.RECEIVE_GAME_TITLES)) {
+				PlayerUtils.sendTitle(entry.getKey(), title, subtitle, fadeInTicks, stayTicks, fadeOutTicks);
+			}
+		}
+	}
+
+	/**
 	 * untested
 	 * @param player
 	 * @return
@@ -156,16 +175,9 @@ public class PlayerUtils {
 		PlayerUtils.sendPacket(player, packet);
 	}
 
-	//fuck paper, this is fucking insanity
 	public static void sendTitle(Player player, @NotNull Component title, @NotNull Component subtitle, int fadeInTicks,
 								 int stayTicks, int fadeOutTicks) {
-
-		Title.Times times = Title.Times.times(Duration.ofMillis(fadeInTicks * 50L), Duration.ofMillis(stayTicks * 50L),
-				Duration.ofMillis(fadeOutTicks * 50L));
-
-		Title fucktitle = Title.title(title, subtitle, times);
-
-		player.showTitle(fucktitle);
+		player.showTitle(TextUtils.createTitle(title, subtitle, fadeInTicks, stayTicks, fadeOutTicks));
 	}
 
 	public static void resetState(Player player) {
@@ -174,7 +186,10 @@ public class PlayerUtils {
 		player.setLevel(0);
 		player.setExp(0);
 		player.setGameMode(GameMode.SURVIVAL);
+		EntityUtils.removeAllModifiers(player);
+		player.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(20d);
 		player.setHealth(player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
+		player.getAttribute(Attribute.GENERIC_ATTACK_SPEED).setBaseValue(99999d);
 		player.setSaturation(5f);
 		player.setFoodLevel(20);
 		player.setAbsorptionAmount(0);
@@ -184,9 +199,6 @@ public class PlayerUtils {
 		for (PotionEffect effect : player.getActivePotionEffects()) {
 			player.removePotionEffect(effect.getType());
 		}
-
-		// remove all queued damage
-		Main.getGame().damageQueue.removeIf(damageEvent -> damageEvent.getVictim() == player);
 	}
 
 	public static void sendKitMessage(Player player, Component chat, Component actionBar) {
@@ -210,5 +222,25 @@ public class PlayerUtils {
 	 */
 	public static void setInvisible(Player player, boolean invis) {
 		player.setInvisible(invis);
+	}
+
+	/**
+	 * Check whether the viewer sees the enemySpy as an ally or not.
+	 * Defaults to false if enemySpy is not alive, is not spy, or is not disguised currently
+	 */
+	public static boolean isDisguisedAsAlly(Player viewer, Player enemySpy){
+		TeamArenaTeam viewerTeam = Main.getPlayerInfo(viewer).team;
+		Kit enemyKit = Main.getPlayerInfo(enemySpy).activeKit;
+		//Check that the currently checked enemy is a spy AND is disguised
+		if(enemyKit != null &&
+				KitSpy.currentlyDisguised.containsKey(enemySpy)){
+					KitSpy.SpyDisguiseInfo disguiseInfo = KitSpy.getInfo(enemySpy);
+					TeamArenaTeam disguisedTeam = Main.getPlayerInfo(disguiseInfo.disguisingAsPlayer()).team;
+					//If the spy is disguised as a different team, they are a valid target, so return true.
+					return disguisedTeam.equals(viewerTeam);
+		}
+		else{
+			return false;
+		}
 	}
 }

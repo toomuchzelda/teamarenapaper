@@ -2,88 +2,72 @@ package me.toomuchzelda.teamarenapaper.utils;
 
 import me.toomuchzelda.teamarenapaper.Main;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Set;
 
-public class FileUtils
-{
-	//from kayz1:
-	// https://stackoverflow.com/questions/6214703/copy-entire-directory-contents-to-another-directory
+public class FileUtils {
 
-	public static void copyFolder(File source, File destination)
-	{
-		if (source.isDirectory())
-		{
-			if (!destination.exists())
-			{
-				destination.mkdirs();
-			}
+	private static final Set<String> IGNORED_DIRECTORIES = Set.of("poi");
+	private static final Set<String> IGNORED_FILES = Set.of("uid.dat");
+	public static void copyFolder(File source, File destination) {
+		Path sourcePath = source.toPath();
+		Path destPath = destination.toPath();
+		try {
+			Files.walkFileTree(sourcePath, new SimpleFileVisitor<>() {
 
-			String files[] = source.list();
-
-			for (String file : files)
-			{
-				File srcFile = new File(source, file);
-				File destFile = new File(destination, file);
-
-				copyFolder(srcFile, destFile);
-			}
-		}
-		else
-		{
-			InputStream in = null;
-			OutputStream out = null;
-
-			try
-			{
-				in = new FileInputStream(source);
-				out = new FileOutputStream(destination);
-
-				byte[] buffer = new byte[1024];
-
-				int length;
-				while ((length = in.read(buffer)) > 0)
-				{
-					out.write(buffer, 0, length);
-				}
-			}
-			catch (Exception e)
-			{
-				try
-				{
-					in.close();
-				}
-				catch (IOException e1)
-				{
-					e1.printStackTrace();
+				@Override
+				public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
+						throws IOException {
+					if (IGNORED_DIRECTORIES.contains(dir.getFileName().toString())) {
+						return FileVisitResult.SKIP_SUBTREE;
+					}
+					Files.createDirectories(destPath.resolve(sourcePath.relativize(dir)));
+					return FileVisitResult.CONTINUE;
 				}
 
-				try
-				{
-					out.close();
+				@Override
+				public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
+						throws IOException {
+					if (!IGNORED_FILES.contains(file.getFileName().toString()))
+						Files.copy(file, destPath.resolve(sourcePath.relativize(file)),
+								StandardCopyOption.REPLACE_EXISTING);
+					return FileVisitResult.CONTINUE;
 				}
-				catch (IOException e1)
-				{
-					e1.printStackTrace();
-				}
-			}
+			});
+		} catch (IOException ex) {
+			Main.logger().severe("Failed to copy \"" + source.getAbsolutePath() + "\" to \"" + destination.getAbsolutePath() + "\"");
+			ex.printStackTrace();
 		}
 	}
 
 	public static void delete(File file) {
-		deleteRec(file);
+		Path directory = file.toPath();
 
-		Main.logger().info("Deleted file " + file.getAbsolutePath());
-	}
+		try {
+			if (Files.isDirectory(directory)) {
+				Files.walkFileTree(directory, new SimpleFileVisitor<>() {
+					@Override
+					public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+						Files.delete(file);
+						return FileVisitResult.CONTINUE;
+					}
 
-	private static void deleteRec(File file) {
-		if (file.isDirectory()) {
-			for (File f : file.listFiles()) {
-				deleteRec(f);
+					@Override
+					public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+						Files.delete(dir);
+						return FileVisitResult.CONTINUE;
+					}
+				});
+			} else {
+				Files.delete(directory);
 			}
-		}
-
-		if(!file.delete()) {
-			Main.logger().severe("Failed to delete " + file.getAbsolutePath());
+			Main.logger().info("Deleted file " + file.getAbsolutePath());
+		} catch (IOException ex) {
+			Main.logger().info("Failed to delete " + file.getAbsolutePath());
+			ex.printStackTrace();
 		}
 	}
 }

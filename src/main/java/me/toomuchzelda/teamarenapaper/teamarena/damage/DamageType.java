@@ -13,16 +13,17 @@ import net.minecraft.world.damagesource.DamageSource;
 import org.bukkit.Material;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftEntity;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.*;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Pig;
+import org.bukkit.entity.Projectile;
 import org.bukkit.event.entity.EntityDamageByBlockEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.regex.Pattern;
 
 //partially from RedWarfare's AttackType class - credit libraryaddict
@@ -169,6 +170,9 @@ public class DamageType {
 	public static final DamageType SNIPER_GRENADE_FAIL = new DamageType("Grenade Fail", "%Killed% forgot they pulled the pin.")
 			.setInstantDeath().setNoKnockback().setDamageSource(DamageSource.explosion((net.minecraft.world.entity.LivingEntity) null));
 
+	public static final DamageType SNIPER_HEADSHOT = new DamageType("Headshot", "%Killed% was headshot by %Killer%")
+			.setProjectile();
+
     public static final DamageType DEMO_TNTMINE = new DamageType("Demolitions TNT Mine",
             "%Killed% stepped on %Killer%'s TNT Mine and blew up")
             .setDamageSource(DamageSource.explosion((net.minecraft.world.entity.LivingEntity) null))
@@ -176,6 +180,14 @@ public class DamageType {
 
 	public static final DamageType TOXIC_LEAP = new DamageType("Venom Leap", "%Killed% was killed by %Killer%'s Toxic Leap");
 
+	/*******************************************************************************************
+	 * 									GAMEMODE DAMAGETYPES
+	 ******************************************************************************************/
+
+	public static final DamageType BOMB_EXPLODED = new DamageType("Team Bomb" ).setInstantDeath().setIgnoreRate();
+
+	public static final DamageType END_GAME_LIGHTNING = new DamageType("Herobrine", "%Killed% was killed by Herobrine")
+			.setIgnoreArmor().setIgnoreArmorEnchants().setNoKnockback().setIgnoreRate().setDamageSource(DamageSource.LIGHTNING_BOLT);
 
 	private static int idCounter = 0;
 
@@ -326,13 +338,17 @@ public class DamageType {
         return _deathMessages[MathUtils.random.nextInt(_deathMessages.length)];
     }
 
-	@NotNull
+	@Nullable
     public Component getDeathMessage(@Nullable Entity victim, @Nullable Entity killer, @Nullable Entity cause) {
-		return doPlaceholders(getRawDeathMessage(),
-				EntityUtils.getComponent(victim),
-				EntityUtils.getComponent(killer),
-				cause != null ? EntityUtils.getComponent(cause) : Component.empty()
-		);
+		if(hasDeathMessages()) {
+			return doPlaceholders(getRawDeathMessage(),
+					EntityUtils.getComponent(victim),
+					EntityUtils.getComponent(killer),
+					cause != null ? EntityUtils.getComponent(cause) : Component.empty()
+			);
+		}
+
+		return null;
     }
 
 	private static final Pattern LEGACY_REGEX = Pattern.compile("%(Kille[dr]|Cause)%");
@@ -454,6 +470,10 @@ public class DamageType {
     public boolean isProjectile() {
         return _projectile;
     }
+
+	public boolean hasDeathMessages() {
+		return this._deathMessages.length > 0;
+	}
 
 	public boolean hasApplicableEnchants() {
 		return this.applicableEnchantments.size() > 0;
@@ -608,13 +628,12 @@ public class DamageType {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, nmsDamageSource);
+		return this.id;
 	}
 
 	@Override
 	public boolean equals(Object obj) {
 		return obj instanceof DamageType other &&
-				id == other.id &&
-				Objects.equals(nmsDamageSource, other.nmsDamageSource);
+				id == other.id;
 	}
 }

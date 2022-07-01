@@ -8,6 +8,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
@@ -74,6 +75,8 @@ public class KitDemolitions extends Kit
 
 		this.setArmor(new ItemStack(Material.CHAINMAIL_HELMET), new ItemStack(Material.CHAINMAIL_CHESTPLATE),
 				new ItemStack(Material.CHAINMAIL_LEGGINGS), new ItemStack(Material.GOLDEN_BOOTS));
+
+		setCategory(KitCategory.SUPPORT);
 	}
 
 	public static boolean isValidMineBlock(Block block) {
@@ -185,7 +188,6 @@ public class KitDemolitions extends Kit
 
 		@Override
 		public void onInteract(PlayerInteractEvent event) {
-
 			Material mat = event.getMaterial();
 			int type = 0;
 			if(TNT_MINE_ITEM.getType() == mat)
@@ -223,6 +225,7 @@ public class KitDemolitions extends Kit
 			else if(mat == REMOTE_DETONATOR_ITEM.getType()) {
 				Player demo = event.getPlayer();
 				event.setUseItemInHand(Event.Result.DENY);
+				event.setUseInteractedBlock(Event.Result.DENY); //prevent arming tnt
 				DemoMine mine = TARGETTED_MINE.get(demo);
 				if(mine != null) {
 					mine.trigger(demo);

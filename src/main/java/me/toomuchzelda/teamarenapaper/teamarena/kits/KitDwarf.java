@@ -24,52 +24,54 @@ public class KitDwarf extends Kit
 	public static final int MAX_LEVELS = 20;
 	public static final int LEVELS_PER_ENCHANT = 3;
 	public static final int MAX_PROTECTION = 4;
-	
+
 	private static final AttributeModifier[] LEVELS_TO_MODIFIER = new AttributeModifier[MAX_LEVELS + 1];
-	
+
 	static {
 		//credit jacky8399
 		for(int i = 0; i < LEVELS_TO_MODIFIER.length; i++) {
 			double slowness = ((double) MAX_LEVELS / 2) - i;
 			slowness /= ((double) MAX_LEVELS / 2);
 			slowness -= 1;
-			
+
 			if(slowness > 1)
 				slowness = 1;
-			
+
 			AttributeModifier modifier = new AttributeModifier("DwarfSlowness" + i, slowness,
 					AttributeModifier.Operation.MULTIPLY_SCALAR_1);
-			
+
 			LEVELS_TO_MODIFIER[i] = modifier;
 		}
 	}
-	
+
 	public KitDwarf() {
 		super("Dwarf", "Starting off very weak, It slowly gains power by sneaking, eventually reaching God-like levels." +
 						" The stronger it gets though, the slower it becomes.",
 				Material.EXPERIENCE_BOTTLE);
-		
+
 		ItemStack[] armour = new ItemStack[4];
-		
+
 		armour[3] = new ItemStack(Material.LEATHER_HELMET);
 		armour[2] = new ItemStack(Material.LEATHER_CHESTPLATE);
 		armour[1] = new ItemStack(Material.LEATHER_LEGGINGS);
 		armour[0] = new ItemStack(Material.LEATHER_BOOTS);
-		
+
 		for(ItemStack armorPiece : armour) {
 			LeatherArmorMeta meta = (LeatherArmorMeta) armorPiece.getItemMeta();
 			meta.setColor(Color.BLUE);
 			armorPiece.setItemMeta(meta);
 		}
 		this.setArmour(armour);
-		
+
 		ItemStack sword = new ItemStack(Material.STONE_SWORD);
 		ItemStack[] items = new ItemStack[]{sword};
 		this.setItems(items);
-		
+
 		setAbilities(new DwarfAbility());
+
+		setCategory(KitCategory.SUPPORT);
 	}
-	
+
 	public static class DwarfAbility extends Ability
 	{
 		@Override
@@ -82,11 +84,11 @@ public class KitDwarf extends Kit
 			}
 			player.setExp(0);
 		}
-		
+
 		@Override
 		public void onPlayerTick(Player player) {
 			float expToGain; //perTick
-			
+
 			if (player.isSprinting()) {
 				expToGain = -0.03f;
 			}
@@ -95,18 +97,18 @@ public class KitDwarf extends Kit
 			}
 			else
 				expToGain = -0.005f;
-			
+
 			expToGain *= 1 + player.getExp() / 20; // slight acceleration at higher levels
-			
+
 			float newExp = player.getExp() + expToGain;
-			
+
 			int currentLevel = player.getLevel();
 			if (newExp > 1) {
 				if (currentLevel < MAX_LEVELS) {
 					//level up
 					player.setLevel(currentLevel + 1);
 					newExp = 0;
-					
+
 					level(player, currentLevel);
 					player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.PLAYERS,
 							1f, 0f);
@@ -119,7 +121,7 @@ public class KitDwarf extends Kit
 					//level down
 					player.setLevel(currentLevel - 1);
 					newExp = 1;
-					
+
 					level(player, currentLevel);
 					player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_BURP, SoundCategory.PLAYERS, 1f, 0f);
 				}
@@ -128,23 +130,23 @@ public class KitDwarf extends Kit
 			}
 			player.setExp(newExp);
 		}
-		
+
 		private void level(Player player, int prevLevel) {
 			int enchantLevels = player.getLevel() / LEVELS_PER_ENCHANT;
-			
+
 			AttributeModifier oldMod = LEVELS_TO_MODIFIER[prevLevel];
 			player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).removeModifier(oldMod);
 			player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).addModifier(LEVELS_TO_MODIFIER[player.getLevel()]);
-			
+
 			PlayerInventory inventory = player.getInventory();
 			for (int i = 0; i < inventory.getSize(); i++) {
 				ItemStack item = inventory.getItem(i);
 				if (item == null)
 					continue;
-				
+
 				if(Main.getGame() instanceof CaptureTheFlag ctf && ctf.isFlagItem(item))
 					continue;
-				
+
 				ItemMeta meta = item.getItemMeta();
 				if (ItemUtils.isArmor(item)) {
 					if (enchantLevels == 0)
@@ -160,14 +162,14 @@ public class KitDwarf extends Kit
 				}
 				item.setItemMeta(meta);
 			}
-			
+
 			//enchantment levels have changed
 			if (prevLevel / LEVELS_PER_ENCHANT != enchantLevels) {
 				PlayerInfo pinfo = Main.getPlayerInfo(player);
 				int armorLevel = Math.min(MAX_PROTECTION, enchantLevels);
 				Component text = Component.text("Armor Protection: " + armorLevel + "    Sword Sharpness: "
 						+ enchantLevels).color(TextColor.color(223, 94, 255));
-				
+
 				if (pinfo.getPreference(Preferences.KIT_ACTION_BAR)) {
 					player.sendActionBar(text);
 				}

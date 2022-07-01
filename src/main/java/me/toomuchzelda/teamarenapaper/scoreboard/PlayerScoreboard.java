@@ -3,14 +3,21 @@ package me.toomuchzelda.teamarenapaper.scoreboard;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.minecraft.server.ServerScoreboard;
+import net.minecraft.world.scores.PlayerTeam;
 import org.bukkit.Bukkit;
+import org.bukkit.craftbukkit.v1_19_R1.scoreboard.CraftScoreboard;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 
-import java.util.*;
+import java.lang.reflect.Field;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -22,6 +29,7 @@ import java.util.stream.Stream;
 public class PlayerScoreboard
 {
 	public static final Scoreboard SCOREBOARD = Bukkit.getScoreboardManager().getNewScoreboard();
+
 	/**
 	 * teams that all players must see always
 	 */
@@ -30,6 +38,24 @@ public class PlayerScoreboard
 	 * objectives all players see
 	 */
 	private static final Set<GlobalObjective> GLOBAL_OBJECTIVES = new HashSet<>();
+
+	// debug
+	private static final Set<String> removedTeams = new HashSet<>();
+	static {
+		// attach a dirty listener to detect team unregisters
+		var nms = (ServerScoreboard) ((CraftScoreboard) SCOREBOARD).getHandle();
+		nms.addDirtyListener(() -> {
+			for (var team : GLOBAL_TEAMS) {
+				var teamName = getNameUnsafe(team);
+				if (!removedTeams.add(teamName))
+					continue;
+				if (nms.getPlayerTeam(teamName) == null) {
+					Main.logger().severe("Global team" + teamName + " was unregistered");
+					new RuntimeException("Stack trace").printStackTrace();
+				}
+			}
+		});
+	}
 
 	private final Player player;
 	private final Scoreboard scoreboard;
@@ -220,6 +246,8 @@ public class PlayerScoreboard
 	public static void removeGlobalTeam(Team bukkitTeam) {
 		//if(!GLOBAL_TEAMS.contains(bukkitTeam)) Bukkit.broadcastMessage("Global teams didn't have " + bukkitTeam.getName());
 		GLOBAL_TEAMS.remove(bukkitTeam);
+		removedTeams.remove(getNameUnsafe(bukkitTeam)); // debug
+
 		for(PlayerInfo pinfo : Main.getPlayerInfos()) {
 			pinfo.getScoreboard().removeBukkitTeam(bukkitTeam);
 		}
@@ -251,7 +279,11 @@ public class PlayerScoreboard
 	}
 
 	public Team getLocalTeam(Team bukkitTeam) {
-		return this.scoreboard.getTeam(bukkitTeam.getName());
+		try {
+			return this.scoreboard.getTeam(bukkitTeam.getName());
+		} catch (IllegalStateException ex) {
+			throw new IllegalStateException("Error while accessing global team " + getNameUnsafe(bukkitTeam), ex);
+		}
 	}
 
 	public void modifyLocalTeam(Team team, Consumer<Team> consumer) {
@@ -264,5 +296,23 @@ public class PlayerScoreboard
 
 	public static Stream<PlayerScoreboard> getScoreboards() {
 		return Main.getPlayerInfos().stream().map(PlayerInfo::getScoreboard);
+	}
+
+	// debug
+	private static Field nmsTeamField;
+	private static String getNameUnsafe(Team team) {
+		try {
+			if (nmsTeamField == null) {
+				// CraftTeam is package-private
+				Class<? extends Team> clazz = team.getClass();
+				nmsTeamField = clazz.getDeclaredField("team");
+				nmsTeamField.setAccessible(true);
+			}
+			PlayerTeam nmsTeam = (PlayerTeam) nmsTeamField.get(team);
+			return nmsTeam.getName();
+		} catch (ReflectiveOperationException ex) {
+			ex.printStackTrace();
+			return "ERROR";
+		}
 	}
 }

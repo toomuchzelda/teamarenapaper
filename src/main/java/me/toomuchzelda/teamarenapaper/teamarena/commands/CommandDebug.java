@@ -1,15 +1,19 @@
 package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.inventory.Inventories;
+import me.toomuchzelda.teamarenapaper.inventory.*;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
+import org.bukkit.Tag;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.MapPalette;
 import org.bukkit.map.MinecraftFont;
 import org.jetbrains.annotations.NotNull;
@@ -24,6 +28,7 @@ public class CommandDebug extends CustomCommand {
 	// TODO temporary feature
 	public static boolean ignoreWinConditions;
 	public static boolean sniperAccuracy;
+	public static Set<String> disabledKits = Collections.emptySet();
 
 	public CommandDebug() {
 		super("debug", "", "/debug ...", PermissionLevel.OWNER);
@@ -70,6 +75,27 @@ public class CommandDebug extends CustomCommand {
 				} else if (args[1].equalsIgnoreCase("sniperaccuracy")) {
 					sniperAccuracy = args.length == 3 ? "true".equalsIgnoreCase(args[2]) : !sniperAccuracy;
 					sender.sendMessage(Component.text("Set sniper accuracy debug to " + sniperAccuracy, NamedTextColor.GREEN));
+				} else if (args[1].equalsIgnoreCase("disabledkits")) {
+					if (args.length != 3)
+						throw throwUsage("/debug game disabledkits <disabledKit>[,...]");
+					String[] kitNames = args[2].split(",");
+					disabledKits = Set.of(kitNames);
+					sender.sendMessage(Component.text("Set disabled kits to " + disabledKits, NamedTextColor.GREEN));
+					Optional<Kit> optionalFallbackKit = Main.getGame().getKits().stream()
+							.filter(kit -> !disabledKits.contains(kit.getName().toLowerCase(Locale.ENGLISH)))
+							.findFirst();
+					if (optionalFallbackKit.isPresent()) {
+						Kit fallbackKit = optionalFallbackKit.get();
+						Main.getPlayerInfoMap().forEach((player, playerInfo) -> {
+							if (playerInfo.kit != null && disabledKits.contains(playerInfo.kit.getName().toLowerCase(Locale.ENGLISH))) {
+								playerInfo.kit = fallbackKit;
+								player.sendMessage(Component.text("The kit you have selected has been disabled. " +
+										"It has been replaced with: " + fallbackKit.getName(), NamedTextColor.YELLOW));
+							}
+						});
+					} else {
+						sender.sendMessage(Component.text("Warning: no fallback kit found.", NamedTextColor.YELLOW));
+					}
 				}
 			}
 			case "draw" -> {
@@ -226,6 +252,16 @@ public class CommandDebug extends CustomCommand {
 		}
 
 		switch (args[0]) {
+			case "guitest" -> {
+				if (args.length < 2)
+					throw throwUsage("/debug guitest <tab/spectate>");
+				var inventory = switch (args[1]) {
+					case "tab" -> new TabTest();
+					case "spectate" -> new SpectateInventory(null);
+					default -> throw throwUsage("/debug guitest <tab/spectate>");
+				};
+				Inventories.openInventory(player, inventory);
+			}
 			case "hide" -> {
 				for (Player viewer : Bukkit.getOnlinePlayers()) {
 					if (viewer.canSee(player)) {
@@ -242,10 +278,11 @@ public class CommandDebug extends CustomCommand {
 	@Override
 	public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
 		if (args.length == 1) {
-			return Arrays.asList("hide", "gui", "game", "setrank", "setteam", "setgame", "setnextgame", "votetest", "draw");
+			return Arrays.asList("hide", "gui", "guitest", "game", "setrank", "setteam", "setgame", "setnextgame", "votetest", "draw");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");
+				case "guitest" -> Arrays.asList("tab", "spectate");
 				case "game" -> Arrays.asList("start", "ignorewinconditions", "sniperaccuracy");
 				case "setrank" -> Arrays.stream(PermissionLevel.values()).map(Enum::name).toList();
 				case "setteam" -> Arrays.stream(Main.getGame().getTeams())
@@ -273,5 +310,42 @@ public class CommandDebug extends CustomCommand {
 			};
 		}
 		return Collections.emptyList();
+	}
+
+	static class TabTest implements InventoryProvider {
+		boolean extended = false;
+		TabBar<@NotNull Material> tab = new TabBar<>(Material.BLACK_WOOL);
+
+		@Override
+		public Component getTitle(Player player) {
+			return Component.text("Tab test");
+		}
+
+		@Override
+		public int getRows() {
+			return 6;
+		}
+
+		List<Material> wools = List.copyOf(Tag.WOOL.getValues());
+		@Override
+		public void init(Player player, InventoryAccessor inventory) {
+			tab.showTabs(inventory, wools, TabBar.highlightWhenSelected(ItemStack::new),
+					0, extended ? 3 : 7, true);
+
+			if (extended) {
+				for (int i = 4; i < 8; i++) {
+					inventory.set(i, new ItemStack(Material.CLOCK));
+				}
+			}
+
+			inventory.set(8, ItemBuilder.of(Material.PAPER)
+					.displayName(Component.text("Toggle ADVANCED options", NamedTextColor.YELLOW))
+					.toClickableItem(e -> {
+						extended = !extended;
+						inventory.invalidate();
+					}));
+
+			inventory.set(9, new ItemStack(tab.getCurrentTab()));
+		}
 	}
 }

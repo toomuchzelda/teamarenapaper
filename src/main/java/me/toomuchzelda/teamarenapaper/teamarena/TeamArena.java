@@ -4,13 +4,16 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.inventory.KitInventory;
+import me.toomuchzelda.teamarenapaper.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.KitDemolitions;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.engineer.KitEngineer;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
@@ -65,7 +68,8 @@ public abstract class TeamArena
 
 	//init to this, don't want negative numbers when waitingSince is set to the past in the prepGamestate() methods
 	protected static int gameTick = TOTAL_WAITING_TIME * 3;
-	protected long waitingSince;
+	private int waitingSince;
+	protected int gameLiveTime;
 	protected GameState gameState;
 
 	protected BoundingBox border;
@@ -90,28 +94,29 @@ public abstract class TeamArena
 	 * for mid-game joiners with whatever amount of time to decide if they wanna join and dead players
 	 * -1 value means ready to respawn when next liveTick runs (magic number moment)
 	 */
-	protected HashMap<Player, RespawnInfo> respawnTimers;
+	protected Map<Player, RespawnInfo> respawnTimers;
 	protected static ItemStack respawnItem = ItemBuilder.of(Material.RED_DYE)
-			.displayName(Component.text("Right click to respawn").color(NamedTextColor.RED)
-					.decoration(TextDecoration.ITALIC, false))
+			.displayName(Component.text("Right click to respawn", NamedTextColor.RED))
 			.build();
 	public static final int RESPAWN_SECONDS = 5;
 	public static final int MID_GAME_JOIN_SECONDS = 10;
 
 	protected final List<Kit> defaultKits = List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
 			new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(),
-			new KitNone(), new KitSniper(), new KitVenom(), new KitRewind(), new KitValkyrie());
+			new KitNone(), new KitSniper(), new KitVenom(), new KitRewind(), new KitValkyrie(), new KitEngineer());
+
 	protected Map<String, Kit> kits;
 	protected static ItemStack kitMenuItem = ItemBuilder.of(Material.FEATHER)
-			.displayName(Component.text("Select a Kit").color(NamedTextColor.BLUE)
-					.decoration(TextDecoration.ITALIC, false))
+			.displayName(Component.text("Select a Kit", NamedTextColor.BLUE))
 			.build();
+
+	public static final Component OWN_TEAM_PREFIX = Component.text("▶ ");
 
 	protected MapInfo mapInfo;
 
-	public Queue<DamageEvent> damageQueue;
+	protected Queue<DamageEvent> damageQueue;
 
-	private final LinkedList<DamageIndicatorHologram> activeDamageIndicators = new LinkedList<>();
+	private final List<DamageIndicatorHologram> activeDamageIndicators = new LinkedList<>();
 
 	public final MiniMapManager miniMap;
 
@@ -221,7 +226,7 @@ public abstract class TeamArena
 
 		players = ConcurrentHashMap.newKeySet();
 		spectators = ConcurrentHashMap.newKeySet();
-		respawnTimers = new HashMap<>();
+		respawnTimers = new LinkedHashMap<>();
 		damageQueue = new LinkedList<>();
 
 		PlayerListScoreManager.removeScores();
@@ -271,10 +276,12 @@ public abstract class TeamArena
 	}
 
 	// player as in players in the players set
-	protected void givePlayerItems(Player player, PlayerInfo info) {
+	protected void givePlayerItems(Player player, PlayerInfo info, boolean clear) {
 		player.sendMap(miniMap.view);
 		PlayerInventory inventory = player.getInventory();
-		inventory.clear();
+		if(clear)
+			inventory.clear();
+
 		inventory.setItem(8, miniMap.getMapItem(info.team));
 		inventory.setItem(7, info.team.getHotbarItem());
 		info.kit.giveKit(player, true, info);
@@ -292,7 +299,6 @@ public abstract class TeamArena
 		gameWorld = null;
 	}
 
-	public static final Component OWN_TEAM_PREFIX = Component.text("▶ ");
 	public final void tickSidebar() {
 		boolean showGameSidebar = gameState != GameState.PREGAME && gameState != GameState.TEAMS_CHOSEN;
 		boolean showTeamSize = gameState == GameState.TEAMS_CHOSEN;
@@ -427,6 +433,8 @@ public abstract class TeamArena
 	}
 
 	public void liveTick() {
+		BuildingManager.tick();
+
 		//checking team states (win/lose) done in liveTick() per-game
 
 		//process players waiting to respawn if a respawning game
@@ -663,11 +671,15 @@ public abstract class TeamArena
 		if(event.getVictim() instanceof Axolotl) {
 			KitDemolitions.DemolitionsAbility.handleAxolotlAttemptDamage(event);
 		}
+
+		if(event.getVictim() instanceof Skeleton) {
+			KitEngineer.EngineerAbility.handleSentryAttemptDamage(event);
+		}
 	}
 
 	public boolean isDead(Entity victim) {
 		if(victim instanceof Player p) {
-			return !players.contains(p);
+			return !players.contains(p) || isSpectator(p);
 		}
 
 		return victim.isDead() || !victim.isValid();
@@ -688,10 +700,16 @@ public abstract class TeamArena
 			Player clicker = event.getPlayer();
 			PlayerInfo pinfo = Main.getPlayerInfo(clicker);
 			TeamArenaTeam team = pinfo.team;
+			if (miniMap.isMapItem(event.getItem())) {
+				event.setUseItemInHand(Event.Result.DENY);
+				Inventories.openInventory(clicker, new SpectateInventory(isSpectator(clicker) ? null : team));
+				return;
+			}
 			//right click to glow teammates, left click to ping to nearby teammates
 			if(team.getHotbarItem().isSimilar(event.getItem())) {
 				Action action = event.getAction();
 				if(action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK) {
+					event.setUseItemInHand(Event.Result.DENY);
 					setViewingGlowingTeammates(pinfo, !pinfo.viewingGlowingTeammates, true);
 				}
 			}
@@ -726,8 +744,7 @@ public abstract class TeamArena
 		}
 	}
 
-	public void onInteractEntity(PlayerInteractEntityEvent event) {
-	}
+	public void onInteractEntity(PlayerInteractEntityEvent event) {}
 
 	public void onPlaceBlock(BlockPlaceEvent event) {}
 
@@ -854,6 +871,7 @@ public abstract class TeamArena
 
 	public void prepLive() {
 		setGameState(GameState.LIVE);
+		gameLiveTime = gameTick;
 
 		Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
 		while(iter.hasNext()) {
@@ -864,7 +882,7 @@ public abstract class TeamArena
 			player.setSaturatedRegenRate(0);
 			PlayerListScoreManager.setKills(player, 0);
 
-			givePlayerItems(player, entry.getValue());
+			givePlayerItems(player, entry.getValue(), true);
 
 			for(TeamArenaTeam team : teams) {
 				if(team.isAlive())
@@ -963,6 +981,9 @@ public abstract class TeamArena
 		}
 		// remove map
 		miniMap.removeMapView();
+
+		BuildingManager.cleanUp();
+
 		setGameState(GameState.DEAD);
 	}
 
@@ -1173,7 +1194,6 @@ public abstract class TeamArena
 	}
 
 	public void respawnPlayer(Player player) {
-		// teleport first to avoid double void damage
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
 		player.teleport(pinfo.team.getNextSpawnpoint());
 
@@ -1183,7 +1203,7 @@ public abstract class TeamArena
 		player.setAllowFlight(false);
 		PlayerUtils.resetState(player);
 
-		givePlayerItems(player, pinfo);
+		givePlayerItems(player, pinfo, true);
 		pinfo.kills = 0;
 		PlayerListScoreManager.setKills(player, 0);
 
@@ -1200,8 +1220,10 @@ public abstract class TeamArena
 	}
 
 	public void handleDeath(DamageEvent event) {
-		Bukkit.broadcast(event.getDamageType().getDeathMessage(event.getVictim(),
-				event.getFinalAttacker(), event.getDamageTypeCause()));
+		Component deathMessage = event.getDamageType().getDeathMessage(event.getVictim(), event.getFinalAttacker(), event.getDamageTypeCause());
+		if(deathMessage != null) {
+			Bukkit.broadcast(deathMessage);
+		}
 		Entity victim = event.getVictim();
 		//if player make them a spectator and put them in queue to respawn if is a respawning game
 		if(victim instanceof Player playerVictim) {
@@ -1243,6 +1265,17 @@ public abstract class TeamArena
 			DamageLogEntry.sendDamageLog(playerVictim);
 			pinfo.clearDamageReceivedLog();
 
+			//if they died in the void teleport them back to map
+			if(playerVictim.getLocation().getY() <= border.getMinY()) {
+				Location toTele;
+				if(killer != null) {
+					toTele = killer.getLocation();
+				}
+				else {
+					toTele = spawnPos;
+				}
+				playerVictim.teleport(toTele);
+			}
 
 			//clear attack givers so they don't get falsely attributed on this next player's death
 			DamageTimes.clearDamageTimes(playerVictim);
@@ -1252,13 +1285,8 @@ public abstract class TeamArena
 				playerVictim.getInventory().addItem(kitMenuItem.clone());
 			}
 		}
-		else {
-			if(victim instanceof Damageable dam) {
-				dam.setHealth(0);
-			}
-			else {
-				victim.remove();
-			}
+		else if(victim instanceof Damageable dam) {
+			dam.setHealth(0);
 		}
 	}
 
@@ -1348,6 +1376,7 @@ public abstract class TeamArena
 		RespawnInfo rinfo = respawnTimers.get(player);
 		if(rinfo != null) {
 			rinfo.interrupted = false;
+			player.getInventory().removeItem(respawnItem);
 		}
 	}
 
@@ -1360,7 +1389,6 @@ public abstract class TeamArena
 		player.sendMap(miniMap.view);
 		PlayerInventory inventory = player.getInventory();
 		inventory.setItem(8, miniMap.getMapItem());
-		inventory.addItem(new ItemStack(Material.COMPASS));
 	}
 
 	//process logging in player
@@ -1604,8 +1632,16 @@ public abstract class TeamArena
 				spawnpoint = new Vec(centre.x(), 255, centre.z());
 			}*/
 		int y = gameWorld.getHighestBlockYAt(centre.getBlockX(), centre.getBlockZ());
-		if(y > centre.getY())
+		int worldSpawnY = gameWorld.getSpawnLocation().getBlockY();
+
+		if(Math.abs(centre.getY() - y) < Math.abs(centre.getY() - worldSpawnY)) {
 			centre.setY(y);
+		}
+		else {
+			centre.setY(worldSpawnY);
+		}
+
+		//centre.setY(y);
 
 		spawnPos = centre.toLocation(gameWorld, 90, 0);
 		spawnPos.setY(spawnPos.getY() + 2);
@@ -1717,6 +1753,11 @@ public abstract class TeamArena
 	}
 
 	public void queueDamage(DamageEvent event) {
+		if(!isDead(event.getVictim()))
+			damageQueue.add(event);
+	}
+
+	public void queueUnsafeDamage(DamageEvent event) {
 		damageQueue.add(event);
 	}
 
@@ -1746,6 +1787,10 @@ public abstract class TeamArena
 
 	public BoundingBox getBorder() {
 		return border;
+	}
+
+	public Location getSpawnPos() {
+		return this.spawnPos != null ? this.spawnPos.clone() : null;
 	}
 
 	/**
