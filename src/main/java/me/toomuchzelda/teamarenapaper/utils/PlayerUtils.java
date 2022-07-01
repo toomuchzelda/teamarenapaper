@@ -4,6 +4,9 @@ import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSpy;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
@@ -210,5 +213,26 @@ public class PlayerUtils {
 	 */
 	public static void setInvisible(Player player, boolean invis) {
 		player.setInvisible(invis);
+	}
+
+	/**
+	 * Check whether the viewer sees the enemySpy as an ally or not.
+	 * Defaults to false if enemySpy is not alive, is not spy, or is not disguised currently
+	 */
+	public static boolean isDisguisedAsAlly(Player viewer, Player enemySpy){
+		TeamArenaTeam viewerTeam = Main.getPlayerInfo(viewer).team;
+		Kit enemyKit = Main.getPlayerInfo(enemySpy).activeKit;
+		//Check that the currently checked enemy is a spy AND is disguised
+		if(enemyKit != null &&
+				KitSpy.currentlyDisguised.containsKey(enemySpy)){
+					KitSpy.SpyDisguiseInfo disguiseInfo = KitSpy.getInfo(enemySpy);
+					Player disguisedPlayer = disguiseInfo.disguisingAsPlayer;
+					TeamArenaTeam disguisedTeam = Main.getPlayerInfo(disguisedPlayer).team;
+					//If the spy is disguised as a different team, they are a valid target, so return true.
+					return disguisedTeam.equals(viewerTeam);
+		}
+		else{
+			return false;
+		}
 	}
 }

@@ -9,6 +9,7 @@ import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
@@ -343,6 +344,11 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void blockBreak(BlockBreakEvent event) {
+		//Handling breaking teleporter blocks
+		if(Main.getGame() != null && Main.getGame().getGameState() == LIVE){
+			BuildingManager.EventListener.onBlockBreak(event);
+		}
+
 		if((Main.getGame() != null && Main.getGame().getGameState() != LIVE &&
 				!BREAKABLE_BLOCKS.containsKey(event.getBlock().getType())) || event.getPlayer().getGameMode() != GameMode.CREATIVE) {
 			event.setCancelled(true);

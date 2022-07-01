@@ -6,11 +6,13 @@ import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.inventory.KitInventory;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.KitDemolitions;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.engineer.KitEngineer;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
@@ -100,7 +102,7 @@ public abstract class TeamArena
 
 	protected final List<Kit> defaultKits = List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
 			new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(),
-			new KitNone(), new KitSniper(), new KitVenom(), new KitRewind(), new KitValkyrie());
+			new KitNone(), new KitSniper(), new KitVenom(), new KitRewind(), new KitValkyrie(), new KitEngineer());
 	protected Map<String, Kit> kits;
 	protected static ItemStack kitMenuItem = ItemBuilder.of(Material.FEATHER)
 			.displayName(Component.text("Select a Kit").color(NamedTextColor.BLUE)
@@ -427,6 +429,8 @@ public abstract class TeamArena
 	}
 
 	public void liveTick() {
+		BuildingManager.tick();
+
 		//checking team states (win/lose) done in liveTick() per-game
 
 		//process players waiting to respawn if a respawning game
@@ -662,6 +666,10 @@ public abstract class TeamArena
 
 		if(event.getVictim() instanceof Axolotl) {
 			KitDemolitions.DemolitionsAbility.handleAxolotlAttemptDamage(event);
+		}
+
+		if(event.getVictim() instanceof Skeleton) {
+			KitEngineer.EngineerAbility.handleSentryAttemptDamage(event);
 		}
 	}
 
@@ -963,6 +971,9 @@ public abstract class TeamArena
 		}
 		// remove map
 		miniMap.removeMapView();
+
+		BuildingManager.cleanUp();
+
 		setGameState(GameState.DEAD);
 	}
 

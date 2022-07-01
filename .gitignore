@@ -11,6 +11,9 @@
 # IntelliJ
 out/
 
+# VS Code
+.vscode/
+
 # Gradle
 .gradle/
 build/
