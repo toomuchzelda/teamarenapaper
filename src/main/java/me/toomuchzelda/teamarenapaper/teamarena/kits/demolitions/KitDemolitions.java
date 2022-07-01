@@ -185,7 +185,6 @@ public class KitDemolitions extends Kit
 
 		@Override
 		public void onInteract(PlayerInteractEvent event) {
-
 			Material mat = event.getMaterial();
 			int type = 0;
 			if(TNT_MINE_ITEM.getType() == mat)
@@ -223,6 +222,7 @@ public class KitDemolitions extends Kit
 			else if(mat == REMOTE_DETONATOR_ITEM.getType()) {
 				Player demo = event.getPlayer();
 				event.setUseItemInHand(Event.Result.DENY);
+				event.setUseInteractedBlock(Event.Result.DENY); //prevent arming tnt
 				DemoMine mine = TARGETTED_MINE.get(demo);
 				if(mine != null) {
 					mine.trigger(demo);

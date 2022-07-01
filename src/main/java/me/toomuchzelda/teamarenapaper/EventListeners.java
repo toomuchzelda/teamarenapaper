@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper;
 
+import com.destroystokyo.paper.event.block.TNTPrimeEvent;
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import com.destroystokyo.paper.event.player.PlayerAdvancementCriterionGrantEvent;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
@@ -416,6 +417,13 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void blockExplode(BlockExplodeEvent event) {
 		event.blockList().clear();
+	}
+
+	@EventHandler
+	public void tntPrime(TNTPrimeEvent event) {
+		if(event.getReason() == TNTPrimeEvent.PrimeReason.PROJECTILE) {
+			event.setCancelled(true);
+		}
 	}
 
 	@EventHandler

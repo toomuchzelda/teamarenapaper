@@ -90,7 +90,7 @@ public abstract class TeamArena
 	 * for mid-game joiners with whatever amount of time to decide if they wanna join and dead players
 	 * -1 value means ready to respawn when next liveTick runs (magic number moment)
 	 */
-	protected HashMap<Player, RespawnInfo> respawnTimers;
+	protected Map<Player, RespawnInfo> respawnTimers;
 	protected static ItemStack respawnItem = ItemBuilder.of(Material.RED_DYE)
 			.displayName(Component.text("Right click to respawn").color(NamedTextColor.RED)
 					.decoration(TextDecoration.ITALIC, false))
@@ -223,7 +223,7 @@ public abstract class TeamArena
 
 		players = ConcurrentHashMap.newKeySet();
 		spectators = ConcurrentHashMap.newKeySet();
-		respawnTimers = new HashMap<>();
+		respawnTimers = new LinkedHashMap<>();
 		damageQueue = new LinkedList<>();
 
 		PlayerListScoreManager.removeScores();
@@ -669,7 +669,7 @@ public abstract class TeamArena
 
 	public boolean isDead(Entity victim) {
 		if(victim instanceof Player p) {
-			return !players.contains(p);
+			return !players.contains(p) || isSpectator(p);
 		}
 
 		return victim.isDead() || !victim.isValid();
@@ -1200,8 +1200,10 @@ public abstract class TeamArena
 	}
 
 	public void handleDeath(DamageEvent event) {
-		Bukkit.broadcast(event.getDamageType().getDeathMessage(event.getVictim(),
-				event.getFinalAttacker(), event.getDamageTypeCause()));
+		Component deathMessage = event.getDamageType().getDeathMessage(event.getVictim(), event.getFinalAttacker(), event.getDamageTypeCause());
+		if(deathMessage != null) {
+			Bukkit.broadcast(deathMessage);
+		}
 		Entity victim = event.getVictim();
 		//if player make them a spectator and put them in queue to respawn if is a respawning game
 		if(victim instanceof Player playerVictim) {
@@ -1252,13 +1254,8 @@ public abstract class TeamArena
 				playerVictim.getInventory().addItem(kitMenuItem.clone());
 			}
 		}
-		else {
-			if(victim instanceof Damageable dam) {
-				dam.setHealth(0);
-			}
-			else {
-				victim.remove();
-			}
+		else if(victim instanceof Damageable dam) {
+			dam.setHealth(0);
 		}
 	}
 

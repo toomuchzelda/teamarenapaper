@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
@@ -51,6 +52,7 @@ public class SearchAndDestroy extends TeamArena
 	public static final Component FUSE_NAME = ItemUtils.noItalics(Component.text("Bomb Fuse", NamedTextColor.GOLD));
 	public static final List<Component> FUSE_LORE;
 	public static final int SPAM_PERIOD = 4 * 20;
+	public static final int TEAM_DEAD_SCORE = 1;
 
 
 	//===========MESSAGE STUFF
@@ -67,6 +69,8 @@ public class SearchAndDestroy extends TeamArena
 
 	public static final Component TEAM_EXPLODED_MESSAGE;
 	public static final Component TEAM_EXPLODED_TITLE;
+
+	public static final Component TEAM_DEFEATED_MESSAGE = Component.text(BOMB_TEAM_KEY + " has been defeated!", NamedTextColor.GOLD);
 	//===========MESSAGE STUFF
 
 	static {
@@ -127,23 +131,79 @@ public class SearchAndDestroy extends TeamArena
 			//if armed now announce it and all
 			int armedTime = bomb.getArmedTime();
 			if(armedTime == currentTick) {
-				announceBombEvent(bomb, BOMB_EVENT_ARMED);
+				announceBombEvent(bomb, BombEvent.ARMED);
 				//record the tnt block so can check it in entityInteract events
 				this.bombTNTs.put(bomb.getTNT(), bomb);
 			}
 			//just been disarmed, remove TNT from map
 			else if(armedTime == Bomb.JUST_BEEN_DISARMED) {
-				announceBombEvent(bomb, BOMB_EVENT_DISARMED);
+				announceBombEvent(bomb, BombEvent.DISARMED);
 				this.bombTNTs.remove(bomb.getTNT());
 			}
 			else if(armedTime == Bomb.JUST_EXPLODED) {
-				announceBombEvent(bomb, BOMB_EVENT_EXPLODED);
-				//leave it in the Map so we can cancel the DamageEvents from it
-				//this.bombTNTs.remove(bomb.getTNT());
+				announceBombEvent(bomb, BombEvent.EXPLODED);
+				//leave the TNT in the Map so we can cancel the DamageEvents from it
+
+				for(Player loser : bomb.getTeam().getPlayerMembers()) {
+					DamageEvent death = DamageEvent.newDamageEvent(loser, 1d, DamageType.BOMB_EXPLODED, null, false);
+					this.queueDamage(death);
+				}
+
+				//score 1 for dead
+				bomb.getTeam().score = TEAM_DEAD_SCORE;
 			}
 		}
 
 		super.liveTick();
+
+		this.checkWinner();
+	}
+
+	/**
+	 * Check if there is one team left alive and end the game
+	 */
+	public void checkWinner() {
+		TeamArenaTeam winnerTeam = null;
+		//check if any alive teams have all members dead
+		for(TeamArenaTeam team : teams) {
+			//skip if already dead
+			if(team.score == TEAM_DEAD_SCORE)
+				continue;
+
+			boolean anyAlive = false;
+			for(Player teamMember : team.getPlayerMembers()) {
+				if(!isDead(teamMember)) {
+					anyAlive = true;
+					break;
+				}
+			}
+
+			if(!anyAlive) {
+				for (Bomb teamBomb : teamBombs.get(team)) {
+					teamBomb.setGrave();
+				}
+
+				team.score = TEAM_DEAD_SCORE;
+
+				final TextReplacementConfig defeatedConfig = TextReplacementConfig.builder().match(BOMB_TEAM_KEY).replacement(team.getComponentName()).build();
+				Component message = TEAM_DEFEATED_MESSAGE.replaceText(defeatedConfig);
+				Bukkit.broadcast(message);
+			}
+			else {
+				if(winnerTeam == null) {
+					winnerTeam = team;
+				}
+				else {
+					winnerTeam = null; //there is another alive team, so no winners
+					break;
+				}
+			}
+		}
+
+		if(winnerTeam != null) {
+			this.winningTeam = winnerTeam;
+			prepEnd();
+		}
 	}
 
 	public void onInteract(PlayerInteractEvent event) {
@@ -229,11 +289,7 @@ public class SearchAndDestroy extends TeamArena
 		super.givePlayerItems(player, pinfo, false);
 	}
 
-	public static final byte BOMB_EVENT_ARMED = 0;
-	public static final byte BOMB_EVENT_DISARMED = 1;
-	public static final byte BOMB_EVENT_EXPLODED = 2;
-
-	public static void announceBombEvent(Bomb bomb, byte bombEvent) {
+	public static void announceBombEvent(Bomb bomb, BombEvent bombEvent) {
 		final Component message;
 		final Component title;
 		//sounds to play and the pitches to play them at
@@ -243,7 +299,7 @@ public class SearchAndDestroy extends TeamArena
 		final TextReplacementConfig bombTeamConfig = TextReplacementConfig.builder().match(BOMB_TEAM_KEY).replacement(bomb.getTeam().getComponentName()).build();;
 		final TextReplacementConfig bombTeamTitleConfig = TextReplacementConfig.builder().match(BOMB_TEAM_KEY).replacement(bomb.getTeam().getComponentSimpleName()).build();
 
-		if(bombEvent == BOMB_EVENT_ARMED) {
+		if(bombEvent == BombEvent.ARMED) {
 			TeamArenaTeam armingTeam = bomb.getArmingTeam();
 
 			final TextReplacementConfig armingTeamConfig = TextReplacementConfig.builder().match(ARMING_TEAM_KEY).replacement(armingTeam.getComponentName()).build();
@@ -257,8 +313,7 @@ public class SearchAndDestroy extends TeamArena
 			pitches[0] = 0.5f;
 			pitches[1] = 1f;
 		}
-		else if(bombEvent == BOMB_EVENT_DISARMED) {
-
+		else if(bombEvent == BombEvent.DISARMED) {
 			message = TEAM_DEFUSED_MESSAGE.replaceText(bombTeamConfig);
 			title = TEAM_DEFUSED_TITLE.replaceText(bombTeamTitleConfig);
 
@@ -268,7 +323,6 @@ public class SearchAndDestroy extends TeamArena
 			pitches[1] = 0.5f;
 		}
 		else {
-
 			message = TEAM_EXPLODED_MESSAGE.replaceText(bombTeamConfig);
 			title = TEAM_EXPLODED_TITLE.replaceText(bombTeamTitleConfig);
 
@@ -382,5 +436,11 @@ public class SearchAndDestroy extends TeamArena
 	@Override
 	public File getMapPath() {
 		return new File(super.getMapPath(), "SND");
+	}
+
+	enum BombEvent {
+		ARMED,
+		DISARMED,
+		EXPLODED
 	}
 }

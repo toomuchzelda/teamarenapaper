@@ -71,12 +71,15 @@ public class Bomb
 		spawnLoc.add(0.5d, 0d, 0.5d);
 	}
 
-	public void removeEntities() {
+	public void setGrave() {
 		if(this.tnt != null) {
 			this.tnt.remove();
 		}
 
-		this.hologram.remove();
+		this.spawnLoc.getBlock().setType(Material.AIR);
+
+		this.armed = false;
+		this.detonated = true;
 	}
 
 	public void addClicker(TeamArenaTeam clickersTeam, Player clicker, int clickTime, float power) {
@@ -205,7 +208,17 @@ public class Bomb
 
 		//process bomb countdown and move the hologram
 		if(this.isArmed()) {
-			this.hologram.moveTo(this.tnt.getLocation().add(TNT_HOLOGRAM_OFFSET));
+			//prevent TNT from being moved on X and Z by landmines and other external forces.
+			// couldn't find a better solution
+			Location moveTo = this.tnt.getLocation();
+			if(moveTo.getX() != spawnLoc.getX() || moveTo.getZ() != spawnLoc.getZ()) {
+				moveTo.setX(spawnLoc.getX());
+				moveTo.setZ(spawnLoc.getZ());
+
+				this.tnt.teleport(moveTo);
+			}
+
+			this.hologram.moveTo(moveTo.add(TNT_HOLOGRAM_OFFSET));
 
 			int timeLeft = BOMB_DETONATION_TIME - (currentTick - this.armedTime);
 			final int secondsLeft = timeLeft / 20;
