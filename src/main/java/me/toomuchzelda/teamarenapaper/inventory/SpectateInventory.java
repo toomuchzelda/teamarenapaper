@@ -6,36 +6,46 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
+import org.bukkit.*;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
 import java.util.function.Function;
 
 /**
  * @author jacky
  */
-public class SpectateInventory extends TabInventory<TeamArenaTeam> {
+public class SpectateInventory implements InventoryProvider {
 	TeamArenaTeam teamFilter;
+	TabBar<TeamArenaTeam> teamFilterTab;
+	Pagination pagination = new Pagination();
+
 	public SpectateInventory(@Nullable TeamArenaTeam teamFilter) {
-		super(teamFilter);
 		this.teamFilter = teamFilter;
+		this.teamFilterTab = new TabBar<>(teamFilter)
+				.setClickSound(Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.BLOCKS, 0.5f, 1);
 	}
 
 	@Override
 	public Component getTitle(Player player) {
-		return Component.text("Spectator menu");
+		return Component.text(teamFilter != null ? "Teammates" : "Players");
 	}
 
 	@Override
 	public int getRows() {
 		return 6;
 	}
+
+	private static final ItemStack BORDER = ItemBuilder.of(Material.BLACK_STAINED_GLASS_PANE)
+			.displayName(Component.empty())
+			.build();
 
 	// advanced options
 	SwitchItem<Boolean> showOptionsButton = SwitchItem.ofBoolean(false,
@@ -46,19 +56,20 @@ public class SpectateInventory extends TabInventory<TeamArenaTeam> {
 					.displayName(Component.text("Show advanced options", NamedTextColor.YELLOW))
 					.build()
 	);
-	SwitchItem<SortOption> sortByButton = SwitchItem.ofSimple(Arrays.asList(SortOption.values()), SortOption.BY_NAME,
+	SwitchItem<SortOption> sortByButton = SwitchItem.ofSimple(List.of(SortOption.values()), SortOption.BY_NAME,
 			ItemBuilder.of(Material.PAPER)
 					.displayName(Component.text("Sort players by", NamedTextColor.AQUA))
 					.lore(Component.empty())
 					.build(),
 			SwitchItem.applyStyleWhenSelected(SortOption::display)
-	);
+	).setClickSound(Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.BLOCKS, 0.5f, 1);
 	SwitchItem<Boolean> showKitButton = SwitchItem.ofBoolean(false,
 			ItemBuilder.of(Material.PLAYER_HEAD)
 					.displayName(Component.text("Show player skins", NamedTextColor.BLUE))
 					.build(),
 			ItemBuilder.of(Material.IRON_SWORD)
 					.displayName(Component.text("Show player kits", NamedTextColor.BLUE))
+					.hide(ItemFlag.values())
 					.build()
 	);
 
@@ -70,9 +81,18 @@ public class SpectateInventory extends TabInventory<TeamArenaTeam> {
 
 		boolean showOptions = showOptionsButton.getState();
 
-		showTabs(inventory, getTeams(playerTeam), highlightWhenSelected(SpectateInventory::teamToItem),
-				0, 8 - (showOptions ? 2 /* number of options */ : 0),
-				false);
+		int end = 8 - (showOptions ? 2 /* number of options */ : 0);
+
+		if (teamFilter != null) {
+			inventory.set(0, teamToItem(teamFilter));
+			for (int i = 1; i < end; i++) {
+				inventory.set(i, BORDER);
+			}
+		} else {
+			teamFilterTab.showTabs(inventory, getTeams(playerTeam),
+					TabBar.highlightWhenSelected(SpectateInventory::teamToItem),
+					0, end, false);
+		}
 
 		if (showOptions) {
 			inventory.set(6, showKitButton.getItem(inventory));
@@ -80,11 +100,12 @@ public class SpectateInventory extends TabInventory<TeamArenaTeam> {
 		}
 		inventory.set(8, showOptionsButton.getItem(inventory));
 
-		TeamArenaTeam currentTeam = getCurrentTab();
+		TeamArenaTeam currentTeam = teamFilterTab.getCurrentTab();
 		var teamPlayers = currentTeam == null ?
 				Bukkit.getOnlinePlayers() :
 				currentTeam.getPlayerMembers();
-		var comparator = sortByButton.getState().comparator.apply(player);
+		var sortBy = sortByButton.getState();
+		var comparator = sortBy.getComparator(player);
 		boolean showKit = showKitButton.getState();
 		var viewerLocation = player.getLocation();
 
@@ -94,11 +115,11 @@ public class SpectateInventory extends TabInventory<TeamArenaTeam> {
 				.map(target -> playerToItem(target, viewerLocation, showKit))
 				.toList();
 
-		setPageItems(headItems, inventory, 9, 45);
+		pagination.showPageItems(headItems, inventory, 9, 45);
 		if (headItems.size() > 9 * 4) { // max 4 rows
 			// set page items
-			inventory.set(45, getPreviousPageItem(inventory));
-			inventory.set(53, getNextPageItem(inventory));
+			inventory.set(45, pagination.getPreviousPageItem(inventory));
+			inventory.set(53, pagination.getNextPageItem(inventory));
 		}
 	}
 
@@ -123,6 +144,7 @@ public class SpectateInventory extends TabInventory<TeamArenaTeam> {
 	private static final ItemStack ALL_PLAYERS = ItemBuilder.of(Material.PLAYER_HEAD)
 			.displayName(Component.text("Show all players"))
 			.build();
+
 	private static ItemStack teamToItem(@Nullable TeamArenaTeam team) {
 		if (team == null) {
 			return ALL_PLAYERS;
@@ -173,6 +195,7 @@ public class SpectateInventory extends TabInventory<TeamArenaTeam> {
 
 		final Function<Player, Comparator<Player>> comparator;
 		final Component display;
+
 		SortOption(Function<Player, Comparator<Player>> comparator, Component display) {
 			this.comparator = comparator;
 			this.display = display;
@@ -180,6 +203,10 @@ public class SpectateInventory extends TabInventory<TeamArenaTeam> {
 
 		Component display() {
 			return display;
+		}
+
+		Comparator<Player> getComparator(Player viewer) {
+			return comparator.apply(viewer);
 		}
 	}
 }

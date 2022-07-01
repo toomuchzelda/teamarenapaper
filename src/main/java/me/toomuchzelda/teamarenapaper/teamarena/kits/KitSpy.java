@@ -3,7 +3,8 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ClickableItem;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
-import me.toomuchzelda.teamarenapaper.inventory.PagedInventory;
+import me.toomuchzelda.teamarenapaper.inventory.InventoryProvider;
+import me.toomuchzelda.teamarenapaper.inventory.Pagination;
 import me.toomuchzelda.teamarenapaper.teamarena.DisguiseManager;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
@@ -317,7 +318,8 @@ public class KitSpy extends Kit
 		}
 	}
 
-	public class SpyInventory extends PagedInventory {
+	public class SpyInventory implements InventoryProvider {
+		Pagination pagination = new Pagination();
 
 		@Override
 		public Component getTitle(Player player) {
@@ -381,11 +383,11 @@ public class KitSpy extends Kit
 					items.add(null);
 			}
 
-			setPageItems(items, inventory, 0, 45);
-			if (getMaxPage() != 1) {
+			pagination.showPageItems(items, inventory, 0, 45);
+			if (pagination.getMaxPage() != 1) {
 				// set prev page/next page items first
-				inventory.set(45, getPreviousPageItem(inventory));
-				inventory.set(53, getNextPageItem(inventory));
+				inventory.set(45, pagination.getPreviousPageItem(inventory));
+				inventory.set(53, pagination.getNextPageItem(inventory));
 			}
 		}
 	}

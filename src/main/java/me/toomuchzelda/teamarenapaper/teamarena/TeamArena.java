@@ -4,6 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.inventory.KitInventory;
+import me.toomuchzelda.teamarenapaper.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
@@ -94,8 +95,7 @@ public abstract class TeamArena
 	 */
 	protected HashMap<Player, RespawnInfo> respawnTimers;
 	protected static ItemStack respawnItem = ItemBuilder.of(Material.RED_DYE)
-			.displayName(Component.text("Right click to respawn").color(NamedTextColor.RED)
-					.decoration(TextDecoration.ITALIC, false))
+			.displayName(Component.text("Right click to respawn", NamedTextColor.RED))
 			.build();
 	public static final int RESPAWN_SECONDS = 5;
 	public static final int MID_GAME_JOIN_SECONDS = 10;
@@ -105,8 +105,7 @@ public abstract class TeamArena
 			new KitNone(), new KitSniper(), new KitVenom(), new KitRewind(), new KitValkyrie(), new KitEngineer());
 	protected Map<String, Kit> kits;
 	protected static ItemStack kitMenuItem = ItemBuilder.of(Material.FEATHER)
-			.displayName(Component.text("Select a Kit").color(NamedTextColor.BLUE)
-					.decoration(TextDecoration.ITALIC, false))
+			.displayName(Component.text("Select a Kit", NamedTextColor.BLUE))
 			.build();
 
 	protected MapInfo mapInfo;
@@ -696,6 +695,11 @@ public abstract class TeamArena
 			Player clicker = event.getPlayer();
 			PlayerInfo pinfo = Main.getPlayerInfo(clicker);
 			TeamArenaTeam team = pinfo.team;
+			if (miniMap.isMapItem(event.getItem())) {
+				event.setUseItemInHand(Event.Result.DENY);
+				Inventories.openInventory(clicker, new SpectateInventory(isSpectator(clicker) ? null : team));
+				return;
+			}
 			//right click to glow teammates, left click to ping to nearby teammates
 			if(team.getHotbarItem().isSimilar(event.getItem())) {
 				Action action = event.getAction();
@@ -1372,7 +1376,6 @@ public abstract class TeamArena
 		player.sendMap(miniMap.view);
 		PlayerInventory inventory = player.getInventory();
 		inventory.setItem(8, miniMap.getMapItem());
-		inventory.addItem(new ItemStack(Material.COMPASS));
 	}
 
 	//process logging in player

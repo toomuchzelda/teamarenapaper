@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * @author jacky8399
  */
-public abstract class PagedInventory implements InventoryProvider {
+public class Pagination {
     private int page = 1, maxPage = 1;
 
     public void setPage(int page) {
@@ -24,7 +24,7 @@ public abstract class PagedInventory implements InventoryProvider {
         return page;
     }
 
-	public void goToPage(int page, InventoryAccessor inventory) {
+	public void goToPage(int page, InventoryProvider.InventoryAccessor inventory) {
 		setPage(page);
 		inventory.invalidate();
 	}
@@ -38,8 +38,8 @@ public abstract class PagedInventory implements InventoryProvider {
      * @param items The items
      * @param inventory The inventory
      */
-    public void setPageItems(List<ClickableItem> items, InventoryAccessor inventory) {
-        setPageItems(items, inventory, 0, Integer.MAX_VALUE);
+    public void showPageItems(List<ClickableItem> items, InventoryProvider.InventoryAccessor inventory) {
+        showPageItems(items, inventory, 0, Integer.MAX_VALUE);
     }
 
     /**
@@ -49,7 +49,7 @@ public abstract class PagedInventory implements InventoryProvider {
      * @param start The slot index to start from (inclusive)
      * @param end The slot index to end on (exclusive)
      */
-    public void setPageItems(List<ClickableItem> items, InventoryAccessor inventory, int start, int end) {
+    public void showPageItems(List<ClickableItem> items, InventoryProvider.InventoryAccessor inventory, int start, int end) {
         // count empty slots
         List<Integer> emptySlots = new ArrayList<>();
         Inventory bukkitInventory = inventory.getInventory();
@@ -83,11 +83,11 @@ public abstract class PagedInventory implements InventoryProvider {
 			.displayName(Component.text("Previous page", NamedTextColor.YELLOW))
 			.build();
 
-    public ClickableItem getNextPageItem(InventoryAccessor inventory) {
+    public ClickableItem getNextPageItem(InventoryProvider.InventoryAccessor inventory) {
         return ClickableItem.of(NEXT_PAGE_ITEM, e -> goToPage(getPage() + 1, inventory));
     }
 
-    public ClickableItem getPreviousPageItem(InventoryAccessor inventory) {
+    public ClickableItem getPreviousPageItem(InventoryProvider.InventoryAccessor inventory) {
         return ClickableItem.of(PREVIOUS_PAGE_ITEM, e -> goToPage(getPage() - 1, inventory));
     }
 }

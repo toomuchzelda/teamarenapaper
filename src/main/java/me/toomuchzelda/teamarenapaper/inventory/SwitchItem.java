@@ -4,8 +4,11 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
+import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -47,6 +50,26 @@ public class SwitchItem<T> {
 
 	private void incrementState(int increment) {
 		index = Math.floorMod(index + increment, values.size());
+	}
+
+	@Nullable
+	private net.kyori.adventure.sound.Sound clickSound;
+
+	@Nullable
+	public net.kyori.adventure.sound.Sound getClickSound() {
+		return clickSound;
+	}
+
+	public SwitchItem<T> setClickSound(@Nullable net.kyori.adventure.sound.Sound clickSound) {
+		this.clickSound = clickSound;
+		return this;
+	}
+
+	public SwitchItem<T> setClickSound(@Nullable Sound clickSound, SoundCategory category, float volume, float pitch) {
+		this.clickSound = clickSound != null ?
+				net.kyori.adventure.sound.Sound.sound(clickSound, category, volume, pitch) :
+				null;
+		return this;
 	}
 
 	public ClickableItem getItem(InventoryProvider.InventoryAccessor inventory) {

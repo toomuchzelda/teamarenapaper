@@ -1,10 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.inventory.Inventories;
-import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
-import me.toomuchzelda.teamarenapaper.inventory.SpectateInventory;
-import me.toomuchzelda.teamarenapaper.inventory.TabInventory;
+import me.toomuchzelda.teamarenapaper.inventory.*;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
@@ -292,12 +289,9 @@ public class CommandDebug extends CustomCommand {
 		return Collections.emptyList();
 	}
 
-	static class TabTest extends TabInventory<@NotNull Material> {
+	static class TabTest implements InventoryProvider {
 		boolean extended = false;
-
-		TabTest() {
-			super(Material.BLACK_WOOL);
-		}
+		TabBar<@NotNull Material> tab = new TabBar<>(Material.BLACK_WOOL);
 
 		@Override
 		public Component getTitle(Player player) {
@@ -309,9 +303,10 @@ public class CommandDebug extends CustomCommand {
 			return 6;
 		}
 
+		List<Material> wools = List.copyOf(Tag.WOOL.getValues());
 		@Override
 		public void init(Player player, InventoryAccessor inventory) {
-			showTabs(inventory, new ArrayList<>(Tag.WOOL.getValues()), highlightWhenSelected(ItemStack::new),
+			tab.showTabs(inventory, wools, TabBar.highlightWhenSelected(ItemStack::new),
 					0, extended ? 3 : 7, true);
 
 			if (extended) {
@@ -327,7 +322,7 @@ public class CommandDebug extends CustomCommand {
 						inventory.invalidate();
 					}));
 
-			inventory.set(9, new ItemStack(getCurrentTab()));
+			inventory.set(9, new ItemStack(tab.getCurrentTab()));
 		}
 	}
 }

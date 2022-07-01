@@ -23,13 +23,14 @@ import org.bukkit.inventory.meta.BannerMeta;
 
 import java.util.*;
 
-public class KitInventory extends TabInventory<KitInventory.KitCategory> {
+public class KitInventory implements InventoryProvider {
 
 	private final ArrayList<Kit> kits;
+	private final TabBar<KitCategory> categoryTab = new TabBar<>(null);
+	private final Pagination pagination = new Pagination();
 
 	public KitInventory(Collection<? extends Kit> kits) {
-		super(null);
-		setClickSound(Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.BLOCKS, 0.5f, 1);
+		categoryTab.setClickSound(Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.BLOCKS, 0.5f, 1);
 
 		this.kits = new ArrayList<>(kits);
 		this.kits.sort(Kit.COMPARATOR);
@@ -88,26 +89,26 @@ public class KitInventory extends TabInventory<KitInventory.KitCategory> {
 		Main.getGame().interruptRespawn(player);
 
 		// include null tab to specify no filter
-		showTabs(inventory,
+		categoryTab.showTabs(inventory,
 				Arrays.asList(null, KitCategory.FIGHTER, KitCategory.RANGED,
 						KitCategory.SUPPORT, KitCategory.STEALTH, KitCategory.UTILITY),
 				(category, selected) -> category == null ?
-						(selected ? highlight(ALL_TAB_ITEM) : ALL_TAB_ITEM) :
+						TabBar.highlightIfSelected(ALL_TAB_ITEM, selected) :
 						category.display(selected),
 				0, 9, true);
 
 		Kit selected = Main.getPlayerInfo(player).kit;
 		if (kits.size() > 9 * 4) { // max 4 rows
 			// set page items
-			inventory.set(45, getPreviousPageItem(inventory));
-			inventory.set(53, getNextPageItem(inventory));
+			inventory.set(45, pagination.getPreviousPageItem(inventory));
+			inventory.set(53, pagination.getNextPageItem(inventory));
 		}
-		KitCategory filter = getCurrentTab();
+		KitCategory filter = categoryTab.getCurrentTab();
 		List<ClickableItem> kitItems = kits.stream()
 				.filter(kit -> filter == null || KIT_CATEGORIES.get(filter).contains(kit.getClass()))
 				.map(kit -> getKitItem(kit, kit == selected))
 				.toList();
-		setPageItems(kitItems, inventory, 9, 45);
+		pagination.showPageItems(kitItems, inventory, 9, 45);
 	}
 
 	@Override
@@ -144,6 +145,7 @@ public class KitInventory extends TabInventory<KitInventory.KitCategory> {
 			)))
 			.hide(ItemFlag.values())
 			.build();
+
 	enum KitCategory {
 		FIGHTER(ItemBuilder.of(Material.IRON_SWORD)
 				.displayName(Component.text("Fighter", NamedTextColor.RED))
@@ -196,7 +198,7 @@ public class KitInventory extends TabInventory<KitInventory.KitCategory> {
 		final ItemStack display, displaySelected;
 
 		KitCategory(ItemStack display) {
-			this(display, highlight(display));
+			this(display, TabBar.highlight(display));
 		}
 
 		KitCategory(ItemStack display, ItemStack displaySelected) {

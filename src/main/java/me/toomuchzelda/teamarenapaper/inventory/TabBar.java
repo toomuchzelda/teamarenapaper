@@ -22,24 +22,29 @@ import java.util.function.Function;
  * @author jacky
  */
 @ParametersAreNonnullByDefault
-public abstract class TabInventory<T> extends PagedInventory {
+public class TabBar<T> {
 	private T currentTab;
 
-	public TabInventory(@Nullable T defaultTab) {
+	public TabBar(@Nullable T defaultTab) {
 		this.currentTab = defaultTab;
 	}
 
-	protected T getCurrentTab() {
+	public T getCurrentTab() {
 		return currentTab;
 	}
 
-	protected void setCurrentTab(@Nullable T tab) {
+	public void setCurrentTab(@Nullable T tab) {
 		currentTab = tab;
 	}
 
-	protected void goToTab(@Nullable T tab, InventoryAccessor inventory) {
-		setCurrentTab(tab);
+	protected boolean goToTab(@Nullable T tab, InventoryProvider.InventoryAccessor inventory) {
+		if (!Objects.equals(getCurrentTab(), tab)) {
+			setCurrentTab(tab);
+			inventory.invalidate();
+			return true;
+		}
 		inventory.invalidate();
+		return false;
 	}
 
 	@Nullable
@@ -50,12 +55,16 @@ public abstract class TabInventory<T> extends PagedInventory {
 		return clickSound;
 	}
 
-	public void setClickSound(@Nullable net.kyori.adventure.sound.Sound clickSound) {
+	public TabBar<T> setClickSound(@Nullable net.kyori.adventure.sound.Sound clickSound) {
 		this.clickSound = clickSound;
+		return this;
 	}
 
-	public void setClickSound(@Nullable Sound clickSound, SoundCategory category, float volume, float pitch) {
-		this.clickSound = net.kyori.adventure.sound.Sound.sound(clickSound, category, volume, pitch);
+	public TabBar<T> setClickSound(@Nullable Sound clickSound, SoundCategory category, float volume, float pitch) {
+		this.clickSound = clickSound != null ?
+				net.kyori.adventure.sound.Sound.sound(clickSound, category, volume, pitch) :
+				null;
+		return this;
 	}
 
 	private void playSound(InventoryClickEvent event) {
@@ -79,7 +88,7 @@ public abstract class TabInventory<T> extends PagedInventory {
 
 	int indexOffset = 0; // page of tabs for when there's more than 9 tabs
 
-	protected void showTabs(InventoryAccessor inventory, List<T> tabs,
+	public void showTabs(InventoryProvider.InventoryAccessor inventory, List<T> tabs,
 							BiFunction<T, Boolean, ItemStack> itemFunction,
 							int start, int end, boolean centered) {
 		int maxTabs = end - start;
@@ -125,8 +134,8 @@ public abstract class TabInventory<T> extends PagedInventory {
 					T tab = iterator.next();
 					boolean isTabSelected = Objects.equals(tab, currentTab);
 					item = ClickableItem.of(itemFunction.apply(tab, isTabSelected), e -> {
-						playSound(e);
-						goToTab(tab, inventory);
+						if (goToTab(tab, inventory))
+							playSound(e);
 					});
 				} else {
 					item = BORDER_ITEM;
@@ -137,14 +146,15 @@ public abstract class TabInventory<T> extends PagedInventory {
 		}
 	}
 
-	protected static <T> BiFunction<T, Boolean, ItemStack> highlightWhenSelected(Function<T, ItemStack> original) {
-		return (tab, selected) -> {
-			var stack = original.apply(tab);
-			return selected ? highlight(stack) : stack;
-		};
+	public static <T> BiFunction<T, Boolean, ItemStack> highlightWhenSelected(Function<T, ItemStack> original) {
+		return (tab, selected) -> highlightIfSelected(original.apply(tab), selected);
 	}
 
-	protected static ItemStack highlight(ItemStack stack) {
+	public static ItemStack highlightIfSelected(ItemStack stack, boolean selected) {
+		return selected ? highlight(stack) : stack;
+	}
+
+	public static ItemStack highlight(ItemStack stack) {
 		return ItemBuilder.from(stack.clone())
 				.enchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1)
 				.hide(ItemFlag.HIDE_ENCHANTS)
