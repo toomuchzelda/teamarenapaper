@@ -106,10 +106,7 @@ public class KitExplosive extends Kit{
 			ACTIVE_GRENADES.clear();
 			GRENADE_RECHARGES.clear();
 
-			ACTIVE_RPG.forEach(rpgInfo -> {
-				rpgInfo.rpgArrow().remove();
-				rpgInfo.rpgEgg().remove();
-			});
+			ACTIVE_RPG.forEach(rpgInfo -> rpgInfo.rpgArrow().remove());
 			ACTIVE_RPG.clear();
 			RPG_RECHARGES.clear();
 		}
@@ -125,6 +122,7 @@ public class KitExplosive extends Kit{
 			RPG_RECHARGES.remove(player);
 		}
 
+		//Prevent RPG arrow from hitting players
 		@Override
 		public void onAttemptedAttack(DamageEvent event) {
 			if(event.getDamageType().is(DamageType.PROJECTILE)){
@@ -196,7 +194,6 @@ public class KitExplosive extends Kit{
 
 				//Explode RPG if it hits block or player
 				if(rpgArrow.isInBlock() || rpgArrow.isOnGround() || rpgArrow.isDead()){
-					//world.createExplosion(rpgArrow.getLocation(), 1.5f, false, false, thrower);
 					rpgBlast(rpgArrow.getLocation().clone(), thrower);
 
 					world.playSound(rpgArrow.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 2.0f, 1.0f);
@@ -301,6 +298,8 @@ public class KitExplosive extends Kit{
 				}
 			}
 		}
+
+		//Returns a count of how much of desiredItem is in inv
 		public int getInvCount(PlayerInventory inv, ItemStack desiredItem){
 			ItemStack[] items = inv.getContents();
 			int itemCount = 0;
@@ -357,7 +356,7 @@ public class KitExplosive extends Kit{
 					RPG_RECHARGES.put(shooter, TeamArena.getGameTick());
 				}
 
-				//Replacing the Egg with an invisible arrow
+				//Replacing the Egg with an arrow to get the appropriate trajectory
 				Vector vel = proj.getVelocity();
 				Location loc = proj.getLocation();
 				Egg rpgEgg = (Egg) proj;
@@ -399,6 +398,7 @@ public class KitExplosive extends Kit{
 					grenadeMeta.setEffect(fireworkColor);
 					grenade.setItemMeta(grenadeMeta);
 
+					//Initializing the grenade Item entity
 					Location initialPoint = player.getEyeLocation().clone().subtract(0, 0.2, 0);
 					Item grenadeDrop = world.dropItem(initialPoint, grenade);
 					grenadeDrop.setCanMobPickup(false);
