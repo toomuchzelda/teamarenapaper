@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper;
 
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
+import com.destroystokyo.paper.event.entity.ThrownEggHatchEvent;
 import com.destroystokyo.paper.event.player.PlayerAdvancementCriterionGrantEvent;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
@@ -737,6 +738,16 @@ public class EventListeners implements Listener
 		event.setCancelled(true);
 	}
 
+	//Prevents Explosive RPGs from creating chickens
+	@EventHandler
+	public void onHatchEgg(ThrownEggHatchEvent event){
+		if(event.getEgg().getShooter() instanceof Player player){
+			if(Main.getPlayerInfo(player).activeKit != null &&
+				Main.getPlayerInfo(player).activeKit.getName().equalsIgnoreCase("Explosive")){
+				event.setHatching(false);
+			}
+		}
+	}
 
 	static final Component MOTD_SEPARATOR = Component.textOfChildren(Component.space(),
 			Component.text("|", NamedTextColor.DARK_RED, TextDecoration.BOLD), Component.space());

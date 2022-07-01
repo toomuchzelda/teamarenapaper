@@ -660,6 +660,14 @@ public abstract class TeamArena
 			else if(event.getDamageType().isProjectile()) {
 				if(event.getAttacker() instanceof Projectile) {
 					event.getKnockback().multiply(0.8);
+
+					//Preventing Explosive RPG arrows from actually dealing damage
+					if(event.getFinalAttacker() instanceof Player shooter &&
+						Main.getPlayerInfo(shooter).activeKit != null &&
+							Main.getPlayerInfo(shooter).activeKit.getName().equalsIgnoreCase("Explosive")){
+						event.setCancelled(true);
+						event.getAttacker().remove();
+					}
 				}
 			}
 		}
