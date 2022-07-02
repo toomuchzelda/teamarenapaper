@@ -56,6 +56,7 @@ public class SearchAndDestroy extends TeamArena
 	protected int poisonRingIndex = 0;
 	protected double poisonDamage = 1d;
 	protected final double midToFurthestBombDistance;
+	protected double forgiveness = 1d;
 	protected Firework poisonFirework;
 
 	protected final ItemStack BASE_FUSE;
@@ -122,7 +123,7 @@ public class SearchAndDestroy extends TeamArena
 
 		Component longObf = Component.text("Herobrine", NamedTextColor.DARK_RED, TextDecoration.OBFUSCATED);
 		MIN_TO_POISON_MESSAGE = Component.text("One minute until ", NamedTextColor.DARK_RED).append(longObf).append(Component.text(" appears." +
-				" Stand near the Centred Shrine, lest you receive no mercy.", NamedTextColor.DARK_RED));
+				" Stand near the Centre Shrine, lest you receive no mercy.", NamedTextColor.DARK_RED));
 		MIN_TO_POISON_TITLE = Component.text("One minute until ", NamedTextColor.DARK_RED).append(longObf);
 
 		POISON_NOW_TITLE = Component.text("abcdefghijklmnopqrstuvwxyz12345", NamedTextColor.DARK_RED, TextDecoration.OBFUSCATED);
@@ -143,7 +144,7 @@ public class SearchAndDestroy extends TeamArena
 			for(Bomb bomb : bombsList) {
 				bomb.init();
 				double distance = bomb.getSpawnLoc().distance(this.spawnPos);
-				distance = Math.max(distance, longest);
+				longest = Math.max(distance, longest);
 			}
 		}
 		this.midToFurthestBombDistance = longest;
@@ -240,15 +241,44 @@ public class SearchAndDestroy extends TeamArena
 
 		if(isPoison) {
 			if (currentTick % 3 == 0) {
-				if (poisonVictims == null) {
-					poisonVictims = new ArrayList<>(this.players);
-				}
+				int idx;
+				if(poisonVictims == null)
+					idx = 0;
+				else
+					idx = poisonRingIndex++ % poisonVictims.size();
 
-				//increase damage on every cycle
-				int idx = poisonRingIndex++ % poisonVictims.size();
 				if (idx == 0) {
+					//increase lightning damage on every cycle
 					poisonDamage += 1d;
-					Collections.shuffle(poisonVictims, MathUtils.random);
+					//decrease how far you can be from centre without being damaged
+					forgiveness = Math.max(0d, forgiveness - 0.15d);
+
+					ArrayList<Player> sortedPlayers = new ArrayList<>(this.players);
+					sortedPlayers.sort((p1, p2) -> {
+						double p1distSqr = p1.getLocation().distanceSquared(spawnPos);
+						double p2distSqr = p2.getLocation().distanceSquared(spawnPos);
+
+						return Double.compare(p1distSqr, p2distSqr);
+					});
+
+					poisonVictims = new ArrayList<>((int) (Math.max(3, sortedPlayers.size() * forgiveness)));
+
+					double furthestPlayerDistance = 0d;
+					for(Player p : sortedPlayers) {
+						double distance = p.getLocation().distanceSquared(spawnPos);
+						furthestPlayerDistance = Math.max(furthestPlayerDistance, distance);
+					}
+					furthestPlayerDistance = Math.sqrt(furthestPlayerDistance);
+
+					for(Player p : sortedPlayers) {
+						double distance = p.getLocation().distance(spawnPos);
+						distance /= furthestPlayerDistance; // get from 0.0 to 1.0
+						if(distance > forgiveness) {
+							poisonVictims.add(p);
+						}
+					}
+
+					Bukkit.broadcastMessage(poisonVictims.toString());
 				}
 
 				Player unfortunateVictim = poisonVictims.get(idx);
@@ -424,9 +454,9 @@ public class SearchAndDestroy extends TeamArena
 	public static void buildShrine(Location baseLocation) {
 		World world = baseLocation.getWorld();
 
-		int baseX = baseLocation.getBlockX();
+		final int baseX = baseLocation.getBlockX();
 		final int baseY = baseLocation.getBlockY();
-		int baseZ = baseLocation.getBlockZ();
+		final int baseZ = baseLocation.getBlockZ();
 
 		//clear out the surrounding space first
 		for(int x = -2; x < 3; x++) {
@@ -436,10 +466,6 @@ public class SearchAndDestroy extends TeamArena
 				}
 			}
 		}
-
-		//add random XZ offset by 2 blocks
-		baseX += MathUtils.randomRange(-1, 1);
-		baseZ += MathUtils.randomRange(-1, 1);
 
 		for(int x = -1; x < 2; x++) {
 			for(int z = -1; z < 2; z++) {
