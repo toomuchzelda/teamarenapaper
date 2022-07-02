@@ -11,11 +11,10 @@ import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.Bukkit;
-import org.bukkit.Material;
-import org.bukkit.Sound;
-import org.bukkit.SoundCategory;
+import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
 import org.bukkit.event.Event;
@@ -23,6 +22,7 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -45,7 +45,7 @@ public class SearchAndDestroy extends TeamArena
 	protected Map<TeamArenaTeam, List<Bomb>> teamBombs;
 	protected Map<BlockVector, Bomb> bombPositions;
 	protected Map<TNTPrimed, Bomb> bombTNTs;
-	public static final int POISON_TIME = 10 * 20;//60 * 5 * 20;
+	public static final int POISON_TIME = (60 * 20) + 10 * 20;//60 * 5 * 20;
 	//starts counting down when game is live
 	// is increased by player death and bomb arms
 	protected int poisonTimeLeft = POISON_TIME;
@@ -55,6 +55,8 @@ public class SearchAndDestroy extends TeamArena
 	protected ArrayList<Player> poisonVictims;
 	protected int poisonRingIndex = 0;
 	protected double poisonDamage = 1d;
+	protected final double midToFurthestBombDistance;
+	protected Firework poisonFirework;
 
 	protected final ItemStack BASE_FUSE;
 	public static final Component FUSE_NAME = ItemUtils.noItalics(Component.text("Bomb Fuse", NamedTextColor.GOLD));
@@ -119,10 +121,11 @@ public class SearchAndDestroy extends TeamArena
 		).build();
 
 		Component longObf = Component.text("Herobrine", NamedTextColor.DARK_RED, TextDecoration.OBFUSCATED);
-		MIN_TO_POISON_MESSAGE = Component.text("One minute until ", NamedTextColor.DARK_RED).append(longObf).append(Component.text(" appears.", NamedTextColor.DARK_RED));
+		MIN_TO_POISON_MESSAGE = Component.text("One minute until ", NamedTextColor.DARK_RED).append(longObf).append(Component.text(" appears." +
+				" Stand near the Centred Shrine, lest you receive no mercy.", NamedTextColor.DARK_RED));
 		MIN_TO_POISON_TITLE = Component.text("One minute until ", NamedTextColor.DARK_RED).append(longObf);
 
-		POISON_NOW_TITLE = Component.text("abcdefghijklmnopqrstuvwxyz", NamedTextColor.DARK_RED, TextDecoration.OBFUSCATED);
+		POISON_NOW_TITLE = Component.text("abcdefghijklmnopqrstuvwxyz12345", NamedTextColor.DARK_RED, TextDecoration.OBFUSCATED);
 		TextComponent.Builder builder = Component.text();
 		for(int i = 0; i < 5; i++) {
 			builder.append(POISON_NOW_TITLE);
@@ -135,11 +138,15 @@ public class SearchAndDestroy extends TeamArena
 	public SearchAndDestroy() {
 		super();
 
+		double longest = 0d;
 		for(List<Bomb> bombsList : teamBombs.values()) {
 			for(Bomb bomb : bombsList) {
 				bomb.init();
+				double distance = bomb.getSpawnLoc().distance(this.spawnPos);
+				distance = Math.max(distance, longest);
 			}
 		}
+		this.midToFurthestBombDistance = longest;
 
 		this.BASE_FUSE = new ItemStack(Material.BLAZE_POWDER);
 		ItemMeta meta = BASE_FUSE.getItemMeta();
@@ -203,25 +210,53 @@ public class SearchAndDestroy extends TeamArena
 		else if(this.poisonTimeLeft == 60 * 20) {
 			Bukkit.broadcast(MIN_TO_POISON_MESSAGE);
 			PlayerUtils.sendOptionalTitle(Component.empty(), MIN_TO_POISON_TITLE, 30, 30, 30);
+
+			//move any players out of the way before building
+			spawnPos.getNearbyPlayers(2, 3).forEach(player -> EntityUtils.setVelocity(player, player.getLocation()
+					.toVector().subtract(spawnPos.toVector()).normalize().multiply(0.3d)));
+
+			buildShrine(spawnPos.clone().subtract(0, 2, 0));
+
+			spawnPos.getWorld().strikeLightningEffect(spawnPos.clone().add(0, 2, 0));
+		}
+		else if(this.poisonTimeLeft < 60 * 20 || isPoison) {
+			if(currentTick % (10 * 20) == 0) {
+				Firework firework = (Firework) gameWorld.spawnEntity(this.spawnPos.clone().add(0, 1, 0), EntityType.FIREWORK);
+				FireworkMeta meta = firework.getFireworkMeta();
+				meta.setPower(3);
+				meta.clearEffects();
+				meta.addEffect(FireworkEffect.builder()
+						.trail(true)
+						.with(FireworkEffect.Type.BALL_LARGE)
+						.withColor(TeamArenaTeam.convert(NamedTextColor.DARK_RED))
+						.withFade(TeamArenaTeam.convert(NamedTextColor.GOLD))
+						.build());
+				firework.setFireworkMeta(meta);
+
+				//store it here so can cancel damage events it causes
+				this.poisonFirework = firework;
+			}
 		}
 
-		if(isPoison && currentTick % 3 == 0) {
-			if(poisonVictims == null) {
-				poisonVictims = new ArrayList<>(this.players);
+		if(isPoison) {
+			if (currentTick % 3 == 0) {
+				if (poisonVictims == null) {
+					poisonVictims = new ArrayList<>(this.players);
+				}
+
+				//increase damage on every cycle
+				int idx = poisonRingIndex++ % poisonVictims.size();
+				if (idx == 0) {
+					poisonDamage += 1d;
+					Collections.shuffle(poisonVictims, MathUtils.random);
+				}
+
+				Player unfortunateVictim = poisonVictims.get(idx);
+
+				gameWorld.strikeLightningEffect(unfortunateVictim.getLocation());
+				DamageEvent damage = DamageEvent.newDamageEvent(unfortunateVictim, poisonDamage, DamageType.END_GAME_LIGHTNING, null, false);
+				queueDamage(damage);
 			}
-
-			//increase damage on every cycle
-			int idx = poisonRingIndex++ % poisonVictims.size();
-			if(idx == 0) {
-				poisonDamage += 1d;
-				Collections.shuffle(poisonVictims, MathUtils.random);
-			}
-
-			Player unfortunateVictim = poisonVictims.get(idx);
-
-			gameWorld.strikeLightningEffect(unfortunateVictim.getLocation());
-			DamageEvent damage = DamageEvent.newDamageEvent(unfortunateVictim, poisonDamage, DamageType.END_GAME_LIGHTNING, null, false);
-			queueDamage(damage);
 		}
 	}
 
@@ -345,6 +380,9 @@ public class SearchAndDestroy extends TeamArena
 		if(event.getAttacker() instanceof TNTPrimed tnt && bombTNTs.containsKey(tnt)) {
 			event.setCancelled(true);
 		}
+		else if(event.getAttacker() instanceof Firework firework && firework == poisonFirework) {
+			event.setCancelled(true);
+		}
 	}
 
 	@Override
@@ -381,6 +419,42 @@ public class SearchAndDestroy extends TeamArena
 			player.removePotionEffect(PotionEffectType.REGENERATION);
 			EntityUtils.setMaxHealth(player, 10d);
 		}
+	}
+
+	public static void buildShrine(Location baseLocation) {
+		World world = baseLocation.getWorld();
+
+		int baseX = baseLocation.getBlockX();
+		final int baseY = baseLocation.getBlockY();
+		int baseZ = baseLocation.getBlockZ();
+
+		//clear out the surrounding space first
+		for(int x = -2; x < 3; x++) {
+			for(int y = 0; y < 4; y++) {
+				for(int z = -2; z < 3; z++) {
+					world.getBlockAt(baseX + x, baseY + y, baseZ + z).setType(Material.AIR);
+				}
+			}
+		}
+
+		//add random XZ offset by 2 blocks
+		baseX += MathUtils.randomRange(-1, 1);
+		baseZ += MathUtils.randomRange(-1, 1);
+
+		for(int x = -1; x < 2; x++) {
+			for(int z = -1; z < 2; z++) {
+				world.getBlockAt(baseX + x, baseY, baseZ + z).setType(Material.GOLD_BLOCK);
+			}
+		}
+
+		world.getBlockAt(baseX, baseY + 1, baseZ).setType(Material.NETHERRACK);
+		world.getBlockAt(baseX, baseY + 2, baseZ).setType(Material.FIRE);
+
+		for(int x = -1; x < 2; x += 2)
+			world.getBlockAt(baseX + x, baseY + 1, baseZ).setType(Material.REDSTONE_TORCH);
+
+		for(int z = -1; z < 2; z += 2)
+			world.getBlockAt(baseX, baseY + 1, baseZ + z).setType(Material.REDSTONE_TORCH);
 	}
 
 	public static void announceBombEvent(Bomb bomb, BombEvent bombEvent) {

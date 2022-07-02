@@ -1603,8 +1603,16 @@ public abstract class TeamArena
 				spawnpoint = new Vec(centre.x(), 255, centre.z());
 			}*/
 		int y = gameWorld.getHighestBlockYAt(centre.getBlockX(), centre.getBlockZ());
-		if(y > centre.getY())
+		int worldSpawnY = gameWorld.getSpawnLocation().getBlockY();
+
+		if(Math.abs(centre.getY() - y) < Math.abs(centre.getY() - worldSpawnY)) {
 			centre.setY(y);
+		}
+		else {
+			centre.setY(worldSpawnY);
+		}
+
+		//centre.setY(y);
 
 		spawnPos = centre.toLocation(gameWorld, 90, 0);
 		spawnPos.setY(spawnPos.getY() + 2);

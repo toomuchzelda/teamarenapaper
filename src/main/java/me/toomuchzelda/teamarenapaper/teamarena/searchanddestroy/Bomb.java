@@ -348,6 +348,10 @@ public class Bomb
 		return this.owningTeam;
 	}
 
+	public Location getSpawnLoc() {
+		return this.spawnLoc.clone();
+	}
+
 	public TeamArenaTeam getArmingTeam() {
 		return this.armingTeam;
 	}
