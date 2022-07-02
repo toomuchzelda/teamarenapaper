@@ -278,7 +278,7 @@ public class SearchAndDestroy extends TeamArena
 						}
 					}
 
-					Bukkit.broadcastMessage(poisonVictims.toString());
+					//Bukkit.broadcastMessage(poisonVictims.toString());
 				}
 
 				Player unfortunateVictim = poisonVictims.get(idx);
