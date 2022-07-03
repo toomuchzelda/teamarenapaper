@@ -123,8 +123,7 @@ public class SearchAndDestroy extends TeamArena
 		).build();
 
 		Component longObf = Component.text("Herobrine", NamedTextColor.DARK_RED, TextDecoration.OBFUSCATED);
-		MIN_TO_POISON_MESSAGE = Component.text("One minute until ", NamedTextColor.DARK_RED).append(longObf).append(Component.text(" appears." +
-				" Stand near the Centre Shrine, lest you receive no mercy.", NamedTextColor.DARK_RED));
+		MIN_TO_POISON_MESSAGE = Component.text("One minute until ", NamedTextColor.DARK_RED).append(longObf).append(Component.text(" appears.", NamedTextColor.DARK_RED));
 		MIN_TO_POISON_TITLE = Component.text("One minute until ", NamedTextColor.DARK_RED).append(longObf);
 
 		POISON_NOW_TITLE = Component.text("abcdefghijklmnopqrstuvwxyz12345", NamedTextColor.DARK_RED, TextDecoration.OBFUSCATED);
