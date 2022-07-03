@@ -1,15 +1,18 @@
 package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.inventory.Inventories;
+import me.toomuchzelda.teamarenapaper.inventory.*;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
+import org.bukkit.Tag;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.MapPalette;
 import org.bukkit.map.MinecraftFont;
 import org.jetbrains.annotations.NotNull;
@@ -226,6 +229,16 @@ public class CommandDebug extends CustomCommand {
 		}
 
 		switch (args[0]) {
+			case "guitest" -> {
+				if (args.length < 2)
+					throw throwUsage("/debug guitest <tab/spectate>");
+				var inventory = switch (args[1]) {
+					case "tab" -> new TabTest();
+					case "spectate" -> new SpectateInventory(null);
+					default -> throw throwUsage("/debug guitest <tab/spectate>");
+				};
+				Inventories.openInventory(player, inventory);
+			}
 			case "hide" -> {
 				for (Player viewer : Bukkit.getOnlinePlayers()) {
 					if (viewer.canSee(player)) {
@@ -242,10 +255,11 @@ public class CommandDebug extends CustomCommand {
 	@Override
 	public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
 		if (args.length == 1) {
-			return Arrays.asList("hide", "gui", "game", "setrank", "setteam", "setgame", "setnextgame", "votetest", "draw");
+			return Arrays.asList("hide", "gui", "guitest", "game", "setrank", "setteam", "setgame", "setnextgame", "votetest", "draw");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");
+				case "guitest" -> Arrays.asList("tab", "spectate");
 				case "game" -> Arrays.asList("start", "ignorewinconditions", "sniperaccuracy");
 				case "setrank" -> Arrays.stream(PermissionLevel.values()).map(Enum::name).toList();
 				case "setteam" -> Arrays.stream(Main.getGame().getTeams())
@@ -273,5 +287,42 @@ public class CommandDebug extends CustomCommand {
 			};
 		}
 		return Collections.emptyList();
+	}
+
+	static class TabTest implements InventoryProvider {
+		boolean extended = false;
+		TabBar<@NotNull Material> tab = new TabBar<>(Material.BLACK_WOOL);
+
+		@Override
+		public Component getTitle(Player player) {
+			return Component.text("Tab test");
+		}
+
+		@Override
+		public int getRows() {
+			return 6;
+		}
+
+		List<Material> wools = List.copyOf(Tag.WOOL.getValues());
+		@Override
+		public void init(Player player, InventoryAccessor inventory) {
+			tab.showTabs(inventory, wools, TabBar.highlightWhenSelected(ItemStack::new),
+					0, extended ? 3 : 7, true);
+
+			if (extended) {
+				for (int i = 4; i < 8; i++) {
+					inventory.set(i, new ItemStack(Material.CLOCK));
+				}
+			}
+
+			inventory.set(8, ItemBuilder.of(Material.PAPER)
+					.displayName(Component.text("Toggle ADVANCED options", NamedTextColor.YELLOW))
+					.toClickableItem(e -> {
+						extended = !extended;
+						inventory.invalidate();
+					}));
+
+			inventory.set(9, new ItemStack(tab.getCurrentTab()));
+		}
 	}
 }

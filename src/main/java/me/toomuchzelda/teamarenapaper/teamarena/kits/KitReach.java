@@ -8,13 +8,15 @@ import org.bukkit.entity.Player;
 
 public class KitReach extends Kit
 {
-	
+
 	public KitReach(TeamArena game) {
 		super("reach", "reach hacks", Material.CARROT_ON_A_STICK);
-		
+
 		setAbilities(new ReachAbility());
+
+		setCategory(KitCategory.FIGHTER);
 	}
-	
+
 	public static class ReachAbility extends Ability
 	{
 		@Override
@@ -23,11 +25,11 @@ public class KitReach extends Kit
 			player.setFlying(false);
 			player.setAllowFlight(false);
 		}
-		
+
 		@Override
 		public void removeAbility(Player player) {
 			player.setGameMode(GameMode.SURVIVAL);
 		}
 	}
-	
+
 }

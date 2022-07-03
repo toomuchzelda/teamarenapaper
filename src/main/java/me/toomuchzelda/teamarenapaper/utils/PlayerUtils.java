@@ -235,8 +235,7 @@ public class PlayerUtils {
 		if(enemyKit != null &&
 				KitSpy.currentlyDisguised.containsKey(enemySpy)){
 					KitSpy.SpyDisguiseInfo disguiseInfo = KitSpy.getInfo(enemySpy);
-					Player disguisedPlayer = disguiseInfo.disguisingAsPlayer;
-					TeamArenaTeam disguisedTeam = Main.getPlayerInfo(disguisedPlayer).team;
+					TeamArenaTeam disguisedTeam = Main.getPlayerInfo(disguiseInfo.disguisingAsPlayer()).team;
 					//If the spy is disguised as a different team, they are a valid target, so return true.
 					return disguisedTeam.equals(viewerTeam);
 		}

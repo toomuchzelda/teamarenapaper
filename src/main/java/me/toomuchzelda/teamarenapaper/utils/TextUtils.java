@@ -19,7 +19,10 @@ import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
-import java.util.Locale;
+import java.util.*;
+import java.util.List;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class TextUtils {
 	public static final TextColor ERROR_RED = TextColor.color(255, 20, 20);
@@ -206,10 +209,10 @@ public class TextUtils {
 		return getProgressText(string, Style.style(backgroundColor), Style.style(cursorColor), Style.style(foregroundColor), progress);
 	}
 
-	public static Component getRGBManiacComponent(Component input, Style style, double offset) {
+	public static Component getRGBManiacComponent(Component component, Style style, double offset) {
 		var builder = Component.text();
-		style = style.merge(input.style());
-		if (input instanceof TextComponent text) {
+		style = style.merge(component.style());
+		if (component instanceof TextComponent text) {
 			Component rgbComponent;
 			var color = style.color();
 			if (color == NamedTextColor.WHITE || color == null) {
@@ -223,9 +226,9 @@ public class TextUtils {
 			}
 			builder.append(text.style(style).content("").children(rgbComponent.children()));
 		} else {
-			builder.append(input.style(style));
+			builder.append(component.style(style));
 		}
-		var children = input.children();
+		var children = component.children();
 		for (var child : children) {
 			var newChild = getRGBManiacComponent(child, style, offset);
 			builder.append(newChild);
@@ -239,6 +242,40 @@ public class TextUtils {
 				Duration.ofMillis(stayTicks * 50L),
 				Duration.ofMillis(fadeOutTicks * 50L)
 		));
+	}
+
+	private static final Pattern SAFE_TO_WRAP = Pattern.compile("\\s|\\n");
+	public static List<Component> wrapString(String string, Style style, int maxWidth) {
+		List<Component> lines = new ArrayList<>();
+		StringJoiner line = new StringJoiner(" ");
+		for (String word : SAFE_TO_WRAP.split(string)) {
+			// arbitrary width
+			if (TextUtils.measureWidth(line.toString()) < maxWidth) {
+				line.add(word);
+			} else {
+				lines.add(Component.text(line.toString(), style));
+				line = new StringJoiner(" ");
+				line.add(word);
+			}
+		}
+		// final line
+		lines.add(Component.text(line.toString(), style));
+		return Collections.unmodifiableList(lines);
+	}
+
+	public static List<Component> toLoreList(String string, Style style) {
+		return string.lines()
+			.filter(line -> !line.isBlank())
+			.map(line -> Component.text(line, style))
+			.collect(Collectors.toList());
+	}
+
+	public static List<Component> toLoreList(String string, TextColor textColor) {
+		return toLoreList(string, Style.style(textColor));
+	}
+
+	public static List<Component> toLoreList(String string) {
+		return toLoreList(string, Style.empty());
 	}
 
 }

@@ -84,6 +84,8 @@ public class KitRewind extends Kit {
 		setItems(new ItemStack(Material.IRON_SWORD), TIME_MACHINE, timeStasis);
 
 		setAbilities(new RewindAbility());
+
+		setCategory(KitCategory.FIGHTER);
 	}
 
 	public static class RewindAbility extends Ability {

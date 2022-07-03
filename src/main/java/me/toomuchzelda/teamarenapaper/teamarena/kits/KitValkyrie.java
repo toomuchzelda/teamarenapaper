@@ -123,6 +123,8 @@ public class KitValkyrie extends Kit{
         this.setArmor(helm, chest, legs, boots);
         setItems(VALK_AXE, GRAV_BOMB);
         setAbilities(new ValkyrieAbility());
+
+		setCategory(KitCategory.FIGHTER);
     }
 
     public static class ValkyrieAbility extends Ability{

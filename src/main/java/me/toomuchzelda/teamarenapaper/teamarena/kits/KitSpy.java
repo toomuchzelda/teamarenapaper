@@ -1,9 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.inventory.ClickableItem;
-import me.toomuchzelda.teamarenapaper.inventory.Inventories;
-import me.toomuchzelda.teamarenapaper.inventory.PagedInventory;
+import me.toomuchzelda.teamarenapaper.inventory.*;
 import me.toomuchzelda.teamarenapaper.teamarena.DisguiseManager;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
@@ -17,20 +15,23 @@ import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.SkullMeta;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Consumer;
 
 public class KitSpy extends Kit
 {
@@ -48,8 +49,6 @@ public class KitSpy extends Kit
 	public static final List<Component> DISGUISE_MENU_LORE_LIST;
 
 	public static final Component COOLDOWN_MESSAGE = Component.text("Disguise pumpkin is still recharging!").color(TextUtils.ERROR_RED);
-	public static final Component CLICK_TO_DISGUISE = Component.text("Click to disguise as this player")
-			.color(NamedTextColor.LIGHT_PURPLE).decoration(TextDecoration.ITALIC, false);
 
 	public static final Component HEAD_TIME_MESSAGE = ItemUtils.noItalics(Component.text((TIME_TO_DISGUISE_HEAD / 20)
 			+ "sec disguise time").color(NamedTextColor.LIGHT_PURPLE));
@@ -92,6 +91,8 @@ public class KitSpy extends Kit
 		setItems(sword, menu);
 
 		setAbilities(new SpyAbility());
+
+		setCategory(KitCategory.STEALTH);
 
 		currentlyDisguised = new HashMap<>();
 	}
@@ -179,7 +180,9 @@ public class KitSpy extends Kit
 				if(event.getMaterial() == DISGUISE_MENU_MATERIAL) {
 					event.setUseItemInHand(Event.Result.DENY);
 					if (event.getPlayer().getExp() >= 1) {
-						Inventories.openInventory(event.getPlayer(), new SpyInventory());
+						var player = event.getPlayer();
+						var team = Main.getPlayerInfo(player).team;
+						Inventories.openInventory(player, new SpyInventory(team));
 					}
 					else {
 						event.getPlayer().sendMessage(COOLDOWN_MESSAGE);
@@ -252,9 +255,6 @@ public class KitSpy extends Kit
 									player.setInvisible(true);
 							}
 
-							dinfo.informMessage = Component.text("Disguised as: ").color(NamedTextColor.LIGHT_PURPLE).append(dinfo.disguisingAsPlayerName)
-									.append(Component.text("    Kit: " + dinfo.disguisingAsKit.getName()).color(NamedTextColor.LIGHT_PURPLE));
-
 							PlayerInfo pinfo = Main.getPlayerInfo(player);
 							if(pinfo.getPreference(Preferences.KIT_ACTION_BAR)) {
 								player.sendActionBar(dinfo.informMessage);
@@ -317,7 +317,12 @@ public class KitSpy extends Kit
 		}
 	}
 
-	public class SpyInventory extends PagedInventory {
+	public class SpyInventory extends SpectateInventory {
+		private TeamArenaTeam viewerTeam;
+		public SpyInventory(@NotNull TeamArenaTeam viewerTeam) {
+			super(null);
+			this.viewerTeam = viewerTeam;
+		}
 
 		@Override
 		public Component getTitle(Player player) {
@@ -325,91 +330,67 @@ public class KitSpy extends Kit
 		}
 
 		@Override
-		public int getRows() {
-			return 6;
-		}
-
-		@Override
-		public void init(Player player, InventoryAccessor inventory) {
-			buildPages(player, inventory);
-		}
-
-		@Override
-		public void update(Player player, InventoryAccessor inventory) {
-			if (TeamArena.getGameTick() % 10 == 0) {
-				inventory.invalidate();
+		protected ItemStack teamToItem(@Nullable TeamArenaTeam team, boolean selected) {
+			// conceal player count
+			if (team != viewerTeam && team != null && team.isAlive()) {
+				var stack = ItemBuilder.of(team.getIconItem().getType())
+					.displayName(team.getComponentName())
+					.lore(Component.text("Players: ???", NamedTextColor.GRAY),
+						Component.text("Score: " + team.getTotalScore(), NamedTextColor.GRAY))
+					.build();
+				return TabBar.highlightIfSelected(stack, selected);
 			}
+			return super.teamToItem(team, selected);
 		}
 
-		public void buildPages(Player player, InventoryAccessor inventory) {
-			ArrayList<ClickableItem> items = new ArrayList<>();
-			TeamArena teamArena = Main.getGame();
-
-			TeamArenaTeam[] gameTeams = teamArena.getTeams();
-			TeamArenaTeam ownTeam = Main.getPlayerInfo(player).team;
-
-			//sort teams so own team is last
-			TeamArenaTeam[] sortedTeams = Arrays.copyOf(gameTeams, gameTeams.length);
-			Arrays.sort(sortedTeams, Comparator.<TeamArenaTeam, Integer>comparing(team -> team == ownTeam ? 1 : 0)
-					.thenComparing(TeamArenaTeam::getSimpleName));
-
-			for (TeamArenaTeam team : sortedTeams) {
-				items.add(ClickableItem.empty(team.getIconItem()));
-
-				for (Player otherPlayer : team.getPlayerMembers()) {
-					if (!teamArena.isSpectator(otherPlayer)) {
-						ItemStack playerHead = new ItemStack(Material.PLAYER_HEAD);
-						SkullMeta meta = (SkullMeta) playerHead.getItemMeta();
-						meta.setPlayerProfile(otherPlayer.getPlayerProfile());
-						meta.displayName(otherPlayer.playerListName().decoration(TextDecoration.ITALIC, false));
-						meta.lore(Collections.singletonList(CLICK_TO_DISGUISE));
-						playerHead.setItemMeta(meta);
-
-						items.add(ClickableItem.of(playerHead, e -> {
-							if (!Main.getGame().isSpectator(otherPlayer)) {
-
-								SpyAbility.disguisePlayer(player, ownTeam, otherPlayer, null,
-										TIME_TO_DISGUISE_MENU, true);
-								Inventories.closeInventory(player);
-							}
-						}));
-					}
+		// don't show sensitive information (kits and distance) for enemies
+		@Override
+		protected ClickableItem playerToItem(@NotNull Player player, Location distanceOrigin, boolean showKit) {
+			Consumer<InventoryClickEvent> clickHandler = e -> {
+				Player viewer = (Player) e.getWhoClicked();
+				if (!Main.getGame().isSpectator(player)) {
+					SpyAbility.disguisePlayer(viewer, viewerTeam, player, null,
+						TIME_TO_DISGUISE_MENU, true);
+					Inventories.closeInventory(viewer);
 				}
+			};
 
-				//make new line if needed and not at the end of the page
-				while (team != sortedTeams[sortedTeams.length - 1] && items.size() % 9 != 0)
-					items.add(null);
+			var playerInfo = Main.getPlayerInfo(player);
+			if (viewerTeam.equals(playerInfo.team)) {
+				var originalItem = super.playerToItem(player, distanceOrigin, showKit);
+				return ItemBuilder.from(originalItem.stack())
+					.addLore(Component.empty(), Component.text("Click to disguise as this player", NamedTextColor.LIGHT_PURPLE))
+					.toClickableItem(clickHandler);
 			}
 
-			setPageItems(items, inventory, 0, 45);
-			if (getMaxPage() != 1) {
-				// set prev page/next page items first
-				inventory.set(45, getPreviousPageItem(inventory));
-				inventory.set(53, getNextPageItem(inventory));
-			}
+			return ItemBuilder.of(Material.PLAYER_HEAD)
+				.displayName(Component.text(player.getName(), playerInfo.team.getRGBTextColor()))
+				.lore(Component.text("Click to disguise as this player", NamedTextColor.LIGHT_PURPLE))
+				.meta(SkullMeta.class, skullMeta -> skullMeta.setOwningPlayer(player))
+				.toClickableItem(clickHandler);
 		}
 	}
 
 	/**
 	 * specifically for kit Spy
 	 */
-	public static class SpyDisguiseInfo
-	{
-		public List<DisguiseManager.Disguise> disguises;
-		public Kit disguisingAsKit;
-		//disguisingAsPlayer added so engineer sentries can easily check for what team the current disguise belongs to
-		public Player disguisingAsPlayer;
-		public Component disguisingAsPlayerName;
-		public int timeToApply; //tick to apply disguise
+	public record SpyDisguiseInfo(List<DisguiseManager.Disguise> disguises,
+								  Kit disguisingAsKit,
+								  Player disguisingAsPlayer,
+								  int timeToApply,
+								  Component informMessage) {
 
-		public Component informMessage;
+		public SpyDisguiseInfo {
+			disguises = List.copyOf(disguises); // defensive copy
+		}
 
 		public SpyDisguiseInfo(List<DisguiseManager.Disguise> disguises, Kit kit, Player player, int timeToApply) {
-			this.disguises = disguises;
-			this.disguisingAsKit = kit;
-			this.disguisingAsPlayer = player;
-			this.disguisingAsPlayerName = player.playerListName();
-			this.timeToApply = timeToApply;
+			this(disguises, kit, player, timeToApply, Component.textOfChildren(
+				Component.text("Disguising as ", NamedTextColor.LIGHT_PURPLE),
+				player.playerListName(),
+				Component.text("    Kit: ", NamedTextColor.LIGHT_PURPLE),
+				Component.text(kit.getName(), kit.getCategory().textColor())
+			));
 		}
 	}
 }

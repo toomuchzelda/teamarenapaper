@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * @author jacky8399
  */
-public abstract class PagedInventory implements InventoryProvider {
+public class Pagination {
     private int page = 1, maxPage = 1;
 
     public void setPage(int page) {
@@ -24,27 +24,34 @@ public abstract class PagedInventory implements InventoryProvider {
         return page;
     }
 
+	public void goToPage(int page, InventoryProvider.InventoryAccessor inventory) {
+		setPage(page);
+		inventory.invalidate();
+	}
+
     public int getMaxPage() {
         return maxPage;
     }
 
     /**
-     * Tries to fill every empty slot in the inventory with the provided items
-     * @param items The items
-     * @param inventory The inventory
-     */
-    public void setPageItems(List<ClickableItem> items, InventoryAccessor inventory) {
-        setPageItems(items, inventory, 0, Integer.MAX_VALUE);
+	 * Tries to fill every empty slot in the inventory with the provided items
+	 *
+	 * @param inventory The inventory
+	 * @param items     The items
+	 */
+    public void showPageItems(InventoryProvider.InventoryAccessor inventory, List<ClickableItem> items) {
+        showPageItems(inventory, items, 0, Integer.MAX_VALUE);
     }
 
     /**
-     * Tries to fill every empty slot in the inventory with the provided items
-     * @param items The items
-     * @param inventory The inventory
-     * @param start The slot index to start from (inclusive)
-     * @param end The slot index to end on (exclusive)
-     */
-    public void setPageItems(List<ClickableItem> items, InventoryAccessor inventory, int start, int end) {
+	 * Tries to fill every empty slot in the inventory with the provided items
+	 *
+	 * @param inventory The inventory
+	 * @param items     The items
+	 * @param start     The slot index to start from (inclusive)
+	 * @param end       The slot index to end on (exclusive)
+	 */
+    public void showPageItems(InventoryProvider.InventoryAccessor inventory, List<ClickableItem> items, int start, int end) {
         // count empty slots
         List<Integer> emptySlots = new ArrayList<>();
         Inventory bukkitInventory = inventory.getInventory();
@@ -68,28 +75,21 @@ public abstract class PagedInventory implements InventoryProvider {
 
     public ItemStack getPageItem() {
         return ItemBuilder.of(Material.PAPER)
-                .displayName(Component.text(page + "/" + maxPage).color(NamedTextColor.WHITE)).build();
+                .displayName(Component.text(page + "/" + maxPage, NamedTextColor.WHITE)).build();
     }
 
-    public ClickableItem getNextPageItem(InventoryAccessor inventory) {
-        return ClickableItem.of(ItemBuilder.of(Material.ARROW)
-                        .displayName(Component.text("Next page").color(NamedTextColor.YELLOW))
-                        .build(),
-                e -> {
-                    setPage(getPage() + 1);
-                    inventory.invalidate();
-                }
-        );
+	private static final ItemStack NEXT_PAGE_ITEM = ItemBuilder.of(Material.ARROW)
+			.displayName(Component.text("Next page", NamedTextColor.YELLOW))
+			.build();
+	private static final ItemStack PREVIOUS_PAGE_ITEM = ItemBuilder.of(Material.ARROW)
+			.displayName(Component.text("Previous page", NamedTextColor.YELLOW))
+			.build();
+
+    public ClickableItem getNextPageItem(InventoryProvider.InventoryAccessor inventory) {
+        return ClickableItem.of(NEXT_PAGE_ITEM, e -> goToPage(getPage() + 1, inventory));
     }
 
-    public ClickableItem getPreviousPageItem(InventoryAccessor inventory) {
-        return ClickableItem.of(ItemBuilder.of(Material.ARROW)
-                        .displayName(Component.text("Previous page").color(NamedTextColor.YELLOW))
-                        .build(),
-                e -> {
-                    setPage(getPage() - 1);
-                    inventory.invalidate();
-                }
-        );
+    public ClickableItem getPreviousPageItem(InventoryProvider.InventoryAccessor inventory) {
+        return ClickableItem.of(PREVIOUS_PAGE_ITEM, e -> goToPage(getPage() - 1, inventory));
     }
 }
