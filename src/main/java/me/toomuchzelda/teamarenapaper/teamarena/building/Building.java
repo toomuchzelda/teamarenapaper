@@ -36,7 +36,7 @@ public abstract class Building {
 			if (hologram != null)
 				hologram.remove();
 		} else if (hologram == null) {
-			hologram = new RealHologram(getHologramLocation(), newText);
+			hologram = new RealHologram(getHologramLocation(), RealHologram.Alignment.TOP, newText);
 		} else {
 			// TODO telepot the hologram
 			hologram.setText(newText);

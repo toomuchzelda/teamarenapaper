@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper;
 
+import com.destroystokyo.paper.event.block.TNTPrimeEvent;
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import com.destroystokyo.paper.event.player.PlayerAdvancementCriterionGrantEvent;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
@@ -26,6 +27,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.craftbukkit.v1_19_R1.CraftWorldBorder;
 import org.bukkit.entity.*;
@@ -98,7 +100,8 @@ public class EventListeners implements Listener
 
 			// initialize next game
 			if (TeamArena.nextGameType == null) {
-				TeamArena.nextGameType = GameType.values()[MathUtils.random.nextInt(GameType.values().length)];
+				//TeamArena.nextGameType = GameType.values()[MathUtils.random.nextInt(GameType.values().length)];
+				TeamArena.nextGameType = GameType.SND;
 			}
 
 			try {
@@ -368,17 +371,65 @@ public class EventListeners implements Listener
 		}
 	}
 
-	/**
-	 * prevent explosions from breaking blocks
-	 */
+	@EventHandler
+	public void explosionPrime(ExplosionPrimeEvent event) {
+		ExplosionManager.EntityExplosionInfo exInfo = ExplosionManager.getEntityInfo(event.getEntity());
+		if(exInfo != null) {
+			if(exInfo.cancel()) {
+				event.setCancelled(true);
+				return;
+			}
+
+			byte fire = exInfo.fire();
+			if(fire == ExplosionManager.NO_FIRE)
+				event.setFire(false);
+			else if(fire == ExplosionManager.YES_FIRE)
+				event.setFire(true);
+			//else leave it as is
+
+			float flat = exInfo.radius();
+			if(flat != ExplosionManager.DEFAULT_FLOAT_VALUE)
+				event.setRadius(flat);
+		}
+	}
+
 	@EventHandler
 	public void entityExplode(EntityExplodeEvent event) {
-		event.blockList().clear();
+		ExplosionManager.EntityExplosionInfo exInfo = ExplosionManager.getEntityInfo(event.getEntity());
+		if(exInfo != null) {
+			if(exInfo.cancel()) {
+				event.setCancelled(true);
+				return;
+			}
+
+			boolean breakBlocks = exInfo.breakBlocks();
+			if(exInfo.exemptions() != null) {
+				Set<Block> exemptions = exInfo.exemptions();
+				event.blockList().removeIf(block -> exemptions.contains(block) == breakBlocks);
+			}
+			else if(!breakBlocks) {
+				event.blockList().clear();
+			}
+
+			float flat = exInfo.yield();
+			if(flat != ExplosionManager.DEFAULT_FLOAT_VALUE)
+				event.setYield(flat);
+		}
+		else {
+			event.blockList().clear();
+		}
 	}
 
 	@EventHandler
 	public void blockExplode(BlockExplodeEvent event) {
 		event.blockList().clear();
+	}
+
+	@EventHandler
+	public void tntPrime(TNTPrimeEvent event) {
+		if(event.getReason() == TNTPrimeEvent.PrimeReason.PROJECTILE) {
+			event.setCancelled(true);
+		}
 	}
 
 	@EventHandler

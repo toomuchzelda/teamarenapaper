@@ -5,6 +5,7 @@ import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import org.bukkit.*;
@@ -120,7 +121,7 @@ public class PushMine extends DemoMine
 						vector.add(p.getVelocity().multiply(0.4));
 						vector.multiply(power * BLAST_STRENGTH);
 
-						PlayerUtils.sendVelocity(p, PlayerUtils.noNonFinites(vector));
+						EntityUtils.setVelocity(p, PlayerUtils.noNonFinites(vector));
 					}
 				}
 
