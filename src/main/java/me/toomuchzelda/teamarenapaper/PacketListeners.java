@@ -286,7 +286,7 @@ public class PacketListeners
 						DisguiseManager.Disguise disg = DisguiseManager.getDisguiseSeeing(packet.getEntity(), event.getPlayer());
 
 						if(disg != null) { //the viewer is indeed viewing a disguise of this player
-							ItemStack[] kitArmour = spyInfo.disguisingAsKit.getArmour();
+							ItemStack[] kitArmour = spyInfo.disguisingAsKit().getArmour();
 
 							//replace the items in the packet accordingly
 							var iter = packet.getSlots().listIterator();

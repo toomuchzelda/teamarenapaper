@@ -355,10 +355,6 @@ public class KitSpy extends Kit
 			var kit = playerInfo.activeKit;
 			return ItemBuilder.of(Material.PLAYER_HEAD)
 				.displayName(Component.text(player.getName())) // TODO handle spies
-				.lore(Component.textOfChildren(
-						Component.text("Kit role: ", NamedTextColor.GRAY),
-						Component.text(kit.getCategory().name(), kit.getCategory().textColor())
-				))
 				.meta(SkullMeta.class, skullMeta -> skullMeta.setOwningPlayer(player))
 				.toClickableItem(e -> {
 					Player viewer = (Player) e.getWhoClicked();
