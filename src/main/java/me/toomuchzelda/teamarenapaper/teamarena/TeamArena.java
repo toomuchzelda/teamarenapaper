@@ -1190,7 +1190,6 @@ public abstract class TeamArena
 	}
 
 	public void respawnPlayer(Player player) {
-		// teleport first to avoid double void damage
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
 		player.teleport(pinfo.team.getNextSpawnpoint());
 
@@ -1262,6 +1261,17 @@ public abstract class TeamArena
 			DamageLogEntry.sendDamageLog(playerVictim);
 			pinfo.clearDamageReceivedLog();
 
+			//if they died in the void teleport them back to map
+			if(playerVictim.getLocation().getY() <= border.getMinY()) {
+				Location toTele;
+				if(killer != null) {
+					toTele = killer.getLocation();
+				}
+				else {
+					toTele = spawnPos;
+				}
+				playerVictim.teleport(toTele);
+			}
 
 			//clear attack givers so they don't get falsely attributed on this next player's death
 			DamageTimes.clearDamageTimes(playerVictim);
@@ -1773,6 +1783,10 @@ public abstract class TeamArena
 
 	public BoundingBox getBorder() {
 		return border;
+	}
+
+	public Location getSpawnPos() {
+		return this.spawnPos != null ? this.spawnPos.clone() : null;
 	}
 
 	/**
