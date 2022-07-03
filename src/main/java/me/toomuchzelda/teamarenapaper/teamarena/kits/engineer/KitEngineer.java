@@ -302,6 +302,7 @@ public class KitEngineer extends Kit {
 				} else if (WRANGLER.isSimilar(stack)) {
 					if (!show && !hasActiveSentries) { // only replace when no active sentries exist
 						iterator.set(SENTRY);
+						hasSentryItem = true;
 					}
 				}
 			}

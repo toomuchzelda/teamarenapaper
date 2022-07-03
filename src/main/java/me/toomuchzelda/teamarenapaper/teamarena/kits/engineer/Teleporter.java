@@ -8,6 +8,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -29,6 +30,7 @@ public class Teleporter extends Building {
 	Block linkedTeleporter;
 	BlockState originalBlockState;
 	BoundingBox hitBox;
+	TextColor teamColor;
 
 	private static final ItemStack ICON = new ItemStack(Material.HONEYCOMB_BLOCK);
 
@@ -36,6 +38,7 @@ public class Teleporter extends Building {
 		super(player, loc);
 		setName("Teleporter");
 		setIcon(ICON);
+		teamColor = Main.getPlayerInfo(player).team.getRGBTextColor();
 		Block block = loc.getBlock();
 		hitBox = BoundingBox.of(block.getRelative(-1, 1, -1), block.getRelative(1, 2, 1));
 	}
@@ -137,7 +140,7 @@ public class Teleporter extends Building {
 		//Allies and spies disguised as allies can use
 		//User must be sneaking and be on top of the teleporter block
 		return player.isSneaking() && player.getLocation().getY() - 1 == location.getY() &&
-			(!Main.getGame().canAttack(player, player) || PlayerUtils.isDisguisedAsAlly(player, player));
+			(!Main.getGame().canAttack(owner, player) || PlayerUtils.isDisguisedAsAlly(owner, player));
 	}
 
 	static final Component NOT_CONNECTED = Component.text("Not Connected", NamedTextColor.GRAY);
@@ -154,7 +157,7 @@ public class Teleporter extends Building {
 		if (linkedBuilding instanceof Teleporter other) { // has link
 			// update hologram
 			if (isReady() && other.isReady()) {
-				hologramText = Component.text("Teleport Ready");
+				hologramText = Component.text("Teleport Ready", teamColor);
 				// teleport eligible entities
 				var nearbyEntities = location.getWorld().getNearbyEntities(hitBox, this::checkCanTeleport);
 				if (nearbyEntities.size() != 0)
