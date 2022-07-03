@@ -59,16 +59,25 @@ import static me.toomuchzelda.teamarenapaper.teamarena.GameState.LIVE;
 public class EventListeners implements Listener
 {
 
-	public static final EnumMap<Material, Boolean> BREAKABLE_BLOCKS;
+	public static final boolean[] BREAKABLE_BLOCKS;
 
 	static {
-		BREAKABLE_BLOCKS = new EnumMap<Material, Boolean>(Material.class);
+		BREAKABLE_BLOCKS = new boolean[Material.values().length];
+		Arrays.fill(BREAKABLE_BLOCKS, false);
 
 		for(Material mat : Material.values()) {
 			if(mat.isBlock() && !mat.isCollidable() && !mat.name().endsWith("SIGN") && !mat.name().endsWith("TORCH")) {
-				BREAKABLE_BLOCKS.put(mat, true);
+				setBlockBreakable(mat);
 			}
 		}
+	}
+
+	private static void setBlockBreakable(Material mat) {
+		BREAKABLE_BLOCKS[mat.ordinal()] = true;
+	}
+
+	private static boolean isBlockBreakable(Material mat) {
+		return BREAKABLE_BLOCKS[mat.ordinal()];
 	}
 
 	public EventListeners(Plugin plugin) {
@@ -352,9 +361,9 @@ public class EventListeners implements Listener
 			BuildingManager.EventListener.onBlockBreak(event);
 		}
 
-		if((Main.getGame() != null && Main.getGame().getGameState() != LIVE &&
-				!BREAKABLE_BLOCKS.containsKey(event.getBlock().getType())) || event.getPlayer().getGameMode() != GameMode.CREATIVE) {
-			event.setCancelled(true);
+		if(event.getPlayer().getGameMode() != GameMode.CREATIVE) {
+			if(!isBlockBreakable(event.getBlock().getType()))
+				event.setCancelled(true);
 		}
 	}
 
