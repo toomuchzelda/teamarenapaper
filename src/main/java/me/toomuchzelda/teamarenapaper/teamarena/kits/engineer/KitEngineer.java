@@ -297,14 +297,15 @@ public class KitEngineer extends Kit {
 			boolean hasSentryItem = false;
 			for (var iterator = inventory.iterator(); iterator.hasNext(); ) {
 				var stack = iterator.next();
-				if (stack.isSimilar(SENTRY)) {
+				if (SENTRY.isSimilar(stack)) {
 					hasSentryItem = true;
 					if (show) { // show wrangler item, replace
 						iterator.set(WRANGLER);
 					}
-				} else if (stack.isSimilar(WRANGLER)) {
+				} else if (WRANGLER.isSimilar(stack)) {
 					if (!show && !hasActiveSentries) { // only replace when no active sentries exist
 						iterator.set(SENTRY);
+						hasSentryItem = true;
 					}
 				}
 			}

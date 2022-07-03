@@ -419,6 +419,9 @@ public class DamageEvent {
 				}
 			}
 
+			if(damageType.isInstantDeath()) {
+				this.finalDamage = 9999999d;
+			}
 
 			//run modifications done by confirmed damage ability "Event Handlers"
 			Main.getGame().onConfirmedDamage(this);
@@ -592,7 +595,6 @@ public class DamageEvent {
 		}
 	}
 
-	// mfw java no primitive pointers
 	private void updateNDT(DamageTimes.DamageTime dTime) {
 		dTime.update(getFinalAttacker(), dTime.getTimeGiven(), TeamArena.getGameTick(), this.finalDamage, this.damageType);
 	}

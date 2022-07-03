@@ -7,6 +7,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -79,13 +80,14 @@ public record DamageLogEntry(DamageType damageType, double damage, @Nullable Com
 	public record DamageSummary(DamageLogEntry summaryEntry, List<DamageLogEntry> entries) {}
 
 	public static Map<DamageType, DamageSummary> createSummary(List<DamageLogEntry> entries) {
-		var damageTypes = entries.stream()
+		Map<DamageType, List<DamageLogEntry>> damageTypes = entries.stream()
 				.sorted(DESCENDING)
 				.collect(Collectors.groupingBy(
 						DamageLogEntry::damageType,
 						LinkedHashMap::new,
 						Collectors.toList()
 				));
+
 		LinkedHashMap<DamageType, DamageSummary> summary = new LinkedHashMap<>();
 		damageTypes.forEach((type, list) -> {
 			// get damager and time from the first entry
@@ -113,10 +115,11 @@ public record DamageLogEntry(DamageType damageType, double damage, @Nullable Com
 		List<DamageLogEntry> list = pinfo.getDamageReceivedLog();
 		if (style == Style.COMPACT) {
 			player.sendMessage(Component.text("Here's how you died: (hover to see more)", NamedTextColor.DARK_PURPLE));
-			var damageSummary = createSummary(list);
+			Map<DamageType, DamageLogEntry.DamageSummary> damageSummary = createSummary(list);
+
 			damageSummary.values().stream()
 					.map(summary -> {
-						var builder = Component.text().content("  "); // indentation
+						TextComponent.Builder builder = Component.text().content("  "); // indentation
 						builder.append(summary.summaryEntry.asComponent());
 						// show all damage received on hover, separated by newlines
 						builder.hoverEvent(HoverEvent.showText(
@@ -131,8 +134,8 @@ public record DamageLogEntry(DamageType damageType, double damage, @Nullable Com
 		} else {
 			player.sendMessage(Component.text("Here's how you died:", NamedTextColor.DARK_PURPLE));
 			List<Component> components = new ArrayList<>(list.size());
-			for (var dinfo : list) {
-				var builder = Component.text();
+			for (DamageLogEntry dinfo : list) {
+				TextComponent.Builder builder = Component.text();
 				builder.content("  "); // indentation
 				builder.append(dinfo.asComponent(true));
 				components.add(builder.build());

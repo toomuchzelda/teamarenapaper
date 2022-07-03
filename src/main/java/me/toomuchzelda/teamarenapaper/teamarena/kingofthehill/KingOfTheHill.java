@@ -206,9 +206,9 @@ public class KingOfTheHill extends TeamArena
 
 		activeHill.playParticles(coloursList.toArray(new Color[0]));
 
-		if (!CommandDebug.ignoreWinConditions) { // disable anti-stall if debug
+		if (owningTeam == null) {
 			//no team owns the hill; do anti-stalling mechanism
-			if (owningTeam == null) {
+			if (!CommandDebug.ignoreWinConditions) { // disable anti-stall if debug
 				//no hill caps for 5 minutes, end the game
 				if (gameTick - lastHillChangeTime >= 5 * 60 * 20) {
 					for (int i = 0; i < 5; i++) {

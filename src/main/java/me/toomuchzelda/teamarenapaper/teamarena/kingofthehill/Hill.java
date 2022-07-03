@@ -29,7 +29,7 @@ public class Hill {
         this.time = time;
         this.done = false;
 
-        hologram = new RealHologram(border.getCenter().toLocation(world), Component.text("Hill: " + name));
+        hologram = new RealHologram(border.getCenter().toLocation(world), RealHologram.Alignment.TOP, Component.text("Hill: " + name));
     }
 
     public void playParticles(Color... colors) {

@@ -14,7 +14,11 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.craftbukkit.v1_19_R1.CraftSound;
+import org.bukkit.craftbukkit.v1_19_R1.attribute.CraftAttributeInstance;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftEntity;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftLivingEntity;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
@@ -26,12 +30,15 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Iterator;
 
 public class EntityUtils {
 
     public static Method getHurtSoundMethod;
+	public static Field attributeHandle;
     public static final double VANILLA_PROJECTILE_SPRAY = 0.0075d;
 
     public static void cacheReflection() {
@@ -39,10 +46,13 @@ public class EntityUtils {
             getHurtSoundMethod = net.minecraft.world.entity.LivingEntity.class
                     .getDeclaredMethod("c", DamageSource.class);
             getHurtSoundMethod.setAccessible(true);
-        } catch (NoSuchMethodException e) {
+
+			attributeHandle = CraftAttributeInstance.class.getDeclaredField("handle");
+			attributeHandle.setAccessible(true);
+        } catch (NoSuchMethodException | NoSuchFieldException e) {
             e.printStackTrace();
         }
-    }
+	}
 
 	@NotNull
     public static Component getComponent(@Nullable Entity entity) {
@@ -108,8 +118,7 @@ public class EntityUtils {
 		}
 	}
 
-    //set velocity fields and send the packet immediately instead of waiting for next tick
-    // otherwise use entity.setVelocity(Vector) for spigot to do it's stuff first
+    //set velocity fields and send the packet immediately instead of waiting for next tick if it's a player
     public static void setVelocity(Entity entity, Vector velocity) {
         entity.setVelocity(velocity);
 
@@ -125,6 +134,36 @@ public class EntityUtils {
             nmsPlayer.connection.send(packet);
         }
     }
+
+	/**
+	 * Set entity's max health attribute and also set their current health manually to prevent a bug when only
+	 * setting their max health attribute.
+	 */
+	public static void setMaxHealth(LivingEntity entity, double newHealth) {
+		double oldHealth = entity.getHealth();
+
+		entity.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(newHealth);
+
+		if(oldHealth > newHealth)
+			entity.setHealth(newHealth);
+	}
+
+	public static void removeAllModifiers(LivingEntity living) {
+		for(Attribute attribute : Attribute.values()) {
+			AttributeInstance instance = living.getAttribute(attribute);
+			if(instance != null) {
+				removeAllModifiers(instance);
+			}
+		}
+	}
+
+	public static void removeAllModifiers(AttributeInstance attributeInstance) {
+		Iterator<AttributeModifier> iter = attributeInstance.getModifiers().iterator();
+		while(iter.hasNext()) {
+			iter.next();
+			iter.remove();
+		}
+	}
 
     /**
      * play entity hurt animation and sound

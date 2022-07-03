@@ -21,6 +21,8 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_19_R1.util.CraftVector;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
@@ -102,6 +104,22 @@ public class PlayerUtils {
 	}
 
 	/**
+	 * Send a title to all players, respecting their RECEIVE_GAME_TITLES preference.
+	 * Method for convenience.
+	 * @param title The title.
+	 */
+	public static void sendOptionalTitle(Component title, Component subtitle, int fadeInTicks, int stayTicks,
+										 int fadeOutTicks) {
+		var iter = Main.getPlayersIter();
+		while(iter.hasNext()) {
+			var entry = iter.next();
+			if(entry.getValue().getPreference(Preferences.RECEIVE_GAME_TITLES)) {
+				PlayerUtils.sendTitle(entry.getKey(), title, subtitle, fadeInTicks, stayTicks, fadeOutTicks);
+			}
+		}
+	}
+
+	/**
 	 * untested
 	 * @param player
 	 * @return
@@ -168,7 +186,10 @@ public class PlayerUtils {
 		player.setLevel(0);
 		player.setExp(0);
 		player.setGameMode(GameMode.SURVIVAL);
+		EntityUtils.removeAllModifiers(player);
+		player.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(20d);
 		player.setHealth(player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
+		player.getAttribute(Attribute.GENERIC_ATTACK_SPEED).setBaseValue(99999d);
 		player.setSaturation(5f);
 		player.setFoodLevel(20);
 		player.setAbsorptionAmount(0);
@@ -178,9 +199,6 @@ public class PlayerUtils {
 		for (PotionEffect effect : player.getActivePotionEffects()) {
 			player.removePotionEffect(effect.getType());
 		}
-
-		// remove all queued damage
-		Main.getGame().damageQueue.removeIf(damageEvent -> damageEvent.getVictim() == player);
 	}
 
 	public static void sendKitMessage(Player player, Component chat, Component actionBar) {
