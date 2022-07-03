@@ -46,7 +46,7 @@ public class SearchAndDestroy extends TeamArena
 	protected Map<TeamArenaTeam, List<Bomb>> teamBombs;
 	protected Map<BlockVector, Bomb> bombPositions;
 	protected Map<TNTPrimed, Bomb> bombTNTs;
-	public static final int POISON_TIME = (60 * 20) + 10 * 20;//60 * 5 * 20;
+	public static final int POISON_TIME = 60 * 5 * 20;
 	//starts counting down when game is live
 	// is increased by player death and bomb arms
 	protected int poisonTimeLeft = POISON_TIME;
@@ -345,8 +345,20 @@ public class SearchAndDestroy extends TeamArena
 					else {
 						removeHealing(p);
 
-						Location toTele = spawnPos.clone().add(MathUtils.randomRange(-2, 2), 0, MathUtils.randomRange(-2, 2));
+						Location toTele = spawnPos.clone().add(MathUtils.randomRange(-2d, 2d), 0, MathUtils.randomRange(-2d, 2d));
 						toTele.setDirection(spawnPos.toVector().subtract(toTele.toVector()).normalize());
+
+						boolean isFinite = false;
+						while(!isFinite) {
+							try {
+								toTele.checkFinite();
+								isFinite = true;
+							}
+							catch(IllegalArgumentException e) {
+								toTele = spawnPos.clone().add(MathUtils.randomRange(-2d, 2d), 0, MathUtils.randomRange(-2d, 2d));
+							}
+						}
+
 						p.teleport(toTele);
 					}
 				}
