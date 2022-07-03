@@ -27,6 +27,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.BlockVector;
+import org.bukkit.util.Vector;
 import org.intellij.lang.annotations.RegExp;
 
 import java.io.File;
@@ -196,97 +197,9 @@ public class SearchAndDestroy extends TeamArena
 
 		this.checkWinner();
 
-		//end-game poison
-		this.poisonTimeLeft--;
-		if(this.poisonTimeLeft <= 0) {
-			if(!isPoison) {
-				this.isPoison = true;
-				Bukkit.broadcast(POISON_NOW_MESSAGE);
-				PlayerUtils.sendOptionalTitle(Component.empty(), POISON_NOW_TITLE, 0, 30, 30);
-				for(Player p : players) {
-					removeHealing(p);
-				}
-			}
-		}
-		else if(this.poisonTimeLeft == 60 * 20) {
-			Bukkit.broadcast(MIN_TO_POISON_MESSAGE);
-			PlayerUtils.sendOptionalTitle(Component.empty(), MIN_TO_POISON_TITLE, 30, 30, 30);
-
-			//move any players out of the way before building
-			spawnPos.getNearbyPlayers(2, 3).forEach(player -> EntityUtils.setVelocity(player, player.getLocation()
-					.toVector().subtract(spawnPos.toVector()).normalize().multiply(0.3d)));
-
-			buildShrine(spawnPos.clone().subtract(0, 2, 0));
-
-			spawnPos.getWorld().strikeLightningEffect(spawnPos.clone().add(0, 2, 0));
-		}
-		else if(this.poisonTimeLeft < 60 * 20 || isPoison) {
-			if(currentTick % (10 * 20) == 0) {
-				Firework firework = (Firework) gameWorld.spawnEntity(this.spawnPos.clone().add(0, 1, 0), EntityType.FIREWORK);
-				FireworkMeta meta = firework.getFireworkMeta();
-				meta.setPower(3);
-				meta.clearEffects();
-				meta.addEffect(FireworkEffect.builder()
-						.trail(true)
-						.with(FireworkEffect.Type.BALL_LARGE)
-						.withColor(TeamArenaTeam.convert(NamedTextColor.DARK_RED))
-						.withFade(TeamArenaTeam.convert(NamedTextColor.GOLD))
-						.build());
-				firework.setFireworkMeta(meta);
-
-				//store it here so can cancel damage events it causes
-				this.poisonFirework = firework;
-			}
-		}
-
-		if(isPoison) {
-			if (currentTick % 3 == 0) {
-				int idx;
-				if(poisonVictims == null)
-					idx = 0;
-				else
-					idx = poisonRingIndex++ % poisonVictims.size();
-
-				if (idx == 0) {
-					//increase lightning damage on every cycle
-					poisonDamage += 1d;
-					//decrease how far you can be from centre without being damaged
-					forgiveness = Math.max(0d, forgiveness - 0.15d);
-
-					ArrayList<Player> sortedPlayers = new ArrayList<>(this.players);
-					sortedPlayers.sort((p1, p2) -> {
-						double p1distSqr = p1.getLocation().distanceSquared(spawnPos);
-						double p2distSqr = p2.getLocation().distanceSquared(spawnPos);
-
-						return Double.compare(p1distSqr, p2distSqr);
-					});
-
-					poisonVictims = new ArrayList<>((int) (Math.max(3, sortedPlayers.size() * forgiveness)));
-
-					double furthestPlayerDistance = 0d;
-					for(Player p : sortedPlayers) {
-						double distance = p.getLocation().distanceSquared(spawnPos);
-						furthestPlayerDistance = Math.max(furthestPlayerDistance, distance);
-					}
-					furthestPlayerDistance = Math.sqrt(furthestPlayerDistance);
-
-					for(Player p : sortedPlayers) {
-						double distance = p.getLocation().distance(spawnPos);
-						distance /= furthestPlayerDistance; // get from 0.0 to 1.0
-						if(distance > forgiveness) {
-							poisonVictims.add(p);
-						}
-					}
-
-					//Bukkit.broadcastMessage(poisonVictims.toString());
-				}
-
-				Player unfortunateVictim = poisonVictims.get(idx);
-
-				gameWorld.strikeLightningEffect(unfortunateVictim.getLocation());
-				DamageEvent damage = DamageEvent.newDamageEvent(unfortunateVictim, poisonDamage, DamageType.END_GAME_LIGHTNING, null, false);
-				queueDamage(damage);
-			}
+		//if no winner run end game poison
+		if(gameState == GameState.LIVE) {
+			poisonTick();
 		}
 	}
 
@@ -412,6 +325,83 @@ public class SearchAndDestroy extends TeamArena
 		}
 		else if(event.getAttacker() instanceof Firework firework && firework == poisonFirework) {
 			event.setCancelled(true);
+		}
+	}
+
+	public void poisonTick() {
+		final int currentTick = getGameTick();
+		this.poisonTimeLeft--;
+		if (this.poisonTimeLeft <= 0) {
+			if (!isPoison) {
+				this.isPoison = true;
+				Bukkit.broadcast(POISON_NOW_MESSAGE);
+				PlayerUtils.sendOptionalTitle(Component.empty(), POISON_NOW_TITLE, 0, 30, 30);
+
+				//teleport everyone to the middle
+				Location specPos = spawnPos.clone().add(0, 5, 0).setDirection(new Vector(0, -1, 0));
+				for (Player p : Bukkit.getOnlinePlayers()) {
+					if (isDead(p)) {
+						p.teleport(specPos);
+					}
+					else {
+						removeHealing(p);
+
+						Location toTele = spawnPos.clone().add(MathUtils.randomRange(-2, 2), 0, MathUtils.randomRange(-2, 2));
+						toTele.setDirection(spawnPos.toVector().subtract(toTele.toVector()).normalize());
+						p.teleport(toTele);
+					}
+				}
+			}
+		}
+		else if (this.poisonTimeLeft == 60 * 20) {
+			Bukkit.broadcast(MIN_TO_POISON_MESSAGE);
+			PlayerUtils.sendOptionalTitle(Component.empty(), MIN_TO_POISON_TITLE, 30, 30, 30);
+
+			//move any players out of the way before building
+			spawnPos.getNearbyPlayers(2, 3)
+					.forEach(player -> EntityUtils.setVelocity(player, player.getLocation().toVector().subtract(spawnPos.toVector()).normalize().multiply(0.3d)));
+
+			buildShrine(spawnPos.clone().subtract(0, 2, 0));
+
+			spawnPos.getWorld().strikeLightningEffect(spawnPos.clone().add(0, 2, 0));
+		}
+		else if (this.poisonTimeLeft < 60 * 20 || isPoison) {
+			if (currentTick % (10 * 20) == 0) {
+				Firework firework = (Firework) gameWorld.spawnEntity(this.spawnPos.clone().add(0, 1, 0), EntityType.FIREWORK);
+				FireworkMeta meta = firework.getFireworkMeta();
+				meta.setPower(3);
+				meta.clearEffects();
+				meta.addEffect(FireworkEffect.builder().trail(true).with(FireworkEffect.Type.BALL_LARGE).withColor(TeamArenaTeam.convert(NamedTextColor.DARK_RED))
+						.withFade(TeamArenaTeam.convert(NamedTextColor.GOLD)).build());
+				firework.setFireworkMeta(meta);
+
+				//store it here so can cancel damage events it causes
+				this.poisonFirework = firework;
+			}
+		}
+
+		if (isPoison) {
+			if (currentTick % 3 == 0) {
+				int idx;
+				if (poisonVictims == null)
+					idx = 0;
+				else
+					idx = ++poisonRingIndex % poisonVictims.size();
+
+				if (idx == 0) {
+					//increase lightning damage on every cycle
+					poisonDamage += 0.75d;
+
+					poisonVictims = new ArrayList<>(this.players);
+					Collections.shuffle(poisonVictims, MathUtils.random);
+				}
+
+				Player unfortunateVictim = poisonVictims.get(idx);
+
+				gameWorld.strikeLightningEffect(unfortunateVictim.getLocation());
+				DamageEvent damage = DamageEvent.newDamageEvent(unfortunateVictim, poisonDamage, DamageType.END_GAME_LIGHTNING, null, false);
+				queueDamage(damage);
+			}
 		}
 	}
 
