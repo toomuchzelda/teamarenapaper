@@ -11,6 +11,7 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -54,6 +55,11 @@ public final class ItemBuilder {
         return this;
     }
 
+	@Nullable
+	public Component displayName() {
+		return meta.displayName();
+	}
+
     public ItemBuilder displayName(ComponentLike component) {
 		var actualComponent = component.asComponent();
 		if (actualComponent.decoration(TextDecoration.ITALIC) == TextDecoration.State.NOT_SET)
@@ -61,6 +67,11 @@ public final class ItemBuilder {
         meta.displayName(actualComponent);
         return this;
     }
+
+	@Nullable
+	public List<Component> lore() {
+		return meta.lore();
+	}
 
     public ItemBuilder lore(ComponentLike... components) {
         return lore(Arrays.asList(components));
@@ -70,14 +81,37 @@ public final class ItemBuilder {
         List<Component> lore = new ArrayList<>(components.size());
         for (ComponentLike componentLike : components) {
 			var actualComponent = componentLike.asComponent();
-			if (actualComponent.decoration(TextDecoration.ITALIC) == TextDecoration.State.NOT_SET)
-				lore.add(actualComponent.decoration(TextDecoration.ITALIC, false));
-			else
-            	lore.add(actualComponent);
+			if (actualComponent.decoration(TextDecoration.ITALIC) == TextDecoration.State.NOT_SET) {
+				actualComponent = actualComponent.decoration(TextDecoration.ITALIC, TextDecoration.State.FALSE);
+			}
+			lore.add(actualComponent);
         }
         meta.lore(lore);
         return this;
     }
+
+	public ItemBuilder addLore(ComponentLike... components) {
+		return addLore(Arrays.asList(components));
+	}
+
+	public ItemBuilder addLore(List<? extends ComponentLike> components) {
+		List<Component> oldLore = lore(), newLore;
+		if (oldLore != null) {
+			newLore = new ArrayList<>(oldLore.size() + components.size());
+			newLore.addAll(oldLore);
+		} else {
+			newLore = new ArrayList<>(components.size());
+		}
+		for (var componentLike : components) {
+			var actualComponent = componentLike.asComponent();
+			if (actualComponent.decoration(TextDecoration.ITALIC) == TextDecoration.State.NOT_SET) {
+				actualComponent = actualComponent.decoration(TextDecoration.ITALIC, TextDecoration.State.FALSE);
+			}
+			newLore.add(actualComponent);
+		}
+		meta.lore(newLore);
+		return this;
+	}
 
     public ItemBuilder enchant(Enchantment enchantment, int level) {
         meta.addEnchant(enchantment, level, true);

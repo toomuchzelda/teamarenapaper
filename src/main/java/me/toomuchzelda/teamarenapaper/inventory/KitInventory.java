@@ -103,7 +103,7 @@ public class KitInventory implements InventoryProvider {
 				.filter(kit -> filter == null || kit.getCategory() == filter)
 				.map(kit -> getKitItem(kit, kit == selected))
 				.toList();
-		pagination.showPageItems(kitItems, inventory, 9, 45);
+		pagination.showPageItems(inventory, kitItems, 9, 45);
 	}
 
 	@Override

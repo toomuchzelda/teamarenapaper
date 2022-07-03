@@ -15,13 +15,13 @@ import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -31,6 +31,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Consumer;
 
 public class KitSpy extends Kit
 {
@@ -48,8 +49,6 @@ public class KitSpy extends Kit
 	public static final List<Component> DISGUISE_MENU_LORE_LIST;
 
 	public static final Component COOLDOWN_MESSAGE = Component.text("Disguise pumpkin is still recharging!").color(TextUtils.ERROR_RED);
-	public static final Component CLICK_TO_DISGUISE = Component.text("Click to disguise as this player")
-			.color(NamedTextColor.LIGHT_PURPLE).decoration(TextDecoration.ITALIC, false);
 
 	public static final Component HEAD_TIME_MESSAGE = ItemUtils.noItalics(Component.text((TIME_TO_DISGUISE_HEAD / 20)
 			+ "sec disguise time").color(NamedTextColor.LIGHT_PURPLE));
@@ -347,23 +346,28 @@ public class KitSpy extends Kit
 		// don't show sensitive information (kits and distance) for enemies
 		@Override
 		protected ClickableItem playerToItem(@NotNull Player player, Location distanceOrigin, boolean showKit) {
+			Consumer<InventoryClickEvent> clickHandler = e -> {
+				Player viewer = (Player) e.getWhoClicked();
+				if (!Main.getGame().isSpectator(player)) {
+					SpyAbility.disguisePlayer(viewer, viewerTeam, player, null,
+						TIME_TO_DISGUISE_MENU, true);
+					Inventories.closeInventory(viewer);
+				}
+			};
+
 			var playerInfo = Main.getPlayerInfo(player);
 			if (viewerTeam.equals(playerInfo.team)) {
-				return super.playerToItem(player, distanceOrigin, showKit);
+				var originalItem = super.playerToItem(player, distanceOrigin, showKit);
+				return ItemBuilder.from(originalItem.stack())
+					.addLore(Component.empty(), Component.text("Click to disguise as this player", NamedTextColor.LIGHT_PURPLE))
+					.toClickableItem(clickHandler);
 			}
 
-			var kit = playerInfo.activeKit;
 			return ItemBuilder.of(Material.PLAYER_HEAD)
-				.displayName(Component.text(player.getName())) // TODO handle spies
+				.displayName(Component.text(player.getName(), playerInfo.team.getRGBTextColor()))
+				.lore(Component.text("Click to disguise as this player", NamedTextColor.LIGHT_PURPLE))
 				.meta(SkullMeta.class, skullMeta -> skullMeta.setOwningPlayer(player))
-				.toClickableItem(e -> {
-					Player viewer = (Player) e.getWhoClicked();
-					if (!Main.getGame().isSpectator(player)) {
-						SpyAbility.disguisePlayer(viewer, viewerTeam, player, null,
-							TIME_TO_DISGUISE_MENU, true);
-						Inventories.closeInventory(viewer);
-					}
-				});
+				.toClickableItem(clickHandler);
 		}
 	}
 

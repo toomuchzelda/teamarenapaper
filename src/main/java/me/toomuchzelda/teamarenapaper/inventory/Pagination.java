@@ -34,22 +34,24 @@ public class Pagination {
     }
 
     /**
-     * Tries to fill every empty slot in the inventory with the provided items
-     * @param items The items
-     * @param inventory The inventory
-     */
-    public void showPageItems(List<ClickableItem> items, InventoryProvider.InventoryAccessor inventory) {
-        showPageItems(items, inventory, 0, Integer.MAX_VALUE);
+	 * Tries to fill every empty slot in the inventory with the provided items
+	 *
+	 * @param inventory The inventory
+	 * @param items     The items
+	 */
+    public void showPageItems(InventoryProvider.InventoryAccessor inventory, List<ClickableItem> items) {
+        showPageItems(inventory, items, 0, Integer.MAX_VALUE);
     }
 
     /**
-     * Tries to fill every empty slot in the inventory with the provided items
-     * @param items The items
-     * @param inventory The inventory
-     * @param start The slot index to start from (inclusive)
-     * @param end The slot index to end on (exclusive)
-     */
-    public void showPageItems(List<ClickableItem> items, InventoryProvider.InventoryAccessor inventory, int start, int end) {
+	 * Tries to fill every empty slot in the inventory with the provided items
+	 *
+	 * @param inventory The inventory
+	 * @param items     The items
+	 * @param start     The slot index to start from (inclusive)
+	 * @param end       The slot index to end on (exclusive)
+	 */
+    public void showPageItems(InventoryProvider.InventoryAccessor inventory, List<ClickableItem> items, int start, int end) {
         // count empty slots
         List<Integer> emptySlots = new ArrayList<>();
         Inventory bukkitInventory = inventory.getInventory();

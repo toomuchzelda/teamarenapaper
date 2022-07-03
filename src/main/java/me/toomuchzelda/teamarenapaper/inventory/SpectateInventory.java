@@ -113,7 +113,7 @@ public class SpectateInventory implements InventoryProvider {
 				.map(target -> playerToItem(target, viewerLocation, showKit))
 				.toList();
 
-		pagination.showPageItems(headItems, inventory, 9, 45);
+		pagination.showPageItems(inventory, headItems, 9, 45);
 		if (headItems.size() > 9 * 4) { // max 4 rows
 			// set page items
 			inventory.set(45, pagination.getPreviousPageItem(inventory));
