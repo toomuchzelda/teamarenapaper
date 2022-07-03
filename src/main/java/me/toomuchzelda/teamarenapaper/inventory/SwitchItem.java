@@ -23,6 +23,10 @@ public class SwitchItem<T> {
 	private int index = 0;
 	private final List<T> values;
 	private final Function<SwitchItem<T>, ItemStack> itemFunction;
+	private boolean disabled;
+	@Nullable
+	private net.kyori.adventure.sound.Sound clickSound;
+
 	// thanks type erasure
 	private SwitchItem(Collection<? extends T> values, T defaultValue, Function<SwitchItem<T>, ItemStack> itemFunction, boolean ignored) {
 		if (values.size() == 0) throw new IllegalArgumentException("values can't be empty");
@@ -52,8 +56,13 @@ public class SwitchItem<T> {
 		index = Math.floorMod(index + increment, values.size());
 	}
 
-	@Nullable
-	private net.kyori.adventure.sound.Sound clickSound;
+	public boolean isDisabled() {
+		return disabled;
+	}
+
+	public void setDisabled(boolean disabled) {
+		this.disabled = disabled;
+	}
 
 	@Nullable
 	public net.kyori.adventure.sound.Sound getClickSound() {
@@ -75,8 +84,12 @@ public class SwitchItem<T> {
 	public ClickableItem getItem(InventoryProvider.InventoryAccessor inventory) {
 		ItemStack stack = itemFunction.apply(this);
 		return ClickableItem.of(stack, e -> {
-			incrementState(1);
-			inventory.invalidate();
+			if (!disabled) {
+				if (clickSound != null)
+					e.getWhoClicked().playSound(clickSound);
+				incrementState(1);
+				inventory.invalidate();
+			}
 		});
 	}
 

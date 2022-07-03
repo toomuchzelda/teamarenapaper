@@ -51,8 +51,8 @@ public enum KitCategory {
 			Kits that debuff enemies/
 			disorients enemy positioning""");
 
-	final TextColor color;
-	final ItemStack display, displaySelected;
+	private final TextColor color;
+	private final ItemStack display, displaySelected;
 
 	KitCategory(TextColor color, ItemStack display, String description) {
 		var stylizedName = capitalize(name().toLowerCase(Locale.ENGLISH).replace('_', ' '));

@@ -4,6 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -59,8 +60,13 @@ public abstract class Kit {
 		return this;
 	}
 
+	@NotNull
 	public KitCategory getCategory() {
 		return category;
+	}
+
+	public Component getDisplayName() {
+		return Component.text(getName(), category.textColor());
 	}
 
     //clearInventory and updateInventory happens outside the following two methods
