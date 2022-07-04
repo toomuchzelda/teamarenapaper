@@ -168,9 +168,11 @@ public class CaptureTheFlag extends TeamArena
 					if(flag.holder != null) {
 						ItemStack invFlag = getFlagInInventory(flag, flag.holder);
 
-						if(invFlag == null || invFlag.getType().isAir())
-							throw new IllegalStateException("Flag " + flag.team.getName() +
-									" holder field is not null but the player does not have the item in their inventory!");
+						if(invFlag == null || invFlag.getType().isAir()) {
+							return;
+//							throw new IllegalStateException("Flag " + flag.team.getName() +
+//									" holder field is not null but the player does not have the item in their inventory!");
+						}
 
 						Damageable meta = (Damageable) invFlag.getItemMeta();
 						short durability = (short) (invFlag.getType().getMaxDurability() * (1 - percentage));

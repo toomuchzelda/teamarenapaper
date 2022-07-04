@@ -1,19 +1,23 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
-import java.util.*;
-
+import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import net.kyori.adventure.sound.SoundStop;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
 import org.bukkit.Particle.DustTransition;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Item;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemFlag;
@@ -25,16 +29,7 @@ import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
-import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
-import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
-import net.kyori.adventure.sound.SoundStop;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.TextColor;
+import java.util.*;
 
 //Kit Description:
 /*
@@ -374,15 +369,16 @@ public class KitValkyrie extends Kit{
 
         public void throwGrenade(Player player, double amp){
 			World world = player.getWorld();
-            Vector direction = player.getLocation().getDirection();
+			Location location = player.getEyeLocation();
             final TeamArenaTeam team = Main.getPlayerInfo(player).team;
 			Color teamColor = team.getColour();
 
-			Item activeGrenade = world.dropItem(player.getLocation(), new ItemStack(Material.HEART_OF_THE_SEA));
-            activeGrenade.setCanPlayerPickup(false);
-			activeGrenade.setCanMobPickup(false);
-		    activeGrenade.setVelocity(direction.multiply(amp));
-		    world.playSound(activeGrenade.getLocation(), Sound.ENTITY_CREEPER_PRIMED, 1f, 1.1f);
+			Item activeGrenade = world.dropItem(location, new ItemStack(Material.HEART_OF_THE_SEA), item -> {
+				item.setCanPlayerPickup(false);
+				item.setCanMobPickup(false);
+				item.setVelocity(location.getDirection().multiply(amp));
+			});
+		    world.playSound(activeGrenade, Sound.ENTITY_CREEPER_PRIMED, 1f, 1.1f);
 
 			BukkitTask runnable = new BukkitRunnable(){
 				//Grenade explosion

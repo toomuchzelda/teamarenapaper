@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.scoreboard;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.minecraft.world.scores.PlayerTeam;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -10,7 +11,11 @@ import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 
-import java.util.*;
+import java.lang.reflect.Field;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -251,7 +256,20 @@ public class PlayerScoreboard
 	}
 
 	public Team getLocalTeam(Team bukkitTeam) {
-		return this.scoreboard.getTeam(bukkitTeam.getName());
+		try {
+			return this.scoreboard.getTeam(bukkitTeam.getName());
+		} catch (IllegalStateException ex) {
+			try {
+				// CraftTeam is package-private
+				Class<? extends Team> clazz = bukkitTeam.getClass();
+				Field field = clazz.getDeclaredField("team");
+				field.setAccessible(true);
+				PlayerTeam nmsTeam = (PlayerTeam) field.get(bukkitTeam);
+				throw new IllegalStateException("Error while accessing global team " + nmsTeam.getName(), ex);
+			} catch (ReflectiveOperationException exception) {
+				throw new Error(exception);
+			}
+		}
 	}
 
 	public void modifyLocalTeam(Team team, Consumer<Team> consumer) {
