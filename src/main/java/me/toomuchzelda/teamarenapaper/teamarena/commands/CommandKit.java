@@ -4,6 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.KitInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
@@ -38,20 +39,31 @@ public class CommandKit extends CustomCommand {
                     showUsage(sender, "/kit set <kit>");
                     return;
                 }
-                Kit kit = Main.getGame().findKit(args[1]);
+				String kitName = args[1];
+				if (CommandDebug.disabledKits.contains(kitName)) {
+					player.sendMessage(Component.text("Kit " + kitName + " has been disabled!", TextUtils.ERROR_RED));
+					return;
+				}
+
+                Kit kit = Main.getGame().findKit(kitName);
                 if (kit == null) {
-                    player.sendMessage(Component.text("Kit " + args[1] + " doesn't exist").color(NamedTextColor.RED));
+                    player.sendMessage(Component.text("Kit " + kitName + " doesn't exist", TextUtils.ERROR_RED));
                     return;
                 }
                 Main.getGame().selectKit(player, kit);
             }
             case "list" -> {
-                Component kitList = Component.text("Available kits: ").color(NamedTextColor.BLUE);
-
-                for (Kit kit : Main.getGame().getKits()) {
-                    kitList = kitList.append(Component.text(kit.getName() + ", ")).color(NamedTextColor.BLUE);
-                }
-                player.sendMessage(kitList);
+				Component kitList = Main.getGame().getKits().stream()
+						.filter(kit -> !CommandDebug.disabledKits.contains(kit.getName()))
+						.map(kit -> Component.text(kit.getName(), kit.getCategory().textColor()))
+						.collect(Component.toComponent(Component.text(", ")));
+				var builder = Component.text().color(NamedTextColor.BLUE);
+				builder.append(
+						Component.text("Available kits: ", NamedTextColor.AQUA),
+						Component.newline(),
+						kitList
+				);
+                player.sendMessage(builder.build());
             }
             default -> {
                 if (args.length == 1) {
@@ -65,7 +77,7 @@ public class CommandKit extends CustomCommand {
             }
         }
     }
-    
+
     @Override
     public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
         if (sender instanceof Player p) {
@@ -76,7 +88,9 @@ public class CommandKit extends CustomCommand {
         if (args.length == 1) {
             return Arrays.asList("list", "set", "gui");
         } else if (args.length == 2 && args[0].equalsIgnoreCase("set")) {
-            return Main.getGame().getTabKitList();
+            return Main.getGame().getTabKitList().stream()
+					.filter(kitName -> !CommandDebug.disabledKits.contains(kitName))
+					.toList();
         }
 
         return Collections.emptyList();

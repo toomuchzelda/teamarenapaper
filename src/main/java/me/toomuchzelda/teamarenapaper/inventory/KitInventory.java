@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.inventory;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.KitDemolitions;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
@@ -50,19 +51,25 @@ public class KitInventory implements InventoryProvider {
 	private static final TextComponent SELECTED_COMPONENT = Component.text("Currently selected!", NamedTextColor.GREEN, TextDecoration.BOLD);
 
 	public static ClickableItem getKitItem(Kit kit, boolean selected) {
+		boolean disabled = CommandDebug.disabledKits.contains(kit.getName().toLowerCase(Locale.ENGLISH));
+
 		String desc = kit.getDescription();
 		// word wrapping because some command-loving idiot didn't add line breaks in kit descriptions
-
 		List<Component> loreLines = new ArrayList<>(TextUtils.wrapString(desc, LORE_STYLE, 200));
 
 		if (selected) {
 			loreLines.add(Component.empty());
 			loreLines.add(SELECTED_COMPONENT);
 		}
+		if (disabled) {
+			loreLines.add(Component.empty());
+			loreLines.add(Component.text("This kit has been disabled.", NamedTextColor.DARK_RED, TextDecoration.BOLD));
+		}
 
 		return ClickableItem.of(
-				ItemBuilder.from(kit.getIcon())
-						.displayName(Component.text(kit.getName(), NAME_STYLE))
+				ItemBuilder.from(disabled ? new ItemStack(Material.BARRIER) : kit.getIcon())
+						.displayName(Component.text(kit.getName(),
+								disabled ? NAME_STYLE.decorate(TextDecoration.STRIKETHROUGH) : NAME_STYLE))
 						.lore(loreLines)
 						.hide(ItemFlag.values())
 						.meta(meta -> {
@@ -72,6 +79,8 @@ public class KitInventory implements InventoryProvider {
 						})
 						.build(),
 				e -> {
+					if (CommandDebug.disabledKits.contains(kit.getName().toLowerCase(Locale.ENGLISH)))
+						return;
 					Player player = (Player) e.getWhoClicked();
 					Main.getGame().selectKit(player, kit);
 					Inventories.closeInventory(player, KitInventory.class);

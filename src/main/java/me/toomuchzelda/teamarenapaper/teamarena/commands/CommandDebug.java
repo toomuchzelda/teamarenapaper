@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.commands;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.*;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -27,6 +28,7 @@ public class CommandDebug extends CustomCommand {
 	// TODO temporary feature
 	public static boolean ignoreWinConditions;
 	public static boolean sniperAccuracy;
+	public static Set<String> disabledKits = Collections.emptySet();
 
 	public CommandDebug() {
 		super("debug", "", "/debug ...", PermissionLevel.OWNER);
@@ -73,6 +75,27 @@ public class CommandDebug extends CustomCommand {
 				} else if (args[1].equalsIgnoreCase("sniperaccuracy")) {
 					sniperAccuracy = args.length == 3 ? "true".equalsIgnoreCase(args[2]) : !sniperAccuracy;
 					sender.sendMessage(Component.text("Set sniper accuracy debug to " + sniperAccuracy, NamedTextColor.GREEN));
+				} else if (args[1].equalsIgnoreCase("disabledkits")) {
+					if (args.length != 3)
+						throw throwUsage("/debug game disabledkits <disabledKit>[,...]");
+					String[] kitNames = args[2].split(",");
+					disabledKits = Set.of(kitNames);
+					sender.sendMessage(Component.text("Set disabled kits to " + disabledKits, NamedTextColor.GREEN));
+					Optional<Kit> optionalFallbackKit = Main.getGame().getKits().stream()
+							.filter(kit -> !disabledKits.contains(kit.getName()))
+							.findFirst();
+					if (optionalFallbackKit.isPresent()) {
+						Kit fallbackKit = optionalFallbackKit.get();
+						Main.getPlayerInfoMap().forEach((player, playerInfo) -> {
+							if (playerInfo.kit != null && disabledKits.contains(playerInfo.kit.getName().toLowerCase(Locale.ENGLISH))) {
+								playerInfo.kit = fallbackKit;
+								player.sendMessage(Component.text("The kit you have selected has been disabled. " +
+										"It has been replaced with: " + fallbackKit.getName(), NamedTextColor.YELLOW));
+							}
+						});
+					} else {
+						sender.sendMessage(Component.text("Warning: no fallback kit found.", NamedTextColor.YELLOW));
+					}
 				}
 			}
 			case "draw" -> {
