@@ -82,7 +82,7 @@ public class CommandDebug extends CustomCommand {
 					disabledKits = Set.of(kitNames);
 					sender.sendMessage(Component.text("Set disabled kits to " + disabledKits, NamedTextColor.GREEN));
 					Optional<Kit> optionalFallbackKit = Main.getGame().getKits().stream()
-							.filter(kit -> !disabledKits.contains(kit.getName()))
+							.filter(kit -> !disabledKits.contains(kit.getName().toLowerCase(Locale.ENGLISH)))
 							.findFirst();
 					if (optionalFallbackKit.isPresent()) {
 						Kit fallbackKit = optionalFallbackKit.get();

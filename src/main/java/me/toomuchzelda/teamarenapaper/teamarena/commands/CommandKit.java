@@ -14,6 +14,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Locale;
 
 public class CommandKit extends CustomCommand {
 
@@ -40,7 +41,7 @@ public class CommandKit extends CustomCommand {
                     return;
                 }
 				String kitName = args[1];
-				if (CommandDebug.disabledKits.contains(kitName)) {
+				if (CommandDebug.disabledKits.contains(kitName.toLowerCase(Locale.ENGLISH))) {
 					player.sendMessage(Component.text("Kit " + kitName + " has been disabled!", TextUtils.ERROR_RED));
 					return;
 				}
@@ -54,7 +55,7 @@ public class CommandKit extends CustomCommand {
             }
             case "list" -> {
 				Component kitList = Main.getGame().getKits().stream()
-						.filter(kit -> !CommandDebug.disabledKits.contains(kit.getName()))
+						.filter(kit -> !CommandDebug.disabledKits.contains(kit.getName().toLowerCase()))
 						.map(kit -> Component.text(kit.getName(), kit.getCategory().textColor()))
 						.collect(Component.toComponent(Component.text(", ")));
 				var builder = Component.text().color(NamedTextColor.BLUE);
