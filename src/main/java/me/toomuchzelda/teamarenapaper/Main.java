@@ -99,7 +99,6 @@ public final class Main extends JavaPlugin
 		return playerInfo;
 	}
 
-	// iterator more like cringe
 	public static Iterator<Map.Entry<Player, PlayerInfo>> getPlayersIter() {
 		return playerInfo.entrySet().iterator();
 	}

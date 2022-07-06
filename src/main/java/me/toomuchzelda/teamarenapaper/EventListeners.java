@@ -607,7 +607,7 @@ public class EventListeners implements Listener
 
 			if(!event.isCancelled() && event.getEntity().getShooter() instanceof Player p) {
 				for(Ability a : Kit.getAbilities(p)) {
-					a.projectileHitEntity(event);
+					a.onProjectileHitEntity(event);
 				}
 			}
 		}
@@ -693,7 +693,7 @@ public class EventListeners implements Listener
 		if(Main.getGame() != null && Main.getGame().getGameState() == LIVE) {
 			Ability[] abilities = Kit.getAbilities(event.getPlayer());
 			for (Ability a : abilities) {
-				a.playerDropItem(event);
+				a.onPlayerDropItem(event);
 			}
 		}
 	}

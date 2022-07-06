@@ -6,52 +6,44 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
-import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
+import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.block.BlockFace;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.Arrow;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.Map;
+import java.util.*;
 
 public class KitPyro extends Kit
 {
-	public static final ItemStack MOLOTOV_ARROW;
-	public static final ItemStack FIRE_ARROW;
+	public static final ItemStack MOLOTOV_BOW;
 	public static final Color MOLOTOV_ARROW_COLOR = Color.fromRGB(255, 84, 10);
+	public static final TextColor MOLOTOV_TEXT_COLOR = TextColor.color(255, 84, 10);
+
+	public static final Component MOLOTOV_READY = Component.text("Incendiary ready", NamedTextColor.LIGHT_PURPLE);
+	public static final Component CANT_SHOOT_YET = Component.text("You can't fire another incendiary yet!", TextUtils.ERROR_RED);
 
 	static {
-		MOLOTOV_ARROW = new ItemStack(Material.TIPPED_ARROW);
-		PotionMeta molotovMeta = (PotionMeta) MOLOTOV_ARROW.getItemMeta();
-		molotovMeta.clearCustomEffects();
-		molotovMeta.setColor(MOLOTOV_ARROW_COLOR);
-		molotovMeta.displayName(Component.text("Incendiary Projectile").color(TextColor.color(255, 84, 10)));
-		MOLOTOV_ARROW.setItemMeta(molotovMeta);
+		MOLOTOV_BOW = new ItemStack(Material.BOW);
+		ItemMeta meta = MOLOTOV_BOW.getItemMeta();
+		meta.displayName(ItemUtils.noItalics(Component.text("Incendiary launcher", MOLOTOV_TEXT_COLOR)));
 
-		/*FIRE_ARROW = new ItemStack(Material.TIPPED_ARROW);
-		PotionMeta fireMeta = (PotionMeta) FIRE_ARROW.getItemMeta();
-		fireMeta.clearCustomEffects();
-		fireMeta.setColor(Color.fromRGB(255, 130, 77));
-		fireMeta.displayName(Component.text("Fire Arrow").color(TextColor.color(255, 130, 77)));
-		FIRE_ARROW.setItemMeta(fireMeta);*/
-
-		FIRE_ARROW = new ItemStack(Material.ARROW);
+		Style style = Style.style(TextUtils.RIGHT_CLICK_TO).decoration(TextDecoration.ITALIC, false);
+		List<Component> lore = TextUtils.wrapString(
+				"Shoot the floor to spawn a searing flame that lasts for a few seconds", style, 200);
+		meta.lore(lore);
+		MOLOTOV_BOW.setItemMeta(meta);
 	}
 
 	public KitPyro() {
@@ -59,10 +51,13 @@ public class KitPyro extends Kit
 
 		ItemStack boots = new ItemStack(Material.CHAINMAIL_BOOTS);
 		boots.addEnchantment(Enchantment.PROTECTION_FIRE, 4);
+
 		ItemStack leggings = new ItemStack(Material.LEATHER_LEGGINGS);
 		leggings.addEnchantment(Enchantment.PROTECTION_EXPLOSIONS, 3);
+
 		ItemStack chestplate = new ItemStack(Material.LEATHER_CHESTPLATE);
 		chestplate.addEnchantment(Enchantment.PROTECTION_PROJECTILE, 3);
+
 		ItemStack helmet = new ItemStack(Material.LEATHER_HELMET);
 		ItemUtils.colourLeatherArmor(Color.RED, leggings);
 		ItemUtils.colourLeatherArmor(Color.RED, chestplate);
@@ -76,9 +71,10 @@ public class KitPyro extends Kit
 		ItemStack bow = new ItemStack(Material.BOW);
 		ItemMeta bowMeta = bow.getItemMeta();
 		bowMeta.addEnchant(Enchantment.ARROW_FIRE, 1, true);
+		bowMeta.addEnchant(Enchantment.ARROW_INFINITE, 1, true);
 		bow.setItemMeta(bowMeta);
 
-		this.setItems(sword, bow, FIRE_ARROW, MOLOTOV_ARROW);
+		this.setItems(sword, bow, MOLOTOV_BOW, new ItemStack(Material.ARROW));
 
 		this.setAbilities(new PyroAbility());
 
@@ -95,14 +91,29 @@ public class KitPyro extends Kit
 
 		@Override
 		public void onShootBow(EntityShootBowEvent event) {
-				if (FIRE_ARROW.equals(event.getConsumable())) {
-					event.setConsumeItem(false);
-					event.getProjectile().setFireTicks(2000);
+			Entity e = event.getProjectile();
+			if(event.getProjectile() instanceof Arrow arrow) {
+				ItemStack bow = event.getBow();
+				if (bow != null) {
+					Player shooter = (Player) event.getEntity();
+					if(bow.isSimilar(MOLOTOV_BOW)) {
+						event.setConsumeItem(false);
+						//exp bar shows molotov recharge progress
+						if (shooter.getExp() >= 1f) {
+							shooter.setExp(0f);
+							arrow.setColor(MOLOTOV_ARROW_COLOR);
+							MOLOTOV_RECHARGES.put(shooter, TeamArena.getGameTick());
+						}
+						else {
+							event.setCancelled(true);
+							shooter.sendMessage(CANT_SHOOT_YET);
+							shooter.playSound(shooter.getLocation(), Sound.ENTITY_PLAYER_ATTACK_WEAK, SoundCategory.AMBIENT,
+									1f, 0.5f);
+						}
+						shooter.updateInventory();
+					}
 				}
-				else if (MOLOTOV_ARROW.equals(event.getConsumable())) {
-					event.getProjectile().setFireTicks(0);
-					MOLOTOV_RECHARGES.put((Player) event.getEntity(), TeamArena.getGameTick());
-				}
+			}
 		}
 
 		@Override
@@ -111,10 +122,20 @@ public class KitPyro extends Kit
 			var itemIter = MOLOTOV_RECHARGES.entrySet().iterator();
 			while(itemIter.hasNext()) {
 				Map.Entry<Player, Integer> entry = itemIter.next();
-				if (currentTick - entry.getValue() >= MOLOTOV_RECHARGE_TIME) {
-					entry.getKey().getInventory().addItem(MOLOTOV_ARROW);
+
+				int diff = currentTick - entry.getValue();
+				float percent = (float) diff / (float) MOLOTOV_RECHARGE_TIME;
+
+				Player player = entry.getKey();
+				if(percent >= 1f) {
 					itemIter.remove();
+					player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.AMBIENT,
+							0.3f, 1f);
+					PlayerUtils.sendKitMessage(player, MOLOTOV_READY, MOLOTOV_READY);
 				}
+
+				percent = MathUtils.clamp(0f, 1f, percent);
+				player.setExp(percent);
 			}
 
 			var iter = ACTIVE_MOLOTOVS.iterator();
@@ -141,18 +162,10 @@ public class KitPyro extends Kit
 				for (Entity entity : world.getNearbyEntities(minfo.box)) {
 					if (!(entity instanceof LivingEntity living)) // only damage living entities
 						continue;
-					if (living instanceof Player p && Main.getGame().isSpectator(p)) // no postmortem kill?
+					if (living instanceof Player p && Main.getGame().isSpectator(p))
 						continue;
 					if (living == minfo.thrower)
 						continue;
-
-					/*EntityDamageByEntityEvent event = new EntityDamageByEntityEvent(minfo.thrower, living,
-							EntityDamageEvent.DamageCause.FIRE_TICK, 1);
-					*DamageEvent damageEvent = DamageEvent.createFromBukkitEvent(event);
-					if (damageEvent != null) {
-						damageEvent.setDamageType(DamageType.PYRO_MOLOTOV);
-						damageEvent.setRealAttacker(minfo.thrower);
-					}*/
 
 					DamageEvent damageEvent = DamageEvent.newDamageEvent(living, 1.75d, DamageType.PYRO_MOLOTOV, minfo.thrower(), false);
 					Main.getGame().queueDamage(damageEvent);
@@ -200,7 +213,7 @@ public class KitPyro extends Kit
 
 				// https://math.stackexchange.com/questions/13261/how-to-get-a-reflection-vector
 				Vector newVelocity = velocity.subtract(dirVector.multiply(2 * velocity.dot(dirVector)));
-				newVelocity.multiply(0.2);
+				newVelocity.multiply(0.25);
 				arrow.getWorld().spawn(arrow.getLocation(), arrow.getClass(), newProjectile -> {
 					newProjectile.setShooter(arrow.getShooter());
 					newProjectile.setVelocity(newVelocity);
@@ -215,7 +228,7 @@ public class KitPyro extends Kit
 		}
 
 		@Override
-		public void projectileHitEntity(ProjectileCollideEvent event) {
+		public void onProjectileHitEntity(ProjectileCollideEvent event) {
 			if(event.getEntity() instanceof Arrow a) {
 				if(a.getColor() != null && a.getColor().equals(MOLOTOV_ARROW_COLOR)) {
 					event.setCancelled(true);
@@ -225,6 +238,16 @@ public class KitPyro extends Kit
 					a.setVelocity(vel);
 				}
 			}
+		}
+
+		@Override
+		public void giveAbility(Player player) {
+			player.setExp(1f);
+		}
+
+		@Override
+		public void removeAbility(Player player) {
+			player.setExp(0f);
 		}
 
 		@Override
