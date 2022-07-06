@@ -52,6 +52,8 @@ public class CaptureTheFlag extends TeamArena
 	public static final int DROPPED_PROGRESS_BAR_LENGTH = 10;
 	public static final String DROPPED_PROGRESS_STRING = "█".repeat(DROPPED_PROGRESS_BAR_LENGTH);
 
+	private static final Component GAME_NAME = Component.text("Capture the Flag", NamedTextColor.AQUA);
+
 	public static final Component PICK_UP_MESSAGE = Component.text("%holdingTeam% has picked up %team%'s flag").color(NamedTextColor.GOLD);
 	public static final Component DROP_MESSAGE = Component.text("%holdingTeam% has dropped %team%'s flag").color(NamedTextColor.GOLD);
 	public static final Component RETURNED_MESSAGE = Component.text("%team%'s flag has been returned to their base").color(NamedTextColor.GOLD);
@@ -255,8 +257,6 @@ public class CaptureTheFlag extends TeamArena
 		super.liveTick();
 	}
 
-	public static final Component GAME_NAME = Component.text("Capture the Flag", NamedTextColor.AQUA);
-
 	private final Map<TeamArenaTeam, Component> sidebarCache = new LinkedHashMap<>();
 	@Override
 	public Collection<Component> updateSharedSidebar() {
@@ -288,7 +288,7 @@ public class CaptureTheFlag extends TeamArena
 	@Override
 	public void updateSidebar(Player player, SidebarManager sidebar) {
 		var playerTeam = Main.getPlayerInfo(player).team;
-		sidebar.setTitle(player, GAME_NAME);
+		sidebar.setTitle(player, getGameName());
 		sidebarCache.forEach((team, entry) -> {
 			if (playerTeam == team) {
 				sidebar.addEntry(Component.textOfChildren(OWN_TEAM_PREFIX, entry));
@@ -830,6 +830,10 @@ public class CaptureTheFlag extends TeamArena
 
 	public boolean isFlagCarrier(Player p) {
 		return flagHolders.containsKey(p);
+	}
+
+	public Component getGameName() {
+		return GAME_NAME;
 	}
 
 	@Override

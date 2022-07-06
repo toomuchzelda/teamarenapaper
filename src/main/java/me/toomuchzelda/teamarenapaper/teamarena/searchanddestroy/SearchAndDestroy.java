@@ -40,6 +40,8 @@ import java.util.*;
  */
 public class SearchAndDestroy extends TeamArena
 {
+	public static final Component GAME_NAME = Component.text("Search and Destroy", NamedTextColor.GOLD);
+
 	//record it here from the map config but won't use it for anything
 	protected boolean randomBases = false;
 	//initialised in parseConfig
@@ -159,36 +161,66 @@ public class SearchAndDestroy extends TeamArena
 		this.poisonVictims = null;
 	}
 
+	public void prepLive() {
+		super.prepLive();
+
+		for(TeamArenaTeam team : teams) {
+			team.bossBar.progress(1f);
+		}
+	}
+
 	public void liveTick() {
 		int currentTick = getGameTick();
-		for(Bomb bomb : bombPositions.values()) {
-			bomb.tick();
 
-			//if armed now announce it and all
-			int armedTime = bomb.getArmedTime();
-			if(armedTime == currentTick) {
-				announceBombEvent(bomb, BombEvent.ARMED);
-				//record the tnt block so can check it in entityInteract events
-				this.bombTNTs.put(bomb.getTNT(), bomb);
-				this.poisonTimeLeft += bombAddPoison;
-				bombAddPoison /= 2;
-			}
-			//just been disarmed, remove TNT from map
-			else if(armedTime == Bomb.JUST_BEEN_DISARMED) {
-				announceBombEvent(bomb, BombEvent.DISARMED);
-				this.bombTNTs.remove(bomb.getTNT());
-			}
-			else if(armedTime == Bomb.JUST_EXPLODED) {
-				announceBombEvent(bomb, BombEvent.EXPLODED);
-				//leave the TNT in the Map so we can cancel the DamageEvents from it
+		for(Map.Entry<TeamArenaTeam, List<Bomb>> entry : teamBombs.entrySet()) {
+			TeamArenaTeam team = entry.getKey();
 
-				for(Player loser : bomb.getTeam().getPlayerMembers()) {
-					DamageEvent death = DamageEvent.newDamageEvent(loser, 1d, DamageType.BOMB_EXPLODED, null, false);
-					this.queueDamage(death);
+			int soonestExplodingBomb = 0;
+			for(Bomb bomb : entry.getValue()) {
+				bomb.tick();
+
+				//if armed now announce it and all
+				int armedTime = bomb.getArmedTime();
+				if(armedTime == currentTick) {
+					announceBombEvent(bomb, BombEvent.ARMED);
+					//record the tnt block so can check it in entityInteract events
+					this.bombTNTs.put(bomb.getTNT(), bomb);
+					this.poisonTimeLeft += bombAddPoison;
+					bombAddPoison /= 2;
 				}
+				//just been disarmed, remove TNT from map
+				else if(armedTime == Bomb.JUST_BEEN_DISARMED) {
+					announceBombEvent(bomb, BombEvent.DISARMED);
+					this.bombTNTs.remove(bomb.getTNT());
+				}
+				else if(armedTime == Bomb.JUST_EXPLODED) {
+					announceBombEvent(bomb, BombEvent.EXPLODED);
+					//leave the TNT in the Map so we can cancel the DamageEvents from it
 
-				//score 1 for dead
-				bomb.getTeam().score = TEAM_DEAD_SCORE;
+					for(Player loser : bomb.getTeam().getPlayerMembers()) {
+						DamageEvent death = DamageEvent.newDamageEvent(loser, 1d, DamageType.BOMB_EXPLODED, null, false);
+						this.queueDamage(death);
+					}
+
+					//score 1 for dead
+					bomb.getTeam().score = TEAM_DEAD_SCORE;
+				}
+				else if(bomb.isArmed()) {
+					soonestExplodingBomb = Math.max(soonestExplodingBomb, bomb.getArmedTime());
+				}
+			}
+
+			//calculate bossbar progress and display it
+			if(soonestExplodingBomb == 0) {
+				team.bossBar.progress(1f);
+			}
+			else {
+				int ticksPassed = currentTick - soonestExplodingBomb;
+				ticksPassed = Bomb.BOMB_DETONATION_TIME - ticksPassed;
+				float progressLeft = (float) ticksPassed / (float) Bomb.BOMB_DETONATION_TIME;
+				//Bukkit.broadcastMessage("bossbar progress: " + progressLeft);
+				progressLeft = MathUtils.clamp(0f, progressLeft, 1f);
+				team.bossBar.progress(progressLeft);
 			}
 		}
 
@@ -626,6 +658,11 @@ public class SearchAndDestroy extends TeamArena
 	@Override
 	public boolean isRespawningGame() {
 		return false;
+	}
+
+	@Override
+	public Component getGameName() {
+		return GAME_NAME;
 	}
 
 	@Override

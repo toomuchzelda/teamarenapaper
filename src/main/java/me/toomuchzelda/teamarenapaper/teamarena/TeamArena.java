@@ -356,7 +356,7 @@ public abstract class TeamArena
 	public abstract void updateSidebar(Player player, SidebarManager sidebar);
 
 	public void updateLegacySidebar(Player player, SidebarManager sidebar) {
-		sidebar.addEntry(Component.text("Warning: legacy unsupported", NamedTextColor.YELLOW));
+		//sidebar.addEntry(Component.text("Warning: legacy unsupported", NamedTextColor.YELLOW));
 		updateSidebar(player, sidebar);
 	}
 
@@ -1578,6 +1578,7 @@ public abstract class TeamArena
 	public void parseConfig(Map<String, Object> map) {
 		//basic info
 		mapInfo = new MapInfo();
+		mapInfo.gameType = getGameName();
 		mapInfo.name = (String) map.get("Name");
 		mapInfo.author = (String) map.get("Author");
 		mapInfo.description = (String) map.get("Description");
@@ -1776,6 +1777,8 @@ public abstract class TeamArena
 	public Collection<String> getTabKitList() {
 		return kits.keySet();
 	}
+
+	public abstract Component getGameName();
 
 	public File getMapPath() {
 		return new File("Maps");

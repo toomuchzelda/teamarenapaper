@@ -251,7 +251,7 @@ public class KitDemolitions extends Kit
 						event.setDamageType(DEMO_TNTMINE_BYSTANDER);
 						event.setDamageTypeCause(mine.triggerer);
 					}
-					event.setFinalDamage(event.getFinalDamage() * 0.65);
+					event.setFinalDamage(event.getFinalDamage() * 0.75);
 				}
 			}
 		}

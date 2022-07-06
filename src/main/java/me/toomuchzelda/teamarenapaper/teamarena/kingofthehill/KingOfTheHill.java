@@ -46,6 +46,8 @@ public class KingOfTheHill extends TeamArena
 	//the total score u need to get to win
 	public final int TICKS_TO_WIN;
 
+	private static final Component GAME_NAME = Component.text("King of the Hill", NamedTextColor.YELLOW);
+
 	public KingOfTheHill() {
 		super();
 
@@ -292,12 +294,10 @@ public class KingOfTheHill extends TeamArena
 		return Collections.emptyList();
 	}
 
-	public static final Component GAME_NAME = Component.text("King of the Hill", NamedTextColor.YELLOW);
-
 	@Override
 	public void updateSidebar(Player player, SidebarManager sidebar) {
 		var playerTeam = Main.getPlayerInfo(player).team;
-		sidebar.setTitle(player, GAME_NAME);
+		sidebar.setTitle(player, getGameName());
 
 		int teamsShown = 0;
 
@@ -585,6 +585,10 @@ public class KingOfTheHill extends TeamArena
 	@Override
 	public boolean isRespawningGame() {
 		return true;
+	}
+
+	public Component getGameName() {
+		return GAME_NAME;
 	}
 
 	@Override

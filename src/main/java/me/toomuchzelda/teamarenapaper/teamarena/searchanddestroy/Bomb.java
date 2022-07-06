@@ -127,6 +127,7 @@ public class Bomb
 		this.armedTime = JUST_EXPLODED;
 		this.armed = false;
 		this.detonated = true;
+		this.currentArmers.clear();
 	}
 
 	public void tick() {
