@@ -127,7 +127,7 @@ public class KitVenom extends Kit
 					victim.addPotionEffect(new PotionEffect(PotionEffectType.POISON, 2 * 25 + poisonDuration, 0));
 				}
 			}
-			//Adds new victim, or updates current vicim's poison duration.
+			//Adds new victim, or updates current victim's poison duration.
 			//Extra check is necessary since some mobs are immune to poison.
 			if(victim.hasPotionEffect(PotionEffectType.POISON)){
 				POISONED_ENTITIES.put(victim, (Integer) victim.getPotionEffect(PotionEffectType.POISON).getDuration());
@@ -163,7 +163,7 @@ public class KitVenom extends Kit
 					direction.multiply(multiplier);
 					player.setCooldown(Material.CHICKEN, 12 * 20);
 					player.setCooldown(Material.COOKED_CHICKEN, 4 * 20);
-					//world.playSound to play sound for all playesr
+					//world.playSound to play sound for all players
 					world.playSound(player, Sound.ENTITY_WITHER_SHOOT, 0.3f, 1.1f);
 					EntityUtils.setVelocity(player, event.getPlayer().getVelocity().add(direction));
 					player.setFallDistance(0);
