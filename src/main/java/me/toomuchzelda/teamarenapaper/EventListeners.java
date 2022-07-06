@@ -146,7 +146,7 @@ public class EventListeners implements Listener
 
 	private final HashMap<UUID, CompletableFuture<Map<Preference<?>, ?>>> preferenceFutureMap = new HashMap<>();
 	@EventHandler(priority = EventPriority.MONITOR)
-	public void asynchronousPlayerPreLoginEventHandler(AsyncPlayerPreLoginEvent e) {
+	public void asyncPlayerPreLogin(AsyncPlayerPreLoginEvent e) {
 		if (e.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED)
 			return;
 		synchronized (preferenceFutureMap) {
@@ -159,9 +159,6 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void playerLogin(PlayerLoginEvent event) {
 		UUID uuid = event.getPlayer().getUniqueId();
-		//todo: read from MySQL server or something for stored player data.
-		// or use persistent data containers, or option to use either
-		// and also use the PreLoginEvent
 		PlayerInfo playerInfo;
 
 		//todo: read perms from db or other
@@ -177,15 +174,15 @@ public class EventListeners implements Listener
 			CompletableFuture<Map<Preference<?>, ?>> future = preferenceFutureMap.remove(uuid);
 			if (future == null) {
 				event.disallow(Result.KICK_OTHER, Component.text("Failed to load preferences!")
-						.color(NamedTextColor.DARK_RED));
+						.color(TextUtils.ERROR_RED));
 				return;
 			}
 			playerInfo.setPreferenceValues(future.join());
 		}
 
 		Main.addPlayerInfo(event.getPlayer(), playerInfo);
-		Main.getGame().loggingInPlayer(event.getPlayer(), playerInfo);
 		Main.playerIdLookup.put(event.getPlayer().getEntityId(), event.getPlayer());
+		Main.getGame().loggingInPlayer(event.getPlayer(), playerInfo);
 	}
 
 	@EventHandler

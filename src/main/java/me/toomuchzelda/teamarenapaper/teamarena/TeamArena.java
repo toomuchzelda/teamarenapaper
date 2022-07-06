@@ -548,7 +548,6 @@ public abstract class TeamArena
 		team.addMembers(player);
 
 		informOfTeam(player);
-//		respawnPlayer(player);
 	}
 
 	public void damageTick() {
@@ -1402,10 +1401,8 @@ public abstract class TeamArena
 				TeamArenaTeam toJoin = addToLowestTeam(player, false);
 				playerInfo.team = toJoin;
 				if(gameState == GameState.GAME_STARTING) {
-					Location[] spawns = toJoin.getSpawns();
 					//put them in next spawn point
-					toTeleport = spawns[toJoin.spawnsIndex % spawns.length];
-					toJoin.spawnsIndex++;
+					toTeleport = toJoin.getNextSpawnpoint();
 				}
 			}
 			else if (gameState == GameState.PREGAME) {
@@ -1445,10 +1442,15 @@ public abstract class TeamArena
 				player.setAllowFlight(true);
 			}
 		} else if (gameState == GameState.LIVE) {
-			if (Main.getPlayerInfo(player).team == spectatorTeam) {
+			//if it's a respawning game put them on a team and in the respawn queue
+			if (this.isRespawningGame() && Main.getPlayerInfo(player).team == spectatorTeam) {
 				handlePlayerJoinMidGame(player);
-
 				respawnTimers.put(player, new RespawnInfo(gameTick));
+			}
+
+			//make sure to hide them as they are still a spectator
+			for(Player p : Bukkit.getOnlinePlayers()) {
+				p.hidePlayer(Main.getPlugin(), player);
 			}
 
 			for (TeamArenaTeam team : teams) {
@@ -1464,9 +1466,9 @@ public abstract class TeamArena
 		if(pinfo.activeKit != null) {
 			pinfo.activeKit.removeKit(player, pinfo);
 		}
-		balancePlayerLeave();
 		players.remove(player);
 		spectators.remove(player);
+		balancePlayerLeave();
 		PlayerListScoreManager.removeScore(player);
 	}
 
