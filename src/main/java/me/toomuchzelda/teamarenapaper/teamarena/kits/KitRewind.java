@@ -32,6 +32,8 @@ import org.bukkit.util.Vector;
 
 import java.util.*;
 
+import static me.toomuchzelda.teamarenapaper.utils.TextUtils.LORE_YELLOW;
+
 //Kit Description:
 /*
 	Main Ability: Rewind
@@ -56,18 +58,17 @@ public class KitRewind extends Kit {
 	public static final TextColor REGEN_COLOR = TextColor.color(245, 204, 91);
 	public static final TextColor DILATE_COLOR = TextColor.color(237, 132, 83);
 	public static final TextColor KB_COLOR = TextColor.color(123, 101, 235);
-	public static final TextColor PALE_YELLOW = TextColor.color(242, 236, 145);
 	public static final ItemStack TIME_MACHINE;
 
 	public static final Component COLORED_TIME_DILATE = ItemUtils.noItalics(Component.text("Time Dilation").color(DILATE_COLOR));
 	public static final Component COLORED_KB = ItemUtils.noItalics(Component.text("Knockback").color(KB_COLOR));
 
 	public static final Component CLOCK_DESC = ItemUtils.noItalics(Component.text("Teleport to your location 15 seconds ago!")
-			.color(PALE_YELLOW));
+			.color(LORE_YELLOW));
 	public static final Component CLOCK_DESC2 = ItemUtils.noItalics(Component.text("" +
-			"You receive a buff based on your current State").color(PALE_YELLOW));
+			"You receive a buff based on your current State").color(LORE_YELLOW));
 	public static final Component CLOCK_DESC3 = ItemUtils.noItalics(Component.text("" +
-			"The 3 states are divided evenly in a 15 second cycle").color(PALE_YELLOW));
+			"The 3 states are divided evenly in a 15 second cycle").color(LORE_YELLOW));
 	public static final Component CLOCK_DESC_REGEN = ItemUtils.noItalics(Component.text("Regeneration: ").color(REGEN_COLOR)
 			.append(Component.text("Receive Regen II for 3.5 Seconds")));
 	public static final Component CLOCK_DESC_TIME_DILATE = ItemUtils.noItalics(Component.text("Time Dilation: ").color(DILATE_COLOR)
@@ -77,12 +78,12 @@ public class KitRewind extends Kit {
 	public static final Component CLOCK_DESC_KB = ItemUtils.noItalics(Component.text("Knockback: ").color(KB_COLOR)
 			.append(Component.text("Blasts nearby enemies away")));
 	public static final Component CLOCK_DESC_EXTRA = ItemUtils.noItalics(Component.text("Note: ")
-			.color(PALE_YELLOW)
+			.color(LORE_YELLOW)
 					.append(COLORED_TIME_DILATE))
-					.append(Component.text(" and ").color(PALE_YELLOW))
+					.append(Component.text(" and ").color(LORE_YELLOW))
 			.append(COLORED_KB);
 	public static final Component CLOCK_DESC_EXTRA2 = ItemUtils.noItalics(Component.text("are applied at departure and arrival location")
-			.color(PALE_YELLOW));
+			.color(LORE_YELLOW));
 
 	public static final List<Component> CLOCK_LORE_LIST;
 
@@ -91,7 +92,7 @@ public class KitRewind extends Kit {
 			.color(KB_COLOR));
 	public static final Component STASIS_DESC = ItemUtils.noItalics(
 			Component.text("Briefly become invulnerable but unable to attack")
-					.color(PALE_YELLOW));
+					.color(LORE_YELLOW));
 
 	public static final List<Component> STASIS_LORE_LIST;
 	public static final ItemStack TIME_STASIS;

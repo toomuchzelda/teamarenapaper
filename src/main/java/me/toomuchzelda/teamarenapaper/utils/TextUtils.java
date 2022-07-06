@@ -26,6 +26,13 @@ import java.util.stream.Collectors;
 
 public class TextUtils {
 	public static final TextColor ERROR_RED = TextColor.color(255, 20, 20);
+	public static final TextColor LORE_YELLOW = TextColor.color(242, 236, 145);
+	public static final TextColor LORE_BROWN = TextColor.color(199, 157, 74);
+
+	public static final Component BOMB_LORE = ItemUtils.noItalics(
+			Component.text("Left Click to throw with high velocity").color(LORE_BROWN));
+	public static final Component BOMB_LORE2 = ItemUtils.noItalics(
+			Component.text("Right Click to toss with low velocity").color(LORE_BROWN));
 
 	public static final DecimalFormat ONE_DECIMAL_POINT = new DecimalFormat("0.#");
 	public static final DecimalFormat TWO_DECIMAL_POINT = new DecimalFormat("0.##");

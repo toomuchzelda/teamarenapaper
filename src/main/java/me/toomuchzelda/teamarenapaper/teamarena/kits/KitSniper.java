@@ -30,11 +30,23 @@ import org.bukkit.util.Vector;
 
 import java.util.*;
 
+import static me.toomuchzelda.teamarenapaper.utils.TextUtils.*;
+
 /**
  * @author onett425
  */
 public class KitSniper extends Kit {
 	public static final ItemStack GRENADE;
+	public static final Component GRENADE_DESC = ItemUtils.noItalics(
+			Component.text("A grenade that deals high explosive damage.")
+					.color(LORE_YELLOW));
+	public static final Component GRENADE_DESC2 = ItemUtils.noItalics(
+			Component.text("First click to pull the pin, Then click again to throw it!")
+					.color(LORE_YELLOW));
+	public static final Component GRENADE_DESC3 = ItemUtils.noItalics(
+			Component.text("Make sure to pay attention to its fuse time... (item cd)")
+					.color(LORE_YELLOW));
+	public static final List<Component> GRENADE_LORE_LIST;
 	public static final ItemStack SNIPER;
 
 	public static final AttributeModifier KNIFE_SPEED = new AttributeModifier(
@@ -46,6 +58,15 @@ public class KitSniper extends Kit {
 		GRENADE = new ItemStack(Material.TURTLE_HELMET);
 		ItemMeta grenadeMeta = GRENADE.getItemMeta();
 		grenadeMeta.displayName(ItemUtils.noItalics(Component.text("Frag Grenade")));
+
+		ArrayList<Component> grenadeLore = new ArrayList<>(5);
+		grenadeLore.add(GRENADE_DESC);
+		grenadeLore.add(GRENADE_DESC2);
+		grenadeLore.add(GRENADE_DESC3);
+		grenadeLore.add(BOMB_LORE);
+		grenadeLore.add(BOMB_LORE2);
+		GRENADE_LORE_LIST = Collections.unmodifiableList(grenadeLore);
+		grenadeMeta.lore(GRENADE_LORE_LIST);
 		GRENADE.setItemMeta(grenadeMeta);
 
 		SNIPER = new ItemStack(Material.SPYGLASS);
@@ -55,7 +76,7 @@ public class KitSniper extends Kit {
 	}
 
 	public KitSniper() {
-		super("Sniper", "Be careful when sniping... Too much movement and your aim will worsen. Don't forget to throw the grenade if you pull the pin btw.", Material.SPYGLASS);
+		super("Sniper", "Be careful when sniping... Too much movement and your aim will worsen. Make sure to aim for the head! Don't forget to throw the grenade if you pull the pin btw.", Material.SPYGLASS);
 
 		setArmor(new ItemStack(Material.LEATHER_HELMET), new ItemStack(Material.LEATHER_CHESTPLATE),
 				new ItemStack(Material.LEATHER_LEGGINGS), new ItemStack(Material.LEATHER_BOOTS));
@@ -187,22 +208,28 @@ public class KitSniper extends Kit {
 				return;
 			Entity victim = event.getCollidedWith();
 			Player shooter = (Player) projectile.getShooter();
+			Location projLoc = projectile.getLocation().clone();
 			if (victim instanceof Player player) {
-				double headLocation = player.getLocation().getY();
-				double projectileHitY = projectile.getLocation().getY();
-				//Must consider when player is below the other player, which makes getting headshots much harder.
-				double headshotThresh = 1.35d;
-				double heightDiff = victim.getLocation().getBlockY() - shooter.getLocation().getBlockY();
-				if (heightDiff > 0) {
-					headshotThresh -= Math.min(0.35, (heightDiff / 10));
+				double victimHeadLoc = player.getEyeLocation().getY() - 0.1d;
+				double projectileHitY = projLoc.getY();
+				//Must consider when shooter is below victim, which makes getting headshots much harder.
+				double heightDiff = victimHeadLoc - (shooter.getEyeLocation()).getY();
+				//If victim is higher than shooter, height diff is positive
+				//If victim is lower than shooter, height diff is negative
+				double headshotThresh = 0;
+					headshotThresh = -(heightDiff * (.15));
+				//Further restrict shots where victim is on lower ground, since it tends to be inconsistent
+				if(headshotThresh > 0){
+					headshotThresh *= 1.5;
 				}
+
 				//Disabled headshot if you are too close since it was buggy
-				if (projectileHitY - headLocation > headshotThresh && projectile.getOrigin().distance(projectile.getLocation()) > 10) {
-					DamageEvent dEvent = DamageEvent.newDamageEvent(player, 999d, DamageType.SNIPER_HEADSHOT, shooter, false);
+				if (projectileHitY - victimHeadLoc >= headshotThresh && projectile.getOrigin().distance(projLoc) > 15) {
+					DamageEvent dEvent = DamageEvent.newDamageEvent(player, 12d, DamageType.SNIPER_HEADSHOT, shooter, false);
 					Main.getGame().queueDamage(dEvent);
 
 					//Hitmarker Sound effect
-					//shooter.playSound(shooter.getLocation(), Sound.ENTITY_ITEM_FRAME_PLACE, 2f, 2.0f);
+					shooter.playSound(shooter.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 2f, 1.5f);
 				}
 			}
 		}
@@ -218,7 +245,7 @@ public class KitSniper extends Kit {
 				Location loc = player.getLocation();
 				double inaccuracy = 0;
 				if (player.isSprinting() || player.isGliding() || player.isJumping() ||
-						loc.subtract(0, 1, 0).getBlock().getType() == Material.AIR ||
+						loc.subtract(0,0.5,0).getBlock().getType() == Material.AIR ||
 						player.getVelocity().lengthSquared() > 1) {
 					inaccuracy = 0.2;
 				} else if (player.isInWater() || player.isSwimming()) {
@@ -239,7 +266,7 @@ public class KitSniper extends Kit {
 				arrow.setCritical(false);
 				arrow.setPickupStatus(PickupStatus.DISALLOWED);
 				arrow.setPierceLevel(100);
-				arrow.setDamage(1);
+				arrow.setDamage(0.65d);
 				world.playSound(player, Sound.ENTITY_GENERIC_EXPLODE, 0.8f, 2.5f);
 
 				//Sniper Cooldown + deleting the dropped sniper and returning a new one.

@@ -31,7 +31,7 @@ import org.bukkit.util.Vector;
 
 import java.util.*;
 
-import static me.toomuchzelda.teamarenapaper.utils.TextUtils.ERROR_RED;
+import static me.toomuchzelda.teamarenapaper.utils.TextUtils.*;
 
 //Kit Description:
 /*
@@ -64,8 +64,6 @@ import static me.toomuchzelda.teamarenapaper.utils.TextUtils.ERROR_RED;
  * @author onett425
  */
 public class KitValkyrie extends Kit{
-    public static final TextColor PALE_YELLOW = TextColor.color(242, 236, 145);
-	public static final TextColor ORANGE = TextColor.color(199, 157, 74);
 	public static final ItemStack VALK_AXE;
     public static final int AXE_SHARP = 1;
     public static final AttributeModifier AXE_SLOW = new AttributeModifier("Valk Axe Slow", -0.30 , AttributeModifier.Operation.ADD_SCALAR);
@@ -82,18 +80,18 @@ public class KitValkyrie extends Kit{
     public static final double PULL_AMP = 0.2;
 
 	public static final Component BOMB_DESC = ItemUtils.noItalics(
-			Component.text("Pulls enemies towards itself upon detonation").color(PALE_YELLOW));
-	public static final Component BOMB_LORE = ItemUtils.noItalics(Component.text("Left Click to throw with high velocity").color(ORANGE));
-    public static final Component BOMB_LORE2 = ItemUtils.noItalics(Component.text("Right Click to toss with low velocity").color(ORANGE));
+			Component.text("Pulls enemies towards itself upon detonation").color(LORE_YELLOW));
 
     public static final Set<BukkitTask> VALK_TASKS = new HashSet<>();
 
 	public static final Component AXE_DESC = ItemUtils.noItalics(
-			Component.text("After a short windup period (as seen in exp bar), ").color(PALE_YELLOW));
+			Component.text("After a short windup period (as seen in exp bar), ")
+					.color(LORE_YELLOW));
 	public static final Component AXE_DESC2 = ItemUtils.noItalics(
-			Component.text("Battle Axe hits all enemies within your attack radius").color(PALE_YELLOW));
+			Component.text("Battle Axe hits all enemies within your attack radius")
+					.color(LORE_YELLOW));
 	public static final Component AXE_DESC3 = ItemUtils.noItalics(
-			Component.text("Hit enemies near the edge to maximize damage!").color(ORANGE));
+			Component.text("Hit enemies near the edge to maximize damage!").color(LORE_BROWN));
 	public static final Component AXE_DESC4 = ItemUtils.noItalics(
 			Component.text("Direct Attacks are disabled").color(ERROR_RED));
 	public static final List<Component> AXE_LORE_LIST;
