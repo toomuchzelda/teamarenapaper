@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
@@ -139,12 +140,13 @@ public class KitDwarf extends Kit
 			player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).addModifier(LEVELS_TO_MODIFIER[player.getLevel()]);
 
 			PlayerInventory inventory = player.getInventory();
+			TeamArena game = Main.getGame();
 			for (int i = 0; i < inventory.getSize(); i++) {
 				ItemStack item = inventory.getItem(i);
 				if (item == null)
 					continue;
 
-				if(Main.getGame() instanceof CaptureTheFlag ctf && ctf.isFlagItem(item))
+				if(!game.isWearableArmorPiece(item))
 					continue;
 
 				ItemMeta meta = item.getItemMeta();
