@@ -1073,6 +1073,8 @@ public abstract class TeamArena
 
 	public abstract boolean canSelectTeamNow();
 
+	public abstract boolean canTeamChatNow(Player player);
+
 	public void selectKit(@NotNull Player player, @NotNull Kit kit) {
 		if (!canSelectKitNow()) {
 			player.sendMessage(Component.text("You can't choose a kit right now").color(NamedTextColor.RED));

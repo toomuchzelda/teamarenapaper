@@ -583,6 +583,11 @@ public class KingOfTheHill extends TeamArena
 	}
 
 	@Override
+	public boolean canTeamChatNow(Player player) {
+		return gameState == GameState.LIVE || gameState.teamsChosen();
+	}
+
+	@Override
 	public boolean isRespawningGame() {
 		return true;
 	}

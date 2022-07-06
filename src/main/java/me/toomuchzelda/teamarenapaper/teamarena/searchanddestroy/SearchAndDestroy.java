@@ -656,6 +656,11 @@ public class SearchAndDestroy extends TeamArena
 	}
 
 	@Override
+	public boolean canTeamChatNow(Player player) {
+		return (gameState == GameState.LIVE || gameState.teamsChosen()) && !isDead(player);
+	}
+
+	@Override
 	public boolean isRespawningGame() {
 		return false;
 	}
