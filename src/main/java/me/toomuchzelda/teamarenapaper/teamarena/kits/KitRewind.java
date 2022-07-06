@@ -37,11 +37,10 @@ import java.util.*;
 	Main Ability: Rewind
         CD: 15 seconds
             Every 15 seconds, this kit can travel to its previous location 15 seconds ago, with an extra buff depending on
-            a 15 second cycle with 3 equivalent parts (each last for 5 seconds).
-            They are denoted by the current time of day:
-                Day: Regeneration
-                Sunset: Time Dilation (AoE Slow)
-                Night: Knockback (KB Explosion)
+            a 15 second cycle with 3 equivalent parts (each last for 5 seconds):
+                First Section: Regeneration
+                Second Section: Time Dilation (AoE Slow)
+                Third Section: Knockback (KB Explosion)
 	Sub Ability: Stasis
 		CD: 12 sec
         Active Duration: 14 ticks
@@ -57,19 +56,79 @@ public class KitRewind extends Kit {
 	public static final TextColor REGEN_COLOR = TextColor.color(245, 204, 91);
 	public static final TextColor DILATE_COLOR = TextColor.color(237, 132, 83);
 	public static final TextColor KB_COLOR = TextColor.color(123, 101, 235);
+	public static final TextColor PALE_YELLOW = TextColor.color(242, 236, 145);
 	public static final ItemStack TIME_MACHINE;
+
+	public static final Component COLORED_TIME_DILATE = ItemUtils.noItalics(Component.text("Time Dilation").color(DILATE_COLOR));
+	public static final Component COLORED_KB = ItemUtils.noItalics(Component.text("Knockback").color(KB_COLOR));
+
+	public static final Component CLOCK_DESC = ItemUtils.noItalics(Component.text("Teleport to your location 15 seconds ago!")
+			.color(PALE_YELLOW));
+	public static final Component CLOCK_DESC2 = ItemUtils.noItalics(Component.text("" +
+			"You receive a buff based on your current State").color(PALE_YELLOW));
+	public static final Component CLOCK_DESC3 = ItemUtils.noItalics(Component.text("" +
+			"The 3 states are divided evenly in a 15 second cycle").color(PALE_YELLOW));
+	public static final Component CLOCK_DESC_REGEN = ItemUtils.noItalics(Component.text("Regeneration: ").color(REGEN_COLOR)
+			.append(Component.text("Receive Regen II for 3.5 Seconds")));
+	public static final Component CLOCK_DESC_TIME_DILATE = ItemUtils.noItalics(Component.text("Time Dilation: ").color(DILATE_COLOR)
+			.append(Component.text("Gives Slowness III + Prevents Jumping ")));
+	public static final Component CLOCK_DESC_TIME_DILATE2 = ItemUtils.noItalics(
+			(Component.text("from enemies within a 4 Block radius for 3 Seconds")).color(DILATE_COLOR));
+	public static final Component CLOCK_DESC_KB = ItemUtils.noItalics(Component.text("Knockback: ").color(KB_COLOR)
+			.append(Component.text("Blasts nearby enemies away")));
+	public static final Component CLOCK_DESC_EXTRA = ItemUtils.noItalics(Component.text("Note: ")
+			.color(PALE_YELLOW)
+					.append(COLORED_TIME_DILATE))
+					.append(Component.text(" and ").color(PALE_YELLOW))
+			.append(COLORED_KB);
+	public static final Component CLOCK_DESC_EXTRA2 = ItemUtils.noItalics(Component.text("are applied at departure and arrival location")
+			.color(PALE_YELLOW));
+
+	public static final List<Component> CLOCK_LORE_LIST;
+
+	public static final Component STASIS_DESC_DURATION = ItemUtils.noItalics(
+			Component.text("Duration: 0.7 seconds")
+			.color(KB_COLOR));
+	public static final Component STASIS_DESC = ItemUtils.noItalics(
+			Component.text("Briefly become invulnerable but unable to attack")
+					.color(PALE_YELLOW));
+
+	public static final List<Component> STASIS_LORE_LIST;
+	public static final ItemStack TIME_STASIS;
 
 	static{
 		TIME_MACHINE = ItemBuilder.of(Material.CLOCK)
 				.displayName(ItemUtils.noItalics(Component.text("Time Machine")))
 				.build();
+
+		ArrayList<Component> clockLore = new ArrayList<>(9);
+		clockLore.add(CLOCK_DESC);
+		clockLore.add(CLOCK_DESC2);
+		clockLore.add(CLOCK_DESC3);
+		clockLore.add(CLOCK_DESC_REGEN);
+		clockLore.add(CLOCK_DESC_TIME_DILATE);
+		clockLore.add(CLOCK_DESC_TIME_DILATE2);
+		clockLore.add(CLOCK_DESC_KB);
+		clockLore.add(CLOCK_DESC_EXTRA);
+		clockLore.add(CLOCK_DESC_EXTRA2);
+		CLOCK_LORE_LIST = Collections.unmodifiableList(clockLore);
+		TIME_MACHINE.lore(CLOCK_LORE_LIST);
+
+		TIME_STASIS = ItemBuilder.of(Material.SHULKER_SHELL)
+				.displayName(ItemUtils.noItalics(Component.text("Time Stasis")))
+				.build();
+		ArrayList<Component> stasisLore = new ArrayList<>(2);
+		stasisLore.add(STASIS_DESC_DURATION);
+		stasisLore.add(STASIS_DESC);
+		STASIS_LORE_LIST = Collections.unmodifiableList(stasisLore);
+		TIME_STASIS.lore(STASIS_LORE_LIST);
 	}
 
 	public KitRewind() {
 		super("Rewind", """
 				Travel 15 seconds back in time with your rewind clock. \
 				Depending on the time, you gain a different buff. \
-				Time stasis allows you to not take damage but you cannot deal damage.\
+				Time stasis provides brief invulnerability at the cost of being disarmed.\
 				""", Material.CLOCK);
 		setArmor(new ItemStack(Material.CHAINMAIL_HELMET),
 				ItemBuilder.of(Material.IRON_CHESTPLATE)
@@ -78,10 +137,7 @@ public class KitRewind extends Kit {
 				new ItemStack(Material.IRON_LEGGINGS),
 				new ItemStack(Material.IRON_BOOTS));
 
-		ItemStack timeStasis = ItemBuilder.of(Material.SHULKER_SHELL)
-				.displayName(ItemUtils.noItalics(Component.text("Time Stasis")))
-				.build();
-		setItems(new ItemStack(Material.IRON_SWORD), TIME_MACHINE, timeStasis);
+		setItems(new ItemStack(Material.IRON_SWORD), TIME_MACHINE, TIME_STASIS);
 
 		setAbilities(new RewindAbility());
 
@@ -166,8 +222,6 @@ public class KitRewind extends Kit {
 
 		@Override
 		public void onPlayerTick(Player player) {
-			//Player tick is used to determine cooldowns + abilities
-			//Time tick is purely aesthetic
 			Location loc = player.getLocation();
 			RewindInfo info = rewindInfo.get(player);
 			Block currBlock = loc.getBlock().getRelative(BlockFace.DOWN);
@@ -200,7 +254,7 @@ public class KitRewind extends Kit {
 				}
 				player.sendActionBar(currState);
 
-				// Update all clikc items if the preference is changed mid-game
+				// Update all click items if the preference is changed mid-game
 				var timeMachineDisplayName = TIME_MACHINE.displayName();
 				for (var iterator = inv.iterator(); iterator.hasNext(); ) {
 					var stack = iterator.next();
@@ -279,6 +333,7 @@ public class KitRewind extends Kit {
 						//Apply buff at departure AND arrival location
 						rewindBuff(player, info, currTick);
 						player.teleport(dest);
+						player.setFireTicks(0);
 						world.playSound(player, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1.5f);
 						rewindBuff(player, info, currTick);
 						player.setCooldown(Material.CLOCK, 15 * 20);
@@ -336,7 +391,7 @@ public class KitRewind extends Kit {
 				player.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 150, 1));
 			} else if (elapsedTick < 10 * 20) {
 				//Time Dilation: Gives nearby enemies Slow 3 + No Jump for 3 seconds
-				List<Entity> affectedEnemies = player.getNearbyEntities(8, 8, 8);
+				List<Entity> affectedEnemies = player.getNearbyEntities(6, 6, 6);
 				for (Entity entity : affectedEnemies) {
 					if (entity instanceof LivingEntity victim && !(entity instanceof ArmorStand)) {
 						//change to 3*20 tick duration, extended for testing purposes
