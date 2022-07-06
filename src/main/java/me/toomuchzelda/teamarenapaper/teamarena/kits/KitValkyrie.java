@@ -6,8 +6,8 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
-import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.sound.SoundStop;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
@@ -31,6 +31,8 @@ import org.bukkit.util.Vector;
 
 import java.util.*;
 
+import static me.toomuchzelda.teamarenapaper.utils.TextUtils.ERROR_RED;
+
 //Kit Description:
 /*
     Kit Goal: Initiator / Fighter kit w/ cool melee mechanics
@@ -38,7 +40,7 @@ import java.util.*;
     Slowed while holding axe
 
     Sub-Ability: Spin Attack
-        Attacks have a short charge up time and short CD
+        Attacks have a short charge uptime and short CD
         Attacks hit ALL enemies within 3 block range
         Damage based on distance from player
             [0,1) block = Regular dmg
@@ -55,17 +57,19 @@ import java.util.*;
         (Can be thrown with low or high velocity depending on type of click)
 
 	    Gravity Bomb Detonation
-            Upon detonation, the bomb will pull enemies within r = 3 towards itself
+            Upon detonation, the bomb will pull enemies towards itself
             Before exploding and dealing very light damage
 */
 /**
  * @author onett425
  */
 public class KitValkyrie extends Kit{
-    public static final ItemStack VALK_AXE;
+    public static final TextColor PALE_YELLOW = TextColor.color(242, 236, 145);
+	public static final TextColor ORANGE = TextColor.color(199, 157, 74);
+	public static final ItemStack VALK_AXE;
     public static final int AXE_SHARP = 1;
     public static final AttributeModifier AXE_SLOW = new AttributeModifier("Valk Axe Slow", -0.30 , AttributeModifier.Operation.ADD_SCALAR);
-    public static final int AXE_WINDUP = 15;
+    public static final int AXE_WINDUP = 10;
     public static final int AXE_CD = 30;
     public static final int ATTACK_RADIUS = 3;
     //Bonus damage adds extra sharpness levels to the given hit
@@ -73,14 +77,26 @@ public class KitValkyrie extends Kit{
     public static final int SWEET_SPOT_BONUS = 3;
 
     public static final ItemStack GRAV_BOMB;
-    //BOMB_CD actual: 12 * 20
-    public static final int BOMB_CD = 12 * 20;
+    public static final int BOMB_CD = 10 * 20;
     public static final int DETONATION_TIME = 30;
     public static final double PULL_AMP = 0.2;
-    public static final Component BOMB_LORE = ItemUtils.noItalics(Component.text("Left Click to throw with high velocity"));
-    public static final Component BOMB_LORE2 = ItemUtils.noItalics(Component.text("Right Click to toss with low velocity"));
+
+	public static final Component BOMB_DESC = ItemUtils.noItalics(
+			Component.text("Pulls enemies towards itself upon detonation").color(PALE_YELLOW));
+	public static final Component BOMB_LORE = ItemUtils.noItalics(Component.text("Left Click to throw with high velocity").color(ORANGE));
+    public static final Component BOMB_LORE2 = ItemUtils.noItalics(Component.text("Right Click to toss with low velocity").color(ORANGE));
 
     public static final Set<BukkitTask> VALK_TASKS = new HashSet<>();
+
+	public static final Component AXE_DESC = ItemUtils.noItalics(
+			Component.text("After a short windup period (as seen in exp bar), ").color(PALE_YELLOW));
+	public static final Component AXE_DESC2 = ItemUtils.noItalics(
+			Component.text("Battle Axe hits all enemies within your attack radius").color(PALE_YELLOW));
+	public static final Component AXE_DESC3 = ItemUtils.noItalics(
+			Component.text("Hit enemies near the edge to maximize damage!").color(ORANGE));
+	public static final Component AXE_DESC4 = ItemUtils.noItalics(
+			Component.text("Direct Attacks are disabled").color(ERROR_RED));
+	public static final List<Component> AXE_LORE_LIST;
 
     static{
         VALK_AXE = new ItemStack(Material.DIAMOND_AXE);
@@ -89,20 +105,30 @@ public class KitValkyrie extends Kit{
         valkMeta.addEnchant(Enchantment.KNOCKBACK, 1, false);
         valkMeta.displayName(ItemUtils.noItalics(Component.text("Battle Axe")));
         valkMeta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-        VALK_AXE.setItemMeta(valkMeta);
+
+		ArrayList<Component> axeLore = new ArrayList<>(4);
+		axeLore.add(AXE_DESC);
+		axeLore.add(AXE_DESC2);
+		axeLore.add(AXE_DESC3);
+		axeLore.add(AXE_DESC4);
+		AXE_LORE_LIST = Collections.unmodifiableList(axeLore);
+		valkMeta.lore(AXE_LORE_LIST);
+		VALK_AXE.setItemMeta(valkMeta);
 
         GRAV_BOMB = new ItemStack(Material.HEART_OF_THE_SEA);
         ItemMeta gravMeta = GRAV_BOMB.getItemMeta();
         gravMeta.displayName(ItemUtils.noItalics(Component.text("Gravity Bomb")));
-        ArrayList<Component> lore = new ArrayList<>(2);
-        lore.add(BOMB_LORE);
-        lore.add(BOMB_LORE2);
-        gravMeta.lore(lore);
+        ArrayList<Component> bombLore = new ArrayList<>(3);
+		bombLore.add(BOMB_DESC);
+		bombLore.add(BOMB_LORE);
+		bombLore.add(BOMB_LORE2);
+        gravMeta.lore(bombLore);
         GRAV_BOMB.setItemMeta(gravMeta);
     }
 
     public KitValkyrie(){
-        super("Valkyrie", "A tanky melee kit which must pay special attention to timing and spacing. The Battle Axe takes a while to swing, but hits all enemies in an area around you! Hit your enemies at the very edge of your attack radius to maximize damage!",
+        super("Valkyrie", "A tanky melee kit which must pay special attention to timing and spacing. " +
+						"It can easily deal with large groups of enemies with its AoE attack and gravity bomb!",
 				Material.DIAMOND_AXE);
         ItemStack helm = new ItemStack(Material.IRON_HELMET);
         ItemStack chest = new ItemStack(Material.DIAMOND_CHESTPLATE);
@@ -160,7 +186,7 @@ public class KitValkyrie extends Kit{
                     event.setCancelled(true);
 					//O
 					if(RECEIVED_AXE_CHAT_MESSAGE.add(player)){
-						player.sendMessage(Component.text("Damage can only be dealt with your spin attack!").color(TextUtils.ERROR_RED));
+						player.sendMessage(Component.text("Damage can only be dealt with your spin attack!").color(ERROR_RED));
 					}
                 }
             }
@@ -200,7 +226,8 @@ public class KitValkyrie extends Kit{
             }
 
             //Gravity Bomb Action Bar
-            if(player.getInventory().getItemInMainHand().getType() == Material.HEART_OF_THE_SEA){
+            if(Main.getPlayerInfo(player).getPreference(Preferences.KIT_ACTION_BAR) &&
+				player.getInventory().getItemInMainHand().getType() == Material.HEART_OF_THE_SEA){
                 Component actionBar = Component.text("Left Click to THROW    Right Click to TOSS").color(TextColor.color(3, 182, 252));
                 player.sendActionBar(actionBar);
             }
@@ -314,9 +341,9 @@ public class KitValkyrie extends Kit{
 						//If distance is < 1, it is a "sour hit" and no bonus damage is given
 						if (distance < 1) {
 
-						} else if (distance < 2.6) {
+						} else if (distance < 2.6 && meta != null) {
 							meta.addEnchant(Enchantment.DAMAGE_ALL, AXE_SHARP + NORMAL_BONUS, true);
-						} else {
+						} else if (distance >= 2.6 && meta != null) {
 							meta.addEnchant(Enchantment.DAMAGE_ALL, AXE_SHARP + SWEET_SPOT_BONUS, true);
 							player.playSound(player, Sound.BLOCK_GRINDSTONE_USE, 1.0f, 1.9f);
 						}
@@ -402,7 +429,7 @@ public class KitValkyrie extends Kit{
                         //Pull-in + Explosion
                         BukkitTask runnable = new BukkitRunnable(){
 
-                            List<Entity> affectedEnemies = activeGrenade.getNearbyEntities(3, 3, 3);
+                            List<Entity> affectedEnemies = activeGrenade.getNearbyEntities(5, 5, 5);
                             int duration = 5;
                             Location currLoc = activeGrenade.getLocation().clone();
 
@@ -419,18 +446,23 @@ public class KitValkyrie extends Kit{
                                 else{
                                     for(Entity entity : affectedEnemies){
                                         //Pull-in
-                                        if(entity instanceof org.bukkit.entity.LivingEntity victim && !(entity.getType().equals(EntityType.ARMOR_STAND))){
+                                        if(entity.getLocation().distanceSquared(activeGrenade.getLocation()) <= 25 &&
+										entity instanceof org.bukkit.entity.LivingEntity victim && !(entity.getType().equals(EntityType.ARMOR_STAND))){
                                             if(!(victim instanceof Player p) || Main.getGame().canAttack(player, p)) {
-                                                Vector currVel = entity.getVelocity().clone();
-                                                Vector nadeLoc = activeGrenade.getLocation().clone().toVector();
-                                                Vector entLoc = entity.getLocation().clone().toVector();
-                                                entity.setVelocity(currVel.add(nadeLoc.subtract(entLoc).multiply(new Vector(PULL_AMP, PULL_AMP/8, PULL_AMP))));
+												//Preventing spectators from getting pulled in
+												if(victim instanceof Player p && Main.getPlayerInfo(p).activeKit != null){
+													//Vector currVel = entity.getVelocity().clone();
+													Vector nadeLoc = activeGrenade.getLocation().clone().toVector();
+													Vector entLoc = entity.getLocation().clone().toVector();
+													entity.setVelocity(nadeLoc.subtract(entLoc).multiply(new Vector(PULL_AMP, PULL_AMP/8, PULL_AMP)));
+												}
                                             }
                                         }
                                     }
 
                                     //Particle Effect, Shows the max radius of grenade pull then shrinks
-                                    double radius = duration * (3.0/5.0);
+                                    //duration * (grenadeRadius / 5.0);
+									double radius = duration * (5.0/5.0);
                                     for(int i = 0; i < 10; i++){
                                         Location locClone = currLoc.clone();
                                         double rad = i * (2 * Math.PI) / 10;
