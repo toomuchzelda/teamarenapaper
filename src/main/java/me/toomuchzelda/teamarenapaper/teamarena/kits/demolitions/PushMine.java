@@ -24,6 +24,8 @@ public class PushMine extends DemoMine
 	public static final double BLAST_RADIUS_SQRD = BLAST_RADIUS * BLAST_RADIUS;
 	public static final double BLAST_STRENGTH = 0.35d;
 
+	public static final double IGNORE_PUSH_ANGLE = Math.toRadians(170d);
+
 	private int triggerTime;
 
 	public PushMine(Player demo, Block block) {
@@ -95,7 +97,7 @@ public class PushMine extends DemoMine
 				Vector explodeLocVec = explodeLoc.toVector();
 				RayTraceResult result;
 				for(Player p : Main.getGame().getPlayers()) {
-					if(this.team.getPlayerMembers().contains(p))
+					if(p != this.owner && this.team.getPlayerMembers().contains(p))
 						continue;
 
 					//add half of height so aim for middle of body not feet
@@ -117,11 +119,22 @@ public class PushMine extends DemoMine
 					if (affect) {
 						//weaker knockback the further they are from mine base
 						double power = Math.sqrt(BLAST_RADIUS_SQRD - lengthSqrd);
+						Vector victimVelocity = p.getVelocity();
 						vector.normalize();
-						vector.add(p.getVelocity().multiply(0.4));
+						//vector.add(victimVelocity.clone().multiply(0.4));
 						vector.multiply(power * BLAST_STRENGTH);
 
-						EntityUtils.setVelocity(p, PlayerUtils.noNonFinites(vector));
+						Vector newVelocityNormal = vector.clone().normalize();
+						double angle = newVelocityNormal.angle(victimVelocity.clone().normalize());
+						//if they are being pushed in a similar direction to that they are already going in
+						// only push them if the mine will push them faster than what they're already going at
+						if (angle <= IGNORE_PUSH_ANGLE && vector.lengthSquared() <= victimVelocity.lengthSquared()) {
+							affect = false;
+							//Bukkit.broadcastMessage("not big enough");
+						}
+
+						if(affect)
+							EntityUtils.setVelocity(p, PlayerUtils.noNonFinites(vector));
 					}
 				}
 

@@ -442,7 +442,8 @@ public class KitDemolitions extends Kit
 
 			regenningMines.add(new RegeneratingMine(type, startTime));
 
-			final Component message = Component.text("You'll get mine back in " + (type.timeToRegen / 20) + " seconds",
+			final Component message = Component.text("You'll get " + type.name +
+							" back in " + (type.timeToRegen / 20) + " seconds",
 					NamedTextColor.AQUA);
 
 			PlayerUtils.sendKitMessage(player, message, message);
