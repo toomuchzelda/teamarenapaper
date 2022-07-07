@@ -42,11 +42,12 @@ public class KingOfTheHill extends TeamArena
 	// and score is cleared
 	public static final float INITIAL_CAP_TIME = 13 * 20;
 	public float ticksAndPlayersToCaptureHill = INITIAL_CAP_TIME;
-
 	//the total score u need to get to win
 	public final int TICKS_TO_WIN;
 
 	private static final Component GAME_NAME = Component.text("King of the Hill", NamedTextColor.YELLOW);
+
+	private final Map<TeamArenaTeam, Component> sidebarCache = new LinkedHashMap<>();
 
 	public KingOfTheHill() {
 		super();
@@ -248,8 +249,6 @@ public class KingOfTheHill extends TeamArena
 		super.liveTick();
 	}
 
-
-	private final Map<TeamArenaTeam, Component> sidebarCache = new LinkedHashMap<>();
 	@Override
 	public Collection<Component> updateSharedSidebar() {
 		sidebarCache.clear();
@@ -296,14 +295,14 @@ public class KingOfTheHill extends TeamArena
 
 	@Override
 	public void updateSidebar(Player player, SidebarManager sidebar) {
-		var playerTeam = Main.getPlayerInfo(player).team;
+		TeamArenaTeam playerTeam = Main.getPlayerInfo(player).team;
 		sidebar.setTitle(player, getGameName());
 
 		int teamsShown = 0;
 
 		for (var entry : sidebarCache.entrySet()) {
-			var team = entry.getKey();
-			var line = entry.getValue();
+			TeamArenaTeam team = entry.getKey();
+			Component line = entry.getValue();
 
 			if (teamsShown >= 4 && team != playerTeam)
 				continue; // don't show

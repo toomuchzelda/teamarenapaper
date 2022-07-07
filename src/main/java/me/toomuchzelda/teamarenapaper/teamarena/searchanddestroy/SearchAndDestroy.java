@@ -10,6 +10,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -67,6 +68,9 @@ public class SearchAndDestroy extends TeamArena
 	public static final List<Component> FUSE_LORE;
 	public static final int SPAM_PERIOD = 4 * 20;
 	public static final int TEAM_DEAD_SCORE = 1;
+
+	//sidebar
+	private final Map<TeamArenaTeam, List<Component>> SIDEBAR_CACHE;
 
 
 	//===========MESSAGE STUFF
@@ -159,6 +163,8 @@ public class SearchAndDestroy extends TeamArena
 
 		this.bombTNTs = new HashMap<>();
 		this.poisonVictims = null;
+
+		this.SIDEBAR_CACHE = new LinkedHashMap<>(teams.length);
 	}
 
 	public void prepLive() {
@@ -641,8 +647,62 @@ public class SearchAndDestroy extends TeamArena
 	}
 
 	@Override
+	public Collection<Component> updateSharedSidebar() {
+		this.SIDEBAR_CACHE.clear();
+
+		final int currentTick = getGameTick();
+		for(TeamArenaTeam team : teams) {
+			if(!team.isAlive())
+				continue;
+
+			int numPlayersAlive = 0;
+			for(Player p : team.getPlayerMembers()) {
+				if(!isDead(p)) {
+					numPlayersAlive++;
+				}
+			}
+
+			if(numPlayersAlive > 0) {
+				List<Bomb> bombs = teamBombs.get(team);
+				List<Component> teamsStuff = new ArrayList<>(bombs.size() + 1);
+
+				Component title = Component.text().append(
+						team.getComponentName(),
+						Component.text(": " + numPlayersAlive + " alive", NamedTextColor.WHITE)
+				).build();
+				teamsStuff.add(title);
+
+				for(Bomb bomb : bombs) {
+					teamsStuff.add(bomb.getSidebarStatus());
+				}
+
+				this.SIDEBAR_CACHE.put(team, teamsStuff);
+			}
+		}
+
+		return Collections.emptyList();
+	}
+
+	@Override
 	public void updateSidebar(Player player, SidebarManager sidebar) {
-		//TODO
+		TeamArenaTeam playersTeam = Main.getPlayerInfo(player).team;
+
+		for(var entry : this.SIDEBAR_CACHE.entrySet()) {
+			TeamArenaTeam team = entry.getKey();
+			List<Component> teamLines = entry.getValue();
+			var teamLinesIter = teamLines.iterator();
+
+			if(team == playersTeam) {
+				sidebar.addEntry(Component.text().append(OWN_TEAM_PREFIX, teamLinesIter.next()).build());
+			}
+			else {
+				sidebar.addEntry(teamLinesIter.next());
+			}
+
+			while(teamLinesIter.hasNext()) {
+				sidebar.addEntry(teamLinesIter.next());
+			}
+		}
 	}
 
 	@Override
