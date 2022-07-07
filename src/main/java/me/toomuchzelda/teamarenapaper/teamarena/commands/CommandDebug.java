@@ -20,6 +20,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -28,10 +29,10 @@ public class CommandDebug extends CustomCommand {
 	// TODO temporary feature
 	public static boolean ignoreWinConditions;
 	public static boolean sniperAccuracy;
-	public static Set<String> disabledKits = Collections.emptySet();
+	public static Predicate<Kit> kitPredicate = ignored -> true;
 
 	public CommandDebug() {
-		super("debug", "", "/debug ...", PermissionLevel.OWNER);
+		super("debug", "", "/debug ...", PermissionLevel.OWNER, "abuse");
 	}
 
 	private final List<MiniMapManager.CanvasOperation> canvasOperations = new ArrayList<>();
@@ -75,90 +76,27 @@ public class CommandDebug extends CustomCommand {
 				} else if (args[1].equalsIgnoreCase("sniperaccuracy")) {
 					sniperAccuracy = args.length == 3 ? "true".equalsIgnoreCase(args[2]) : !sniperAccuracy;
 					sender.sendMessage(Component.text("Set sniper accuracy debug to " + sniperAccuracy, NamedTextColor.GREEN));
-				} else if (args[1].equalsIgnoreCase("disabledkits")) {
-					if (args.length != 3)
-						throw throwUsage("/debug game disabledkits <disabledKit>[,...]");
-					String[] kitNames = args[2].split(",");
-					disabledKits = Set.of(kitNames);
-					sender.sendMessage(Component.text("Set disabled kits to " + disabledKits, NamedTextColor.GREEN));
-					Optional<Kit> optionalFallbackKit = Main.getGame().getKits().stream()
-							.filter(kit -> !disabledKits.contains(kit.getName().toLowerCase(Locale.ENGLISH)))
-							.findFirst();
-					if (optionalFallbackKit.isPresent()) {
-						Kit fallbackKit = optionalFallbackKit.get();
-						Main.getPlayerInfoMap().forEach((player, playerInfo) -> {
-							if (playerInfo.kit != null && disabledKits.contains(playerInfo.kit.getName().toLowerCase(Locale.ENGLISH))) {
-								playerInfo.kit = fallbackKit;
-								player.sendMessage(Component.text("The kit you have selected has been disabled. " +
-										"It has been replaced with: " + fallbackKit.getName(), NamedTextColor.YELLOW));
-							}
-						});
-					} else {
-						sender.sendMessage(Component.text("Warning: no fallback kit found.", NamedTextColor.YELLOW));
-					}
+				} else if (args[1].equalsIgnoreCase("kitfilter")) {
+					setKitRestrictions(sender, args);
 				}
 			}
-			case "draw" -> {
-				if (args.length < 4)
-					throw throwUsage("/debug draw clear/<text/area> <x> <z> ...");
-
-				int x = Integer.parseInt(args[2]), z = Integer.parseInt(args[3]);
-				MiniMapManager.CanvasOperation operation;
-				if ("text".equalsIgnoreCase(args[1])) {
-					if (args.length < 5)
-						throw throwUsage("/debug draw text <x> <z> <text>");
-
-					// white by default
-					String text = "\u00A734;" + MAP_COLOR.matcher(
-							String.join(" ", Arrays.copyOfRange(args, 4, args.length))
-									.replace('&', ChatColor.COLOR_CHAR)
-					).replaceAll(result -> {
-						int hex = Integer.parseInt(result.group(1), 16);
-						//noinspection deprecation
-						return "\u00A7" + MapPalette.matchColor(new java.awt.Color(hex)) + ";";
-					});
-					canvasOperations.add((viewer, ignored, canvas, renderer) ->
-							canvas.drawText((renderer.convertX(x) + 128) / 2, (renderer.convertZ(z) + 128) / 2,
-									MinecraftFont.Font, text));
-				} else if ("area".equalsIgnoreCase(args[1])) {
-					if (args.length < 7)
-						throw throwUsage("/debug draw area <x> <z> <x2> <z2> <color>");
-					int x2 = Integer.parseInt(args[4]), z2 = Integer.parseInt(args[5]);
-					byte color;
-					Matcher matcher = MAP_COLOR.matcher(args[6]);
-					if (matcher.matches()) {
-						int hex = Integer.parseInt(matcher.group(1), 16);
-						//noinspection deprecation
-						color = MapPalette.matchColor(new java.awt.Color(hex));
-					} else {
-						color = Byte.parseByte(args[6]);
-					}
-					int minX = Math.min(x, x2), maxX = Math.max(x, x2), minY = Math.min(z, z2), maxY = Math.max(z, z2);
-					canvasOperations.add((viewer, ignored, canvas, renderer) -> {
-						int startX = (renderer.convertX(minX) + 128) / 2, endX = (renderer.convertX(maxX) + 128) / 2;
-						int startY = (renderer.convertZ(minY) + 128) / 2, endY = (renderer.convertZ(maxY) + 128) / 2;
-						for (int i = startX; i < endX; i++)
-							for (int j = startY; j < endY; j++)
-								canvas.setPixel(i, j, color);
-					});
-				} else if ("clear".equalsIgnoreCase(args[1])) {
-					canvasOperations.clear();
-				} else if ("invalidatebase".equalsIgnoreCase(args[1])) {
-					((MiniMapManager.GameMapRenderer) Main.getGame().miniMap.view.getRenderers().get(0)).hasDrawn = false;
+			case "draw" -> doDrawCommand(args);
+			case "votetest" -> CommandCallvote.instance.createVote(null, sender.name(),
+					Component.text("Next player to ban?"),
+					new CommandCallvote.TopicOptions(true, null, CommandCallvote.LE_FUNNY_VOTE,
+							CommandCallvote.VoteOption.getOptions(
+									new CommandCallvote.VoteOption("zelda", TextUtils.getUselessRainbowText("toomuchzelda"), TextUtils.getUselessRainbowText("toomuchzelda: ")),
+									new CommandCallvote.VoteOption("toed", Component.text("T_0_E_D", NamedTextColor.DARK_GREEN)),
+									new CommandCallvote.VoteOption("onett", Component.text("Onett_", NamedTextColor.BLUE))
+							)));
+			case "respawn" -> {
+				var game = Main.getGame();
+				var targetPlayers = selectPlayersOrThrow(sender, args, 2);
+				for (var target : targetPlayers) {
+					PlayerInfo info = Main.getPlayerInfo(target);
+					game.respawnPlayer(target);
+					game.givePlayerItems(target, info, true);
 				}
-				if (!Main.getGame().miniMap.hasCanvasOperation(operationExecutor)) {
-					Main.getGame().miniMap.registerCanvasOperation(operationExecutor);
-				}
-			}
-			case "votetest" -> {
-				CommandCallvote.instance.createVote(null, sender.name(),
-						Component.text("Next player to ban?"),
-						new CommandCallvote.TopicOptions(true, null, CommandCallvote.LE_FUNNY_VOTE,
-								CommandCallvote.VoteOption.getOptions(
-										new CommandCallvote.VoteOption("zelda", TextUtils.getUselessRainbowText("toomuchzelda"), TextUtils.getUselessRainbowText("toomuchzelda: ")),
-										new CommandCallvote.VoteOption("toed", Component.text("T_0_E_D", NamedTextColor.DARK_GREEN)),
-										new CommandCallvote.VoteOption("onett", Component.text("Onett_", NamedTextColor.BLUE))
-								)));
 			}
 			case "setrank" -> {
 				if (args.length < 2)
@@ -168,10 +106,12 @@ public class CommandDebug extends CustomCommand {
 				Player target = getPlayerOrThrow(sender, args, 2);
 				PlayerInfo info = Main.getPlayerInfo(target);
 				info.permissionLevel = level;
+
+				target.sendMessage(Component.text("Your rank has been updated to " + level.name(), NamedTextColor.GREEN));
 			}
 			case "setteam" -> {
 				if (args.length < 2)
-					throw throwUsage("/debug setteam <team> [player]");
+					throw throwUsage("/debug setteam <team> [selector]");
 
 				TeamArenaTeam[] teams = Main.getGame().getTeams();
 				TeamArenaTeam targetTeam = null;
@@ -184,8 +124,39 @@ public class CommandDebug extends CustomCommand {
 				if (targetTeam == null)
 					throw new CommandException(Component.text("Team not found!", NamedTextColor.RED));
 
-				Player target = getPlayerOrThrow(sender, args, 2);
-				targetTeam.addMembers(target);
+				var targetPlayers = selectPlayersOrThrow(sender, args, 2);
+				targetTeam.addMembers(targetPlayers.toArray(new Player[0]));
+
+				var message = Component.textOfChildren(
+						Component.text("Your team has been updated to ", NamedTextColor.GREEN),
+						targetTeam.getComponentName()
+				);
+				targetPlayers.forEach(player -> player.sendMessage(message));
+			}
+			case "setkit" -> {
+				if (args.length < 2)
+					throw throwUsage("/debug setkit <kit> [selector]");
+				var game = Main.getGame();
+				var kit = game.findKit(args[1]);
+				if (kit == null) {
+					throw new CommandException("Invalid kit " + args[1]);
+				}
+				var targetPlayers = selectPlayersOrThrow(sender, args, 2);
+				for (var target : targetPlayers) {
+					PlayerInfo info = Main.getPlayerInfo(target);
+
+					if (info.activeKit != null) {
+						info.activeKit.removeKit(target, info);
+					}
+					info.kit = kit;
+					if (game.getGameState() == GameState.LIVE) {
+						game.givePlayerItems(target, info, true);
+					}
+					target.sendMessage(Component.textOfChildren(
+							Component.text("Your kit has been updated to ", NamedTextColor.GREEN),
+							kit.getDisplayName()
+					));
+				}
 			}
 			case "setgame", "setnextgame" -> {
 				if (args.length < 2)
@@ -234,6 +205,103 @@ public class CommandDebug extends CustomCommand {
 		return true;
 	}
 
+	private void setKitRestrictions(@NotNull CommandSender sender, @NotNull String @NotNull [] args) {
+		if (args.length < 3)
+			throw throwUsage("/debug game kitfilter <allow/block> [kit1,...]");
+		boolean block = args[2].equalsIgnoreCase("block");
+		Set<String> kitNames;
+		if (args.length == 4) {
+			kitNames = Set.of(args[3].split(","));
+		} else {
+			kitNames = Set.of();
+		}
+		// Truth table
+		// Action    | Contains | Kit allowed
+		// block (T) | T        | F
+		// block (T) | F        | T
+		// allow (F) | T        | T
+		// allow (F) | F        | F
+		kitPredicate = kit -> block != kitNames.contains(kit.getName().toLowerCase(Locale.ENGLISH));
+		sender.sendMessage(Component.text("Set kit restrictions to: " +
+				args[2] + " " + kitNames, NamedTextColor.GREEN));
+		Optional<Kit> optionalFallbackKit = Main.getGame().getKits().stream()
+				.filter(kitPredicate)
+				.findFirst();
+		if (optionalFallbackKit.isPresent()) {
+			Kit fallbackKit = optionalFallbackKit.get();
+			Main.getPlayerInfoMap().forEach((player, playerInfo) -> {
+				if (playerInfo.kit != null && !kitPredicate.test(playerInfo.kit)) {
+					playerInfo.kit = fallbackKit;
+					player.sendMessage(Component.text("The kit you have selected has been disabled. " +
+							"It has been replaced with: " + fallbackKit.getName(), NamedTextColor.YELLOW));
+				}
+				if (playerInfo.activeKit != null && !kitPredicate.test(playerInfo.activeKit)) {
+					// also change active kit
+					playerInfo.activeKit.removeKit(player, playerInfo);
+					Main.getGame().givePlayerItems(player, playerInfo, true);
+					player.sendMessage(Component.text("The kit you are using has been disabled. " +
+							"It has been replaced with your selected kit.", NamedTextColor.YELLOW));
+				}
+			});
+		} else { // cannot allow blocking all kits!
+			sender.sendMessage(Component.text("Warning: no fallback kit found. Allowing all kits instead.", NamedTextColor.YELLOW));
+			kitPredicate = kit -> true;
+		}
+	}
+
+	private void doDrawCommand(@NotNull String @NotNull [] args) {
+		if (args.length < 4)
+			throw throwUsage("/debug draw clear/<text/area> <x> <z> ...");
+
+		int x = Integer.parseInt(args[2]), z = Integer.parseInt(args[3]);
+		MiniMapManager.CanvasOperation operation;
+		if ("text".equalsIgnoreCase(args[1])) {
+			if (args.length < 5)
+				throw throwUsage("/debug draw text <x> <z> <text>");
+
+			// white by default
+			String text = "\u00A734;" + MAP_COLOR.matcher(
+					String.join(" ", Arrays.copyOfRange(args, 4, args.length))
+							.replace('&', ChatColor.COLOR_CHAR)
+			).replaceAll(result -> {
+				int hex = Integer.parseInt(result.group(1), 16);
+				//noinspection deprecation
+				return "\u00A7" + MapPalette.matchColor(new java.awt.Color(hex)) + ";";
+			});
+			canvasOperations.add((viewer, ignored, canvas, renderer) ->
+					canvas.drawText((renderer.convertX(x) + 128) / 2, (renderer.convertZ(z) + 128) / 2,
+							MinecraftFont.Font, text));
+		} else if ("area".equalsIgnoreCase(args[1])) {
+			if (args.length < 7)
+				throw throwUsage("/debug draw area <x> <z> <x2> <z2> <color>");
+			int x2 = Integer.parseInt(args[4]), z2 = Integer.parseInt(args[5]);
+			byte color;
+			Matcher matcher = MAP_COLOR.matcher(args[6]);
+			if (matcher.matches()) {
+				int hex = Integer.parseInt(matcher.group(1), 16);
+				//noinspection deprecation
+				color = MapPalette.matchColor(new java.awt.Color(hex));
+			} else {
+				color = Byte.parseByte(args[6]);
+			}
+			int minX = Math.min(x, x2), maxX = Math.max(x, x2), minY = Math.min(z, z2), maxY = Math.max(z, z2);
+			canvasOperations.add((viewer, ignored, canvas, renderer) -> {
+				int startX = (renderer.convertX(minX) + 128) / 2, endX = (renderer.convertX(maxX) + 128) / 2;
+				int startY = (renderer.convertZ(minY) + 128) / 2, endY = (renderer.convertZ(maxY) + 128) / 2;
+				for (int i = startX; i < endX; i++)
+					for (int j = startY; j < endY; j++)
+						canvas.setPixel(i, j, color);
+			});
+		} else if ("clear".equalsIgnoreCase(args[1])) {
+			canvasOperations.clear();
+		} else if ("invalidatebase".equalsIgnoreCase(args[1])) {
+			((MiniMapManager.GameMapRenderer) Main.getGame().miniMap.view.getRenderers().get(0)).hasDrawn = false;
+		}
+		if (!Main.getGame().miniMap.hasCanvasOperation(operationExecutor)) {
+			Main.getGame().miniMap.registerCanvasOperation(operationExecutor);
+		}
+	}
+
 	@Override
 	public void run(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
 		if (args.length == 0) {
@@ -278,25 +346,30 @@ public class CommandDebug extends CustomCommand {
 	@Override
 	public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
 		if (args.length == 1) {
-			return Arrays.asList("hide", "gui", "guitest", "game", "setrank", "setteam", "setgame", "setnextgame", "votetest", "draw");
+			return Arrays.asList("hide", "gui", "guitest", "game", "setrank", "setteam", "setkit", "setgame", "setnextgame", "votetest", "draw");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");
 				case "guitest" -> Arrays.asList("tab", "spectate");
-				case "game" -> Arrays.asList("start", "ignorewinconditions", "sniperaccuracy");
+				case "game" -> Arrays.asList("start", "ignorewinconditions", "sniperaccuracy", "kitfilter");
 				case "setrank" -> Arrays.stream(PermissionLevel.values()).map(Enum::name).toList();
 				case "setteam" -> Arrays.stream(Main.getGame().getTeams())
 						.map(team -> team.getSimpleName().replace(' ', '_'))
 						.toList();
+				case "setkit" -> Main.getGame().getTabKitList();
 				case "setgame", "setnextgame" -> Arrays.stream(GameType.values()).map(Enum::name).toList();
 				case "draw" -> Arrays.asList("text", "area", "clear", "invalidatebase");
 				default -> Collections.emptyList();
 			};
 		} else if (args.length == 3) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
-				case "setrank", "setteam" -> Bukkit.getOnlinePlayers().stream()
+				case "setrank", "setteam", "setkit" -> Bukkit.getOnlinePlayers().stream()
 						.map(Player::getName).toList();
-				case "game" -> Arrays.asList("true", "false");
+				case "game" -> switch (args[1]) {
+					case "start" -> Collections.emptyList();
+					case "kitfilter" -> Arrays.asList("allow", "block");
+					default -> Arrays.asList("true", "false");
+				};
 				case "setgame", "setnextgame" -> {
 					String gameMode = args[1].toUpperCase(Locale.ENGLISH);
 					File mapContainer = new File("Maps" + File.separator + gameMode);

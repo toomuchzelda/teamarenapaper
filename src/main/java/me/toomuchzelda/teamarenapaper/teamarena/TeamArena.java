@@ -103,7 +103,7 @@ public abstract class TeamArena
 
 	protected final List<Kit> defaultKits = List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
 			new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(),
-			new KitNone(), /*new KitSniper(),*/ new KitVenom(), new KitRewind(), new KitValkyrie(), new KitEngineer());
+			new KitNone(), new KitVenom(), new KitRewind(), new KitValkyrie(), new KitEngineer());
 
 	protected Map<String, Kit> kits;
 	protected static ItemStack kitMenuItem = ItemBuilder.of(Material.FEATHER)
@@ -276,7 +276,7 @@ public abstract class TeamArena
 	}
 
 	// player as in players in the players set
-	protected void givePlayerItems(Player player, PlayerInfo info, boolean clear) {
+	public void givePlayerItems(Player player, PlayerInfo info, boolean clear) {
 		player.sendMap(miniMap.view);
 		PlayerInventory inventory = player.getInventory();
 		if(clear)
@@ -475,6 +475,7 @@ public abstract class TeamArena
 		}
 		if (!CommandDebug.ignoreWinConditions && aliveTeamCount < 2) {
 			if (lastTeam != null) {
+				winningTeam = lastTeam;
 				Bukkit.broadcast(lastTeam.getComponentName().append(Component.text(" is the last team standing so they win!!")));
 			} else {
 				Bukkit.broadcast(Component.text("Where'd everyone go?"));

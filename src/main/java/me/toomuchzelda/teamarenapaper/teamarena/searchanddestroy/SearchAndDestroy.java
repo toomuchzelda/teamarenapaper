@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
@@ -10,7 +11,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -281,7 +281,7 @@ public class SearchAndDestroy extends TeamArena
 			}
 		}
 
-		if(winnerTeam != null) {
+		if(!CommandDebug.ignoreWinConditions && winnerTeam != null) {
 			this.winningTeam = winnerTeam;
 			prepEnd();
 		}
@@ -465,7 +465,7 @@ public class SearchAndDestroy extends TeamArena
 	}
 
 	@Override
-	protected void givePlayerItems(Player player, PlayerInfo pinfo, boolean clear) {
+	public void givePlayerItems(Player player, PlayerInfo pinfo, boolean clear) {
 		//need to clear and give the fuse first to put it in 1st slot
 		player.getInventory().clear();
 		player.getInventory().addItem(BASE_FUSE);

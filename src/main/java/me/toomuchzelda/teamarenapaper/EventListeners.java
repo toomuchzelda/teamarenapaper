@@ -162,10 +162,11 @@ public class EventListeners implements Listener
 		PlayerInfo playerInfo;
 
 		//todo: read perms from db or other
-		String playerName = event.getPlayer().getName();
-		if ("toomuchzelda".equalsIgnoreCase(playerName) || "jacky8399".equalsIgnoreCase(playerName) || "Onett_".equalsIgnoreCase(playerName)) {
-			event.getPlayer().setOp(true); // lol
+		if (event.getPlayer().isOp()) {
 			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.OWNER, event.getPlayer());
+			Player player = event.getPlayer();
+			Bukkit.getScheduler().runTask(Main.getPlugin(),
+					() -> player.sendMessage(Component.text("Your rank has been updated to OWNER", NamedTextColor.GREEN)));
 		} else {
 			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.ALL, event.getPlayer());
 		}
