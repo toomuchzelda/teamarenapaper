@@ -228,6 +228,9 @@ public class KitDemolitions extends Kit
 
 		@Override
 		public void onInteract(PlayerInteractEvent event) {
+			if(!event.getAction().isRightClick())
+				return;
+
 			Material mat = event.getMaterial();
 			int type = 0;
 			if(TNT_MINE_ITEM.getType() == mat)
@@ -278,20 +281,21 @@ public class KitDemolitions extends Kit
 		public void onAttemptedAttack(DamageEvent event) {
 			if(event.getDamageType().is(DamageType.EXPLOSION) && event.getAttacker() instanceof TNTPrimed dTnt) {
 				Player demo = (Player) event.getFinalAttacker();
-				Player victim = event.getPlayerVictim();
-				TNTMine mine = TNTMine.getByTNT(demo, dTnt);
-				if(mine != null) {
-					if(mine.triggerer == demo) {
-						event.setDamageType(DEMO_TNTMINE_REMOTE);
+				if(event.getVictim() instanceof Player victim) {
+					TNTMine mine = TNTMine.getByTNT(demo, dTnt);
+					if (mine != null) {
+						if (mine.triggerer == demo) {
+							event.setDamageType(DEMO_TNTMINE_REMOTE);
+						}
+						else if (mine.triggerer == victim) {
+							event.setDamageType(DamageType.DEMO_TNTMINE);
+						}
+						else {
+							event.setDamageType(DEMO_TNTMINE_BYSTANDER);
+							event.setDamageTypeCause(mine.triggerer);
+						}
+						event.setFinalDamage(event.getFinalDamage() * 0.75);
 					}
-					else if(mine.triggerer == victim) {
-						event.setDamageType(DamageType.DEMO_TNTMINE);
-					}
-					else {
-						event.setDamageType(DEMO_TNTMINE_BYSTANDER);
-						event.setDamageTypeCause(mine.triggerer);
-					}
-					event.setFinalDamage(event.getFinalDamage() * 0.75);
 				}
 			}
 		}
