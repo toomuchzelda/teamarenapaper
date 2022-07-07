@@ -261,12 +261,15 @@ public class KingOfTheHill extends TeamArena
 						team == owningTeam ? Float.MAX_VALUE : hillCapProgresses.getOrDefault(team, 0f),
 						hillCapChange.getOrDefault(team, 0f))
 				)
-				.sorted(Comparator.comparingDouble(CaptureSummary::progress).reversed())
+				.sorted(Comparator.comparingDouble(CaptureSummary::progress)
+						.thenComparingDouble(summary -> summary.team.getTotalScore())
+						.reversed())
 				.toList();
 		if (teamSummary.size() == 0)
 			return Collections.emptyList();
 
-		var fastestGrowingTeam = Collections.max(teamSummary, Comparator.comparingDouble(CaptureSummary::change));
+		double fastestGrowth = teamSummary.stream()
+				.mapToDouble(CaptureSummary::change).max().orElse(1);
 
 		for (var summary : teamSummary) {
 			var builder = Component.text();
@@ -275,22 +278,27 @@ public class KingOfTheHill extends TeamArena
 				builder.append(Component.text("KING", NamedTextColor.GOLD, TextDecoration.BOLD));
 			} else {
 				// whatever the hell this means
-				double percentage = summary.progress / ticksAndPlayersToCaptureHill * 100;
-				builder.append(Component.text((int) percentage + "% "));
+				double hillPercentage = summary.progress / ticksAndPlayersToCaptureHill * 100;
+				builder.append(Component.text((int) hillPercentage + "%"));
 				if (summary.change > 0) {
-					builder.append(Component.text(summary == fastestGrowingTeam && TeamArena.getGameTick() % 20 < 10 ?
-							"▲" : "↑", NamedTextColor.GREEN));
+					builder.append(Component.text(summary.change() == fastestGrowth && TeamArena.getGameTick() % 20 < 10 ?
+							" ▲" : " ↑", NamedTextColor.GREEN));
 				} else if (summary.change < 0) {
-					builder.append(Component.text("↓", NamedTextColor.RED));
-				} else {
-					builder.append(Component.text("-", NamedTextColor.DARK_GRAY));
+					builder.append(Component.text(" ↓", NamedTextColor.RED));
 				}
 			}
 
+			int controlTime = summary.team.getTotalScore() / 20;
+			builder.append(Component.text("/", NamedTextColor.DARK_GRAY),
+					Component.text(controlTime + "s", NamedTextColor.WHITE, TextDecoration.ITALIC));
 			sidebarCache.put(summary.team, builder.build());
 		}
 
-		return Collections.emptyList();
+		return Collections.singletonList(Component.textOfChildren(
+				Component.text("First to ", NamedTextColor.GRAY),
+				Component.text(TICKS_TO_WIN / 20 + "s", NamedTextColor.WHITE, TextDecoration.ITALIC),
+				Component.text(" control", NamedTextColor.GRAY)
+		));
 	}
 
 	@Override

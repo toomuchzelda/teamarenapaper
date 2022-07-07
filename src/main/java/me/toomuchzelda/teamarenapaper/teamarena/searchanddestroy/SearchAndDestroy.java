@@ -25,6 +25,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.map.MapCursor;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.BlockVector;
@@ -70,7 +71,7 @@ public class SearchAndDestroy extends TeamArena
 	public static final int TEAM_DEAD_SCORE = 1;
 
 	//sidebar
-	private final Map<TeamArenaTeam, List<Component>> SIDEBAR_CACHE;
+	private final Map<TeamArenaTeam, Component> sidebarCache;
 
 
 	//===========MESSAGE STUFF
@@ -164,7 +165,7 @@ public class SearchAndDestroy extends TeamArena
 		this.bombTNTs = new HashMap<>();
 		this.poisonVictims = null;
 
-		this.SIDEBAR_CACHE = new LinkedHashMap<>(teams.length);
+		this.sidebarCache = new LinkedHashMap<>(teams.length);
 	}
 
 	public void prepLive() {
@@ -173,6 +174,22 @@ public class SearchAndDestroy extends TeamArena
 		for(TeamArenaTeam team : teams) {
 			team.bossBar.progress(1f);
 		}
+
+		teamBombs.forEach((team, bombs) -> {
+			MapCursor.Type icon = MapCursor.Type.valueOf("BANNER_" + team.getDyeColour().name());
+			var bombText = Component.text(team.getSimpleName() + "'s bomb", team.getRGBTextColor());
+			miniMap.registerCursors(
+					(ignored1, ignored2) -> CommandDebug.ignoreWinConditions || team.isAlive(),
+					null,
+					(player, playerInfo) -> bombs.stream()
+							.map(bomb -> new MiniMapManager.CursorInfo(
+									bomb.getSpawnLoc(), false, icon,
+									playerInfo.team == team ?
+											Component.text("Your team's bomb", team.getRGBTextColor()) :
+											bombText))
+							.toArray(MiniMapManager.CursorInfo[]::new)
+			);
+		});
 	}
 
 	public void liveTick() {
@@ -366,6 +383,9 @@ public class SearchAndDestroy extends TeamArena
 	}
 
 	public void poisonTick() {
+		if (CommandDebug.ignoreWinConditions)
+			return;
+
 		final int currentTick = getGameTick();
 		this.poisonTimeLeft--;
 		if (this.poisonTimeLeft <= 0) {
@@ -648,61 +668,68 @@ public class SearchAndDestroy extends TeamArena
 
 	@Override
 	public Collection<Component> updateSharedSidebar() {
-		this.SIDEBAR_CACHE.clear();
-
-		final int currentTick = getGameTick();
-		for(TeamArenaTeam team : teams) {
-			if(!team.isAlive())
+		this.sidebarCache.clear();
+		int currentTick = TeamArena.getGameTick();
+		for (var entry : teamBombs.entrySet()) {
+			var team = entry.getKey();
+			var bombs = entry.getValue();
+			if (!team.isAlive() && !CommandDebug.ignoreWinConditions)
 				continue;
 
-			int numPlayersAlive = 0;
-			for(Player p : team.getPlayerMembers()) {
-				if(!isDead(p)) {
-					numPlayersAlive++;
-				}
+			var builder = Component.text();
+			builder.append(team.getComponentSimpleName(), Component.text(": "));
+			Bomb bomb;
+			if (bombs.size() == 1 && (bomb = bombs.get(0)).isArmed()) {
+				double progress = (double) (currentTick - bomb.getArmedTime()) / Bomb.BOMB_DETONATION_TIME;
+				builder.append(Component.text("⚡ ", NamedTextColor.DARK_RED),
+						TextUtils.getProgressBar(team.getRGBTextColor(), NamedTextColor.DARK_RED, 3, progress));
+			} else if (bombs.stream().anyMatch(Bomb::isArmed)) {
+				// weird map
+				builder.append(Component.text("❌ In danger", NamedTextColor.DARK_RED));
+			} else {
+				builder.append(Component.text("✔ Safe", NamedTextColor.GREEN));
 			}
 
-			if(numPlayersAlive > 0) {
-				List<Bomb> bombs = teamBombs.get(team);
-				List<Component> teamsStuff = new ArrayList<>(bombs.size() + 1);
-
-				Component title = Component.text().append(
-						team.getComponentName(),
-						Component.text(": " + numPlayersAlive + " alive", NamedTextColor.WHITE)
-				).build();
-				teamsStuff.add(title);
-
-				for(Bomb bomb : bombs) {
-					teamsStuff.add(bomb.getSidebarStatus());
+			int playersAlive = 0;
+			for (var player : team.getPlayerMembers()) {
+				if (!isDead(player)) {
+					playersAlive++;
 				}
-
-				this.SIDEBAR_CACHE.put(team, teamsStuff);
 			}
+			builder.append(Component.text(" | ", NamedTextColor.DARK_GRAY),
+					Component.text(playersAlive + " alive"));
+
+			sidebarCache.put(team, builder.build());
 		}
 
-		return Collections.emptyList();
+		return Collections.singletonList(Component.text("Last team standing", NamedTextColor.GRAY));
 	}
 
 	@Override
 	public void updateSidebar(Player player, SidebarManager sidebar) {
-		TeamArenaTeam playersTeam = Main.getPlayerInfo(player).team;
+		sidebar.setTitle(player, getGameName());
+		TeamArenaTeam playerTeam = Main.getPlayerInfo(player).team;
+		int teamsShown = 0;
 
-		for(var entry : this.SIDEBAR_CACHE.entrySet()) {
-			TeamArenaTeam team = entry.getKey();
-			List<Component> teamLines = entry.getValue();
-			var teamLinesIter = teamLines.iterator();
+		for (var entry : sidebarCache.entrySet()) {
+			var team = entry.getKey();
+			Component line = entry.getValue();
 
-			if(team == playersTeam) {
-				sidebar.addEntry(Component.text().append(OWN_TEAM_PREFIX, teamLinesIter.next()).build());
-			}
-			else {
-				sidebar.addEntry(teamLinesIter.next());
-			}
-
-			while(teamLinesIter.hasNext()) {
-				sidebar.addEntry(teamLinesIter.next());
+			if (teamsShown >= 4 && team != playerTeam)
+				continue; // don't show
+			teamsShown++;
+			if (team == playerTeam) {
+				// blink red when flag picked up
+				boolean inDanger = teamBombs.get(team).stream().anyMatch(Bomb::isArmed);
+				var teamPrefix = inDanger && TeamArena.getGameTick() % 20 < 10 ? OWN_TEAM_PREFIX_DANGER : OWN_TEAM_PREFIX;
+				sidebar.addEntry(Component.textOfChildren(teamPrefix, line));
+			} else {
+				sidebar.addEntry(line);
 			}
 		}
+		// unimportant teams
+		if (sidebarCache.size() != teamsShown)
+			sidebar.addEntry(Component.text("+ " + (sidebarCache.size() - teamsShown) + " teams", NamedTextColor.GRAY));
 	}
 
 	@Override

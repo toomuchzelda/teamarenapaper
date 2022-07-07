@@ -111,6 +111,7 @@ public abstract class TeamArena
 			.build();
 
 	public static final Component OWN_TEAM_PREFIX = Component.text("▶ ");
+	public static final Component OWN_TEAM_PREFIX_DANGER = OWN_TEAM_PREFIX.color(NamedTextColor.RED);
 
 	protected MapInfo mapInfo;
 
