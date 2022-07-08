@@ -294,7 +294,11 @@ public class KingOfTheHill extends TeamArena
 			sidebarCache.put(summary.team, builder.build());
 		}
 
-		return Collections.singletonList(Component.text("First to " + (TICKS_TO_WIN / 20) + "s of King", NamedTextColor.GRAY));
+		return Collections.singletonList(Component.textOfChildren(
+				Component.text("First to ", NamedTextColor.GRAY),
+				Component.text(TICKS_TO_WIN / 20 + "s", NamedTextColor.WHITE, TextDecoration.ITALIC),
+				Component.text(" control", NamedTextColor.GRAY)
+		));
 	}
 
 	@Override
