@@ -446,7 +446,7 @@ public class MiniMapManager {
          * Maps yaw to 0 to 15
          */
         public byte convertYaw(int yaw) {
-            return (byte) Math.round(Math.floorMod(yaw, 360) * 16 / 360d);
+            return (byte) Math.floorMod(Math.round(Math.floorMod(yaw, 360) * 16 / 360d), 16);
         }
 
         public static final byte TRANSPARENT = 0;

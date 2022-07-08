@@ -289,14 +289,14 @@ public class KingOfTheHill extends TeamArena
 			}
 
 			int controlTime = summary.team.getTotalScore() / 20;
-			builder.append(Component.text("/", NamedTextColor.DARK_GRAY),
-					Component.text(controlTime + "s", NamedTextColor.WHITE, TextDecoration.ITALIC));
+			builder.append(Component.text(" | ", NamedTextColor.DARK_GRAY),
+					Component.text(controlTime + "s", NamedTextColor.WHITE, TextDecoration.UNDERLINED));
 			sidebarCache.put(summary.team, builder.build());
 		}
 
 		return Collections.singletonList(Component.textOfChildren(
 				Component.text("First to ", NamedTextColor.GRAY),
-				Component.text(TICKS_TO_WIN / 20 + "s", NamedTextColor.WHITE, TextDecoration.ITALIC),
+				Component.text(TICKS_TO_WIN / 20 + "s", NamedTextColor.WHITE, TextDecoration.UNDERLINED),
 				Component.text(" control", NamedTextColor.GRAY)
 		));
 	}

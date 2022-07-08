@@ -271,7 +271,7 @@ public class CaptureTheFlag extends TeamArena
 			var builder = Component.text();
 			builder.append(flag.team.getComponentSimpleName(), Component.text(": "));
 			if (flag.isAtBase) {
-				builder.append(Component.text("⌂ " + flag.team.getTotalScore() + " pts", NamedTextColor.GREEN));
+				builder.append(Component.text("⚑ " + flag.team.getTotalScore(), NamedTextColor.GREEN));
 			} else if (flag.holdingTeam != null) {
 				builder.append(
 						TextUtils.getProgressBar(NamedTextColor.GRAY, flag.holdingTeam.getRGBTextColor(),
@@ -288,7 +288,7 @@ public class CaptureTheFlag extends TeamArena
 
 		return Collections.singletonList(Component.textOfChildren(
 				Component.text("First to ", NamedTextColor.GRAY),
-				Component.text(capsToWin + " pts", NamedTextColor.GREEN)
+				Component.text("⚑ " + capsToWin, NamedTextColor.GREEN)
 		));
 	}
 

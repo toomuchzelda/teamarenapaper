@@ -91,12 +91,7 @@ public class CommandDebug extends CustomCommand {
 							)));
 			case "respawn" -> {
 				var game = Main.getGame();
-				var targetPlayers = selectPlayersOrThrow(sender, args, 2);
-				for (var target : targetPlayers) {
-					PlayerInfo info = Main.getPlayerInfo(target);
-					game.respawnPlayer(target);
-					game.givePlayerItems(target, info, true);
-				}
+				selectPlayersOrThrow(sender, args, 2).forEach(game::respawnPlayer);
 			}
 			case "setrank" -> {
 				if (args.length < 2)

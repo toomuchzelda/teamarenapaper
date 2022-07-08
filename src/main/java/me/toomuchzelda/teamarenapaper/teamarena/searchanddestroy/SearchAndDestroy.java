@@ -33,6 +33,7 @@ import org.bukkit.util.Vector;
 import org.intellij.lang.annotations.RegExp;
 
 import java.io.File;
+import java.text.DecimalFormat;
 import java.util.*;
 
 /**
@@ -185,7 +186,7 @@ public class SearchAndDestroy extends TeamArena
 							.map(bomb -> new MiniMapManager.CursorInfo(
 									bomb.getSpawnLoc(), false, icon,
 									playerInfo.team == team ?
-											Component.text("Your team's bomb", team.getRGBTextColor()) :
+											Component.text("Your bomb", team.getRGBTextColor()) :
 											bombText))
 							.toArray(MiniMapManager.CursorInfo[]::new)
 			);
@@ -666,6 +667,7 @@ public class SearchAndDestroy extends TeamArena
 		return null;
 	}
 
+	private static final DecimalFormat ONE_DP = new DecimalFormat("0.0");
 	@Override
 	public Collection<Component> updateSharedSidebar() {
 		this.sidebarCache.clear();
@@ -680,9 +682,20 @@ public class SearchAndDestroy extends TeamArena
 			builder.append(team.getComponentSimpleName(), Component.text(": "));
 			Bomb bomb;
 			if (bombs.size() == 1 && (bomb = bombs.get(0)).isArmed()) {
-				double progress = (double) (currentTick - bomb.getArmedTime()) / Bomb.BOMB_DETONATION_TIME;
-				builder.append(Component.text("⚡ ", NamedTextColor.DARK_RED),
-						TextUtils.getProgressBar(team.getRGBTextColor(), NamedTextColor.DARK_RED, 3, progress));
+				int timeLeft = Bomb.BOMB_DETONATION_TIME - (currentTick - bomb.getArmedTime());
+				double disarmProgress;
+				// defusing
+				if (bomb.getArmingTeams().contains(team) && (disarmProgress = bomb.getTeamArmingProgress(team)) != 0) {
+					var disarmProgressBar = TextUtils.getProgressBar(NamedTextColor.DARK_RED, team.getRGBTextColor(), 3, disarmProgress);
+					builder.append(Component.text("\uD83D\uDD25 ", team.getRGBTextColor()), // fire emoji
+							disarmProgressBar);
+				} else {
+					var textColor = timeLeft % 40 < 20 ? NamedTextColor.RED : NamedTextColor.YELLOW;
+					String timeLeftText = timeLeft >= 200 ?
+							Integer.toString(timeLeft / 20) :
+							ONE_DP.format(timeLeft / 20d);
+					builder.append(Component.text("⚡ " + timeLeftText + "s", textColor));
+				}
 			} else if (bombs.stream().anyMatch(Bomb::isArmed)) {
 				// weird map
 				builder.append(Component.text("❌ In danger", NamedTextColor.DARK_RED));
@@ -702,7 +715,7 @@ public class SearchAndDestroy extends TeamArena
 			sidebarCache.put(team, builder.build());
 		}
 
-		return Collections.singletonList(Component.text("Last team standing", NamedTextColor.GRAY));
+		return Collections.singletonList(Component.text("Last to stand", NamedTextColor.GRAY));
 	}
 
 	@Override
@@ -730,6 +743,35 @@ public class SearchAndDestroy extends TeamArena
 		// unimportant teams
 		if (sidebarCache.size() != teamsShown)
 			sidebar.addEntry(Component.text("+ " + (sidebarCache.size() - teamsShown) + " teams", NamedTextColor.GRAY));
+	}
+
+	/** @author toomuchzelda */
+	@Override
+	public void updateLegacySidebar(Player player, SidebarManager sidebar) {
+		teamBombs.forEach((team, bombs) -> {
+			if(!team.isAlive())
+				return;
+
+			int numPlayersAlive = 0;
+			for(Player p : team.getPlayerMembers()) {
+				if(!isDead(p)) {
+					numPlayersAlive++;
+				}
+			}
+
+			if(numPlayersAlive > 0) {
+
+				Component title = Component.text().append(
+						team.getComponentName(),
+						Component.text(": " + numPlayersAlive + " alive", NamedTextColor.WHITE)
+				).build();
+				sidebar.addEntry(title);
+
+				for (Bomb bomb : bombs) {
+					sidebar.addEntry(bomb.getSidebarStatus());
+				}
+			}
+		});
 	}
 
 	@Override
