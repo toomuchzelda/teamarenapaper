@@ -46,6 +46,8 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static me.toomuchzelda.teamarenapaper.teamarena.kits.engineer.KitEngineer.EngineerAbility.handleProjectionAttemptDamage;
+
 //main game class
 public abstract class TeamArena
 {
@@ -674,6 +676,7 @@ public abstract class TeamArena
 		}
 
 		if(event.getVictim() instanceof Skeleton) {
+			KitEngineer.EngineerAbility.handleProjectionAttemptDamage(event);
 			KitEngineer.EngineerAbility.handleSentryAttemptDamage(event);
 		}
 	}

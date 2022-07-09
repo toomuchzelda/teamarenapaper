@@ -65,6 +65,7 @@ import static me.toomuchzelda.teamarenapaper.utils.TextUtils.*;
  */
 public class KitValkyrie extends Kit{
 	public static final ItemStack VALK_AXE;
+	public static final Material VALK_AXE_MAT;
     public static final int AXE_SHARP = 1;
     public static final AttributeModifier AXE_SLOW = new AttributeModifier("Valk Axe Slow", -0.30 , AttributeModifier.Operation.ADD_SCALAR);
     public static final int AXE_WINDUP = 10;
@@ -122,6 +123,8 @@ public class KitValkyrie extends Kit{
 		bombLore.add(BOMB_LORE2);
         gravMeta.lore(bombLore);
         GRAV_BOMB.setItemMeta(gravMeta);
+
+		VALK_AXE_MAT = VALK_AXE.getType();
     }
 
     public KitValkyrie(){
