@@ -19,8 +19,8 @@ import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -207,6 +207,51 @@ public class TextUtils {
 
 	public static Component getProgressText(String string, TextColor backgroundColor, TextColor cursorColor, TextColor foregroundColor, double progress) {
 		return getProgressText(string, Style.style(backgroundColor), Style.style(cursorColor), Style.style(foregroundColor), progress);
+	}
+
+	private static final String[] PROGRESS_BLOCK = {"▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"};
+
+	public static String getProgressBlock(double progress) {
+		return PROGRESS_BLOCK[MathUtils.clamp(0, 7, (int) Math.round(progress / 0.125))];
+	}
+
+	/**
+	 * Create a smoother progress bar
+	 */
+	public static Component getProgressBar(Style background, Style foreground, int blocks, double progress) {
+		if (blocks <= 0)
+			throw new IllegalArgumentException("blocks must be > 0");
+		if (progress >= 1)
+			return Component.text(PROGRESS_BLOCK[7].repeat(blocks), foreground);
+		else if (progress <= 0)
+			return Component.text(PROGRESS_BLOCK[7].repeat(blocks), background);
+
+		var builder = Component.text();
+		double increment = 1d / blocks;
+		// blocks fully behind the progress
+		int blocksBehind = (int) (progress / increment);
+		builder.append(Component.text(PROGRESS_BLOCK[7].repeat(blocksBehind), foreground));
+		double localProgress = progress % increment / increment;
+		if (localProgress != 0) {
+			int eightsBehind = (int) Math.round(localProgress / 0.125);
+			// check if close enough to one of the blocks
+			if (eightsBehind == 8) {
+				builder.append(Component.text(PROGRESS_BLOCK[7], foreground));
+			} else if (eightsBehind == 0) {
+				builder.append(Component.text(PROGRESS_BLOCK[7], background));
+			} else {
+				builder.append(Component.text(PROGRESS_BLOCK[eightsBehind - 1], foreground),
+						Component.text(PROGRESS_BLOCK[7 - eightsBehind], background));
+			}
+		}
+		// blocks fully ahead of the progress
+		int blocksAhead = (int) ((1 - progress) / increment);
+		builder.append(Component.text(PROGRESS_BLOCK[7].repeat(blocksAhead), background));
+		return builder.build();
+	}
+
+	public static Component getProgressBar(TextColor backgroundColor, TextColor foregroundColor, int blocks, double progress) {
+		return getProgressBar(Style.style(backgroundColor), Style.style(foregroundColor), blocks, progress);
 	}
 
 	public static Component getRGBManiacComponent(Component component, Style style, double offset) {

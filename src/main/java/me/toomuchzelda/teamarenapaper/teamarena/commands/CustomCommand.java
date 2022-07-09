@@ -132,6 +132,23 @@ public abstract class CustomCommand extends Command {
 		}
 	}
 
+	protected static @NotNull Collection<Player> selectPlayersOrThrow(CommandSender sender, String[] args, int index) throws CommandException {
+		if (args.length > index) {
+			try {
+				return Bukkit.selectEntities(sender, args[index]).stream()
+						.map(entity -> entity instanceof Player player ? player : null)
+						.filter(Objects::nonNull)
+						.toList();
+			} catch (IllegalArgumentException ex) {
+				throw new CommandException("Invalid entity selector", ex);
+			}
+		} else if (sender instanceof Player player) {
+			return Collections.singletonList(player);
+		} else {
+			throw new CommandException(PLAYER_ONLY);
+		}
+	}
+
     //todo: a system for commands that have multiple word arguments ie. /give player item amount etc
     // whatever that means
 //    @Deprecated

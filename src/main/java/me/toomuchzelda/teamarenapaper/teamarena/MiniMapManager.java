@@ -418,7 +418,7 @@ public class MiniMapManager {
          * Maps world X coordinates to -128 to 127 on the map
          */
         public byte convertX(int x) {
-            return (byte) ((x - centerX) * 128 / (mapWidth / 2));
+            return (byte) Math.round((x - centerX) * 128 / (mapWidth / 2d));
         }
 
         /**
@@ -432,7 +432,7 @@ public class MiniMapManager {
          * Maps world Z coordinates to -128 to 127 on the map
          */
         public byte convertZ(int z) {
-            return (byte) ((z - centerZ) * 128 / (mapWidth / 2));
+            return (byte) Math.round((z - centerZ) * 128 / (mapWidth / 2d));
         }
 
         /**
@@ -446,7 +446,7 @@ public class MiniMapManager {
          * Maps yaw to 0 to 15
          */
         public byte convertYaw(int yaw) {
-            return (byte) (Math.floorMod(yaw, 360) * 16 / 360);
+            return (byte) Math.floorMod(Math.round(Math.floorMod(yaw, 360) * 16 / 360d), 16);
         }
 
         public static final byte TRANSPARENT = 0;

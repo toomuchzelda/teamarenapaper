@@ -14,7 +14,6 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Locale;
 
 public class CommandKit extends CustomCommand {
 
@@ -41,21 +40,22 @@ public class CommandKit extends CustomCommand {
                     return;
                 }
 				String kitName = args[1];
-				if (CommandDebug.disabledKits.contains(kitName.toLowerCase(Locale.ENGLISH))) {
+				Kit kit = Main.getGame().findKit(kitName);
+				if (kit == null) {
+					player.sendMessage(Component.text("Kit " + kitName + " doesn't exist", TextUtils.ERROR_RED));
+					return;
+				}
+
+				if (!CommandDebug.kitPredicate.test(kit)) {
 					player.sendMessage(Component.text("Kit " + kitName + " has been disabled!", TextUtils.ERROR_RED));
 					return;
 				}
 
-                Kit kit = Main.getGame().findKit(kitName);
-                if (kit == null) {
-                    player.sendMessage(Component.text("Kit " + kitName + " doesn't exist", TextUtils.ERROR_RED));
-                    return;
-                }
                 Main.getGame().selectKit(player, kit);
             }
             case "list" -> {
 				Component kitList = Main.getGame().getKits().stream()
-						.filter(kit -> !CommandDebug.disabledKits.contains(kit.getName().toLowerCase()))
+						.filter(CommandDebug.kitPredicate)
 						.map(kit -> Component.text(kit.getName(), kit.getCategory().textColor()))
 						.collect(Component.toComponent(Component.text(", ")));
 				var builder = Component.text().color(NamedTextColor.BLUE);
@@ -89,8 +89,9 @@ public class CommandKit extends CustomCommand {
         if (args.length == 1) {
             return Arrays.asList("list", "set", "gui");
         } else if (args.length == 2 && args[0].equalsIgnoreCase("set")) {
-            return Main.getGame().getTabKitList().stream()
-					.filter(kitName -> !CommandDebug.disabledKits.contains(kitName))
+            return Main.getGame().getKits().stream()
+					.filter(CommandDebug.kitPredicate)
+					.map(kit -> kit.getName().toLowerCase())
 					.toList();
         }
 

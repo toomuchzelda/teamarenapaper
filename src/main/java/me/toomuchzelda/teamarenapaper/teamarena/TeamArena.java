@@ -103,7 +103,7 @@ public abstract class TeamArena
 
 	protected final List<Kit> defaultKits = List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
 			new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(),
-			new KitNone(), new KitSniper(), new KitVenom(), new KitRewind(), new KitValkyrie(), new KitEngineer());
+			new KitNone(), new KitVenom(), new KitRewind(), new KitValkyrie(), new KitEngineer());
 
 	protected Map<String, Kit> kits;
 	protected static ItemStack kitMenuItem = ItemBuilder.of(Material.FEATHER)
@@ -111,6 +111,7 @@ public abstract class TeamArena
 			.build();
 
 	public static final Component OWN_TEAM_PREFIX = Component.text("▶ ");
+	public static final Component OWN_TEAM_PREFIX_DANGER = OWN_TEAM_PREFIX.color(NamedTextColor.RED);
 
 	protected MapInfo mapInfo;
 
@@ -276,7 +277,7 @@ public abstract class TeamArena
 	}
 
 	// player as in players in the players set
-	protected void givePlayerItems(Player player, PlayerInfo info, boolean clear) {
+	public void givePlayerItems(Player player, PlayerInfo info, boolean clear) {
 		player.sendMap(miniMap.view);
 		PlayerInventory inventory = player.getInventory();
 		if(clear)
@@ -356,7 +357,7 @@ public abstract class TeamArena
 	public abstract void updateSidebar(Player player, SidebarManager sidebar);
 
 	public void updateLegacySidebar(Player player, SidebarManager sidebar) {
-		sidebar.addEntry(Component.text("Warning: legacy unsupported", NamedTextColor.YELLOW));
+		//sidebar.addEntry(Component.text("Warning: legacy unsupported", NamedTextColor.YELLOW));
 		updateSidebar(player, sidebar);
 	}
 
@@ -475,6 +476,7 @@ public abstract class TeamArena
 		}
 		if (!CommandDebug.ignoreWinConditions && aliveTeamCount < 2) {
 			if (lastTeam != null) {
+				winningTeam = lastTeam;
 				Bukkit.broadcast(lastTeam.getComponentName().append(Component.text(" is the last team standing so they win!!")));
 			} else {
 				Bukkit.broadcast(Component.text("Where'd everyone go?"));
@@ -548,7 +550,6 @@ public abstract class TeamArena
 		team.addMembers(player);
 
 		informOfTeam(player);
-//		respawnPlayer(player);
 	}
 
 	public void damageTick() {
@@ -1073,6 +1074,8 @@ public abstract class TeamArena
 
 	public abstract boolean canSelectTeamNow();
 
+	public abstract boolean canTeamChatNow(Player player);
+
 	public void selectKit(@NotNull Player player, @NotNull Kit kit) {
 		if (!canSelectKitNow()) {
 			player.sendMessage(Component.text("You can't choose a kit right now").color(NamedTextColor.RED));
@@ -1400,10 +1403,8 @@ public abstract class TeamArena
 				TeamArenaTeam toJoin = addToLowestTeam(player, false);
 				playerInfo.team = toJoin;
 				if(gameState == GameState.GAME_STARTING) {
-					Location[] spawns = toJoin.getSpawns();
 					//put them in next spawn point
-					toTeleport = spawns[toJoin.spawnsIndex % spawns.length];
-					toJoin.spawnsIndex++;
+					toTeleport = toJoin.getNextSpawnpoint();
 				}
 			}
 			else if (gameState == GameState.PREGAME) {
@@ -1443,10 +1444,15 @@ public abstract class TeamArena
 				player.setAllowFlight(true);
 			}
 		} else if (gameState == GameState.LIVE) {
-			if (Main.getPlayerInfo(player).team == spectatorTeam) {
+			//if it's a respawning game put them on a team and in the respawn queue
+			if (this.isRespawningGame() && Main.getPlayerInfo(player).team == spectatorTeam) {
 				handlePlayerJoinMidGame(player);
-
 				respawnTimers.put(player, new RespawnInfo(gameTick));
+			}
+
+			//make sure to hide them as they are still a spectator
+			for(Player p : Bukkit.getOnlinePlayers()) {
+				p.hidePlayer(Main.getPlugin(), player);
 			}
 
 			for (TeamArenaTeam team : teams) {
@@ -1462,9 +1468,9 @@ public abstract class TeamArena
 		if(pinfo.activeKit != null) {
 			pinfo.activeKit.removeKit(player, pinfo);
 		}
-		balancePlayerLeave();
 		players.remove(player);
 		spectators.remove(player);
+		balancePlayerLeave();
 		PlayerListScoreManager.removeScore(player);
 	}
 
@@ -1578,6 +1584,7 @@ public abstract class TeamArena
 	public void parseConfig(Map<String, Object> map) {
 		//basic info
 		mapInfo = new MapInfo();
+		mapInfo.gameType = getGameName();
 		mapInfo.name = (String) map.get("Name");
 		mapInfo.author = (String) map.get("Author");
 		mapInfo.description = (String) map.get("Description");
@@ -1776,6 +1783,8 @@ public abstract class TeamArena
 	public Collection<String> getTabKitList() {
 		return kits.keySet();
 	}
+
+	public abstract Component getGameName();
 
 	public File getMapPath() {
 		return new File("Maps");

@@ -20,9 +20,7 @@ import org.bukkit.entity.TNTPrimed;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 
 public class Bomb
 {
@@ -41,6 +39,9 @@ public class Bomb
 
 	private static final Vector TNT_HOLOGRAM_OFFSET = new Vector(0d, 1d, 0d);
 
+	//space for indentation
+	private static final Component BOMB_IS_SAFE = Component.text(" Bomb is safe");
+
 	private final TeamArenaTeam owningTeam;
 	private final Location spawnLoc;
 	private RealHologram hologram;
@@ -54,6 +55,8 @@ public class Bomb
 	private TeamArenaTeam armingTeam;
 	private ExplosionEffect explodeMode = ExplosionEffect.CARBONIZE_BLOCKS;
 	private int lastHissTime = 0;
+
+	private Component sidebarStatus = BOMB_IS_SAFE;
 
 	public Bomb(TeamArenaTeam team, Location spawnLoc) {
 		this.owningTeam = team;
@@ -127,6 +130,7 @@ public class Bomb
 		this.armedTime = JUST_EXPLODED;
 		this.armed = false;
 		this.detonated = true;
+		this.currentArmers.clear();
 	}
 
 	public void tick() {
@@ -135,6 +139,8 @@ public class Bomb
 		}
 
 		ArrayList<Component> hologramLines = new ArrayList<>(currentArmers.size() + 1);
+		//used only if bomb is armed
+		Component disarmingProgressBar = null;
 
 		//tick current clickers and update the hologram
 		hologramLines.add(0, this.title);
@@ -171,9 +177,9 @@ public class Bomb
 				//if there's any arming progress display the bar
 				if(totalProgress > 0f) {
 					TextColor teamColor = entry.getKey().getRGBTextColor();
-					Component progressBar = TextUtils.getProgressText(PROGRESS_BAR_STRING, NamedTextColor.DARK_RED, NamedTextColor.DARK_RED,
+					disarmingProgressBar = TextUtils.getProgressText(PROGRESS_BAR_STRING, NamedTextColor.DARK_RED, NamedTextColor.DARK_RED,
 							teamColor, totalProgress + -0.1f);
-					hologramLines.add(i++,  progressBar);
+					hologramLines.add(i++,  disarmingProgressBar);
 				}
 
 				//arm if done
@@ -220,7 +226,7 @@ public class Bomb
 
 			this.hologram.moveTo(moveTo.add(TNT_HOLOGRAM_OFFSET));
 
-			int timeLeft = BOMB_DETONATION_TIME - (currentTick - this.armedTime);
+			final int timeLeft = BOMB_DETONATION_TIME - (currentTick - this.armedTime);
 			final int secondsLeft = timeLeft / 20;
 
 			if(timeLeft % 20 == 0) {
@@ -248,9 +254,20 @@ public class Bomb
 			if(timeLeft <= 0) {
 				this.detonate(this.explodeMode);
 			}
+
+			Component secondsText = Component.text(" "+ secondsLeft, NamedTextColor.DARK_RED);
+			if(disarmingProgressBar != null) {
+				this.sidebarStatus = disarmingProgressBar.append(secondsText);
+			}
+			else {
+				this.sidebarStatus = Component.textOfChildren(Component.space(), detonatingIn);
+			}
 		}
 		else if(this.isDetonated()){
 			hologramLines.set(0, Component.text("R.I.P " + owningTeam.getName(), owningTeam.getRGBTextColor()));
+		}
+		else {
+			this.sidebarStatus = BOMB_IS_SAFE;
 		}
 
 		Component[] finalLines = hologramLines.toArray(new Component[0]);
@@ -358,6 +375,25 @@ public class Bomb
 
 	public TNTPrimed getTNT() {
 		return this.tnt;
+	}
+
+	public Component getSidebarStatus() {
+		return this.sidebarStatus;
+	}
+
+	public double getExplosionProgress() {
+		return (double) (TeamArena.getGameTick() - armedTime) / BOMB_DETONATION_TIME;
+	}
+
+	public Set<TeamArenaTeam> getArmingTeams() {
+		return Collections.unmodifiableSet(currentArmers.keySet());
+	}
+
+	public double getTeamArmingProgress(TeamArenaTeam team) {
+		TeamArmInfo teamArmInfo = currentArmers.get(team);
+		if (teamArmInfo == null)
+			throw new IllegalArgumentException(team + " is not arming!");
+		return teamArmInfo.armProgress;
 	}
 
 	/**

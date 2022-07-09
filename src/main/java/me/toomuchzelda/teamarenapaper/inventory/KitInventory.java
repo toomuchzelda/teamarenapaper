@@ -51,7 +51,7 @@ public class KitInventory implements InventoryProvider {
 	private static final TextComponent SELECTED_COMPONENT = Component.text("Currently selected!", NamedTextColor.GREEN, TextDecoration.BOLD);
 
 	public static ClickableItem getKitItem(Kit kit, boolean selected) {
-		boolean disabled = CommandDebug.disabledKits.contains(kit.getName().toLowerCase(Locale.ENGLISH));
+		boolean disabled = !CommandDebug.kitPredicate.test(kit);
 
 		String desc = kit.getDescription();
 		// word wrapping because some command-loving idiot didn't add line breaks in kit descriptions
@@ -79,7 +79,7 @@ public class KitInventory implements InventoryProvider {
 						})
 						.build(),
 				e -> {
-					if (CommandDebug.disabledKits.contains(kit.getName().toLowerCase(Locale.ENGLISH)))
+					if (!CommandDebug.kitPredicate.test(kit))
 						return;
 					Player player = (Player) e.getWhoClicked();
 					Main.getGame().selectKit(player, kit);

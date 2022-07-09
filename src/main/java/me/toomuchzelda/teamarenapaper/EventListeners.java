@@ -146,7 +146,7 @@ public class EventListeners implements Listener
 
 	private final HashMap<UUID, CompletableFuture<Map<Preference<?>, ?>>> preferenceFutureMap = new HashMap<>();
 	@EventHandler(priority = EventPriority.MONITOR)
-	public void asynchronousPlayerPreLoginEventHandler(AsyncPlayerPreLoginEvent e) {
+	public void asyncPlayerPreLogin(AsyncPlayerPreLoginEvent e) {
 		if (e.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED)
 			return;
 		synchronized (preferenceFutureMap) {
@@ -159,16 +159,14 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void playerLogin(PlayerLoginEvent event) {
 		UUID uuid = event.getPlayer().getUniqueId();
-		//todo: read from MySQL server or something for stored player data.
-		// or use persistent data containers, or option to use either
-		// and also use the PreLoginEvent
 		PlayerInfo playerInfo;
 
 		//todo: read perms from db or other
-		String playerName = event.getPlayer().getName();
-		if ("toomuchzelda".equalsIgnoreCase(playerName) || "jacky8399".equalsIgnoreCase(playerName) || "Onett_".equalsIgnoreCase(playerName)) {
-			event.getPlayer().setOp(true); // lol
+		if (event.getPlayer().isOp()) {
 			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.OWNER, event.getPlayer());
+			Player player = event.getPlayer();
+			Bukkit.getScheduler().runTask(Main.getPlugin(),
+					() -> player.sendMessage(Component.text("Your rank has been updated to OWNER", NamedTextColor.GREEN)));
 		} else {
 			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.ALL, event.getPlayer());
 		}
@@ -177,15 +175,15 @@ public class EventListeners implements Listener
 			CompletableFuture<Map<Preference<?>, ?>> future = preferenceFutureMap.remove(uuid);
 			if (future == null) {
 				event.disallow(Result.KICK_OTHER, Component.text("Failed to load preferences!")
-						.color(NamedTextColor.DARK_RED));
+						.color(TextUtils.ERROR_RED));
 				return;
 			}
 			playerInfo.setPreferenceValues(future.join());
 		}
 
 		Main.addPlayerInfo(event.getPlayer(), playerInfo);
-		Main.getGame().loggingInPlayer(event.getPlayer(), playerInfo);
 		Main.playerIdLookup.put(event.getPlayer().getEntityId(), event.getPlayer());
+		Main.getGame().loggingInPlayer(event.getPlayer(), playerInfo);
 	}
 
 	@EventHandler
@@ -610,7 +608,7 @@ public class EventListeners implements Listener
 
 			if(!event.isCancelled() && event.getEntity().getShooter() instanceof Player p) {
 				for(Ability a : Kit.getAbilities(p)) {
-					a.projectileHitEntity(event);
+					a.onProjectileHitEntity(event);
 				}
 			}
 		}
@@ -696,7 +694,7 @@ public class EventListeners implements Listener
 		if(Main.getGame() != null && Main.getGame().getGameState() == LIVE) {
 			Ability[] abilities = Kit.getAbilities(event.getPlayer());
 			for (Ability a : abilities) {
-				a.playerDropItem(event);
+				a.onPlayerDropItem(event);
 			}
 		}
 	}

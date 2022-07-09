@@ -15,6 +15,9 @@ import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.Style;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -26,6 +29,7 @@ import org.bukkit.event.Event;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
@@ -35,32 +39,68 @@ import java.util.*;
 
 public class KitDemolitions extends Kit
 {
-	public static final ItemStack REMOTE_DETONATOR_ITEM = new ItemStack(Material.FLINT_AND_STEEL);
-
 	public static final int TNT_MINE_COUNT = 2;
 	public static final int PUSH_MINE_COUNT = 1;
-	public static final ItemStack TNT_MINE_ITEM = new ItemStack(Material.TNT);
-	public static final ItemStack PUSH_MINE_ITEM = new ItemStack(Material.WHITE_WOOL);
+	public static final TextColor TNT_COLOR = TextColor.color(187, 60, 23);
+	public static final ItemStack TNT_MINE_ITEM;
+	public static final ItemStack PUSH_MINE_ITEM;
+	public static final ItemStack REMOTE_DETONATOR_ITEM;
 
 	//valid blocks for mines to be placed on
-	public static final EnumMap<Material, Boolean> VALID_MINE_BLOCKS;
+	private static final boolean[] VALID_MINE_BLOCKS;
 
 	static {
-		VALID_MINE_BLOCKS = new EnumMap<Material, Boolean>(Material.class);
+		VALID_MINE_BLOCKS = new boolean[Material.values().length];
 
 		for(Material mat : Material.values()) {
 			if(!mat.isBlock())
 				continue;
 
 			if(mat.isOccluding() || mat.name().endsWith("SLAB") || mat.name().endsWith("STAIRS")) {
-				VALID_MINE_BLOCKS.put(mat, true);
+				setValidMineBlock(mat);
 			}
 			else if(mat.name().endsWith("LEAVES")) {
-				VALID_MINE_BLOCKS.put(mat, true);
+				setValidMineBlock(mat);
 			}
 		}
+
+		Style style = Style.style(TextUtils.RIGHT_CLICK_TO).decoration(TextDecoration.ITALIC, false);
+		String strUsage = "Right click the top of a block to place the trap down. " +
+				"It will triggered by your remote detonator or when enemies step on it.";
+		List<Component> usage = TextUtils.wrapString(strUsage, style, 200);
+
+		TNT_MINE_ITEM = new ItemStack(Material.TNT);
+		ItemMeta meta = TNT_MINE_ITEM.getItemMeta();
+
+		meta.displayName(ItemUtils.noItalics(Component.text("TNT Mine", TNT_COLOR)));
+
+		List<Component> lore = new ArrayList<>();
+		lore.addAll(TextUtils.wrapString("A TNT landmine trap that blows enemies to smithereens", Style.style(TNT_COLOR), 200));
+		lore.addAll(usage);
+		meta.lore(lore);
+		TNT_MINE_ITEM.setItemMeta(meta);
+
+		PUSH_MINE_ITEM = new ItemStack(Material.WHITE_WOOL);
+		meta = PUSH_MINE_ITEM.getItemMeta();
+		meta.displayName(ItemUtils.noItalics(Component.text("Push Mine")));
+		lore = new ArrayList<>();
+		lore.addAll(TextUtils.wrapString("A trap that creates an explosive gust of air, pushing away all enemies near it", Style.empty(), 200));
+		lore.addAll(usage);
+		meta.lore(lore);
+		PUSH_MINE_ITEM.setItemMeta(meta);
+
+		REMOTE_DETONATOR_ITEM = new ItemStack(Material.FLINT_AND_STEEL);
+		meta = REMOTE_DETONATOR_ITEM.getItemMeta();
+		meta.displayName(ItemUtils.noItalics(Component.text("Remote Trigger", NamedTextColor.BLUE)));
+		lore = new ArrayList<>();
+		lore.addAll(TextUtils.wrapString("Point at any of your mines from any distance to select one. Right click and boom!", style, 200));
+		meta.lore(lore);
+		REMOTE_DETONATOR_ITEM.setItemMeta(meta);
 	}
 
+	private static void setValidMineBlock(Material mat) {
+		VALID_MINE_BLOCKS[mat.ordinal()] = true;
+	}
 
 	public KitDemolitions() {
 		super("Demolitions", "mines", Material.STONE_PRESSURE_PLATE);
@@ -80,7 +120,7 @@ public class KitDemolitions extends Kit
 	}
 
 	public static boolean isValidMineBlock(Block block) {
-		return VALID_MINE_BLOCKS.containsKey(block.getType());
+		return VALID_MINE_BLOCKS[block.getType().ordinal()];
 	}
 
 	public record RegeneratingMine(MineType type, int removedTime) {}
@@ -188,6 +228,9 @@ public class KitDemolitions extends Kit
 
 		@Override
 		public void onInteract(PlayerInteractEvent event) {
+			if(!event.getAction().isRightClick())
+				return;
+
 			Material mat = event.getMaterial();
 			int type = 0;
 			if(TNT_MINE_ITEM.getType() == mat)
@@ -238,20 +281,21 @@ public class KitDemolitions extends Kit
 		public void onAttemptedAttack(DamageEvent event) {
 			if(event.getDamageType().is(DamageType.EXPLOSION) && event.getAttacker() instanceof TNTPrimed dTnt) {
 				Player demo = (Player) event.getFinalAttacker();
-				Player victim = event.getPlayerVictim();
-				TNTMine mine = TNTMine.getByTNT(demo, dTnt);
-				if(mine != null) {
-					if(mine.triggerer == demo) {
-						event.setDamageType(DEMO_TNTMINE_REMOTE);
+				if(event.getVictim() instanceof Player victim) {
+					TNTMine mine = TNTMine.getByTNT(demo, dTnt);
+					if (mine != null) {
+						if (mine.triggerer == demo) {
+							event.setDamageType(DEMO_TNTMINE_REMOTE);
+						}
+						else if (mine.triggerer == victim) {
+							event.setDamageType(DamageType.DEMO_TNTMINE);
+						}
+						else {
+							event.setDamageType(DEMO_TNTMINE_BYSTANDER);
+							event.setDamageTypeCause(mine.triggerer);
+						}
+						event.setFinalDamage(event.getFinalDamage() * 0.75);
 					}
-					else if(mine.triggerer == victim) {
-						event.setDamageType(DamageType.DEMO_TNTMINE);
-					}
-					else {
-						event.setDamageType(DEMO_TNTMINE_BYSTANDER);
-						event.setDamageTypeCause(mine.triggerer);
-					}
-					event.setFinalDamage(event.getFinalDamage() * 0.65);
 				}
 			}
 		}
@@ -442,7 +486,8 @@ public class KitDemolitions extends Kit
 
 			regenningMines.add(new RegeneratingMine(type, startTime));
 
-			final Component message = Component.text("You'll get mine back in " + (type.timeToRegen / 20) + " seconds",
+			final Component message = Component.text("You'll get " + type.name +
+							" back in " + (type.timeToRegen / 20) + " seconds",
 					NamedTextColor.AQUA);
 
 			PlayerUtils.sendKitMessage(player, message, message);

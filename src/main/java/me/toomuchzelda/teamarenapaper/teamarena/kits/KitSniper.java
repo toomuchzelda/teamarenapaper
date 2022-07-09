@@ -181,7 +181,7 @@ public class KitSniper extends Kit {
 
 		//Headshot
 		@Override
-		public void projectileHitEntity(ProjectileCollideEvent event) {
+		public void onProjectileHitEntity(ProjectileCollideEvent event) {
 			Projectile projectile = event.getEntity();
 			if (!(projectile instanceof Arrow arrow))
 				return;
@@ -208,7 +208,7 @@ public class KitSniper extends Kit {
 		}
 
 		//Sniper Rifle Shooting
-		public void playerDropItem(PlayerDropItemEvent event) {
+		public void onPlayerDropItem(PlayerDropItemEvent event) {
 			Player player = event.getPlayer();
 			Item item = event.getItemDrop();
 			World world = player.getWorld();

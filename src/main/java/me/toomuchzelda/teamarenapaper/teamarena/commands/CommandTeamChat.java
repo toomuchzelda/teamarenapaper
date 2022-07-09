@@ -1,14 +1,11 @@
 package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.teamarena.GameState;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.ComponentBuilder;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Sound;
@@ -22,7 +19,7 @@ import java.util.Collections;
 
 public class CommandTeamChat extends CustomCommand
 {
-	public static final Component GAME_NOT_RUNNING = Component.text("You call out to your team, but only hear back the echo of your own voice."
+	public static final Component CANT_CHAT_NOW = Component.text("You call out to your team, but only hear back the echo of your screaming, wailing voice."
 			, TextUtils.ERROR_RED);
 	public static final Collection<String> TAB_COMPLETE = Collections.singleton("<message>");
 
@@ -36,7 +33,7 @@ public class CommandTeamChat extends CustomCommand
 	public void run(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) throws CommandException {
 		if(sender instanceof Player player) {
 			TeamArena game = Main.getGame();
-			if(game.getGameState() == GameState.TEAMS_CHOSEN || game.getGameState() == GameState.LIVE) {
+			if(game.canTeamChatNow(player)) {
 				TeamArenaTeam playersTeam = Main.getPlayerInfo(player).team;
 				Component message = constructMessage(playersTeam, player, args);
 
@@ -48,7 +45,7 @@ public class CommandTeamChat extends CustomCommand
 				});
 			}
 			else {
-				sender.sendMessage(GAME_NOT_RUNNING);
+				sender.sendMessage(CANT_CHAT_NOW);
 			}
 		}
 		else {

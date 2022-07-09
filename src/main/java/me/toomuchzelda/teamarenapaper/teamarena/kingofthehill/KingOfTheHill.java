@@ -42,9 +42,12 @@ public class KingOfTheHill extends TeamArena
 	// and score is cleared
 	public static final float INITIAL_CAP_TIME = 13 * 20;
 	public float ticksAndPlayersToCaptureHill = INITIAL_CAP_TIME;
-
 	//the total score u need to get to win
 	public final int TICKS_TO_WIN;
+
+	private static final Component GAME_NAME = Component.text("King of the Hill", NamedTextColor.YELLOW);
+
+	private final Map<TeamArenaTeam, Component> sidebarCache = new LinkedHashMap<>();
 
 	public KingOfTheHill() {
 		super();
@@ -246,8 +249,6 @@ public class KingOfTheHill extends TeamArena
 		super.liveTick();
 	}
 
-
-	private final Map<TeamArenaTeam, Component> sidebarCache = new LinkedHashMap<>();
 	@Override
 	public Collection<Component> updateSharedSidebar() {
 		sidebarCache.clear();
@@ -260,12 +261,15 @@ public class KingOfTheHill extends TeamArena
 						team == owningTeam ? Float.MAX_VALUE : hillCapProgresses.getOrDefault(team, 0f),
 						hillCapChange.getOrDefault(team, 0f))
 				)
-				.sorted(Comparator.comparingDouble(CaptureSummary::progress).reversed())
+				.sorted(Comparator.comparingDouble(CaptureSummary::progress)
+						.thenComparingDouble(summary -> summary.team.getTotalScore())
+						.reversed())
 				.toList();
 		if (teamSummary.size() == 0)
 			return Collections.emptyList();
 
-		var fastestGrowingTeam = Collections.max(teamSummary, Comparator.comparingDouble(CaptureSummary::change));
+		double fastestGrowth = teamSummary.stream()
+				.mapToDouble(CaptureSummary::change).max().orElse(1);
 
 		for (var summary : teamSummary) {
 			var builder = Component.text();
@@ -274,36 +278,39 @@ public class KingOfTheHill extends TeamArena
 				builder.append(Component.text("KING", NamedTextColor.GOLD, TextDecoration.BOLD));
 			} else {
 				// whatever the hell this means
-				double percentage = summary.progress / ticksAndPlayersToCaptureHill * 100;
-				builder.append(Component.text((int) percentage + "% "));
+				double hillPercentage = summary.progress / ticksAndPlayersToCaptureHill * 100;
+				builder.append(Component.text((int) hillPercentage + "%"));
 				if (summary.change > 0) {
-					builder.append(Component.text(summary == fastestGrowingTeam && TeamArena.getGameTick() % 20 < 10 ?
-							"▲" : "↑", NamedTextColor.GREEN));
+					builder.append(Component.text(summary.change() == fastestGrowth && TeamArena.getGameTick() % 20 < 10 ?
+							" ▲" : " ↑", NamedTextColor.GREEN));
 				} else if (summary.change < 0) {
-					builder.append(Component.text("↓", NamedTextColor.RED));
-				} else {
-					builder.append(Component.text("-", NamedTextColor.DARK_GRAY));
+					builder.append(Component.text(" ↓", NamedTextColor.RED));
 				}
 			}
 
+			int controlTime = summary.team.getTotalScore() / 20;
+			builder.append(Component.text(" | ", NamedTextColor.DARK_GRAY),
+					Component.text(controlTime + "s", NamedTextColor.WHITE, TextDecoration.UNDERLINED));
 			sidebarCache.put(summary.team, builder.build());
 		}
 
-		return Collections.emptyList();
+		return Collections.singletonList(Component.textOfChildren(
+				Component.text("First to ", NamedTextColor.GRAY),
+				Component.text(TICKS_TO_WIN / 20 + "s", NamedTextColor.WHITE, TextDecoration.UNDERLINED),
+				Component.text(" control", NamedTextColor.GRAY)
+		));
 	}
-
-	public static final Component GAME_NAME = Component.text("King of the Hill", NamedTextColor.YELLOW);
 
 	@Override
 	public void updateSidebar(Player player, SidebarManager sidebar) {
-		var playerTeam = Main.getPlayerInfo(player).team;
-		sidebar.setTitle(player, GAME_NAME);
+		TeamArenaTeam playerTeam = Main.getPlayerInfo(player).team;
+		sidebar.setTitle(player, getGameName());
 
 		int teamsShown = 0;
 
 		for (var entry : sidebarCache.entrySet()) {
-			var team = entry.getKey();
-			var line = entry.getValue();
+			TeamArenaTeam team = entry.getKey();
+			Component line = entry.getValue();
 
 			if (teamsShown >= 4 && team != playerTeam)
 				continue; // don't show
@@ -583,8 +590,17 @@ public class KingOfTheHill extends TeamArena
 	}
 
 	@Override
+	public boolean canTeamChatNow(Player player) {
+		return gameState == GameState.LIVE || gameState.teamsChosen();
+	}
+
+	@Override
 	public boolean isRespawningGame() {
 		return true;
+	}
+
+	public Component getGameName() {
+		return GAME_NAME;
 	}
 
 	@Override

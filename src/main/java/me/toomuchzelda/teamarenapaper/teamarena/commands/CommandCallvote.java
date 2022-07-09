@@ -273,7 +273,7 @@ public class CommandCallvote extends CustomCommand {
 		return builder.build();
 	}
 
-	static final Component LE_FUNNY_VOTE = Component.text("Reminder: This vote has no actual effect!", TextUtils.ERROR_RED);
+	static final Component LE_FUNNY_VOTE = Component.text("Reminder: This vote has no actual effect!", NamedTextColor.YELLOW);
 	public void createVote(@Nullable UUID caller, Component owner, Component display) {
 		createVote(caller, owner, display, new TopicOptions(false, null, LE_FUNNY_VOTE, VoteOption.DEFAULT_OPTIONS));
 	}
