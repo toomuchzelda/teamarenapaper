@@ -99,13 +99,12 @@ public abstract class TeamArena
 			.displayName(Component.text("Right click to respawn", NamedTextColor.RED))
 			.build();
 	public static final int RESPAWN_SECONDS = 5;
-	public static final int MID_GAME_JOIN_SECONDS = 10;
 
 	protected final List<Kit> defaultKits = List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
 			new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(),
-			new KitNone(), new KitVenom(), new KitRewind(), new KitValkyrie(), new KitEngineer());
+			new KitNone(), new KitVenom(), new KitRewind(), new KitValkyrie(), new KitEngineer(), new KitExplosive());
 
-	protected Map<String, Kit> kits;
+	protected Map<String, Kit> kits = new LinkedHashMap<>();
 	protected static ItemStack kitMenuItem = ItemBuilder.of(Material.FEATHER)
 			.displayName(Component.text("Select a Kit", NamedTextColor.BLUE))
 			.build();
@@ -216,7 +215,6 @@ public abstract class TeamArena
 		winningTeam = null;
 		lastHadLeft = null;
 
-		kits = new LinkedHashMap<>();
 		registerKits();
 
 		//List of team names
