@@ -4,7 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.KitInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
-import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
@@ -42,12 +42,12 @@ public class CommandKit extends CustomCommand {
 				String kitName = args[1];
 				Kit kit = Main.getGame().findKit(kitName);
 				if (kit == null) {
-					player.sendMessage(Component.text("Kit " + kitName + " doesn't exist", TextUtils.ERROR_RED));
+					player.sendMessage(Component.text("Kit " + kitName + " doesn't exist", TextColors.ERROR_RED));
 					return;
 				}
 
 				if (!CommandDebug.kitPredicate.test(kit)) {
-					player.sendMessage(Component.text("Kit " + kitName + " has been disabled!", TextUtils.ERROR_RED));
+					player.sendMessage(Component.text("Kit " + kitName + " has been disabled!", TextColors.ERROR_RED));
 					return;
 				}
 

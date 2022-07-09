@@ -57,7 +57,7 @@ public class EntityUtils {
 	@NotNull
     public static Component getComponent(@Nullable Entity entity) {
         if (entity == null)
-            return Component.text("Unknown", TextUtils.ERROR_RED);
+            return Component.text("Unknown", TextColors.ERROR_RED);
 
         if (entity instanceof Player player) {
 			var uselessRGBName = player.playerListName();

@@ -32,7 +32,7 @@ public class KitPyro extends Kit
 	public static final TextColor MOLOTOV_TEXT_COLOR = TextColor.color(255, 84, 10);
 
 	public static final Component MOLOTOV_READY = Component.text("Incendiary ready", NamedTextColor.LIGHT_PURPLE);
-	public static final Component CANT_SHOOT_YET = Component.text("You can't fire another incendiary yet!", TextUtils.ERROR_RED);
+	public static final Component CANT_SHOOT_YET = Component.text("You can't fire another incendiary yet!", TextColors.ERROR_RED);
 
 	static {
 		MOLOTOV_BOW = new ItemStack(Material.BOW);

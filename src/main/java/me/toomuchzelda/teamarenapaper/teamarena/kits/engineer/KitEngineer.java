@@ -2,22 +2,25 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.engineer;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
+import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
-import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextColor;
-import org.bukkit.Color;
+import net.kyori.adventure.text.minimessage.tag.Tag;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.FluidCollisionMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -28,16 +31,18 @@ import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Skeleton;
 import org.bukkit.event.Event;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.PlayerInventory;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.RayTraceResult;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import static me.toomuchzelda.teamarenapaper.teamarena.kits.KitValkyrie.VALK_AXE_MAT;
+import static me.toomuchzelda.teamarenapaper.teamarena.kits.engineer.KitEngineer.EngineerAbility.SENTRY_CD;
 
 //Kit Description:
 /*
@@ -53,13 +58,12 @@ import java.util.Map;
 
         Upon placement, the turret will self-destruct after its Active Time is up.
 
-        Active sentry(s) can be manually aimed and fired with the Wrangler
+        Active sentry(s) can be mounted by the Engineer and
+        manually aimed and fired with the Wrench with slightly faster attack speed
 
         Turret Further Details:
             -Visible Angle: 90 Degrees (Able to turn 360 degrees to track a locked-on enemy)
             -Health: 20 Hearts + Full Leather Armor
-            -Fire-Rate: 1 shot every second (20 ticks)
-            -DMG: 1.35 DMG per shot
             -Completely impervious to Invis (Give ghost some usefulness back)
 
     Sub Ability: Teleporter
@@ -77,24 +81,44 @@ import java.util.Map;
  * @author onett425
  */
 public class KitEngineer extends Kit {
-	public static final ItemStack SENTRY;
-	public static final ItemStack WRANGLER;
 	static final Team[] COLOUR_TEAMS;
 	static final Team RED_GLOWING_TEAM;
 	static final Team GREEN_GLOWING_TEAM;
 	private static final String PROJECTION_STATUS = "ProjectionStatus";
 
+	public static final ItemStack WRENCH = ItemBuilder.of(Material.IRON_SHOVEL)
+			.displayName(Component.text("Wrench"))
+			.lore(Component.text("Right click to manually fire while mounted on your sentry!", TextColors.LIGHT_YELLOW),
+					Component.text("(with slightly faster fire rate than Automatic fire)", TextColors.LIGHT_BROWN))
+			.build();
+
+	public static final ItemStack SENTRY = ItemBuilder.of(Material.CHEST_MINECART)
+			.displayName(Component.text("Sentry Kit"))
+			.lore(TextUtils.toLoreList("""
+							When your Sentry Projection is Green,
+							Right click to initialize the building process!
+							After Construction, your Sentry will Automatically fire at enemies
+							within a <pitch> degree cone of view and <range> block radius.
+							It can also be mounted and fired manually using your wrench!
+							<brown>Active Time / Cooldown: <cd> seconds""", TextColors.LIGHT_YELLOW,
+					Placeholder.unparsed("pitch", String.valueOf(Sentry.SENTRY_PITCH_VIEW)),
+					Placeholder.unparsed("range", String.valueOf(Sentry.SENTRY_SIGHT_RANGE)),
+					Placeholder.unparsed("cd", String.valueOf(SENTRY_CD / 20)),
+					TagResolver.resolver("brown", Tag.styling(TextColors.LIGHT_BROWN))
+			))
+			.build();
+
+	public static final ItemStack TP_CREATOR = ItemBuilder.of(Material.QUARTZ)
+			.displayName(Component.text("Create Teleporter"))
+			.lore(Component.text("Right click the top of a block to create/destroy your teleporter!", TextColors.LIGHT_YELLOW))
+			.build();
+
+	public static final ItemStack DESTRUCTION_PDA = ItemBuilder.of(Material.BOOK)
+			.displayName(Component.text("Destruction PDA"))
+			.lore(Component.text("Right click to manage active buildings!", TextColors.LIGHT_YELLOW))
+			.build();
+
 	static {
-		SENTRY = new ItemStack(Material.CHEST_MINECART);
-		ItemMeta sentryMeta = SENTRY.getItemMeta();
-		sentryMeta.displayName(ItemUtils.noItalics(Component.text("Sentry Kit")));
-		SENTRY.setItemMeta(sentryMeta);
-
-		WRANGLER = new ItemStack(Material.STICK);
-		ItemMeta wranglerMeta = WRANGLER.getItemMeta();
-		wranglerMeta.displayName(ItemUtils.noItalics(Component.text("Manual Sentry Fire")));
-		WRANGLER.setItemMeta(wranglerMeta);
-
 		//Stolen from toomuchzelda
 		//Sentry Projection changes color based on whether it is a valid spot or not
 		COLOUR_TEAMS = new Team[2];
@@ -119,29 +143,14 @@ public class KitEngineer extends Kit {
 				"Gun down enemies with your automatic sentry and set up teleporters to " +
 				"transport your allies across the map!", Material.IRON_SHOVEL);
 
-		ItemStack pants = new ItemStack(Material.LEATHER_LEGGINGS);
-		LeatherArmorMeta pantsMeta = (LeatherArmorMeta) pants.getItemMeta();
-		pantsMeta.setColor(Color.WHITE);
-		pants.setItemMeta(pantsMeta);
+		//ItemStack pants = new ItemStack(Material.LEATHER_LEGGINGS);
+		//LeatherArmorMeta pantsMeta = (LeatherArmorMeta) pants.getItemMeta();
+		//pantsMeta.setColor(Color.WHITE);
+		//pants.setItemMeta(pantsMeta);
 		setArmor(new ItemStack(Material.GOLDEN_HELMET), new ItemStack(Material.IRON_CHESTPLATE),
-				pants, new ItemStack(Material.GOLDEN_BOOTS));
+				new ItemStack(Material.IRON_LEGGINGS), new ItemStack(Material.GOLDEN_BOOTS));
 
-		ItemStack wrench = new ItemStack(Material.IRON_SHOVEL);
-		ItemMeta wrenchMeta = wrench.getItemMeta();
-		wrenchMeta.displayName(ItemUtils.noItalics(Component.text("Wrench")));
-		wrench.setItemMeta(wrenchMeta);
-
-		ItemStack tele = new ItemStack(Material.QUARTZ);
-		ItemMeta teleMeta = tele.getItemMeta();
-		teleMeta.displayName(ItemUtils.noItalics(Component.text("Create Teleporter")));
-		tele.setItemMeta(teleMeta);
-
-		ItemStack pda = new ItemStack(Material.BOOK);
-		ItemMeta pdaMeta = pda.getItemMeta();
-		pdaMeta.displayName(ItemUtils.noItalics(Component.text("Destruction PDA")));
-		pda.setItemMeta(pdaMeta);
-
-		setItems(wrench, SENTRY, tele, pda);
+		setItems(WRENCH, SENTRY, TP_CREATOR, DESTRUCTION_PDA);
 		setAbilities(new EngineerAbility());
 
 		setCategory(KitCategory.SUPPORT);
@@ -156,9 +165,6 @@ public class KitEngineer extends Kit {
 		public static final int SENTRY_CD = 300;
 		public static final int SENTRY_PLACEMENT_RANGE = 3;
 
-
-		//Note: Currently designed so buildings persist even if engineer dies
-		//Modifications will be made to accommodate for SnD, so buildings die when engineer dies
 		@Override
 		public void registerAbility() {
 			//Cleaning up is done in registerAbility so structures remain after game ends
@@ -175,10 +181,6 @@ public class KitEngineer extends Kit {
 			}
 		}
 
-		public void giveAbility(Player player) {
-
-		}
-
 		public void removeAbility(Player player) {
 			if (activePlayerProjections.containsKey(player)) {
 				destroyProjection(player);
@@ -186,6 +188,15 @@ public class KitEngineer extends Kit {
 			Inventories.closeInventory(player, BuildingInventory.class);
 			// remove all player buildings
 			BuildingManager.getAllPlayerBuildings(player).forEach(BuildingManager::destroyBuilding);
+		}
+
+		//Modifying sentry fire to deal less KB
+		@Override
+		public void onAttemptedAttack(DamageEvent event) {
+			if(event.getDamageType().is(DamageType.PROJECTILE) &&
+					event.getKnockback() != null){
+				event.setKnockback(event.getKnockback().multiply(0.5));
+			}
 		}
 
 		@Override
@@ -196,7 +207,6 @@ public class KitEngineer extends Kit {
 				return;
 
 			Player player = event.getPlayer();
-			ItemStack item = event.getItem();
 			Material mat = event.getMaterial();
 			Block block = event.getClickedBlock();
 			BlockFace blockFace = event.getBlockFace();
@@ -204,6 +214,18 @@ public class KitEngineer extends Kit {
 			// will be uncancelled later if not handled
 			event.setUseItemInHand(Event.Result.DENY);
 			event.setUseInteractedBlock(Event.Result.DENY);
+
+			//If a player is mounted on a sentry, they can fire it manually w/ wrench
+			if(mat == Material.IRON_SHOVEL &&
+					!player.hasCooldown(Material.IRON_SHOVEL) &&
+					player.getVehicle() instanceof Skeleton skeleton &&
+					sentryEntityToSentryMap.get(skeleton) != null){
+				Sentry sentry = sentryEntityToSentryMap.get(skeleton);
+				sentry.forceFire();
+				//a mounted sentry has slightly faster fire rate
+				player.setCooldown(Material.IRON_SHOVEL, Sentry.SENTRY_FIRE_RATE * 3 / 4);
+			}
+
 			if (mat == Material.QUARTZ) {
 				// Creating / Destroying Teleporters
 				// validate placement first
@@ -220,14 +242,14 @@ public class KitEngineer extends Kit {
 						BuildingManager.destroyBuilding(teleporter);
 						message = Component.text("You removed your teleporter.", NamedTextColor.BLUE);
 					} else {
-						message = Component.text("Another teleporter already exists as this spot.", TextUtils.ERROR_RED);
+						message = Component.text("Another teleporter already exists as this spot.", TextColors.ERROR_RED);
 					}
 				} else {
 					var playerTeleporters = BuildingManager.getPlayerBuildings(player, Teleporter.class);
 					//Creating TP
 					if (playerTeleporters.size() >= 2) {
 						//Failure: 2 TPs already exist
-						message = Component.text("Two teleporters are already active! Destroy one with your Destruction PDA!", TextUtils.ERROR_RED);
+						message = Component.text("Two teleporters are already active! Destroy one with your Destruction PDA!", TextColors.ERROR_RED);
 					} else {
 						//Success: TP is created
 						var teleporter = new Teleporter(player, block.getLocation());
@@ -244,17 +266,9 @@ public class KitEngineer extends Kit {
 			} else if (mat == Material.CHEST_MINECART) {
 				//Initializing Sentry Build
 				if (activePlayerProjections.containsKey(player) &&
-						isValidProjection(activePlayerProjections.get(player).getLocation()) &&
+						isValidProjection(activePlayerProjections.get(player)) &&
 						!player.hasCooldown(Material.CHEST_MINECART)) {
-					createSentry(player, item);
-				}
-			} else if (mat == Material.STICK) {
-				//Manual Fire using Wrangler
-				if (!player.hasCooldown(Material.STICK)) {
-					BuildingManager.getPlayerBuildings(player, Sentry.class).stream()
-							.filter(sentry -> sentry.currState != Sentry.State.STARTUP)
-							.forEach(sentry -> sentry.shoot(sentry.sentry.getLocation().getDirection()));
-					player.setCooldown(Material.STICK, Sentry.SENTRY_FIRE_RATE);
+					createSentry(player);
 				}
 			} else if (mat == Material.BOOK) {
 				// Destruction PDA
@@ -268,9 +282,7 @@ public class KitEngineer extends Kit {
 		}
 
 		//Converts the Projection into a Sentry + Handles static hashmaps + Inventory
-		public void createSentry(Player player, ItemStack currItem) {
-			PlayerInventory inv = player.getInventory();
-			boolean isMainHand = inv.getItemInMainHand().equals(currItem);
+		public void createSentry(Player player) {
 			Mob projection = activePlayerProjections.get(player);
 			Sentry sentry = new Sentry(player, projection);
 			BuildingManager.placeBuilding(sentry);
@@ -279,41 +291,12 @@ public class KitEngineer extends Kit {
 			activePlayerProjections.remove(player);
 			Main.getPlayerInfo(player).getMetadataViewer().removeViewedValues(projection);
 			player.setCooldown(Material.CHEST_MINECART, SENTRY_CD);
-
-			toggleWranglerItem(player, true);
 		}
 
 		//Destroys sentry + Handles static hashmaps + Inventory
 		public void destroySentry(Player player, Sentry sentry) {
 			BuildingManager.destroyBuilding(sentry);
 			sentryEntityToSentryMap.remove(sentry.sentry);
-
-			toggleWranglerItem(player, false);
-		}
-
-		public void toggleWranglerItem(Player player, boolean show) {
-			PlayerInventory inventory = player.getInventory();
-			boolean hasActiveSentries = BuildingManager.getPlayerBuildings(player, Sentry.class).size() != 0;
-			boolean hasSentryItem = false;
-			for (var iterator = inventory.iterator(); iterator.hasNext(); ) {
-				var stack = iterator.next();
-				if (SENTRY.isSimilar(stack)) {
-					hasSentryItem = true;
-					if (show) { // show wrangler item, replace
-						iterator.set(WRANGLER);
-					}
-				} else if (WRANGLER.isSimilar(stack)) {
-					if (!show && !hasActiveSentries) { // only replace when no active sentries exist
-						iterator.set(SENTRY);
-						hasSentryItem = true;
-					}
-				}
-			}
-
-			if (!show && hasActiveSentries && !hasSentryItem) {
-				// only add item if not already there
-				inventory.addItem(SENTRY);
-			}
 		}
 
 		@Override
@@ -338,55 +321,90 @@ public class KitEngineer extends Kit {
 				LivingEntity projection = activePlayerProjections.get(player);
 				//Y Coordinate is lowered so the projection doesn't obstruct the Engineer's view
 				Location playerLoc = player.getEyeLocation().clone().add(0, -0.8, 0);
-				Location projPos = projectSentry(playerLoc, player);
+				Location projPos = projectSentry(playerLoc);
 				projection.teleport(projPos);
 
 				//Handling color display that indicates validity of current sentry location
-				if (isValidProjection(projPos)) {
+				if (isValidProjection(activePlayerProjections.get(player))) {
 					Main.getPlayerInfo(player).getScoreboard().addMembers(GREEN_GLOWING_TEAM, projection);
 				} else {
 					Main.getPlayerInfo(player).getScoreboard().addMembers(RED_GLOWING_TEAM, projection);
 				}
 			}
 
-			//Creating Wrangler "laser beam" and manipulating sentry direction
-			if (PlayerUtils.isHolding(player, WRANGLER)) {
-				wranglerProjection(player);
+			//If player is riding skeleton (sentry), wrangle it
+			if(player.getVehicle() instanceof Skeleton skeleton){
+				Sentry sentry = sentryEntityToSentryMap.get(skeleton);
+				if(sentry != null){
+					sentry.currState = Sentry.State.WRANGLED;
+				}
 			}
 
-			//Extra check to ensure wrangler is replaced if there are no active sentries
-			toggleWranglerItem(player, false);
 		}
 
-		public void wranglerProjection(Player player) {
-			Location playerTarget = findBlock(player.getEyeLocation(), 100);
-
-			BuildingManager.getPlayerBuildings(player, Sentry.class).stream()
-					//First remove sentries that are currently starting up
-					.filter(sentry -> sentry.currState != Sentry.State.STARTUP)
-					//Calculate projected path for each sentry and make them look at that spot
-					.forEach(sentry -> {
-						sentry.currState = Sentry.State.WRANGLED;
-						sentry.forceTarget(playerTarget);
-					});
+		//Allowing engineers to ride their own sentries and manually aim + fire
+		@Override
+		public void onInteractEntity(PlayerInteractEntityEvent event) {
+			Player rider = event.getPlayer();
+			//If the right-clicked mob is a skeleton
+			//Check all sentries made by that player but also make sure it is not in STARTUP
+			if(event.getRightClicked() instanceof Skeleton skeleton){
+				Sentry sentry = sentryEntityToSentryMap.get(skeleton);
+				if(sentry != null && sentry.owner.equals(rider) &&
+						sentry.currState != Sentry.State.STARTUP){
+					skeleton.addPassenger(rider);
+				}
+			}
 		}
 
-		public boolean isValidProjection(Location projPos) {
-			Block baseBlock = projPos.clone().add(0, -0.1, 0).getBlock();
-			return baseBlock.getRelative(0, 2, 0).isReplaceable() &&
-					baseBlock.getRelative(0, 1, 0).isReplaceable() &&
-					baseBlock.isSolid();
+
+		public boolean isValidProjection(Mob projection) {
+			Location projLoc = projection.getLocation().clone();
+			//If the projection is levitating too far off ground, invalidate the current position
+			if(projLoc.clone().subtract(0,0.1,0).getBlock().isPassable()){
+				return false;
+			}
+
+			//base = block beneath projection, ignoring blocks that have partial height (slabs, carpet, etc.)
+			//aboveOne = + 1, aboveTwo = +2
+			Block baseBlock = projLoc.getBlock().getRelative(BlockFace.DOWN);
+			Block aboveOne = baseBlock.getRelative(0, 1, 0);
+			Block aboveTwo = baseBlock.getRelative(0, 2, 0);
+			Block aboveThree = baseBlock.getRelative(0, 3, 0);
+
+			//for testing only
+			//if(TeamArena.getGameTick() % 20 == 0){
+			//	Bukkit.broadcast(Component.text("BLOCKS: " +
+			//			baseBlock.toString() + aboveOne.toString() + aboveTwo.toString()
+			//	+ aboveThree.toString()));
+			//}
+
+			//entity is not standing on top of any block
+			if(!aboveOne.isCollidable()){
+				return baseBlock.isSolid() && !aboveTwo.isCollidable();
+			}
+			//Validating all blocks which will allow the skeleton to survive in a
+			//2 block tall space if placed on
+			else if(aboveOne.getBoundingBox().getHeight() <= 0.25){
+				return !aboveTwo.isCollidable();
+			}
+			//On top of this block, the sentry will suffocate in a 2 block space,
+			//so check aboveThree
+			else if(aboveOne.getBoundingBox().getHeight() > 0.25){
+				return !aboveTwo.isCollidable() && !aboveThree.isCollidable();
+			}
+			else{
+				return false;
+			}
 		}
 
 		public void createProjection(Player player) {
-			Location loc = projectSentry(player.getEyeLocation().clone().add(0, -.8, 0), player);
-			TextColor teamColorText = Main.getPlayerInfo(player).team.getRGBTextColor();
+			Location loc = projectSentry(player.getEyeLocation().clone().add(0, -.8, 0));
 			LivingEntity projection = player.getWorld().spawn(loc, Skeleton.class, entity -> {
 				entity.setAI(false);
 				entity.setCollidable(false);
 				entity.setInvisible(true);
 				entity.setRemoveWhenFarAway(false);
-				entity.setInvulnerable(true);
 				entity.setShouldBurnInDay(false);
 				entity.getEquipment().clear();
 				entity.setCanPickupItems(false);
@@ -402,16 +420,16 @@ public class KitEngineer extends Kit {
 
 		public void destroyProjection(Player player) {
 			LivingEntity projection = activePlayerProjections.get(player);
-			projection.setInvulnerable(false);
 			projection.remove();
 			activePlayerProjections.remove(player);
 			Main.getPlayerInfo(player).getMetadataViewer().removeViewedValues(projection);
 		}
 
 		//From entity's eyes, find the location in their line of sight that is within range
-		public Location findBlock(Location loc, double range) {
+		public static Location findBlock(Location loc, double range) {
 			var world = loc.getWorld();
-			RayTraceResult rayTraceResult = world.rayTraceBlocks(loc, loc.getDirection(), range, FluidCollisionMode.NEVER);
+			RayTraceResult rayTraceResult = world.rayTraceBlocks(loc, loc.getDirection(), range,
+					FluidCollisionMode.NEVER, true);
 			if (rayTraceResult == null) {
 				return loc.clone().add(loc.getDirection().multiply(range));
 			} else {
@@ -419,7 +437,7 @@ public class KitEngineer extends Kit {
 			}
 		}
 
-		public Location projectSentry(Location loc, Player player) {
+		public Location projectSentry(Location loc) {
 			Location distance = findBlock(loc, SENTRY_PLACEMENT_RANGE);
 			distance.setYaw(loc.getYaw());
 			distance.setPitch(0);
@@ -435,6 +453,56 @@ public class KitEngineer extends Kit {
 				if (event.getFinalAttacker() instanceof Player attacker &&
 						!Main.getGame().canAttack(attacker, sentry.owner)) {
 					event.setCancelled(true);
+				}
+			}
+		}
+
+		//Cancels all incoming damage but also,
+		// When projection blocks a melee hit,
+		//manually calculate if nearby players should be hit "through" the projection or not
+		public static void handleProjectionAttemptDamage(DamageEvent event) {
+			//First, cancel all damage events that hit registered projections
+			List<Map.Entry<Player, Mob>> projections = activePlayerProjections.entrySet().stream()
+					.filter(entry -> {
+						Mob projection = entry.getValue();
+						return projection.equals(event.getVictim());
+					}).toList();
+
+			if(!projections.isEmpty()) {
+				//Prevent the hit projections from actually taking damage
+				//Bukkit.broadcast(Component.text("HIT PROJECTION"));
+				event.setCancelled(true);
+			}
+
+			//If a projection was hit,
+			//check if the projection is intercepting a melee attack
+			//Ensure the attacker is a player that is alive
+			if(!projections.isEmpty() &&
+					event.getFinalAttacker() instanceof Player attacker &&
+					event.getDamageType().is(DamageType.MELEE) &&
+					Main.getPlayerInfo(attacker).activeKit != null){
+				//Ignore cases where Valk Axe is used, since it will already find all enemies in range
+				if(attacker.getInventory().getItemInMainHand().getType() == VALK_AXE_MAT &&
+						Main.getPlayerInfo(attacker).activeKit.getName().equalsIgnoreCase("Valkyrie")){
+
+				}
+				else{
+					projections.forEach(entry -> {
+						Mob projection = entry.getValue();
+						RayTraceResult trace = attacker.getWorld()
+								.rayTraceEntities(attacker.getEyeLocation(),
+										attacker.getEyeLocation().getDirection(),
+										3,
+										hitMob -> hitMob instanceof LivingEntity &&
+												!hitMob.equals(projection) &&
+												!hitMob.equals(attacker)
+								);
+						//Bukkit.broadcast(Component.text("trace complete"));
+						if(trace != null){
+							attacker.attack(trace.getHitEntity());
+							//Bukkit.broadcast(Component.text("HIT: " + trace.getHitEntity()));
+						}
+					});
 				}
 			}
 		}

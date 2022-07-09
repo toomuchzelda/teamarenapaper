@@ -66,19 +66,19 @@ public class CaptureTheFlag extends TeamArena
 	public static final Component CAPTURED_TITLE = Component.text("%holdingTeam% captured %team%'s flag!").color(NamedTextColor.GOLD);
 	public static final Component PASSED_TITLE = Component.text("%holdingTeam% gave %team%'s flag to %otherTeam%").color(NamedTextColor.GOLD);
 
-	public static final Component CANT_CAPTURE_YOUR_FLAG_NOT_AT_BASE = Component.text("You can't capture until your flag is safely at your base!", TextUtils.ERROR_RED);
+	public static final Component CANT_CAPTURE_YOUR_FLAG_NOT_AT_BASE = Component.text("You can't capture until your flag is safely at your base!", TextColors.ERROR_RED);
 	public static final String CANT_CAPTURE_KEY = "yrflagnotatbase";
 
-	public static final Component CANT_TELEPORT_HOLDING_FLAG_MESSAGE = Component.text("You can't teleport while holding the flag!", TextUtils.ERROR_RED);
-	public static final Component CANT_TELEPORT_HOLDING_FLAG_TITLE = Component.text("Can't teleport with the flag!", TextUtils.ERROR_RED);
+	public static final Component CANT_TELEPORT_HOLDING_FLAG_MESSAGE = Component.text("You can't teleport while holding the flag!", TextColors.ERROR_RED);
+	public static final Component CANT_TELEPORT_HOLDING_FLAG_TITLE = Component.text("Can't teleport with the flag!", TextColors.ERROR_RED);
 
-	public static final Component ONE_MINUTE_LEFT_SPEED_MESSAGE = Component.text("In one minute flag takers will get a speed bonus! Hurry it up!", TextUtils.ERROR_RED);
-	public static final Component ONE_MINUTE_LEFT_SPEED_TITLE = Component.text("Flag takers get speed in 1 minute!", TextUtils.ERROR_RED);
+	public static final Component ONE_MINUTE_LEFT_SPEED_MESSAGE = Component.text("In one minute flag takers will get a speed bonus! Hurry it up!", TextColors.ERROR_RED);
+	public static final Component ONE_MINUTE_LEFT_SPEED_TITLE = Component.text("Flag takers get speed in 1 minute!", TextColors.ERROR_RED);
 	public static final Component SPEED_NOW_MESSAGE = Component.text("Anyone who carries a flag will now run faster! This bonus will end once any flag is captured!" +
-			" If you don't end the game in " + TIME_TO_END_MINUTES + " minutes, I will!!", TextUtils.ERROR_RED);
-	public static final Component SPEED_NOW_TITLE = Component.text("Flag takers will now run faster!", TextUtils.ERROR_RED);
-	public static final Component SPEED_DONE_MESSAGE = Component.text("Speed bonus for carrying a flag is gone! Game proceeds as normal.", TextUtils.ERROR_RED);
-	public static final Component TOOK_TOO_LONG = Component.text("Too slow! Game ended!", TextUtils.ERROR_RED);
+			" If you don't end the game in " + TIME_TO_END_MINUTES + " minutes, I will!!", TextColors.ERROR_RED);
+	public static final Component SPEED_NOW_TITLE = Component.text("Flag takers will now run faster!", TextColors.ERROR_RED);
+	public static final Component SPEED_DONE_MESSAGE = Component.text("Speed bonus for carrying a flag is gone! Game proceeds as normal.", TextColors.ERROR_RED);
+	public static final Component TOOK_TOO_LONG = Component.text("Too slow! Game ended!", TextColors.ERROR_RED);
 
 	private void addFlagHeld(Player player, Flag flag) {
 		Set<Flag> flags = flagHolders.computeIfAbsent(player, k -> new HashSet<>()); //put new HashSet if no value and also return it

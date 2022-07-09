@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
+import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
@@ -458,7 +459,7 @@ public class CommandCallvote extends CustomCommand {
 						name = player.playerListName();
 
 						if (!calledVotes.add(caller)) {
-							player.sendMessage(Component.text("You've already queued a topic!", TextUtils.ERROR_RED));
+							player.sendMessage(Component.text("You've already queued a topic!", TextColors.ERROR_RED));
 							return;
 						}
 					} else {

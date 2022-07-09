@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
@@ -9,7 +10,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
@@ -34,28 +35,32 @@ import java.util.*;
  * @author onett425
  */
 public class KitSniper extends Kit {
-	public static final ItemStack GRENADE;
-	public static final ItemStack SNIPER;
+
+	// shared between all kits with grenades
+	public static final Component BOMB_LORE = Component.text("Left Click to throw with high velocity", TextColors.LIGHT_BROWN);
+	public static final Component BOMB_LORE2 = Component.text("Right Click to toss with low velocity", TextColors.LIGHT_BROWN);
+
+	public static final ItemStack GRENADE = ItemBuilder.of(Material.TURTLE_HELMET)
+			.displayName(Component.text("Frag Grenade"))
+			.lore(Component.text("A grenade that deals high explosive damage.", TextColors.LIGHT_YELLOW),
+					Component.text("First click to pull the pin, Then click again to throw it!", TextColors.LIGHT_YELLOW),
+					Component.text("Make sure to pay attention to its fuse time... (item cd)", TextColors.LIGHT_YELLOW),
+					BOMB_LORE,
+					BOMB_LORE2)
+			.build();
+
+	public static final ItemStack SNIPER = ItemBuilder.of(Material.SPYGLASS)
+			.displayName(Component.text("CheyTac Intervention"))
+			.build();
 
 	public static final AttributeModifier KNIFE_SPEED = new AttributeModifier(
 			UUID.fromString("743e8aec-10f7-44c7-b0b0-cf1f32634c72"),
 			"Sniper Knife", 0.2, //20% = speed 1
 			AttributeModifier.Operation.ADD_SCALAR, EquipmentSlot.HAND);
 
-	static {
-		GRENADE = new ItemStack(Material.TURTLE_HELMET);
-		ItemMeta grenadeMeta = GRENADE.getItemMeta();
-		grenadeMeta.displayName(ItemUtils.noItalics(Component.text("Frag Grenade")));
-		GRENADE.setItemMeta(grenadeMeta);
-
-		SNIPER = new ItemStack(Material.SPYGLASS);
-		ItemMeta rifleMeta = SNIPER.getItemMeta();
-		rifleMeta.displayName(ItemUtils.noItalics(Component.text("CheyTac Intervention")));
-		SNIPER.setItemMeta(rifleMeta);
-	}
-
 	public KitSniper() {
-		super("Sniper", "Be careful when sniping... Too much movement and your aim will worsen. Don't forget to throw the grenade if you pull the pin btw.", Material.SPYGLASS);
+		super("Sniper", "Be careful when sniping... Too much movement and your aim will worsen. " +
+				"Make sure to aim for the head! Don't forget to throw the grenade if you pull the pin btw.", Material.SPYGLASS);
 
 		setArmor(new ItemStack(Material.LEATHER_HELMET), new ItemStack(Material.LEATHER_CHESTPLATE),
 				new ItemStack(Material.LEATHER_LEGGINGS), new ItemStack(Material.LEATHER_BOOTS));
@@ -187,22 +192,28 @@ public class KitSniper extends Kit {
 				return;
 			Entity victim = event.getCollidedWith();
 			Player shooter = (Player) projectile.getShooter();
+			Location projLoc = projectile.getLocation().clone();
 			if (victim instanceof Player player) {
-				double headLocation = player.getLocation().getY();
-				double projectileHitY = projectile.getLocation().getY();
-				//Must consider when player is below the other player, which makes getting headshots much harder.
-				double headshotThresh = 1.35d;
-				double heightDiff = victim.getLocation().getBlockY() - shooter.getLocation().getBlockY();
-				if (heightDiff > 0) {
-					headshotThresh -= Math.min(0.35, (heightDiff / 10));
+				double victimHeadLoc = player.getEyeLocation().getY() - 0.1d;
+				double projectileHitY = projLoc.getY();
+				//Must consider when shooter is below victim, which makes getting headshots much harder.
+				double heightDiff = victimHeadLoc - (shooter.getEyeLocation()).getY();
+				//If victim is higher than shooter, height diff is positive
+				//If victim is lower than shooter, height diff is negative
+				double headshotThresh = 0;
+				headshotThresh = -(heightDiff * (.15));
+				//Further restrict shots where victim is on lower ground, since it tends to be inconsistent
+				if(headshotThresh > 0){
+					headshotThresh *= 1.5;
 				}
+
 				//Disabled headshot if you are too close since it was buggy
-				if (projectileHitY - headLocation > headshotThresh && projectile.getOrigin().distance(projectile.getLocation()) > 10) {
-					DamageEvent dEvent = DamageEvent.newDamageEvent(player, 999d, DamageType.SNIPER_HEADSHOT, shooter, false);
+				if (projectileHitY - victimHeadLoc >= headshotThresh && projectile.getOrigin().distance(projLoc) > 15) {
+					DamageEvent dEvent = DamageEvent.newDamageEvent(player, 12d, DamageType.SNIPER_HEADSHOT, shooter, false);
 					Main.getGame().queueDamage(dEvent);
 
 					//Hitmarker Sound effect
-					//shooter.playSound(shooter.getLocation(), Sound.ENTITY_ITEM_FRAME_PLACE, 2f, 2.0f);
+					shooter.playSound(shooter.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 2f, 1.5f);
 				}
 			}
 		}
@@ -218,7 +229,7 @@ public class KitSniper extends Kit {
 				Location loc = player.getLocation();
 				double inaccuracy = 0;
 				if (player.isSprinting() || player.isGliding() || player.isJumping() ||
-						loc.subtract(0, 1, 0).getBlock().getType() == Material.AIR ||
+						loc.subtract(0,0.5,0).getBlock().getType() == Material.AIR ||
 						player.getVelocity().lengthSquared() > 1) {
 					inaccuracy = 0.2;
 				} else if (player.isInWater() || player.isSwimming()) {
@@ -239,7 +250,7 @@ public class KitSniper extends Kit {
 				arrow.setCritical(false);
 				arrow.setPickupStatus(PickupStatus.DISALLOWED);
 				arrow.setPierceLevel(100);
-				arrow.setDamage(1);
+				arrow.setDamage(0.65d);
 				world.playSound(player, Sound.ENTITY_GENERIC_EXPLODE, 0.8f, 2.5f);
 
 				//Sniper Cooldown + deleting the dropped sniper and returning a new one.

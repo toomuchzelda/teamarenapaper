@@ -324,7 +324,7 @@ public class SearchAndDestroy extends TeamArena
 							if(!clickedBomb.isArmed()) {
 								final String key = "sndDisarmOwnBomb";
 								if(pinfo.messageHasCooldowned(key, SPAM_PERIOD)) {
-									event.getPlayer().sendMessage(Component.text("You cannot arm your own bomb!", TextUtils.ERROR_RED));
+									event.getPlayer().sendMessage(Component.text("You cannot arm your own bomb!", TextColors.ERROR_RED));
 								}
 							}
 							//else Shouldn't be able to interact with the bomb via this method while it's armed
@@ -362,7 +362,7 @@ public class SearchAndDestroy extends TeamArena
 					if(clickedBomb.isArmed()) {
 						final String key = "sndDisarmEnemyBomb";
 						if(pinfo.messageHasCooldowned(key, SPAM_PERIOD)) {
-							event.getPlayer().sendMessage(Component.text("You cannot disarm an enemy's bomb!", TextUtils.ERROR_RED));
+							event.getPlayer().sendMessage(Component.text("You cannot disarm an enemy's bomb!", TextColors.ERROR_RED));
 						}
 					}
 				}

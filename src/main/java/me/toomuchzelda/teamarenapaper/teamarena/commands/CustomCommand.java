@@ -2,7 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
-import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
@@ -54,7 +54,7 @@ public abstract class CustomCommand extends Command {
 		} catch (CommandException e) {
 			sender.sendMessage(e.message);
         } catch (Throwable e) {
-			sender.sendMessage(Component.text("Internal error", TextUtils.ERROR_RED));
+			sender.sendMessage(Component.text("Internal error", TextColors.ERROR_RED));
             Main.logger().severe("Command " + getClass().getSimpleName() + " finished execution exceptionally " +
                     "for input /" + commandLabel + " " + String.join(" ", args));
             e.printStackTrace();
@@ -122,7 +122,7 @@ public abstract class CustomCommand extends Command {
 		if (args.length > index) {
 			var player = Bukkit.getPlayer(args[index]);
 			if (player == null) {
-				throw new CommandException(Component.text("Player " + args[index] + " not found!", TextUtils.ERROR_RED));
+				throw new CommandException(Component.text("Player " + args[index] + " not found!", TextColors.ERROR_RED));
 			}
 			return player;
 		} else if (sender instanceof Player player) {
