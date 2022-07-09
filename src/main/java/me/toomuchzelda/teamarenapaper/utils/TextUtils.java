@@ -7,6 +7,8 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import net.kyori.adventure.title.Title;
 import net.kyori.adventure.util.HSVLike;
 import org.bukkit.map.MinecraftFont;
@@ -25,7 +27,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class TextUtils {
-	public static final TextColor ERROR_RED = TextColor.color(255, 20, 20);
 
 	public static final DecimalFormat ONE_DECIMAL_POINT = new DecimalFormat("0.#");
 	public static final DecimalFormat TWO_DECIMAL_POINT = new DecimalFormat("0.##");
@@ -308,19 +309,27 @@ public class TextUtils {
 		return Collections.unmodifiableList(lines);
 	}
 
-	public static List<Component> toLoreList(String string, Style style) {
+	public static List<Component> toLoreList(String string, Style style, TagResolver... tagResolvers) {
+		// TODO this won't create a new object, but use decorationIfAbsent when Adventure is updated
+		Style styleNoItalics = style.decoration(TextDecoration.ITALIC, false);
+		MiniMessage miniMessage = MiniMessage.builder()
+				.postProcessor(component -> component.compact().style(styleNoItalics))
+				.build();
 		return string.lines()
-			.filter(line -> !line.isBlank())
-			.map(line -> Component.text(line, style))
+			.map(line -> {
+				if (line.isEmpty())
+					return Component.empty();
+				return miniMessage.deserialize(string, tagResolvers);
+			})
 			.collect(Collectors.toList());
 	}
 
-	public static List<Component> toLoreList(String string, TextColor textColor) {
-		return toLoreList(string, Style.style(textColor));
+	public static List<Component> toLoreList(String string, TextColor textColor, TagResolver... tagResolvers) {
+		return toLoreList(string, Style.style(textColor), tagResolvers);
 	}
 
-	public static List<Component> toLoreList(String string) {
-		return toLoreList(string, Style.empty());
+	public static List<Component> toLoreList(String string, TagResolver... tagResolvers) {
+		return toLoreList(string, Style.empty(), tagResolvers);
 	}
 
 }

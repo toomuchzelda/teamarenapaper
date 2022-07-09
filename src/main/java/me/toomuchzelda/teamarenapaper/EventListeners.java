@@ -175,7 +175,7 @@ public class EventListeners implements Listener
 			CompletableFuture<Map<Preference<?>, ?>> future = preferenceFutureMap.remove(uuid);
 			if (future == null) {
 				event.disallow(Result.KICK_OTHER, Component.text("Failed to load preferences!")
-						.color(TextUtils.ERROR_RED));
+						.color(TextColors.ERROR_RED));
 				return;
 			}
 			playerInfo.setPreferenceValues(future.join());
@@ -570,13 +570,13 @@ public class EventListeners implements Listener
 
 				if (cause == PlayerTeleportEvent.TeleportCause.ENDER_PEARL) {
 					event.getPlayer().sendMessage(Component.text("One of your ender pearls landed outside the border. " +
-							"Aim better!").color(TextUtils.ERROR_RED));
+							"Aim better!").color(TextColors.ERROR_RED));
 				}
 				else if(cause == PlayerTeleportEvent.TeleportCause.CHORUS_FRUIT) {
 					event.getPlayer().sendMessage(Component.text("This fruit tried to take you outside the border, " +
 									"so now you just go nowhere because I have deemed finding a safe alternative position" +
 									" to be too much trouble (i am lazy). Here's a free diamond! - toomuchzelda")
-							.color(TextUtils.ERROR_RED));
+							.color(TextColors.ERROR_RED));
 					event.getPlayer().getInventory().addItem(new ItemStack(Material.DIAMOND));
 				}
 			}

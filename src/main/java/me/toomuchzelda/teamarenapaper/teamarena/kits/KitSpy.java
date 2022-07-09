@@ -9,10 +9,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
-import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
@@ -41,14 +38,14 @@ public class KitSpy extends Kit
 
 	public static final Material DISGUISE_MENU_MATERIAL = Material.CARVED_PUMPKIN;
 	public static final Component DISGUISE_MENU_NAME = ItemUtils.noItalics(Component.text("sussy mask")
-			.color(TextUtils.ERROR_RED));
+			.color(TextColors.ERROR_RED));
 	public static final Component DISGUISE_MENU_DESC = ItemUtils.noItalics(Component.text("Click to disguise!"));
 	public static final Component DISGUISE_MENU_DESC2 = ItemUtils.noItalics(Component.text(DISGUISE_MENU_COOLDOWN + "sec recharge. "
 			+ (TIME_TO_DISGUISE_MENU / 20) + "sec disguise time"));
 
 	public static final List<Component> DISGUISE_MENU_LORE_LIST;
 
-	public static final Component COOLDOWN_MESSAGE = Component.text("Disguise pumpkin is still recharging!").color(TextUtils.ERROR_RED);
+	public static final Component COOLDOWN_MESSAGE = Component.text("Disguise pumpkin is still recharging!").color(TextColors.ERROR_RED);
 
 	public static final Component HEAD_TIME_MESSAGE = ItemUtils.noItalics(Component.text((TIME_TO_DISGUISE_HEAD / 20)
 			+ "sec disguise time").color(NamedTextColor.LIGHT_PURPLE));

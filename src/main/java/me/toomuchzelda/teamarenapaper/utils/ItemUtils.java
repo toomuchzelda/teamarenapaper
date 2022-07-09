@@ -2,7 +2,6 @@ package me.toomuchzelda.teamarenapaper.utils;
 
 import com.destroystokyo.paper.MaterialSetTag;
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.Flag;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.ChatColor;
@@ -26,6 +25,7 @@ public class ItemUtils {
      * @param component
      * @return
      */
+	@Deprecated
     public static Component noItalics(Component component) {
         return component.decoration(TextDecoration.ITALIC, false);
     }

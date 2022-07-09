@@ -12,6 +12,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -256,12 +257,12 @@ public class KitDemolitions extends Kit
 					}
 					else {
 						final Component message = Component.text("A Mine has already been placed here",
-								TextUtils.ERROR_RED);
+								TextColors.ERROR_RED);
 						PlayerUtils.sendKitMessage(event.getPlayer(), message, message);
 					}
 				}
 				else {
-					final Component message = Component.text("You can't place a Mine here", TextUtils.ERROR_RED);
+					final Component message = Component.text("You can't place a Mine here", TextColors.ERROR_RED);
 					PlayerUtils.sendKitMessage(event.getPlayer(), message, message);
 				}
 			}

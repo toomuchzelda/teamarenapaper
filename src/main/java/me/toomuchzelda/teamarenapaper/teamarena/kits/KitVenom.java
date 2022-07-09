@@ -9,9 +9,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
-import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -25,7 +23,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.potion.PotionData;
 import org.bukkit.potion.PotionEffect;
@@ -54,12 +51,10 @@ import java.util.*;
 /**
  * @author onett425
  */
-public class KitVenom extends Kit
-{
+public class KitVenom extends Kit {
 	public static final HashMap<LivingEntity, Integer> POISONED_ENTITIES = new HashMap<>();
 	//keep track of all the bukkit tasks so we can cancel them in the event of some disaster or crash
 	public static final Set<BukkitTask> LEAP_TASKS = new HashSet<>();
-	public static final TextColor POISON_PURP = TextColor.color(145, 86, 204);
 
 	private static final ItemStack POTION_OF_POISON = ItemBuilder.of(Material.POTION)
 			.meta(PotionMeta.class, potionMeta -> {
@@ -71,23 +66,18 @@ public class KitVenom extends Kit
 	public KitVenom() {
 		super("Venom", "Poison dmg on hit, poisoned people cannot be healed. It can also quickly jump in, afflicting all enemies it hits with poison and decreasing its cooldown with each enemy hit!",
 				POTION_OF_POISON);
-		this.setArmor(new ItemStack(Material.CHAINMAIL_HELMET), new ItemStack(Material.GOLDEN_CHESTPLATE),
+		setArmor(new ItemStack(Material.CHAINMAIL_HELMET), new ItemStack(Material.GOLDEN_CHESTPLATE),
 				new ItemStack(Material.IRON_LEGGINGS), new ItemStack(Material.IRON_BOOTS));
-		ItemStack sword = new ItemStack(Material.IRON_SWORD);
-		ItemMeta swordMeta = sword.getItemMeta();
-			swordMeta.displayName(ItemUtils.noItalics(Component.text("Poison Sword")));
-			swordMeta.addEnchant(Enchantment.SOUL_SPEED, 1, true);
-			swordMeta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-		List<Component> lore = new ArrayList<Component>();
-			TextComponent message = (TextComponent) ItemUtils.noItalics(Component.text("Poison I", TextColor.color(170, 170, 170)));
-			lore.add(message);
-			swordMeta.lore(lore);
-		sword.setItemMeta(swordMeta);
+		ItemStack sword = ItemBuilder.of(Material.IRON_SWORD)
+				.displayName(Component.text("Poison Sword"))
+				.lore(Component.text("Poison I", TextColor.color(170, 170, 170)))
+				.enchant(Enchantment.SOUL_SPEED, 1)
+				.hide(ItemFlag.HIDE_ENCHANTS)
+				.build();
 
-		ItemStack leap = new ItemStack(Material.CHICKEN);
-		ItemMeta leapMeta = leap.getItemMeta();
-		leapMeta.displayName(ItemUtils.noItalics(Component.text("Toxic Leap")).color(POISON_PURP));
-		leap.setItemMeta(leapMeta);
+		ItemStack leap = ItemBuilder.of(Material.CHICKEN)
+				.displayName(Component.text("Toxic Leap", TextColor.color(145, 86, 204)))
+				.build();
 
 		setItems(sword, leap);
 		setAbilities(new VenomAbility());
@@ -127,7 +117,7 @@ public class KitVenom extends Kit
 					victim.addPotionEffect(new PotionEffect(PotionEffectType.POISON, 2 * 25 + poisonDuration, 0));
 				}
 			}
-			//Adds new victim, or updates current vicim's poison duration.
+			//Adds new victim, or updates current victim's poison duration.
 			//Extra check is necessary since some mobs are immune to poison.
 			if(victim.hasPotionEffect(PotionEffectType.POISON)){
 				POISONED_ENTITIES.put(victim, (Integer) victim.getPotionEffect(PotionEffectType.POISON).getDuration());
@@ -163,7 +153,7 @@ public class KitVenom extends Kit
 					direction.multiply(multiplier);
 					player.setCooldown(Material.CHICKEN, 12 * 20);
 					player.setCooldown(Material.COOKED_CHICKEN, 4 * 20);
-					//world.playSound to play sound for all playesr
+					//world.playSound to play sound for all players
 					world.playSound(player, Sound.ENTITY_WITHER_SHOOT, 0.3f, 1.1f);
 					EntityUtils.setVelocity(player, event.getPlayer().getVelocity().add(direction));
 					player.setFallDistance(0);
@@ -257,7 +247,7 @@ public class KitVenom extends Kit
 				//Preventing Healing/Eating is handled in EventListeners.java
 				//Entities cannot be healed
 				//Players cannot be healed + cannot eat
-        	}
+			}
 		}
 	}
 }

@@ -10,6 +10,10 @@ import java.util.Set;
 
 public class FileUtils {
 
+	public static void init() {
+
+	}
+
 	private static final Set<String> IGNORED_DIRECTORIES = Set.of("poi");
 	private static final Set<String> IGNORED_FILES = Set.of("uid.dat");
 	public static void copyFolder(File source, File destination) {
