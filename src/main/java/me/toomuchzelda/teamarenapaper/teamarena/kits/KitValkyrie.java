@@ -348,9 +348,11 @@ public class KitValkyrie extends Kit{
 							meta.addEnchant(Enchantment.DAMAGE_ALL, AXE_SHARP + SWEET_SPOT_BONUS, true);
 							player.playSound(player, Sound.BLOCK_GRINDSTONE_USE, 1.0f, 1.9f);
 						}
-						item.setItemMeta(meta);
+						if(meta != null){
+							item.setItemMeta(meta);
+							item.addEnchantment(Enchantment.DAMAGE_ALL, AXE_SHARP);
+						}
 						player.attack(victim);
-						item.addEnchantment(Enchantment.DAMAGE_ALL, AXE_SHARP);
 					}
 				}
                 iter.remove();
