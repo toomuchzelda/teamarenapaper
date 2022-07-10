@@ -723,12 +723,12 @@ public abstract class TeamArena
 
 		for (Player viewed : pinfo.team.getPlayerMembers()) {
 			if(glow) {
-				meta.updateBitfieldValue(viewed, MetaIndex.BASE_ENTITY_META,
-						MetaIndex.BITFIELD_GLOWING, glow);
+				meta.updateBitfieldValue(viewed, MetaIndex.BASE_BITFIELD_IDX,
+						MetaIndex.BASE_BITFIELD_GLOWING_IDX, glow);
 			}
 			else {
-				meta.removeBitfieldValue(viewed, MetaIndex.BASE_ENTITY_META,
-						MetaIndex.BITFIELD_GLOWING);
+				meta.removeBitfieldValue(viewed, MetaIndex.BASE_BITFIELD_IDX,
+						MetaIndex.BASE_BITFIELD_GLOWING_IDX);
 			}
 
 			meta.refreshViewer(viewed);

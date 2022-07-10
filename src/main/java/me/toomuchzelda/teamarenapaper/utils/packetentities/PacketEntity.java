@@ -1,10 +1,10 @@
-package me.toomuchzelda.teamarenapaper.utils;
+package me.toomuchzelda.teamarenapaper.utils.packetentities;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
-import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -24,6 +24,7 @@ public class PacketEntity
 {
 	//specify in constructor if a new entity ID is wanted
 	public static final int NEW_ID = -1;
+	//public static final double ENTITY_TRACKING_DISTANCE;
 
 	private final int id;
 
@@ -35,11 +36,7 @@ public class PacketEntity
 	private StructureModifier<Double> teleportPacketDoubles;
 
 	//entity's WrappedDataWatcher
-	private WrappedDataWatcher data;
-	//store the fields for metadata so we can easily access and modify
-	// add more fields as needed
-	private WrappedDataWatcher.WrappedDataWatcherObject baseEntityBitmask;
-	private WrappedDataWatcher.WrappedDataWatcherObject customNameMetadata;
+	protected PacketEntityMetadata metadata;
 
 	private boolean isAlive;
 	protected Location location;
@@ -47,7 +44,8 @@ public class PacketEntity
 	protected Predicate<Player> viewerRule;
 
 	/**
-	 * Create a new PacketEntity
+	 * Create a new PacketEntity. If viewers is specified in constructor, viewerRule will not be considered in initial
+	 * spawning.
 	 * @param id
 	 * @param entityType
 	 * @param location
@@ -75,15 +73,26 @@ public class PacketEntity
 
 		createTeleport();
 
-		if(viewers == null)
-			this.viewers = new LinkedHashSet<>();
-		else
-			this.viewers = viewers;
+		this.viewerRule = viewerRule;
 
-		if(viewerRule == null)
-			this.viewerRule = player -> true;
-		else
-			this.viewerRule = viewerRule;
+		if(viewers == null) {
+			this.viewers = new LinkedHashSet<>();
+
+			for(Player player : Bukkit.getOnlinePlayers()) {
+				double simulationDistance = Bukkit.getSimulationDistance();
+				if(viewerRule.test(player)) {
+					if(!viewers.contains(player)) {
+						viewers.add(player);
+					}
+				}
+				else if(viewers.contains(player)) {
+					viewers.remove(player);
+				}
+			}
+		}
+		else {
+			this.viewers = viewers;
+		}
 
 		this.isAlive = false;
 		this.respawn();
@@ -113,13 +122,14 @@ public class PacketEntity
 		deletePacket.getModifier().write(0, intList);
 	}
 
-	protected void createMetadata() {
+	private void createMetadata() {
 		this.metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
 		this.metadataPacket.getIntegers().write(0, id);
 
-		this.data = new WrappedDataWatcher();
+		this.metadata = new PacketEntityMetadata();
 
-		this.metadataPacket.getWatchableCollectionModifier().write(0, data.getWatchableObjects());
+		this.metadataPacket.getWatchableCollectionModifier().write(0, this.metadata.getDataWatcher()
+				.getWatchableObjects());
 	}
 
 	private void createTeleport() {
@@ -228,6 +238,10 @@ public class PacketEntity
 				}
 			}
 		}
+	}
+
+	private void testRule() {
+
 	}
 
 	public boolean isAlive() {

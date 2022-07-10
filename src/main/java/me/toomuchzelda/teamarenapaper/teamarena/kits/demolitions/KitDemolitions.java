@@ -472,7 +472,7 @@ public class KitDemolitions extends Kit
 					metadataViewer.removeViewedValues(mine.stands);
 				}
 				else if(mine.team == newTeam) {
-					metadataViewer.setViewedValues(MetaIndex.BASE_ENTITY_META, MetaIndex.GLOWING_METADATA,
+					metadataViewer.setViewedValues(MetaIndex.BASE_BITFIELD_IDX, MetaIndex.GLOWING_METADATA,
 							mine.stands);
 				}
 
