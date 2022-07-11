@@ -3,10 +3,12 @@ package me.toomuchzelda.teamarenapaper.utils.packetentities;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
+import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
 import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -36,11 +38,14 @@ public class PacketEntity
 	private StructureModifier<Double> teleportPacketDoubles;
 
 	//entity's WrappedDataWatcher
-	protected PacketEntityMetadata metadata;
+	protected WrappedDataWatcher data;
 
 	private boolean isAlive;
 	protected Location location;
 	protected Set<Player> viewers;
+	//the players currently seeing the packet entity, and receiving packets for it.
+	// a viewer may not be a 'real viewer' if they are not within tracking range of this packet entity.
+	protected Set<Player> realViewers;
 	protected Predicate<Player> viewerRule;
 
 	/**
@@ -78,21 +83,22 @@ public class PacketEntity
 		if(viewers == null) {
 			this.viewers = new LinkedHashSet<>();
 
-			for(Player player : Bukkit.getOnlinePlayers()) {
-				double simulationDistance = Bukkit.getSimulationDistance();
-				if(viewerRule.test(player)) {
-					if(!viewers.contains(player)) {
-						viewers.add(player);
+			if(viewerRule != null) {
+				for (Player player : Bukkit.getOnlinePlayers()) {
+					if (viewerRule.test(player)) {
+						this.viewers.add(player);
 					}
-				}
-				else if(viewers.contains(player)) {
-					viewers.remove(player);
+					else {
+						this.viewers.remove(player);
+					}
 				}
 			}
 		}
 		else {
 			this.viewers = viewers;
 		}
+
+		this.realViewers = new LinkedHashSet<>(this.realViewers);
 
 		this.isAlive = false;
 		this.respawn();
@@ -126,10 +132,9 @@ public class PacketEntity
 		this.metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
 		this.metadataPacket.getIntegers().write(0, id);
 
-		this.metadata = new PacketEntityMetadata();
+		this.data = new WrappedDataWatcher();
 
-		this.metadataPacket.getWatchableCollectionModifier().write(0, this.metadata.getDataWatcher()
-				.getWatchableObjects());
+		this.metadataPacket.getWatchableCollectionModifier().write(0, this.data.getWatchableObjects());
 	}
 
 	private void createTeleport() {
@@ -176,13 +181,13 @@ public class PacketEntity
 			double yDiff = newLocation.getY() - location.getY();
 			double zDiff = newLocation.getZ() - location.getZ();
 			ClientboundMoveEntityPacket.Pos movePacket = getRelativePosPacket(xDiff, yDiff, zDiff);
-			for(Player p : viewers) {
+			for(Player p : realViewers) {
 				PlayerUtils.sendPacket(p, movePacket);
 			}
 		}
 		else {
 			updateTeleportPacket(newLocation);
-			for(Player p : viewers) {
+			for(Player p : realViewers) {
 				PlayerUtils.sendPacket(p, teleportPacket);
 			}
 		}
@@ -223,24 +228,73 @@ public class PacketEntity
 	}
 
 	public void tick() {
-		//update viewers by viewer rule
-		if(this.isAlive && viewerRule != null) {
-			for(Player player : Bukkit.getOnlinePlayers()) {
-				if(viewerRule.test(player)) {
-					if(!viewers.contains(player)) {
-						viewers.add(player);
-						spawn(player);
+		if(this.isAlive) {
+			reEvaluateViewers(true);
+		}
+	}
+
+	private void reEvaluateViewers(boolean spawn) {
+		Chunk holChunk = this.location.getChunk();
+		final int holX = holChunk.getX();
+		final int holZ = holChunk.getZ();
+		if(viewerRule != null) {
+			for(Player p : Bukkit.getOnlinePlayers()) {
+				if(viewerRule.test(p)) {
+					viewers.add(p);
+					Chunk pChunk = p.getChunk();
+					int playX = pChunk.getX();
+					int playZ = pChunk.getZ();
+					if(isInViewingRange(holX, holZ, playX, playZ, p.getSimulationDistance())) {
+						realViewers.add(p);
+						if(spawn)
+							spawn(p);
+					}
+					else {
+						realViewers.remove(p);
+						if(spawn)
+							despawn(p);
 					}
 				}
-				else if(viewers.contains(player)) {
-					viewers.remove(player);
-					despawn(player);
+				else {
+					viewers.remove(p);
+					if(realViewers.remove(p) && spawn) {
+						despawn(p);
+					}
+				}
+			}
+		}
+		else {
+			for(Player p : viewers) {
+				Chunk pChunk = p.getChunk();
+				int playX = pChunk.getX();
+				int playZ = pChunk.getZ();
+
+				if(isInViewingRange(holX, holZ, playX, playZ, p.getSimulationDistance())) {
+					realViewers.add(p);
+					if(spawn)
+						spawn(p);
 				}
 			}
 		}
 	}
 
-	private void testRule() {
+	/**
+	 * Coordinates are chunk coordinates
+	 */
+	private static boolean isInViewingRange(int holX, int holZ, int playX, int playZ, int simulDist) {
+		//get the corner
+		playX -= simulDist;
+		playZ -= simulDist;
+
+		//other corner
+		final int offset = (simulDist * 2) + 1;
+		final int x2 = playX + offset;
+		final int z2 = playZ + offset;
+
+		return (playX <= holX && holX <= x2 && playZ <= holZ && holZ <= z2);
+	}
+
+	public void refreshViewerMetadata() {
 
 	}
 

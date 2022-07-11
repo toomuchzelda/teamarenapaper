@@ -33,21 +33,26 @@ public class PacketHologram extends PacketEntity
 		super(PacketEntity.NEW_ID, EntityType.ARMOR_STAND, location, viewers, null);
 
 		this.text = text;
-	}
 
-	@Override
-	protected void initMetadata() {
-		this.metadata.setObject(MetaIndex.CUSTOM_NAME_IDX, text);
-		this.metadata.setObject(MetaIndex.CUSTOM_NAME_VISIBLE_IDX, Boolean.TRUE);
-		this.metadata.setObject(MetaIndex.ARMOR_STAND_MARKER_IDX, MetaIndex.ARMOR_STAND_MARKER_MASK);
+		//setup the metadata
+		this.data.setObject(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK);
+
+		Optional<?> nameComponent = Optional.of(AdventureComponentConverter.fromComponent(
+				this.text).getHandle());
+
+		this.data.setObject(MetaIndex.CUSTOM_NAME_OBJ, nameComponent);
+		this.data.setObject(MetaIndex.CUSTOM_NAME_VISIBLE_OBJ, Boolean.TRUE);
+
+		this.data.setObject(MetaIndex.ARMOR_STAND_BITFIELD_OBJ, MetaIndex.ARMOR_STAND_MARKER_MASK);
+
+		this.metadataPacket.getWatchableCollectionModifier().write(0, this.data.getWatchableObjects());
 	}
 
 	public void setText(Component component, boolean sendPacket) {
 		Optional<?> nameComponent = Optional.of(AdventureComponentConverter.fromComponent(
 				component).getHandle());
 
-		//customNameWatcher.setValue(nameComponent, true);
-		this.data.setObject(customNameMetadata, nameComponent);
+		this.data.setObject(MetaIndex.CUSTOM_NAME_OBJ, nameComponent);
 
 		if(sendPacket) {
 			for (Player p : viewers) {

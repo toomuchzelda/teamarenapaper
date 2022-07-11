@@ -23,16 +23,14 @@ public class MetaIndex
 	public static final int ARMOR_STAND_MARKER_IDX = 3;
 	public static final byte ARMOR_STAND_MARKER_MASK = 0x10;
 
-	public static final MetadataBitfieldValue GLOWING_METADATA = MetadataBitfieldValue.create(Collections.singletonMap(BASE_BITFIELD_GLOWING_IDX, true));
+	public static final MetadataBitfieldValue GLOWING_METADATA_VALUE = MetadataBitfieldValue.create(Collections.singletonMap(BASE_BITFIELD_GLOWING_IDX, true));
 
+	public static final WrappedDataWatcher.WrappedDataWatcherObject BASE_BITFIELD_OBJ;
+	public static final WrappedDataWatcher.WrappedDataWatcherObject CUSTOM_NAME_OBJ;
+	public static final WrappedDataWatcher.WrappedDataWatcherObject CUSTOM_NAME_VISIBLE_OBJ;
 
-	private static final WrappedDataWatcher.WrappedDataWatcherObject BASE_BITFIELD_OBJ;
-	private static final WrappedDataWatcher.WrappedDataWatcherObject CUSTOM_NAME_OBJ;
-	private static final WrappedDataWatcher.WrappedDataWatcherObject CUSTOM_NAME_VISIBLE_OBJ;
+	public static final WrappedDataWatcher.WrappedDataWatcherObject ARMOR_STAND_BITFIELD_OBJ;
 
-	private static final WrappedDataWatcher.WrappedDataWatcherObject ARMOR_STAND_BITFIELD_OBJ;
-
-	private static final WrappedDataWatcher.WrappedDataWatcherObject[] OBJECTS_BY_INDEX;
 
 	static {
 		BASE_BITFIELD_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(BASE_BITFIELD_IDX, WrappedDataWatcher.Registry.get(Byte.class));
@@ -40,16 +38,5 @@ public class MetaIndex
 		CUSTOM_NAME_VISIBLE_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(CUSTOM_NAME_VISIBLE_IDX, WrappedDataWatcher.Registry.get(Boolean.class));
 
 		ARMOR_STAND_BITFIELD_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(ARMOR_STAND_BITFIELD_IDX, WrappedDataWatcher.Registry.get(Byte.class));
-
-		OBJECTS_BY_INDEX = new WrappedDataWatcher.WrappedDataWatcherObject[MAX_FIELD_INDEX];
-		OBJECTS_BY_INDEX[BASE_BITFIELD_IDX] = BASE_BITFIELD_OBJ;
-		OBJECTS_BY_INDEX[CUSTOM_NAME_IDX] = CUSTOM_NAME_OBJ;
-		OBJECTS_BY_INDEX[CUSTOM_NAME_VISIBLE_IDX] = CUSTOM_NAME_VISIBLE_OBJ;
-
-		OBJECTS_BY_INDEX[ARMOR_STAND_BITFIELD_IDX] = ARMOR_STAND_BITFIELD_OBJ;
-	}
-
-	public static WrappedDataWatcher.WrappedDataWatcherObject getWatcherObject(int index) {
-		return OBJECTS_BY_INDEX[index];
 	}
 }

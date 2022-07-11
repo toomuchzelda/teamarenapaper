@@ -394,7 +394,7 @@ public class KitEngineer extends Kit {
 
 				MetadataViewer metaViewer = Main.getPlayerInfo(player).getMetadataViewer();
 				metaViewer.setViewedValue(MetaIndex.BASE_BITFIELD_IDX,
-						MetaIndex.GLOWING_METADATA, entity.getEntityId(), entity);
+						MetaIndex.GLOWING_METADATA_VALUE, entity.getEntityId(), entity);
 
 				activePlayerProjections.put(player, entity);
 			});
