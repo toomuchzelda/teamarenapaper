@@ -460,8 +460,7 @@ public class KitDemolitions extends Kit
 		/**
 		 * Add the appropriate metadata for glowing mines for players leaving and joining the team.
 		 */
-		@Override
-		public void onTeamSwitch(Player player, TeamArenaTeam oldTeam, TeamArenaTeam newTeam) {
+		public static void teamSwitch(Player player, TeamArenaTeam oldTeam, TeamArenaTeam newTeam) {
 			//iterate through all mines.
 			// if it's old team's mines, make it un-glow.
 			// if new team's mines, make it glow

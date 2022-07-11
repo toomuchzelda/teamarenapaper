@@ -1128,6 +1128,8 @@ public abstract class TeamArena
 		for(Ability ability : Kit.getAbilities(player)) {
 			ability.onTeamSwitch(player, oldTeam, newTeam);
 		}
+
+		KitDemolitions.DemolitionsAbility.teamSwitch(player, oldTeam, newTeam);
 	}
 
 	//switch a player between spectator and player
