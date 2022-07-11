@@ -319,7 +319,10 @@ public class TextUtils {
 			.map(line -> {
 				if (line.isEmpty())
 					return Component.empty();
-				return miniMessage.deserialize(string, tagResolvers);
+				else if (line.indexOf('<') > -1)
+					return miniMessage.deserialize(line, tagResolvers);
+				else
+					return Component.text(line, styleNoItalics);
 			})
 			.collect(Collectors.toList());
 	}
