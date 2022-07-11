@@ -12,6 +12,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.frost.ProjDeflect;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
@@ -24,6 +25,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.FireworkEffectMeta;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.metadata.MetadataValue;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
@@ -93,6 +95,8 @@ public class KitExplosive extends Kit {
 		public final Map<Player, Integer> GRENADE_RECHARGES = new LinkedHashMap<>();
 		public static final List<RPGInfo> ACTIVE_RPG = new ArrayList<>();
 		public final Map<Player, Integer> RPG_RECHARGES = new LinkedHashMap<>();
+		//Color is only used for identifying arrow as an RPG
+		public static final Color RPG_ARROW_COLOR = Color.fromRGB(3, 13, 0);
 
 		@Override
 		public void unregisterAbility() {
@@ -136,7 +140,21 @@ public class KitExplosive extends Kit {
 				World world = grenadeInfo.thrower().getWorld();
 				Player thrower = grenadeInfo.thrower();
 				Item grenade = grenadeInfo.grenade();
-				Particle.DustOptions particleOptions = new Particle.DustOptions(grenadeInfo.color(), 1);
+
+				if(ProjDeflect.getShooterOverride(grenade) != null){
+					thrower = ProjDeflect.getShooterOverride(grenade);
+
+					Color teamColor = Main.getPlayerInfo(thrower).team.getColour();
+					ItemStack grenadeItem = grenade.getItemStack();
+					FireworkEffectMeta grenadeMeta = (FireworkEffectMeta) grenadeItem.getItemMeta();
+					FireworkEffect fireworkColor = FireworkEffect.builder().withColor(teamColor).build();
+					grenadeMeta.setEffect(fireworkColor);
+					grenade.getItemStack().setItemMeta(grenadeMeta);
+					grenade.setItemStack(grenadeItem);
+				}
+
+				Color color = Main.getPlayerInfo(thrower).team.getColour();
+				Particle.DustOptions particleOptions = new Particle.DustOptions(color, 1);
 
 				//Explode grenade if fuse time passes
 				if (TeamArena.getGameTick() - grenadeInfo.spawnTime >= GRENADE_FUSE_TIME) {
@@ -164,10 +182,16 @@ public class KitExplosive extends Kit {
 
 			//Handling RPG Behavior
 			ACTIVE_RPG.forEach(rpgInfo -> {
-				World world = rpgInfo.thrower().getWorld();
-				Player thrower = rpgInfo.thrower();
+				Player thrower = (Player) rpgInfo.rpgArrow().getShooter();
+				World world = thrower.getWorld();
 				Arrow rpgArrow = rpgInfo.rpgArrow();
 				Egg rpgEgg = rpgInfo.rpgEgg();
+
+				//For Kit Frost when it deflects ability projectiles
+				//Indirectly changes the shooter of the projectile
+				if(ProjDeflect.getShooterOverride(rpgArrow) != null){
+					thrower = ProjDeflect.getShooterOverride(rpgArrow);
+				}
 
 				rpgEgg.remove();
 				//Hiding arrow
@@ -363,13 +387,14 @@ public class KitExplosive extends Kit {
 					arrow.setSilent(true);
 					arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
 					arrow.setShooter(shooter);
+					arrow.setColor(RPG_ARROW_COLOR);
 				});
 
-				ACTIVE_RPG.add(new RPGInfo(rpgArrow, rpgEgg, shooter, TeamArena.getGameTick()));
+				ACTIVE_RPG.add(new RPGInfo(rpgArrow, rpgEgg, TeamArena.getGameTick()));
 			}
 		}
 
-		public record RPGInfo(Arrow rpgArrow, Egg rpgEgg, Player thrower, int spawnTime) {}
+		public record RPGInfo(Arrow rpgArrow, Egg rpgEgg, int spawnTime) {}
 
 		public void onInteract(PlayerInteractEvent event) {
 			ItemStack item = event.getItem();
@@ -414,7 +439,7 @@ public class KitExplosive extends Kit {
 			//Throwing the grenade and activating it
 			Vector vel = player.getLocation().getDirection().multiply(0.8);
 			grenadeDrop.setVelocity(vel);
-			ACTIVE_GRENADES.add(new GrenadeInfo(grenadeDrop, player, teamColor, TeamArena.getGameTick()));
+			ACTIVE_GRENADES.add(new GrenadeInfo(grenadeDrop, player, TeamArena.getGameTick()));
 
 			//Resetting Grenade recharge time
 			if (getInvCount(inv, GRENADE) == GRENADE_MAX_IN_INV) {
@@ -431,5 +456,5 @@ public class KitExplosive extends Kit {
 		}
 	}
 
-	public record GrenadeInfo(Item grenade, Player thrower, Color color, int spawnTime) {}
+	public record GrenadeInfo(Item grenade, Player thrower, int spawnTime) {}
 }

@@ -7,6 +7,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.frost.ProjDeflect;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import net.kyori.adventure.sound.SoundStop;
@@ -24,6 +25,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.FireworkEffectMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
@@ -125,6 +127,8 @@ public class KitValkyrie extends Kit {
 		public final HashMap<Player, Integer> BOMB_RECHARGES = new HashMap<>();
 		private final Set<Player> RECEIVED_AXE_CHAT_MESSAGE = new HashSet<>();
 
+		public final List<GravInfo> ACTIVE_GRAV = new ArrayList<>();
+
 		public void unregisterAbility() {
 			Iterator<BukkitTask> iter = VALK_TASKS.iterator();
 			while(iter.hasNext()) {
@@ -132,6 +136,9 @@ public class KitValkyrie extends Kit {
 				task.cancel();
 				iter.remove();
 			}
+
+			ACTIVE_GRAV.forEach(gravInfo -> gravInfo.grenade().remove());
+			ACTIVE_GRAV.clear();
 		}
 
 		public void removeAbility(Player player) {
@@ -213,6 +220,84 @@ public class KitValkyrie extends Kit {
 					itemIter.remove();
 				}
 			}
+
+			List<GravInfo> staleGrenades = new ArrayList<>();
+			//Handling Grav Bomb Behavior
+			ACTIVE_GRAV.forEach(gravInfo -> {
+				World world = gravInfo.thrower().getWorld();
+				Player thrower = gravInfo.thrower();
+				Item grenade = gravInfo.grenade();
+
+				if(ProjDeflect.getShooterOverride(grenade) != null){
+					thrower = ProjDeflect.getShooterOverride(grenade);
+				}
+
+				Color color = Main.getPlayerInfo(thrower).team.getColour();
+				Particle.DustOptions particleOptions = new Particle.DustOptions(color, 1);
+
+				//Explode grenade if fuse time passes
+				if (TeamArena.getGameTick() - gravInfo.spawnTime >= DETONATION_TIME) {
+					//elapsedTick = ticks after detonation begins
+					int elapsedTick = TeamArena.getGameTick() - gravInfo.spawnTime - DETONATION_TIME;
+					Player finalThrower = thrower;
+					List<Entity> affectedEnemies = grenade.getNearbyEntities(5, 5, 5).stream()
+							//Ensure entity is within range, and do not target armor stands
+							.filter(entity -> entity.getLocation().distanceSquared(grenade.getLocation()) <= 25 &&
+									entity instanceof LivingEntity && !entity.getType().equals(EntityType.ARMOR_STAND))
+							//Only pull enemies and Never pull spectators
+							.filter(entity -> (entity instanceof Player p && (!Main.getGame().isSpectator(p) &&
+									Main.getGame().canAttack(finalThrower, p))))
+							.toList();
+
+					//Only explode if the thrower is still alive
+					if (!Main.getGame().isDead(thrower)) {
+						if(elapsedTick >= 5){
+							//Explosion
+							world.playSound(grenade.getLocation(), Sound.BLOCK_RESPAWN_ANCHOR_DEPLETE, 1.0f, 1.3f);
+							world.spawnParticle(Particle.EXPLOSION_LARGE, grenade.getLocation(), 1, 0,0,0, 0.2f);
+
+							grenade.remove();
+							BOMB_RECHARGES.put(gravInfo.thrower(), TeamArena.getGameTick());
+							staleGrenades.add(gravInfo);
+						}
+						else{
+							//Pull-in
+							affectedEnemies.forEach(enemy -> {
+								Vector nadeLoc = grenade.getLocation().clone().toVector();
+								Vector entLoc = enemy.getLocation().clone().toVector();
+								enemy.setVelocity(nadeLoc.subtract(entLoc).multiply(new Vector(PULL_AMP, PULL_AMP/8, PULL_AMP)));
+							});
+							}
+
+							//Particle Effect, Shows the max radius of grenade pull then shrinks
+							//duration * (grenadeRadius / 5.0);
+							double radius = (5 - elapsedTick) * (5.0/5.0);
+							for(int i = 0; i < 10; i++){
+								Location locClone = grenade.getLocation().clone();
+								double rad = i * (2 * Math.PI) / 10;
+								double x = radius * Math.sin(rad);
+								double z = radius * Math.cos(rad);
+								locClone.add(x, 0, z);
+								world.spawnParticle(Particle.REDSTONE, locClone, 1, particleOptions);
+							}
+						}
+				}
+				//Grenade particles
+				else {
+					//Grenade is in motion
+					if(!grenade.isOnGround()){
+						world.spawnParticle(Particle.REDSTONE, grenade.getLocation(), 1, particleOptions);
+						world.spawnParticle(Particle.ENCHANTMENT_TABLE, grenade.getLocation(), 8, 0,0,0, 0.5f);
+					}
+					//Grenade is on the ground
+					else{
+						world.spawnParticle(Particle.REDSTONE, grenade.getLocation(), 1, particleOptions);
+						world.spawnParticle(Particle.ENCHANTMENT_TABLE, grenade.getLocation(), 10, 0,0,0, 1.5f);
+					}
+				}
+			});
+
+			staleGrenades.forEach(ACTIVE_GRAV::remove);
 
 			//clean up cancelled or ended bukkit tasks
 			VALK_TASKS.removeIf(BukkitTask::isCancelled);
@@ -339,7 +424,6 @@ public class KitValkyrie extends Kit {
 			Color teamColor = team.getColour();
 			DustTransition particle = new DustTransition(teamColor, Color.WHITE, 2);
 			BukkitTask runnable = new BukkitRunnable() {
-
 				int duration = 4;
 				int increment = 0;
 
@@ -356,14 +440,13 @@ public class KitValkyrie extends Kit {
 							loc.subtract(radius * Math.cos(rad), 0, radius * Math.sin(rad));
 						}
 						increment++;
-
-
 					}
-
 				}
 			}.runTaskTimer(Main.getPlugin(), 0, 0);
 			VALK_TASKS.add(runnable);
 		}
+
+		public record GravInfo(Item grenade, Player thrower, int spawnTime) {}
 
 		public void throwGrenade(Player player, double amp){
 			World world = player.getWorld();
@@ -377,82 +460,7 @@ public class KitValkyrie extends Kit {
 				item.setVelocity(location.getDirection().multiply(amp));
 			});
 			world.playSound(activeGrenade, Sound.ENTITY_CREEPER_PRIMED, 1f, 1.1f);
-
-			BukkitTask runnable = new BukkitRunnable(){
-				//Grenade explosion
-				int timer = DETONATION_TIME;
-				DustTransition particle = new DustTransition(teamColor, Color.WHITE, 2);
-				public void run() {
-					//Grenade Particles when it is thrown
-					//In Motion
-					if(activeGrenade.getVelocity().length() > 0){
-						world.spawnParticle(Particle.REDSTONE, activeGrenade.getLocation(), 1, new Particle.DustOptions(teamColor, 2f));
-						world.spawnParticle(Particle.ENCHANTMENT_TABLE, activeGrenade.getLocation(), 8, 0,0,0, 0.5f);
-					}
-					else{
-						//On the ground
-						world.spawnParticle(Particle.DUST_COLOR_TRANSITION, activeGrenade.getLocation().add(Vector.getRandom().subtract(new Vector(-0.5,-0.5,-0.5)).multiply(4)), 2, particle);
-						world.spawnParticle(Particle.ENCHANTMENT_TABLE, activeGrenade.getLocation(), 20,  1,1,1, 1.5f);
-					}
-					timer--;
-					if(timer <= 0){
-						player.getWorld().playSound(player.getLocation(), Sound.BLOCK_RESPAWN_ANCHOR_DEPLETE, 1.0f, 1.3f);
-						//Pull-in + Explosion
-						BukkitTask runnable = new BukkitRunnable(){
-
-							List<Entity> affectedEnemies = activeGrenade.getNearbyEntities(5, 5, 5);
-							int duration = 5;
-							Location currLoc = activeGrenade.getLocation().clone();
-
-							public void run(){
-								if(duration <= 0){
-									//Explosion
-									world.createExplosion(activeGrenade.getLocation(), 0.2f, false, false);
-									player.stopSound(Sound.ENTITY_GENERIC_EXPLODE);
-									player.getWorld().stopSound(SoundStop.named(Sound.ENTITY_GENERIC_EXPLODE));
-									activeGrenade.remove();
-									BOMB_RECHARGES.put(player, TeamArena.getGameTick());
-									cancel();
-								}
-								else{
-									for(Entity entity : affectedEnemies){
-										//Pull-in
-										if(entity.getLocation().distanceSquared(activeGrenade.getLocation()) <= 25 &&
-												entity instanceof org.bukkit.entity.LivingEntity victim && !(entity.getType().equals(EntityType.ARMOR_STAND))){
-											if(!(victim instanceof Player p) || Main.getGame().canAttack(player, p)) {
-												//Preventing spectators from getting pulled in
-												if(victim instanceof Player p && Main.getPlayerInfo(p).activeKit != null){
-													//Vector currVel = entity.getVelocity().clone();
-													Vector nadeLoc = activeGrenade.getLocation().clone().toVector();
-													Vector entLoc = entity.getLocation().clone().toVector();
-													entity.setVelocity(nadeLoc.subtract(entLoc).multiply(new Vector(PULL_AMP, PULL_AMP/8, PULL_AMP)));
-												}
-											}
-										}
-									}
-
-									//Particle Effect, Shows the max radius of grenade pull then shrinks
-									//duration * (grenadeRadius / 5.0);
-									double radius = duration * (5.0/5.0);
-									for(int i = 0; i < 10; i++){
-										Location locClone = currLoc.clone();
-										double rad = i * (2 * Math.PI) / 10;
-										double x = radius * Math.sin(rad);
-										double z = radius * Math.cos(rad);
-										locClone.add(x, 0, z);
-										world.spawnParticle(Particle.REDSTONE, locClone, 1, new Particle.DustOptions(teamColor, 2f));
-									}
-									duration--;
-								}
-							}
-						}.runTaskTimer(Main.getPlugin(), 0, 0);
-						VALK_TASKS.add(runnable);
-
-						cancel();
-					}
-				}
-			}.runTaskTimer(Main.getPlugin(), 0, 0);
-			VALK_TASKS.add(runnable);
+			ACTIVE_GRAV.add(new GravInfo(activeGrenade, player, TeamArena.getGameTick()));
 		}
 	}
 }

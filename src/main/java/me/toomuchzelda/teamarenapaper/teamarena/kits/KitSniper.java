@@ -4,11 +4,12 @@ import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.frost.ProjDeflect;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import net.kyori.adventure.text.Component;
@@ -25,7 +26,6 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
 
@@ -81,14 +81,14 @@ public class KitSniper extends Kit {
 		private final Set<UUID> RECEIVED_GRENADE_CHAT_MESSAGE = new HashSet<>();
 		public static final TextColor SNIPER_MSG_COLOR = TextColor.color(89, 237, 76);
 		public static final TextColor GRENADE_MSG_COLOR = TextColor.color(66, 245, 158);
-
-		final List<BukkitTask> GRENADE_TASKS = new ArrayList<>();
 		final Random gunInaccuracy = new Random();
+		public static final List<FragInfo> ACTIVE_FRAG = new ArrayList<>();
+		public static final int GRENADE_FUSE_TIME = 70;
 
 		@Override
 		public void unregisterAbility() {
-			GRENADE_TASKS.forEach(BukkitTask::cancel);
-			GRENADE_TASKS.clear();
+			ACTIVE_FRAG.forEach(fragInfo -> fragInfo.grenade().remove());
+			ACTIVE_FRAG.clear();
 		}
 
 		@Override
@@ -115,35 +115,10 @@ public class KitSniper extends Kit {
 				item.setVelocity(origin.getDirection().multiply(amp));
 			});
 			world.playSound(origin, Sound.ENTITY_CREEPER_PRIMED, 1f, 1.1f);
-
-			// schedule task
-			TeamArenaTeam team = Main.getPlayerInfo(player).team;
-			Particle.DustOptions particleOptions = new Particle.DustOptions(team.getColour(), 2);
-			BukkitTask runnable = new BukkitRunnable() {
-				//Grenade explosion
-				int timer = player.getCooldown(Material.TURTLE_HELMET);
-
-				public void run() {
-					//Grenade Particles when it is thrown
-					//In Motion
-					if (!grenade.isOnGround()) {
-						world.spawnParticle(Particle.REDSTONE, grenade.getLocation(), 1, particleOptions);
-					} else {
-						//On the ground
-						world.spawnParticle(Particle.REDSTONE, grenade.getLocation(),
-								2, 0.5, 0.5,0.5, particleOptions);
-					}
-					if (timer <= 0) {
-						world.createExplosion(grenade.getLocation(), 1.7f, false, false);
-						player.getInventory().addItem(GRENADE);
-						grenade.remove();
-						cancel();
-					}
-					timer--;
-				}
-			}.runTaskTimer(Main.getPlugin(), 0, 0);
-			GRENADE_TASKS.add(runnable);
+			ACTIVE_FRAG.add(new FragInfo(grenade, player, TeamArena.getGameTick()));
 		}
+
+		public record FragInfo(Item grenade, Player thrower, int spawnTime) {}
 
 		@Override
 		public void onInteract(PlayerInteractEvent event) {
@@ -259,6 +234,50 @@ public class KitSniper extends Kit {
 				}
 				event.setCancelled(true);
 			}
+		}
+
+		@Override
+		public void onTick() {
+
+			List<FragInfo> staleFrags = new ArrayList<>();
+
+			ACTIVE_FRAG.forEach(grenadeInfo -> {
+				World world = grenadeInfo.thrower().getWorld();
+				Player thrower = grenadeInfo.thrower();
+				Item grenade = grenadeInfo.grenade();
+
+				if(ProjDeflect.getShooterOverride(grenade) != null){
+					thrower = ProjDeflect.getShooterOverride(grenade);
+				}
+
+				Color color = Main.getPlayerInfo(thrower).team.getColour();
+				Particle.DustOptions particleOptions = new Particle.DustOptions(color, 1);
+
+				//Explode grenade if fuse time passes
+				if (TeamArena.getGameTick() - grenadeInfo.spawnTime >= GRENADE_FUSE_TIME) {
+					//Only explode if the thrower is still alive
+					if (!Main.getGame().isDead(thrower)) {
+						world.createExplosion(grenade.getLocation(), 1.5f, false, false, thrower);
+						grenadeInfo.thrower.getInventory().addItem(GRENADE);
+					}
+					grenade.remove();
+					staleFrags.add(grenadeInfo);
+				}
+				//Grenade particles
+				else {
+					//Grenade is in Motion
+					if (!grenade.isOnGround()) {
+						world.spawnParticle(Particle.REDSTONE, grenade.getLocation(), 1, particleOptions);
+					}
+					//Grenade is on ground
+					else {
+						world.spawnParticle(Particle.REDSTONE, grenade.getLocation(),
+								2, 0.5, 0.5,0.5, particleOptions);
+					}
+				}
+			});
+
+			staleFrags.forEach(ACTIVE_FRAG::remove);
 		}
 
 		@Override
