@@ -27,7 +27,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -180,11 +179,7 @@ public class KitExplosive extends Kit {
 					PacketContainer packet = protocolManager.createPacket(PacketType.Play.Server.ENTITY_DESTROY);
 					packet.getIntLists().write(0, entityIDList);
 
-					try {
-						protocolManager.sendServerPacket(player, packet);
-					} catch (InvocationTargetException e) {
-						e.printStackTrace();
-					}
+					protocolManager.sendServerPacket(player, packet);
 				});
 
 				//Explode RPG if it hits block or player

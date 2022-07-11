@@ -21,8 +21,6 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_19_R1.util.CraftVector;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event;
-import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
@@ -30,7 +28,6 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -42,11 +39,7 @@ public class PlayerUtils {
 
 	public static void sendPacket(Player player, boolean triggerPacketListeners, PacketContainer... packets) {
 		for (PacketContainer packet : packets) {
-			try {
-				ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet, triggerPacketListeners);
-			} catch (InvocationTargetException e) {
-				e.printStackTrace();
-			}
+			ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet, triggerPacketListeners);
 		}
     }
 

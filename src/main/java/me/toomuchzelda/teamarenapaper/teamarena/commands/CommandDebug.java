@@ -101,7 +101,7 @@ public class CommandDebug extends CustomCommand {
 				Player target = getPlayerOrThrow(sender, args, 2);
 				PlayerInfo info = Main.getPlayerInfo(target);
 				info.permissionLevel = level;
-
+				target.updateCommands();
 				target.sendMessage(Component.text("Your rank has been updated to " + level.name(), NamedTextColor.GREEN));
 			}
 			case "setteam" -> {
