@@ -632,8 +632,6 @@ public abstract class TeamArena
 						pinfo.getKillAssistTracker().addDamage(attacker, event.getFinalDamage());
 					}
 				}
-			} else if(event.getVictim() instanceof Axolotl) {
-				KitDemolitions.DemolitionsAbility.handleAxolotlDamage(event);
 			}
 		}
 	}
@@ -667,10 +665,6 @@ public abstract class TeamArena
 					event.getKnockback().multiply(0.8);
 				}
 			}
-		}
-
-		if(event.getVictim() instanceof Axolotl) {
-			KitDemolitions.DemolitionsAbility.handleAxolotlAttemptDamage(event);
 		}
 
 		if(event.getVictim() instanceof Skeleton) {

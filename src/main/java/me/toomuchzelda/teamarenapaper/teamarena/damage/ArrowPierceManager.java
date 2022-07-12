@@ -101,7 +101,7 @@ public class ArrowPierceManager {
     }
 
     //just in case
-    public static void cleanup() {
+    public static void cleanUp() {
         piercedEntitiesMap.entrySet().removeIf(entry -> !entry.getKey().isValid());
     }
 }

@@ -28,6 +28,14 @@ public class PacketEntityManager
 		}
 	}
 
+	public static void cleanUp() {
+		var iter = ALL_PACKET_ENTITIES.values().iterator();
+		while(iter.hasNext()) {
+			iter.next().remove();
+			iter.remove();
+		}
+	}
+
 	public static void handleInteract(PlayerUseUnknownEntityEvent event) {
 		PacketEntity pEnt = ALL_PACKET_ENTITIES.get(event.getEntityId());
 		if(pEnt != null) {

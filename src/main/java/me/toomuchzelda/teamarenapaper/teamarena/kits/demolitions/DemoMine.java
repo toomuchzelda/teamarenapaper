@@ -9,7 +9,6 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.Axolotl;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.scoreboard.Team;
@@ -67,7 +66,8 @@ public abstract class DemoMine
 	Team glowingTeam;
 	Team ownerGlowingTeam; //sub-mine specific
 	ArmorStand[] stands;
-	final Axolotl hitboxEntity; //the mine's interactable hitbox
+	//final Axolotl hitboxEntity; //the mine's interactable hitbox
+	final PacketMineHitbox hitboxEntity;
 	Player triggerer; //store the player that stepped on it for shaming OR the demo if remote detonate
 
 	//for construction
@@ -102,12 +102,8 @@ public abstract class DemoMine
 		this.baseLoc = blockLoc.add(0.5d, topOfBlock, 0.5d);
 		this.targetLoc = baseLoc.toVector().add(new Vector(0d, 0.1d, 0d));
 
-		this.hitboxEntity = world.spawn(baseLoc.clone().add(0, -0.20d, 0), Axolotl.class, entity -> {
-			entity.setAI(false);
-			entity.setSilent(true);
-			entity.setInvisible(true);
-			entity.setCollidable(false);
-		});
+		this.hitboxEntity = new PacketMineHitbox(baseLoc.clone().add(0, -0.20d, 0));
+		this.hitboxEntity.respawn();
 	}
 
 	void removeEntities() {

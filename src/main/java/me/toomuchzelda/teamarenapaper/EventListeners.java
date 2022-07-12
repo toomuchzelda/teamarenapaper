@@ -43,7 +43,6 @@ import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.*;
 import org.bukkit.event.player.PlayerLoginEvent.Result;
-import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.BoundingBox;
@@ -107,7 +106,10 @@ public class EventListeners implements Listener
 					entry.getValue().clearMessageCooldowns();
 				}
 			}
+
 			Main.playerIdLookup.entrySet().removeIf(idLookupEntry -> !idLookupEntry.getValue().isOnline());
+
+			PacketEntityManager.cleanUp();
 
 			// initialize next game
 			if (TeamArena.nextGameType == null) {
@@ -141,7 +143,7 @@ public class EventListeners implements Listener
 		//every 3 minutes
 		int count = event.getTickNumber() % (3 * 60  *20);
 		if(count == 0) {
-			ArrowPierceManager.cleanup();
+			ArrowPierceManager.cleanUp();
 		}
 		else if(count == 10) {
 			for(PlayerInfo pinfo : Main.getPlayerInfos()) {
