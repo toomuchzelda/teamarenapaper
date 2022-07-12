@@ -5,6 +5,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.frost.KitFrost;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
@@ -332,7 +333,9 @@ public class SearchAndDestroy extends TeamArena
 							// some delayed packet can cause the event to be called. Better safe than sorry I suppose.
 						}
 						else {
-							if(!clickedBomb.isArmed()) {
+							//Prevent player from arming bomb if they are currently Frosted
+							if(!clickedBomb.isArmed() &&
+							!KitFrost.FROSTED_ENTITIES.containsKey(event.getPlayer())) {
 								clickedBomb.addClicker(pinfo.team, event.getPlayer(), getGameTick(), Bomb.getArmProgressPerTick(event.getItem()));
 							}
 							//else handled in interactEntity
@@ -353,7 +356,9 @@ public class SearchAndDestroy extends TeamArena
 			if(clickedBomb != null) {
 				PlayerInfo pinfo = Main.getPlayerInfo(clicker);
 				if(clickedBomb.getTeam() == pinfo.team) {
-					if(clickedBomb.isArmed()) {
+					//If the clicker is Frosted, prevent them from disarming
+					if(clickedBomb.isArmed() &&
+							!KitFrost.FROSTED_ENTITIES.containsKey(clicker)) {
 						clickedBomb.addClicker(pinfo.team, clicker, getGameTick(), Bomb.getArmProgressPerTick(item));
 					}
 					//else Shouldn't be possible to interact with bomb as a TNTPrimed in disarmed state.

@@ -4,6 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.frost.KitFrost;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
@@ -698,7 +699,9 @@ public class CaptureTheFlag extends TeamArena
 		if(event.getRightClicked() instanceof Player receiver) {
 			ItemStack usedItem = event.getPlayer().getEquipment().getItem(event.getHand());
 			Set<Flag> flagsHeld = flagHolders.get(event.getPlayer());
-			if(flagsHeld != null) {
+			//Prevent flag passing if the current holder is Frosted
+			if(flagsHeld != null &&
+					!KitFrost.FROSTED_ENTITIES.containsKey(event.getPlayer())) {
 				for(Flag flag : flagsHeld) {
 					if(itemIsThisFlagsItem(flag, usedItem)) {
 						final TextReplacementConfig dropperConfig = TextReplacementConfig.builder().match("%holdingTeam%").replacement(event.getPlayer().playerListName()).build();

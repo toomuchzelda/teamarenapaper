@@ -104,7 +104,7 @@ public abstract class TeamArena
 	protected final List<Kit> defaultKits = List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
 			new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(),
 			new KitNone(), new KitVenom(), new KitRewind(), new KitValkyrie(), new KitEngineer(), new KitExplosive(),
-			new KitFrost(), new KitSniper());
+			new KitFrost());
 
 	protected Map<String, Kit> kits = new LinkedHashMap<>();
 	protected static ItemStack kitMenuItem = ItemBuilder.of(Material.FEATHER)

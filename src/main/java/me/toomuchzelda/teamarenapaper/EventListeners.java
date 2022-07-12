@@ -20,6 +20,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.frost.KitFrost;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.PreferenceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
@@ -60,6 +61,8 @@ import java.util.concurrent.CompletableFuture;
 
 import static me.toomuchzelda.teamarenapaper.teamarena.GameState.DEAD;
 import static me.toomuchzelda.teamarenapaper.teamarena.GameState.LIVE;
+import static me.toomuchzelda.teamarenapaper.teamarena.kits.frost.KitFrost.FROSTED_ENTITIES;
+import static me.toomuchzelda.teamarenapaper.teamarena.kits.frost.KitFrost.FROST_FROZEN_MESSAGE;
 
 public class EventListeners implements Listener
 {
@@ -708,11 +711,23 @@ public class EventListeners implements Listener
 				e.setCancelled(true);
 			}
 		}
+
+		if(e.getWhoClicked() instanceof Player player &&
+				KitFrost.FROSTED_ENTITIES.containsKey(player)){
+			e.setCancelled(true);
+			player.sendMessage(KitFrost.FROST_FROZEN_MESSAGE);
+		}
 	}
 
 	@EventHandler(ignoreCancelled = true)
 	public void onPlayerArmorDrag(InventoryDragEvent e) {
 		ItemStack draggedItem = e.getOldCursor();
+
+		if(e.getWhoClicked() instanceof Player player &&
+				KitFrost.FROSTED_ENTITIES.containsKey(player)){
+			e.setCancelled(true);
+			player.sendMessage(KitFrost.FROST_FROZEN_MESSAGE);
+		}
 
 		boolean isDraggingOnArmorSlot = false;
 		if(e.getInventory().getHolder() instanceof HumanEntity) {
@@ -734,7 +749,12 @@ public class EventListeners implements Listener
 		if(Main.getGame() != null) {
 			Main.getGame().onInteract(event);
 
-			if(Main.getGame().getGameState() == LIVE) {
+			if(event.getAction().isRightClick() &&
+					KitFrost.FROSTED_ENTITIES.containsKey(event.getPlayer())){
+				event.setCancelled(true);
+				event.getPlayer().sendMessage(KitFrost.FROST_FROZEN_MESSAGE);
+			}
+			else if(Main.getGame().getGameState() == LIVE) {
 				Ability[] abilities = Kit.getAbilities(event.getPlayer());
 				for (Ability a : abilities) {
 					a.onInteract(event);
@@ -784,6 +804,24 @@ public class EventListeners implements Listener
 		Player player = event.getPlayer();
 		if(KitVenom.POISONED_ENTITIES.containsKey((LivingEntity)player)){
 			event.setCancelled(true);
+		}
+	}
+
+	@EventHandler
+	public void onSwapHand(PlayerSwapHandItemsEvent event){
+		Player player = event.getPlayer();
+		if(KitFrost.FROSTED_ENTITIES.containsKey(player)){
+			event.setCancelled(true);
+			player.sendMessage(KitFrost.FROST_FROZEN_MESSAGE);
+		}
+	}
+
+	@EventHandler
+	public void onSwapItem(PlayerItemHeldEvent event){
+		Player player = event.getPlayer();
+		if(KitFrost.FROSTED_ENTITIES.containsKey(player)){
+			event.setCancelled(true);
+			player.sendMessage(KitFrost.FROST_FROZEN_MESSAGE);
 		}
 	}
 
