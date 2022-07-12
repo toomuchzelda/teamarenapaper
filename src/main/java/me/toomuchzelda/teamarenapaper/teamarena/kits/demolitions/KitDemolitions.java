@@ -92,8 +92,7 @@ public class KitDemolitions extends Kit
 		REMOTE_DETONATOR_ITEM = new ItemStack(Material.FLINT_AND_STEEL);
 		meta = REMOTE_DETONATOR_ITEM.getItemMeta();
 		meta.displayName(ItemUtils.noItalics(Component.text("Remote Trigger", NamedTextColor.BLUE)));
-		lore = new ArrayList<>();
-		lore.addAll(TextUtils.wrapString("Point at any of your mines from any distance to select one. Right click and boom!", style, 200));
+		lore = new ArrayList<>(TextUtils.wrapString("Point at any of your mines from any distance to select one. Right click and boom!", style, 200));
 		meta.lore(lore);
 		REMOTE_DETONATOR_ITEM.setItemMeta(meta);
 	}

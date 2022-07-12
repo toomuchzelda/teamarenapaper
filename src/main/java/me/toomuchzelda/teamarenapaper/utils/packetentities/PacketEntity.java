@@ -33,6 +33,7 @@ public class PacketEntity
 	public static final Predicate<Player> VISIBLE_TO_ALL = player -> true;
 
 	private final int id;
+	private UUID uuid;
 
 	private PacketContainer spawnPacket;
 	private StructureModifier<Double> spawnPacketDoubles; //keep spawn location modifier
@@ -61,18 +62,19 @@ public class PacketEntity
 	 * @param id
 	 * @param entityType
 	 * @param location
-	 * @param viewers Initial Players that will see this PacketEntity. The instance will keep and use the provided map.
-	 *                May be null (add viewers later).
+	 * @param viewers Initial Players that will see this PacketEntity. May be null (add viewers later).
 	 * @param viewerRule Rule to evaluate who should and shouldn't see this PacketEntity. Will be evaluated on every online player every tick.
 	 *                May be null if you wish to handle viewers yourself.
 	 */
-	public PacketEntity(int id, EntityType entityType, Location location, @Nullable LinkedHashSet<Player> viewers,
+	public PacketEntity(int id, EntityType entityType, Location location, @Nullable Collection<Player> viewers,
 						@Nullable Predicate<Player> viewerRule) {
 		//entity ID
 		if(id == NEW_ID)
 			this.id = Bukkit.getUnsafe().nextEntityId();
 		else
 			this.id = id;
+
+		this.uuid = UUID.randomUUID();
 
 		this.location = location;
 
@@ -102,7 +104,7 @@ public class PacketEntity
 			}
 		}
 		else {
-			this.viewers = viewers;
+			this.viewers = new LinkedHashSet<>(viewers);
 		}
 
 		this.realViewers = new LinkedHashSet<>(this.viewers);
@@ -127,7 +129,7 @@ public class PacketEntity
 		doubles.write(2, location.getZ());
 		this.spawnPacketDoubles = doubles;
 
-		spawnPacket.getUUIDs().write(0, UUID.randomUUID());
+		spawnPacket.getUUIDs().write(0, this.uuid);
 	}
 
 	private void createDelete() {
@@ -195,6 +197,7 @@ public class PacketEntity
 	 * does not support moving between worlds
 	 */
 	public void move(Location newLocation) {
+		newLocation = newLocation.clone();
 		if(isAlive) {
 			double distanceSqr = location.distanceSquared(newLocation);
 			if (distanceSqr <= 64) { //8 blocks
@@ -422,5 +425,9 @@ public class PacketEntity
 
 	public int getId() {
 		return id;
+	}
+
+	public UUID getUuid() {
+		return uuid;
 	}
 }

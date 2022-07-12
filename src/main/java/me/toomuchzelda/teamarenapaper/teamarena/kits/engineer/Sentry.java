@@ -45,7 +45,7 @@ public class Sentry extends Building {
 
 	private static final ItemStack ICON = new ItemStack(Material.BOW);
 
-	public Sentry(Player player, Mob sentry) {
+	public Sentry(Player player, Skeleton sentry) {
 		super(player, sentry.getLocation());
 		setName("Sentry");
 		setIcon(ICON);
@@ -61,6 +61,11 @@ public class Sentry extends Building {
 
 		//Changing properties from Projection state to Active state
 
+		sentry.setAI(false);
+		sentry.setRemoveWhenFarAway(false);
+		sentry.setShouldBurnInDay(false);
+		sentry.getEquipment().clear();
+		sentry.setCanPickupItems(false);
 		sentry.setInvisible(false);
 		sentry.setInvulnerable(false);
 		sentry.setCollidable(true);

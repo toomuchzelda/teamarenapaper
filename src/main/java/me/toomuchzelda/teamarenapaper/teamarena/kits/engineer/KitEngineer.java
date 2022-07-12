@@ -149,7 +149,7 @@ public class KitEngineer extends Kit {
 
 	public static class EngineerAbility extends Ability {
 
-		public static final Map<Player, Mob> activePlayerProjections = new HashMap<>();
+		public static final Map<Player, SentryProjection> activePlayerProjections = new HashMap<>();
 		@Deprecated // temporary API
 		public static final Map<LivingEntity, Sentry> sentryEntityToSentryMap = new HashMap<>();
 		//SENTRY_CD should be 300, it may be altered for testing purposes
@@ -269,17 +269,15 @@ public class KitEngineer extends Kit {
 
 		//Converts the Projection into a Sentry + Handles static hashmaps + Inventory
 		public void createSentry(Player player, ItemStack currItem) {
-			PlayerInventory inv = player.getInventory();
-			boolean isMainHand = inv.getItemInMainHand().equals(currItem);
-			Mob projection = activePlayerProjections.get(player);
-			Sentry sentry = new Sentry(player, projection);
+			SentryProjection projection = activePlayerProjections.remove(player);
+			Skeleton skeleton = player.getWorld().spawn(projection.getLocation(), Skeleton.class);
+			Sentry sentry = new Sentry(player, skeleton);
+			projection.remove(); //destroy the old projection so it doesn't linger
+
 			BuildingManager.placeBuilding(sentry);
 
-			sentryEntityToSentryMap.put(projection, sentry);
-			activePlayerProjections.remove(player);
-			Main.getPlayerInfo(player).getMetadataViewer().removeViewedValues(projection);
+			sentryEntityToSentryMap.put(skeleton, sentry);
 			player.setCooldown(Material.CHEST_MINECART, SENTRY_CD);
-
 			toggleWranglerItem(player, true);
 		}
 
@@ -335,17 +333,17 @@ public class KitEngineer extends Kit {
 			//Controlling position of Sentry Projection
 			if (activePlayerProjections.containsKey(player) &&
 					!player.hasCooldown(Material.CHEST_MINECART)) {
-				LivingEntity projection = activePlayerProjections.get(player);
+				SentryProjection projection = activePlayerProjections.get(player);
 				//Y Coordinate is lowered so the projection doesn't obstruct the Engineer's view
 				Location playerLoc = player.getEyeLocation().clone().add(0, -0.8, 0);
 				Location projPos = projectSentry(playerLoc, player);
-				projection.teleport(projPos);
+				projection.move(projPos);
 
 				//Handling color display that indicates validity of current sentry location
 				if (isValidProjection(projPos)) {
-					Main.getPlayerInfo(player).getScoreboard().addMembers(GREEN_GLOWING_TEAM, projection);
+					Main.getPlayerInfo(player).getScoreboard().addMembers(GREEN_GLOWING_TEAM, projection.getUuid().toString());
 				} else {
-					Main.getPlayerInfo(player).getScoreboard().addMembers(RED_GLOWING_TEAM, projection);
+					Main.getPlayerInfo(player).getScoreboard().addMembers(RED_GLOWING_TEAM, projection.getUuid().toString());
 				}
 			}
 
@@ -380,32 +378,14 @@ public class KitEngineer extends Kit {
 
 		public void createProjection(Player player) {
 			Location loc = projectSentry(player.getEyeLocation().clone().add(0, -.8, 0), player);
-			TextColor teamColorText = Main.getPlayerInfo(player).team.getRGBTextColor();
-			LivingEntity projection = player.getWorld().spawn(loc, Skeleton.class, entity -> {
-				entity.setAI(false);
-				entity.setCollidable(false);
-				entity.setInvisible(true);
-				entity.setRemoveWhenFarAway(false);
-				entity.setInvulnerable(true);
-				entity.setShouldBurnInDay(false);
-				entity.getEquipment().clear();
-				entity.setCanPickupItems(false);
-				entity.setSilent(true);
-
-				MetadataViewer metaViewer = Main.getPlayerInfo(player).getMetadataViewer();
-				metaViewer.setViewedValue(MetaIndex.BASE_BITFIELD_IDX,
-						MetaIndex.GLOWING_METADATA_VALUE, entity.getEntityId(), entity);
-
-				activePlayerProjections.put(player, entity);
-			});
+			SentryProjection projection = new SentryProjection(loc, player);
+			projection.respawn();
+			activePlayerProjections.put(player, projection);
 		}
 
 		public void destroyProjection(Player player) {
-			LivingEntity projection = activePlayerProjections.get(player);
-			projection.setInvulnerable(false);
+			SentryProjection projection = activePlayerProjections.remove(player);
 			projection.remove();
-			activePlayerProjections.remove(player);
-			Main.getPlayerInfo(player).getMetadataViewer().removeViewedValues(projection);
 		}
 
 		//From entity's eyes, find the location in their line of sight that is within range

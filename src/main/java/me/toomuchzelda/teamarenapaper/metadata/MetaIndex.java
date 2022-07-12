@@ -16,8 +16,9 @@ public class MetaIndex
 	public static final int CUSTOM_NAME_IDX = 2;
 	public static final int CUSTOM_NAME_VISIBLE_IDX = 3;
 
-	public static final int BASE_BITFIELD_GLOWING_IDX = 6;
 	public static final byte BASE_BITFIELD_INVIS_MASK = 0x20;
+	public static final int BASE_BITFIELD_GLOWING_IDX = 6;
+	public static final byte BASE_BITFIELD_GLOWING_MASK = 0x40;
 
 	public static final int ARMOR_STAND_BITFIELD_IDX = 15;
 	public static final int ARMOR_STAND_MARKER_IDX = 3;
