@@ -3,9 +3,9 @@ package me.toomuchzelda.teamarenapaper.teamarena.capturetheflag;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
+import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
-import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -155,10 +155,7 @@ public class Flag
 
 		WrappedDataWatcher data = WrappedDataWatcher.getEntityWatcher(stand).deepClone();
 
-		WrappedDataWatcher.WrappedDataWatcherObject armorStandMeta =
-				new WrappedDataWatcher.WrappedDataWatcherObject(PacketHologram.ARMOR_STAND_METADATA_INDEX,
-						WrappedDataWatcher.Registry.get(Byte.class));
-		data.setObject(armorStandMeta, PacketHologram.ARMOR_STAND_MARKER_BIT_MASK);
+		data.setObject(MetaIndex.ARMOR_STAND_BITFIELD_OBJ, MetaIndex.ARMOR_STAND_MARKER_MASK);
 
 		metadataPacket.getWatchableCollectionModifier().write(0, data.getWatchableObjects());
 

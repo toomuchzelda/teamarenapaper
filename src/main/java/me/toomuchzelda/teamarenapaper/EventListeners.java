@@ -22,6 +22,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.PreferenceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -85,7 +86,6 @@ public class EventListeners implements Listener
 	}
 
 	//run the TeamArena tick
-	//paper good spigot bad
 	@EventHandler
 	public void endTick(ServerTickEndEvent event) {
 		PacketListeners.cancelDamageSounds = false;
@@ -109,8 +109,7 @@ public class EventListeners implements Listener
 
 			// initialize next game
 			if (TeamArena.nextGameType == null) {
-				//TeamArena.nextGameType = GameType.values()[MathUtils.random.nextInt(GameType.values().length)];
-				TeamArena.nextGameType = GameType.SND;
+				TeamArena.nextGameType = GameType.values()[MathUtils.random.nextInt(GameType.values().length)];
 			}
 
 			try {
@@ -125,6 +124,13 @@ public class EventListeners implements Listener
 
 		try {
 			Main.getGame().tick();
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+
+		try {
+			PacketEntityManager.tick();
 		}
 		catch(Exception e) {
 			e.printStackTrace();

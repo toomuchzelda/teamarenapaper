@@ -4,6 +4,7 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
+import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
@@ -19,6 +20,7 @@ import java.util.function.Predicate;
 
 /**
  * "Fake" entity the internal server is not aware exists.
+ * Packet Entities are valid as long as a reference to them is kept.
  *
  * @author toomuchzelda
  */
@@ -34,6 +36,7 @@ public class PacketEntity
 	private StructureModifier<Double> spawnPacketDoubles; //keep spawn location modifier
 	private PacketContainer deletePacket;
 	protected PacketContainer metadataPacket;
+	private StructureModifier<List<WrappedWatchableObject>> watchableCollectionModifier;
 	private PacketContainer teleportPacket;
 	private StructureModifier<Double> teleportPacketDoubles;
 
@@ -41,6 +44,7 @@ public class PacketEntity
 	protected WrappedDataWatcher data;
 
 	private boolean isAlive;
+	private boolean remove;
 	protected Location location;
 	protected Set<Player> viewers;
 	//the players currently seeing the packet entity, and receiving packets for it.
@@ -51,6 +55,7 @@ public class PacketEntity
 	/**
 	 * Create a new PacketEntity. If viewers is specified in constructor, viewerRule will not be considered in initial
 	 * spawning.
+	 * Must call respawn manually after construction!
 	 * @param id
 	 * @param entityType
 	 * @param location
@@ -98,10 +103,12 @@ public class PacketEntity
 			this.viewers = viewers;
 		}
 
-		this.realViewers = new LinkedHashSet<>(this.realViewers);
+		this.realViewers = new LinkedHashSet<>(this.viewers);
 
 		this.isAlive = false;
-		this.respawn();
+		this.remove = false;
+
+		PacketEntityManager.addPacketEntity(this);
 	}
 
 	private void createSpawn(EntityType type) {
@@ -134,7 +141,8 @@ public class PacketEntity
 
 		this.data = new WrappedDataWatcher();
 
-		this.metadataPacket.getWatchableCollectionModifier().write(0, this.data.getWatchableObjects());
+		this.watchableCollectionModifier = this.metadataPacket.getWatchableCollectionModifier();
+		this.watchableCollectionModifier.write(0, this.data.getWatchableObjects());
 	}
 
 	private void createTeleport() {
@@ -171,12 +179,20 @@ public class PacketEntity
 	}
 
 	/**
+	 * Call manually after updating this WrappedDataWatcher data
+	 */
+	protected void updateMetadataPacket() {
+		this.watchableCollectionModifier.write(0, this.data.getWatchableObjects());
+	}
+
+	/**
 	 * does not support moving between worlds
 	 * @param newLocation
 	 */
 	public void move(Location newLocation) {
 		double distanceSqr = location.distanceSquared(newLocation);
 		if(distanceSqr <= 64) { //8 blocks
+			Bukkit.broadcastMessage("mov packet");
 			double xDiff = newLocation.getX() - location.getX();
 			double yDiff = newLocation.getY() - location.getY();
 			double zDiff = newLocation.getZ() - location.getZ();
@@ -207,6 +223,10 @@ public class PacketEntity
 	 * Spawn this if removed and mark as alive.
 	 */
 	public void respawn() {
+		if(remove) {
+			throw new IllegalStateException("Cannot respawn PacketEntity that has been marked for removal");
+		}
+
 		if(!isAlive) {
 			for (Player p : viewers) {
 				spawn(p);
@@ -216,9 +236,9 @@ public class PacketEntity
 	}
 
 	/**
-	 * Remove this and mark as dead.
+	 * Despawn this packet entity.
 	 */
-	public void remove() {
+	public void despawn() {
 		if(isAlive) {
 			for (Player p : viewers) {
 				despawn(p);
@@ -227,13 +247,31 @@ public class PacketEntity
 		}
 	}
 
-	public void tick() {
+	/**
+	 * Mark for removal
+	 */
+	public void remove() {
+		if(isAlive) {
+			this.despawn();
+		}
+
+		this.remove = true;
+	}
+
+	public boolean isRemoved() {
+		return this.remove;
+	}
+
+	void globalTick() {
 		if(this.isAlive) {
 			reEvaluateViewers(true);
+			this.tick();
 		}
 	}
 
-	private void reEvaluateViewers(boolean spawn) {
+	public void tick() {}
+
+	protected void reEvaluateViewers(boolean spawn) {
 		Chunk holChunk = this.location.getChunk();
 		final int holX = holChunk.getX();
 		final int holZ = holChunk.getZ();
@@ -245,18 +283,15 @@ public class PacketEntity
 					int playX = pChunk.getX();
 					int playZ = pChunk.getZ();
 					if(isInViewingRange(holX, holZ, playX, playZ, p.getSimulationDistance())) {
-						realViewers.add(p);
-						if(spawn)
+						if(realViewers.add(p) && spawn)
 							spawn(p);
 					}
 					else {
-						realViewers.remove(p);
-						if(spawn)
+						if(realViewers.remove(p) && spawn)
 							despawn(p);
 					}
 				}
 				else {
-					viewers.remove(p);
 					if(realViewers.remove(p) && spawn) {
 						despawn(p);
 					}
@@ -270,8 +305,7 @@ public class PacketEntity
 				int playZ = pChunk.getZ();
 
 				if(isInViewingRange(holX, holZ, playX, playZ, p.getSimulationDistance())) {
-					realViewers.add(p);
-					if(spawn)
+					if(realViewers.add(p) && spawn)
 						spawn(p);
 				}
 			}
@@ -295,7 +329,12 @@ public class PacketEntity
 	}
 
 	public void refreshViewerMetadata() {
-
+		this.updateMetadataPacket();
+		if(this.isAlive) {
+			for (Player p : realViewers) {
+				PlayerUtils.sendPacket(p, this.metadataPacket);
+			}
+		}
 	}
 
 	public boolean isAlive() {

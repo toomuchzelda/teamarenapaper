@@ -585,17 +585,17 @@ public abstract class TeamArena
 			event.executeAttack();
 		}
 
-		var indiIter = activeDamageIndicators.iterator();
+		/*var indiIter = activeDamageIndicators.iterator();
 		while(indiIter.hasNext()) {
 			DamageIndicatorHologram h = indiIter.next();
-			if(h.age >= 15) {
-				h.remove();
+			if(h.age >= 300) {
+				h.despawn();
 				indiIter.remove();
 			}
 			else {
 				h.tick();
 			}
-		}
+		}*/
 	}
 
 	public void onConfirmedDamage(DamageEvent event) {
@@ -623,7 +623,7 @@ public abstract class TeamArena
 					Location spawnLoc = p.getLocation();
 					spawnLoc.add(0, MathUtils.randomRange(1.4, 2), 0);
 					DamageIndicatorHologram hologram = new DamageIndicatorHologram(spawnLoc, PlayerUtils.getDamageIndicatorViewers(p, playerCause), damageText);
-					activeDamageIndicators.add(hologram);
+					//activeDamageIndicators.add(hologram);
 
 					//add to their damage log
 					pinfo.logDamageReceived(p, event.getDamageType(), event.getFinalDamage(), event.getFinalAttacker(), gameTick);
