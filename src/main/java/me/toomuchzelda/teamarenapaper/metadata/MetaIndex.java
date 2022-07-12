@@ -23,6 +23,8 @@ public class MetaIndex
 	public static final int ARMOR_STAND_MARKER_IDX = 3;
 	public static final byte ARMOR_STAND_MARKER_MASK = 0x10;
 
+	public static final int AXOLOTL_COLOR_IDX = 17;
+
 	public static final MetadataBitfieldValue GLOWING_METADATA_VALUE = MetadataBitfieldValue.create(Collections.singletonMap(BASE_BITFIELD_GLOWING_IDX, true));
 
 	public static final WrappedDataWatcher.WrappedDataWatcherObject BASE_BITFIELD_OBJ;
@@ -31,6 +33,8 @@ public class MetaIndex
 
 	public static final WrappedDataWatcher.WrappedDataWatcherObject ARMOR_STAND_BITFIELD_OBJ;
 
+	public static final WrappedDataWatcher.WrappedDataWatcherObject AXOLOTL_COLOR;
+
 
 	static {
 		BASE_BITFIELD_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(BASE_BITFIELD_IDX, WrappedDataWatcher.Registry.get(Byte.class));
@@ -38,5 +42,7 @@ public class MetaIndex
 		CUSTOM_NAME_VISIBLE_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(CUSTOM_NAME_VISIBLE_IDX, WrappedDataWatcher.Registry.get(Boolean.class));
 
 		ARMOR_STAND_BITFIELD_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(ARMOR_STAND_BITFIELD_IDX, WrappedDataWatcher.Registry.get(Byte.class));
+
+		AXOLOTL_COLOR = new WrappedDataWatcher.WrappedDataWatcherObject(AXOLOTL_COLOR_IDX, WrappedDataWatcher.Registry.get(Integer.class));
 	}
 }

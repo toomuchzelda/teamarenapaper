@@ -11,8 +11,10 @@ import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.EquipmentSlot;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -28,7 +30,7 @@ public class PacketEntity
 {
 	//specify in constructor if a new entity ID is wanted
 	public static final int NEW_ID = -1;
-	//public static final double ENTITY_TRACKING_DISTANCE;
+	public static final Predicate<Player> VISIBLE_TO_ALL = player -> true;
 
 	private final int id;
 
@@ -145,6 +147,10 @@ public class PacketEntity
 		this.watchableCollectionModifier.write(0, this.data.getWatchableObjects());
 	}
 
+	public void setMetadata(WrappedDataWatcher.WrappedDataWatcherObject index, Object object) {
+		this.data.setObject(index, object);
+	}
+
 	private void createTeleport() {
 		teleportPacket = new PacketContainer(PacketType.Play.Server.ENTITY_TELEPORT);
 		teleportPacket.getIntegers().write(0, id);
@@ -187,24 +193,24 @@ public class PacketEntity
 
 	/**
 	 * does not support moving between worlds
-	 * @param newLocation
 	 */
 	public void move(Location newLocation) {
-		double distanceSqr = location.distanceSquared(newLocation);
-		if(distanceSqr <= 64) { //8 blocks
-			Bukkit.broadcastMessage("mov packet");
-			double xDiff = newLocation.getX() - location.getX();
-			double yDiff = newLocation.getY() - location.getY();
-			double zDiff = newLocation.getZ() - location.getZ();
-			ClientboundMoveEntityPacket.Pos movePacket = getRelativePosPacket(xDiff, yDiff, zDiff);
-			for(Player p : realViewers) {
-				PlayerUtils.sendPacket(p, movePacket);
+		if(isAlive) {
+			double distanceSqr = location.distanceSquared(newLocation);
+			if (distanceSqr <= 64) { //8 blocks
+				double xDiff = newLocation.getX() - location.getX();
+				double yDiff = newLocation.getY() - location.getY();
+				double zDiff = newLocation.getZ() - location.getZ();
+				ClientboundMoveEntityPacket.Pos movePacket = getRelativePosPacket(xDiff, yDiff, zDiff);
+				for (Player p : realViewers) {
+					PlayerUtils.sendPacket(p, movePacket);
+				}
 			}
-		}
-		else {
-			updateTeleportPacket(newLocation);
-			for(Player p : realViewers) {
-				PlayerUtils.sendPacket(p, teleportPacket);
+			else {
+				updateTeleportPacket(newLocation);
+				for (Player p : realViewers) {
+					PlayerUtils.sendPacket(p, teleportPacket);
+				}
 			}
 		}
 		updateSpawnPacket(newLocation);
@@ -270,6 +276,8 @@ public class PacketEntity
 	}
 
 	public void tick() {}
+
+	public void onInteract(Player player, EquipmentSlot hand, boolean attack) {}
 
 	protected void reEvaluateViewers(boolean spawn) {
 		Chunk holChunk = this.location.getChunk();
@@ -396,8 +404,20 @@ public class PacketEntity
 	/**
 	 * @return Immutable viewers Set
 	 */
-	public Set<Player> getViewers() {
+	public Set<Player> getLogicalViewers() {
 		return Collections.unmodifiableSet(viewers);
+	}
+
+	public Set<Player> getRealViewers() {
+		return Collections.unmodifiableSet(realViewers);
+	}
+
+	public Location getLocation() {
+		return location.clone();
+	}
+
+	public World getWorld() {
+		return location.getWorld();
 	}
 
 	public int getId() {

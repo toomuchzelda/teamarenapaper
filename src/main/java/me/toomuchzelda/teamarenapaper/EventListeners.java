@@ -4,6 +4,7 @@ import com.destroystokyo.paper.event.block.TNTPrimeEvent;
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import com.destroystokyo.paper.event.player.PlayerAdvancementCriterionGrantEvent;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
+import com.destroystokyo.paper.event.player.PlayerUseUnknownEntityEvent;
 import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
@@ -42,6 +43,7 @@ import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.*;
 import org.bukkit.event.player.PlayerLoginEvent.Result;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.BoundingBox;
@@ -780,6 +782,23 @@ public class EventListeners implements Listener
 					a.onInteractEntity(event);
 				}
 			}
+		}
+	}
+
+	@EventHandler
+	public void playerUseUnknownEntity(PlayerUseUnknownEntityEvent event) {
+		//prevent right clicks being handled 4 times
+		if(!event.isAttack()) {
+			PlayerInfo pinfo = Main.getPlayerInfo(event.getPlayer());
+			int currentTick = TeamArena.getGameTick();
+			int idx = event.getHand().ordinal();
+			if (pinfo.lastInteractUnknownEntityTimes[idx] != currentTick) {
+				pinfo.lastInteractUnknownEntityTimes[idx] = currentTick;
+				PacketEntityManager.handleInteract(event);
+			}
+		}
+		else {
+			PacketEntityManager.handleInteract(event);
 		}
 	}
 
