@@ -244,8 +244,10 @@ public class KitPyro extends Kit
 			if (event.getEntity() instanceof Arrow arrow) {
 				if (arrow.getColor() != null && arrow.getColor().equals(MOLOTOV_ARROW_COLOR)) {
 					event.setCancelled(true);
-					spawnMolotov((Player) arrow.getShooter(), arrow.getLocation());
-					arrow.remove();
+					Vector vel = arrow.getVelocity();
+					vel.setX(vel.getX() * 0.4);
+					vel.setZ(vel.getZ() * 0.4);
+					arrow.setVelocity(vel);
 				}
 			}
 		}

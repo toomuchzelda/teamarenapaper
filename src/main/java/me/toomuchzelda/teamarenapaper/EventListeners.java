@@ -587,7 +587,7 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void projectileHit(ProjectileHitEvent event) {
 		if(Main.getGame() != null) {
-			if(event.getEntity().getShooter() instanceof Player p) {
+			if(event.getHitBlock() != null && event.getEntity().getShooter() instanceof Player p) {
 				Ability[] abilities = Kit.getAbilities(p);
 				for(Ability a : abilities) {
 					if(a instanceof KitPyro.PyroAbility pyroAbility) {
