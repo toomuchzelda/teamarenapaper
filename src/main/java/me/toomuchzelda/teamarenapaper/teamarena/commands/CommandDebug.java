@@ -2,20 +2,25 @@ package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.*;
+import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Material;
-import org.bukkit.Tag;
+import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
+import org.bukkit.*;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.MapPalette;
 import org.bukkit.map.MinecraftFont;
+import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -29,6 +34,7 @@ public class CommandDebug extends CustomCommand {
 	// TODO temporary feature
 	public static boolean ignoreWinConditions;
 	public static boolean sniperAccuracy;
+	public static PacketEntity testPacketEntity = null;
 	public static Predicate<Kit> kitPredicate = ignored -> true;
 
 	public CommandDebug() {
@@ -191,6 +197,47 @@ public class CommandDebug extends CustomCommand {
 							task.cancel();
 						}
 					}, 0, 1);
+				}
+			}
+			case "packetent" -> {
+				Player p = (Player) sender;
+				if(testPacketEntity == null) {
+					testPacketEntity = new PacketEntity(PacketEntity.NEW_ID, EntityType.AXOLOTL, p.getLocation(), null, PacketEntity.VISIBLE_TO_ALL) {
+						@Override
+						public void onInteract(Player player, EquipmentSlot hand, boolean attack) {
+							this.setMetadata(MetaIndex.AXOLOTL_COLOR, MathUtils.randomMax(4));
+							EntityUtils.playEffect(this, ClientboundAnimatePacket.CRITICAL_HIT);
+							this.getWorld().playSound(this.getLocation(), Sound.ENTITY_AXOLOTL_SWIM, 1f, 1f);
+							if(attack)
+								Bukkit.broadcast(Component.text("Curse you " + player.getName() + "!", NamedTextColor.DARK_RED));
+						}
+					};
+
+					testPacketEntity.respawn();
+				}
+				else if(!testPacketEntity.isAlive()) {
+					testPacketEntity.respawn();
+				}
+				else {
+					testPacketEntity.setMetadata(MetaIndex.AXOLOTL_COLOR, MathUtils.randomMax(4));
+					Location pLoc = p.getLocation();
+					Vector dir = pLoc.toVector().subtract(testPacketEntity.getLocation().toVector()).normalize();
+
+					Location newLoc = testPacketEntity.getLocation().setDirection(dir).add(0, 0.2, 0);
+					testPacketEntity.move(newLoc);
+					testPacketEntity.refreshViewerMetadata();
+				}
+
+			}
+			case "packetentkill" -> {
+				if(testPacketEntity != null) {
+					if(testPacketEntity.isAlive()) {
+						testPacketEntity.despawn();
+					}
+					else {
+						testPacketEntity.remove();
+						testPacketEntity = null;
+					}
 				}
 			}
 			default -> {

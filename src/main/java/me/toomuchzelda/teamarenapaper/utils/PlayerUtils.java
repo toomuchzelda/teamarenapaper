@@ -29,8 +29,9 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashSet;
+import java.lang.reflect.InvocationTargetException;
+import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.Set;
 
 public class PlayerUtils {
     public static void sendPacket(Player player, PacketContainer... packets) {
@@ -74,8 +75,8 @@ public class PlayerUtils {
 		nmsPlayer.connection.send(packet);
 	}
 
-	public static Set<Player> getDamageIndicatorViewers(Player takingDamage, Player attacker) {
-		Set<Player> set = new HashSet<>();
+	public static LinkedHashSet<Player> getDamageIndicatorViewers(Player takingDamage, Player attacker) {
+		LinkedHashSet<Player> set = new LinkedHashSet<>();
 		var iter = Main.getPlayersIter();
 		PlayerInfo pinfo;
 		Player p;

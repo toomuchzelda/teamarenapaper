@@ -4,6 +4,7 @@ import com.destroystokyo.paper.event.block.TNTPrimeEvent;
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import com.destroystokyo.paper.event.player.PlayerAdvancementCriterionGrantEvent;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
+import com.destroystokyo.paper.event.player.PlayerUseUnknownEntityEvent;
 import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
@@ -23,6 +24,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.PreferenceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -88,7 +90,6 @@ public class EventListeners implements Listener
 	}
 
 	//run the TeamArena tick
-	//paper good spigot bad
 	@EventHandler
 	public void endTick(ServerTickEndEvent event) {
 		PacketListeners.cancelDamageSounds = false;
@@ -108,12 +109,14 @@ public class EventListeners implements Listener
 					entry.getValue().clearMessageCooldowns();
 				}
 			}
+
 			Main.playerIdLookup.entrySet().removeIf(idLookupEntry -> !idLookupEntry.getValue().isOnline());
+
+			PacketEntityManager.cleanUp();
 
 			// initialize next game
 			if (TeamArena.nextGameType == null) {
-				//TeamArena.nextGameType = GameType.values()[MathUtils.random.nextInt(GameType.values().length)];
-				TeamArena.nextGameType = GameType.SND;
+				TeamArena.nextGameType = GameType.values()[MathUtils.random.nextInt(GameType.values().length)];
 			}
 
 			try {
@@ -133,10 +136,17 @@ public class EventListeners implements Listener
 			e.printStackTrace();
 		}
 
+		try {
+			PacketEntityManager.tick();
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+
 		//every 3 minutes
 		int count = event.getTickNumber() % (3 * 60  *20);
 		if(count == 0) {
-			ArrowPierceManager.cleanup();
+			ArrowPierceManager.cleanUp();
 		}
 		else if(count == 10) {
 			for(PlayerInfo pinfo : Main.getPlayerInfos()) {
@@ -744,6 +754,23 @@ public class EventListeners implements Listener
 					a.onInteractEntity(event);
 				}
 			}
+		}
+	}
+
+	@EventHandler
+	public void playerUseUnknownEntity(PlayerUseUnknownEntityEvent event) {
+		//prevent right clicks being handled 4 times
+		if(!event.isAttack()) {
+			PlayerInfo pinfo = Main.getPlayerInfo(event.getPlayer());
+			int currentTick = TeamArena.getGameTick();
+			int idx = event.getHand().ordinal();
+			if (pinfo.lastInteractUnknownEntityTimes[idx] != currentTick) {
+				pinfo.lastInteractUnknownEntityTimes[idx] = currentTick;
+				PacketEntityManager.handleInteract(event);
+			}
+		}
+		else {
+			PacketEntityManager.handleInteract(event);
 		}
 	}
 

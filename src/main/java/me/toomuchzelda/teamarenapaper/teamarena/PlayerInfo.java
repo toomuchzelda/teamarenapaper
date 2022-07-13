@@ -9,7 +9,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.KillAssistTracker;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
-import me.toomuchzelda.teamarenapaper.utils.PacketHologram;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.entity.Damageable;
@@ -47,6 +47,13 @@ public class PlayerInfo
 	//for right clicking the leather chestplate
 	public boolean viewingGlowingTeammates;
 
+	/**
+	 * PlayerUseUnknownEntityEvent is called 4 times for right clicks.
+	 * So store the last tick they interacted here and don't handle the event more than once for each hand
+	 * Index is ordinal of EquipmentSlot hand.
+	 */
+	public int[] lastInteractUnknownEntityTimes;
+
 	public PlayerInfo(CustomCommand.PermissionLevel permissionLevel, Player player) {
 		team = null;
 		spawnPoint = null;
@@ -61,6 +68,7 @@ public class PlayerInfo
 		killAssistTracker = new KillAssistTracker(player);
 		kills = 0;
 		viewingGlowingTeammates = false;
+		lastInteractUnknownEntityTimes = new int[2];
 
 		this.scoreboard = new PlayerScoreboard(player);
 		this.metadataViewer = new MetadataViewer(player);
