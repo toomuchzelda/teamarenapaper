@@ -2,8 +2,6 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.engineer;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
-import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
-import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
@@ -16,7 +14,6 @@ import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Color;
 import org.bukkit.FluidCollisionMode;
 import org.bukkit.Location;
@@ -24,7 +21,6 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Skeleton;
 import org.bukkit.event.Event;
@@ -335,8 +331,8 @@ public class KitEngineer extends Kit {
 					!player.hasCooldown(Material.CHEST_MINECART)) {
 				SentryProjection projection = activePlayerProjections.get(player);
 				//Y Coordinate is lowered so the projection doesn't obstruct the Engineer's view
-				Location playerLoc = player.getEyeLocation().clone().add(0, -0.8, 0);
-				Location projPos = projectSentry(playerLoc, player);
+				Location playerLoc = player.getEyeLocation().add(0, -0.8, 0);
+				Location projPos = projectSentry(playerLoc);
 				projection.move(projPos);
 
 				//Handling color display that indicates validity of current sentry location
@@ -377,7 +373,7 @@ public class KitEngineer extends Kit {
 		}
 
 		public void createProjection(Player player) {
-			Location loc = projectSentry(player.getEyeLocation().clone().add(0, -.8, 0), player);
+			Location loc = projectSentry(player.getEyeLocation().clone().add(0, -.8, 0));
 			SentryProjection projection = new SentryProjection(loc, player);
 			projection.respawn();
 			activePlayerProjections.put(player, projection);
@@ -399,7 +395,7 @@ public class KitEngineer extends Kit {
 			}
 		}
 
-		public Location projectSentry(Location loc, Player player) {
+		public Location projectSentry(Location loc) {
 			Location distance = findBlock(loc, SENTRY_PLACEMENT_RANGE);
 			distance.setYaw(loc.getYaw());
 			distance.setPitch(0);

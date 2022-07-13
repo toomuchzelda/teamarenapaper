@@ -20,6 +20,7 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.MapPalette;
 import org.bukkit.map.MinecraftFont;
+import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -224,7 +225,11 @@ public class CommandDebug extends CustomCommand {
 				}
 				else {
 					testPacketEntity.setMetadata(MetaIndex.AXOLOTL_COLOR, MathUtils.randomMax(4));
-					testPacketEntity.move(testPacketEntity.getLocation().add(0, 0.5, 1));
+					Location pLoc = p.getLocation();
+					Vector dir = pLoc.toVector().subtract(testPacketEntity.getLocation().toVector()).normalize();
+
+					Location newLoc = testPacketEntity.getLocation().setDirection(dir).add(0, 0.2, 0);
+					testPacketEntity.move(newLoc);
 					testPacketEntity.refreshViewerMetadata();
 				}
 
