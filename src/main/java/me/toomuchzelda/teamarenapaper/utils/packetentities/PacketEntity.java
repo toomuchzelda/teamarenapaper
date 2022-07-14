@@ -372,12 +372,12 @@ public class PacketEntity
 						if(realViewers.add(p) && spawn)
 							spawn(p);
 					}
-					else {
-						if(realViewers.remove(p) && spawn)
-							despawn(p);
+					else if(realViewers.remove(p) && spawn) {
+						despawn(p);
 					}
 				}
 				else {
+					viewers.remove(p);
 					if(realViewers.remove(p) && spawn) {
 						despawn(p);
 					}
@@ -393,6 +393,9 @@ public class PacketEntity
 				if(isInViewingRange(holX, holZ, playX, playZ, p.getSimulationDistance())) {
 					if(realViewers.add(p) && spawn)
 						spawn(p);
+				}
+				else if(realViewers.remove(p) && spawn) {
+					despawn(p);
 				}
 			}
 		}
@@ -441,12 +444,13 @@ public class PacketEntity
 
 		//remove viewers that were not specified in the players arg
 		for (Player prevViewer : this.viewers) {
-			if (!newViewers.contains(prevViewer)) {
+			if (!newViewers.contains(prevViewer) && realViewers.remove(prevViewer)) {
 				despawn(prevViewer);
 			}
 		}
 
 		this.viewers = newViewers;
+		this.reEvaluateViewers(true);
 	}
 
 	public void setViewers(Player... players) {
@@ -454,12 +458,8 @@ public class PacketEntity
 	}
 
 	public void addViewers(Collection<Player> viewers) {
-		for(Player newViewer : viewers) {
-			if(!this.viewers.contains(newViewer)) {
-				this.viewers.add(newViewer);
-				spawn(newViewer);
-			}
-		}
+		this.viewers.addAll(viewers);
+		reEvaluateViewers(true);
 	}
 
 	public void addViewers(Player... viewers) {
@@ -468,9 +468,9 @@ public class PacketEntity
 
 	public void removeViewers(Collection<Player> viewers) {
 		for(Player exViewer : viewers) {
-			if(this.viewers.contains(exViewer)) {
-				this.viewers.remove(exViewer);
-				despawn(exViewer);
+			if(this.viewers.remove(exViewer)) {
+				if(this.realViewers.remove(exViewer))
+					despawn(exViewer);
 			}
 		}
 	}
