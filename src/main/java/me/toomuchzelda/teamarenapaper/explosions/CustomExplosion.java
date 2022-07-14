@@ -1,7 +1,6 @@
 package me.toomuchzelda.teamarenapaper.explosions;
 
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
-import net.minecraft.world.level.Explosion;
 import org.bukkit.FluidCollisionMode;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -11,10 +10,12 @@ import org.bukkit.entity.Projectile;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
+import javax.annotation.Nullable;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
- * Re-implementation of explosions
+ * Re-implementation of explosions to be more customizable and better accommodating of Team Arena
  *
  * @author toomuchzelda
  */
@@ -22,21 +23,20 @@ public abstract class CustomExplosion
 {
 	private Location centre;
 	private double explosionRadius;
-	private double explRadiusSqr;
 	private double guaranteeHitRadius;
-	private double guarHitRadiusSqr;
 	private double damage;
 	private DamageType damageType;
 	private Vector knockback;
+	private Entity entity;
 
-	public CustomExplosion(Location centre, double explosionRadius, double guaranteeHitRadius, double damage, DamageType damageType) {
+	public CustomExplosion(Location centre, double explosionRadius, double guaranteeHitRadius, double damage, DamageType damageType,
+						   @Nullable Entity entity) {
 		this.centre = centre;
 		this.explosionRadius = explosionRadius;
-		this.explosionRadius = explosionRadius * explosionRadius;
 		this.guaranteeHitRadius = guaranteeHitRadius;
-		this.guaranteeHitRadius = guaranteeHitRadius * guaranteeHitRadius;
 		this.damage = damage;
 		this.damageType = damageType;
+		this.entity = entity;
 
 		this.knockback = new Vector();
 	}
@@ -47,32 +47,46 @@ public abstract class CustomExplosion
 		final Vector locVector = centre.toVector();
 
 		final double explosionRadius = this.explosionRadius;
-		final double explRadSqr = this.explRadiusSqr;
-		final double guarRadSqr = this.guarHitRadiusSqr;
+		final double guaranteedRadius = this.guaranteeHitRadius;
+		final double explRadSqr = explosionRadius * explosionRadius;
+		final double guarRadSqr = guaranteedRadius * guaranteedRadius;
 		final double maxDamage = this.damage;
 
-		List<Entity> allEntities = world.getEntities(); //allocates a new ArrayList on every call.
+		record HitInfo(Entity entity, Vector hitVector, double distance, double damage) {};
+
+		List<HitInfo> hitEntities = new LinkedList<>();
+		List<Entity> allEntities = world.getEntities();
 		for(Entity e : allEntities) {
+			if(!globalShouldHurtEntity(e))
+				continue;
+
 			final Location eLocation = e.getLocation();
+			//direction to centre of entity
+			final Vector directionToCentre = eLocation.clone().add(0, e.getHeight() / 2, 0).toVector().subtract(locVector);
 
-			final Vector direction = eLocation.toVector().subtract(locVector);
+			final double distSqr = directionToCentre.lengthSquared();
 
-			final double distSqr = direction.lengthSquared();
-			double distDamage = 1d; //initial value doesn't matter
-
+			double distance = 0d; //initial value doesn't matter
+			Vector hitVector = directionToCentre;
 			boolean hit = false;
 			if(distSqr <= guarRadSqr) {
 				hit = true;
-				distDamage = distSqr;
+				distance = distSqr;
 			}
 			else if(distSqr <= explRadSqr) {
+				//all the directions to aim at the victim at
+				// 0 will always be the towards the centre of the target
 				Vector[] directions;
-				//if a livingentity, if it doesn't hit their feet then aim for their eyes
+				//if a livingentity, if it doesn't hit their centre, then aim for eyes, then feet.
 				if(e instanceof LivingEntity living) {
-					directions = new Vector[]{direction, eLocation.add(0d, living.getEyeHeight(), 0d).toVector().subtract(locVector)};
+					Vector eBaseVector = eLocation.toVector();
+					directions = new Vector[]{
+							directionToCentre,
+							eBaseVector.clone().setY(eBaseVector.getY() + living.getEyeHeight()).subtract(locVector),
+							eBaseVector.subtract(locVector)};
 				}
 				else {
-					directions = new Vector[]{direction};
+					directions = new Vector[]{directionToCentre};
 				}
 
 				for(Vector aim : directions) {
@@ -81,22 +95,27 @@ public abstract class CustomExplosion
 					//did not hit any blocks, since entity is in explosion range then it must have hit the entity
 					if (rayTrace == null) {
 						hit = true;
-						distDamage = aim.lengthSquared();
+						distance = aim.lengthSquared();
+						hitVector = aim;
 						break;
 					}
 				}
 			}
 
 			if(hit) {
-				distDamage = Math.sqrt(distDamage);
+				distance = Math.sqrt(distance);
 				//linear damage fall off
-				distDamage = explosionRadius - distDamage;
-				distDamage /= explosionRadius; //from 0.0 to 1.0
+				double damage = explosionRadius - distance;
+				damage /= explosionRadius; //from 0.0 to 1.0
+				damage = maxDamage * damage;
 
-				distDamage = maxDamage * distDamage;
-
-
+				HitInfo info = new HitInfo(e, hitVector, distance, damage);
+				hitEntities.add(info);
 			}
+		}
+
+		for(HitInfo hinfo : hitEntities) {
+			this.hitEntity(hinfo.entity, hinfo.hitVector, hinfo.distance, hinfo.damage);
 		}
 	}
 
@@ -114,6 +133,8 @@ public abstract class CustomExplosion
 	 */
 	public abstract boolean shouldHurtEntity(Entity entity);
 
+	public abstract void hitEntity(Entity victim, Vector hitVector, double distance, double damage);
+
 	public Location getCentre() {
 		return centre;
 	}
@@ -128,7 +149,6 @@ public abstract class CustomExplosion
 
 	public void setExplosionRadius(double explosionRadius) {
 		this.explosionRadius = explosionRadius;
-		this.explRadiusSqr = explosionRadius * explosionRadius;
 	}
 
 	public double getGuaranteeHitRadius() {
@@ -137,7 +157,6 @@ public abstract class CustomExplosion
 
 	public void setGuaranteeHitRadius(double guaranteeHitRadius) {
 		this.guaranteeHitRadius = guaranteeHitRadius;
-		this.guarHitRadiusSqr = guaranteeHitRadius * guaranteeHitRadius;
 	}
 
 	public double getDamage() {
