@@ -120,4 +120,8 @@ public abstract class Ability {
 	public void onPlaceBlock(BlockPlaceEvent event) {}
 
 	public void onTeamSwitch(Player player, @Nullable TeamArenaTeam oldTeam, @Nullable TeamArenaTeam newTeam) {}
+
+	//For Frost, if the kit has special ability projectiles w/ special behavior,
+	//A method should be defined to instruct how to attribute its damage to the Frost that reflected it.
+	public void deflectProjectile() {}
 }

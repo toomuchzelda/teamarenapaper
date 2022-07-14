@@ -3,26 +3,26 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.frost;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.util.BoundingBox;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
 import java.util.*;
-
-import static me.toomuchzelda.teamarenapaper.teamarena.kits.KitExplosive.ExplosiveAbility.RPG_ARROW_COLOR;
-import static me.toomuchzelda.teamarenapaper.teamarena.kits.KitPyro.MOLOTOV_ARROW_COLOR;
+import java.util.stream.Stream;
 
 /**
  * @author onett425
@@ -56,14 +56,54 @@ public class KitFrost extends Kit
 		public static final int FLASH_CD = 2 * 20;
 		public static final double FLASH_DISTANCE = 8.0;
 		public static final int FROST_DURATION = 120;
+		//public static final int PARRY_CD = 120;
+		public static final int PARRY_CD = 20;
+		//public static final int ACTIVE_PARRY_TIME = 20;
+		public static final int ACTIVE_PARRY_TIME = 120;
+		public static final double PARRY_HITBOX_SIZE = 3.0;
+
+		public static final Component PARRY_READY_MESSAGE = Component.text("PARRY IS READY");
+		public static final Enchantment PARRY_ENCHANT = Enchantment.PROTECTION_PROJECTILE;
+
+		//Yaw / Pitch Range = player yaw / pitch can deviate from the incoming projectile's
+		// yaw/pitch by +/- the # of degrees listed below
+		public static final double PARRY_YAW_RANGE = 45;
+		public static final HashSet<Player> ACTIVE_PARRY = new HashSet<>();
+		public static final HashMap<Player, Entity> LATEST_DEFLECT = new HashMap<>();
 
 		@Override
 		public void unregisterAbility() {
 			FROSTED_ENTITIES.clear();
+			ACTIVE_PARRY.clear();
+			LATEST_DEFLECT.clear();
+		}
+
+		//Ensuring EXP bar is clean upon spawn
+		@Override
+		public void giveAbility(Player player) {
+			player.setExp(0f);
+		}
+
+		//Cleaning up EXP bar upon player death
+		@Override
+		public void removeAbility(Player player) {
+			disableParry(player);
+			LATEST_DEFLECT.remove(player);
+		}
+
+		@Override
+		public void onAttemptedAttack(DamageEvent event) {
+			if(event.getDamageType().is(DamageType.MELEE) &&
+					event.getFinalAttacker() instanceof Player attacker &&
+					ACTIVE_PARRY.contains(attacker)) {
+				//Prevent melee attacks when the Frost is parrying
+				event.setCancelled(true);
+			}
 		}
 
 		@Override
 		public void onTick() {
+			//Handling Frost Debuff
 			Iterator<Map.Entry<Player, Integer>> iter = FROSTED_ENTITIES.entrySet().iterator();
 			while(iter.hasNext()) {
 				Map.Entry<Player, Integer> entry = iter.next();
@@ -78,13 +118,89 @@ public class KitFrost extends Kit
 					iter.remove();
 					entity.removePotionEffect(PotionEffectType.SLOW);
 				}
-				//Actual Frost debuff is handled in EventHandlers
+				//Actual Frost debuff is handled in EventHandlers, SearchAndDestroy and CaptureTheFlag
 			}
+
+			HashMap<Player, Entity> staleProj = new HashMap<>();
+			//Handling teleporting to the latest deflected projectile
+			LATEST_DEFLECT.forEach((player, entity) -> {
+
+				//Maintaining the player's original rotation upon teleport
+				Location tpLoc = entity.getLocation().clone();
+				tpLoc.setYaw(player.getLocation().getYaw());
+				tpLoc.setPitch(player.getLocation().getPitch());
+
+				if(entity instanceof Projectile proj) {
+					//Teleport to arrows if they hit a block / removed
+					if(proj instanceof AbstractArrow abstractArrow &&
+							(abstractArrow.isInBlock() || abstractArrow.isDead())) {
+
+							player.teleport(tpLoc);
+							staleProj.put(player, entity);
+					}
+					//Only allow them to teleport to Burst rocket if it hits a block or near a player
+					else if (proj instanceof ShulkerBullet rocket &&
+							(rocket.isDead() &&
+									(rocket.getLocation().clone().add(rocket.getLocation().getDirection())
+									.getBlock().isSolid() ||
+									!rocket.getLocation().getNearbyPlayers(1).isEmpty()))) {
+
+						player.teleport(tpLoc);
+						staleProj.put(player, entity);
+					}
+					else {
+						if(proj.isDead()) {
+							player.teleport(tpLoc);
+							staleProj.put(player, entity);
+						}
+					}
+				}
+				//All deflectable Items are grenades, which are marked for removal upon detonation
+				else if(entity instanceof Item item) {
+					if(item.isDead()) {
+						player.teleport(tpLoc);
+						staleProj.put(player, entity);
+					}
+				}
+			});
+
+			staleProj.forEach(LATEST_DEFLECT::remove);
 		}
 
 		@Override
-		public void onPlayerTick(Player player){
-			//deflectTest(player);
+		public void onPlayerTick(Player player) {
+
+			//Removing Parry if player is not holding a sword at all
+			if(ACTIVE_PARRY.contains(player) &&
+					(player.getInventory().getItemInMainHand().getType() != Material.IRON_SWORD &&
+							player.getInventory().getItemInOffHand().getType() != Material.IRON_SWORD)) {
+
+				disableParry(player);
+			}
+
+			//Handling display of frost sword uptime
+			float percent = (float) 1 / (float) PARRY_CD;
+			//if Frost is not currently parrying, slowly fill exp bar
+			if(!ACTIVE_PARRY.contains(player)) {
+				float newPercent = player.getExp() + percent;
+				newPercent = MathUtils.clamp(0f, 1f, newPercent);
+				player.setExp(newPercent);
+			}
+			//if Frost is currently parrying, deplete exp bar
+			//EXP bar is completely depleted when parry is performed
+			else {
+				percent = (float) 1 / (float) ACTIVE_PARRY_TIME;
+				float newPercent = player.getExp() - percent;
+				newPercent = MathUtils.clamp(0f, 1f, newPercent);
+				player.setExp(newPercent);
+
+				parryDeflectTick(player);
+
+				if(newPercent == 0f) {
+					//If parry remains unused, disable it when exp bar reaches 0
+					disableParry(player);
+				}
+			}
 		}
 
 		@Override
@@ -99,8 +215,69 @@ public class KitFrost extends Kit
 			event.setUseItemInHand(Event.Result.DENY);
 			event.setUseInteractedBlock(Event.Result.DENY);
 
-			if(mat == Material.AMETHYST_SHARD && !player.hasCooldown(mat)){
+			if(mat == Material.AMETHYST_SHARD && !player.hasCooldown(mat)) {
 				flashFreeze(player);
+			}
+			else if(mat == Material.IRON_SWORD && player.getExp() >= 1f) {
+				activateParry(player);
+			}
+		}
+
+		public void activateParry(Player player) {
+			player.getInventory().all(Material.IRON_SWORD).forEach(
+					(k, v) -> v.addUnsafeEnchantment(PARRY_ENCHANT, 1));
+			if(player.getInventory().getItemInOffHand().getType() == Material.IRON_SWORD) {
+				player.getInventory().getItemInOffHand().addUnsafeEnchantment(PARRY_ENCHANT, 1);
+			}
+
+			ACTIVE_PARRY.add(player);
+		}
+
+		public void disableParry(Player player) {
+			player.getInventory().all(Material.IRON_SWORD).forEach(
+					(k, v) -> v.removeEnchantment(PARRY_ENCHANT));
+			if(player.getInventory().getItemInOffHand().getType() == Material.IRON_SWORD) {
+				player.getInventory().getItemInOffHand().removeEnchantment(PARRY_ENCHANT);
+			}
+
+			ACTIVE_PARRY.remove(player);
+			player.setExp(0f);
+		}
+
+		public void parryDeflectTick(Player player) {
+
+			Collection<Entity> nearbyEntities = player.getEyeLocation()
+					.getNearbyEntities(PARRY_HITBOX_SIZE, PARRY_HITBOX_SIZE, PARRY_HITBOX_SIZE);
+
+			List<Entity> projectiles = nearbyEntities.stream()
+					.filter(ProjDeflect::isDeflectable)
+					.filter(entity -> {
+						//If it is an Item Grenade, Yaw cannot be checked so
+						//Allow deflection if it is in mid-air
+						if(entity instanceof Item item){
+							return !item.isOnGround();
+						}
+
+						//Projectiles' direction must be checked so it is alligned w/ the player's curr direction
+						Location entLoc = entity.getLocation().clone();
+						float playerYaw = player.getLocation().getYaw();
+						float entYaw = entLoc.getYaw();
+						float yawDiff = 180 - Math.abs(Math.abs(playerYaw - entYaw) - 180);
+
+						return yawDiff <= PARRY_YAW_RANGE;
+					}).toList();
+
+			if(!projectiles.isEmpty()) {
+				attemptDeflect(player, projectiles.get(0));
+			}
+		}
+
+		public void attemptDeflect(Player player, Entity entity) {
+			if(ProjDeflect.tryDeflect(player, entity)){
+				LATEST_DEFLECT.put(player, entity);
+				//Only 1 projectile is able to be deflected per Parry use.
+				disableParry(player);
+				Bukkit.broadcast(Component.text("DEFLECTED"));
 			}
 		}
 
@@ -177,66 +354,6 @@ public class KitFrost extends Kit
 							0.25,0.25,0.25, Material.FROSTED_ICE.createBlockData());
 					world.playSound(enemy, Sound.BLOCK_GLASS_BREAK, 1.2f, 0.8f);
 			});
-		}
-
-		public void deflectTest(Player player){
-			List<Entity> nearbyEnt = player.getNearbyEntities(4,4,4);
-			nearbyEnt.stream()
-					.filter(entity -> (entity.getVelocity().lengthSquared()  >= 0 &&
-							(entity instanceof Projectile || entity instanceof Item)))
-					.forEach(entity -> {
-						if(entity instanceof ShulkerBullet rocket){
-							//Only allow them to teleport to the rocket if it hits a block
-							//rocket.getLocation().getBlock().isSolid();
-							ProjDeflect.deflectProj(player, rocket);
-						}
-						if(entity instanceof Firework firework){
-							ProjDeflect.deflectBurstFirework(player, firework);
-						}
-						else if(entity instanceof AbstractArrow arrow){
-							//For arrows which are associated with special abilities,
-							//The shooter must be changed last second to preserve the properties
-							if(arrow instanceof Arrow abilityArrow &&
-								abilityArrow.getColor() != null){
-								if(abilityArrow.getColor().equals(MOLOTOV_ARROW_COLOR) ||
-										abilityArrow.getColor().equals(RPG_ARROW_COLOR)){
-									//Used to mark the "true" shooter of the arrow
-									//the actual shooter must be preserved so the arrows behave
-									//according to their respective kit's implementation
-									if(abilityArrow.hasMetadata("shooterOverride")){
-										//First, clear any other past overrides if
-										//another Frost had already deflected the projectile
-										abilityArrow.removeMetadata("shooterOverride",
-												Main.getPlugin());
-									}
-									abilityArrow.setMetadata("shooterOverride",
-											new FixedMetadataValue(Main.getPlugin(), player));
-									ProjDeflect.deflectSameShooter(player, abilityArrow);
-								}
-								else{
-									ProjDeflect.deflectArrow(player, arrow);
-								}
-							}
-							else{
-								ProjDeflect.deflectArrow(player, arrow);
-							}
-						}
-						else if(entity instanceof EnderPearl pearl){
-							ProjDeflect.deflectSameShooter(player, pearl);
-						}
-						else if (entity instanceof Item item){
-							if(item.getItemStack().getType() == Material.TURTLE_HELMET ||
-									item.getItemStack().getType() == Material.HEART_OF_THE_SEA ||
-									item.getItemStack().getType() == Material.FIREWORK_STAR) {
-								ProjDeflect.addShooterOverride(player, item);
-								ProjDeflect.deflectSameShooter(player, item);
-							}
-						}
-						else{
-							//For non-specific projectiles that are not used for kits
-							ProjDeflect.deflectProj(player, (Projectile) entity);
-						}
-					});
 		}
 	}
 }
