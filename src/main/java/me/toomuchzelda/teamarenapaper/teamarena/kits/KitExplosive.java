@@ -12,6 +12,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
@@ -51,9 +52,9 @@ public class KitExplosive extends Kit {
 	// yet another shade of yellow? why??
 	private static final TextColor ITEM_YELLOW = TextColor.color(255, 241, 120);
 
-	public static ItemStack GRENADE = ItemBuilder.of(Material.FIREWORK_STAR)
+	public static final ItemStack GRENADE = ItemBuilder.of(Material.FIREWORK_STAR)
 			.displayName(Component.text("Grenade", ITEM_YELLOW)).build();
-	public static ItemStack RPG = ItemBuilder.of(Material.EGG)
+	public static final ItemStack RPG = ItemBuilder.of(Material.EGG)
 			.displayName(Component.text("RPG", ITEM_YELLOW)).build();
 
 	public KitExplosive() {
@@ -79,13 +80,16 @@ public class KitExplosive extends Kit {
 		public static final int RPG_MAX_IN_INV = 2;
 		public static final int RPG_CD = 10;
 		public static final double RPG_BLAST_RADIUS = 4.5;
-		public static final double RPG_BLAST_RADIUS_SQRD = 20.25;
+		public static final double RPG_BLAST_RADIUS_SQRD = RPG_BLAST_RADIUS * RPG_BLAST_RADIUS;
 		public static final double RPG_BLAST_STRENGTH = 0.35d;
 
 		public static final int GRENADE_RECHARGE_TIME = 80;
 		public static final int GRENADE_MAX_ACTIVE = 3;
 		public static final int GRENADE_MAX_IN_INV = 5;
 		public static final int GRENADE_FUSE_TIME = 60;
+
+		public record RPGInfo(Arrow rpgArrow, Egg rpgEgg, Player thrower, int spawnTime) {}
+		public record GrenadeInfo(Item grenade, Player thrower, Color color, int spawnTime) {}
 
 		//ACTIVE handles behavior of active explosives
 		//RECHARGES handles giving players explosives
@@ -142,7 +146,7 @@ public class KitExplosive extends Kit {
 				if (TeamArena.getGameTick() - grenadeInfo.spawnTime >= GRENADE_FUSE_TIME) {
 					//Only explode if the thrower is still alive
 					if (!Main.getGame().isDead(thrower)) {
-						world.createExplosion(grenade.getLocation(), 1.5f, false, false, thrower);
+						world.createExplosion(grenade.getLocation(), 1.5f, false, false, grenade);
 					}
 					grenade.remove();
 					staleGrenades.add(grenadeInfo);
@@ -172,19 +176,18 @@ public class KitExplosive extends Kit {
 				rpgEgg.remove();
 				//Hiding arrow
 				Bukkit.getOnlinePlayers().forEach(player -> {
-					List<Integer> entityIDList = new ArrayList<>();
-					entityIDList.add(rpgArrow.getEntityId());
+					List<Integer> entityIDList = new ArrayList<>(rpgArrow.getEntityId());
 
 					ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
 					PacketContainer packet = protocolManager.createPacket(PacketType.Play.Server.ENTITY_DESTROY);
 					packet.getIntLists().write(0, entityIDList);
 
-					protocolManager.sendServerPacket(player, packet);
+					PlayerUtils.sendPacket(player, packet);
 				});
 
 				//Explode RPG if it hits block or player
 				if (rpgArrow.isInBlock() || rpgArrow.isOnGround() || rpgArrow.isDead()) {
-					rpgBlast(rpgArrow.getLocation().clone(), thrower);
+					rpgBlast(rpgArrow.getLocation(), thrower);
 
 					world.playSound(rpgArrow.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 2.0f, 1.0f);
 					world.spawnParticle(Particle.EXPLOSION_LARGE, rpgArrow.getLocation(), 1);
@@ -208,8 +211,8 @@ public class KitExplosive extends Kit {
 			});
 
 			//Cleaning up Stale RPG + Grenades
-			staleGrenades.forEach(ACTIVE_GRENADES::remove);
-			staleRPG.forEach(ACTIVE_RPG::remove);
+			ACTIVE_GRENADES.removeAll(staleGrenades);
+			ACTIVE_RPG.removeAll(staleRPG);
 		}
 
 		public void rpgBlast(Location explodeLoc, Player owner) {
@@ -253,15 +256,19 @@ public class KitExplosive extends Kit {
 						PlayerUtils.sendVelocity(p, PlayerUtils.noNonFinites(vector));
 
 						//RPG Custom Damage, so it is more consistent. Ignore KB since it is already handled above
-						if (p.equals(owner) && p.getGameMode() == GameMode.SURVIVAL) {
-							//Self Damage deals a consistent amount
-							DamageEvent dEvent = DamageEvent.newDamageEvent(owner, 5.0d, DamageType.EXPLOSION, null, false);
-							dEvent.setNoKnockback();
-							Main.getGame().queueDamage(dEvent);
-						} else if (!team.getPlayerMembers().contains(p) && p.getGameMode() == GameMode.SURVIVAL) {
-							//Enemy Damage is based on distance from bomb
-							double damage = Math.max(power, 0.1d) * 1.8d;
-							DamageEvent dEvent = DamageEvent.newDamageEvent(p, damage, DamageType.EXPLOSION, owner, false);
+						if(p.getGameMode() == GameMode.SURVIVAL) {
+							DamageEvent dEvent;
+							if (p.equals(owner)) {
+								//Self Damage deals a consistent amount
+								dEvent = DamageEvent.newDamageEvent(owner, 5.0d, DamageType.EXPLOSION, null, false);
+								dEvent.setNoKnockback();
+
+							}
+							else {
+								//Enemy Damage is based on distance from bomb
+								double damage = Math.max(power, 0.1d) * 1.8d;
+								dEvent = DamageEvent.newDamageEvent(p, damage, DamageType.EXPLOSION, owner, false);
+							}
 							dEvent.setNoKnockback();
 							Main.getGame().queueDamage(dEvent);
 						}
@@ -275,7 +282,7 @@ public class KitExplosive extends Kit {
 		public void itemDist(Player player, int lastUsedTick,
 							 int maxCount, int rechargeTime, ItemStack desiredItem) {
 			PlayerInventory inv = player.getInventory();
-			int itemCount = getInvCount(inv, desiredItem);
+			int itemCount = ItemUtils.getMaterialCount(inv, desiredItem.getType());
 
 			if (itemCount < maxCount &&
 					(TeamArena.getGameTick() - lastUsedTick) % rechargeTime == 0) {
@@ -287,41 +294,6 @@ public class KitExplosive extends Kit {
 			}
 		}
 
-		//Returns a count of how much of desiredItem is in inv
-		public int getInvCount(PlayerInventory inv, ItemStack desiredItem) {
-			ItemStack[] items = inv.getContents();
-			int itemCount = 0;
-			for (ItemStack item : items) {
-				if (item != null && item.getType() == desiredItem.getType()) {
-					itemCount += item.getAmount();
-				}
-			}
-			return itemCount;
-		}
-
-		//If the inventory exceeds the maxCount of the targetItem, set the quantity
-		//of that item equal to maxCount
-		public void correctInv(PlayerInventory inv, ItemStack targetItem, int maxCount) {
-			int count = 0;
-			for (var iterator = inv.iterator(); iterator.hasNext(); ) {
-				ItemStack stack = iterator.next();
-				if (stack == null || !targetItem.isSimilar(stack))
-					continue;
-				int amount = stack.getAmount();
-				if (count + amount > maxCount) {
-					if (maxCount - count > 0) {
-						stack.setAmount(maxCount - count);
-						count = maxCount;
-						iterator.set(stack);
-					} else {
-						iterator.set(null);
-					}
-				} else {
-					count += amount;
-				}
-			}
-		}
-
 		@Override
 		public void onPlayerTick(Player player) {
 			//Fixing glitch where player can get extra explosives by "hiding" grenades
@@ -329,8 +301,8 @@ public class KitExplosive extends Kit {
 			PlayerInventory inv = player.getInventory();
 			//Ignore excess explosives if the player is in creative mode and is admin abusing
 			if (player.getGameMode() != GameMode.CREATIVE) {
-				correctInv(inv, GRENADE, GRENADE_MAX_IN_INV);
-				correctInv(inv, RPG, RPG_MAX_IN_INV);
+				ItemUtils.maxItemAmount(inv, GRENADE, GRENADE_MAX_IN_INV);
+				ItemUtils.maxItemAmount(inv, RPG, RPG_MAX_IN_INV);
 			}
 		}
 
@@ -349,7 +321,7 @@ public class KitExplosive extends Kit {
 					shooter.setCooldown(Material.EGG, RPG_CD);
 				}
 				//Resetting RPG recharge time
-				if (getInvCount(inv, RPG) == RPG_MAX_IN_INV) {
+				if (ItemUtils.getMaterialCount(inv, RPG.getType()) == RPG_MAX_IN_INV) {
 					RPG_RECHARGES.put(shooter, TeamArena.getGameTick());
 				}
 
@@ -368,8 +340,6 @@ public class KitExplosive extends Kit {
 				ACTIVE_RPG.add(new RPGInfo(rpgArrow, rpgEgg, shooter, TeamArena.getGameTick()));
 			}
 		}
-
-		public record RPGInfo(Arrow rpgArrow, Egg rpgEgg, Player thrower, int spawnTime) {}
 
 		public void onInteract(PlayerInteractEvent event) {
 			ItemStack item = event.getItem();
@@ -408,6 +378,7 @@ public class KitExplosive extends Kit {
 				entity.setCanPlayerPickup(false);
 				entity.setUnlimitedLifetime(true);
 				entity.setWillAge(false);
+				entity.setThrower(player.getUniqueId());
 			});
 			world.playSound(grenadeDrop, Sound.ENTITY_CREEPER_PRIMED, 1.0f, 1.1f);
 
@@ -417,7 +388,7 @@ public class KitExplosive extends Kit {
 			ACTIVE_GRENADES.add(new GrenadeInfo(grenadeDrop, player, teamColor, TeamArena.getGameTick()));
 
 			//Resetting Grenade recharge time
-			if (getInvCount(inv, GRENADE) == GRENADE_MAX_IN_INV) {
+			if (ItemUtils.getMaterialCount(inv, GRENADE.getType()) == GRENADE_MAX_IN_INV) {
 				GRENADE_RECHARGES.put(player, TeamArena.getGameTick());
 			}
 
@@ -430,6 +401,4 @@ public class KitExplosive extends Kit {
 
 		}
 	}
-
-	public record GrenadeInfo(Item grenade, Player thrower, Color color, int spawnTime) {}
 }

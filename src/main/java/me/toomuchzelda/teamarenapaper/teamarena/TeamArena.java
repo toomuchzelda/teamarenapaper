@@ -223,8 +223,8 @@ public abstract class TeamArena
 			tabTeamsList.add(team.getSimpleName());
 		}
 
-		players = ConcurrentHashMap.newKeySet();
-		spectators = ConcurrentHashMap.newKeySet();
+		players = new LinkedHashSet<>();
+		spectators = new LinkedHashSet<>();
 		respawnTimers = new LinkedHashMap<>();
 		damageQueue = new LinkedList<>();
 

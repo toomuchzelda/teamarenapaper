@@ -121,29 +121,29 @@ public class KitBurst extends Kit
 			Player player = event.getPlayer();
 
 			//stop them from accidentally placing the firework down and using it
-			if(event.useItemInHand() != Event.Result.DENY && mat == Material.FIREWORK_ROCKET) {
-				event.setUseItemInHand(Event.Result.DENY);
-			}
-
-			//Firing Rocket
-			if(event.useItemInHand() != Event.Result.DENY && mat == Material.FURNACE_MINECART) {
-				event.setUseItemInHand(Event.Result.DENY);
-
-				if(event.getAction().isRightClick() && !player.hasCooldown(mat)) {
-					fireRocket(player);
+			if(event.useItemInHand() != Event.Result.DENY) {
+				if (mat == Material.FIREWORK_ROCKET) {
+					event.setUseItemInHand(Event.Result.DENY);
+				}
+				//Firing Rocket
+				else if (mat == Material.FURNACE_MINECART) {
+					event.setUseItemInHand(Event.Result.DENY);
+					if (event.getAction().isRightClick() && !player.hasCooldown(mat)) {
+						fireRocket(player);
+					}
 				}
 			}
 		}
 
 		public void fireRocket(Player player) {
 			World world = player.getWorld();
-			Location eyeLoc = player.getEyeLocation().clone();
+			Location eyeLoc = player.getEyeLocation();
 			Vector dir = eyeLoc.getDirection();
 
 			ShulkerBullet rocket = world.spawn(eyeLoc, ShulkerBullet.class, bullet -> {
 				bullet.setShooter(player);
 				bullet.setTarget(null);
-				bullet.setVelocity(eyeLoc.getDirection());
+				bullet.setVelocity(dir);
 				bullet.setGravity(false);
 			});
 			//Push player back slightly upon firing, no vertical boost allowed
@@ -160,7 +160,7 @@ public class KitBurst extends Kit
 
 			ACTIVE_ROCKETS.forEach(rocket -> {
 				int tick = rocket.getTicksLived();
-				Location loc = rocket.getLocation().clone();
+				Location loc = rocket.getLocation();
 				Player shooter = (Player) rocket.getShooter();
 				Color teamColor = Main.getPlayerInfo(shooter).team.getColour();
 				World world = rocket.getWorld();

@@ -6,14 +6,15 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.ChatColor;
 import org.bukkit.Color;
+import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.jetbrains.annotations.NotNull;
 
-import javax.annotation.Nullable;
-import java.util.Iterator;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ItemUtils {
     public static int _uniqueName = 0;
@@ -21,11 +22,7 @@ public class ItemUtils {
     /**
      * used to explicity set italics state of components to false
      * useful coz setting displayname/lore on ItemMetas defaults to making them italic
-     *
-     * @param component
-     * @return
      */
-	@Deprecated
     public static Component noItalics(Component component) {
         return component.decoration(TextDecoration.ITALIC, false);
     }
@@ -53,25 +50,69 @@ public class ItemUtils {
 
 	/**
 	 * get the instance of this item that is in the inventory
-	 * @return
 	 */
-	public static @Nullable ItemStack getItemInInventory(@NotNull ItemStack originalItem, Inventory inventory) {
-		Iterator<ItemStack> iter = inventory.iterator();
-		while(iter.hasNext()) {
-			ItemStack item = iter.next();
+	public static @NotNull List<ItemStack> getItemInInventory(@NotNull ItemStack originalItem, Inventory inventory) {
+		List<ItemStack> itemsFound = new ArrayList<>();
 
-			if(originalItem.isSimilar(item))
-				return item;
+		for(ItemStack item : inventory) {
+			if (originalItem.isSimilar(item))
+				itemsFound.add(item);
 		}
 
 		//they may be holding it on their mouse in their inventory (if a player)
 		if(inventory.getHolder() instanceof Player p) {
 			ItemStack cursor = p.getItemOnCursor();
 			if(originalItem.isSimilar(cursor))
-				return cursor;
+				itemsFound.add(cursor);
 		}
 
-		return null;
+		return itemsFound;
+	}
+
+	/**
+	 * If the inventory exceeds the maxCount of the targetItem, set the quantity
+	 * of that item equal to maxCount
+	 * @param inv Inventory to search.
+	 * @param targetItem Item to limit count of.
+	 * @param maxCount Max amount of that item.
+	 * @author onett425
+	 */
+	public static void maxItemAmount(Inventory inv, ItemStack targetItem, int maxCount) {
+		int count = 0;
+		for (var iterator = inv.iterator(); iterator.hasNext(); ) {
+			ItemStack stack = iterator.next();
+			if (stack == null || !targetItem.isSimilar(stack))
+				continue;
+			int amount = stack.getAmount();
+			if (count + amount > maxCount) {
+				if (maxCount - count > 0) {
+					stack.setAmount(maxCount - count);
+					count = maxCount;
+					iterator.set(stack);
+				} else {
+					iterator.set(null);
+				}
+			} else {
+				count += amount;
+			}
+		}
+	}
+
+	/**
+	 * Get how many items of this material are in an inventory
+	 * @param inv Inventory to search.
+	 * @param material Material to search for.
+	 * @author onett425
+	 */
+	public static int getMaterialCount(Inventory inv, Material material) {
+		ItemStack[] items = inv.getContents();
+		int itemCount = 0;
+		for (ItemStack item : items) {
+			if (item != null && item.getType() == material) {
+				itemCount += item.getAmount();
+			}
+		}
+		return itemCount;
 	}
 
     /**
@@ -103,7 +144,7 @@ public class ItemUtils {
 
     /**
      * return a bunch of color chars to append to the end of item name/lore to make it unique?
-     * used to stop identical item stacking
+     * used to stop stacking of otherwise identical items.
      * credit libraryaddict - https://github.com/libraryaddict/RedWarfare/blob/master/redwarfare-core/src/me/libraryaddict/core/utils/UtilInv.java
      */
     public static String getUniqueId() {
