@@ -20,9 +20,7 @@ import org.bukkit.entity.TNTPrimed;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 
 public class Bomb
 {
@@ -381,6 +379,21 @@ public class Bomb
 
 	public Component getSidebarStatus() {
 		return this.sidebarStatus;
+	}
+
+	public double getExplosionProgress() {
+		return (double) (TeamArena.getGameTick() - armedTime) / BOMB_DETONATION_TIME;
+	}
+
+	public Set<TeamArenaTeam> getArmingTeams() {
+		return Collections.unmodifiableSet(currentArmers.keySet());
+	}
+
+	public double getTeamArmingProgress(TeamArenaTeam team) {
+		TeamArmInfo teamArmInfo = currentArmers.get(team);
+		if (teamArmInfo == null)
+			throw new IllegalArgumentException(team + " is not arming!");
+		return teamArmInfo.armProgress;
 	}
 
 	/**

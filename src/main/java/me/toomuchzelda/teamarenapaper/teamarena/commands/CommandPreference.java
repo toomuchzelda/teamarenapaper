@@ -2,7 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
-import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -55,7 +55,7 @@ public class CommandPreference extends CustomCommand {
                 } catch (IllegalArgumentException e) {
                     player.sendMessage(Component.text(
 							"Invalid value '" + input + "' for preference " + args[1] + ":\n" + e,
-							TextUtils.ERROR_RED));
+							TextColors.ERROR_RED));
                     return;
                 }
 

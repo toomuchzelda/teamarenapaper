@@ -9,10 +9,11 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
-import net.kyori.adventure.sound.SoundStop;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -37,11 +38,10 @@ import java.util.*;
 	Main Ability: Rewind
         CD: 15 seconds
             Every 15 seconds, this kit can travel to its previous location 15 seconds ago, with an extra buff depending on
-            a 15 second cycle with 3 equivalent parts (each last for 5 seconds).
-            They are denoted by the current time of day:
-                Day: Regeneration
-                Sunset: Time Dilation (AoE Slow)
-                Night: Knockback (KB Explosion)
+            a 15 second cycle with 3 equivalent parts (each last for 5 seconds):
+                First Section: Regeneration
+                Second Section: Time Dilation (AoE Slow)
+                Third Section: Knockback (KB Explosion)
 	Sub Ability: Stasis
 		CD: 12 sec
         Active Duration: 14 ticks
@@ -57,20 +57,38 @@ public class KitRewind extends Kit {
 	public static final TextColor REGEN_COLOR = TextColor.color(245, 204, 91);
 	public static final TextColor DILATE_COLOR = TextColor.color(237, 132, 83);
 	public static final TextColor KB_COLOR = TextColor.color(123, 101, 235);
-	public static final ItemStack TIME_MACHINE;
 
-	static{
-		TIME_MACHINE = ItemBuilder.of(Material.CLOCK)
-				.displayName(ItemUtils.noItalics(Component.text("Time Machine")))
-				.build();
-	}
+	public static final ItemStack TIME_MACHINE = ItemBuilder.of(Material.CLOCK)
+			.displayName(Component.text("Time Machine"))
+			.lore(TextUtils.toLoreList("""
+							Teleport to your location 15 seconds ago!
+							You receive a buff based on your current State
+							The 3 states are divided evenly in a 15 second cycle
+							<regeneration>: Receive Regen II for 3.5 Seconds
+							<time_dilation>: Gives Slowness III + Prevents Jumping
+							    from enemies within a 4 Block radius for 3 Seconds
+							<knockback>: Blasts nearby enemies away
+							Note: <time_dilation> and <knockback>
+							    are applied at departure and arrival location""", TextColors.LIGHT_YELLOW,
+					Placeholder.component("regeneration", Component.text("Regeneration", REGEN_COLOR)),
+					Placeholder.component("time_dilation", Component.text("Time Dilation", DILATE_COLOR)),
+					Placeholder.component("knockback", Component.text("Knockback", KB_COLOR))
+			))
+			.build();
+
+	public static final ItemStack TIME_STASIS = ItemBuilder.of(Material.SHULKER_SHELL)
+			.displayName(Component.text("Time Stasis"))
+			.lore(Component.text("Duration: 0.7 seconds", KB_COLOR),
+					Component.text("Briefly become invulnerable but unable to attack", TextColors.LIGHT_YELLOW))
+			.build();
 
 	public KitRewind() {
 		super("Rewind", """
 				Travel 15 seconds back in time with your rewind clock. \
 				Depending on the time, you gain a different buff. \
-				Time stasis allows you to not take damage but you cannot deal damage.\
+				Time stasis provides brief invulnerability at the cost of being disarmed.\
 				""", Material.CLOCK);
+
 		setArmor(new ItemStack(Material.CHAINMAIL_HELMET),
 				ItemBuilder.of(Material.IRON_CHESTPLATE)
 						.enchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1)
@@ -78,10 +96,7 @@ public class KitRewind extends Kit {
 				new ItemStack(Material.IRON_LEGGINGS),
 				new ItemStack(Material.IRON_BOOTS));
 
-		ItemStack timeStasis = ItemBuilder.of(Material.SHULKER_SHELL)
-				.displayName(ItemUtils.noItalics(Component.text("Time Stasis")))
-				.build();
-		setItems(new ItemStack(Material.IRON_SWORD), TIME_MACHINE, timeStasis);
+		setItems(new ItemStack(Material.IRON_SWORD), TIME_MACHINE, TIME_STASIS);
 
 		setAbilities(new RewindAbility());
 
@@ -166,8 +181,6 @@ public class KitRewind extends Kit {
 
 		@Override
 		public void onPlayerTick(Player player) {
-			//Player tick is used to determine cooldowns + abilities
-			//Time tick is purely aesthetic
 			Location loc = player.getLocation();
 			RewindInfo info = rewindInfo.get(player);
 			Block currBlock = loc.getBlock().getRelative(BlockFace.DOWN);
@@ -200,7 +213,7 @@ public class KitRewind extends Kit {
 				}
 				player.sendActionBar(currState);
 
-				// Update all clikc items if the preference is changed mid-game
+				// Update all click items if the preference is changed mid-game
 				var timeMachineDisplayName = TIME_MACHINE.displayName();
 				for (var iterator = inv.iterator(); iterator.hasNext(); ) {
 					var stack = iterator.next();
@@ -253,7 +266,7 @@ public class KitRewind extends Kit {
 		}
 
 		private static final ItemStack DISABLED_ITEM = ItemBuilder.of(Material.BARRIER)
-				.displayName(Component.text("Item Disabled", TextUtils.ERROR_RED))
+				.displayName(Component.text("Item Disabled", TextColors.ERROR_RED))
 				.build();
 		@Override
 		public void onInteract(PlayerInteractEvent event) {
@@ -279,6 +292,7 @@ public class KitRewind extends Kit {
 						//Apply buff at departure AND arrival location
 						rewindBuff(player, info, currTick);
 						player.teleport(dest);
+						player.setFireTicks(0);
 						world.playSound(player, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1.5f);
 						rewindBuff(player, info, currTick);
 						player.setCooldown(Material.CLOCK, 15 * 20);
@@ -336,7 +350,7 @@ public class KitRewind extends Kit {
 				player.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 150, 1));
 			} else if (elapsedTick < 10 * 20) {
 				//Time Dilation: Gives nearby enemies Slow 3 + No Jump for 3 seconds
-				List<Entity> affectedEnemies = player.getNearbyEntities(8, 8, 8);
+				List<Entity> affectedEnemies = player.getNearbyEntities(6, 6, 6);
 				for (Entity entity : affectedEnemies) {
 					if (entity instanceof LivingEntity victim && !(entity instanceof ArmorStand)) {
 						//change to 3*20 tick duration, extended for testing purposes

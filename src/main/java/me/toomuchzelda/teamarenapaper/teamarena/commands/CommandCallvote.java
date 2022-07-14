@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
+import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
@@ -273,7 +274,7 @@ public class CommandCallvote extends CustomCommand {
 		return builder.build();
 	}
 
-	static final Component LE_FUNNY_VOTE = Component.text("Reminder: This vote has no actual effect!", TextUtils.ERROR_RED);
+	static final Component LE_FUNNY_VOTE = Component.text("Reminder: This vote has no actual effect!", NamedTextColor.YELLOW);
 	public void createVote(@Nullable UUID caller, Component owner, Component display) {
 		createVote(caller, owner, display, new TopicOptions(false, null, LE_FUNNY_VOTE, VoteOption.DEFAULT_OPTIONS));
 	}
@@ -458,7 +459,7 @@ public class CommandCallvote extends CustomCommand {
 						name = player.playerListName();
 
 						if (!calledVotes.add(caller)) {
-							player.sendMessage(Component.text("You've already queued a topic!", TextUtils.ERROR_RED));
+							player.sendMessage(Component.text("You've already queued a topic!", TextColors.ERROR_RED));
 							return;
 						}
 					} else {

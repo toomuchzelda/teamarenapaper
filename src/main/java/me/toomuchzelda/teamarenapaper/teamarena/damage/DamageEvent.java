@@ -31,6 +31,7 @@ import org.jetbrains.annotations.NotNull;
 import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.List;
+import java.util.UUID;
 
 import static me.toomuchzelda.teamarenapaper.teamarena.GameState.LIVE;
 
@@ -176,12 +177,6 @@ public class DamageEvent {
 			}
 		}
 
-        /*Bukkit.broadcast(Component.text("DamageCause: " + event.getCause()));
-        Bukkit.broadcast(Component.text("DamageType: " + damageType.toString()));*/
-
-		//if(damageType.isKnockback())
-		//   knockbackMults = new LinkedList<>();
-
 		boolean doBaseKB = true;
 		double knockbackLevels = 0;
 		double knockbackResistance = 1;
@@ -204,6 +199,14 @@ public class DamageEvent {
 				Entity tntSource = tnt.getSource();
 				if(tntSource != null) {
 					realAttacker = tntSource;
+				}
+			}
+			else if(attacker instanceof Item item) {
+				UUID throwerUuid = item.getThrower();
+				if(throwerUuid != null) {
+					Player thrower = Bukkit.getPlayer(throwerUuid);
+					if(thrower != null)
+						realAttacker = thrower;
 				}
 			}
 			else if(attacker instanceof LivingEntity living) {

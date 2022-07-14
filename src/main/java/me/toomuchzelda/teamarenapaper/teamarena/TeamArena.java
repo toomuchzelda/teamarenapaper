@@ -99,18 +99,18 @@ public abstract class TeamArena
 			.displayName(Component.text("Right click to respawn", NamedTextColor.RED))
 			.build();
 	public static final int RESPAWN_SECONDS = 5;
-	public static final int MID_GAME_JOIN_SECONDS = 10;
 
 	protected final List<Kit> defaultKits = List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
 			new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(),
-			new KitNone(), /*new KitSniper(),*/ new KitVenom(), new KitRewind(), new KitValkyrie(), new KitEngineer());
+			new KitNone(), new KitVenom(), new KitRewind(), new KitValkyrie(), new KitEngineer(), new KitExplosive());
 
-	protected Map<String, Kit> kits;
+	protected Map<String, Kit> kits = new LinkedHashMap<>();
 	protected static ItemStack kitMenuItem = ItemBuilder.of(Material.FEATHER)
 			.displayName(Component.text("Select a Kit", NamedTextColor.BLUE))
 			.build();
 
 	public static final Component OWN_TEAM_PREFIX = Component.text("▶ ");
+	public static final Component OWN_TEAM_PREFIX_DANGER = OWN_TEAM_PREFIX.color(NamedTextColor.RED);
 
 	protected MapInfo mapInfo;
 
@@ -215,7 +215,6 @@ public abstract class TeamArena
 		winningTeam = null;
 		lastHadLeft = null;
 
-		kits = new LinkedHashMap<>();
 		registerKits();
 
 		//List of team names
@@ -224,8 +223,8 @@ public abstract class TeamArena
 			tabTeamsList.add(team.getSimpleName());
 		}
 
-		players = ConcurrentHashMap.newKeySet();
-		spectators = ConcurrentHashMap.newKeySet();
+		players = new LinkedHashSet<>();
+		spectators = new LinkedHashSet<>();
 		respawnTimers = new LinkedHashMap<>();
 		damageQueue = new LinkedList<>();
 
@@ -276,7 +275,7 @@ public abstract class TeamArena
 	}
 
 	// player as in players in the players set
-	protected void givePlayerItems(Player player, PlayerInfo info, boolean clear) {
+	public void givePlayerItems(Player player, PlayerInfo info, boolean clear) {
 		player.sendMap(miniMap.view);
 		PlayerInventory inventory = player.getInventory();
 		if(clear)
@@ -475,6 +474,7 @@ public abstract class TeamArena
 		}
 		if (!CommandDebug.ignoreWinConditions && aliveTeamCount < 2) {
 			if (lastTeam != null) {
+				winningTeam = lastTeam;
 				Bukkit.broadcast(lastTeam.getComponentName().append(Component.text(" is the last team standing so they win!!")));
 			} else {
 				Bukkit.broadcast(Component.text("Where'd everyone go?"));
@@ -583,17 +583,17 @@ public abstract class TeamArena
 			event.executeAttack();
 		}
 
-		var indiIter = activeDamageIndicators.iterator();
+		/*var indiIter = activeDamageIndicators.iterator();
 		while(indiIter.hasNext()) {
 			DamageIndicatorHologram h = indiIter.next();
-			if(h.age >= 15) {
-				h.remove();
+			if(h.age >= 300) {
+				h.despawn();
 				indiIter.remove();
 			}
 			else {
 				h.tick();
 			}
-		}
+		}*/
 	}
 
 	public void onConfirmedDamage(DamageEvent event) {
@@ -621,7 +621,7 @@ public abstract class TeamArena
 					Location spawnLoc = p.getLocation();
 					spawnLoc.add(0, MathUtils.randomRange(1.4, 2), 0);
 					DamageIndicatorHologram hologram = new DamageIndicatorHologram(spawnLoc, PlayerUtils.getDamageIndicatorViewers(p, playerCause), damageText);
-					activeDamageIndicators.add(hologram);
+					//activeDamageIndicators.add(hologram);
 
 					//add to their damage log
 					pinfo.logDamageReceived(p, event.getDamageType(), event.getFinalDamage(), event.getFinalAttacker(), gameTick);
@@ -630,8 +630,6 @@ public abstract class TeamArena
 						pinfo.getKillAssistTracker().addDamage(attacker, event.getFinalDamage());
 					}
 				}
-			} else if(event.getVictim() instanceof Axolotl) {
-				KitDemolitions.DemolitionsAbility.handleAxolotlDamage(event);
 			}
 		}
 	}
@@ -665,10 +663,6 @@ public abstract class TeamArena
 					event.getKnockback().multiply(0.8);
 				}
 			}
-		}
-
-		if(event.getVictim() instanceof Axolotl) {
-			KitDemolitions.DemolitionsAbility.handleAxolotlAttemptDamage(event);
 		}
 
 		if(event.getVictim() instanceof Skeleton) {
@@ -721,12 +715,12 @@ public abstract class TeamArena
 
 		for (Player viewed : pinfo.team.getPlayerMembers()) {
 			if(glow) {
-				meta.updateBitfieldValue(viewed, MetaIndex.BASE_ENTITY_META,
-						MetaIndex.BITFIELD_GLOWING, glow);
+				meta.updateBitfieldValue(viewed, MetaIndex.BASE_BITFIELD_IDX,
+						MetaIndex.BASE_BITFIELD_GLOWING_IDX, glow);
 			}
 			else {
-				meta.removeBitfieldValue(viewed, MetaIndex.BASE_ENTITY_META,
-						MetaIndex.BITFIELD_GLOWING);
+				meta.removeBitfieldValue(viewed, MetaIndex.BASE_BITFIELD_IDX,
+						MetaIndex.BASE_BITFIELD_GLOWING_IDX);
 			}
 
 			meta.refreshViewer(viewed);
@@ -1128,6 +1122,8 @@ public abstract class TeamArena
 		for(Ability ability : Kit.getAbilities(player)) {
 			ability.onTeamSwitch(player, oldTeam, newTeam);
 		}
+
+		KitDemolitions.DemolitionsAbility.teamSwitch(player, oldTeam, newTeam);
 	}
 
 	//switch a player between spectator and player

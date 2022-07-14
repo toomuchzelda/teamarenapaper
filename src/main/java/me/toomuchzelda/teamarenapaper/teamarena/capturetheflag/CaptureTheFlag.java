@@ -66,19 +66,19 @@ public class CaptureTheFlag extends TeamArena
 	public static final Component CAPTURED_TITLE = Component.text("%holdingTeam% captured %team%'s flag!").color(NamedTextColor.GOLD);
 	public static final Component PASSED_TITLE = Component.text("%holdingTeam% gave %team%'s flag to %otherTeam%").color(NamedTextColor.GOLD);
 
-	public static final Component CANT_CAPTURE_YOUR_FLAG_NOT_AT_BASE = Component.text("You can't capture until your flag is safely at your base!", TextUtils.ERROR_RED);
+	public static final Component CANT_CAPTURE_YOUR_FLAG_NOT_AT_BASE = Component.text("You can't capture until your flag is safely at your base!", TextColors.ERROR_RED);
 	public static final String CANT_CAPTURE_KEY = "yrflagnotatbase";
 
-	public static final Component CANT_TELEPORT_HOLDING_FLAG_MESSAGE = Component.text("You can't teleport while holding the flag!", TextUtils.ERROR_RED);
-	public static final Component CANT_TELEPORT_HOLDING_FLAG_TITLE = Component.text("Can't teleport with the flag!", TextUtils.ERROR_RED);
+	public static final Component CANT_TELEPORT_HOLDING_FLAG_MESSAGE = Component.text("You can't teleport while holding the flag!", TextColors.ERROR_RED);
+	public static final Component CANT_TELEPORT_HOLDING_FLAG_TITLE = Component.text("Can't teleport with the flag!", TextColors.ERROR_RED);
 
-	public static final Component ONE_MINUTE_LEFT_SPEED_MESSAGE = Component.text("In one minute flag takers will get a speed bonus! Hurry it up!", TextUtils.ERROR_RED);
-	public static final Component ONE_MINUTE_LEFT_SPEED_TITLE = Component.text("Flag takers get speed in 1 minute!", TextUtils.ERROR_RED);
+	public static final Component ONE_MINUTE_LEFT_SPEED_MESSAGE = Component.text("In one minute flag takers will get a speed bonus! Hurry it up!", TextColors.ERROR_RED);
+	public static final Component ONE_MINUTE_LEFT_SPEED_TITLE = Component.text("Flag takers get speed in 1 minute!", TextColors.ERROR_RED);
 	public static final Component SPEED_NOW_MESSAGE = Component.text("Anyone who carries a flag will now run faster! This bonus will end once any flag is captured!" +
-			" If you don't end the game in " + TIME_TO_END_MINUTES + " minutes, I will!!", TextUtils.ERROR_RED);
-	public static final Component SPEED_NOW_TITLE = Component.text("Flag takers will now run faster!", TextUtils.ERROR_RED);
-	public static final Component SPEED_DONE_MESSAGE = Component.text("Speed bonus for carrying a flag is gone! Game proceeds as normal.", TextUtils.ERROR_RED);
-	public static final Component TOOK_TOO_LONG = Component.text("Too slow! Game ended!", TextUtils.ERROR_RED);
+			" If you don't end the game in " + TIME_TO_END_MINUTES + " minutes, I will!!", TextColors.ERROR_RED);
+	public static final Component SPEED_NOW_TITLE = Component.text("Flag takers will now run faster!", TextColors.ERROR_RED);
+	public static final Component SPEED_DONE_MESSAGE = Component.text("Speed bonus for carrying a flag is gone! Game proceeds as normal.", TextColors.ERROR_RED);
+	public static final Component TOOK_TOO_LONG = Component.text("Too slow! Game ended!", TextColors.ERROR_RED);
 
 	private void addFlagHeld(Player player, Flag flag) {
 		Set<Flag> flags = flagHolders.computeIfAbsent(player, k -> new HashSet<>()); //put new HashSet if no value and also return it
@@ -257,7 +257,7 @@ public class CaptureTheFlag extends TeamArena
 		super.liveTick();
 	}
 
-	private final Map<TeamArenaTeam, Component> sidebarCache = new LinkedHashMap<>();
+	private final Map<Flag, Component> sidebarCache = new LinkedHashMap<>();
 	@Override
 	public Collection<Component> updateSharedSidebar() {
 		sidebarCache.clear();
@@ -271,31 +271,53 @@ public class CaptureTheFlag extends TeamArena
 			var builder = Component.text();
 			builder.append(flag.team.getComponentSimpleName(), Component.text(": "));
 			if (flag.isAtBase) {
-				builder.append(Component.text("⌂ Safe", NamedTextColor.GREEN));
+				builder.append(Component.text("⚑ " + flag.team.getTotalScore(), NamedTextColor.GREEN));
 			} else if (flag.holdingTeam != null) {
-				builder.append(flag.holdingTeam.colourWord("■ Held").decorate(TextDecoration.BOLD));
+				builder.append(
+						TextUtils.getProgressBar(NamedTextColor.GRAY, flag.holdingTeam.getRGBTextColor(),
+								1, (double) flag.ticksUntilReturn / TAKEN_FLAG_RETURN_TIME).decorate(TextDecoration.BOLD),
+						flag.holdingTeam.colourWord(" Held").decorate(TextDecoration.BOLD)
+				);
 			} else {
-				builder.append(TextUtils.getProgressText("� Dropped",
+				builder.append(TextUtils.getProgressText("↓ Dropped",
 						NamedTextColor.GRAY, flag.team.getRGBTextColor(), NamedTextColor.GREEN,
 						1 - (double) flag.ticksUntilReturn / TAKEN_FLAG_RETURN_TIME));
 			}
-			sidebarCache.put(flag.team, builder.build());
+			sidebarCache.put(flag, builder.build());
 		}
 
-		return Collections.emptyList();
+		return Collections.singletonList(Component.textOfChildren(
+				Component.text("First to ", NamedTextColor.GRAY),
+				Component.text("⚑ " + capsToWin, NamedTextColor.GREEN)
+		));
 	}
 
 	@Override
 	public void updateSidebar(Player player, SidebarManager sidebar) {
 		var playerTeam = Main.getPlayerInfo(player).team;
 		sidebar.setTitle(player, getGameName());
-		sidebarCache.forEach((team, entry) -> {
-			if (playerTeam == team) {
-				sidebar.addEntry(Component.textOfChildren(OWN_TEAM_PREFIX, entry));
+
+		int teamsShown = 0;
+
+		for (var entry : sidebarCache.entrySet()) {
+			var flag = entry.getKey();
+			var team = flag.team;
+			Component line = entry.getValue();
+
+			if (teamsShown >= 4 && team != playerTeam)
+				continue; // don't show
+			teamsShown++;
+			if (team == playerTeam) {
+				// blink red when flag picked up
+				var teamPrefix = !flag.isAtBase && TeamArena.getGameTick() % 20 < 10 ? OWN_TEAM_PREFIX_DANGER : OWN_TEAM_PREFIX;
+				sidebar.addEntry(Component.textOfChildren(teamPrefix, line));
 			} else {
-				sidebar.addEntry(entry);
+				sidebar.addEntry(line);
 			}
-		});
+		}
+		// unimportant teams
+		if (sidebarCache.size() != teamsShown)
+			sidebar.addEntry(Component.text("+ " + (sidebarCache.size() - teamsShown) + " teams", NamedTextColor.GRAY));
 
 	}
 
@@ -782,18 +804,21 @@ public class CaptureTheFlag extends TeamArena
 			MapCursor.Type icon = MapCursor.Type.valueOf("BANNER_" + team.getDyeColour().name());
 			Component flagText = Component.text(team.getSimpleName() + " flag", team.getRGBTextColor());
 			Component yourFlagText = Component.text("Your flag", team.getRGBTextColor());
-			miniMap.registerCursor((player, playerInfo) -> {
-				// display extra information for own flag
-				if (playerInfo.team == team) {
-					if (flag.holder != null && gameTick % 40 < 20) {
-						return new MiniMapManager.CursorInfo(flag.holder.getLocation(), true, MapCursor.Type.RED_POINTER, yourFlagText);
-					} else {
-						return new MiniMapManager.CursorInfo(stand.getLocation(), false, icon, yourFlagText);
+			miniMap.registerCursor(
+					(ignored1, ignored2) -> CommandDebug.ignoreWinConditions || team.isAlive(), // hide dead flags
+					(player, playerInfo) -> {
+						// display extra information for own flag
+						if (playerInfo.team == team) {
+							if (flag.holder != null && gameTick % 40 < 20) {
+								return new MiniMapManager.CursorInfo(flag.holder.getLocation(), true, MapCursor.Type.RED_POINTER, yourFlagText);
+							} else {
+								return new MiniMapManager.CursorInfo(stand.getLocation(), false, icon, yourFlagText);
+							}
+						} else {
+							return new MiniMapManager.CursorInfo(stand.getLocation(), false, icon, flagText);
+						}
 					}
-				} else {
-					return new MiniMapManager.CursorInfo(stand.getLocation(), false, icon, flagText);
-				}
-			});
+			);
 		}
 	}
 

@@ -4,7 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -20,7 +20,7 @@ import java.util.Collections;
 public class CommandTeamChat extends CustomCommand
 {
 	public static final Component CANT_CHAT_NOW = Component.text("You call out to your team, but only hear back the echo of your screaming, wailing voice."
-			, TextUtils.ERROR_RED);
+			, TextColors.ERROR_RED);
 	public static final Collection<String> TAB_COMPLETE = Collections.singleton("<message>");
 
 	public static final String TEAM_CHAT_PREFIX = "TEAM CHAT ";

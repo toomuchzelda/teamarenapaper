@@ -170,9 +170,9 @@ public class MetadataViewer
 			for (Map.Entry<Integer, MetadataValue> entry : meta.indexedValues().entrySet()) {
 				WrappedWatchableObject obj = originalData.getWatchableObject(entry.getKey());
 
-				WrappedDataWatcher.WrappedDataWatcherObject watcherObj =
+				/*WrappedDataWatcher.WrappedDataWatcherObject watcherObj =
 						new WrappedDataWatcher.WrappedDataWatcherObject(
-								obj.getIndex(), obj.getWatcherObject().getSerializer());
+								obj.getIndex(), obj.getWatcherObject().getSerializer());*/
 
 				Object newValue;
 				MetadataValue metadataValue = entry.getValue();
@@ -183,7 +183,7 @@ public class MetadataViewer
 					newValue = metadataValue.getValue();
 				}
 
-				modifiedData.setObject(watcherObj, newValue);
+				modifiedData.setObject(obj.getWatcherObject(), newValue);
 			}
 		}
 		else {
@@ -218,9 +218,9 @@ public class MetadataViewer
 			while (iter.hasNext()) {
 				obj = iter.next();
 
-				WrappedDataWatcher.WrappedDataWatcherObject watcherObj =
+				/*WrappedDataWatcher.WrappedDataWatcherObject watcherObj =
 						new WrappedDataWatcher.WrappedDataWatcherObject(
-								obj.getIndex(), obj.getWatcherObject().getSerializer());
+								obj.getIndex(), obj.getWatcherObject().getSerializer());*/
 
 				value = this.getViewedValue(id, obj.getIndex());
 				if (value != null) {
@@ -233,10 +233,10 @@ public class MetadataViewer
 						newValue = value.getValue();
 					}
 
-					watcher.setObject(watcherObj, newValue);
+					watcher.setObject(obj.getWatcherObject(), newValue);
 				}
 				else {
-					watcher.setObject(watcherObj, obj.getValue());
+					watcher.setObject(obj.getWatcherObject(), obj.getValue());
 				}
 			}
 

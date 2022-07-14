@@ -2,13 +2,11 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.engineer;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.building.Building;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
-import org.bukkit.block.Block;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
@@ -34,7 +32,7 @@ public class Sentry extends Building {
 	public static final int SENTRY_LIFETIME = KitEngineer.EngineerAbility.SENTRY_CD;
 	public static final int SENTRY_STARTUP_TIME = 40;
 	public static final int SENTRY_CYCLE_TIME = 120;
-	public static final int SENTRY_SIGHT_RANGE = 15;
+	public static final int SENTRY_SIGHT_RANGE = 20;
 	//degree rotation = how much the sentry will rotate
 	//yaw and pitch view = the sentry's cone of vision
 	public static final int SENTRY_DEGREE_ROTATION = 90;
@@ -45,7 +43,7 @@ public class Sentry extends Building {
 
 	private static final ItemStack ICON = new ItemStack(Material.BOW);
 
-	public Sentry(Player player, Mob sentry) {
+	public Sentry(Player player, Skeleton sentry) {
 		super(player, sentry.getLocation());
 		setName("Sentry");
 		setIcon(ICON);
@@ -61,8 +59,12 @@ public class Sentry extends Building {
 
 		//Changing properties from Projection state to Active state
 
+		sentry.setAI(false);
+		sentry.setRemoveWhenFarAway(false);
+		sentry.setShouldBurnInDay(false);
+		sentry.getEquipment().clear();
+		sentry.setCanPickupItems(false);
 		sentry.setInvisible(false);
-		sentry.setInvulnerable(false);
 		sentry.setCollidable(true);
 		sentry.setSilent(false);
 		this.armor = new ItemStack[4];
@@ -87,7 +89,7 @@ public class Sentry extends Building {
 	}
 
 	public boolean isExpired() {
-		return TeamArena.getGameTick() - creationTick > SENTRY_LIFETIME;
+		return TeamArena.getGameTick() - initTick > SENTRY_LIFETIME;
 	}
 
 	public boolean sentryCanSee(LivingEntity sentry, Player target) {
@@ -98,13 +100,16 @@ public class Sentry extends Building {
 		Location relAngle = sentry.getEyeLocation().clone();
 		relAngle.setDirection(sentryToTarget);
 
-		double yawAngle = relAngle.getYaw();
-		double currYaw = sentry.getEyeLocation().getYaw();
-		double pitchAngle = relAngle.getPitch();
-		double currPitch = sentry.getEyeLocation().getPitch();
+		double yawAngle = Location.normalizeYaw(relAngle.getYaw());
+		double currYaw = Location.normalizeYaw(sentryLoc.getYaw());
+		double pitchAngle = Location.normalizePitch(relAngle.getPitch());
+		double currPitch = Location.normalizePitch(sentryLoc.getPitch());
 
 		RayTraceResult rayTrace = sentry.getWorld().rayTraceBlocks(sentryLoc, sentryToTarget, distance,
 				FluidCollisionMode.NEVER, true);
+
+		//Bukkit.broadcast(Component.text("YAW DIFF: " + Math.abs(yawAngle - currYaw)));
+		//Bukkit.broadcast(Component.text("PITCH DIFF: " + Math.abs(pitchAngle - currPitch)));
 
 		return (Math.abs(yawAngle - currYaw) <= SENTRY_YAW_VIEW &&
 				Math.abs(pitchAngle - currPitch) <= SENTRY_PITCH_VIEW) &&
@@ -140,7 +145,7 @@ public class Sentry extends Building {
 		else if (elapsedTick < 5 * SENTRY_CYCLE_TIME / 6) {
 
 		}
-		//Return back to center position
+		//Return to center position
 		else {
 			sentryLoc.setYaw((float) (initYaw + (SENTRY_CYCLE_TIME / 6 * degInc)
 					- (cycleTick * degInc)));
@@ -161,14 +166,15 @@ public class Sentry extends Building {
 
 	//Checks within sight range for possible targets, then locks on the closest target
 	public void findTarget() {
-		TeamArenaTeam ownerTeam = Main.getPlayerInfo(owner).team;
 		Location sentryLoc = sentry.getLocation().clone();
 		Collection<Player> nearbyTargets = sentryLoc.getNearbyPlayers(SENTRY_SIGHT_RANGE);
 		Player nearestPlayer = nearbyTargets.stream()
 				//Always ignore teammates and players who are invisible or are obstructed from view
 				.filter(player -> !player.isInvisible()
 						&& sentryCanSee(sentry, player)
-						&& Main.getGame().canAttack(player, owner))
+						&& Main.getGame().canAttack(player, owner)
+						&& sentry.getLocation().distanceSquared(player.getLocation())
+						<= Math.pow(SENTRY_SIGHT_RANGE, 2))
 				//Ignore spies who are disguised as allies
 				.filter(enemy -> !PlayerUtils.isDisguisedAsAlly(owner, enemy))
 				.reduce(null, (currClosest, currPlayer) -> {
@@ -185,11 +191,13 @@ public class Sentry extends Building {
 					}
 				});
 
+		//Bukkit.broadcast(Component.text("nearest player: " + nearestPlayer));
+
 		if (nearestPlayer != null) {
-			if (sentry.getTarget() == null) {
-				//Only play Lock-on Sound once for a given target
-				//sentry.getWorld().playSound(sentry, Sound.BLOCK_LANTERN_BREAK, 1.0f, 1.8f);
-			}
+			//if (sentry.getTarget() == null) {
+			//Only play Lock-on Sound once for a given target
+			//sentry.getWorld().playSound(sentry, Sound.BLOCK_LANTERN_BREAK, 1.0f, 1.8f);
+			//}
 			//Success: Player is found, so lock on
 			sentry.setTarget(nearestPlayer);
 			this.currState = State.LOCKED;
@@ -205,7 +213,7 @@ public class Sentry extends Building {
 		if (sentry.getTarget() != null) {
 			Mob sentryCasted = sentry;
 			Player target = (Player) sentryCasted.getTarget();
-			Location sentryLoc = sentry.getLocation();
+			Location sentryLoc = sentry.getLocation().clone();
 			Vector diff = target.getEyeLocation().toVector().subtract(sentryCasted.getEyeLocation().toVector());
 			diff.normalize();
 			sentryLoc.setDirection(diff);
@@ -245,28 +253,29 @@ public class Sentry extends Building {
 
 	public void shoot(Vector direction) {
 		AbstractArrow sentryFire = sentry.launchProjectile(Arrow.class);
-		sentryFire.setVelocity(direction.multiply(2.5));
+		sentryFire.setVelocity(direction.multiply(3.5));
 		sentryFire.setDamage(1.0);
-		sentryFire.setGravity(false);
-		sentryFire.setKnockbackStrength(0);
 		sentryFire.setShooter(owner);
 		sentryFire.setCritical(false);
 		sentryFire.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
+
+		sentry.getWorld().playSound(sentry, Sound.ENTITY_FISHING_BOBBER_THROW, 1.5f, 0.8f);
 	}
 
-	public void forceTarget(Location location) {
-		//sentryLoc is for calculating the beam, sentryPosLoc is for altering pitch + yaw of sentry itself
-		Location sentryLoc = sentry.getEyeLocation();
-		Location sentryPosLoc = sentry.getLocation();
-		Vector sentryToTermDir = location.clone().subtract(sentryLoc).toVector().normalize();
-		sentryPosLoc.setDirection(sentryToTermDir);
-		sentry.teleport(sentryPosLoc);
+	//Manual fire which is available when sentry is WRANGLED
+	public void forceFire() {
+		Vector direction = owner.getLocation().getDirection();
+		shoot(direction);
+	}
 
+	//Fires a particle beam to show direction of fire when sentry is WRANGLED
+	public void wranglerParticleBeam(){
+		Vector direction = owner.getLocation().getDirection();
+		Location sentryLoc = sentry.getEyeLocation();
 		var data = new Particle.DustOptions(Main.getPlayerInfo(owner).team.getColour(), 0.7f);
 		//Creating particle beam
-		Vector inc = sentryToTermDir.multiply(0.5);
-
-		for (int i = 0, length = (int) (sentryLoc.distance(location)) * 2; i < length; i++) {
+		Vector inc = direction.multiply(0.5);
+		for (int i = 0; i < 6; i++) {
 			sentryLoc.add(inc);
 			sentry.getWorld().spawnParticle(Particle.REDSTONE, sentryLoc, 1, 0, 0, 0, data);
 		}
@@ -308,7 +317,9 @@ public class Sentry extends Building {
 				this.currState = State.NEUTRAL;
 			}
 		} else if (this.currState == State.WRANGLED) {
-			if (!PlayerUtils.isHolding(owner, KitEngineer.WRANGLER) || owner.hasCooldown(Material.STICK)) {
+			wranglerParticleBeam();
+			//If engineer leaves mount, return to NEUTRAL
+			if(sentry.getPassengers().isEmpty()){
 				this.currState = State.NEUTRAL;
 			}
 		}

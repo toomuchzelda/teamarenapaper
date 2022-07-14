@@ -164,7 +164,7 @@ public class Teleporter extends Building {
 					teleport((Player) nearbyEntities.iterator().next(), other);
 			} else {
 				long percCD = Math.round(100d * (double) other.getRemainingCD() / TELEPORT_COOLDOWN);
-				hologramText = Component.text("Recharging... " + percCD + "%");
+				hologramText = Component.text("Recharging... " + percCD + "%", teamColor);
 			}
 		} else {
 			hologramText = NOT_CONNECTED;

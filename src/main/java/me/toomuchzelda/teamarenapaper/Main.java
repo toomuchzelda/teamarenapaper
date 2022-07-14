@@ -4,12 +4,12 @@ import com.comphenix.protocol.ProtocolLibrary;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy.SearchAndDestroy;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
+import me.toomuchzelda.teamarenapaper.utils.FileUtils;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandMap;
@@ -40,7 +40,9 @@ public final class Main extends JavaPlugin
 		logger = this.getLogger();
 		logger.info("Starting TMA");
 
+		// load important classes
 		Preferences.registerPreferences();
+		FileUtils.init();
 
 		int initialCapacity = Bukkit.getMaxPlayers();
 		playerInfo = Collections.synchronizedMap(new LinkedHashMap<>(initialCapacity));

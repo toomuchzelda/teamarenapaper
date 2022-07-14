@@ -1,8 +1,12 @@
 package me.toomuchzelda.teamarenapaper.utils;
 
+import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.events.PacketContainer;
+import com.comphenix.protocol.reflect.StructureModifier;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
@@ -57,7 +61,7 @@ public class EntityUtils {
 	@NotNull
     public static Component getComponent(@Nullable Entity entity) {
         if (entity == null)
-            return Component.text("Unknown", TextUtils.ERROR_RED);
+            return Component.text("Unknown", TextColors.ERROR_RED);
 
         if (entity instanceof Player player) {
 			var uselessRGBName = player.playerListName();
@@ -116,6 +120,16 @@ public class EntityUtils {
 		for (Player p : entity.getTrackedPlayers()) {
 			PlayerUtils.sendPacket(p, packet);
 		}
+	}
+
+	public static void playEffect(PacketEntity packetEntity, int effect) {
+		PacketContainer packet = new PacketContainer(PacketType.Play.Server.ANIMATION);
+
+		StructureModifier<Integer> ints = packet.getIntegers();
+		ints.write(0, packetEntity.getId());
+		ints.write(1, effect);
+
+		packetEntity.getRealViewers().forEach(player -> PlayerUtils.sendPacket(player, packet));
 	}
 
     //set velocity fields and send the packet immediately instead of waiting for next tick if it's a player

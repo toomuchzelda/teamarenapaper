@@ -10,6 +10,10 @@ import java.util.Set;
 
 public class FileUtils {
 
+	public static void init() {
+
+	}
+
 	private static final Set<String> IGNORED_DIRECTORIES = Set.of("poi");
 	private static final Set<String> IGNORED_FILES = Set.of("uid.dat");
 	public static void copyFolder(File source, File destination) {
@@ -43,24 +47,26 @@ public class FileUtils {
 		}
 	}
 
+	// anonymous classes be like
+	private static final SimpleFileVisitor<Path> FILE_DELETE_VISITOR = new SimpleFileVisitor<>() {
+		@Override
+		public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+			Files.delete(file);
+			return FileVisitResult.CONTINUE;
+		}
+
+		@Override
+		public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+			Files.delete(dir);
+			return FileVisitResult.CONTINUE;
+		}
+	};
 	public static void delete(File file) {
 		Path directory = file.toPath();
 
 		try {
 			if (Files.isDirectory(directory)) {
-				Files.walkFileTree(directory, new SimpleFileVisitor<>() {
-					@Override
-					public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-						Files.delete(file);
-						return FileVisitResult.CONTINUE;
-					}
-
-					@Override
-					public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-						Files.delete(dir);
-						return FileVisitResult.CONTINUE;
-					}
-				});
+				Files.walkFileTree(directory, FILE_DELETE_VISITOR);
 			} else {
 				Files.delete(directory);
 			}
