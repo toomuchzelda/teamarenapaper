@@ -14,6 +14,7 @@ import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
@@ -29,7 +30,6 @@ import org.bukkit.entity.TNTPrimed;
 import org.bukkit.event.Event;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
@@ -70,7 +70,7 @@ public class KitDemolitions extends Kit
 				"It will triggered by your remote detonator or when enemies step on it.";
 		List<Component> usage = TextUtils.wrapString(strUsage, style, 200);
 
-		TNT_MINE_ITEM = new ItemStack(Material.TNT);
+		TNT_MINE_ITEM = new ItemStack(Material.TNT, TNT_MINE_COUNT);
 		ItemMeta meta = TNT_MINE_ITEM.getItemMeta();
 
 		meta.displayName(ItemUtils.noItalics(Component.text("TNT Mine", TNT_COLOR)));
@@ -81,7 +81,7 @@ public class KitDemolitions extends Kit
 		meta.lore(lore);
 		TNT_MINE_ITEM.setItemMeta(meta);
 
-		PUSH_MINE_ITEM = new ItemStack(Material.WHITE_WOOL);
+		PUSH_MINE_ITEM = new ItemStack(Material.WHITE_WOOL, PUSH_MINE_COUNT);
 		meta = PUSH_MINE_ITEM.getItemMeta();
 		meta.displayName(ItemUtils.noItalics(Component.text("Push Mine")));
 		lore = new ArrayList<>();
@@ -93,8 +93,7 @@ public class KitDemolitions extends Kit
 		REMOTE_DETONATOR_ITEM = new ItemStack(Material.FLINT_AND_STEEL);
 		meta = REMOTE_DETONATOR_ITEM.getItemMeta();
 		meta.displayName(ItemUtils.noItalics(Component.text("Remote Trigger", NamedTextColor.BLUE)));
-		lore = new ArrayList<>();
-		lore.addAll(TextUtils.wrapString("Point at any of your mines from any distance to select one. Right click and boom!", style, 200));
+		lore = new ArrayList<>(TextUtils.wrapString("Point at any of your mines from any distance to select one. Right click and boom!", style, 200));
 		meta.lore(lore);
 		REMOTE_DETONATOR_ITEM.setItemMeta(meta);
 	}
@@ -132,7 +131,7 @@ public class KitDemolitions extends Kit
 		public static final Map<Player, List<RegeneratingMine>> REGENERATING_MINES = new LinkedHashMap<>();
 		public static final Map<Player, DemoMine> TARGETTED_MINE = new HashMap<>();
 
-		public static final Map<Axolotl, DemoMine> AXOLOTL_TO_DEMO_MINE = new LinkedHashMap<>();
+		public static final Map<PacketMineHitbox, DemoMine> AXOLOTL_TO_DEMO_MINE = new LinkedHashMap<>();
 		public static final Set<BlockVector> MINE_POSITIONS = new HashSet<>();
 
 		public static final DamageType DEMO_TNTMINE_BYSTANDER = new DamageType(DamageType.DEMO_TNTMINE,
@@ -155,13 +154,13 @@ public class KitDemolitions extends Kit
 
 		@Override
 		public void giveAbility(Player player) {
-			PlayerInventory inventory = player.getInventory();
+			/*PlayerInventory inventory = player.getInventory();
 
 			ItemStack playersTNT = ItemUtils.getItemInInventory(TNT_MINE_ITEM, player.getInventory());
 			ItemStack playersPush = ItemUtils.getItemInInventory(PUSH_MINE_ITEM, player.getInventory());
 			//should not be null
 			playersTNT.setAmount(TNT_MINE_COUNT);
-			playersPush.setAmount(PUSH_MINE_COUNT);
+			playersPush.setAmount(PUSH_MINE_COUNT);*/
 		}
 		@Override
 		public void removeAbility(Player player) {
@@ -381,7 +380,7 @@ public class KitDemolitions extends Kit
 			List<DemoMine> toRemove = new LinkedList<>();
 			var axIter = AXOLOTL_TO_DEMO_MINE.entrySet().iterator();
 			while(axIter.hasNext()) {
-				Map.Entry<Axolotl, DemoMine> entry = axIter.next();
+				Map.Entry<PacketMineHitbox, DemoMine> entry = axIter.next();
 				DemoMine mine = entry.getValue();
 
 				mine.tick();
@@ -413,7 +412,7 @@ public class KitDemolitions extends Kit
 						if (mine.team.getPlayerMembers().contains(stepper))
 							continue;
 
-						Axolotl axolotl = entry.getKey();
+						PacketMineHitbox axolotl = entry.getKey();
 						if (stepper.getBoundingBox().overlaps(axolotl.getBoundingBox())) {
 							//they stepped on mine, trigger explosion
 							mine.trigger(stepper);
@@ -460,20 +459,19 @@ public class KitDemolitions extends Kit
 		/**
 		 * Add the appropriate metadata for glowing mines for players leaving and joining the team.
 		 */
-		@Override
-		public void onTeamSwitch(Player player, TeamArenaTeam oldTeam, TeamArenaTeam newTeam) {
+		public static void teamSwitch(Player player, TeamArenaTeam oldTeam, TeamArenaTeam newTeam) {
 			//iterate through all mines.
 			// if it's old team's mines, make it un-glow.
 			// if new team's mines, make it glow
 			MetadataViewer metadataViewer = Main.getPlayerInfo(player).getMetadataViewer();
-			for(Map.Entry<Axolotl, DemoMine> entry : AXOLOTL_TO_DEMO_MINE.entrySet()) {
+			for(Map.Entry<PacketMineHitbox, DemoMine> entry : AXOLOTL_TO_DEMO_MINE.entrySet()) {
 				DemoMine mine = entry.getValue();
 
 				if(mine.team == oldTeam) {
 					metadataViewer.removeViewedValues(mine.stands);
 				}
 				else if(mine.team == newTeam) {
-					metadataViewer.setViewedValues(MetaIndex.BASE_ENTITY_META, MetaIndex.GLOWING_METADATA,
+					metadataViewer.setViewedValues(MetaIndex.BASE_BITFIELD_IDX, MetaIndex.GLOWING_METADATA_VALUE,
 							mine.stands);
 				}
 
@@ -494,57 +492,35 @@ public class KitDemolitions extends Kit
 			PlayerUtils.sendKitMessage(player, message, message);
 		}
 
-		public static void handleAxolotlAttemptDamage(DamageEvent event) {
-			Axolotl axolotl = (Axolotl) event.getVictim();
-			DemoMine mine = AXOLOTL_TO_DEMO_MINE.get(axolotl);
-			if(mine != null) {
-				event.setCancelled(true);
-				if(event.getDamageType().is(DamageType.MELEE)) {
-					if (event.getFinalAttacker() instanceof Player breaker) {
-						if(breaker == mine.owner) {
-							/*if(mine.damage == 0)
-								breaker.sendMessage(Component.text("This is your mine. Keep punching to remove it")
-										.color(NamedTextColor.AQUA));*/
+		public static void handleHitboxPunch(PacketMineHitbox hitbox, Player puncher) {
+			DemoMine mine = AXOLOTL_TO_DEMO_MINE.get(hitbox);
 
-							event.setFinalDamage(0d);
-							event.setCancelled(false);
-						}
-						else if (!mine.team.getPlayerMembers().contains(breaker)) {
-							event.setFinalDamage(0d);
-							event.setCancelled(false);
-						}
-						// check MELEE only so not do sweep attacks
-						// This may cause issues if other non-punch attacks use MELEE type (maybe something custom?)
-						else if(event.getDamageType().is(DamageType.MELEE)){
-							breaker.sendMessage(Component.text("This is ").color(NamedTextColor.AQUA).append(
-									mine.owner.playerListName()).append(Component.text("'s " + mine.type.name)));
-
-						}
-					}
-				}
+			//teammate punches it
+			if (puncher != mine.owner && mine.team.getPlayerMembers().contains(puncher)) {
+				puncher.sendMessage(Component.text("This is ", NamedTextColor.AQUA).append(
+						mine.owner.playerListName()).append(Component.text("'s " + mine.type.name)));
 			}
-		}
-
-		public static void handleAxolotlDamage(DamageEvent event) {
-			Axolotl axolotl = (Axolotl) event.getVictim();
-			DemoMine mine = AXOLOTL_TO_DEMO_MINE.get(axolotl);
-			if (mine != null && event.getDamageType().isMelee()) {
-				if(mine.hurt()) {
-					if(event.getFinalAttacker() instanceof Player breaker) {
+			else {
+				final int currentTick = TeamArena.getGameTick();
+				int diff = currentTick - hitbox.lastHurtTime;
+				if(diff >= 10) {
+					hitbox.lastHurtTime = currentTick;
+					if(mine.hurt()) {
 						Component message;
-						if(breaker != mine.owner) {
-							message = Component.text("You've broken one of ").color(NamedTextColor.AQUA).append(
-								mine.owner.playerListName()).append(Component.text("'s " + mine.type.name + "s!")
-									.color(NamedTextColor.AQUA));
+						if(puncher != mine.owner) {
+							message = Component.text("You've broken one of ", NamedTextColor.AQUA).append(
+									mine.owner.playerListName()).append(Component.text("'s " + mine.type.name + "s!",
+									NamedTextColor.AQUA));
 
-							Component ownerMessage = Component.text("Someone broke one of your " + mine.type.name + "s!")
-									.color(NamedTextColor.AQUA);
+							Component ownerMessage = Component.text("Someone broke one of your " + mine.type.name + "s!",
+									NamedTextColor.AQUA);
+
 							PlayerUtils.sendKitMessage(mine.owner, ownerMessage, ownerMessage);
 						}
 						else {
 							message = Component.text("Broke your " + mine.type.name).color(NamedTextColor.AQUA);
 						}
-						breaker.sendMessage(message);
+						puncher.sendMessage(message);
 					}
 				}
 			}

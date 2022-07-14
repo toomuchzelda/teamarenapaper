@@ -21,6 +21,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.tag.Tag;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import org.bukkit.Color;
 import org.bukkit.FluidCollisionMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -158,7 +159,7 @@ public class KitEngineer extends Kit {
 
 	public static class EngineerAbility extends Ability {
 
-		public static final Map<Player, Mob> activePlayerProjections = new HashMap<>();
+		public static final Map<Player, SentryProjection> activePlayerProjections = new HashMap<>();
 		@Deprecated // temporary API
 		public static final Map<LivingEntity, Sentry> sentryEntityToSentryMap = new HashMap<>();
 		//SENTRY_CD should be 300, it may be altered for testing purposes
@@ -266,7 +267,7 @@ public class KitEngineer extends Kit {
 			} else if (mat == Material.CHEST_MINECART) {
 				//Initializing Sentry Build
 				if (activePlayerProjections.containsKey(player) &&
-						isValidProjection(activePlayerProjections.get(player)) &&
+						isValidProjection(activePlayerProjections.get(player).getLocation()) &&
 						!player.hasCooldown(Material.CHEST_MINECART)) {
 					createSentry(player);
 				}
@@ -283,13 +284,14 @@ public class KitEngineer extends Kit {
 
 		//Converts the Projection into a Sentry + Handles static hashmaps + Inventory
 		public void createSentry(Player player) {
-			Mob projection = activePlayerProjections.get(player);
-			Sentry sentry = new Sentry(player, projection);
+			SentryProjection projection = activePlayerProjections.remove(player);
+			Skeleton skeleton = player.getWorld().spawn(projection.getLocation(), Skeleton.class);
+			Sentry sentry = new Sentry(player, skeleton);
+			projection.remove(); //destroy the old projection so it doesn't linger
+
 			BuildingManager.placeBuilding(sentry);
 
-			sentryEntityToSentryMap.put(projection, sentry);
-			activePlayerProjections.remove(player);
-			Main.getPlayerInfo(player).getMetadataViewer().removeViewedValues(projection);
+			sentryEntityToSentryMap.put(skeleton, sentry);
 			player.setCooldown(Material.CHEST_MINECART, SENTRY_CD);
 		}
 
@@ -318,17 +320,17 @@ public class KitEngineer extends Kit {
 			//Controlling position of Sentry Projection
 			if (activePlayerProjections.containsKey(player) &&
 					!player.hasCooldown(Material.CHEST_MINECART)) {
-				LivingEntity projection = activePlayerProjections.get(player);
+				SentryProjection projection = activePlayerProjections.get(player);
 				//Y Coordinate is lowered so the projection doesn't obstruct the Engineer's view
-				Location playerLoc = player.getEyeLocation().clone().add(0, -0.8, 0);
+				Location playerLoc = player.getEyeLocation().add(0, -0.8, 0);
 				Location projPos = projectSentry(playerLoc);
-				projection.teleport(projPos);
+				projection.move(projPos);
 
 				//Handling color display that indicates validity of current sentry location
-				if (isValidProjection(activePlayerProjections.get(player))) {
-					Main.getPlayerInfo(player).getScoreboard().addMembers(GREEN_GLOWING_TEAM, projection);
+				if (isValidProjection(projPos)) {
+					Main.getPlayerInfo(player).getScoreboard().addMembers(GREEN_GLOWING_TEAM, projection.getUuid().toString());
 				} else {
-					Main.getPlayerInfo(player).getScoreboard().addMembers(RED_GLOWING_TEAM, projection);
+					Main.getPlayerInfo(player).getScoreboard().addMembers(RED_GLOWING_TEAM, projection.getUuid().toString());
 				}
 			}
 
@@ -358,8 +360,8 @@ public class KitEngineer extends Kit {
 		}
 
 
-		public boolean isValidProjection(Mob projection) {
-			Location projLoc = projection.getLocation().clone();
+		public boolean isValidProjection(Location projLoc) {
+			projLoc = projLoc.clone();
 			//If the projection is levitating too far off ground, invalidate the current position
 			if(projLoc.clone().subtract(0,0.1,0).getBlock().isPassable()){
 				return false;
@@ -400,29 +402,14 @@ public class KitEngineer extends Kit {
 
 		public void createProjection(Player player) {
 			Location loc = projectSentry(player.getEyeLocation().clone().add(0, -.8, 0));
-			LivingEntity projection = player.getWorld().spawn(loc, Skeleton.class, entity -> {
-				entity.setAI(false);
-				entity.setCollidable(false);
-				entity.setInvisible(true);
-				entity.setRemoveWhenFarAway(false);
-				entity.setShouldBurnInDay(false);
-				entity.getEquipment().clear();
-				entity.setCanPickupItems(false);
-				entity.setSilent(true);
-
-				MetadataViewer metaViewer = Main.getPlayerInfo(player).getMetadataViewer();
-				metaViewer.setViewedValue(MetaIndex.BASE_ENTITY_META,
-						MetaIndex.GLOWING_METADATA, entity.getEntityId(), entity);
-
-				activePlayerProjections.put(player, entity);
-			});
+			SentryProjection projection = new SentryProjection(loc, player);
+			projection.respawn();
+			activePlayerProjections.put(player, projection);
 		}
 
 		public void destroyProjection(Player player) {
-			LivingEntity projection = activePlayerProjections.get(player);
+			SentryProjection projection = activePlayerProjections.remove(player);
 			projection.remove();
-			activePlayerProjections.remove(player);
-			Main.getPlayerInfo(player).getMetadataViewer().removeViewedValues(projection);
 		}
 
 		//From entity's eyes, find the location in their line of sight that is within range
@@ -453,56 +440,6 @@ public class KitEngineer extends Kit {
 				if (event.getFinalAttacker() instanceof Player attacker &&
 						!Main.getGame().canAttack(attacker, sentry.owner)) {
 					event.setCancelled(true);
-				}
-			}
-		}
-
-		//Cancels all incoming damage but also,
-		// When projection blocks a melee hit,
-		//manually calculate if nearby players should be hit "through" the projection or not
-		public static void handleProjectionAttemptDamage(DamageEvent event) {
-			//First, cancel all damage events that hit registered projections
-			List<Map.Entry<Player, Mob>> projections = activePlayerProjections.entrySet().stream()
-					.filter(entry -> {
-						Mob projection = entry.getValue();
-						return projection.equals(event.getVictim());
-					}).toList();
-
-			if(!projections.isEmpty()) {
-				//Prevent the hit projections from actually taking damage
-				//Bukkit.broadcast(Component.text("HIT PROJECTION"));
-				event.setCancelled(true);
-			}
-
-			//If a projection was hit,
-			//check if the projection is intercepting a melee attack
-			//Ensure the attacker is a player that is alive
-			if(!projections.isEmpty() &&
-					event.getFinalAttacker() instanceof Player attacker &&
-					event.getDamageType().is(DamageType.MELEE) &&
-					Main.getPlayerInfo(attacker).activeKit != null){
-				//Ignore cases where Valk Axe is used, since it will already find all enemies in range
-				if(attacker.getInventory().getItemInMainHand().getType() == VALK_AXE_MAT &&
-						Main.getPlayerInfo(attacker).activeKit.getName().equalsIgnoreCase("Valkyrie")){
-
-				}
-				else{
-					projections.forEach(entry -> {
-						Mob projection = entry.getValue();
-						RayTraceResult trace = attacker.getWorld()
-								.rayTraceEntities(attacker.getEyeLocation(),
-										attacker.getEyeLocation().getDirection(),
-										3,
-										hitMob -> hitMob instanceof LivingEntity &&
-												!hitMob.equals(projection) &&
-												!hitMob.equals(attacker)
-								);
-						//Bukkit.broadcast(Component.text("trace complete"));
-						if(trace != null){
-							attacker.attack(trace.getHitEntity());
-							//Bukkit.broadcast(Component.text("HIT: " + trace.getHitEntity()));
-						}
-					});
 				}
 			}
 		}

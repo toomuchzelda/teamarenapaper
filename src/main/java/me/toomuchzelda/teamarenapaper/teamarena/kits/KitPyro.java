@@ -18,6 +18,7 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.BoundingBox;
@@ -99,12 +100,11 @@ public class KitPyro extends Kit
 					if(bow.isSimilar(MOLOTOV_BOW)) {
 						event.setConsumeItem(false);
 						//exp bar shows molotov recharge progress
-						if (shooter.getExp() >= 1f) {
+						if (shooter.getExp() == 1f || shooter.getGameMode() == GameMode.CREATIVE) {
 							shooter.setExp(0f);
 							arrow.setColor(MOLOTOV_ARROW_COLOR);
 							MOLOTOV_RECHARGES.put(shooter, TeamArena.getGameTick());
-						}
-						else {
+						} else {
 							event.setCancelled(true);
 							shooter.sendMessage(CANT_SHOOT_YET);
 							shooter.playSound(shooter.getLocation(), Sound.ENTITY_PLAYER_ATTACK_WEAK, SoundCategory.AMBIENT,
@@ -142,7 +142,6 @@ public class KitPyro extends Kit
 			while(iter.hasNext()) {
 				MolotovInfo minfo = iter.next();
 				if (currentTick - minfo.spawnTime >= MOLOTOV_ACTIVE_TIME) {
-					minfo.arrow.remove();
 					iter.remove();
 					continue;
 				}
@@ -173,70 +172,103 @@ public class KitPyro extends Kit
 			}
 		}
 
+		void spawnMolotov(Player owner, Location location) {
+			Location corner1 = location.clone().add(BOX_RADIUS, -0.1, BOX_RADIUS);
+			Location corner2 = location.clone().add(-BOX_RADIUS, 0.5, -BOX_RADIUS);
+
+			BoundingBox box = BoundingBox.of(corner1, corner2);
+			//shooter will always be a player because this method will only be called if the projectile of a pyro hits smth
+			ACTIVE_MOLOTOVS.add(new MolotovInfo(box, owner, Main.getPlayerInfo(owner).team.getColour(), TeamArena.getGameTick()));
+
+			location.getWorld().playSound(location, Sound.ITEM_FIRECHARGE_USE, 0.5f, 0.5f);
+		}
+
 		//called manually in EventListeners.projectileHit
 		// spawn the molotov effect
 		public void onProjectileHit(ProjectileHitEvent event) {
-			if (!(event.getEntity() instanceof Arrow arrow))
-				return;
+			var entity = event.getEntity();
 
-			if (arrow.getColor() == null || !arrow.getColor().equals(MOLOTOV_ARROW_COLOR))
-				return;
+			if (entity instanceof Arrow || entity instanceof Snowball) {
+				// use the colour to know if it's a molotov arrow
+				if (entity instanceof Arrow arrow && !Objects.equals(arrow.getColor(), MOLOTOV_ARROW_COLOR))
+					return;
 
-			if (event.getHitBlock() == null)
-				return;
+				if (event.getHitBlock() == null)
+					return;
 
-			if (event.getHitBlockFace() == BlockFace.UP) {
-				//use the colour to know if it's a molotov arrow
-				Location loc = event.getEntity().getLocation();
-				loc.setY(event.getHitBlock().getY() + 1); //set it to floor level of hit floor
-				Vector corner1 = loc.toVector().add(new Vector(BOX_RADIUS, -0.1, BOX_RADIUS));
-				Vector corner2 = loc.toVector().add(new Vector(-BOX_RADIUS, 0.5, -BOX_RADIUS));
+				if (event.getHitBlockFace() == BlockFace.UP) {
+					//shooter will always be a player because this method will only be called if the projectile of a pyro hits smth
+					Player player = (Player) entity.getShooter();
+					Location loc = event.getEntity().getLocation();
+					loc.setY(event.getHitBlock().getY() + 1); //set it to floor level of hit floor
 
-				BoundingBox box = BoundingBox.of(corner1, corner2);
-				//shooter will always be a player because this method will only be called if the projectile of a pyro hits smth
-				Player player = (Player) arrow.getShooter();
-				ACTIVE_MOLOTOVS.add(new MolotovInfo(box, player, arrow, Main.getPlayerInfo(player).team.getColour(), TeamArena.getGameTick()));
+					spawnMolotov(player, loc);
+				} else { // it hit a wall, make it not stick in the wall
+					event.setCancelled(true);
 
-				loc.getWorld().playSound(loc, Sound.ENTITY_PLAYER_ATTACK_STRONG, 2, 2f);
-				loc.getWorld().playSound(loc, Sound.BLOCK_FIRE_AMBIENT, 2, 0.5f);
+					//credit jacky8399 for bouncing arrow code
+					BlockFace hitFace = event.getHitBlockFace();
+					Vector dirVector = hitFace.getDirection();
+					if (hitFace != BlockFace.DOWN) { // ignore Y component
+						dirVector.setY(0).normalize();
+					}
+					Vector velocity = event.getEntity().getVelocity();
 
-			} else { // it hit a wall, make it not stick in the wall
-				event.setCancelled(true);
-
-				//credit jacky8399 for bouncing arrow code
-				BlockFace hitFace = event.getHitBlockFace();
-				Vector dirVector = hitFace.getDirection();
-				if (hitFace != BlockFace.DOWN) { // ignore Y component
-					dirVector.setY(0).normalize();
+					// https://math.stackexchange.com/questions/13261/how-to-get-a-reflection-vector
+					Vector newVelocity = velocity.subtract(dirVector.multiply(2 * velocity.dot(dirVector)));
+					newVelocity.multiply(0.25);
+					entity.getWorld().spawn(entity.getLocation(), entity.getClass(), newProjectile -> {
+						newProjectile.setShooter(entity.getShooter());
+						newProjectile.setVelocity(newVelocity);
+						if (entity instanceof Arrow arrow) {
+							Arrow newArrow = (Arrow) newProjectile;
+							newArrow.setColor(arrow.getColor());
+							newArrow.setDamage(arrow.getDamage());
+							newArrow.setKnockbackStrength(arrow.getKnockbackStrength());
+							newArrow.setShotFromCrossbow(arrow.isShotFromCrossbow());
+							newArrow.setPickupStatus(arrow.getPickupStatus());
+						} else {
+							Snowball snowball = (Snowball) entity;
+							Snowball newSnowball = (Snowball) newProjectile;
+							newSnowball.setItem(snowball.getItem());
+							newSnowball.setVisualFire(snowball.isVisualFire());
+						}
+					});
+					entity.remove();
 				}
-				Vector velocity = event.getEntity().getVelocity();
-
-				// https://math.stackexchange.com/questions/13261/how-to-get-a-reflection-vector
-				Vector newVelocity = velocity.subtract(dirVector.multiply(2 * velocity.dot(dirVector)));
-				newVelocity.multiply(0.25);
-				arrow.getWorld().spawn(arrow.getLocation(), arrow.getClass(), newProjectile -> {
-					newProjectile.setShooter(arrow.getShooter());
-					newProjectile.setVelocity(newVelocity);
-					newProjectile.setColor(arrow.getColor());
-					newProjectile.setDamage(arrow.getDamage());
-					newProjectile.setKnockbackStrength(arrow.getKnockbackStrength());
-					newProjectile.setShotFromCrossbow(arrow.isShotFromCrossbow());
-					newProjectile.setPickupStatus(arrow.getPickupStatus());
-				});
-				arrow.remove();
 			}
 		}
 
 		@Override
 		public void onProjectileHitEntity(ProjectileCollideEvent event) {
-			if(event.getEntity() instanceof Arrow a) {
-				if(a.getColor() != null && a.getColor().equals(MOLOTOV_ARROW_COLOR)) {
+			if (event.getEntity() instanceof Arrow arrow) {
+				if (arrow.getColor() != null && arrow.getColor().equals(MOLOTOV_ARROW_COLOR)) {
 					event.setCancelled(true);
-					Vector vel = a.getVelocity();
+					Vector vel = arrow.getVelocity();
 					vel.setX(vel.getX() * 0.4);
 					vel.setZ(vel.getZ() * 0.4);
-					a.setVelocity(vel);
+					arrow.setVelocity(vel);
 				}
+			}
+		}
+
+		@Override
+		public void onInteract(PlayerInteractEvent event) {
+			var player = event.getPlayer();
+			if (event.getMaterial() == Material.FIRE_CHARGE) {
+				var location = player.getEyeLocation();
+				var direction = location.getDirection();
+				var playerVelocity = player.getVelocity();
+				var velocity = event.getAction().isLeftClick() ? direction : direction.multiply(0.5);
+				velocity.add(playerVelocity);
+				player.getWorld().spawn(location.add(direction), Snowball.class, snowball -> {
+					snowball.setShooter(player);
+					snowball.setVelocity(velocity);
+					snowball.setGravity(true);
+					snowball.setInvulnerable(true);
+					snowball.setItem(new ItemStack(Material.FIRE_CHARGE));
+					snowball.setVisualFire(true);
+				});
 			}
 		}
 
@@ -262,5 +294,5 @@ public class KitPyro extends Kit
 		}
 	}
 
-	public record MolotovInfo(BoundingBox box, Player thrower, Arrow arrow, Color color, int spawnTime) {}
+	public record MolotovInfo(BoundingBox box, Player thrower, Color color, int spawnTime) {}
 }

@@ -108,7 +108,7 @@ public class TextUtils {
 		int[] codePoints = string.codePoints().toArray();
 		for (int codePoint : codePoints) {
 			float progress = ((float) width / totalWidth) % 1f;
-			width += measureWidth(codePoint);
+			width += measureWidth(codePoint) + 1;
 			if (Character.isSpaceChar(codePoint)) {
 				builder.append(Component.text(Character.toString(codePoint)));
 			} else {

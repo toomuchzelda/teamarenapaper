@@ -4,10 +4,12 @@ import com.destroystokyo.paper.event.block.TNTPrimeEvent;
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import com.destroystokyo.paper.event.player.PlayerAdvancementCriterionGrantEvent;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
+import com.destroystokyo.paper.event.player.PlayerUseUnknownEntityEvent;
 import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
+import io.papermc.paper.event.player.AsyncChatEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
@@ -22,10 +24,13 @@ import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.PreferenceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
@@ -85,7 +90,6 @@ public class EventListeners implements Listener
 	}
 
 	//run the TeamArena tick
-	//paper good spigot bad
 	@EventHandler
 	public void endTick(ServerTickEndEvent event) {
 		PacketListeners.cancelDamageSounds = false;
@@ -105,12 +109,14 @@ public class EventListeners implements Listener
 					entry.getValue().clearMessageCooldowns();
 				}
 			}
+
 			Main.playerIdLookup.entrySet().removeIf(idLookupEntry -> !idLookupEntry.getValue().isOnline());
+
+			PacketEntityManager.cleanUp();
 
 			// initialize next game
 			if (TeamArena.nextGameType == null) {
-				//TeamArena.nextGameType = GameType.values()[MathUtils.random.nextInt(GameType.values().length)];
-				TeamArena.nextGameType = GameType.SND;
+				TeamArena.nextGameType = GameType.values()[MathUtils.random.nextInt(GameType.values().length)];
 			}
 
 			try {
@@ -130,10 +136,17 @@ public class EventListeners implements Listener
 			e.printStackTrace();
 		}
 
+		try {
+			PacketEntityManager.tick();
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+
 		//every 3 minutes
 		int count = event.getTickNumber() % (3 * 60  *20);
 		if(count == 0) {
-			ArrowPierceManager.cleanup();
+			ArrowPierceManager.cleanUp();
 		}
 		else if(count == 10) {
 			for(PlayerInfo pinfo : Main.getPlayerInfos()) {
@@ -223,46 +236,13 @@ public class EventListeners implements Listener
 		});
 	}
 
-	//public static int i = 0;
-
-	//handle tab-completes asynchronously
-	/*@EventHandler
-	public void asyncTabComplete(AsyncTabCompleteEvent event) {
-		//parse if it's a command first
-
-		Bukkit.broadcastMessage(event.getBuffer());
-		Bukkit.broadcastMessage("----------" + i++);
-		/*for(AsyncTabCompleteEvent.Completion completion : event.completions()) {
-			Bukkit.broadcast(Component.text(completion.suggestion() + " + ").append(completion.tooltip() == null ? Component.empty() : completion.tooltip()));
-		}
-		Bukkit.broadcastMessage("============");
-
-		String typed = event.getBuffer();
-		if(typed.startsWith("/")) {
-			int firstSpaceIdx = typed.indexOf(' ');
-			String commandName = typed.substring(1, firstSpaceIdx);
-			CustomCommand typedCommand = CustomCommand.getFromName(commandName);
-			//if it's null it may be a vanilla or other plugin command so just let the normal process happen for that
-			if(typedCommand != null) {
-				event.setHandled(true);
-				String argsString = typed.substring(firstSpaceIdx + 1); //get all the arguments
-				String[] args = argsString.split(" ");
-				// if the typed args ends with " " we need to manually add the space to the args array
-				if(argsString.endsWith(" ")) {
-					args = Arrays.copyOf(args, args.length + 1);
-					args[args.length - 1] = " ";
-				}
-				List<String> stringSuggestions = typedCommand.tabComplete(event.getSender(), commandName, args);
-				LinkedList<AsyncTabCompleteEvent.Completion> completionSuggestions = new LinkedList<>();
-				for(final String s : stringSuggestions) {
-					AsyncTabCompleteEvent.Completion completion = AsyncTabCompleteEvent.Completion.completion(s);
-					completionSuggestions.add(completion);
-				}
-
-				event.completions(completionSuggestions);
-			}
-		}
-	}*/
+	@EventHandler
+	public void playerChat(AsyncChatEvent event) {
+		if (!event.getPlayer().isOp())
+			return;
+		var parsed = MiniMessage.miniMessage().deserialize(PlainTextComponentSerializer.plainText().serialize(event.message()));
+		event.message(parsed);
+	}
 
 	@EventHandler
 	public void playerQuit(PlayerQuitEvent event) {
@@ -774,6 +754,23 @@ public class EventListeners implements Listener
 					a.onInteractEntity(event);
 				}
 			}
+		}
+	}
+
+	@EventHandler
+	public void playerUseUnknownEntity(PlayerUseUnknownEntityEvent event) {
+		//prevent right clicks being handled 4 times
+		if(!event.isAttack()) {
+			PlayerInfo pinfo = Main.getPlayerInfo(event.getPlayer());
+			int currentTick = TeamArena.getGameTick();
+			int idx = event.getHand().ordinal();
+			if (pinfo.lastInteractUnknownEntityTimes[idx] != currentTick) {
+				pinfo.lastInteractUnknownEntityTimes[idx] = currentTick;
+				PacketEntityManager.handleInteract(event);
+			}
+		}
+		else {
+			PacketEntityManager.handleInteract(event);
 		}
 	}
 
