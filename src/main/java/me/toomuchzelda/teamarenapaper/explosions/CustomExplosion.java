@@ -1,16 +1,16 @@
 package me.toomuchzelda.teamarenapaper.explosions;
 
+import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
-import org.bukkit.FluidCollisionMode;
-import org.bukkit.Location;
-import org.bukkit.World;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Projectile;
+import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
+import org.bukkit.*;
+import org.bukkit.entity.*;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
 import javax.annotation.Nullable;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -19,18 +19,18 @@ import java.util.List;
  *
  * @author toomuchzelda
  */
-public abstract class CustomExplosion
+public class CustomExplosion
 {
 	private Location centre;
 	private double explosionRadius;
 	private double guaranteeHitRadius;
 	private double damage;
 	private DamageType damageType;
-	private Vector knockback;
+	private double knockbackStrength;
 	private Entity entity;
 
-	public CustomExplosion(Location centre, double explosionRadius, double guaranteeHitRadius, double damage, DamageType damageType,
-						   @Nullable Entity entity) {
+	public CustomExplosion(Location centre, double explosionRadius, double guaranteeHitRadius, double damage, double knockbackStrength,
+						   DamageType damageType, @Nullable Entity entity) {
 		this.centre = centre;
 		this.explosionRadius = explosionRadius;
 		this.guaranteeHitRadius = guaranteeHitRadius;
@@ -38,7 +38,7 @@ public abstract class CustomExplosion
 		this.damageType = damageType;
 		this.entity = entity;
 
-		this.knockback = new Vector();
+		this.knockbackStrength = knockbackStrength;
 	}
 
 	public void explode() {
@@ -55,14 +55,14 @@ public abstract class CustomExplosion
 		record HitInfo(Entity entity, Vector hitVector, double distance, double damage) {};
 
 		List<HitInfo> hitEntities = new LinkedList<>();
-		List<Entity> allEntities = world.getEntities();
+		Collection<Entity> allEntities = this.getEntitesToBlow();
 		for(Entity e : allEntities) {
 			if(!globalShouldHurtEntity(e))
 				continue;
 
 			final Location eLocation = e.getLocation();
 			//direction to centre of entity
-			final Vector directionToCentre = eLocation.clone().add(0, e.getHeight() / 2, 0).toVector().subtract(locVector);
+			final Vector directionToCentre = eLocation.toVector().add(new Vector(0, e.getHeight() / 2, 0)).subtract(locVector);
 
 			final double distSqr = directionToCentre.lengthSquared();
 
@@ -89,7 +89,14 @@ public abstract class CustomExplosion
 					directions = new Vector[]{directionToCentre};
 				}
 
+				int i = 0;
 				for(Vector aim : directions) {
+					//Bukkit.broadcastMessage("processing " + i++);
+					if(aim.lengthSquared() <= 0) {
+						Main.logger().warning("lengthSqr is " + aim.lengthSquared() + "!");
+						continue;
+					}
+
 					RayTraceResult rayTrace =
 							world.rayTraceBlocks(centre, aim, explosionRadius, FluidCollisionMode.NEVER, true);
 					//did not hit any blocks, since entity is in explosion range then it must have hit the entity
@@ -97,6 +104,11 @@ public abstract class CustomExplosion
 						hit = true;
 						distance = aim.lengthSquared();
 						hitVector = aim;
+
+						//debug - play a particle at the hit point
+						Vector hitPoint = locVector.clone().add(hitVector);
+						ParticleUtils.colouredRedstone(hitPoint.toLocation(world), Color.LIME, 3d, 3f);
+
 						break;
 					}
 				}
@@ -112,6 +124,9 @@ public abstract class CustomExplosion
 				HitInfo info = new HitInfo(e, hitVector, distance, damage);
 				hitEntities.add(info);
 			}
+			else {
+				//Bukkit.broadcastMessage("did not hit " + e.getName());
+			}
 		}
 
 		for(HitInfo hinfo : hitEntities) {
@@ -120,8 +135,9 @@ public abstract class CustomExplosion
 	}
 
 	private boolean globalShouldHurtEntity(Entity entity) {
-		if(entity instanceof Projectile)
+		if(entity instanceof ArmorStand stand && stand.isMarker()) {
 			return false;
+		}
 
 		return shouldHurtEntity(entity);
 	}
@@ -131,9 +147,50 @@ public abstract class CustomExplosion
 	 * @param entity The entity.
 	 * @return true if the entity will be hurt.
 	 */
-	public abstract boolean shouldHurtEntity(Entity entity);
+	public boolean shouldHurtEntity(Entity entity) {
+		boolean hurt = !entity.isInvulnerable();
 
-	public abstract void hitEntity(Entity victim, Vector hitVector, double distance, double damage);
+		if(hurt) {
+			if(entity instanceof Projectile) {
+				hurt = false;
+			}
+			else if(entity instanceof HumanEntity humanEntity) {
+				GameMode mode = humanEntity.getGameMode();
+				if (mode == GameMode.CREATIVE || mode == GameMode.SPECTATOR)
+					hurt = false;
+
+			}
+		}
+
+		return hurt;
+	}
+
+	/**
+	 * What occurs when an entity is hit.
+	 * @param victim The victim.
+	 * @param hitVector The vector from the explosion to the hit point on the entity.
+	 * @param distance Length of the hitVector.
+	 * @param damage Amount of damage dealt.
+	 */
+	protected void hitEntity(Entity victim, Vector hitVector, double distance, double damage) {
+		Vector kb = calculateKnockback(victim, hitVector, distance, damage);
+
+		DamageEvent event = DamageEvent.newDamageEvent(victim, damage, this.damageType, this.entity, false);
+		event.setKnockback(kb);
+		Main.getGame().queueDamage(event);
+	}
+
+	protected Vector calculateKnockback(Entity victim, Vector hitVector, double distance, double damage) {
+		double kbStrength = distance / this.explosionRadius;
+		kbStrength = 1 - kbStrength;
+		kbStrength = this.knockbackStrength * kbStrength;
+
+		return hitVector.clone().normalize().multiply(kbStrength);
+	}
+
+	protected Collection<Entity> getEntitesToBlow() {
+		return this.centre.getWorld().getEntities();
+	}
 
 	public Location getCentre() {
 		return centre;
@@ -175,14 +232,11 @@ public abstract class CustomExplosion
 		this.damageType = damageType;
 	}
 
-	/**
-	 * Mutable
-	 */
-	public Vector getKnockback() {
-		return this.knockback;
+	public double getKnockbackStrength() {
+		return this.knockbackStrength;
 	}
 
-	public void setKnockback(Vector knockback) {
-		this.knockback = knockback;
+	public void setKnockback(double knockbackStrength) {
+		this.knockbackStrength = knockbackStrength;
 	}
 }

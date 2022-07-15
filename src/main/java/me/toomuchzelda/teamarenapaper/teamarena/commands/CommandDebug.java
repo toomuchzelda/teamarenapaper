@@ -1,9 +1,11 @@
 package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.explosions.CustomExplosion;
 import me.toomuchzelda.teamarenapaper.inventory.*;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
@@ -239,6 +241,23 @@ public class CommandDebug extends CustomCommand {
 						testPacketEntity = null;
 					}
 				}
+			}
+			case "explode" -> {
+				if(args.length < 2) {
+					throw throwUsage("rad, guar, damage, knockbackStrength");
+				}
+
+				Player p = (Player) sender;
+				double rad = Double.parseDouble(args[1]);
+				double guar = Double.parseDouble(args[2]);
+				double damage = Double.parseDouble(args[3]);
+				double knockbackStrength = Double.parseDouble(args[4]);
+
+
+				CustomExplosion explosion = new CustomExplosion(p.getLocation(),
+						rad, guar, damage, knockbackStrength, DamageType.EXPLOSION, p);
+				explosion.explode();
+
 			}
 			default -> {
 				return false;
