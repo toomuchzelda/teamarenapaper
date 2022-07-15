@@ -199,6 +199,7 @@ public class CaptureTheFlag extends TeamArena
 
 				for (Player carrier : flagHolders.keySet()) {
 					carrier.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).addModifier(SPEED_ATTR);
+					currentSpeeders.add(carrier);
 				}
 			}
 			// out of time, end the game.
@@ -630,6 +631,7 @@ public class CaptureTheFlag extends TeamArena
 		}
 		//reset speed timer and remove speed from current flag holders
 		this.timeToSpeed = TIME_TO_SPEED_BOOST;
+
 		Iterator<Player> speedersIter = currentSpeeders.iterator();
 		while(speedersIter.hasNext()) {
 			speedersIter.next().getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).removeModifier(SPEED_ATTR);
@@ -828,14 +830,19 @@ public class CaptureTheFlag extends TeamArena
 
 		flagItems.clear();
 
-		Bukkit.getScheduler().runTaskLater(Main.getPlugin(), bukkitTask -> {
+		for(Player carrier : currentSpeeders) {
+			carrier.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).removeModifier(SPEED_ATTR);
+		}
+	}
 
-			for(Flag flag : flagStands.values()) {
-				flag.getArmorStand().remove();
-				flag.unregisterTeam();
-			}
+	@Override
+	public void prepDead() {
+		super.prepDead();
 
-		}, END_GAME_TIME - 4); //one tick before the scheduled tasks in super
+		for(Flag flag : flagStands.values()) {
+			flag.getArmorStand().remove();
+			flag.unregisterTeam();
+		}
 	}
 
 	@Override
