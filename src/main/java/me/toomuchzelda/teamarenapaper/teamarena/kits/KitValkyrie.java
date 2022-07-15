@@ -225,12 +225,8 @@ public class KitValkyrie extends Kit {
 			//Handling Grav Bomb Behavior
 			ACTIVE_GRAV.forEach(gravInfo -> {
 				World world = gravInfo.thrower().getWorld();
-				Player thrower = gravInfo.thrower();
 				Item grenade = gravInfo.grenade();
-
-				if(ProjDeflect.getShooterOverride(grenade) != null){
-					thrower = ProjDeflect.getShooterOverride(grenade);
-				}
+				Player thrower = getDeflectionOverride(gravInfo.thrower(), grenade);
 
 				Color color = Main.getPlayerInfo(thrower).team.getColour();
 				Particle.DustOptions particleOptions = new Particle.DustOptions(color, 1);
@@ -458,6 +454,7 @@ public class KitValkyrie extends Kit {
 				item.setCanPlayerPickup(false);
 				item.setCanMobPickup(false);
 				item.setVelocity(location.getDirection().multiply(amp));
+				item.setThrower(player.getUniqueId());
 			});
 			world.playSound(activeGrenade, Sound.ENTITY_CREEPER_PRIMED, 1f, 1.1f);
 			ACTIVE_GRAV.add(new GravInfo(activeGrenade, player, TeamArena.getGameTick()));

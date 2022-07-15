@@ -6,6 +6,8 @@ import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.frost.ProjDeflect;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
@@ -121,7 +123,27 @@ public abstract class Ability {
 
 	public void onTeamSwitch(Player player, @Nullable TeamArenaTeam oldTeam, @Nullable TeamArenaTeam newTeam) {}
 
-	//For Frost, if the kit has special ability projectiles w/ special behavior,
-	//A method should be defined to instruct how to attribute its damage to the Frost that reflected it.
-	public void deflectProjectile() {}
+	/** For projectiles which have Kit-Specific special abilities attached to them,
+	this method should be used to check the "true owner" of the projectile before activating its ability.
+	 @param currOwner the current owner of the projectile
+	 @param proj the projectile that is checked for Shooter Override
+	 @return if no override is found, return currOwner. Else, return overrideShooter
+	**/
+	 public Player getDeflectionOverride(Player currOwner, Entity proj) {
+		return ProjDeflect.getShooterOverride(proj) == null?
+				currOwner : ProjDeflect.getShooterOverride(proj);
+	}
+
+	/** For projectiles which have Kit-Specific special abilities attached to them,
+	 this method should be used to transfer the "true owner" of the projectile to a new projectile.
+	 Does nothing if shooterOverride is not found in oldProj.
+	 @param oldProj the projectile that is checked for Shooter Override
+	 @param newProj the projectile to transfer ownership to
+	 **/
+	public void transferDeflectionOverride(Entity oldProj, Entity newProj) {
+		if(ProjDeflect.getShooterOverride(oldProj) != null) {
+			Player shooterOverride = ProjDeflect.getShooterOverride(oldProj);
+			ProjDeflect.addShooterOverride(shooterOverride, newProj);
+		}
+	}
 }

@@ -113,6 +113,7 @@ public class KitSniper extends Kit {
 				item.setCanPlayerPickup(false);
 				item.setUnlimitedLifetime(true);
 				item.setVelocity(origin.getDirection().multiply(amp));
+				item.setThrower(player.getUniqueId());
 			});
 			world.playSound(origin, Sound.ENTITY_CREEPER_PRIMED, 1f, 1.1f);
 			ACTIVE_FRAG.add(new FragInfo(grenade, player, TeamArena.getGameTick()));
@@ -243,12 +244,8 @@ public class KitSniper extends Kit {
 
 			ACTIVE_FRAG.forEach(grenadeInfo -> {
 				World world = grenadeInfo.thrower().getWorld();
-				Player thrower = grenadeInfo.thrower();
 				Item grenade = grenadeInfo.grenade();
-
-				if(ProjDeflect.getShooterOverride(grenade) != null){
-					thrower = ProjDeflect.getShooterOverride(grenade);
-				}
+				Player thrower = getDeflectionOverride(grenadeInfo.thrower(), grenade);
 
 				Color color = Main.getPlayerInfo(thrower).team.getColour();
 				Particle.DustOptions particleOptions = new Particle.DustOptions(color, 1);

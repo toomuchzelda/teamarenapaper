@@ -172,13 +172,14 @@ public class KitPyro extends Kit
 			}
 		}
 
-		void spawnMolotov(Player owner, Location location) {
+		void spawnMolotov(Player owner, Location location, Entity molotov) {
+			Player thrower = getDeflectionOverride(owner, molotov);
 			Location corner1 = location.clone().add(BOX_RADIUS, -0.1, BOX_RADIUS);
 			Location corner2 = location.clone().add(-BOX_RADIUS, 0.5, -BOX_RADIUS);
 
 			BoundingBox box = BoundingBox.of(corner1, corner2);
 			//shooter will always be a player because this method will only be called if the projectile of a pyro hits smth
-			ACTIVE_MOLOTOVS.add(new MolotovInfo(box, owner, Main.getPlayerInfo(owner).team.getColour(), TeamArena.getGameTick()));
+			ACTIVE_MOLOTOVS.add(new MolotovInfo(box, thrower, Main.getPlayerInfo(thrower).team.getColour(), TeamArena.getGameTick()));
 
 			location.getWorld().playSound(location, Sound.ITEM_FIRECHARGE_USE, 0.5f, 0.5f);
 		}
@@ -202,7 +203,7 @@ public class KitPyro extends Kit
 					Location loc = event.getEntity().getLocation();
 					loc.setY(event.getHitBlock().getY() + 1); //set it to floor level of hit floor
 
-					spawnMolotov(player, loc);
+					spawnMolotov(player, loc, event.getEntity());
 				} else { // it hit a wall, make it not stick in the wall
 					event.setCancelled(true);
 
@@ -227,6 +228,9 @@ public class KitPyro extends Kit
 							newArrow.setKnockbackStrength(arrow.getKnockbackStrength());
 							newArrow.setShotFromCrossbow(arrow.isShotFromCrossbow());
 							newArrow.setPickupStatus(arrow.getPickupStatus());
+							//Transferring potential overrides to new arrow
+							//Necessary for Frost Deflection
+							transferDeflectionOverride(entity, newProjectile);
 						} else {
 							Snowball snowball = (Snowball) entity;
 							Snowball newSnowball = (Snowball) newProjectile;

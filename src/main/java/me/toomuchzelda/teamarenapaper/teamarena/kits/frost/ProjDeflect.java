@@ -2,8 +2,9 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.frost;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
-import org.bukkit.FireworkEffect;
-import org.bukkit.Material;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import org.bukkit.*;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.metadata.FixedMetadataValue;
@@ -13,19 +14,81 @@ import java.util.List;
 
 import static me.toomuchzelda.teamarenapaper.teamarena.kits.KitExplosive.ExplosiveAbility.RPG_ARROW_COLOR;
 import static me.toomuchzelda.teamarenapaper.teamarena.kits.KitPyro.MOLOTOV_ARROW_COLOR;
+import static me.toomuchzelda.teamarenapaper.teamarena.kits.frost.KitFrost.FrostAbility.PARRY_YAW_RANGE;
 
 public class ProjDeflect {
 
-	public static boolean isDeflectable(Entity entity){
+	public static boolean isDeflectable(Player deflector, Entity entity) {
 		//Allow deflection for all generic Projectiles
 		//Only deflect Items that are grenades
 		//Only allow entities that are in motion
-		return ((entity instanceof Projectile ||
-				(entity instanceof Item item &&
-						(item.getItemStack().getType() == Material.TURTLE_HELMET ||
-						item.getItemStack().getType() == Material.HEART_OF_THE_SEA ||
-						item.getItemStack().getType() == Material.FIREWORK_STAR))) &&
-						(entity.getVelocity().lengthSquared() > 0));
+		if(entity.getVelocity().lengthSquared() <= 0) {
+			return false;
+		}
+
+		if(entity instanceof Projectile proj) {
+			//Ensure the projectile shot from a player is from an enemy
+			if(proj.getShooter() instanceof Player player) {
+				//Ensure arrow is not in block for it to be deflected + is from an enemy
+				if(proj instanceof AbstractArrow arrow) {
+					return !arrow.isInBlock() && Main.getGame().canAttack(player, deflector);
+				}
+				//If it's not an arrow, just make sure it's from an enemy
+				else {
+					return Main.getGame().canAttack(player, deflector);
+				}
+			}
+			//If the shooter is not a player, deflect as long as the projectile is in motion
+			else {
+				if(proj instanceof AbstractArrow arrow) {
+					return !arrow.isInBlock();
+				}
+				else {
+					return true;
+				}
+			}
+		}
+
+		else if(entity instanceof Item item &&
+		(item.getItemStack().getType() == Material.TURTLE_HELMET ||
+				item.getItemStack().getType() == Material.HEART_OF_THE_SEA ||
+				item.getItemStack().getType() == Material.FIREWORK_STAR)) {
+
+			//Item has no thrower, so it is not an ability grenade
+			if(item.getThrower() == null) {
+				return false;
+			}
+			//If Item has a thrower, check that the thrower is an enemy + item is in the air
+			else {
+				return Main.getGame().canAttack(deflector, Bukkit.getPlayer(item.getThrower())) &&
+							!item.isOnGround();
+			}
+		}
+		//Non-projectiles and Non-item grenades cannot be deflected
+		return false;
+	}
+
+	public static boolean cancelDirectHit(DamageEvent event) {
+		//Prevent damage from direct player collision with rockets
+		if(event.getAttacker() instanceof ShulkerBullet) {
+			Player shooter = (Player) event.getFinalAttacker();
+			event.getAttacker().remove();
+
+			shooter.playSound(shooter, Sound.ENTITY_ARROW_HIT_PLAYER, 1.0f, 1.0f);
+			return true;
+		}
+
+		//Preventing RPG direct hit
+		if (event.getDamageType().is(DamageType.PROJECTILE) &&
+				(event.getAttacker() instanceof Arrow arrow &&
+						arrow.getColor() != null &&
+						arrow.getColor().equals(RPG_ARROW_COLOR))) {
+
+			event.getAttacker().remove();
+			return true;
+		}
+
+		return false;
 	}
 
 	public static void addShooterOverride(Player newShooter, Entity entity){
@@ -91,7 +154,7 @@ public class ProjDeflect {
 	//Returns true if deflect is successful, else, return false;
 	public static boolean tryDeflect(Player player, Entity entity) {
 
-		if(!isDeflectable(entity)){
+		if(!isDeflectable(player, entity)){
 			return false;
 		}
 
@@ -106,10 +169,6 @@ public class ProjDeflect {
 		}
 
 		else if(entity instanceof AbstractArrow arrow) {
-			//Preventing deflecting dead arrows
-			if(arrow.isInBlock()) {
-				return false;
-			}
 			//For arrows which are associated with special abilities,
 			//The shooter must be changed last second to preserve the properties
 			if(arrow instanceof Arrow abilityArrow &&

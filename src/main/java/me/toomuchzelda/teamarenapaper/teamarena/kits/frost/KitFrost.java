@@ -7,6 +7,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitExplosive;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import net.kyori.adventure.text.Component;
@@ -55,12 +56,14 @@ public class KitFrost extends Kit
 		//public static final int FLASH_CD = 8 * 20;
 		public static final int FLASH_CD = 2 * 20;
 		public static final double FLASH_DISTANCE = 8.0;
+		public static final double FLASH_HITBOX_SIZE = 0.3;
 		public static final int FROST_DURATION = 120;
 		//public static final int PARRY_CD = 120;
 		public static final int PARRY_CD = 20;
 		//public static final int ACTIVE_PARRY_TIME = 20;
 		public static final int ACTIVE_PARRY_TIME = 120;
-		public static final double PARRY_HITBOX_SIZE = 3.0;
+		public static final double PARRY_HITBOX_SIZE = 0.3;
+		public static final double PARRY_RANGE = 3.0;
 
 		public static final Component PARRY_READY_MESSAGE = Component.text("PARRY IS READY");
 		public static final Enchantment PARRY_ENCHANT = Enchantment.PROTECTION_PROJECTILE;
@@ -93,6 +96,10 @@ public class KitFrost extends Kit
 
 		@Override
 		public void onAttemptedAttack(DamageEvent event) {
+
+			//Certain projectiles cancel direct hits, so check for that here first before proceeding
+			event.setCancelled(ProjDeflect.cancelDirectHit(event));
+
 			if(event.getDamageType().is(DamageType.MELEE) &&
 					event.getFinalAttacker() instanceof Player attacker &&
 					ACTIVE_PARRY.contains(attacker)) {
@@ -125,12 +132,29 @@ public class KitFrost extends Kit
 			//Handling teleporting to the latest deflected projectile
 			LATEST_DEFLECT.forEach((player, entity) -> {
 
+				Location tpLoc = entity.getLocation();
+				World world = player.getWorld();
 				//Maintaining the player's original rotation upon teleport
-				Location tpLoc = entity.getLocation().clone();
 				tpLoc.setYaw(player.getLocation().getYaw());
 				tpLoc.setPitch(player.getLocation().getPitch());
 
 				if(entity instanceof Projectile proj) {
+
+					Vector inc;
+					//Apply extra correction for rockets since they tend to be extra inaccurate
+					if(proj instanceof ShulkerBullet) {
+						inc = tpLoc.getDirection().multiply(0.2);
+					}
+					else {
+						inc = tpLoc.getDirection().multiply(0.1);
+					}
+					//Apply correction to tpLoc to ensure it is in bounds + does not suffocate the user
+					while(tpLoc.getBlock().isSolid() ||
+							!Main.getGame().getBorder().contains(tpLoc.toVector())) {
+
+						tpLoc.subtract(inc);
+					}
+
 					//Teleport to arrows if they hit a block / removed
 					if(proj instanceof AbstractArrow abstractArrow &&
 							(abstractArrow.isInBlock() || abstractArrow.isDead())) {
@@ -148,8 +172,14 @@ public class KitFrost extends Kit
 						player.teleport(tpLoc);
 						staleProj.put(player, entity);
 					}
+					else if (proj instanceof EnderPearl && proj.isDead()) {
+
+						player.teleport(tpLoc);
+						staleProj.put(player, entity);
+					}
 					else {
 						if(proj.isDead()) {
+
 							player.teleport(tpLoc);
 							staleProj.put(player, entity);
 						}
@@ -245,30 +275,12 @@ public class KitFrost extends Kit
 		}
 
 		public void parryDeflectTick(Player player) {
+			World world = player.getWorld();
+			RayTraceResult trace = world.rayTraceEntities(player.getEyeLocation(), player.getLocation().getDirection(),
+					PARRY_RANGE, PARRY_HITBOX_SIZE, entity -> ProjDeflect.isDeflectable(player, entity));
 
-			Collection<Entity> nearbyEntities = player.getEyeLocation()
-					.getNearbyEntities(PARRY_HITBOX_SIZE, PARRY_HITBOX_SIZE, PARRY_HITBOX_SIZE);
-
-			List<Entity> projectiles = nearbyEntities.stream()
-					.filter(ProjDeflect::isDeflectable)
-					.filter(entity -> {
-						//If it is an Item Grenade, Yaw cannot be checked so
-						//Allow deflection if it is in mid-air
-						if(entity instanceof Item item){
-							return !item.isOnGround();
-						}
-
-						//Projectiles' direction must be checked so it is alligned w/ the player's curr direction
-						Location entLoc = entity.getLocation().clone();
-						float playerYaw = player.getLocation().getYaw();
-						float entYaw = entLoc.getYaw();
-						float yawDiff = 180 - Math.abs(Math.abs(playerYaw - entYaw) - 180);
-
-						return yawDiff <= PARRY_YAW_RANGE;
-					}).toList();
-
-			if(!projectiles.isEmpty()) {
-				attemptDeflect(player, projectiles.get(0));
+			if(trace != null) {
+				attemptDeflect(player, trace.getHitEntity());
 			}
 		}
 
@@ -332,7 +344,7 @@ public class KitFrost extends Kit
 
 			for(Player player : Bukkit.getOnlinePlayers()){
 				RayTraceResult trace = world.rayTraceEntities(departure, dir, flashDistance,
-						0.1, entity -> entity.equals(player));
+						FLASH_HITBOX_SIZE, entity -> entity.equals(player));
 
 				if(trace != null){
 					frostVictims.add((Player) trace.getHitEntity());

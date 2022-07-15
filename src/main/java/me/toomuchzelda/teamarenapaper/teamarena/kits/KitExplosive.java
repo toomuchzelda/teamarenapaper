@@ -70,6 +70,8 @@ public class KitExplosive extends Kit {
 		setArmor(new ItemStack(Material.DIAMOND_HELMET), new ItemStack(Material.GOLDEN_CHESTPLATE),
 				new ItemStack(Material.GOLDEN_LEGGINGS), new ItemStack(Material.DIAMOND_BOOTS));
 		setAbilities(new ExplosiveAbility());
+
+		setCategory(KitCategory.UTILITY);
 	}
 
 	public static class ExplosiveAbility extends Ability {
@@ -137,17 +139,17 @@ public class KitExplosive extends Kit {
 
 			//Handling Grenade Behavior
 			ACTIVE_GRENADES.forEach(grenadeInfo -> {
-				World world = grenadeInfo.thrower().getWorld();
-				Player thrower = grenadeInfo.thrower();
 				Item grenade = grenadeInfo.grenade();
+				Player thrower = getDeflectionOverride(grenadeInfo.thrower(), grenade);
+				World world = grenadeInfo.thrower().getWorld();
 
-				if(ProjDeflect.getShooterOverride(grenade) != null){
-					thrower = ProjDeflect.getShooterOverride(grenade);
-
+				//If projectile was deflected, modify team color to match the deflector's team color
+				if(!getDeflectionOverride(grenadeInfo.thrower(), grenade).equals(grenadeInfo.thrower())) {
 					Color teamColor = Main.getPlayerInfo(thrower).team.getColour();
 					ItemStack grenadeItem = grenade.getItemStack();
 					FireworkEffectMeta grenadeMeta = (FireworkEffectMeta) grenadeItem.getItemMeta();
 					FireworkEffect fireworkColor = FireworkEffect.builder().withColor(teamColor).build();
+
 					grenadeMeta.setEffect(fireworkColor);
 					grenade.getItemStack().setItemMeta(grenadeMeta);
 					grenade.setItemStack(grenadeItem);
@@ -182,16 +184,10 @@ public class KitExplosive extends Kit {
 
 			//Handling RPG Behavior
 			ACTIVE_RPG.forEach(rpgInfo -> {
-				Player thrower = (Player) rpgInfo.rpgArrow().getShooter();
-				World world = thrower.getWorld();
 				Arrow rpgArrow = rpgInfo.rpgArrow();
 				Egg rpgEgg = rpgInfo.rpgEgg();
-
-				//For Kit Frost when it deflects ability projectiles
-				//Indirectly changes the shooter of the projectile
-				if(ProjDeflect.getShooterOverride(rpgArrow) != null){
-					thrower = ProjDeflect.getShooterOverride(rpgArrow);
-				}
+				Player thrower = getDeflectionOverride(rpgInfo.thrower(), rpgArrow);
+				World world = thrower.getWorld();
 
 				rpgEgg.remove();
 				//Hiding arrow
@@ -390,11 +386,11 @@ public class KitExplosive extends Kit {
 					arrow.setColor(RPG_ARROW_COLOR);
 				});
 
-				ACTIVE_RPG.add(new RPGInfo(rpgArrow, rpgEgg, TeamArena.getGameTick()));
+				ACTIVE_RPG.add(new RPGInfo(rpgArrow, rpgEgg, shooter, TeamArena.getGameTick()));
 			}
 		}
 
-		public record RPGInfo(Arrow rpgArrow, Egg rpgEgg, int spawnTime) {}
+		public record RPGInfo(Arrow rpgArrow, Egg rpgEgg, Player thrower, int spawnTime) {}
 
 		public void onInteract(PlayerInteractEvent event) {
 			ItemStack item = event.getItem();
@@ -433,6 +429,7 @@ public class KitExplosive extends Kit {
 				entity.setCanPlayerPickup(false);
 				entity.setUnlimitedLifetime(true);
 				entity.setWillAge(false);
+				entity.setThrower(player.getUniqueId());
 			});
 			world.playSound(grenadeDrop, Sound.ENTITY_CREEPER_PRIMED, 1.0f, 1.1f);
 
