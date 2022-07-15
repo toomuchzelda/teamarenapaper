@@ -175,7 +175,7 @@ public class KitExplosive extends Kit {
 
 				rpgEgg.remove();
 				//Hiding arrow
-				Bukkit.getOnlinePlayers().forEach(player -> {
+				/*Bukkit.getOnlinePlayers().forEach(player -> {
 					List<Integer> entityIDList = new ArrayList<>(rpgArrow.getEntityId());
 
 					ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
@@ -183,7 +183,7 @@ public class KitExplosive extends Kit {
 					packet.getIntLists().write(0, entityIDList);
 
 					PlayerUtils.sendPacket(player, packet);
-				});
+				});*/
 
 				//Explode RPG if it hits block or player
 				if (rpgArrow.isInBlock() || rpgArrow.isOnGround() || rpgArrow.isDead()) {
