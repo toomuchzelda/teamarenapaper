@@ -830,7 +830,7 @@ public class CaptureTheFlag extends TeamArena
 
 		flagItems.clear();
 
-		for(Player carrier : currentSpeeders) {
+		for (Player carrier : currentSpeeders) {
 			carrier.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).removeModifier(SPEED_ATTR);
 		}
 	}

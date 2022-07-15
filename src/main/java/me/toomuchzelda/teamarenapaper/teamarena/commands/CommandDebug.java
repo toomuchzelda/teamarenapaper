@@ -33,8 +33,8 @@ public class CommandDebug extends CustomCommand {
 
 	// TODO temporary feature
 	public static boolean ignoreWinConditions;
+	public static boolean allowSniper = false;
 	public static boolean sniperAccuracy;
-	public static PacketEntity testPacketEntity = null;
 	public static Predicate<Kit> kitPredicate = ignored -> true;
 
 	public CommandDebug() {
@@ -60,22 +60,7 @@ public class CommandDebug extends CustomCommand {
 					throw throwUsage("/debug game start/<...> [value]");
 
 				if (args[1].equalsIgnoreCase("start")) {
-					Bukkit.getScheduler().runTaskTimer(Main.getPlugin(), task -> {
-						var state = Main.getGame().getGameState();
-						if (state == GameState.PREGAME) {
-							if (Bukkit.getOnlinePlayers().size() < 2) {
-								ignoreWinConditions = true;
-							}
-							Main.getGame().prepTeamsDecided();
-						} else if (state == GameState.TEAMS_CHOSEN) {
-							Main.getGame().prepGameStarting();
-						} else if (state == GameState.GAME_STARTING) {
-							Main.getGame().prepLive();
-							task.cancel();
-						} else {
-							task.cancel();
-						}
-					}, 0, 1);
+					skipGameState(GameState.LIVE);
 				} else if (args[1].equalsIgnoreCase("ignorewinconditions")) {
 					ignoreWinConditions = args.length == 3 ? "true".equalsIgnoreCase(args[2]) : !ignoreWinConditions;
 					sender.sendMessage(Component.text("Set ignore win conditions to " + ignoreWinConditions, NamedTextColor.GREEN));
@@ -177,67 +162,7 @@ public class CommandDebug extends CustomCommand {
 				));
 				// abort the current game
 				if ("setgame".equalsIgnoreCase(args[0])) {
-					Bukkit.getScheduler().runTaskTimer(Main.getPlugin(), task -> {
-						var state = Main.getGame().getGameState();
-						if (state == GameState.PREGAME) {
-							if (Bukkit.getOnlinePlayers().size() < 2) {
-								ignoreWinConditions = true;
-							}
-							Main.getGame().prepTeamsDecided();
-						} else if (state == GameState.TEAMS_CHOSEN) {
-							Main.getGame().prepGameStarting();
-						} else if (state == GameState.GAME_STARTING) {
-							Main.getGame().prepLive();
-						} else if (state == GameState.LIVE) {
-							Main.getGame().prepEnd();
-						} else if (state == GameState.END) {
-							Main.getGame().prepDead();
-							task.cancel();
-						} else {
-							task.cancel();
-						}
-					}, 0, 1);
-				}
-			}
-			case "packetent" -> {
-				Player p = (Player) sender;
-				if(testPacketEntity == null) {
-					testPacketEntity = new PacketEntity(PacketEntity.NEW_ID, EntityType.AXOLOTL, p.getLocation(), null, PacketEntity.VISIBLE_TO_ALL) {
-						@Override
-						public void onInteract(Player player, EquipmentSlot hand, boolean attack) {
-							this.setMetadata(MetaIndex.AXOLOTL_COLOR, MathUtils.randomMax(4));
-							EntityUtils.playEffect(this, ClientboundAnimatePacket.CRITICAL_HIT);
-							this.getWorld().playSound(this.getLocation(), Sound.ENTITY_AXOLOTL_SWIM, 1f, 1f);
-							if(attack)
-								Bukkit.broadcast(Component.text("Curse you " + player.getName() + "!", NamedTextColor.DARK_RED));
-						}
-					};
-
-					testPacketEntity.respawn();
-				}
-				else if(!testPacketEntity.isAlive()) {
-					testPacketEntity.respawn();
-				}
-				else {
-					testPacketEntity.setMetadata(MetaIndex.AXOLOTL_COLOR, MathUtils.randomMax(4));
-					Location pLoc = p.getLocation();
-					Vector dir = pLoc.toVector().subtract(testPacketEntity.getLocation().toVector()).normalize();
-
-					Location newLoc = testPacketEntity.getLocation().setDirection(dir).add(0, 0.2, 0);
-					testPacketEntity.move(newLoc);
-					testPacketEntity.refreshViewerMetadata();
-				}
-
-			}
-			case "packetentkill" -> {
-				if(testPacketEntity != null) {
-					if(testPacketEntity.isAlive()) {
-						testPacketEntity.despawn();
-					}
-					else {
-						testPacketEntity.remove();
-						testPacketEntity = null;
-					}
+					skipGameState(GameState.DEAD);
 				}
 			}
 			default -> {
@@ -247,9 +172,24 @@ public class CommandDebug extends CustomCommand {
 		return true;
 	}
 
+	public static Kit filterKit(Kit kit) {
+		if (!kitPredicate.test(kit))
+			return Main.getGame().getKits().stream()
+					.filter(kitPredicate)
+					.findFirst().orElse(null);
+		else
+			return kit;
+	}
+
 	private void setKitRestrictions(@NotNull CommandSender sender, @NotNull String @NotNull [] args) {
 		if (args.length < 3)
-			throw throwUsage("/debug game kitfilter <allow/block> [kit1,...]");
+			throw throwUsage("/debug game kitfilter <allow/block/clear> [kit1,...]");
+		if (args[2].equalsIgnoreCase("clear")) {
+			kitPredicate = kit -> true;
+			sender.sendMessage(Component.text("Allowing all kits.", NamedTextColor.YELLOW));
+			return;
+		}
+
 		boolean block = args[2].equalsIgnoreCase("block");
 		Set<String> kitNames;
 		if (args.length == 4) {
@@ -266,29 +206,27 @@ public class CommandDebug extends CustomCommand {
 		kitPredicate = kit -> block != kitNames.contains(kit.getName().toLowerCase(Locale.ENGLISH));
 		sender.sendMessage(Component.text("Set kit restrictions to: " +
 				args[2] + " " + kitNames, NamedTextColor.GREEN));
-		Optional<Kit> optionalFallbackKit = Main.getGame().getKits().stream()
+		Main.getGame().getKits().stream()
 				.filter(kitPredicate)
-				.findFirst();
-		if (optionalFallbackKit.isPresent()) {
-			Kit fallbackKit = optionalFallbackKit.get();
-			Main.getPlayerInfoMap().forEach((player, playerInfo) -> {
-				if (playerInfo.kit != null && !kitPredicate.test(playerInfo.kit)) {
-					playerInfo.kit = fallbackKit;
-					player.sendMessage(Component.text("The kit you have selected has been disabled. " +
-							"It has been replaced with: " + fallbackKit.getName(), NamedTextColor.YELLOW));
-				}
-				if (playerInfo.activeKit != null && !kitPredicate.test(playerInfo.activeKit)) {
-					// also change active kit
-					playerInfo.activeKit.removeKit(player, playerInfo);
-					Main.getGame().givePlayerItems(player, playerInfo, true);
-					player.sendMessage(Component.text("The kit you are using has been disabled. " +
-							"It has been replaced with your selected kit.", NamedTextColor.YELLOW));
-				}
-			});
-		} else { // cannot allow blocking all kits!
-			sender.sendMessage(Component.text("Warning: no fallback kit found. Allowing all kits instead.", NamedTextColor.YELLOW));
-			kitPredicate = kit -> true;
-		}
+				.findFirst()
+				.ifPresentOrElse(fallbackKit -> Main.getPlayerInfoMap().forEach((player, playerInfo) -> {
+					if (playerInfo.kit != null && !kitPredicate.test(playerInfo.kit)) {
+						playerInfo.kit = fallbackKit;
+						player.sendMessage(Component.text("The kit you have selected has been disabled by an admin. " +
+								"It has been replaced with: " + fallbackKit.getName(), NamedTextColor.YELLOW));
+					}
+					if (playerInfo.activeKit != null && !kitPredicate.test(playerInfo.activeKit)) {
+						// also change active kit
+						playerInfo.activeKit.removeKit(player, playerInfo);
+						Main.getGame().givePlayerItems(player, playerInfo, true);
+						player.sendMessage(Component.text("The kit you are using has been disabled by an admin. " +
+								"It has been replaced with your selected kit.", NamedTextColor.YELLOW));
+					}
+				}), /* else */ () -> {
+					// cannot allow blocking all kits!
+					kitPredicate = kit -> true;
+					sender.sendMessage(Component.text("Warning: no fallback kit found. Allowing all kits instead.", NamedTextColor.YELLOW));
+				});
 	}
 
 	private void doDrawCommand(@NotNull String @NotNull [] args) {
@@ -344,6 +282,43 @@ public class CommandDebug extends CustomCommand {
 		}
 	}
 
+	@Deprecated
+	private static void skipGameState(GameState dest) {
+		int ordinal = dest.ordinal();
+		boolean didIgnoreWinConditions = ignoreWinConditions;
+		Bukkit.getScheduler().runTaskTimer(Main.getPlugin(), task -> {
+			var state = Main.getGame().getGameState();
+			if (state.ordinal() >= ordinal) {
+				ignoreWinConditions = didIgnoreWinConditions;
+				task.cancel();
+				return;
+			}
+
+			if (state == GameState.PREGAME) {
+				if (Bukkit.getOnlinePlayers().size() < 2) {
+					ignoreWinConditions = true;
+				}
+				Main.getGame().prepTeamsDecided();
+			} else if (state == GameState.TEAMS_CHOSEN) {
+				Main.getGame().prepGameStarting();
+			} else if (state == GameState.GAME_STARTING) {
+				Main.getGame().prepLive();
+			} else if (state == GameState.LIVE) {
+				Main.getGame().prepEnd();
+			} else if (state == GameState.END) {
+				Main.getGame().prepDead();
+				ignoreWinConditions = didIgnoreWinConditions;
+				task.cancel();
+			} else {
+				ignoreWinConditions = didIgnoreWinConditions;
+				task.cancel();
+			}
+		}, 0, 1);
+	}
+
+
+	private static PacketEntity testPacketEntity = null;
+
 	@Override
 	public void run(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
 		if (args.length == 0) {
@@ -378,6 +353,43 @@ public class CommandDebug extends CustomCommand {
 						viewer.hidePlayer(Main.getPlugin(), player);
 					} else {
 						viewer.showPlayer(Main.getPlugin(), player);
+					}
+				}
+			}
+			case "packetent" -> {
+				if (testPacketEntity == null) {
+					testPacketEntity = new PacketEntity(PacketEntity.NEW_ID, EntityType.AXOLOTL, player.getLocation(), null, PacketEntity.VISIBLE_TO_ALL) {
+						@Override
+						public void onInteract(Player player, EquipmentSlot hand, boolean attack) {
+							this.setMetadata(MetaIndex.AXOLOTL_COLOR, MathUtils.randomMax(4));
+							EntityUtils.playEffect(this, ClientboundAnimatePacket.CRITICAL_HIT);
+							this.getWorld().playSound(this.getLocation(), Sound.ENTITY_AXOLOTL_SWIM, 1f, 1f);
+							if (attack)
+								Bukkit.broadcast(Component.text("Curse you " + player.getName() + "!", NamedTextColor.DARK_RED));
+						}
+					};
+
+					testPacketEntity.respawn();
+				} else if (!testPacketEntity.isAlive()) {
+					testPacketEntity.respawn();
+				} else {
+					testPacketEntity.setMetadata(MetaIndex.AXOLOTL_COLOR, MathUtils.randomMax(4));
+					Location pLoc = player.getLocation();
+					Vector dir = pLoc.toVector().subtract(testPacketEntity.getLocation().toVector()).normalize();
+
+					Location newLoc = testPacketEntity.getLocation().setDirection(dir).add(0, 0.2, 0);
+					testPacketEntity.move(newLoc);
+					testPacketEntity.refreshViewerMetadata();
+				}
+
+			}
+			case "packetentkill" -> {
+				if (testPacketEntity != null) {
+					if (testPacketEntity.isAlive()) {
+						testPacketEntity.despawn();
+					} else {
+						testPacketEntity.remove();
+						testPacketEntity = null;
 					}
 				}
 			}
@@ -442,6 +454,7 @@ public class CommandDebug extends CustomCommand {
 		}
 
 		List<Material> wools = List.copyOf(Tag.WOOL.getValues());
+
 		@Override
 		public void init(Player player, InventoryAccessor inventory) {
 			tab.showTabs(inventory, wools, TabBar.highlightWhenSelected(ItemStack::new),

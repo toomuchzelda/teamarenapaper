@@ -45,7 +45,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 //main game class
 public abstract class TeamArena
@@ -239,6 +238,7 @@ public abstract class TeamArena
 		DamageTimes.clear();
 
 		//init all the players online at time of construction
+		Kit fallbackKit = CommandDebug.filterKit(kits.values().iterator().next());
 		for (var entry : Main.getPlayerInfoMap().entrySet()) {
 			Player p = entry.getKey();
 			PlayerInfo pinfo = entry.getValue();
@@ -255,7 +255,7 @@ public abstract class TeamArena
 			noTeamTeam.addMembers(p);
 
 			if(pinfo.kit == null)
-				pinfo.kit = kits.values().iterator().next();
+				pinfo.kit = fallbackKit;
 
 			PlayerUtils.resetState(p);
 			p.setAllowFlight(true);
@@ -1415,11 +1415,11 @@ public abstract class TeamArena
 			playerInfo.team = spectatorTeam;
 		}
 
-		if(playerInfo.kit == null) {
-			playerInfo.kit = findKit(playerInfo.defaultKit);
+		if (playerInfo.kit == null) {
+			playerInfo.kit = CommandDebug.filterKit(findKit(playerInfo.defaultKit));
 			//default kit somehow invalid; maybe a kit was removed
-			if(playerInfo.kit == null) {
-				playerInfo.kit = kits.values().iterator().next();
+			if (playerInfo.kit == null) {
+				playerInfo.kit = CommandDebug.filterKit(kits.values().iterator().next());
 			}
 		}
 

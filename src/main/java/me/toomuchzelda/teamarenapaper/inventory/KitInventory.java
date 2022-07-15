@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.inventory;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.KitDemolitions;
@@ -10,7 +11,9 @@ import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.*;
+import org.bukkit.Material;
+import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
@@ -63,7 +66,7 @@ public class KitInventory implements InventoryProvider {
 		}
 		if (disabled) {
 			loreLines.add(Component.empty());
-			loreLines.add(Component.text("This kit has been disabled.", NamedTextColor.DARK_RED, TextDecoration.BOLD));
+			loreLines.add(Component.text("This kit has been disabled by an admin.", NamedTextColor.DARK_RED, TextDecoration.BOLD));
 		}
 
 		return ClickableItem.of(
@@ -101,12 +104,41 @@ public class KitInventory implements InventoryProvider {
 						category.display(selected),
 				0, 9, true);
 
-		Kit selected = Main.getPlayerInfo(player).kit;
-		if (kits.size() > 9 * 4) { // max 4 rows
-			// set page items
-			inventory.set(45, pagination.getPreviousPageItem(inventory));
-			inventory.set(53, pagination.getNextPageItem(inventory));
+
+		// 6th row
+		ItemStack borderItem = ItemBuilder.of(Material.BLACK_STAINED_GLASS_PANE).displayName(Component.empty()).build();
+		// max 4 rows
+		boolean showPageItems = kits.size() > 9 * 4;
+		for (int i = 45; i < 54; i++) {
+			if (i == 45 && showPageItems)
+				inventory.set(i, pagination.getPreviousPageItem(inventory));
+			else if (i == 46 && showPageItems)
+				inventory.set(i, pagination.getNextPageItem(inventory));
+			else if (i == 53)
+				inventory.set(i, ItemBuilder.of(Material.ENDER_CHEST)
+						.displayName(Component.text("Save as default kit", NamedTextColor.YELLOW))
+						.lore(TextUtils.toLoreList("""
+								Warning: Unfortunately, the default kit is not
+								actually saved. To make your changes persist
+								across sessions, nag toomuchzelda.""", NamedTextColor.GRAY))
+						.toClickableItem(e -> {
+							Player clicker = (Player) e.getWhoClicked();
+							PlayerInfo playerInfo = Main.getPlayerInfo(clicker);
+							playerInfo.defaultKit = playerInfo.kit.getName();
+							clicker.playSound(clicker, Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1);
+							clicker.sendMessage(Component.textOfChildren(
+									Component.text("Saved ", NamedTextColor.GREEN),
+									Component.text(playerInfo.defaultKit, NamedTextColor.YELLOW),
+									Component.text(" as your default kit.", NamedTextColor.GREEN)
+							));
+							Inventories.closeInventory(clicker, KitInventory.class);
+						})
+				);
+			else
+				inventory.set(i, borderItem);
 		}
+
+		Kit selected = Main.getPlayerInfo(player).kit;
 		KitCategory filter = categoryTab.getCurrentTab();
 		List<ClickableItem> kitItems = kits.stream()
 				.filter(kit -> filter == null || kit.getCategory() == filter)
