@@ -23,6 +23,7 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.Action;
@@ -204,6 +205,9 @@ public abstract class TeamArena
 			gameWorld.setStorm(true);
 		else
 			gameWorld.setClearWeatherDuration(6000); //5 minutes
+
+		//force disable relative projectile velocity (projectiles inheriting the velocity of their shooter)
+		((CraftWorld) gameWorld).getHandle().paperConfig().misc.disableRelativeProjectileVelocity = true;
 
 		waitingSince = gameTick;
 		//gameState = GameState.PREGAME;

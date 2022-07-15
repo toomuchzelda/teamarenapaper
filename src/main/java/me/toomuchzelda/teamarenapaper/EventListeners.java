@@ -466,13 +466,11 @@ public class EventListeners implements Listener
 		event.setRespawnLocation(Main.getPlayerInfo(event.getPlayer()).spawnPoint);
 	}
 
-	//stop projectiles from inheriting thrower's velocity
-	// like moving too up/down when player is jumping/falling/rising
 	//this event is fired for shooting bows including by players
 	@EventHandler
 	public void entityShootBow(EntityShootBowEvent event) {
-		event.getProjectile().setVelocity(EntityUtils.projectileLaunchVector(event.getEntity(),
-				event.getProjectile().getVelocity(), EntityUtils.VANILLA_PROJECTILE_SPRAY));
+		//event.getProjectile().setVelocity(EntityUtils.projectileLaunchVector(event.getEntity(),
+		//		event.getProjectile().getVelocity(), EntityUtils.VANILLA_PROJECTILE_SPRAY));
 
 		if(event.getProjectile() instanceof AbstractArrow aa)
 			aa.setPickupStatus(AbstractArrow.PickupStatus.CREATIVE_ONLY);
@@ -504,8 +502,8 @@ public class EventListeners implements Listener
 		/*Bukkit.broadcastMessage(event.getItemStack().getType().toString());
 		Bukkit.broadcastMessage(event.getProjectile().getVelocity().toString());*/
 
-		event.getProjectile().setVelocity(EntityUtils.projectileLaunchVector(event.getPlayer(),
-				event.getProjectile().getVelocity(), EntityUtils.VANILLA_PROJECTILE_SPRAY));
+		//event.getProjectile().setVelocity(EntityUtils.projectileLaunchVector(event.getPlayer(),
+		//		event.getProjectile().getVelocity(), EntityUtils.VANILLA_PROJECTILE_SPRAY));
 
 		if(Main.getGame() != null) {
 			Player p = event.getPlayer();
