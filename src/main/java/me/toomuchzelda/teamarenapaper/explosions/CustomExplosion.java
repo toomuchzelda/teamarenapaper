@@ -4,6 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import org.bukkit.*;
 import org.bukkit.entity.*;
 import org.bukkit.util.RayTraceResult;
@@ -21,6 +22,8 @@ import java.util.List;
  */
 public class CustomExplosion
 {
+	public static final double IGNORE_PUSH_ANGLE = Math.toRadians(90d);
+
 	private Location centre;
 	private double explosionRadius;
 	private double guaranteeHitRadius;
@@ -55,23 +58,22 @@ public class CustomExplosion
 		record HitInfo(Entity entity, Vector hitVector, double distance, double damage) {};
 
 		List<HitInfo> hitEntities = new LinkedList<>();
-		Collection<Entity> allEntities = this.getEntitesToBlow();
+		Collection<Entity> allEntities = this.getEntitesToConsider();
 		for(Entity e : allEntities) {
 			if(!globalShouldHurtEntity(e))
 				continue;
 
-			final Location eLocation = e.getLocation();
+			final Vector eBaseVector = e.getLocation().toVector();
 			//direction to centre of entity
-			final Vector directionToCentre = eLocation.toVector().add(new Vector(0, e.getHeight() / 2, 0)).subtract(locVector);
-
+			final Vector directionToCentre = eBaseVector.clone().add(new Vector(0, e.getHeight() / 2, 0)).subtract(locVector);
 			final double distSqr = directionToCentre.lengthSquared();
 
-			double distance = 0d; //initial value doesn't matter
+			double distance = 0d; //initial value doesn't matter, will only be read if hit
 			Vector hitVector = directionToCentre;
 			boolean hit = false;
 			if(distSqr <= guarRadSqr) {
 				hit = true;
-				distance = distSqr;
+				distance = Math.sqrt(distSqr);
 			}
 			else if(distSqr <= explRadSqr) {
 				//all the directions to aim at the victim at
@@ -79,30 +81,36 @@ public class CustomExplosion
 				Vector[] directions;
 				//if a livingentity, if it doesn't hit their centre, then aim for eyes, then feet.
 				if(e instanceof LivingEntity living) {
-					Vector eBaseVector = eLocation.toVector();
 					directions = new Vector[]{
 							directionToCentre,
 							eBaseVector.clone().setY(eBaseVector.getY() + living.getEyeHeight()).subtract(locVector),
-							eBaseVector.subtract(locVector)};
+							eBaseVector.subtract(locVector)}; //final use of this Vector instance, don't need to clone
 				}
 				else {
 					directions = new Vector[]{directionToCentre};
 				}
 
-				int i = 0;
+				for(Vector aim : directions) {
+					Vector hitPoint = locVector.clone().add(aim);
+					ParticleUtils.colouredRedstone(hitPoint.toLocation(world), Color.RED, 3d, 3f);
+				}
+
+				int debugIdx = 0;
 				for(Vector aim : directions) {
 					//Bukkit.broadcastMessage("processing " + i++);
 					if(aim.lengthSquared() <= 0) {
-						Main.logger().warning("lengthSqr is " + aim.lengthSquared() + "!");
+						Main.logger().warning("lengthSqr of vector " + debugIdx + " is " + aim.lengthSquared() + "!");
+						Thread.dumpStack();
 						continue;
 					}
 
+					final double aimLength = aim.length();
 					RayTraceResult rayTrace =
-							world.rayTraceBlocks(centre, aim, explosionRadius, FluidCollisionMode.NEVER, true);
+							world.rayTraceBlocks(centre, aim, aimLength, FluidCollisionMode.NEVER, true);
 					//did not hit any blocks, since entity is in explosion range then it must have hit the entity
 					if (rayTrace == null) {
 						hit = true;
-						distance = aim.lengthSquared();
+						distance = aimLength;
 						hitVector = aim;
 
 						//debug - play a particle at the hit point
@@ -111,11 +119,16 @@ public class CustomExplosion
 
 						break;
 					}
+					else {
+						Bukkit.broadcastMessage("raytrace not null");
+						Bukkit.broadcastMessage(rayTrace.toString());
+					}
+
+					debugIdx++;
 				}
 			}
 
 			if(hit) {
-				distance = Math.sqrt(distance);
 				//linear damage fall off
 				double damage = explosionRadius - distance;
 				damage /= explosionRadius; //from 0.0 to 1.0
@@ -123,9 +136,6 @@ public class CustomExplosion
 
 				HitInfo info = new HitInfo(e, hitVector, distance, damage);
 				hitEntities.add(info);
-			}
-			else {
-				//Bukkit.broadcastMessage("did not hit " + e.getName());
 			}
 		}
 
@@ -185,10 +195,10 @@ public class CustomExplosion
 		kbStrength = 1 - kbStrength;
 		kbStrength = this.knockbackStrength * kbStrength;
 
-		return hitVector.clone().normalize().multiply(kbStrength);
+		return PlayerUtils.noNonFinites(hitVector.clone().normalize().multiply(kbStrength));
 	}
 
-	protected Collection<Entity> getEntitesToBlow() {
+	protected Collection<Entity> getEntitesToConsider() {
 		return this.centre.getWorld().getEntities();
 	}
 
