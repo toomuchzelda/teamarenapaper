@@ -4,30 +4,38 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.FireworkEffect;
+import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.util.Vector;
 
-import java.util.List;
-
 import static me.toomuchzelda.teamarenapaper.teamarena.kits.KitExplosive.ExplosiveAbility.RPG_ARROW_COLOR;
 import static me.toomuchzelda.teamarenapaper.teamarena.kits.KitPyro.MOLOTOV_ARROW_COLOR;
-import static me.toomuchzelda.teamarenapaper.teamarena.kits.frost.KitFrost.FrostAbility.PARRY_YAW_RANGE;
 
 public class ProjDeflect {
 
+	/**
+	 * Checks if a given entity/projectile is Deflectable by a given Frost
+	 *
+	 * @param deflector The Frost that is deflecting
+	 * @param entity The Entity that is checked
+	 * @return true if the entity is viable for deflection, and is not shot by an ally. Else, false.
+	 */
 	public static boolean isDeflectable(Player deflector, Entity entity) {
-		//Allow deflection for all generic Projectiles
-		//Only deflect Items that are grenades
+
 		//Only allow entities that are in motion
 		if(entity.getVelocity().lengthSquared() <= 0) {
 			return false;
 		}
 
+		//Allow deflection for all generic Projectiles
+		//Only deflect Items that are grenades
 		if(entity instanceof Projectile proj) {
-			//Ensure the projectile shot from a player is from an enemy
+			//If the projectile shot from a player, ensure it is from an enemy
 			if(proj.getShooter() instanceof Player player) {
 				//Ensure arrow is not in block for it to be deflected + is from an enemy
 				if(proj instanceof AbstractArrow arrow) {
@@ -68,6 +76,12 @@ public class ProjDeflect {
 		return false;
 	}
 
+	/**
+	 * A method that checks if a damage event should cancel direct hit damage to preserve
+	 * properties that are implemented in a different Kit Class.
+	 * @param event damage event which may involve a deflected projectile
+	 * @return if projectile damage should be cancelled on direct hit, return true. Else, return false.
+	 */
 	public static boolean cancelDirectHit(DamageEvent event) {
 		//Prevent damage from direct player collision with rockets
 		if(event.getAttacker() instanceof ShulkerBullet) {
@@ -79,7 +93,7 @@ public class ProjDeflect {
 		}
 
 		//Preventing RPG direct hit
-		if (event.getDamageType().is(DamageType.PROJECTILE) &&
+		if(event.getDamageType().is(DamageType.PROJECTILE) &&
 				(event.getAttacker() instanceof Arrow arrow &&
 						arrow.getColor() != null &&
 						arrow.getColor().equals(RPG_ARROW_COLOR))) {
@@ -91,8 +105,14 @@ public class ProjDeflect {
 		return false;
 	}
 
-	public static void addShooterOverride(Player newShooter, Entity entity){
-		if (entity.hasMetadata("shooterOverride")) {
+	/**
+	 * Adds a "shooterOverride" in an entity's metadata, to signify a new owner.
+	 * Used by Frost to transfer ownership without changing the projectile's shooter.
+	 * @param newShooter the new owner of the projectile
+	 * @param entity the projectile
+	 */
+	public static void addShooterOverride(Player newShooter, Entity entity) {
+		if(entity.hasMetadata("shooterOverride")) {
 			//First, clear any other past overrides if
 			//another Frost had already deflected the projectile
 			entity.removeMetadata("shooterOverride",
@@ -102,12 +122,18 @@ public class ProjDeflect {
 				new FixedMetadataValue(Main.getPlugin(), newShooter));
 	}
 
-	public static Player getShooterOverride(Entity entity){
+	/**
+	 * Checks for a "shooterOverride" in an entity's metadata.
+	 * Used by Frost to transfer ownership without changing the projectile's shooter.
+	 * @param entity The entity that is checked for a Shooter Override
+	 * @return The overriding Shooter if it exists. Else, return null.
+	 */
+	public static Player getShooterOverride(Entity entity) {
 		return entity.hasMetadata("shooterOverride")?
 				(Player) entity.getMetadata("shooterOverride").get(0).value() : null;
 	}
 
-	private static void deflectProj(Player newOwner, Projectile proj){
+	private static void deflectProj(Player newOwner, Projectile proj) {
 		//Vector = unit vector * magnitude
 		Vector dir = newOwner.getEyeLocation().getDirection();
 		double magnitude = proj.getVelocity().length();
@@ -117,7 +143,7 @@ public class ProjDeflect {
 		proj.setShooter(newOwner);
 	}
 
-	private static void deflectArrow(Player newOwner, AbstractArrow arrow){
+	private static void deflectArrow(Player newOwner, AbstractArrow arrow) {
 		arrow.setShooter(newOwner);
 		arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
 
@@ -127,10 +153,9 @@ public class ProjDeflect {
 		Vector deflectVel = dir.multiply(magnitude);
 
 		arrow.setVelocity(deflectVel);
-
 	}
 
-	private static void deflectSameShooter(Player newOwner, Entity projectile){
+	private static void deflectSameShooter(Player newOwner, Entity projectile) {
 		Vector dir = newOwner.getEyeLocation().getDirection();
 		double magnitude = projectile.getVelocity().length();
 		Vector deflectVel = dir.multiply(magnitude);
@@ -138,7 +163,7 @@ public class ProjDeflect {
 		projectile.setVelocity(deflectVel);
 	}
 
-	private static void deflectBurstFirework(Player newOwner, Firework firework){
+	private static void deflectBurstFirework(Player newOwner, Firework firework) {
 		TeamArenaTeam team = Main.getPlayerInfo(newOwner).team;
 
 		FireworkMeta meta = firework.getFireworkMeta();
@@ -151,16 +176,19 @@ public class ProjDeflect {
 		deflectProj(newOwner, firework);
 	}
 
-	//Returns true if deflect is successful, else, return false;
+	/**
+	 * Attempts to make player deflect entity.
+	 * @param player The Deflector
+	 * @param entity The Entity/Projectile to be deflected
+	 * @return If the deflect is successful, True. Else, False.
+	 */
 	public static boolean tryDeflect(Player player, Entity entity) {
 
-		if(!isDeflectable(player, entity)){
+		if(!isDeflectable(player, entity)) {
 			return false;
 		}
 
 		if(entity instanceof ShulkerBullet rocket) {
-			//Only allow them to teleport to the rocket if it hits a block
-			//rocket.getLocation().getBlock().isSolid();
 			ProjDeflect.deflectProj(player, rocket);
 		}
 

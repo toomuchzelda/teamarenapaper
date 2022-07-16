@@ -61,8 +61,6 @@ import java.util.concurrent.CompletableFuture;
 
 import static me.toomuchzelda.teamarenapaper.teamarena.GameState.DEAD;
 import static me.toomuchzelda.teamarenapaper.teamarena.GameState.LIVE;
-import static me.toomuchzelda.teamarenapaper.teamarena.kits.frost.KitFrost.FROSTED_ENTITIES;
-import static me.toomuchzelda.teamarenapaper.teamarena.kits.frost.KitFrost.FROST_FROZEN_MESSAGE;
 
 public class EventListeners implements Listener
 {
@@ -715,7 +713,6 @@ public class EventListeners implements Listener
 		if(e.getWhoClicked() instanceof Player player &&
 				KitFrost.FROSTED_ENTITIES.containsKey(player)){
 			e.setCancelled(true);
-			player.sendMessage(KitFrost.FROST_FROZEN_MESSAGE);
 		}
 	}
 
@@ -726,7 +723,6 @@ public class EventListeners implements Listener
 		if(e.getWhoClicked() instanceof Player player &&
 				KitFrost.FROSTED_ENTITIES.containsKey(player)){
 			e.setCancelled(true);
-			player.sendMessage(KitFrost.FROST_FROZEN_MESSAGE);
 		}
 
 		boolean isDraggingOnArmorSlot = false;
@@ -752,7 +748,6 @@ public class EventListeners implements Listener
 			if(event.getAction().isRightClick() &&
 					KitFrost.FROSTED_ENTITIES.containsKey(event.getPlayer())){
 				event.setCancelled(true);
-				event.getPlayer().sendMessage(KitFrost.FROST_FROZEN_MESSAGE);
 			}
 			else if(Main.getGame().getGameState() == LIVE) {
 				Ability[] abilities = Kit.getAbilities(event.getPlayer());
@@ -812,7 +807,6 @@ public class EventListeners implements Listener
 		Player player = event.getPlayer();
 		if(KitFrost.FROSTED_ENTITIES.containsKey(player)){
 			event.setCancelled(true);
-			player.sendMessage(KitFrost.FROST_FROZEN_MESSAGE);
 		}
 	}
 
@@ -821,7 +815,6 @@ public class EventListeners implements Listener
 		Player player = event.getPlayer();
 		if(KitFrost.FROSTED_ENTITIES.containsKey(player)){
 			event.setCancelled(true);
-			player.sendMessage(KitFrost.FROST_FROZEN_MESSAGE);
 		}
 	}
 
