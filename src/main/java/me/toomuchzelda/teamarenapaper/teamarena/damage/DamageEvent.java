@@ -383,9 +383,7 @@ public class DamageEvent {
 
 		//non-livingentitys dont have NDT or health, can't do much
 		if(!(victim instanceof LivingEntity)) {
-			//projectiles shouldn't be killable
-			//if(!(damagee instanceof Projectile))
-			victim.remove();
+			//TODO: handle non-living entities
 		}
 		else
 		{
@@ -448,9 +446,6 @@ public class DamageEvent {
 				}
 			}
 
-			//damage
-			boolean isDeath = false;
-
 			//this should be impossible normally but can happen in some circumstances
 			if(finalDamage < 0) {
 				StringBuilder error = new StringBuilder();
@@ -477,44 +472,48 @@ public class DamageEvent {
 				finalDamage = 0;
 			}
 
-			double absorp = living.getAbsorptionAmount();
-			double newHealth = living.getHealth();
-			//they still got absorption hearts
-			if(absorp > 0) {
-				if(finalDamage >= absorp) {
-					living.setAbsorptionAmount(0);
-					newHealth -= finalDamage - absorp;
+			//damage
+			boolean isDeath = false;
+			if(finalDamage > 0) {
+				double absorp = living.getAbsorptionAmount();
+				double newHealth = living.getHealth();
+				//they still got absorption hearts
+				if(absorp > 0) {
+					if(finalDamage >= absorp) {
+						living.setAbsorptionAmount(0);
+						newHealth -= finalDamage - absorp;
+					}
+					else {
+						living.setAbsorptionAmount(absorp - finalDamage);
+					}
 				}
 				else {
-					living.setAbsorptionAmount(absorp - finalDamage);
+					newHealth -= finalDamage;
 				}
+
+				if (newHealth <= 0) {
+					//Bukkit.broadcast(Component.text(living.getName() + " has died"));
+					newHealth = living.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+					isDeath = true;
+				}
+
+				living.setHealth(newHealth);
+				living.setLastDamage(finalDamage);
+
+				if(doHurtEffect)
+					EntityUtils.playHurtAnimation(living, damageType, isDeath);
+
+				if(isCritical)
+					EntityUtils.playCritEffect(living);
+
+				if(enchantDamage > 0d)
+					EntityUtils.playMagicCritEffect(living);
 			}
-			else {
-				newHealth -= finalDamage;
-			}
-
-			if (newHealth <= 0) {
-				//Bukkit.broadcast(Component.text(living.getName() + " has died"));
-				newHealth = living.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
-				isDeath = true;
-			}
-
-			living.setHealth(newHealth);
-			living.setLastDamage(finalDamage);
-
-			if(doHurtEffect)
-				EntityUtils.playHurtAnimation(living, damageType, isDeath);
-
-			if(isCritical)
-				EntityUtils.playCritEffect(living);
-
-			if(enchantDamage > 0d)
-				EntityUtils.playMagicCritEffect(living);
 
 			if(isDeath)
 				Main.getGame().handleDeath(this); // run this after to ensure the animations are seen by viewers
 			else if(attacker instanceof AbstractArrow aa && aa.getPierceLevel() == 0 &&
-					damageType.is(DamageType.PROJECTILE)) {
+					damageType.isProjectile()) {
 				living.setArrowsInBody(living.getArrowsInBody() + 1);
 			}
 

@@ -21,6 +21,10 @@ import java.util.Random;
 
 /**
  * Re-implementation of explosions to be more customizable and better accommodating of Team Arena
+ * All explosions are spheres and some parts are overridable by subclasses.
+ *
+ * The explosion may use a provided Location or the Location of a given Entity for it's centre. If both are given,
+ * then the Location is used over the Entity.
  *
  * @author toomuchzelda
  */
@@ -32,17 +36,38 @@ public class CustomExplosion
 	private Location centre;
 	private double explosionRadius;
 	private double guaranteeHitRadius;
-	private double damage;
+	private double maxDamage;
+	private double minDamage;
 	private DamageType damageType;
 	private double knockbackStrength;
 	private Entity entity;
 
-	public CustomExplosion(Location centre, double explosionRadius, double guaranteeHitRadius, double damage, double knockbackStrength,
-						   DamageType damageType, @Nullable Entity entity) {
+	/**
+	 * @param centre The centre of the explosion. May be null only if entity is not null.
+	 * @param explosionRadius The explosion radius.
+	 * @param guaranteeHitRadius Radius of guaranteed hit radius. Entites within this radius will always be hit, without
+	 *                           checking their position behind blocks or other.
+	 * @param maxDamage Maximum amount of damage to deal. Max damage is dealt to any entities at the centre of the explosion.
+	 *               It decreases linearly towards the edge of the explosion until reaches minDamage at the very edge.
+	 * @param minDamage Minimum amount of damage this explosion can deal.
+	 * @param knockbackStrength Strength of knockback. 0 for no knockback.
+	 * @param damageType DamageType to deal damage with.
+	 * @param entity The responsible entity (if any). If null, centre must not be null.
+	 */
+	public CustomExplosion(@Nullable Location centre, double explosionRadius, double guaranteeHitRadius, double maxDamage,
+						   double minDamage, double knockbackStrength, DamageType damageType, @Nullable Entity entity) {
+
+		if(centre == null && entity == null)
+			throw new IllegalArgumentException("centre and entity may not both be null!");
+
+		if(maxDamage < minDamage)
+			throw new IllegalArgumentException("maxDamage must be larger than or equal to minDamage!");
+
 		this.centre = centre;
 		this.explosionRadius = explosionRadius;
 		this.guaranteeHitRadius = guaranteeHitRadius;
-		this.damage = damage;
+		this.maxDamage = maxDamage;
+		this.minDamage = minDamage;
 		this.damageType = damageType;
 		this.entity = entity;
 
@@ -50,7 +75,7 @@ public class CustomExplosion
 	}
 
 	public void explode() {
-		final Location centre = this.centre;
+		final Location centre = this.getCentre();
 		final World world = centre.getWorld();
 		final Vector locVector = centre.toVector();
 
@@ -62,7 +87,7 @@ public class CustomExplosion
 		record HitInfo(Entity entity, Vector hitVector, double distance, double damage) {};
 
 		List<HitInfo> hitEntities = new LinkedList<>();
-		Collection<Entity> allEntities = this.getEntitesToConsider();
+		Collection<? extends Entity> allEntities = this.getEntitiesToConsider();
 		for(Entity e : allEntities) {
 			if(!globalShouldHurtEntity(e))
 				continue;
@@ -206,47 +231,74 @@ public class CustomExplosion
 
 		Vector currentVel = victim.getVelocity();
 		Vector newVel = hitVector.clone().normalize();
-		newVel.multiply(kbStrength);
 		newVel.add(currentVel.multiply(0.4d));
+		newVel.multiply(kbStrength);
 		//If they are moving in a similar direction to where this explosion will push them already, only move them
 		// if the knockback of this explosion is stronger than their current velocity.
-		double angleBetween = currentVel.normalize().angle(newVel.clone().normalize());
+		/*double angleBetween = currentVel.normalize().angle(newVel.clone().normalize());
 		if(angleBetween <= IGNORE_PUSH_ANGLE && newVel.lengthSquared() <= currentVel.lengthSquared()) {
 			return null;
-		}
+		}*/
 
 		return PlayerUtils.noNonFinites(newVel);
 	}
 
 	protected double calculateDamage(Vector hitVector, double distance) {
+		if(this.maxDamage <= 0)
+			return 0;
+
 		double newDamage = explosionRadius - distance;
 		newDamage /= explosionRadius; //from 0.0 to 1.0
-		newDamage = this.damage * newDamage;
+		newDamage = ((maxDamage - minDamage) * newDamage) + minDamage; //account for min/max damage
 
 		return newDamage;
 	}
 
-	protected Collection<Entity> getEntitesToConsider() {
-		return this.centre.getWorld().getEntities();
+	protected Collection<? extends Entity> getEntitiesToConsider() {
+		return this.getCentre().getWorld().getEntities();
 	}
 
 	public void playExplosionEffect() {
 		boolean large = this.explosionRadius >= 2d;
-		ParticleUtils.playExplosionParticle(this.centre, 0f, 0f, 0f, large);
+		ParticleUtils.playExplosionParticle(this.getCentre(), 0f, 0f, 0f, large);
 	}
 
 	public void playExplosionSound() {
 		Random random = MathUtils.random;
-		this.centre.getWorld().playSound(centre, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.BLOCKS, 4.0F,
+		Location centre = this.getCentre();
+		centre.getWorld().playSound(centre, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.BLOCKS, 4.0F,
 				(1f + (random.nextFloat() - random.nextFloat()) * 0.2f) * 0.7f);
 	}
 
 	public Location getCentre() {
-		return centre;
+		if(this.centre == null)
+			return entity.getLocation();
+		else
+			return this.centre.clone();
 	}
 
 	public void setCentre(Location centre) {
+		if(this.entity == null) {
+			if(centre == null) {
+				throw new IllegalArgumentException("centre and entity cannot both be null!");
+			}
+		}
+
 		this.centre = centre;
+	}
+
+	public Entity getEntity() {
+		return this.entity;
+	}
+
+	public void setEntity(Entity entity) {
+		if(this.centre == null) {
+			if(entity == null) {
+				throw new IllegalArgumentException("centre and entity cannot both be null!");
+			}
+		}
+
+		this.entity = entity;
 	}
 
 	public double getExplosionRadius() {
@@ -265,12 +317,26 @@ public class CustomExplosion
 		this.guaranteeHitRadius = guaranteeHitRadius;
 	}
 
-	public double getDamage() {
-		return damage;
+	public double getMaxDamage() {
+		return maxDamage;
 	}
 
-	public void setDamage(double damage) {
-		this.damage = damage;
+	public void setMaxDamage(double maxDamage) {
+		if(maxDamage < minDamage)
+			throw new IllegalArgumentException("maxDamage must be larger than or equal to minDamage!");
+
+		this.maxDamage = maxDamage;
+	}
+
+	public double getMinDamage() {
+		return this.minDamage;
+	}
+
+	public void setMinDamage(double minDamage) {
+		if(maxDamage < minDamage)
+			throw new IllegalArgumentException("maxDamage must be larger than or equal to minDamage!");
+
+		this.minDamage = minDamage;
 	}
 
 	public DamageType getDamageType() {
@@ -285,7 +351,7 @@ public class CustomExplosion
 		return this.knockbackStrength;
 	}
 
-	public void setKnockback(double knockbackStrength) {
+	public void setKnockbackStrength(double knockbackStrength) {
 		this.knockbackStrength = knockbackStrength;
 	}
 }

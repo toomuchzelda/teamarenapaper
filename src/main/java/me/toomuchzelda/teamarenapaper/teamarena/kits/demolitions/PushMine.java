@@ -5,26 +5,22 @@ import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
-import org.bukkit.*;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.util.RayTraceResult;
-import org.bukkit.util.Vector;
 
 public class PushMine extends DemoMine
 {
 	//time in ticks
 	public static final double BLAST_RADIUS = 4.5;
-	public static final double BLAST_RADIUS_SQRD = BLAST_RADIUS * BLAST_RADIUS;
-	public static final double BLAST_STRENGTH = 0.35d;
-
-	public static final double IGNORE_PUSH_ANGLE = Math.toRadians(170d);
+	public static final double BLAST_STRENGTH = 1.575d;
 
 	private int triggerTime;
 
@@ -89,54 +85,11 @@ public class PushMine extends DemoMine
 			if(TeamArena.getGameTick() - triggerTime == this.timeToDetonate) {
 				World world = baseLoc.getWorld();
 				Location explodeLoc = baseLoc.clone().add(0, 0.1, 0);
-				world.spawnParticle(Particle.EXPLOSION_NORMAL, explodeLoc, 15);
 
-				world.playSound(explodeLoc, Sound.ENTITY_GENERIC_EXPLODE, 1f, 2f);
-
-				//create a sort of explosion that pushes everyone away
-				Vector explodeLocVec = explodeLoc.toVector();
-				RayTraceResult result;
-				for(Player p : Main.getGame().getPlayers()) {
-					if(p != this.owner && this.team.getPlayerMembers().contains(p))
-						continue;
-
-					//add half of height so aim for middle of body not feet
-					Vector vector = p.getLocation().add(0, p.getHeight() / 2, 0).toVector().subtract(explodeLocVec);
-
-					result = world.rayTrace(explodeLoc, vector, BLAST_RADIUS, FluidCollisionMode.SOURCE_ONLY, true, 0,
-							e -> e == p);
-					//Bukkit.broadcastMessage(result.toString());
-					double lengthSqrd = vector.lengthSquared();
-					boolean affect = false;
-					if(result != null && result.getHitEntity() == p) {
-						affect = true;
-					}
-					//even if raytrace didn't hit, if they are within 1.1 block count it anyway
-					else if(lengthSqrd <= 1.21d){
-						affect = true;
-					}
-
-					if (affect) {
-						//weaker knockback the further they are from mine base
-						double power = Math.sqrt(BLAST_RADIUS_SQRD - lengthSqrd);
-						Vector victimVelocity = p.getVelocity();
-						vector.normalize();
-						vector.add(victimVelocity.clone().multiply(0.4));
-						vector.multiply(power * BLAST_STRENGTH);
-
-						Vector newVelocityNormal = vector.clone().normalize();
-						double angle = newVelocityNormal.angle(victimVelocity.clone().normalize());
-						//if they are being pushed in a similar direction to that they are already going in
-						// only push them if the mine will push them faster than what they're already going at
-						if (angle <= IGNORE_PUSH_ANGLE && vector.lengthSquared() <= victimVelocity.lengthSquared()) {
-							affect = false;
-							//Bukkit.broadcastMessage("not big enough");
-						}
-
-						if(affect)
-							EntityUtils.setVelocity(p, PlayerUtils.noNonFinites(vector));
-					}
-				}
+				//custom damageType, should not do direct damage but attribute the resulting fall to this mine owner
+				PushMineExplosion explosion = new PushMineExplosion(explodeLoc, BLAST_RADIUS, 1.1d, 0d, 0d,
+						BLAST_STRENGTH, DamageType.DEMO_PUSHMINE, this.owner);
+				explosion.explode();
 
 				this.removeEntities();
 			}

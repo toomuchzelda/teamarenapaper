@@ -1,9 +1,13 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.explosions.CustomExplosionInfo;
+import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaExplosion;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -86,6 +90,11 @@ public class TNTMine extends DemoMine
 		tnt.setFuseTicks(this.timeToDetonate);
 		tnt.setSource(this.owner);
 		tnt.setVelocity(new Vector(0, 0.45d, 0));
+
+		TeamArenaExplosion explosion = new TeamArenaExplosion(null, 8d, 0.3d, 35d, 3d, 0.1d, DamageType.DEMO_TNTMINE, tnt);
+		CustomExplosionInfo cinfo = new CustomExplosionInfo(explosion, true);
+		ExplosionManager.setEntityInfo(tnt, cinfo);
+
 		this.tnt = tnt;
 	}
 

@@ -137,7 +137,7 @@ public class DamageType {
     public static final DamageType SUICIDE_ASSISTED = new DamageType("Assisted Suicide",
             "%Killed% saw T_0_E_D's face and died", "%Killed% caught a whiff " +
             "of their own body odour", "%Killed% thought Mineplex was better than Red Warfare", "%Killed% kicked a stray " +
-            "cat because they thought it was funny", "%Killed% had negative social credit score", "%Killed% played " +
+            "cat and thought it was funny", "%Killed% had negative social credit score", "%Killed% played " +
             "russian roulette, and lost", "%Killed% lost against themselves in a 1v1").setInstantDeath().setNoKnockback();
 
     public static final DamageType SWEEP_ATTACK = new DamageType("Sweep Attack", "%Killed% was killed by %Killer%'s sweeping attack")
@@ -179,6 +179,10 @@ public class DamageType {
             .setIgnoreRate().setExplosion();
 
 	public static final DamageType TOXIC_LEAP = new DamageType("Venom Leap", "%Killed% was killed by %Killer%'s Toxic Leap");
+
+	public static final DamageType DEMO_PUSHMINE = new DamageType("Demolitions Push Mine",
+			"%Killed% was somehow directly killed by %Killer%'s Push Mine. (If you see this please tell how you did it" +
+					" to a mod. Thanks)").setTrackedDamageType(DamageTimes.TrackedDamageTypes.ATTACK).setIgnoreRate();
 
 	/*******************************************************************************************
 	 * 									GAMEMODE DAMAGETYPES

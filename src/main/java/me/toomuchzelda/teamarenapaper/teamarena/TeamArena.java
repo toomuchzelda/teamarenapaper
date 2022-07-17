@@ -621,13 +621,14 @@ public abstract class TeamArena
 					Location spawnLoc = p.getLocation();
 					spawnLoc.add(0, MathUtils.randomRange(1.4, 2), 0);
 					DamageIndicatorHologram hologram = new DamageIndicatorHologram(spawnLoc, PlayerUtils.getDamageIndicatorViewers(p, playerCause), damageText);
-					//activeDamageIndicators.add(hologram);
 
 					//add to their damage log
-					pinfo.logDamageReceived(p, event.getDamageType(), event.getFinalDamage(), event.getFinalAttacker(), gameTick);
+					if(event.getFinalDamage() > 0) {
+						pinfo.logDamageReceived(p, event.getDamageType(), event.getFinalDamage(), event.getFinalAttacker(), gameTick);
 
-					if (event.getFinalAttacker() instanceof Player attacker) {
-						pinfo.getKillAssistTracker().addDamage(attacker, event.getFinalDamage());
+						if (event.getFinalAttacker() instanceof Player attacker) {
+							pinfo.getKillAssistTracker().addDamage(attacker, event.getFinalDamage());
+						}
 					}
 				}
 			}
