@@ -5,7 +5,9 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import net.minecraft.world.item.enchantment.ProtectionEnchantment;
 import org.bukkit.*;
+import org.bukkit.craftbukkit.v1_19_R1.entity.CraftLivingEntity;
 import org.bukkit.entity.*;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
@@ -23,6 +25,7 @@ import java.util.List;
 public class CustomExplosion
 {
 	public static final double IGNORE_PUSH_ANGLE = Math.toRadians(90d);
+	public static final double DEFAULT_GUARANTEED_HIT_RADIUS = 0.3d;
 
 	private Location centre;
 	private double explosionRadius;
@@ -90,21 +93,21 @@ public class CustomExplosion
 					directions = new Vector[]{directionToCentre};
 				}
 
-				for(Vector aim : directions) {
+				/*for(Vector aim : directions) {
 					Vector hitPoint = locVector.clone().add(aim);
 					ParticleUtils.colouredRedstone(hitPoint.toLocation(world), Color.RED, 3d, 3f);
-				}
+				}*/
 
 				int debugIdx = 0;
 				for(Vector aim : directions) {
-					//Bukkit.broadcastMessage("processing " + i++);
-					if(aim.lengthSquared() <= 0) {
+					final double aimLength = aim.length();
+
+					if(aimLength <= 0) {
 						Main.logger().warning("lengthSqr of vector " + debugIdx + " is " + aim.lengthSquared() + "!");
 						Thread.dumpStack();
 						continue;
 					}
 
-					final double aimLength = aim.length();
 					RayTraceResult rayTrace =
 							world.rayTraceBlocks(centre, aim, aimLength, FluidCollisionMode.NEVER, true);
 					//did not hit any blocks, since entity is in explosion range then it must have hit the entity
@@ -114,14 +117,10 @@ public class CustomExplosion
 						hitVector = aim;
 
 						//debug - play a particle at the hit point
-						Vector hitPoint = locVector.clone().add(hitVector);
-						ParticleUtils.colouredRedstone(hitPoint.toLocation(world), Color.LIME, 3d, 3f);
+						/*Vector hitPoint = locVector.clone().add(hitVector);
+						ParticleUtils.colouredRedstone(hitPoint.toLocation(world), Color.LIME, 3d, 3f);*/
 
 						break;
-					}
-					else {
-						Bukkit.broadcastMessage("raytrace not null");
-						Bukkit.broadcastMessage(rayTrace.toString());
 					}
 
 					debugIdx++;
@@ -130,9 +129,7 @@ public class CustomExplosion
 
 			if(hit) {
 				//linear damage fall off
-				double damage = explosionRadius - distance;
-				damage /= explosionRadius; //from 0.0 to 1.0
-				damage = maxDamage * damage;
+				double damage = calculateDamage(hitVector, distance);
 
 				HitInfo info = new HitInfo(e, hitVector, distance, damage);
 				hitEntities.add(info);
@@ -191,11 +188,38 @@ public class CustomExplosion
 	}
 
 	protected Vector calculateKnockback(Entity victim, Vector hitVector, double distance, double damage) {
+		if(this.knockbackStrength <= 0)
+			return null;
+
 		double kbStrength = distance / this.explosionRadius;
 		kbStrength = 1 - kbStrength;
 		kbStrength = this.knockbackStrength * kbStrength;
 
-		return PlayerUtils.noNonFinites(hitVector.clone().normalize().multiply(kbStrength));
+		if(victim instanceof LivingEntity living) {
+			kbStrength = ProtectionEnchantment.getExplosionKnockbackAfterDampener(
+					((CraftLivingEntity) living).getHandle(), kbStrength);
+		}
+
+		Vector currentVel = victim.getVelocity();
+		Vector newVel = hitVector.clone().normalize();
+		newVel.multiply(kbStrength);
+		newVel.add(currentVel.multiply(0.4d));
+		//If they are moving in a similar direction to where this explosion will push them already, only move them
+		// if the knockback of this explosion is stronger than their current velocity.
+		double angleBetween = currentVel.normalize().angle(newVel.clone().normalize());
+		if(angleBetween <= IGNORE_PUSH_ANGLE && newVel.lengthSquared() <= currentVel.lengthSquared()) {
+			return null;
+		}
+
+		return PlayerUtils.noNonFinites(newVel);
+	}
+
+	protected double calculateDamage(Vector hitVector, double distance) {
+		double newDamage = explosionRadius - distance;
+		newDamage /= explosionRadius; //from 0.0 to 1.0
+		newDamage = this.damage * newDamage;
+
+		return newDamage;
 	}
 
 	protected Collection<Entity> getEntitesToConsider() {

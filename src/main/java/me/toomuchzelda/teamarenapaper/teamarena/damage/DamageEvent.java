@@ -7,6 +7,8 @@ import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.phys.Vec3;
@@ -451,14 +453,26 @@ public class DamageEvent {
 
 			//this should be impossible normally but can happen in some circumstances
 			if(finalDamage < 0) {
-				Main.logger().warning(getFinalAttacker().getName() + " is doing " + finalDamage + " damage to " + victim.getName() +
-						" DamageType: " + damageType.toString() + " attacker: " + (attacker != null ? attacker.getName() : "null"));
-				if(getFinalAttacker() instanceof Player p) {
-					Main.logger().warning("attacker kit: " + Main.getPlayerInfo(p).activeKit.getName());
+				StringBuilder error = new StringBuilder();
+				error.append(getFinalAttacker().getName()).append(" is doing ").append(finalDamage)
+						.append(" damage to ").append(victim.getName()).append(" DamageType: ")
+						.append(damageType.toString()).append(" attacker: ")
+						.append(attacker != null ? attacker.getName() : "null").append("\n");
+				if(Main.getGame().getGameState() == LIVE) {
+					if (getFinalAttacker() instanceof Player p && Main.getPlayerInfo(p).activeKit != null) {
+						error.append("attacker kit: ").append(Main.getPlayerInfo(p).activeKit.getName()).append("\n");
+					}
+					if (victim instanceof Player p && Main.getPlayerInfo(p).activeKit != null) {
+						error.append("victim kit: ").append(Main.getPlayerInfo(p).activeKit.getName()).append("\n");
+					}
 				}
-				if(victim instanceof Player p) {
-					Main.logger().warning("victim kit: " + Main.getPlayerInfo(p).activeKit.getName());
-				}
+
+				String errString = error.toString();
+				Main.logger().warning(errString);
+
+				//TODO: don't broadcast in production
+				Component errorComp = Component.text(errString, NamedTextColor.YELLOW);
+				Bukkit.broadcast(errorComp);
 
 				finalDamage = 0;
 			}

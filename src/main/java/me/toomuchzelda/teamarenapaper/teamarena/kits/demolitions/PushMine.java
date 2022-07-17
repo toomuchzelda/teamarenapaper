@@ -121,7 +121,7 @@ public class PushMine extends DemoMine
 						double power = Math.sqrt(BLAST_RADIUS_SQRD - lengthSqrd);
 						Vector victimVelocity = p.getVelocity();
 						vector.normalize();
-						//vector.add(victimVelocity.clone().multiply(0.4));
+						vector.add(victimVelocity.clone().multiply(0.4));
 						vector.multiply(power * BLAST_STRENGTH);
 
 						Vector newVelocityNormal = vector.clone().normalize();

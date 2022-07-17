@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy;
 
-import me.toomuchzelda.teamarenapaper.teamarena.ExplosionManager;
+import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
+import me.toomuchzelda.teamarenapaper.explosions.VanillaExplosionInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
@@ -53,7 +54,7 @@ public class Bomb
 	private boolean detonated = false;
 	private int armedTime;
 	private TeamArenaTeam armingTeam;
-	private ExplosionEffect explodeMode = ExplosionEffect.CARBONIZE_BLOCKS;
+	private ExplosionEffect explodeMode = ExplosionEffect.DESTROY_BLOCKS;
 	private int lastHissTime = 0;
 
 	private Component sidebarStatus = BOMB_IS_SAFE;
@@ -95,7 +96,7 @@ public class Bomb
 		this.spawnLoc.getBlock().setType(Material.AIR);
 
 		this.tnt = spawnLoc.getWorld().spawn(spawnLoc, TNTPrimed.class);
-		tnt.setFuseTicks(BOMB_DETONATION_TIME);
+		tnt.setFuseTicks(BOMB_DETONATION_TIME + 1); //+1 so that the TNT explodes after the VanillaExplosionInfo is placed.
 		tnt.setVelocity(new Vector(0d, 0.4d, 0d));
 
 		this.armingTeam = armingTeam;
@@ -119,8 +120,8 @@ public class Bomb
 	 */
 	public void detonate(ExplosionEffect effect) {
 		if (effect == ExplosionEffect.DESTROY_BLOCKS) {
-			ExplosionManager.EntityExplosionInfo exInfo = new ExplosionManager.EntityExplosionInfo(false, ExplosionManager.NO_FIRE,
-					BOMB_DESTROY_RADIUS, ExplosionManager.DEFAULT_FLOAT_VALUE, true, null);
+			VanillaExplosionInfo exInfo = new VanillaExplosionInfo(false, VanillaExplosionInfo.FireMode.NO_FIRE,
+					BOMB_DESTROY_RADIUS, VanillaExplosionInfo.DEFAULT_FLOAT_VALUE, true, null);
 
 			ExplosionManager.setEntityInfo(this.tnt, exInfo);
 		} else if (effect == ExplosionEffect.CARBONIZE_BLOCKS) {
