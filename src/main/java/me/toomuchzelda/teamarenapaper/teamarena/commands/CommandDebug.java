@@ -253,7 +253,6 @@ public class CommandDebug extends CustomCommand {
 				double damage = Double.parseDouble(args[3]);
 				double knockbackStrength = Double.parseDouble(args[4]);
 
-
 				CustomExplosion explosion = new CustomExplosion(p.getLocation().add(0, 0.2, 0),
 						rad, guar, damage, knockbackStrength, DamageType.EXPLOSION, p);
 				explosion.explode();

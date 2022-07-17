@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.explosions;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.minecraft.world.item.enchantment.ProtectionEnchantment;
@@ -16,6 +17,7 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 
 /**
  * Re-implementation of explosions to be more customizable and better accommodating of Team Arena
@@ -56,7 +58,6 @@ public class CustomExplosion
 		final double guaranteedRadius = this.guaranteeHitRadius;
 		final double explRadSqr = explosionRadius * explosionRadius;
 		final double guarRadSqr = guaranteedRadius * guaranteedRadius;
-		final double maxDamage = this.damage;
 
 		record HitInfo(Entity entity, Vector hitVector, double distance, double damage) {};
 
@@ -139,6 +140,9 @@ public class CustomExplosion
 		for(HitInfo hinfo : hitEntities) {
 			this.hitEntity(hinfo.entity, hinfo.hitVector, hinfo.distance, hinfo.damage);
 		}
+
+		this.playExplosionEffect();
+		this.playExplosionSound();
 	}
 
 	private boolean globalShouldHurtEntity(Entity entity) {
@@ -163,9 +167,9 @@ public class CustomExplosion
 			}
 			else if(entity instanceof HumanEntity humanEntity) {
 				GameMode mode = humanEntity.getGameMode();
-				if (mode == GameMode.CREATIVE || mode == GameMode.SPECTATOR)
+				if (mode == GameMode.CREATIVE || mode == GameMode.SPECTATOR) {
 					hurt = false;
-
+				}
 			}
 		}
 
@@ -224,6 +228,17 @@ public class CustomExplosion
 
 	protected Collection<Entity> getEntitesToConsider() {
 		return this.centre.getWorld().getEntities();
+	}
+
+	public void playExplosionEffect() {
+		boolean large = this.explosionRadius >= 2d;
+		ParticleUtils.playExplosionParticle(this.centre, 0f, 0f, 0f, large);
+	}
+
+	public void playExplosionSound() {
+		Random random = MathUtils.random;
+		this.centre.getWorld().playSound(centre, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.BLOCKS, 4.0F,
+				(1f + (random.nextFloat() - random.nextFloat()) * 0.2f) * 0.7f);
 	}
 
 	public Location getCentre() {
