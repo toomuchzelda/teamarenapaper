@@ -187,7 +187,7 @@ public class KitBurst extends Kit
 				}
 			});
 
-			deadRockets.forEach(ACTIVE_ROCKETS::remove);
+			ACTIVE_ROCKETS.removeAll(deadRockets);
 		}
 
 		public void rocketBlast(Location explodeLoc, Player owner) {

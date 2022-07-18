@@ -27,10 +27,7 @@ import org.bukkit.inventory.meta.FireworkEffectMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.Vector;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 /*
 //Kit Explosive:
 // Primary: Utility
@@ -79,8 +76,6 @@ public class KitExplosive extends Kit {
 		public static final int RPG_MAX_IN_INV = 2;
 		public static final int RPG_CD = 10;
 		public static final double RPG_BLAST_RADIUS = 4.5;
-		public static final double RPG_BLAST_RADIUS_SQRD = RPG_BLAST_RADIUS * RPG_BLAST_RADIUS;
-		public static final double RPG_BLAST_STRENGTH = 0.35d;
 
 		public static final int GRENADE_RECHARGE_TIME = 80;
 		public static final int GRENADE_MAX_ACTIVE = 3;
@@ -89,23 +84,29 @@ public class KitExplosive extends Kit {
 
 		public static final DamageType SELF_RPG = new DamageType(DamageType.EXPLOSIVE_RPG, "%Killed% shot their RPG a bit too close to themselves");
 
-		public record RPGInfo(Arrow rpgArrow, Egg rpgEgg, Player thrower, int spawnTime) {}
-		public record GrenadeInfo(Item grenade, Player thrower, Color color, int spawnTime) {}
+		private record RPGInfo(Arrow rpgArrow, Egg rpgEgg, Player thrower, int spawnTime) {}
+		private record GrenadeInfo(Item grenade, Player thrower, Color color, int spawnTime) {}
 
 		//ACTIVE handles behavior of active explosives
 		//RECHARGES handles giving players explosives
-		public static final List<GrenadeInfo> ACTIVE_GRENADES = new ArrayList<>();
-		public final Map<Player, Integer> GRENADE_RECHARGES = new LinkedHashMap<>();
-		public static final List<RPGInfo> ACTIVE_RPG = new ArrayList<>();
-		public final Map<Player, Integer> RPG_RECHARGES = new LinkedHashMap<>();
+		private static final Map<Player, List<GrenadeInfo>> ACTIVE_GRENADES = new LinkedHashMap<>();
+		private final Map<Player, Integer> GRENADE_RECHARGES = new LinkedHashMap<>();
+		private static final Map<Player, List<RPGInfo>> ACTIVE_RPG = new LinkedHashMap<>();
+		private final Map<Player, Integer> RPG_RECHARGES = new LinkedHashMap<>();
 
 		@Override
 		public void unregisterAbility() {
-			ACTIVE_GRENADES.forEach(grenadeInfo -> grenadeInfo.grenade().remove());
+			ACTIVE_GRENADES.forEach((player, grenades) -> {
+				grenades.forEach(grenadeInfo -> grenadeInfo.grenade().remove());
+				grenades.clear();
+			});
 			ACTIVE_GRENADES.clear();
 			GRENADE_RECHARGES.clear();
 
-			ACTIVE_RPG.forEach(rpgInfo -> rpgInfo.rpgArrow().remove());
+			ACTIVE_RPG.forEach((player, rpgs) -> {
+				rpgs.forEach(rpgInfo -> rpgInfo.rpgArrow().remove());
+				rpgs.clear();
+			});
 			ACTIVE_RPG.clear();
 			RPG_RECHARGES.clear();
 		}
@@ -120,6 +121,18 @@ public class KitExplosive extends Kit {
 		public void removeAbility(Player player) {
 			GRENADE_RECHARGES.remove(player);
 			RPG_RECHARGES.remove(player);
+
+			List<RPGInfo> rpgs = ACTIVE_RPG.remove(player);
+			if(rpgs != null) {
+				rpgs.forEach(rpgInfo -> rpgInfo.rpgArrow().remove());
+				rpgs.clear();
+			}
+
+			List<GrenadeInfo> grenades = ACTIVE_GRENADES.remove(player);
+			if(grenades != null) {
+				grenades.forEach(grenadeInfo -> grenadeInfo.grenade().remove());
+				grenades.clear();
+			}
 		}
 
 		//Prevent RPG arrow from hitting players
@@ -133,78 +146,74 @@ public class KitExplosive extends Kit {
 
 		@Override
 		public void onTick() {
-			List<GrenadeInfo> staleGrenades = new ArrayList<>();
-			List<RPGInfo> staleRPG = new ArrayList<>();
-
 			//Handling Grenade Behavior
-			ACTIVE_GRENADES.forEach(grenadeInfo -> {
-				World world = grenadeInfo.thrower().getWorld();
-				Player thrower = grenadeInfo.thrower();
-				Item grenade = grenadeInfo.grenade();
-				Particle.DustOptions particleOptions = new Particle.DustOptions(grenadeInfo.color(), 1);
+			var allGrenadesIter = ACTIVE_GRENADES.entrySet().iterator();
+			while(allGrenadesIter.hasNext()) {
+				var playerGrenadesIter = allGrenadesIter.next().getValue().iterator();
+				while(playerGrenadesIter.hasNext()) {
+					GrenadeInfo grenadeInfo = playerGrenadesIter.next();
 
-				//Explode grenade if fuse time passes
-				if (TeamArena.getGameTick() - grenadeInfo.spawnTime >= GRENADE_FUSE_TIME) {
-					//Only explode if the thrower is still alive
-					if (!Main.getGame().isDead(thrower)) {
+					World world = grenadeInfo.thrower().getWorld();
+					Item grenade = grenadeInfo.grenade();
+					Particle.DustOptions particleOptions = new Particle.DustOptions(grenadeInfo.color(), 1);
+
+					//Explode grenade if fuse time passes
+					if (TeamArena.getGameTick() - grenadeInfo.spawnTime >= GRENADE_FUSE_TIME) {
 						//real thrower info is passed on through grenade's thrower field
-						TeamArenaExplosion explosion = new TeamArenaExplosion(null, 1.5, 0.5,
-								7, 0.18, 0.35, DamageType.EXPLOSIVE_GRENADE, grenade);
+						TeamArenaExplosion explosion = new TeamArenaExplosion(null, 2, 0.5,
+								9, 3.5, 0.35, DamageType.EXPLOSIVE_GRENADE, grenade);
 						explosion.explode();
+
+						grenade.remove();
+						playerGrenadesIter.remove();
 					}
-					grenade.remove();
-					staleGrenades.add(grenadeInfo);
-				}
-				//Grenade particles
-				else {
-					//Particles for when grenade has landed
-					if (grenade.isOnGround()) {
-						world.spawnParticle(Particle.REDSTONE, grenade.getLocation(),
-								1, 0.25, 0.25, 0.25, particleOptions);
-					}
-					//Particles for when grenade is in motion
+					//Grenade particles
 					else {
-						world.spawnParticle(Particle.REDSTONE, grenade.getLocation(),
-								1, particleOptions);
+						//Particles for when grenade has landed
+						if (grenade.isOnGround()) {
+							world.spawnParticle(Particle.REDSTONE, grenade.getLocation(),
+									1, 0.25, 0.25, 0.25, particleOptions);
+						}
+						//Particles for when grenade is in motion
+						else {
+							world.spawnParticle(Particle.REDSTONE, grenade.getLocation(),
+									1, particleOptions);
+						}
 					}
 				}
-			});
+			}
 
 			//Handling RPG Behavior
-			ACTIVE_RPG.forEach(rpgInfo -> {
-				World world = rpgInfo.thrower().getWorld();
-				Player thrower = rpgInfo.thrower();
-				Arrow rpgArrow = rpgInfo.rpgArrow();
-				Egg rpgEgg = rpgInfo.rpgEgg();
+			var allRpgIter = ACTIVE_RPG.entrySet().iterator();
+			while(allRpgIter.hasNext()) {
+				var playerRpgIter = allRpgIter.next().getValue().iterator();
+				while (playerRpgIter.hasNext()) {
+					RPGInfo rpgInfo = playerRpgIter.next();
 
-				rpgEgg.remove();
-				//Hiding arrow
-				/*Bukkit.getOnlinePlayers().forEach(player -> {
-					List<Integer> entityIDList = new ArrayList<>(rpgArrow.getEntityId());
+					World world = rpgInfo.thrower().getWorld();
+					Player thrower = rpgInfo.thrower();
+					Arrow rpgArrow = rpgInfo.rpgArrow();
+					Egg rpgEgg = rpgInfo.rpgEgg();
 
-					ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
-					PacketContainer packet = protocolManager.createPacket(PacketType.Play.Server.ENTITY_DESTROY);
-					packet.getIntLists().write(0, entityIDList);
+					rpgEgg.remove();
 
-					PlayerUtils.sendPacket(player, packet);
-				});*/
+					//Explode RPG if it hits block or player
+					if (rpgArrow.isInBlock() || rpgArrow.isOnGround() || rpgArrow.isDead()) {
+						rpgBlast(rpgArrow.getLocation(), thrower);
 
-				//Explode RPG if it hits block or player
-				if (rpgArrow.isInBlock() || rpgArrow.isOnGround() || rpgArrow.isDead()) {
-					rpgBlast(rpgArrow.getLocation(), thrower);
-
-					world.playSound(rpgArrow.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 2.0f, 1.0f);
-					world.spawnParticle(Particle.EXPLOSION_LARGE, rpgArrow.getLocation(), 1);
-					rpgArrow.remove();
-					staleRPG.add(rpgInfo);
-				}
-				//RPG particle trail
-				else {
-					if ((TeamArena.getGameTick() - rpgInfo.spawnTime()) % 2 == 0) {
+						world.playSound(rpgArrow.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 2.0f, 1.0f);
 						world.spawnParticle(Particle.EXPLOSION_LARGE, rpgArrow.getLocation(), 1);
+						rpgArrow.remove();
+						playerRpgIter.remove();
+					}
+					//RPG particle trail
+					else {
+						if ((TeamArena.getGameTick() - rpgInfo.spawnTime()) % 2 == 0) {
+							world.spawnParticle(Particle.EXPLOSION_LARGE, rpgArrow.getLocation(), 1);
+						}
 					}
 				}
-			});
+			}
 
 			//Handling giving explosives to players
 			GRENADE_RECHARGES.forEach((player, lastUsedTick) -> {
@@ -213,10 +222,6 @@ public class KitExplosive extends Kit {
 			RPG_RECHARGES.forEach((player, lastUsedTick) -> {
 				itemDist(player, lastUsedTick, RPG_MAX_IN_INV, RPG_RECHARGE_TIME, RPG);
 			});
-
-			//Cleaning up Stale RPG + Grenades
-			ACTIVE_GRENADES.removeAll(staleGrenades);
-			ACTIVE_RPG.removeAll(staleRPG);
 		}
 
 		@Override
@@ -293,7 +298,8 @@ public class KitExplosive extends Kit {
 					arrow.setShooter(shooter);
 				});
 
-				ACTIVE_RPG.add(new RPGInfo(rpgArrow, rpgEgg, shooter, TeamArena.getGameTick()));
+				List<RPGInfo> list = ACTIVE_RPG.computeIfAbsent(shooter, player -> new LinkedList<>());
+				list.add(new RPGInfo(rpgArrow, rpgEgg, shooter, TeamArena.getGameTick()));
 			}
 		}
 
@@ -311,8 +317,7 @@ public class KitExplosive extends Kit {
 			}
 
 			//Finding all the currently active grenades that are owned by the current thrower
-			List<GrenadeInfo> currActiveGrenades = ACTIVE_GRENADES.stream()
-					.filter(grenadeInfo -> grenadeInfo.thrower().equals(player)).toList();
+			List<GrenadeInfo> currActiveGrenades = ACTIVE_GRENADES.computeIfAbsent(player, player1 -> new LinkedList<>());
 
 			//Throw grenade if # of active grenades doesn't exceed the cap
 			if (player.getGameMode() != GameMode.CREATIVE && currActiveGrenades.size() >= GRENADE_MAX_ACTIVE) {
@@ -342,7 +347,7 @@ public class KitExplosive extends Kit {
 			//Throwing the grenade and activating it
 			Vector vel = player.getLocation().getDirection().multiply(0.8);
 			grenadeDrop.setVelocity(vel);
-			ACTIVE_GRENADES.add(new GrenadeInfo(grenadeDrop, player, teamColor, TeamArena.getGameTick()));
+			currActiveGrenades.add(new GrenadeInfo(grenadeDrop, player, teamColor, TeamArena.getGameTick()));
 
 			//Resetting Grenade recharge time
 			if (ItemUtils.getMaterialCount(inv, GRENADE.getType()) == GRENADE_MAX_IN_INV) {
