@@ -27,10 +27,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Mob;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.Skeleton;
+import org.bukkit.entity.*;
 import org.bukkit.event.Event;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -195,8 +192,9 @@ public class KitEngineer extends Kit {
 		@Override
 		public void onAttemptedAttack(DamageEvent event) {
 			if(event.getDamageType().is(DamageType.PROJECTILE) &&
-					event.getKnockback() != null){
-				event.setKnockback(event.getKnockback().multiply(0.5));
+					event.getAttacker() instanceof Arrow &&
+					event.getKnockback() != null) {
+				event.setNoKnockback();
 			}
 		}
 

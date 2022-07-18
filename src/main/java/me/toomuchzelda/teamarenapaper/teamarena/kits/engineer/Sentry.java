@@ -70,12 +70,12 @@ public class Sentry extends Building {
 		this.armor = new ItemStack[4];
 		armor[3] = new ItemStack(Material.LEATHER_HELMET);
 		armor[2] = new ItemStack(Material.LEATHER_CHESTPLATE);
-		armor[1] = new ItemStack(Material.LEATHER_LEGGINGS);
-		armor[0] = new ItemStack(Material.LEATHER_BOOTS);
+		armor[1] = new ItemStack(Material.IRON_LEGGINGS);
+		armor[0] = new ItemStack(Material.IRON_BOOTS);
 		ItemUtils.colourLeatherArmor(teamColor, armor[3]);
 		ItemUtils.colourLeatherArmor(teamColor, armor[2]);
-		ItemUtils.colourLeatherArmor(teamColor, armor[1]);
-		ItemUtils.colourLeatherArmor(teamColor, armor[0]);
+		//ItemUtils.colourLeatherArmor(teamColor, armor[1]);
+		//ItemUtils.colourLeatherArmor(teamColor, armor[0]);
 
 		ItemStack sentryBow = new ItemStack(Material.BOW);
 		sentry.getEquipment().setItemInMainHand(sentryBow, true);
@@ -253,7 +253,7 @@ public class Sentry extends Building {
 
 	public void shoot(Vector direction) {
 		AbstractArrow sentryFire = sentry.launchProjectile(Arrow.class);
-		sentryFire.setVelocity(direction.multiply(3.5));
+		sentryFire.setVelocity(direction.multiply(4.1));
 		sentryFire.setDamage(1.0);
 		sentryFire.setShooter(owner);
 		sentryFire.setCritical(false);
