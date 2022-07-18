@@ -1,19 +1,24 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
+import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.*;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.craftbukkit.v1_19_R1.block.data.CraftBlockData;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityShootBowEvent;
@@ -172,6 +177,82 @@ public class KitPyro extends Kit
 			}
 		}
 
+		Map<Player, PacketEntity> previewEntities = new HashMap<>();
+		@Override
+		public void onPlayerTick(Player player) {
+			if (TeamArena.getGameTick() % 5 != 0)
+				return;
+			if (player.getInventory().getItemInMainHand().getType() != Material.FIRE_CHARGE) {
+				var oldPreviewEntity = previewEntities.remove(player);
+				if (oldPreviewEntity != null)
+					oldPreviewEntity.remove();
+				return;
+			}
+
+			World world = player.getWorld();
+			Location location = player.getEyeLocation();
+			Vector velocity = location.getDirection();
+			location.add(velocity);
+			velocity.add(player.getVelocity());
+			var acceleration = new Vector(0, 0.03, 0); // constant for snowballs
+			var dustOptions = new Particle.DustOptions(Color.BLACK, 1);
+			for (int i = 0; i < 100; i++) { // ticks
+				// check inside blocks
+				var hitResult = world.rayTrace(location, velocity, velocity.length(), FluidCollisionMode.NEVER,
+						true, 0, entity -> entity instanceof Player);
+				if (hitResult != null) {
+					var block = hitResult.getHitBlock();
+					var blockFace = hitResult.getHitBlockFace();
+					if (block != null && blockFace != null) {
+						Vector dirVector = blockFace.getDirection();
+						if (blockFace == BlockFace.UP) {
+							var packetEntity = spawnPreviewBlock(location, block, player);
+
+							var oldPreviewEntity = previewEntities.put(player, packetEntity);
+							if (oldPreviewEntity != null)
+								oldPreviewEntity.remove();
+							packetEntity.respawn();
+
+							return;
+						} else if (blockFace != BlockFace.DOWN) {
+							dirVector.setY(0).normalize();
+						}
+
+						velocity.subtract(dirVector.multiply(2 * velocity.dot(dirVector))).multiply(0.25);
+					}
+				}
+
+				location.add(velocity);
+				world.spawnParticle(Particle.REDSTONE, location, 1, 0, 0, 0, 0, dustOptions);
+				velocity.multiply(0.99); // drag
+				velocity.subtract(acceleration);
+			}
+			// nothing was spawned
+			var oldPreviewEntity = previewEntities.remove(player);
+			if (oldPreviewEntity != null)
+				oldPreviewEntity.remove();
+		}
+
+		PacketEntity spawnPreviewBlock(Location location, Block block, Player player) {
+			// MC-114286: falling blocks do not render at all if they have
+			// the same block state as the block they are currently occupying
+			var blockData = Material.FIRE.createBlockData(); // block.getBlockData();
+			var packetEntity = new PacketEntity(PacketEntity.NEW_ID, EntityType.FALLING_BLOCK,
+					location.clone().set(location.getBlockX() + 0.5, location.getY() - 0.00001, location.getBlockZ()),
+					List.of(player), null, packet -> {
+				// data
+				int id = net.minecraft.world.level.block.Block.getId(((CraftBlockData) blockData).getState());
+				packet.getIntegers().write(4, id);
+			});
+			// glowing
+			packetEntity.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_GLOWING_MASK);
+			// no gravity
+			packetEntity.setMetadata(new WrappedDataWatcher.WrappedDataWatcherObject(
+					5, WrappedDataWatcher.Registry.get(Boolean.class)), true);
+			packetEntity.refreshViewerMetadata();
+			return packetEntity;
+		}
+
 		void spawnMolotov(Player owner, Location location) {
 			Location corner1 = location.clone().add(BOX_RADIUS, -0.1, BOX_RADIUS);
 			Location corner2 = location.clone().add(-BOX_RADIUS, 0.5, -BOX_RADIUS);
@@ -280,12 +361,16 @@ public class KitPyro extends Kit
 		@Override
 		public void removeAbility(Player player) {
 			player.setExp(0f);
+			var packetEntity = previewEntities.remove(player);
+			if (packetEntity != null)
+				packetEntity.remove();
 		}
 
 		@Override
 		public void unregisterAbility() {
 			MOLOTOV_RECHARGES.clear();
 			ACTIVE_MOLOTOVS.clear();
+			previewEntities.values().forEach(PacketEntity::remove);
 		}
 
 		@Override

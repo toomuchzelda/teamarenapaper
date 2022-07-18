@@ -19,6 +19,7 @@ import org.bukkit.inventory.EquipmentSlot;
 
 import javax.annotation.Nullable;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 /**
@@ -74,8 +75,8 @@ public class PacketEntity
 	 * @param viewerRule Rule to evaluate who should and shouldn't see this PacketEntity. Will be evaluated on every online player every tick.
 	 *                May be null if you wish to handle viewers yourself.
 	 */
-	public PacketEntity(int id, EntityType entityType, Location location, @Nullable Collection<Player> viewers,
-						@Nullable Predicate<Player> viewerRule) {
+	public PacketEntity(int id, EntityType entityType, Location location, @Nullable Collection<? extends Player> viewers,
+						@Nullable Predicate<Player> viewerRule, @Nullable Consumer<PacketContainer> spawnPacketConsumer) {
 		//entity ID
 		if(id == NEW_ID)
 			this.id = Bukkit.getUnsafe().nextEntityId();
@@ -88,6 +89,9 @@ public class PacketEntity
 
 		//create and cache the packets to send to players
 		createSpawn(entityType);
+
+		if (spawnPacketConsumer != null)
+			spawnPacketConsumer.accept(spawnPacket);
 
 		createDelete();
 
@@ -124,6 +128,22 @@ public class PacketEntity
 		this.dirtyRelativePacketTime = HASNT_MOVED;
 
 		PacketEntityManager.addPacketEntity(this);
+	}
+
+	/**
+	 * Create a new PacketEntity. If viewers is specified in constructor, viewerRule will not be considered in initial
+	 * spawning.
+	 * Must call respawn manually after construction!
+	 * @param id Entity ID. Use PacketEntity.NEW_ID for new ID.
+	 * @param entityType Type of entity. PLAYER will not work.
+	 * @param location Location to spawn at.
+	 * @param viewers Initial Players that will see this PacketEntity. May be null (add viewers later).
+	 * @param viewerRule Rule to evaluate who should and shouldn't see this PacketEntity. Will be evaluated on every online player every tick.
+	 *                May be null if you wish to handle viewers yourself.
+	 */
+	public PacketEntity(int id, EntityType entityType, Location location, @Nullable Collection<? extends Player> viewers,
+						@Nullable Predicate<Player> viewerRule) {
+		this(id, entityType, location, viewers, viewerRule, null);
 	}
 
 	private void createSpawn(EntityType type) {

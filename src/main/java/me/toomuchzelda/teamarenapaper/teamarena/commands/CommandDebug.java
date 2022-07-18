@@ -62,6 +62,7 @@ public class CommandDebug extends CustomCommand {
 					throw throwUsage("/debug game start/<...> [value]");
 
 				if (args[1].equalsIgnoreCase("start")) {
+					ignoreWinConditions = true;
 					skipGameState(GameState.LIVE);
 				} else if (args[1].equalsIgnoreCase("ignorewinconditions")) {
 					ignoreWinConditions = args.length == 3 ? "true".equalsIgnoreCase(args[2]) : !ignoreWinConditions;
