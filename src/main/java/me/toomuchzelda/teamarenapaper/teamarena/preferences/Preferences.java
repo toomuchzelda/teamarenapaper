@@ -53,4 +53,7 @@ public class Preferences {
 
 	public static final Preference<Boolean> TEAM_CHAT_SOUND = SimplePreference.of("team_chat_sound",
 			"Hear a sound when receiving a team chat message", true);
+
+	public static final Preference<Float> EXPLOSION_VOLUME_MULTIPLIER = SimplePreference.of("explosion_volume",
+			"Change the volume of explosions. 1 = normal, 0.5 = half, 0 = silent, etc.", Float.class, 1f);
 }

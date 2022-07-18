@@ -5,6 +5,7 @@ import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.comphenix.protocol.wrappers.PlayerInfoData;
 import com.mojang.authlib.GameProfile;
@@ -16,6 +17,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.GameState;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSpy;
+import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.minecraft.network.protocol.game.*;
@@ -125,12 +127,12 @@ public class PacketListeners
 		});
 
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
-				PacketType.Play.Server.NAMED_SOUND_EFFECT)
+				PacketType.Play.Server.NAMED_SOUND_EFFECT, PacketType.Play.Server.ENTITY_SOUND)
 		{
 			@Override
 			public void onPacketSending(PacketEvent event) {
+				Sound sound = event.getPacket().getSoundEffects().read(0);
 				if (cancelDamageSounds) {
-					Sound sound = event.getPacket().getSoundEffects().read(0);
 					if(sound == Sound.ENTITY_PLAYER_ATTACK_STRONG ||
 							sound == Sound.ENTITY_PLAYER_ATTACK_CRIT ||
 							sound == Sound.ENTITY_PLAYER_ATTACK_NODAMAGE ||
@@ -138,7 +140,17 @@ public class PacketListeners
 							sound == Sound.ENTITY_PLAYER_ATTACK_SWEEP ||
 							sound == Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK) {
 						event.setCancelled(true);
+						return;
 					}
+				}
+
+				//explosion sound volume preference
+				if(sound == Sound.ENTITY_GENERIC_EXPLODE || sound == Sound.ENTITY_DRAGON_FIREBALL_EXPLODE) {
+					StructureModifier<Float> floats = event.getPacket().getFloat();
+					float modifier = Main.getPlayerInfo(event.getPlayer()).getPreference(Preferences.EXPLOSION_VOLUME_MULTIPLIER);
+					float newVolume = floats.read(0);
+					newVolume *= modifier;
+					floats.write(0, newVolume);
 				}
 			}
 		});

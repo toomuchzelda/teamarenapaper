@@ -137,7 +137,7 @@ public class DamageType {
     public static final DamageType SUICIDE_ASSISTED = new DamageType("Assisted Suicide",
             "%Killed% saw T_0_E_D's face and died", "%Killed% caught a whiff " +
             "of their own body odour", "%Killed% thought Mineplex was better than Red Warfare", "%Killed% kicked a stray " +
-            "cat because they thought it was funny", "%Killed% had negative social credit score", "%Killed% played " +
+            "cat and thought it was funny", "%Killed% had negative social credit score", "%Killed% played " +
             "russian roulette, and lost", "%Killed% lost against themselves in a 1v1").setInstantDeath().setNoKnockback();
 
     public static final DamageType SWEEP_ATTACK = new DamageType("Sweep Attack", "%Killed% was killed by %Killer%'s sweeping attack")
@@ -161,7 +161,7 @@ public class DamageType {
             .setNoKnockback().setDamageSource(DamageSource.WITHER);
 
     /******************************************************************************************
-     *                                  KIT DAMAGETYPES
+     *                                  KIT BASE DAMAGETYPES
      ******************************************************************************************/
 
     public static final DamageType PYRO_MOLOTOV = new DamageType("Pyro Incendiary", "%Killed% was burned to death by %Killer%'s incendiary")
@@ -179,6 +179,19 @@ public class DamageType {
             .setIgnoreRate().setExplosion();
 
 	public static final DamageType TOXIC_LEAP = new DamageType("Venom Leap", "%Killed% was killed by %Killer%'s Toxic Leap");
+
+	public static final DamageType DEMO_PUSHMINE = new DamageType("Demolitions Push Mine",
+			"%Killed% was somehow directly killed by %Killer%'s Push Mine. (If you see this please tell how you did it" +
+					" to a mod. Thanks)").setTrackedDamageType(DamageTimes.TrackedDamageTypes.ATTACK).setIgnoreRate();
+
+	public static final DamageType BURST_ROCKET = new DamageType("Burst Rocket", "%Killed% was blown up by %Killer%'s rocket")
+			.setExplosion();
+
+	public static final DamageType EXPLOSIVE_RPG = new DamageType("Explosive RPG", "%Killed% was caught in %Killer%'s RPG")
+			.setExplosion();
+
+	public static final DamageType EXPLOSIVE_GRENADE = new DamageType("Explosive Grenade", "%Killed% thought %Killer%'s grenade was a cozy bonfire and stood near it")
+			.setExplosion();
 
 	/*******************************************************************************************
 	 * 									GAMEMODE DAMAGETYPES
@@ -278,6 +291,9 @@ public class DamageType {
                 return getSweeping(event);
             case PROJECTILE:
                 return getProjectile(event);
+			case BLOCK_EXPLOSION:
+			case ENTITY_EXPLOSION:
+				return getExplosion(EXPLOSION, event);
             case SUFFOCATION:
                 return SUFFOCATION;
             case FALL:
@@ -292,9 +308,6 @@ public class DamageType {
                 return LAVA;
             case DROWNING:
                 return DROWNED;
-            case BLOCK_EXPLOSION:
-            case ENTITY_EXPLOSION:
-                return EXPLOSION;
             case VOID:
                 return VOID;
             case LIGHTNING:
@@ -407,6 +420,15 @@ public class DamageType {
 			);
 		}
 		return SONIC_BOOM;
+	}
+
+	private static DamageType getExplosion(DamageType type, EntityDamageEvent event) {
+		if(event instanceof EntityDamageByEntityEvent dEvent && dEvent.getDamager() instanceof LivingEntity living) {
+			return new DamageType(type).setDamageSource(DamageSourceCreator.getExplosion(living));
+		}
+		else {
+			return type;
+		}
 	}
 
     public static DamageType getProjectile(EntityDamageEvent event) {

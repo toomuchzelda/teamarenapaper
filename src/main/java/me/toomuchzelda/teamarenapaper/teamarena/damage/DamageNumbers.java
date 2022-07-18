@@ -22,7 +22,6 @@ public class DamageNumbers
 	static {
 		//***** ITEM DAMAGE *****
 		MATERIAL_BASE_DAMAGE = new double[Material.values().length];
-
 		Arrays.fill(MATERIAL_BASE_DAMAGE, 1d);
 
 		setBaseDamage(Material.WOODEN_SWORD, 4d);
@@ -59,6 +58,7 @@ public class DamageNumbers
 		//***** ARMOR DEFENSE POINTS
 		ARMOR_BASE_PROTECTION = new double[Material.values().length];
 		Arrays.fill(ARMOR_BASE_PROTECTION, 0d);
+
 		setDefensePoints(Material.TURTLE_HELMET, 2);
 
 		setDefensePoints(Material.LEATHER_HELMET, 1d);

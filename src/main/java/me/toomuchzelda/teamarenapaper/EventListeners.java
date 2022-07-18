@@ -11,6 +11,8 @@ import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
+import me.toomuchzelda.teamarenapaper.explosions.EntityExplosionInfo;
+import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
@@ -32,7 +34,6 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
-import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.craftbukkit.v1_19_R1.CraftWorldBorder;
 import org.bukkit.entity.*;
@@ -360,47 +361,18 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void explosionPrime(ExplosionPrimeEvent event) {
-		ExplosionManager.EntityExplosionInfo exInfo = ExplosionManager.getEntityInfo(event.getEntity());
+		//if there is an EntityExplosionInfo use that to handle it
+		EntityExplosionInfo exInfo = ExplosionManager.getEntityInfo(event.getEntity());
 		if(exInfo != null) {
-			if(exInfo.cancel()) {
-				event.setCancelled(true);
-				return;
-			}
-
-			byte fire = exInfo.fire();
-			if(fire == ExplosionManager.NO_FIRE)
-				event.setFire(false);
-			else if(fire == ExplosionManager.YES_FIRE)
-				event.setFire(true);
-			//else leave it as is
-
-			float flat = exInfo.radius();
-			if(flat != ExplosionManager.DEFAULT_FLOAT_VALUE)
-				event.setRadius(flat);
+			exInfo.handleEvent(event);
 		}
 	}
 
 	@EventHandler
 	public void entityExplode(EntityExplodeEvent event) {
-		ExplosionManager.EntityExplosionInfo exInfo = ExplosionManager.getEntityInfo(event.getEntity());
+		EntityExplosionInfo exInfo = ExplosionManager.getEntityInfo(event.getEntity());
 		if(exInfo != null) {
-			if(exInfo.cancel()) {
-				event.setCancelled(true);
-				return;
-			}
-
-			boolean breakBlocks = exInfo.breakBlocks();
-			if(exInfo.exemptions() != null) {
-				Set<Block> exemptions = exInfo.exemptions();
-				event.blockList().removeIf(block -> exemptions.contains(block) == breakBlocks);
-			}
-			else if(!breakBlocks) {
-				event.blockList().clear();
-			}
-
-			float flat = exInfo.yield();
-			if(flat != ExplosionManager.DEFAULT_FLOAT_VALUE)
-				event.setYield(flat);
+			exInfo.handleEvent(event);
 		}
 		else {
 			event.blockList().clear();
