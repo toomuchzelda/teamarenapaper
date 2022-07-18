@@ -187,6 +187,12 @@ public class DamageType {
 	public static final DamageType BURST_ROCKET = new DamageType("Burst Rocket", "%Killed% was blown up by %Killer%'s rocket")
 			.setExplosion();
 
+	public static final DamageType EXPLOSIVE_RPG = new DamageType("Explosive RPG", "%Killed% was caught in %Killer%'s RPG")
+			.setExplosion();
+
+	public static final DamageType EXPLOSIVE_GRENADE = new DamageType("Explosive Grenade", "%Killed% thought %Killer%'s grenade was a cozy bonfire and stood near it")
+			.setExplosion();
+
 	/*******************************************************************************************
 	 * 									GAMEMODE DAMAGETYPES
 	 ******************************************************************************************/

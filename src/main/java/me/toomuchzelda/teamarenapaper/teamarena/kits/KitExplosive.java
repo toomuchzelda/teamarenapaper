@@ -8,7 +8,7 @@ import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaExplosion;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
@@ -25,7 +25,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.FireworkEffectMeta;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
@@ -88,6 +87,8 @@ public class KitExplosive extends Kit {
 		public static final int GRENADE_MAX_IN_INV = 5;
 		public static final int GRENADE_FUSE_TIME = 60;
 
+		public static final DamageType SELF_RPG = new DamageType(DamageType.EXPLOSIVE_RPG, "%Killed% shot their RPG a bit too close to themselves");
+
 		public record RPGInfo(Arrow rpgArrow, Egg rpgEgg, Player thrower, int spawnTime) {}
 		public record GrenadeInfo(Item grenade, Player thrower, Color color, int spawnTime) {}
 
@@ -146,7 +147,10 @@ public class KitExplosive extends Kit {
 				if (TeamArena.getGameTick() - grenadeInfo.spawnTime >= GRENADE_FUSE_TIME) {
 					//Only explode if the thrower is still alive
 					if (!Main.getGame().isDead(thrower)) {
-						world.createExplosion(grenade.getLocation(), 1.5f, false, false, grenade);
+						//real thrower info is passed on through grenade's thrower field
+						TeamArenaExplosion explosion = new TeamArenaExplosion(null, 1.5, 0.5,
+								7, 0.18, 0.35, DamageType.EXPLOSIVE_GRENADE, grenade);
+						explosion.explode();
 					}
 					grenade.remove();
 					staleGrenades.add(grenadeInfo);
@@ -215,66 +219,18 @@ public class KitExplosive extends Kit {
 			ACTIVE_RPG.removeAll(staleRPG);
 		}
 
-		public void rpgBlast(Location explodeLoc, Player owner) {
-			//Stolen from toomuchzelda
-			//create a sort of explosion that pushes everyone away
-			World world = owner.getWorld();
-			Vector explodeLocVec = explodeLoc.toVector();
-			RayTraceResult result;
-			TeamArenaTeam team = Main.getPlayerInfo(owner).team;
-			for (Player p : Main.getGame().getPlayers()) {
-				if (!team.getPlayerMembers().contains(p) || p.equals(owner)) {
-					double blastStrength = RPG_BLAST_STRENGTH;
-					//Owner receives more KB from RPG blast
-					if (p.equals(owner)) {
-
-					} else {
-						blastStrength /= 1.5;
-					}
-					//add half of height so aim for middle of body not feet
-					Vector vector = p.getLocation().add(0, p.getHeight() / 2, 0).toVector().subtract(explodeLocVec);
-
-					result = world.rayTrace(explodeLoc, vector, RPG_BLAST_RADIUS, FluidCollisionMode.SOURCE_ONLY, true, 0,
-							e -> e == p);
-					//Bukkit.broadcastMessage(result.toString());
-					double lengthSqrd = vector.lengthSquared();
-					boolean affect = false;
-					if (result != null && result.getHitEntity() == p) {
-						affect = true;
-					}
-					//even if raytrace didn't hit, if they are within 1.1 block count it anyway
-					else if (lengthSqrd <= 1.21d) {
-						affect = true;
-					}
-
-					if (affect) {
-						//weaker knockback the further they are from mine base
-						double power = Math.sqrt(RPG_BLAST_RADIUS_SQRD - lengthSqrd);
-						vector.normalize();
-						vector.add(p.getVelocity().multiply(0.4));
-						vector.multiply(power * blastStrength);
-						PlayerUtils.sendVelocity(p, PlayerUtils.noNonFinites(vector));
-
-						//RPG Custom Damage, so it is more consistent. Ignore KB since it is already handled above
-						if(p.getGameMode() == GameMode.SURVIVAL) {
-							DamageEvent dEvent;
-							if (p.equals(owner)) {
-								//Self Damage deals a consistent amount
-								dEvent = DamageEvent.newDamageEvent(owner, 5.0d, DamageType.EXPLOSION, null, false);
-								dEvent.setNoKnockback();
-
-							}
-							else {
-								//Enemy Damage is based on distance from bomb
-								double damage = Math.max(power, 0.1d) * 1.8d;
-								dEvent = DamageEvent.newDamageEvent(p, damage, DamageType.EXPLOSION, owner, false);
-							}
-							dEvent.setNoKnockback();
-							Main.getGame().queueDamage(dEvent);
-						}
-					}
-				}
+		@Override
+		public void onAttemptedDamage(DamageEvent event) {
+			if(event.getDamageType().is(SELF_RPG)) {
+				event.setFinalDamage(5); //self RPG always does 5 damage
 			}
+		}
+
+		public void rpgBlast(Location explodeLoc, Player owner) {
+			//self damage multiplier does not matter here, is overridden in attempted damage
+			SelfHarmingExplosion explosion = new SelfHarmingExplosion(explodeLoc, RPG_BLAST_RADIUS, 1d,
+					8.1, 0.18, 1.575, DamageType.EXPLOSIVE_RPG, owner, 5,0, SELF_RPG);
+			explosion.explode();
 		}
 
 		//Based on the lastUsedTick, itemDist gives the player the desiredItem
@@ -341,6 +297,7 @@ public class KitExplosive extends Kit {
 			}
 		}
 
+		@Override
 		public void onInteract(PlayerInteractEvent event) {
 			ItemStack item = event.getItem();
 			Material mat = item != null ? item.getType() : Material.AIR;

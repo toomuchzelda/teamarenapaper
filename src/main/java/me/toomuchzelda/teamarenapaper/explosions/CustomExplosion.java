@@ -274,7 +274,8 @@ public class CustomExplosion
 
 	public Location getCentre() {
 		if(this.centre == null)
-			return entity.getLocation();
+			//add half of entity's height to explode from their centre, not their feet.
+			return entity.getLocation().add(0d, entity.getHeight() / 2, 0d);
 		else
 			return this.centre.clone();
 	}

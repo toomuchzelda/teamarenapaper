@@ -54,7 +54,7 @@ public class Bomb
 	private boolean detonated = false;
 	private int armedTime;
 	private TeamArenaTeam armingTeam;
-	private ExplosionEffect explodeMode = ExplosionEffect.DESTROY_BLOCKS;
+	private ExplosionEffect explodeMode = ExplosionEffect.CARBONIZE_BLOCKS;
 	private int lastHissTime = 0;
 
 	private Component sidebarStatus = BOMB_IS_SAFE;
