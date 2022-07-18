@@ -39,4 +39,8 @@ public class DamageSourceCreator {
             return DamageSource.thrown(nmsProjectile, nmsEntity);
         }
     }
+
+	public static DamageSource getExplosion(LivingEntity source) {
+		return DamageSource.explosion(((CraftLivingEntity) source).getHandle());
+	}
 }

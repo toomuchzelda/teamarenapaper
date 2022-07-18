@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.explosions;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
@@ -162,8 +163,9 @@ public class CustomExplosion
 			}
 		}
 
+		TeamArena game = Main.getGame();
 		for(HitInfo hinfo : hitEntities) {
-			this.hitEntity(hinfo.entity, hinfo.hitVector, hinfo.distance, hinfo.damage);
+			game.queueDamage(this.calculateDamageEvent(hinfo.entity, hinfo.hitVector, hinfo.distance, hinfo.damage));
 		}
 
 		this.playExplosionEffect();
@@ -208,16 +210,16 @@ public class CustomExplosion
 	 * @param distance Length of the hitVector.
 	 * @param damage Amount of damage dealt.
 	 */
-	protected void hitEntity(Entity victim, Vector hitVector, double distance, double damage) {
-		Vector kb = calculateKnockback(victim, hitVector, distance, damage);
+	protected DamageEvent calculateDamageEvent(Entity victim, Vector hitVector, double distance, double damage) {
+		Vector kb = calculateKnockback(victim, hitVector, distance, damage, this.knockbackStrength);
 
 		DamageEvent event = DamageEvent.newDamageEvent(victim, damage, this.damageType, this.entity, false);
 		event.setKnockback(kb);
-		Main.getGame().queueDamage(event);
+		return event;
 	}
 
-	protected Vector calculateKnockback(Entity victim, Vector hitVector, double distance, double damage) {
-		if(this.knockbackStrength <= 0)
+	protected Vector calculateKnockback(Entity victim, Vector hitVector, double distance, double damage, double knockbackStrength) {
+		if(knockbackStrength <= 0)
 			return null;
 
 		double kbStrength = distance / this.explosionRadius;
@@ -259,7 +261,7 @@ public class CustomExplosion
 	}
 
 	public void playExplosionEffect() {
-		boolean large = this.explosionRadius >= 2d;
+		boolean large = this.explosionRadius >= 3d;
 		ParticleUtils.playExplosionParticle(this.getCentre(), 0f, 0f, 0f, large);
 	}
 

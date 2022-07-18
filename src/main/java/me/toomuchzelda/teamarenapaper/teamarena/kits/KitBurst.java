@@ -7,7 +7,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
@@ -22,7 +21,6 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
@@ -50,7 +48,7 @@ public class KitBurst extends Kit
 		bowMeta.addEnchant(Enchantment.QUICK_CHARGE, 1, true);
 		crossbow.setItemMeta(bowMeta);
 
-		ItemStack firework = new ItemStack(Material.FIREWORK_ROCKET);
+		ItemStack firework = new ItemStack(Material.FIREWORK_ROCKET, 2);
 
 		ItemStack rocketLauncher = ItemBuilder.of(Material.FURNACE_MINECART)
 				.displayName(Component.text("Rocket Launcher"))
@@ -71,9 +69,9 @@ public class KitBurst extends Kit
 		public static final List<ShulkerBullet> ACTIVE_ROCKETS = new ArrayList<>();
 
 		public static final int ROCKET_CD = 120;
-		public static final double ROCKET_BLAST_STRENGTH = 0.25d;
 		public static final double ROCKET_BLAST_RADIUS = 2.5;
-		public static final double ROCKET_BLAST_RADIUS_SQRD = 6.25;
+		public static final DamageType ROCKET_HURT_SELF = new DamageType(DamageType.BURST_ROCKET,
+				"%Killed% was caught in their own Rocket explosion");
 
 		@Override
 		public void unregisterAbility() {
@@ -168,7 +166,7 @@ public class KitBurst extends Kit
 
 				//Since the location extends past the block when it hits it,
 				//correct location by reversing trajectory slightly
-				Vector dir = loc.getDirection().multiply(0.1);
+				Vector dir = rocket.getVelocity().normalize().multiply(0.1d);
 				while(loc.getBlock().isSolid()) {
 					loc.subtract(dir);
 				}
@@ -193,65 +191,9 @@ public class KitBurst extends Kit
 		}
 
 		public void rocketBlast(Location explodeLoc, Player owner) {
-			//Stolen from toomuchzelda
-			//create a sort of explosion that pushes everyone away
-			World world = owner.getWorld();
-			Vector explodeLocVec = explodeLoc.toVector();
-			RayTraceResult result;
-			TeamArenaTeam team = Main.getPlayerInfo(owner).team;
-			for (Player p : Main.getGame().getPlayers()) {
-				if (!team.getPlayerMembers().contains(p) || p.equals(owner)) {
-					double blastStrength = ROCKET_BLAST_STRENGTH;
-					//Prevent owner from rocket jumping
-					if (p.equals(owner)) {
-						blastStrength = 0;
-					}
-					//add half of height so aim for middle of body not feet
-					Vector vector = p.getLocation().add(0, p.getHeight() / 2, 0).toVector().subtract(explodeLocVec);
-
-					result = world.rayTrace(explodeLoc, vector, ROCKET_BLAST_RADIUS, FluidCollisionMode.SOURCE_ONLY, true, 0,
-							e -> e == p);
-					//Bukkit.broadcastMessage(result.toString());
-					double lengthSqrd = vector.lengthSquared();
-					boolean affect = false;
-					if (result != null && result.getHitEntity() == p) {
-						affect = true;
-					}
-					//even if raytrace didn't hit, if they are within 1.1 block count it anyway
-					else if (lengthSqrd <= 1.21d) {
-						affect = true;
-					}
-
-					if (affect) {
-						//Rocket KB
-						double power = Math.sqrt(ROCKET_BLAST_RADIUS_SQRD - lengthSqrd);
-						vector.normalize();
-						vector.add(p.getVelocity().multiply(0.4));
-						vector.multiply(power * blastStrength);
-						PlayerUtils.sendVelocity(p, PlayerUtils.noNonFinites(vector));
-
-						//Rocket Damage
-						if(p.getGameMode() == GameMode.SURVIVAL) {
-							double damage = Math.max(power, 0.1d) * 3.0d;
-							Player damager;
-							if(p.equals(owner)) {
-								damager = null;
-								damage *= 1.5;
-							}
-							else {
-								damager = owner;
-							}
-
-							//Avoiding NaN numbers
-							damage = Math.round(damage);
-							DamageEvent dEvent = DamageEvent.newDamageEvent(p, damage, DamageType.EXPLOSION,
-									damager, false);
-							dEvent.setNoKnockback();
-							Main.getGame().queueDamage(dEvent);
-						}
-					}
-				}
-			}
+			SelfHarmingExplosion burstRocket = new SelfHarmingExplosion(explodeLoc, ROCKET_BLAST_RADIUS, 0.3,
+					7.5, 0.3, 0.625, DamageType.BURST_ROCKET, owner, 1.5, 0, ROCKET_HURT_SELF);
+			burstRocket.explode();
 		}
 	}
 }
