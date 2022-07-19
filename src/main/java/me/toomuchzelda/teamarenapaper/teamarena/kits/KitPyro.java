@@ -1,6 +1,5 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
-import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
@@ -95,6 +94,8 @@ public class KitPyro extends Kit
 		public static final int MOLOTOV_ACTIVE_TIME = 5 * 20;
 		public static final double BOX_RADIUS = 2.5;
 
+		private final Map<Player, PacketEntity> PREVIEW_ENTITIES = new HashMap<>();
+
 		@Override
 		public void onShootBow(EntityShootBowEvent event) {
 			Entity e = event.getProjectile();
@@ -177,13 +178,12 @@ public class KitPyro extends Kit
 			}
 		}
 
-		Map<Player, PacketEntity> previewEntities = new HashMap<>();
 		@Override
 		public void onPlayerTick(Player player) {
 			if (TeamArena.getGameTick() % 5 != 0)
 				return;
 			if (player.getInventory().getItemInMainHand().getType() != Material.FIRE_CHARGE) {
-				var oldPreviewEntity = previewEntities.remove(player);
+				var oldPreviewEntity = PREVIEW_ENTITIES.remove(player);
 				if (oldPreviewEntity != null)
 					oldPreviewEntity.remove();
 				return;
@@ -208,7 +208,7 @@ public class KitPyro extends Kit
 						if (blockFace == BlockFace.UP) {
 							var packetEntity = spawnPreviewBlock(location, block, player);
 
-							var oldPreviewEntity = previewEntities.put(player, packetEntity);
+							var oldPreviewEntity = PREVIEW_ENTITIES.put(player, packetEntity);
 							if (oldPreviewEntity != null)
 								oldPreviewEntity.remove();
 							packetEntity.respawn();
@@ -228,7 +228,7 @@ public class KitPyro extends Kit
 				velocity.subtract(acceleration);
 			}
 			// nothing was spawned
-			var oldPreviewEntity = previewEntities.remove(player);
+			var oldPreviewEntity = PREVIEW_ENTITIES.remove(player);
 			if (oldPreviewEntity != null)
 				oldPreviewEntity.remove();
 		}
@@ -237,18 +237,17 @@ public class KitPyro extends Kit
 			// MC-114286: falling blocks do not render at all if they have
 			// the same block state as the block they are currently occupying
 			var blockData = Material.FIRE.createBlockData(); // block.getBlockData();
-			var packetEntity = new PacketEntity(PacketEntity.NEW_ID, EntityType.FALLING_BLOCK,
+			PacketEntity packetEntity = new PacketEntity(PacketEntity.NEW_ID, EntityType.FALLING_BLOCK,
 					location.clone().set(location.getBlockX() + 0.5, location.getY() - 0.00001, location.getBlockZ()),
-					List.of(player), null, packet -> {
-				// data
-				int id = net.minecraft.world.level.block.Block.getId(((CraftBlockData) blockData).getState());
-				packet.getIntegers().write(4, id);
-			});
+					List.of(player), null);
+
+			int id = net.minecraft.world.level.block.Block.getId(((CraftBlockData) blockData).getState());
+			packetEntity.getSpawnPacket().getIntegers().write(4, id);
+
 			// glowing
 			packetEntity.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_GLOWING_MASK);
 			// no gravity
-			packetEntity.setMetadata(new WrappedDataWatcher.WrappedDataWatcherObject(
-					5, WrappedDataWatcher.Registry.get(Boolean.class)), true);
+			packetEntity.setMetadata(MetaIndex.NO_GRAVITY_OBJ, true);
 			packetEntity.refreshViewerMetadata();
 			return packetEntity;
 		}
@@ -361,7 +360,7 @@ public class KitPyro extends Kit
 		@Override
 		public void removeAbility(Player player) {
 			player.setExp(0f);
-			var packetEntity = previewEntities.remove(player);
+			var packetEntity = PREVIEW_ENTITIES.remove(player);
 			if (packetEntity != null)
 				packetEntity.remove();
 		}
@@ -370,11 +369,13 @@ public class KitPyro extends Kit
 		public void unregisterAbility() {
 			MOLOTOV_RECHARGES.clear();
 			ACTIVE_MOLOTOVS.clear();
-			previewEntities.values().forEach(PacketEntity::remove);
+			PREVIEW_ENTITIES.values().forEach(PacketEntity::remove);
+			PREVIEW_ENTITIES.clear();
 		}
 
 		@Override
 		public void onDeath(DamageEvent event) {
+			PREVIEW_ENTITIES.remove((Player) event.getVictim());
 			MOLOTOV_RECHARGES.remove(event.getPlayerVictim());
 		}
 	}
