@@ -258,18 +258,40 @@ public class EventListeners implements Listener
 	public void playerMove(PlayerMoveEvent event) {
 		Player player = event.getPlayer();
 		TeamArena game = Main.getGame();
-		if (game.getGameState() == GameState.GAME_STARTING && !game.isSpectator(player)) {
-			Location prev = event.getFrom();
-			Location next = event.getTo();
+		if (game.getGameState() == GameState.GAME_STARTING) {
+			if(!game.isSpectator(player)) {
+				Location prev = event.getFrom();
+				Location next = event.getTo();
 
-			if(prev.getX() != next.getX() || prev.getZ() != next.getZ()) {
-				event.setCancelled(true);
-				return;
+				if (prev.getX() != next.getX() || prev.getZ() != next.getZ()) {
+					event.setCancelled(true);
+					return;
+				}
+			}
+		}
+		else if(game.getGameState() == LIVE) {
+			for(Ability a : Kit.getAbilities(event.getPlayer())) {
+				a.onMove(event);
 			}
 		}
 
 		Vector from = event.getFrom().toVector();
 		Vector to = event.getTo().toVector();
+
+		//prevent them from moving outside the game border
+		if (player.getGameMode() != GameMode.SPECTATOR && !game.getBorder().contains(to)) {
+			// if they're hitting the bottom border call it falling into the void
+			if (to.getY() < game.getBorder().getMinY() && game.getGameState() == LIVE) {
+				event.setCancelled(false);
+				DamageEvent dEvent = DamageEvent.newDamageEvent(event.getPlayer(), 9999d, DamageType.VOID, null, false);
+				Main.getGame().queueDamage(dEvent);
+			} else {
+				Location newTo = event.getTo().clone();
+				newTo.set(from.getX(), from.getY(), from.getZ());
+				event.setTo(newTo);
+			}
+		}
+
 		// dynamic world border
 		if (from.distanceSquared(to) != 0) {
 			BoundingBox border = game.getBorder();
@@ -315,20 +337,6 @@ public class EventListeners implements Listener
 						}
 					}, 40);
 				}
-			}
-		}
-
-		//prevent them from moving outside the game border
-		if (player.getGameMode() != GameMode.SPECTATOR && !game.getBorder().contains(to)) {
-			// if they're hitting the bottom border call it falling into the void
-			if (to.getY() < game.getBorder().getMinY() && game.getGameState() == LIVE) {
-				event.setCancelled(false);
-				DamageEvent dEvent = DamageEvent.newDamageEvent(event.getPlayer(), 9999d, DamageType.VOID, null, false);
-				Main.getGame().queueDamage(dEvent);
-			} else {
-				Location newTo = event.getTo().clone();
-				newTo.set(from.getX(), from.getY(), from.getZ());
-				event.setTo(newTo);
 			}
 		}
 	}
@@ -480,7 +488,8 @@ public class EventListeners implements Listener
 		if(Main.getGame() != null) {
 			Player p = event.getPlayer();
 			if(Main.getGame().getGameState() == LIVE) {
-				if (Main.getGame() instanceof CaptureTheFlag ctf && ctf.isFlagCarrier(p)) {
+				if (event.getProjectile() instanceof EnderPearl &&
+						Main.getGame() instanceof CaptureTheFlag ctf && ctf.isFlagCarrier(p)) {
 					event.setCancelled(true);
 					PlayerInfo pinfo = Main.getPlayerInfo(p);
 					if (pinfo.getPreference(Preferences.RECEIVE_GAME_TITLES)) {

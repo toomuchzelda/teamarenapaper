@@ -12,6 +12,7 @@ import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
 
 import javax.annotation.Nullable;
 
@@ -118,6 +119,8 @@ public abstract class Ability {
 	 * method has been called
 	 */
 	public void onPlaceBlock(BlockPlaceEvent event) {}
+
+	public void onMove(PlayerMoveEvent event) {}
 
 	public void onTeamSwitch(Player player, @Nullable TeamArenaTeam oldTeam, @Nullable TeamArenaTeam newTeam) {}
 }

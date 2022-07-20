@@ -252,8 +252,11 @@ public class SearchAndDestroy extends TeamArena
 
 		this.checkWinner();
 
+		if(this.winningTeam != null) {
+			this.prepEnd();
+		}
 		//if no winner run end game poison
-		if(gameState == GameState.LIVE) {
+		else if(gameState == GameState.LIVE) {
 			poisonTick();
 		}
 	}
@@ -300,8 +303,9 @@ public class SearchAndDestroy extends TeamArena
 		}
 
 		if(!CommandDebug.ignoreWinConditions && winnerTeam != null) {
+			//this method may be called during a damage tick, so signal to end game later instead by assigning
+			// winningTeam
 			this.winningTeam = winnerTeam;
-			prepEnd();
 		}
 	}
 
@@ -478,6 +482,8 @@ public class SearchAndDestroy extends TeamArena
 	@Override
 	public void handleDeath(DamageEvent event) {
 		super.handleDeath(event);
+
+		checkWinner();
 
 		this.poisonTimeLeft += 10 * 20;
 		if(isPoison && event.getVictim() instanceof Player p) {

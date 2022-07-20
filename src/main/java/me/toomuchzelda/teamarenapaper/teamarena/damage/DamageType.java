@@ -193,6 +193,17 @@ public class DamageType {
 	public static final DamageType EXPLOSIVE_GRENADE = new DamageType("Explosive Grenade", "%Killed% thought %Killer%'s grenade was a cozy bonfire and stood near it")
 			.setExplosion();
 
+	public static final DamageType TRIGGER_UNSTABLE_EXPLODE = new DamageType("Trigger Unstable Explosion", "%Killed% tried to hug %Killer%, who exploded from instability")
+			.setExplosion();
+
+	public static final DamageType TRIGGER_UNSTABLE_SELF_KILL = new DamageType("Trigger Instability", "%Killed% went emotionally unstable and blew up")
+			.setInstantDeath();
+
+	public static final DamageType TRIGGER_BOOM_SELF = new DamageType("Trigger self-destruct", "%Killed% blew themselves up");
+
+	public static final DamageType TRIGGER_BOOM = new DamageType("Trigger BOOM", "%Killed% was caught in %Killer%'s explosion of madness")
+			.setExplosion();
+
 	/*******************************************************************************************
 	 * 									GAMEMODE DAMAGETYPES
 	 ******************************************************************************************/
