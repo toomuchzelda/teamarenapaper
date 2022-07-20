@@ -1,10 +1,15 @@
-package me.toomuchzelda.teamarenapaper.teamarena.kits;
+package me.toomuchzelda.teamarenapaper.teamarena.kits.trigger;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
+import me.toomuchzelda.teamarenapaper.metadata.MetadataBitfieldValue;
+import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaExplosion;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
@@ -22,8 +27,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.Vector;
 
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -58,7 +63,9 @@ public class KitTrigger extends Kit
 				, Material.CREEPER_HEAD);
 
 		ItemStack helmet = new ItemStack(Material.NETHERITE_HELMET);
-		helmet.addEnchantment(Enchantment.PROTECTION_ENVIRONMENTAL, 4);
+		ItemMeta meta = helmet.getItemMeta();
+		meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 8, true);
+		helmet.setItemMeta(meta);
 
 		ItemStack chestplate = new ItemStack(Material.LEATHER_CHESTPLATE);
 		ItemUtils.colourLeatherArmor(Color.RED, chestplate);
@@ -74,45 +81,110 @@ public class KitTrigger extends Kit
 
 	public static class TriggerAbility extends Ability
 	{
-		//if stall, then timestamp is the time that the stall period will end
-		// else, it's the time that the current BOOM was triggered
-		private record TriggerInfo(boolean stall, int timestamp) {};
-
 		//chance to start a stall per tick
 		public static final double CHANCE_TO_STALL = 0.02d;
 		public static final int MAX_STALL_TIME = 2 * 20;
-		public static final int BOOM_TIME = 50;
+		public static final int BOOM_TIME = 2 * 20;
+		public static final int COUNTDOWN_TIME = 3 * 20;
 
-		private final Map<Player, TriggerInfo> TRIGGER_ACTIONS = new HashMap<>();
+		private enum TriggerMode {
+			NORMAL, COUNTDOWN, STALLING, BOOMING
+		}
+
+		private static class TriggerInfo {
+			public static final int NULL_ALERT_TIME = -1;
+
+			TriggerMode currentMode;
+			int timestamp;
+			//PacketEntities are the entites that are viewed by trigger's teammates and enemies respectively
+			final TriggerCreeper enemyEntity;
+			final TriggerCreeper teamEntity;
+
+			int alertTime; //time alert sound was played and creeper ignite effect
+
+			public TriggerInfo(Player trigger, TeamArenaTeam playersTeam) {
+				this.currentMode = TriggerMode.COUNTDOWN;
+				this.timestamp = TeamArena.getGameTick();
+				this.alertTime = NULL_ALERT_TIME;
+
+				this.enemyEntity = new TriggerCreeper(trigger,  player -> !playersTeam.getPlayerMembers().contains(player));
+				enemyEntity.respawn();
+
+				this.teamEntity = new TriggerCreeper(trigger,  player -> player != trigger &&
+						playersTeam.getPlayerMembers().contains(player));
+
+				teamEntity.setMetadata(MetaIndex.BASE_BITFIELD_OBJ,MetaIndex.BASE_BITFIELD_INVIS_MASK);
+				teamEntity.refreshViewerMetadata();
+				teamEntity.respawn();
+			}
+		}
+
+		private final Map<Player, TriggerInfo> TRIGGER_INFOS = new HashMap<>();
 
 		@Override
 		public void unregisterAbility() {
-			TRIGGER_ACTIONS.clear();
+			TRIGGER_INFOS.forEach((player, triggerInfo) -> {
+				triggerInfo.teamEntity.remove();
+				triggerInfo.enemyEntity.remove();
+			});
+			TRIGGER_INFOS.clear();
 		}
 
 		@Override
 		public void giveAbility(Player player) {
 			player.setExp(0.5f);
+			TeamArenaTeam team = Main.getPlayerInfo(player).team;
+			TriggerInfo tinfo = new TriggerInfo(player, team);
+			TRIGGER_INFOS.put(player, tinfo);
+
+			//make the player invisible to enemies only
+			for(Player p : Bukkit.getOnlinePlayers()) {
+				if(!team.getPlayerMembers().contains(p)) {
+					Map<Integer, Boolean> bit = Collections.singletonMap(MetaIndex.BASE_BITFIELD_INVIS_IDX, true);
+					MetadataBitfieldValue value = MetadataBitfieldValue.create(bit);
+					MetadataViewer viewer = Main.getPlayerInfo(p).getMetadataViewer();
+					viewer.setViewedValue(0, value, player);
+					viewer.refreshViewer(p);
+				}
+			}
 		}
 
 		@Override
 		public void removeAbility(Player player) {
-			TRIGGER_ACTIONS.remove(player);
+			TriggerInfo tinfo = TRIGGER_INFOS.remove(player);
+			tinfo.enemyEntity.remove();
+			tinfo.teamEntity.remove();
+
+			MetadataViewer.removeAllValues(player);
 		}
 
 		@Override
 		public void onInteract(PlayerInteractEvent event) {
-			if(event.getMaterial() == DETONATOR_MAT && event.getAction().isRightClick()) {
+			if(event.getMaterial() == DETONATOR_MAT && (event.getAction().isRightClick() || event.getAction().isLeftClick())) {
 				Player trigger = event.getPlayer();
+				TriggerInfo info = TRIGGER_INFOS.get(trigger);
+				if(info.currentMode == TriggerMode.BOOMING)
+					return;
+
 				final int currentTick = TeamArena.getGameTick();
 
 				World world = trigger.getWorld();
 				Location loc = trigger.getLocation();
 				world.strikeLightningEffect(loc);
 
-				TriggerInfo info = new TriggerInfo(false, currentTick);
-				//override anything that was already there
-				TRIGGER_ACTIONS.put(trigger, info);
+				if(info.currentMode == TriggerMode.COUNTDOWN) {
+					trigger.setLevel(0);
+				}
+				info.currentMode = TriggerMode.BOOMING;
+				info.timestamp = currentTick;
+				//charge the creeper and fuse it
+				info.enemyEntity.setMetadata(MetaIndex.CREEPER_STATE_OBJ, 1);
+				info.enemyEntity.setMetadata(MetaIndex.CREEPER_CHARGED_OBJ, true);
+				info.enemyEntity.refreshViewerMetadata();
+
+				info.teamEntity.setMetadata(MetaIndex.CREEPER_CHARGED_OBJ, true);
+				info.teamEntity.setMetadata(MetaIndex.CREEPER_STATE_OBJ, 1);
+				info.teamEntity.refreshViewerMetadata();
 			}
 		}
 
@@ -120,51 +192,69 @@ public class KitTrigger extends Kit
 		public void onPlayerTick(Player player) {
 			//do exp first
 			float expToGain = -(0.1f / 20f);
-			float newExp;
+			float newExp = MathUtils.clamp(0f, 1f, player.getExp() + expToGain);
 			final int currentTick = TeamArena.getGameTick();
+			TriggerInfo info = TRIGGER_INFOS.get(player);
+			final int diff = currentTick - info.timestamp;
 
-			int timeStarted = 0;
-
-			TriggerInfo info = TRIGGER_ACTIONS.get(player);
-			boolean stabilityTick = true;
-			if(info != null) {
-				//stall time ran out
-				if(info.stall()) {
-					if(currentTick >= info.timestamp()) {
-						TRIGGER_ACTIONS.remove(player);
-					}
-					//still stalling
-					else {
-						expToGain = 0f;
-					}
+			final TriggerMode mode = info.currentMode;
+			if(mode == TriggerMode.COUNTDOWN) {
+				if(diff >= COUNTDOWN_TIME) {
+					info.currentMode = TriggerMode.NORMAL;
+					info.timestamp = currentTick;
+					player.setLevel(0);
 				}
 				else {
-					stabilityTick = false;
-					timeStarted = info.timestamp();
+					int secondsLeft = ((COUNTDOWN_TIME - diff) / 20) + 1;
+					player.setLevel(secondsLeft);
 				}
 			}
-			//random chance to start a stall
-			else {
-				double rand = MathUtils.random.nextDouble();
-				if(rand <= CHANCE_TO_STALL) {
-					int length = MathUtils.randomMax(MAX_STALL_TIME - 1) + currentTick;
-					info = new TriggerInfo(true, length);
-					TRIGGER_ACTIONS.put(player, info);
-					expToGain = 0f;
+			else if(mode == TriggerMode.STALLING) {
+				//amount of time to stall for is decided at dice-roll time, so timestamp actually stores the time the
+				// stall wears off
+				if(currentTick >= info.timestamp) {
+					info.currentMode = TriggerMode.NORMAL;
+					info.timestamp = currentTick;
 				}
+			}
+			else if(mode == TriggerMode.NORMAL) {
+				stabilityTick(player, newExp);
+
+				//decide if stall
+				boolean stall = MathUtils.random.nextDouble() <= CHANCE_TO_STALL;
+				if(stall) {
+					int stallTime = currentTick + MathUtils.randomMax(MAX_STALL_TIME);
+					info.currentMode = TriggerMode.STALLING;
+					info.timestamp = stallTime;
+				}
+			}
+			else { //booming
+				boomTick(player, info.timestamp, currentTick);
 			}
 
-			if(stabilityTick) {
-				newExp = MathUtils.clamp(0f, 1f, player.getExp() + expToGain);
-				stabilityTick(player, newExp);
-			}
-			else {
-				boomTick(player, timeStarted, currentTick);
+			//play alert sound to trigger and update creepers igniting
+			if(mode == TriggerMode.NORMAL || mode == TriggerMode.STALLING) {
+				if(newExp <= 0.15f || newExp >= 0.85f) {
+					if(info.alertTime == TriggerInfo.NULL_ALERT_TIME) {
+						info.alertTime = currentTick;
+						info.enemyEntity.setMetadata(MetaIndex.CREEPER_STATE_OBJ, 1);
+						info.enemyEntity.refreshViewerMetadata();
+					}
+
+					if((currentTick - info.alertTime) % 10 == 0) {
+						player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.AMBIENT, 2f, 1.4f);
+					}
+				}
+				else if(info.alertTime != TriggerInfo.NULL_ALERT_TIME) {
+					info.alertTime = TriggerInfo.NULL_ALERT_TIME;
+					info.enemyEntity.setMetadata(MetaIndex.CREEPER_STATE_OBJ, -1);
+					info.enemyEntity.refreshViewerMetadata();
+				}
 			}
 		}
 
 		private void boomTick(Player player, int timeStarted, int currentTick) {
-			int diff = currentTick - timeStarted;
+			final int diff = currentTick - timeStarted;
 			float expProgress = (float) diff / (float) BOOM_TIME;
 			expProgress = MathUtils.clamp(0f, 1f, expProgress);
 			player.setExp(expProgress);
@@ -179,7 +269,7 @@ public class KitTrigger extends Kit
 			}
 			else {
 				if(diff % 10 == 0) {
-					player.getWorld().playSound(player.getLocation(), Sound.ENTITY_CREEPER_PRIMED, SoundCategory.PLAYERS, 3f, 1.2f);
+					player.getWorld().playSound(player.getLocation(), Sound.ENTITY_CREEPER_PRIMED, SoundCategory.PLAYERS, 4.5f, 1.2f);
 				}
 			}
 		}
@@ -226,20 +316,26 @@ public class KitTrigger extends Kit
 			}
 
 			//don't do anything if stalling or booming
-			TriggerInfo info = TRIGGER_ACTIONS.get(event.getPlayer());
-			if(info != null) {
+			Player trigger = event.getPlayer();
+
+			TriggerInfo info = TRIGGER_INFOS.get(trigger);
+			//ignore stall if sprinting
+			if(info.currentMode == TriggerMode.STALLING)
+				if(!trigger.isSprinting())
+					return;
+
+			if(info.currentMode != TriggerMode.NORMAL)
 				return;
-			}
 
 			Vector from = event.getFrom().toVector();
 			Vector to = event.getTo().toVector();
 			float lengthSquared = (float) from.distanceSquared(to);
 			if(lengthSquared > 0) {
 				float dist = (float) Math.sqrt(lengthSquared);
-				dist *= 0.05f;
-				float exp = event.getPlayer().getExp() + dist;
+				dist *= 0.04f;
+				float exp = trigger.getExp() + dist;
 				exp = MathUtils.clamp(0f, 1f, exp);
-				event.getPlayer().setExp(exp);
+				trigger.setExp(exp);
 			}
 		}
 	}

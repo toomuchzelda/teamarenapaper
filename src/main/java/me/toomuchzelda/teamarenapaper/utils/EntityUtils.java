@@ -42,7 +42,6 @@ import java.util.Iterator;
 public class EntityUtils {
 
     public static Method getHurtSoundMethod;
-	public static Field attributeHandle;
     public static final double VANILLA_PROJECTILE_SPRAY = 0.0075d;
 
     public static void cacheReflection() {
@@ -51,9 +50,7 @@ public class EntityUtils {
                     .getDeclaredMethod("c", DamageSource.class);
             getHurtSoundMethod.setAccessible(true);
 
-			attributeHandle = CraftAttributeInstance.class.getDeclaredField("handle");
-			attributeHandle.setAccessible(true);
-        } catch (NoSuchMethodException | NoSuchFieldException e) {
+        } catch (NoSuchMethodException e) {
             e.printStackTrace();
         }
 	}

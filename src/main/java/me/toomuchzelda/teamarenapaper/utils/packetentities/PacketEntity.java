@@ -33,7 +33,7 @@ public class PacketEntity
 	//specify in constructor if a new entity ID is wanted
 	public static final int NEW_ID = -1;
 	private static final int HASNT_MOVED = -1;
-	public static final int TICKS_PER_TELEPORT_UPDATE = 3 * 20;
+	public static final int TICKS_PER_TELEPORT_UPDATE = 4 * 20;
 
 	public static final Predicate<Player> VISIBLE_TO_ALL = player -> true;
 
@@ -85,7 +85,7 @@ public class PacketEntity
 
 		this.uuid = UUID.randomUUID();
 
-		this.location = location;
+		this.location = location.clone();
 
 		//create and cache the packets to send to players
 		createSpawn(entityType);

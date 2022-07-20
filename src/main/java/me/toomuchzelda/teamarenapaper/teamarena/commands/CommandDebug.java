@@ -380,7 +380,7 @@ public class CommandDebug extends CustomCommand {
 					testPacketEntity = new PacketEntity(PacketEntity.NEW_ID, EntityType.AXOLOTL, player.getLocation(), null, PacketEntity.VISIBLE_TO_ALL) {
 						@Override
 						public void onInteract(Player player, EquipmentSlot hand, boolean attack) {
-							this.setMetadata(MetaIndex.AXOLOTL_COLOR, MathUtils.randomMax(4));
+							this.setMetadata(MetaIndex.AXOLOTL_COLOR_OBJ, MathUtils.randomMax(4));
 							EntityUtils.playEffect(this, ClientboundAnimatePacket.CRITICAL_HIT);
 							this.getWorld().playSound(this.getLocation(), Sound.ENTITY_AXOLOTL_SWIM, 1f, 1f);
 							if (attack)
@@ -392,7 +392,7 @@ public class CommandDebug extends CustomCommand {
 				} else if (!testPacketEntity.isAlive()) {
 					testPacketEntity.respawn();
 				} else {
-					testPacketEntity.setMetadata(MetaIndex.AXOLOTL_COLOR, MathUtils.randomMax(4));
+					testPacketEntity.setMetadata(MetaIndex.AXOLOTL_COLOR_OBJ, MathUtils.randomMax(4));
 					Location pLoc = player.getLocation();
 					Vector dir = pLoc.toVector().subtract(testPacketEntity.getLocation().toVector()).normalize();
 

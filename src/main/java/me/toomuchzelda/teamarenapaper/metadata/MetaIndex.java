@@ -18,6 +18,7 @@ public class MetaIndex
 	public static final int NO_GRAVITY_IDX = 5;
 
 	public static final byte BASE_BITFIELD_INVIS_MASK = 0x20;
+	public static final int BASE_BITFIELD_INVIS_IDX = 5;
 	public static final int BASE_BITFIELD_GLOWING_IDX = 6;
 	public static final byte BASE_BITFIELD_GLOWING_MASK = 0x40;
 
@@ -26,6 +27,10 @@ public class MetaIndex
 	public static final byte ARMOR_STAND_MARKER_MASK = 0x10;
 
 	public static final int AXOLOTL_COLOR_IDX = 17;
+
+	public static final int CREEPER_STATE_IDX = 16;
+	public static final int CREEPER_CHARGED_IDX = 17;
+	public static final int CREEPER_IGNITED_IDX = 18;
 
 	public static final MetadataBitfieldValue GLOWING_METADATA_VALUE = MetadataBitfieldValue.create(Collections.singletonMap(BASE_BITFIELD_GLOWING_IDX, true));
 
@@ -36,8 +41,11 @@ public class MetaIndex
 
 	public static final WrappedDataWatcher.WrappedDataWatcherObject ARMOR_STAND_BITFIELD_OBJ;
 
-	public static final WrappedDataWatcher.WrappedDataWatcherObject AXOLOTL_COLOR;
+	public static final WrappedDataWatcher.WrappedDataWatcherObject AXOLOTL_COLOR_OBJ;
 
+	public static final WrappedDataWatcher.WrappedDataWatcherObject CREEPER_STATE_OBJ;
+	public static final WrappedDataWatcher.WrappedDataWatcherObject CREEPER_CHARGED_OBJ;
+	public static final WrappedDataWatcher.WrappedDataWatcherObject CREEPER_IGNITED_OBJ;
 
 	static {
 		BASE_BITFIELD_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(BASE_BITFIELD_IDX, WrappedDataWatcher.Registry.get(Byte.class));
@@ -47,6 +55,10 @@ public class MetaIndex
 
 		ARMOR_STAND_BITFIELD_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(ARMOR_STAND_BITFIELD_IDX, WrappedDataWatcher.Registry.get(Byte.class));
 
-		AXOLOTL_COLOR = new WrappedDataWatcher.WrappedDataWatcherObject(AXOLOTL_COLOR_IDX, WrappedDataWatcher.Registry.get(Integer.class));
+		AXOLOTL_COLOR_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(AXOLOTL_COLOR_IDX, WrappedDataWatcher.Registry.get(Integer.class));
+
+		CREEPER_STATE_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(CREEPER_STATE_IDX, WrappedDataWatcher.Registry.get(Integer.class));
+		CREEPER_CHARGED_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(CREEPER_CHARGED_IDX, WrappedDataWatcher.Registry.get(Boolean.class));
+		CREEPER_IGNITED_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(CREEPER_IGNITED_IDX, WrappedDataWatcher.Registry.get(Boolean.class));
 	}
 }
