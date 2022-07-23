@@ -17,8 +17,10 @@ public class MetaIndex
 	public static final int CUSTOM_NAME_VISIBLE_IDX = 3;
 	public static final int NO_GRAVITY_IDX = 5;
 
-	public static final byte BASE_BITFIELD_INVIS_MASK = 0x20;
+	public static final int BASE_BITFIELD_SNEAKING_IDX = 1;
+	public static final byte BASE_BITFIELD_SNEAKING_MASK = 0x02;
 	public static final int BASE_BITFIELD_INVIS_IDX = 5;
+	public static final byte BASE_BITFIELD_INVIS_MASK = 0x20;
 	public static final int BASE_BITFIELD_GLOWING_IDX = 6;
 	public static final byte BASE_BITFIELD_GLOWING_MASK = 0x40;
 

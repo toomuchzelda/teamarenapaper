@@ -1,9 +1,11 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.trigger;
 
+import io.papermc.paper.adventure.PaperAdventure;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataBitfieldValue;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
+import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaExplosion;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
@@ -27,10 +29,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.Vector;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author toomuchzelda
@@ -108,6 +107,9 @@ public class KitTrigger extends Kit
 				this.alertTime = NULL_ALERT_TIME;
 
 				this.enemyEntity = new TriggerCreeper(trigger,  player -> !playersTeam.getPlayerMembers().contains(player));
+				enemyEntity.setMetadata(MetaIndex.CUSTOM_NAME_OBJ, Optional.of(PaperAdventure.asVanilla(trigger.playerListName())));
+				enemyEntity.setMetadata(MetaIndex.CUSTOM_NAME_VISIBLE_OBJ, true);
+				enemyEntity.refreshViewerMetadata();
 				enemyEntity.respawn();
 
 				this.teamEntity = new TriggerCreeper(trigger,  player -> player != trigger &&
@@ -138,13 +140,15 @@ public class KitTrigger extends Kit
 			TRIGGER_INFOS.put(player, tinfo);
 
 			//make the player invisible to enemies only
-			for(Player p : Bukkit.getOnlinePlayers()) {
+			var iter = Main.getPlayersIter();
+			while (iter.hasNext()) {
+				var entry = iter.next();
+				Player p = entry.getKey();
 				if(!team.getPlayerMembers().contains(p)) {
-					Map<Integer, Boolean> bit = Collections.singletonMap(MetaIndex.BASE_BITFIELD_INVIS_IDX, true);
-					MetadataBitfieldValue value = MetadataBitfieldValue.create(bit);
-					MetadataViewer viewer = Main.getPlayerInfo(p).getMetadataViewer();
-					viewer.setViewedValue(0, value, player);
-					viewer.refreshViewer(p);
+					PlayerInfo pinfo = entry.getValue();
+					MetadataViewer viewer = pinfo.getMetadataViewer();
+					viewer.updateBitfieldValue(player,  MetaIndex.BASE_BITFIELD_IDX, MetaIndex.BASE_BITFIELD_INVIS_IDX, true);
+					viewer.refreshViewer(player);
 				}
 			}
 		}
@@ -155,7 +159,9 @@ public class KitTrigger extends Kit
 			tinfo.enemyEntity.remove();
 			tinfo.teamEntity.remove();
 
-			MetadataViewer.removeAllValues(player);
+			for(PlayerInfo pinfo : Main.getPlayerInfos()) {
+				pinfo.getMetadataViewer().removeBitfieldValue(player, MetaIndex.BASE_BITFIELD_IDX, MetaIndex.BASE_BITFIELD_INVIS_IDX);
+			}
 		}
 
 		@Override

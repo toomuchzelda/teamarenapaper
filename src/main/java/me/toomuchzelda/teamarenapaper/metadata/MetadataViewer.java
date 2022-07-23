@@ -106,6 +106,9 @@ public class MetadataViewer
 			MetadataBitfieldValue bitfield = (MetadataBitfieldValue) viewedValues.indexedValues().get(index);
 			if(bitfield != null) {
 				bitfield.getValue().remove(bitIndex);
+				if(bitfield.getValue().size() == 0) {
+					removeViewedValue(viewedEntity, index);
+				}
 			}
 		}
 	}
