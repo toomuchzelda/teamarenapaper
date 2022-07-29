@@ -13,12 +13,10 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
-import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.TextColors;
-import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
 import org.bukkit.*;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
@@ -343,6 +341,12 @@ public class KitTrigger extends Kit
 				exp = MathUtils.clamp(0f, 1f, exp);
 				trigger.setExp(exp);
 			}
+		}
+
+		@Override
+		public void onReceiveDamage(DamageEvent event) {
+			TriggerInfo tinfo = TRIGGER_INFOS.get((Player) event.getVictim());
+			EntityUtils.playEffect(tinfo.enemyEntity, ClientboundAnimatePacket.HURT);
 		}
 	}
 }
