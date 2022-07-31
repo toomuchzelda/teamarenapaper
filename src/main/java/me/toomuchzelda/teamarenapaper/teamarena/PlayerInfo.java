@@ -1,5 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
+import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitbox;
+import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
@@ -42,6 +44,7 @@ public class PlayerInfo
 	private final KillAssistTracker killAssistTracker;
 	private final PlayerScoreboard scoreboard; //scoreboard they view
 	private final MetadataViewer metadataViewer; //custom entity metadata tracker
+	private final FakeHitbox hitbox;
 
 	public double kills;
 	//for right clicking the leather chestplate
@@ -72,6 +75,9 @@ public class PlayerInfo
 
 		this.scoreboard = new PlayerScoreboard(player);
 		this.metadataViewer = new MetadataViewer(player);
+
+		if(FakeHitboxManager.ACTIVE)
+			this.hitbox = new FakeHitbox(player);
 	}
 
 	public void setPreferenceValues(Map<Preference<?>, ?> values) {
@@ -137,5 +143,9 @@ public class PlayerInfo
 
 	public List<DamageLogEntry> getDamageReceivedLog() {
 		return damageReceivedLog;
+	}
+
+	public FakeHitbox getHitbox() {
+		return this.hitbox;
 	}
 }

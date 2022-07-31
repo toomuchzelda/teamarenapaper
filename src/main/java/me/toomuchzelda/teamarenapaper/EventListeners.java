@@ -13,6 +13,7 @@ import io.papermc.paper.event.player.AsyncChatEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
 import me.toomuchzelda.teamarenapaper.explosions.EntityExplosionInfo;
 import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
+import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
@@ -154,6 +155,9 @@ public class EventListeners implements Listener
 				pinfo.getMetadataViewer().cleanUp();
 			}
 		}
+		else if(count == 20) {
+			FakeHitboxManager.cleanUp();
+		}
 
 		PacketListeners.cancelDamageSounds = true;
 	}
@@ -210,9 +214,11 @@ public class EventListeners implements Listener
 		Player player = event.getPlayer();
 		//disable yellow "Player has joined the game" messages
 		event.joinMessage(null);
+		PlayerInfo pinfo = Main.getPlayerInfo(player);
 		Main.getPlayerInfo(player).getScoreboard().set();
 		// send sidebar objectives
 		SidebarManager.getInstance(player).registerObjectives(player);
+
 		Main.getGame().joiningPlayer(player);
 	}
 
@@ -250,6 +256,8 @@ public class EventListeners implements Listener
 		event.quitMessage(null);
 		Main.getGame().leavingPlayer(event.getPlayer());
 		//Main.getPlayerInfo(event.getPlayer()).nametag.remove();
+		//FakeHitboxManager.leavePlayer(event.getPlayer());
+
 		Main.removePlayerInfo(event.getPlayer());
 		Main.playerIdLookup.remove(event.getPlayer().getEntityId());
 	}
