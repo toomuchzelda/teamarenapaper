@@ -68,12 +68,6 @@ public class FakeHitbox
 			}
 			name += i;
 
-			/*PlayerProfile profile = player.getPlayerProfile();
-			PlayerProfile newProfile = new CraftPlayerProfile(fPlayer.uuid, name);
-			newProfile.setProperties(profile.getProperties());
-			newProfile.setTextures(profile.getTextures());
-
-			GameProfile authLibProfile = ((CraftPlayerProfile) newProfile).getGameProfile();*/
 			GameProfile authLibProfile = new GameProfile(fPlayer.uuid, name);
 
 			net.minecraft.network.chat.Component nmsComponent = PaperAdventure.asVanilla(Component.text(name));
@@ -89,6 +83,8 @@ public class FakeHitbox
 			spawnPlayerPackets[i] = spawnPlayerPacket;
 
 			fakePlayerIds[i] = fPlayer.entityId;
+
+			FakeHitboxManager.addFakeLookupEntry(fPlayer.entityId, player);
 		}
 
 		List<Integer> list = new ArrayList<>(4);

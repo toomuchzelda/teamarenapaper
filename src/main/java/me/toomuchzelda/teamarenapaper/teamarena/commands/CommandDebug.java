@@ -1,11 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
-import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.reflect.StructureModifier;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.explosions.CustomExplosion;
-import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitbox;
 import me.toomuchzelda.teamarenapaper.inventory.*;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
@@ -13,12 +9,10 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.minecraft.network.protocol.game.ClientboundAddPlayerPacket;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
 import org.bukkit.*;
 import org.bukkit.command.CommandSender;
@@ -189,28 +183,6 @@ public class CommandDebug extends CustomCommand {
 				CustomExplosion explosion = new CustomExplosion(p.getLocation().add(0, 0.2, 0),
 						rad, guar, damage, minDamage, knockbackStrength, DamageType.EXPLOSION, p);
 				explosion.explode();
-			}
-			case "fakeplayer" -> {
-				if(args.length < 2) {
-					throw throwUsage("x, z");
-				}
-				Player p = (Player) sender;
-				FakeHitbox hitbox = Main.getPlayerInfo(p).getHitbox();
-
-				double x = Double.parseDouble(args[1]);
-				double z = Double.parseDouble(args[2]);
-
-				for(Player viewer : ((Player) sender).getTrackedPlayers()) {
-					PlayerUtils.sendPacket(viewer, hitbox.getSpawnPlayerPackets(x, p.getLocation().getY(), z));
-				}
-			}
-			case "fakeplayerinfo" -> {
-				Player p = (Player) sender;
-				FakeHitbox hitbox = Main.getPlayerInfo(p).getHitbox();
-
-				for(Player viewer : p.getTrackedPlayers()) {
-					PlayerUtils.sendPacket(viewer, hitbox.getAddPlayerInfoPacket());
-				}
 			}
 			default -> {
 				return false;

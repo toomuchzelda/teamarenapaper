@@ -5,7 +5,6 @@ import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
-import com.comphenix.protocol.events.ScheduledPacket;
 import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.comphenix.protocol.wrappers.PlayerInfoData;
@@ -35,6 +34,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.LinkedList;
+import java.util.List;
+
 public class PacketListeners
 {
 	/**
@@ -63,17 +65,16 @@ public class PacketListeners
 					event.setCancelled(true);
 				}
 
-				if(FakeHitboxManager.ACTIVE) {
+				if(FakeHitboxManager.ACTIVE && !event.isCancelled()) {
 					Player player = Main.playerIdLookup.get(id);
-					FakeHitbox hitbox = Main.getPlayerInfo(player).getHitbox();
+					FakeHitbox hitbox = FakeHitboxManager.getFakeHitbox(player);
 					StructureModifier<Double> coords = event.getPacket().getDoubles();
 					double x = coords.read(0);
 					double y = coords.read(1);
 					double z = coords.read(2);
 					Player viewer = event.getPlayer();
-					for(PacketContainer spawnBoxPacket : hitbox.getSpawnPlayerPackets(x, y, z)) {
-						event.schedule(ScheduledPacket.fromSilent(spawnBoxPacket, viewer));
-					}
+
+					PlayerUtils.sendPacket(viewer, hitbox.getSpawnPlayerPackets(x, y, z));
 				}
 			}
 		});
@@ -93,7 +94,7 @@ public class PacketListeners
 					Player viewer = event.getPlayer();
 
 					if(mover != null) {
-						FakeHitbox hitbox = Main.getPlayerInfo(mover).getHitbox();
+						FakeHitbox hitbox = FakeHitboxManager.getFakeHitbox(mover);
 
 						if (event.getPacketType() == PacketType.Play.Server.ENTITY_TELEPORT) {
 							PlayerUtils.sendPacket(viewer, hitbox.createTeleportPackets(packet));
@@ -115,14 +116,28 @@ public class PacketListeners
 					ClientboundRemoveEntitiesPacket nmsPacket = (ClientboundRemoveEntitiesPacket) event.getPacket().getHandle();
 					var iter = nmsPacket.getEntityIds().listIterator();
 					while(iter.hasNext()) {
-						Player removingPlayer = Main.playerIdLookup.get(iter.nextInt());
-						if(removingPlayer != null) {
-							FakeHitbox removingHitbox = Main.getPlayerInfo(removingPlayer).getHitbox();
-							for(int i : removingHitbox.getFakePlayerIds()) {
+						FakeHitbox removingHitbox = FakeHitboxManager.getByPlayerId(iter.nextInt());
+						if(removingHitbox != null) {
+							for (int i : removingHitbox.getFakePlayerIds()) {
 								iter.add(i);
 							}
 						}
 					}
+				}
+			}
+		});
+
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
+				PacketType.Play.Client.USE_ENTITY) {
+			@Override
+			public void onPacketReceiving(PacketEvent event) {
+				PacketContainer packet = event.getPacket();
+				StructureModifier<Integer> ints = packet.getIntegers();
+				int interactedId = ints.read(0);
+				//will return Player if a fake hitbox was interacted
+				Player fakeHitboxPlayer = FakeHitboxManager.getByFakeId(interactedId);
+				if(fakeHitboxPlayer != null) {
+					ints.write(0, fakeHitboxPlayer.getEntityId());
 				}
 			}
 		});
@@ -137,18 +152,41 @@ public class PacketListeners
 				if(action == ClientboundPlayerInfoPacket.Action.ADD_PLAYER ||
 						action == ClientboundPlayerInfoPacket.Action.REMOVE_PLAYER) {
 
-					var iter = nmsPacket.getEntries().listIterator();
+					//make a copy of the list before making modifications as it gets re-used and sent to multiple
+					// players who we may not want to see these modifications
+					List<ClientboundPlayerInfoPacket.PlayerUpdate> copyList = new LinkedList<>(nmsPacket.getEntries());
+
+					boolean modified = false;
+					var iter = copyList.listIterator();
 					while(iter.hasNext()) {
 						ClientboundPlayerInfoPacket.PlayerUpdate update = iter.next();
 
 						GameProfile profile = update.getProfile();
-						Player pinfoPlayer = Bukkit.getPlayer(profile.getId());
 
+						//add the fake player hitbox player infos
+						if(FakeHitboxManager.ACTIVE) {
+							if(!profile.getId().equals(event.getPlayer().getUniqueId())) {
+								FakeHitbox hitbox = FakeHitboxManager.getByPlayerUuid(profile.getId());
+								if(hitbox != null) {
+									modified = true;
+									for (ClientboundPlayerInfoPacket.PlayerUpdate playerUpdate : hitbox.getPlayerInfoEntries()) {
+										//reset the listiterator state so it does not throw if subsequent
+										// iter.set is called
+										iter.previous();
+										iter.add(playerUpdate);
+										iter.next();
+									}
+								}
+							}
+						}
+
+						Player pinfoPlayer = Bukkit.getPlayer(profile.getId());
 						if (pinfoPlayer == null)
 							continue;
 
 						DisguiseManager.Disguise disguise = DisguiseManager.getDisguiseSeeing(pinfoPlayer, event.getPlayer());
 						if(disguise != null) {
+							modified = true;
 							if(action == ClientboundPlayerInfoPacket.Action.ADD_PLAYER) {
 
 								var replacementUpdate =
@@ -179,15 +217,12 @@ public class PacketListeners
 								iter.add(tabListUpdate);
 							}
 						}
+					}
 
-						//add the fake player hitbox player infos
-						if(FakeHitboxManager.ACTIVE) {
-							FakeHitbox hitbox = Main.getPlayerInfo(pinfoPlayer).getHitbox();
-
-							for(ClientboundPlayerInfoPacket.PlayerUpdate playerUpdate : hitbox.getPlayerInfoEntries()) {
-								iter.add(playerUpdate);
-							}
-						}
+					if(modified) {
+						PacketContainer copy = event.getPacket().shallowClone();
+						copy.getModifier().write(1, copyList);
+						event.setPacket(copy);
 					}
 				}
 			}

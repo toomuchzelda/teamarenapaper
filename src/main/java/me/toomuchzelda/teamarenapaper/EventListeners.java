@@ -176,17 +176,17 @@ public class EventListeners implements Listener
 	//these three events are called in this order
 	@EventHandler
 	public void playerLogin(PlayerLoginEvent event) {
-		UUID uuid = event.getPlayer().getUniqueId();
+		Player player = event.getPlayer();
+		UUID uuid = player.getUniqueId();
 		PlayerInfo playerInfo;
 
 		//todo: read perms from db or other
-		if (event.getPlayer().isOp()) {
-			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.OWNER, event.getPlayer());
-			Player player = event.getPlayer();
+		if (player.isOp()) {
+			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.OWNER, player);
 			Bukkit.getScheduler().runTask(Main.getPlugin(),
 					() -> player.sendMessage(Component.text("Your rank has been updated to OWNER", NamedTextColor.GREEN)));
 		} else {
-			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.ALL, event.getPlayer());
+			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.ALL, player);
 		}
 
 		synchronized (preferenceFutureMap) {
@@ -199,9 +199,10 @@ public class EventListeners implements Listener
 			playerInfo.setPreferenceValues(future.join());
 		}
 
-		Main.addPlayerInfo(event.getPlayer(), playerInfo);
-		Main.playerIdLookup.put(event.getPlayer().getEntityId(), event.getPlayer());
-		Main.getGame().loggingInPlayer(event.getPlayer(), playerInfo);
+		Main.addPlayerInfo(player, playerInfo);
+		Main.playerIdLookup.put(player.getEntityId(), player);
+		FakeHitboxManager.addFakeHitbox(player);
+		Main.getGame().loggingInPlayer(player, playerInfo);
 	}
 
 	@EventHandler
@@ -214,7 +215,6 @@ public class EventListeners implements Listener
 		Player player = event.getPlayer();
 		//disable yellow "Player has joined the game" messages
 		event.joinMessage(null);
-		PlayerInfo pinfo = Main.getPlayerInfo(player);
 		Main.getPlayerInfo(player).getScoreboard().set();
 		// send sidebar objectives
 		SidebarManager.getInstance(player).registerObjectives(player);
@@ -254,12 +254,12 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void playerQuit(PlayerQuitEvent event) {
 		event.quitMessage(null);
-		Main.getGame().leavingPlayer(event.getPlayer());
+		Player leaver = event.getPlayer();
+		Main.getGame().leavingPlayer(leaver);
 		//Main.getPlayerInfo(event.getPlayer()).nametag.remove();
-		//FakeHitboxManager.leavePlayer(event.getPlayer());
-
-		Main.removePlayerInfo(event.getPlayer());
-		Main.playerIdLookup.remove(event.getPlayer().getEntityId());
+		FakeHitboxManager.removeFakeHitbox(leaver);
+		Main.removePlayerInfo(leaver);
+		Main.playerIdLookup.remove(leaver.getEntityId());
 	}
 
 	@EventHandler
@@ -747,17 +747,27 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void playerUseUnknownEntity(PlayerUseUnknownEntityEvent event) {
 		//prevent right clicks being handled 4 times
+		boolean handle = false;
 		if(!event.isAttack()) {
 			PlayerInfo pinfo = Main.getPlayerInfo(event.getPlayer());
 			int currentTick = TeamArena.getGameTick();
 			int idx = event.getHand().ordinal();
 			if (pinfo.lastInteractUnknownEntityTimes[idx] != currentTick) {
 				pinfo.lastInteractUnknownEntityTimes[idx] = currentTick;
-				PacketEntityManager.handleInteract(event);
+				handle = true;
 			}
 		}
 		else {
-			PacketEntityManager.handleInteract(event);
+			handle = true;
+		}
+
+		if(handle) {
+			boolean success = PacketEntityManager.handleInteract(event);
+
+			if(!success) {
+				Main.logger().warning(event.getPlayer().getName() + " used an Unknown Entity that is not a PacketEntity" +
+						" or a FakeHitbox");
+			}
 		}
 	}
 
