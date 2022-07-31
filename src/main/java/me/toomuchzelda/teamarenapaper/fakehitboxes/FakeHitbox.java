@@ -3,9 +3,11 @@ package me.toomuchzelda.teamarenapaper.fakehitboxes;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
-import com.comphenix.protocol.wrappers.EnumWrappers;
+import com.comphenix.protocol.wrappers.WrappedDataWatcher;
+import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import com.mojang.authlib.GameProfile;
 import io.papermc.paper.adventure.PaperAdventure;
+import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoPacket;
 import net.minecraft.world.level.GameType;
@@ -21,6 +23,8 @@ public class FakeHitbox
 {
 	//index is the fake player number
 	private static final Vector[] OFFSETS;
+	//metadata to make them invisible
+	private static final List<WrappedWatchableObject> METADATA;
 
 	static {
 		OFFSETS = new Vector[4];
@@ -31,27 +35,25 @@ public class FakeHitbox
 				OFFSETS[i++] = vec;
 			}
 		}
+
+		WrappedDataWatcher watcher = new WrappedDataWatcher();
+		watcher.setObject(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK);
+		METADATA = watcher.getWatchableObjects();
 	}
 
-	private final FakePlayer[] fakePlayers;
-	private final PacketContainer addPlayerInfoPacket;
 	private final List<ClientboundPlayerInfoPacket.PlayerUpdate> playerInfoEntries;
-	private final PacketContainer removePlayerInfoPacket;
 
 	private final PacketContainer[] spawnPlayerPackets;
+	private final PacketContainer[] metadataPackets;
+	private final PacketContainer[] spawnAndMetaPackets;
 	private final PacketContainer removeEntitiesPacket;
 	private final int[] fakePlayerIds;
 
 	public FakeHitbox(Player player) {
-		fakePlayers = new FakePlayer[4];
-
-		addPlayerInfoPacket = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);
-		addPlayerInfoPacket.getModifier().write(0, ClientboundPlayerInfoPacket.Action.ADD_PLAYER);
-
-		removePlayerInfoPacket = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);
-		addPlayerInfoPacket.getPlayerInfoAction().write(0, EnumWrappers.PlayerInfoAction.REMOVE_PLAYER);
 
 		spawnPlayerPackets = new PacketContainer[4];
+		metadataPackets = new PacketContainer[4];
+		spawnAndMetaPackets = new PacketContainer[8];
 
 		removeEntitiesPacket = new PacketContainer(PacketType.Play.Server.ENTITY_DESTROY);
 		fakePlayerIds = new int[4];
@@ -60,17 +62,17 @@ public class FakeHitbox
 
 		for(int i = 0; i < 4; i++) {
 			FakePlayer fPlayer = new FakePlayer();
-			fakePlayers[i] = fPlayer;
 
-			String name = player.getName();
+			/*String name = player.getName();
 			if(name.length() == 16) {
 				name = name.substring(0, 16);
 			}
-			name += i;
+			name += i;*/
 
-			GameProfile authLibProfile = new GameProfile(fPlayer.uuid, name);
+			//use this name so appears at bottom of tab list
+			GameProfile authLibProfile = new GameProfile(fPlayer.uuid, "zzzzzzzzzzzzzzzz");
 
-			net.minecraft.network.chat.Component nmsComponent = PaperAdventure.asVanilla(Component.text(name));
+			net.minecraft.network.chat.Component nmsComponent = PaperAdventure.asVanilla(Component.text(" "));
 			ClientboundPlayerInfoPacket.PlayerUpdate update = new ClientboundPlayerInfoPacket.PlayerUpdate(authLibProfile, 1,
 					GameType.SURVIVAL, nmsComponent, null);
 
@@ -81,6 +83,13 @@ public class FakeHitbox
 			spawnPlayerPacket.getUUIDs().write(0, fPlayer.uuid);
 			//spawn position modified in getter
 			spawnPlayerPackets[i] = spawnPlayerPacket;
+			spawnAndMetaPackets[i] = spawnPlayerPacket;
+
+			PacketContainer metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
+			metadataPacket.getIntegers().write(0, fPlayer.entityId);
+			metadataPacket.getWatchableCollectionModifier().write(0, METADATA);
+			metadataPackets[i] = metadataPacket;
+			spawnAndMetaPackets[i + 4] = metadataPacket;
 
 			fakePlayerIds[i] = fPlayer.entityId;
 
@@ -94,28 +103,18 @@ public class FakeHitbox
 		removeEntitiesPacket.getIntLists().write(0, list);
 
 		this.playerInfoEntries = playerUpdates;
-		addPlayerInfoPacket.getModifier().write(1, playerUpdates);
-		removePlayerInfoPacket.getModifier().write(1, playerUpdates);
-	}
-
-	public PacketContainer getAddPlayerInfoPacket() {
-		return this.addPlayerInfoPacket;
 	}
 
 	public List<ClientboundPlayerInfoPacket.PlayerUpdate> getPlayerInfoEntries() {
 		return this.playerInfoEntries;
 	}
 
-	public PacketContainer getRemovePlayerInfoPacket() {
-		return this.removePlayerInfoPacket;
-	}
-
-	public PacketContainer[] getSpawnPlayerPackets(double x, double y, double z) {
+	public PacketContainer[] getSpawnAndMetadataPackets(double x, double y, double z) {
 		for(int i = 0; i < 4; i++) {
 			writeDoubles(spawnPlayerPackets[i], x, y, z, i);
 		}
 
-		return spawnPlayerPackets;
+		return spawnAndMetaPackets;
 	}
 
 	public PacketContainer[] createTeleportPackets(PacketContainer teleportPacket) {

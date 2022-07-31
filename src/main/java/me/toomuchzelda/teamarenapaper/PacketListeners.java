@@ -74,7 +74,7 @@ public class PacketListeners
 					double z = coords.read(2);
 					Player viewer = event.getPlayer();
 
-					PlayerUtils.sendPacket(viewer, hitbox.getSpawnPlayerPackets(x, y, z));
+					PlayerUtils.sendPacket(viewer, hitbox.getSpawnAndMetadataPackets(x, y, z));
 				}
 			}
 		});
