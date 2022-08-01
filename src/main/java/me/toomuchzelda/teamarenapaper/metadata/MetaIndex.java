@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.metadata;
 
+import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 
 import java.util.Collections;
@@ -16,6 +17,7 @@ public class MetaIndex
 	public static final int CUSTOM_NAME_IDX = 2;
 	public static final int CUSTOM_NAME_VISIBLE_IDX = 3;
 	public static final int NO_GRAVITY_IDX = 5;
+	public static final int POSE_IDX = 6;
 
 	public static final int BASE_BITFIELD_SNEAKING_IDX = 1;
 	public static final byte BASE_BITFIELD_SNEAKING_MASK = 0x02;
@@ -40,6 +42,7 @@ public class MetaIndex
 	public static final WrappedDataWatcher.WrappedDataWatcherObject CUSTOM_NAME_OBJ;
 	public static final WrappedDataWatcher.WrappedDataWatcherObject CUSTOM_NAME_VISIBLE_OBJ;
 	public static final WrappedDataWatcher.WrappedDataWatcherObject NO_GRAVITY_OBJ;
+	public static final WrappedDataWatcher.WrappedDataWatcherObject POSE_OBJ;
 
 	public static final WrappedDataWatcher.WrappedDataWatcherObject ARMOR_STAND_BITFIELD_OBJ;
 
@@ -54,6 +57,7 @@ public class MetaIndex
 		CUSTOM_NAME_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(CUSTOM_NAME_IDX, WrappedDataWatcher.Registry.getChatComponentSerializer(true));
 		CUSTOM_NAME_VISIBLE_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(CUSTOM_NAME_VISIBLE_IDX, WrappedDataWatcher.Registry.get(Boolean.class));
 		NO_GRAVITY_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(NO_GRAVITY_IDX, WrappedDataWatcher.Registry.get(Boolean.class));
+		POSE_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(POSE_IDX, WrappedDataWatcher.Registry.get(EnumWrappers.getEntityPoseClass()));
 
 		ARMOR_STAND_BITFIELD_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(ARMOR_STAND_BITFIELD_IDX, WrappedDataWatcher.Registry.get(Byte.class));
 

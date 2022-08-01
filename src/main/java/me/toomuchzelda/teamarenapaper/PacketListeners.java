@@ -310,7 +310,18 @@ public class PacketListeners
 				PacketContainer packet = event.getPacket();
 
 				MetadataViewer metadataViewer = Main.getPlayerInfo(event.getPlayer()).getMetadataViewer();
-				event.setPacket(metadataViewer.adjustMetadataPacket(packet));
+				packet = metadataViewer.adjustMetadataPacket(packet);
+
+				//make fake hitboxes copy the player's pose (if it is a player and fake hitboxes are active and there
+				// is a pose in the outgoing metadata)
+				FakeHitbox hitbox = FakeHitboxManager.getByPlayerId(packet.getIntegers().read(0));
+				if(hitbox != null) {
+					PacketContainer[] newPackets = hitbox.getPoseMetadataPackets(packet);
+					if(newPackets != null)
+						PlayerUtils.sendPacket(event.getPlayer(), newPackets);
+				}
+
+				event.setPacket(packet);
 			}
 		});
 

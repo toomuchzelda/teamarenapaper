@@ -10,11 +10,13 @@ import io.papermc.paper.adventure.PaperAdventure;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoPacket;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.level.GameType;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -115,6 +117,7 @@ public class FakeHitbox
 		}
 
 		return spawnAndMetaPackets;
+		//return spawnPlayerPackets;
 	}
 
 	public PacketContainer[] createTeleportPackets(PacketContainer teleportPacket) {
@@ -151,6 +154,34 @@ public class FakeHitbox
 		doubles.write(0, x + offset.getX());
 		doubles.write(1, y);
 		doubles.write(2, z + offset.getZ());
+	}
+
+	public @Nullable PacketContainer[] getPoseMetadataPackets(PacketContainer packet) {
+		List<WrappedWatchableObject> objects = packet.getWatchableCollectionModifier().read(0);
+
+		PacketContainer[] newPackets = null;
+		for (WrappedWatchableObject obj : objects) {
+			if (obj.getIndex() == MetaIndex.POSE_IDX) {
+				Pose pose = (Pose) obj.getValue();
+
+				newPackets = new PacketContainer[4];
+
+				WrappedDataWatcher watcher = new WrappedDataWatcher();
+				watcher.setObject(MetaIndex.POSE_OBJ, pose);
+				List<WrappedWatchableObject> newObjects = watcher.getWatchableObjects();
+
+				for(int i = 0; i < 4; i++) {
+					PacketContainer newPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
+					newPacket.getIntegers().write(0, this.fakePlayerIds[i]);
+					newPacket.getWatchableCollectionModifier().write(0, newObjects);
+					newPackets[i] = newPacket;
+				}
+
+				break;
+			}
+		}
+
+		return newPackets;
 	}
 
 	public PacketContainer getRemoveEntitiesPacket() {
