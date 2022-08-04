@@ -1,8 +1,10 @@
 package me.toomuchzelda.teamarenapaper.fakehitboxes;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.scoreboard.Team;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -24,6 +26,26 @@ public class FakeHitboxManager
 	private static final Map<Integer, FakeHitbox> FAKE_HITBOXES_BY_PLAYER_ID = new HashMap<>();
 	private static final Map<UUID, FakeHitbox> FAKE_HITBOXES_BY_PLAYER_UUID = new HashMap<>();
 	private static final ConcurrentHashMap<Integer, Player> FAKE_PLAYER_LOOKUP = new ConcurrentHashMap<>();
+
+	/**
+	 * A Minecraft Team to put all the fake players in. This is to have them appear after all the real players
+	 * in the tab list
+	 */
+	private static final Team BUKKIT_TEAM;
+
+	static {
+		//use z's as they're alphanumerically considered the end? so players in this team will be placed at the bottom
+		// of the tab list.
+		BUKKIT_TEAM = PlayerScoreboard.SCOREBOARD.registerNewTeam("zzzzzzzzzzzzzzzzzzzzzzzzzzzz");
+
+		BUKKIT_TEAM.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
+		BUKKIT_TEAM.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
+		BUKKIT_TEAM.setAllowFriendlyFire(true);
+
+		BUKKIT_TEAM.addEntry(FakeHitbox.USERNAME);
+
+		PlayerScoreboard.addGlobalTeam(BUKKIT_TEAM);
+	}
 
 	public static void addFakeHitbox(Player player) {
 		if(ACTIVE) {

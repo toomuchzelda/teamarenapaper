@@ -8,7 +8,9 @@ import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import com.mojang.authlib.GameProfile;
 import io.papermc.paper.adventure.PaperAdventure;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoPacket;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.level.GameType;
@@ -27,6 +29,7 @@ public class FakeHitbox
 	private static final Vector[] OFFSETS;
 	//metadata to make them invisible
 	private static final List<WrappedWatchableObject> METADATA;
+	public static final String USERNAME = "zzzzzzzzzzzzzzzz";
 
 	static {
 		OFFSETS = new Vector[4];
@@ -52,7 +55,6 @@ public class FakeHitbox
 	private final int[] fakePlayerIds;
 
 	public FakeHitbox(Player player) {
-
 		spawnPlayerPackets = new PacketContainer[4];
 		metadataPackets = new PacketContainer[4];
 		spawnAndMetaPackets = new PacketContainer[8];
@@ -72,9 +74,11 @@ public class FakeHitbox
 			name += i;*/
 
 			//use this name so appears at bottom of tab list
-			GameProfile authLibProfile = new GameProfile(fPlayer.uuid, "zzzzzzzzzzzzzzzz");
+			GameProfile authLibProfile = new GameProfile(fPlayer.uuid, USERNAME);
 
-			net.minecraft.network.chat.Component nmsComponent = PaperAdventure.asVanilla(Component.text(" "));
+			//net.minecraft.network.chat.Component nmsComponent = PaperAdventure.asVanilla(Component.text(" "));
+			Component displayNameComp = Component.text("TEAM ARENA", MathUtils.randomTextColor(), TextDecoration.BOLD);
+			net.minecraft.network.chat.Component nmsComponent = PaperAdventure.asVanilla(displayNameComp);
 			ClientboundPlayerInfoPacket.PlayerUpdate update = new ClientboundPlayerInfoPacket.PlayerUpdate(authLibProfile, 1,
 					GameType.SURVIVAL, nmsComponent, null);
 
@@ -116,8 +120,8 @@ public class FakeHitbox
 			writeDoubles(spawnPlayerPackets[i], x, y, z, i);
 		}
 
-		return spawnAndMetaPackets;
-		//return spawnPlayerPackets;
+		//return spawnAndMetaPackets;
+		return spawnPlayerPackets;
 	}
 
 	public PacketContainer[] createTeleportPackets(PacketContainer teleportPacket) {
@@ -156,12 +160,12 @@ public class FakeHitbox
 		doubles.write(2, z + offset.getZ());
 	}
 
-	public @Nullable PacketContainer[] getPoseMetadataPackets(PacketContainer packet) {
+	public @Nullable PacketContainer[] createPoseMetadataPackets(PacketContainer packet) {
 		List<WrappedWatchableObject> objects = packet.getWatchableCollectionModifier().read(0);
 
 		PacketContainer[] newPackets = null;
 		for (WrappedWatchableObject obj : objects) {
-			if (obj.getIndex() == MetaIndex.POSE_IDX) {
+			if (obj.getIndex() == MetaIndex.POSE_IDX) { //if the metadata has pose
 				Pose pose = (Pose) obj.getValue();
 
 				newPackets = new PacketContainer[4];
@@ -193,8 +197,8 @@ public class FakeHitbox
 	}
 
 	private static class FakePlayer {
-		public int entityId;
-		public UUID uuid;
+		public final int entityId;
+		public final UUID uuid;
 
 		public FakePlayer() {
 			this.entityId = Bukkit.getUnsafe().nextEntityId();

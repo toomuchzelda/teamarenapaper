@@ -7,6 +7,7 @@ import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -340,8 +341,9 @@ public class TeamArenaTeam
 	public Component colourWord(String str) {
 		Component component;
 		if(secondColour != null) {
-			component = TextUtils.getUselessRGBText(str, getRGBTextColor(), getRGBSecondTextColor());
-			/*for (float i = 0; i < str.length(); i++) {
+			//component = TextUtils.getUselessRGBText(str, getRGBTextColor(), getRGBSecondTextColor());
+			TextComponent.Builder builder = Component.text();
+			for (float i = 0; i < str.length(); i++) {
 				//percentage of second colour to use, leftover is percentage of first colour
 				// from 0 to 1
 				float percentage = (i / (float) str.length());
@@ -357,8 +359,10 @@ public class TeamArenaTeam
 						(int) (colour1.getZ() + colour2.getZ()));
 
 
-				component = component.append(Component.text(str.charAt((int) i)).color(result));
-			}*/
+				builder.append(Component.text(str.charAt((int) i)).color(result));
+			}
+
+			component = builder.build();
 		}
 		else {
 			component = Component.text(str, getRGBTextColor());

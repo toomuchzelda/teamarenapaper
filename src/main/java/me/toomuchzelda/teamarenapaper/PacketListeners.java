@@ -316,7 +316,7 @@ public class PacketListeners
 				// is a pose in the outgoing metadata)
 				FakeHitbox hitbox = FakeHitboxManager.getByPlayerId(packet.getIntegers().read(0));
 				if(hitbox != null) {
-					PacketContainer[] newPackets = hitbox.getPoseMetadataPackets(packet);
+					PacketContainer[] newPackets = hitbox.createPoseMetadataPackets(packet);
 					if(newPackets != null)
 						PlayerUtils.sendPacket(event.getPlayer(), newPackets);
 				}
