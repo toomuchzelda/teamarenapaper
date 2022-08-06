@@ -145,6 +145,13 @@ public class EventListeners implements Listener
 			e.printStackTrace();
 		}
 
+		try {
+			FakeHitboxManager.tick();
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+
 		//every 3 minutes
 		int count = event.getTickNumber() % (3 * 60  *20);
 		if(count == 0) {

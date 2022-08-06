@@ -7,6 +7,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Team;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,7 +23,7 @@ public class FakeHitboxManager
 	 * Store the fake hitboxes here instead of in player's PlayerInfo object as it need to persists after the PlayerInfo
 	 * is removed from the map for the player disconnecting packet listeners
 	 */
-	private static final Map<Player, FakeHitbox> FAKE_HITBOXES = new HashMap<>();
+	private static final Map<Player, FakeHitbox> FAKE_HITBOXES = new LinkedHashMap<>();
 	private static final Map<Integer, FakeHitbox> FAKE_HITBOXES_BY_PLAYER_ID = new HashMap<>();
 	private static final Map<UUID, FakeHitbox> FAKE_HITBOXES_BY_PLAYER_UUID = new HashMap<>();
 	private static final ConcurrentHashMap<Integer, Player> FAKE_PLAYER_LOOKUP = new ConcurrentHashMap<>();
@@ -85,6 +86,12 @@ public class FakeHitboxManager
 
 	public static FakeHitbox getByPlayerUuid(UUID uuid) {
 		return FAKE_HITBOXES_BY_PLAYER_UUID.get(uuid);
+	}
+
+	public static void tick() {
+		for (FakeHitbox box : FAKE_HITBOXES.values()) {
+			box.tick();
+		}
 	}
 
 	public static void cleanUp() {

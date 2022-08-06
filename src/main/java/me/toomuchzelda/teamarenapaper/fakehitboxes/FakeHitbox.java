@@ -9,19 +9,19 @@ import com.mojang.authlib.GameProfile;
 import io.papermc.paper.adventure.PaperAdventure;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoPacket;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.level.GameType;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 public class FakeHitbox
 {
@@ -30,6 +30,8 @@ public class FakeHitbox
 	//metadata to make them invisible
 	private static final List<WrappedWatchableObject> METADATA;
 	public static final String USERNAME = "zzzzzzzzzzzzzzzz";
+	public static final double VIEWING_RADIUS = 17d;
+	public static final double VIEWING_RADIUS_SQR = VIEWING_RADIUS * VIEWING_RADIUS;
 
 	static {
 		OFFSETS = new Vector[4];
@@ -47,14 +49,18 @@ public class FakeHitbox
 	}
 
 	private final List<ClientboundPlayerInfoPacket.PlayerUpdate> playerInfoEntries;
-
 	private final PacketContainer[] spawnPlayerPackets;
 	private final PacketContainer[] metadataPackets;
 	private final PacketContainer[] spawnAndMetaPackets;
 	private final PacketContainer removeEntitiesPacket;
 	private final int[] fakePlayerIds;
 
-	public FakeHitbox(Player player) {
+	private final Player owner;
+	private final Map<Player, FakeHitboxViewer> viewers;
+
+	public FakeHitbox(Player owner) {
+		this.owner = owner;
+		viewers = new LinkedHashMap<>();
 		spawnPlayerPackets = new PacketContainer[4];
 		metadataPackets = new PacketContainer[4];
 		spawnAndMetaPackets = new PacketContainer[8];
@@ -67,17 +73,17 @@ public class FakeHitbox
 		for(int i = 0; i < 4; i++) {
 			FakePlayer fPlayer = new FakePlayer();
 
-			/*String name = player.getName();
-			if(name.length() == 16) {
-				name = name.substring(0, 16);
-			}
-			name += i;*/
-
-			//use this name so appears at bottom of tab list
 			GameProfile authLibProfile = new GameProfile(fPlayer.uuid, USERNAME);
 
 			//net.minecraft.network.chat.Component nmsComponent = PaperAdventure.asVanilla(Component.text(" "));
-			Component displayNameComp = Component.text("TEAM ARENA", MathUtils.randomTextColor(), TextDecoration.BOLD);
+			Component displayNameComp;
+			if(MathUtils.randomMax(10) == 10) {
+				displayNameComp = Component.text("TEAM ARENA", MathUtils.randomTextColor(), TextDecoration.BOLD);
+			}
+			else {
+				displayNameComp = Component.text(" ");
+			}
+
 			net.minecraft.network.chat.Component nmsComponent = PaperAdventure.asVanilla(displayNameComp);
 			ClientboundPlayerInfoPacket.PlayerUpdate update = new ClientboundPlayerInfoPacket.PlayerUpdate(authLibProfile, 1,
 					GameType.SURVIVAL, nmsComponent, null);
@@ -99,7 +105,7 @@ public class FakeHitbox
 
 			fakePlayerIds[i] = fPlayer.entityId;
 
-			FakeHitboxManager.addFakeLookupEntry(fPlayer.entityId, player);
+			FakeHitboxManager.addFakeLookupEntry(fPlayer.entityId, owner);
 		}
 
 		List<Integer> list = new ArrayList<>(4);
@@ -111,6 +117,45 @@ public class FakeHitbox
 		this.playerInfoEntries = playerUpdates;
 	}
 
+	void tick() {
+		var iter = this.viewers.entrySet().iterator();
+		Location ownerLoc = this.owner.getLocation();
+		while(iter.hasNext()) {
+			var entry = iter.next();
+			Player playerViewer = entry.getKey();
+
+			if(!playerViewer.isOnline()) {
+				iter.remove();
+				PlayerUtils.sendPacket(playerViewer, getRemoveEntitiesPacket());
+				continue;
+			}
+
+			FakeHitboxViewer fakeHitboxViewer = entry.getValue();
+			if (fakeHitboxViewer.isSeeingRealPlayer) {
+				double distSqr = playerViewer.getLocation().distanceSquared(ownerLoc);
+				boolean nowInRange = distSqr <= VIEWING_RADIUS_SQR;
+
+				if(fakeHitboxViewer.isSeeingHitboxes != nowInRange) {
+					fakeHitboxViewer.isSeeingHitboxes = nowInRange;
+					//need to spawn / remove the hitboxes for viewer
+					if (nowInRange) {
+						PlayerUtils.sendPacket(playerViewer, getSpawnAndMetadataPackets(ownerLoc.getX(), ownerLoc.getY(), ownerLoc.getZ()));
+						//Bukkit.broadcastMessage("sent spawn packets from " + this.owner.getName() + " to " + playerViewer.getName());
+					}
+					else {
+						PlayerUtils.sendPacket(playerViewer, getRemoveEntitiesPacket());
+					}
+				}
+
+				//TODO: adjust coords on swimming and trident
+			}
+		}
+	}
+
+	public FakeHitboxViewer getFakeViewer(Player viewer) {
+		return this.viewers.computeIfAbsent(viewer, player1 -> new FakeHitboxViewer());
+	}
+
 	public List<ClientboundPlayerInfoPacket.PlayerUpdate> getPlayerInfoEntries() {
 		return this.playerInfoEntries;
 	}
@@ -120,8 +165,8 @@ public class FakeHitbox
 			writeDoubles(spawnPlayerPackets[i], x, y, z, i);
 		}
 
-		//return spawnAndMetaPackets;
-		return spawnPlayerPackets;
+		return spawnAndMetaPackets;
+		//return spawnPlayerPackets;
 	}
 
 	public PacketContainer[] createTeleportPackets(PacketContainer teleportPacket) {

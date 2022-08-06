@@ -13,6 +13,7 @@ import com.mojang.datafixers.util.Pair;
 import io.papermc.paper.adventure.PaperAdventure;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitbox;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
+import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxViewer;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.DisguiseManager;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
@@ -66,15 +67,11 @@ public class PacketListeners
 				}
 
 				if(FakeHitboxManager.ACTIVE && !event.isCancelled()) {
-					Player player = Main.playerIdLookup.get(id);
-					FakeHitbox hitbox = FakeHitboxManager.getFakeHitbox(player);
-					StructureModifier<Double> coords = event.getPacket().getDoubles();
-					double x = coords.read(0);
-					double y = coords.read(1);
-					double z = coords.read(2);
 					Player viewer = event.getPlayer();
-
-					PlayerUtils.sendPacket(viewer, hitbox.getSpawnAndMetadataPackets(x, y, z));
+					FakeHitbox hitbox = FakeHitboxManager.getByPlayerId(id);
+					FakeHitboxViewer boxViewer = hitbox.getFakeViewer(viewer);
+					//set this to true then spawn packets get sent in FakeHitbox tick if / when needed
+					boxViewer.setSeeingRealPlayer(true);
 				}
 			}
 		});
@@ -95,12 +92,14 @@ public class PacketListeners
 
 					if(mover != null) {
 						FakeHitbox hitbox = FakeHitboxManager.getFakeHitbox(mover);
-
-						if (event.getPacketType() == PacketType.Play.Server.ENTITY_TELEPORT) {
-							PlayerUtils.sendPacket(viewer, hitbox.createTeleportPackets(packet));
-						}
-						else {
-							PlayerUtils.sendPacket(viewer, hitbox.createRelMovePackets(packet));
+						//don't send move packets for fake hitboxes unless the receiver is actually seeing them
+						if(hitbox.getFakeViewer(viewer).isSeeingHitboxes()) {
+							if (event.getPacketType() == PacketType.Play.Server.ENTITY_TELEPORT) {
+								PlayerUtils.sendPacket(viewer, hitbox.createTeleportPackets(packet));
+							}
+							else {
+								PlayerUtils.sendPacket(viewer, hitbox.createRelMovePackets(packet));
+							}
 						}
 					}
 				}
@@ -118,8 +117,13 @@ public class PacketListeners
 					while(iter.hasNext()) {
 						FakeHitbox removingHitbox = FakeHitboxManager.getByPlayerId(iter.nextInt());
 						if(removingHitbox != null) {
-							for (int i : removingHitbox.getFakePlayerIds()) {
-								iter.add(i);
+							FakeHitboxViewer viewerBox = removingHitbox.getFakeViewer(event.getPlayer());
+							viewerBox.setSeeingRealPlayer(false);
+							if(viewerBox.isSeeingHitboxes()) {
+								viewerBox.setSeeingHitboxes(false);
+								for (int i : removingHitbox.getFakePlayerIds()) {
+									iter.add(i);
+								}
 							}
 						}
 					}
