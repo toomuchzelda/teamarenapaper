@@ -50,6 +50,7 @@ public class FakeHitbox
 
 	private final List<ClientboundPlayerInfoPacket.PlayerUpdate> playerInfoEntries;
 	private final PacketContainer[] spawnPlayerPackets;
+	private final PacketContainer[] teleportPackets;
 	private final PacketContainer[] metadataPackets;
 	private final PacketContainer[] spawnAndMetaPackets;
 	private final PacketContainer removeEntitiesPacket;
@@ -57,11 +58,15 @@ public class FakeHitbox
 
 	private final Player owner;
 	private final Map<Player, FakeHitboxViewer> viewers;
+	//[fakePlayerIndex][x/y/z]
+	private final Vector[] coordinates;
 
 	public FakeHitbox(Player owner) {
 		this.owner = owner;
 		viewers = new LinkedHashMap<>();
+		coordinates = new Vector[4];
 		spawnPlayerPackets = new PacketContainer[4];
+		teleportPackets = new PacketContainer[4];
 		metadataPackets = new PacketContainer[4];
 		spawnAndMetaPackets = new PacketContainer[8];
 
@@ -70,6 +75,7 @@ public class FakeHitbox
 
 		List<ClientboundPlayerInfoPacket.PlayerUpdate> playerUpdates = new ArrayList<>(4);
 
+		Location loc = owner.getLocation();
 		for(int i = 0; i < 4; i++) {
 			FakePlayer fPlayer = new FakePlayer();
 
@@ -93,9 +99,14 @@ public class FakeHitbox
 			PacketContainer spawnPlayerPacket = new PacketContainer(PacketType.Play.Server.NAMED_ENTITY_SPAWN);
 			spawnPlayerPacket.getIntegers().write(0, fPlayer.entityId);
 			spawnPlayerPacket.getUUIDs().write(0, fPlayer.uuid);
-			//spawn position modified in getter
+			//positions modified in updatePosition()
 			spawnPlayerPackets[i] = spawnPlayerPacket;
 			spawnAndMetaPackets[i] = spawnPlayerPacket;
+
+			PacketContainer teleportPacket = new PacketContainer(PacketType.Play.Server.ENTITY_TELEPORT);
+			teleportPacket.getIntegers().write(0, fPlayer.entityId);
+			teleportPackets[i] = teleportPacket;
+
 
 			PacketContainer metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
 			metadataPacket.getIntegers().write(0, fPlayer.entityId);
@@ -104,6 +115,7 @@ public class FakeHitbox
 			spawnAndMetaPackets[i + 4] = metadataPacket;
 
 			fakePlayerIds[i] = fPlayer.entityId;
+			coordinates[i] = loc.toVector();
 
 			FakeHitboxManager.addFakeLookupEntry(fPlayer.entityId, owner);
 		}
@@ -115,6 +127,8 @@ public class FakeHitbox
 		removeEntitiesPacket.getIntLists().write(0, list);
 
 		this.playerInfoEntries = playerUpdates;
+
+		this.updatePosition(loc);
 	}
 
 	void tick() {
@@ -139,7 +153,7 @@ public class FakeHitbox
 					fakeHitboxViewer.isSeeingHitboxes = nowInRange;
 					//need to spawn / remove the hitboxes for viewer
 					if (nowInRange) {
-						PlayerUtils.sendPacket(playerViewer, getSpawnAndMetadataPackets(ownerLoc.getX(), ownerLoc.getY(), ownerLoc.getZ()));
+						PlayerUtils.sendPacket(playerViewer, getSpawnAndMetadataPackets());
 						//Bukkit.broadcastMessage("sent spawn packets from " + this.owner.getName() + " to " + playerViewer.getName());
 					}
 					else {
@@ -152,6 +166,41 @@ public class FakeHitbox
 		}
 	}
 
+	/**
+	 * Update position in packets and calculate position for swimming/riptide pose if needed.
+	 */
+	public void updatePosition(Location newPosition) {
+		org.bukkit.entity.Pose pose = this.owner.getPose();
+		HitboxPose boxPose = HitboxPose.getFromBukkit(pose);
+
+		if(boxPose == HitboxPose.SWIMMING) {
+			//todo: swimming positions here
+			for(int i = 0; i < 4; i++) {
+				coordinates[i].setY(coordinates[i].getY() + 4);
+			}
+		}
+		else if(boxPose == HitboxPose.RIPTIDING) {
+			for(int i = 0; i < 4; i++) {
+				coordinates[i].setY(coordinates[i].getY() + 2);
+			}
+		}
+		else {
+			for(int i = 0; i < 4; i++) {
+				Vector offset = OFFSETS[i];
+
+				coordinates[i].setX(newPosition.getX() + offset.getX());
+				coordinates[i].setY(newPosition.getY());
+				coordinates[i].setZ(newPosition.getZ() + offset.getZ());
+			}
+		}
+
+		//update the packets
+		for(int i = 0; i < 4; i++) {
+			writeDoubles(spawnPlayerPackets[i], coordinates[i]);
+			writeDoubles(teleportPackets[i], coordinates[i]);
+		}
+	}
+
 	public FakeHitboxViewer getFakeViewer(Player viewer) {
 		return this.viewers.computeIfAbsent(viewer, player1 -> new FakeHitboxViewer());
 	}
@@ -160,30 +209,13 @@ public class FakeHitbox
 		return this.playerInfoEntries;
 	}
 
-	public PacketContainer[] getSpawnAndMetadataPackets(double x, double y, double z) {
-		for(int i = 0; i < 4; i++) {
-			writeDoubles(spawnPlayerPackets[i], x, y, z, i);
-		}
-
-		return spawnAndMetaPackets;
-		//return spawnPlayerPackets;
+	public PacketContainer[] getSpawnAndMetadataPackets() {
+		//return spawnAndMetaPackets;
+		return spawnPlayerPackets;
 	}
 
-	public PacketContainer[] createTeleportPackets(PacketContainer teleportPacket) {
-		StructureModifier<Double> coords = teleportPacket.getDoubles();
-		double x = coords.read(0);
-		double y = coords.read(1);
-		double z = coords.read(2);
-
-		PacketContainer[] packets = new PacketContainer[4];
-		for(int i = 0; i < 4; i++) {
-			PacketContainer packet = teleportPacket.shallowClone();
-			packet.getIntegers().write(0, this.fakePlayerIds[i]);
-			writeDoubles(packet, x, y, z, i);
-			packets[i] = packet;
-		}
-
-		return packets;
+	public PacketContainer[] getTeleportPackets() {
+		return this.teleportPackets;
 	}
 
 	public PacketContainer[] createRelMovePackets(PacketContainer movePacket) {
@@ -197,12 +229,11 @@ public class FakeHitbox
 		return packets;
 	}
 
-	private static void writeDoubles(PacketContainer packet, double x, double y, double z, int index) {
-		Vector offset = OFFSETS[index];
+	private static void writeDoubles(PacketContainer packet, Vector coords) {
 		StructureModifier<Double> doubles = packet.getDoubles();
-		doubles.write(0, x + offset.getX());
-		doubles.write(1, y);
-		doubles.write(2, z + offset.getZ());
+		doubles.write(0, coords.getX());
+		doubles.write(1, coords.getY());
+		doubles.write(2, coords.getZ());
 	}
 
 	public @Nullable PacketContainer[] createPoseMetadataPackets(PacketContainer packet) {
@@ -248,6 +279,30 @@ public class FakeHitbox
 		public FakePlayer() {
 			this.entityId = Bukkit.getUnsafe().nextEntityId();
 			this.uuid = UUID.randomUUID();
+		}
+	}
+
+	private enum HitboxPose {
+		SWIMMING,
+		RIPTIDING,
+		OTHER;
+
+		private static final HitboxPose[] TABLE;
+
+		static {
+			TABLE = new HitboxPose[org.bukkit.entity.Pose.values().length];
+
+			for(org.bukkit.entity.Pose pose : org.bukkit.entity.Pose.values()) {
+				switch (pose) {
+					case SWIMMING -> TABLE[pose.ordinal()] = SWIMMING;
+					case FALL_FLYING, SPIN_ATTACK -> TABLE[pose.ordinal()] = RIPTIDING;
+					default -> TABLE[pose.ordinal()] = OTHER;
+				}
+			}
+		}
+
+		static HitboxPose getFromBukkit(org.bukkit.entity.Pose pose) {
+			return TABLE[pose.ordinal()];
 		}
 	}
 }

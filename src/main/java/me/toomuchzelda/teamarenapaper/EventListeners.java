@@ -354,6 +354,10 @@ public class EventListeners implements Listener
 				}
 			}
 		}
+
+		if(!event.isCancelled()) {
+			FakeHitboxManager.getFakeHitbox(player).updatePosition(event.getTo());
+		}
 	}
 
 	@EventHandler

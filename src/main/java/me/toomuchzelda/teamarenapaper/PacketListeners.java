@@ -95,7 +95,7 @@ public class PacketListeners
 						//don't send move packets for fake hitboxes unless the receiver is actually seeing them
 						if(hitbox.getFakeViewer(viewer).isSeeingHitboxes()) {
 							if (event.getPacketType() == PacketType.Play.Server.ENTITY_TELEPORT) {
-								PlayerUtils.sendPacket(viewer, hitbox.createTeleportPackets(packet));
+								PlayerUtils.sendPacket(viewer, hitbox.getTeleportPackets());
 							}
 							else {
 								PlayerUtils.sendPacket(viewer, hitbox.createRelMovePackets(packet));
