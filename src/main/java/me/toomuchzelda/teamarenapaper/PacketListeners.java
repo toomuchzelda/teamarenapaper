@@ -79,6 +79,7 @@ public class PacketListeners
 		//when moving player also move their hitboxes with them
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(Main.getPlugin(),
 				PacketType.Play.Server.REL_ENTITY_MOVE, PacketType.Play.Server.REL_ENTITY_MOVE_LOOK,
+				PacketType.Play.Server.ENTITY_LOOK,
 				PacketType.Play.Server.ENTITY_TELEPORT)
 		{
 			@Override

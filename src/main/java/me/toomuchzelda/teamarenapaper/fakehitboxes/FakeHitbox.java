@@ -25,7 +25,7 @@ import java.util.*;
 
 public class FakeHitbox
 {
-	//index is the fake player number
+	//index is the fake player number 0-3
 	private static final Vector[] OFFSETS;
 	//metadata to make them invisible
 	private static final List<WrappedWatchableObject> METADATA;
@@ -173,23 +173,30 @@ public class FakeHitbox
 		org.bukkit.entity.Pose pose = this.owner.getPose();
 		HitboxPose boxPose = HitboxPose.getFromBukkit(pose);
 
-		if(boxPose == HitboxPose.SWIMMING) {
+		if(boxPose == HitboxPose.RIPTIDING) {
 			//todo: swimming positions here
 			for(int i = 0; i < 4; i++) {
-				coordinates[i].setY(coordinates[i].getY() + 4);
+				Vector offset = OFFSETS[i];
+
+				coordinates[i].setX(newPosition.getX() + offset.getX());
+				coordinates[i].setY(newPosition.getY() + 4);
+				coordinates[i].setZ(newPosition.getZ() + offset.getZ());
 			}
 		}
-		else if(boxPose == HitboxPose.RIPTIDING) {
+		else if(boxPose == HitboxPose.SWIMMING) {
+			Vector direction = newPosition.getDirection();
+			Vector newDir = new Vector();
 			for(int i = 0; i < 4; i++) {
-				coordinates[i].setY(coordinates[i].getY() + 2);
+				getBoxPosition(newDir, boxPose, newPosition, direction, i);
+				MathUtils.copyVector(coordinates[i], newDir);
 			}
 		}
 		else {
 			for(int i = 0; i < 4; i++) {
 				Vector offset = OFFSETS[i];
 
-				coordinates[i].setX(newPosition.getX() + offset.getX());
 				coordinates[i].setY(newPosition.getY());
+				coordinates[i].setX(newPosition.getX() + offset.getX());
 				coordinates[i].setZ(newPosition.getZ() + offset.getZ());
 			}
 		}
@@ -198,6 +205,26 @@ public class FakeHitbox
 		for(int i = 0; i < 4; i++) {
 			writeDoubles(spawnPlayerPackets[i], coordinates[i]);
 			writeDoubles(teleportPackets[i], coordinates[i]);
+		}
+	}
+
+	/**
+	 * Calcualte new box number position. Take in Vectors from caller instead of constructing new ones to
+	 * reduce Object allocation.
+	 */
+	private static void getBoxPosition(Vector container, HitboxPose pose, Location ownerLoc, Vector ownerDir, int boxNum) {
+		container.setX(ownerDir.getX());
+		container.setY(ownerDir.getY());
+		container.setZ(ownerDir.getZ());
+
+		if(pose == HitboxPose.SWIMMING) {
+			//align the boxes along the length of the body
+			// the original hitbox is at the player's feet, so have these extend from there
+			double mult = ((double) boxNum + -2) * 0.36d;
+			container.multiply(mult);
+			container.setX(container.getX() + ownerLoc.getX());
+			container.setY(container.getY() + ownerLoc.getY());
+			container.setZ(container.getZ() + ownerLoc.getZ());
 		}
 	}
 
@@ -221,9 +248,18 @@ public class FakeHitbox
 	public PacketContainer[] createRelMovePackets(PacketContainer movePacket) {
 		PacketContainer[] packets = new PacketContainer[4];
 		for(int i = 0; i < 4; i++) {
-			packets[i] = movePacket.shallowClone();
-			//just change entity id
-			packets[i].getIntegers().write(0, this.fakePlayerIds[i]);
+			//adjust positioning if needed
+			HitboxPose pose = HitboxPose.getFromBukkit(this.owner.getPose());
+			if (pose == HitboxPose.SWIMMING && movePacket.getType() == PacketType.Play.Server.REL_ENTITY_MOVE_LOOK ||
+					movePacket.getType() == PacketType.Play.Server.ENTITY_LOOK) {
+				//too hard to create new rel move packets, just precise teleport to correct position
+				packets[i] = this.teleportPackets[i];
+			}
+			else {
+				packets[i] = movePacket.shallowClone();
+				//replace the entity id
+				packets[i].getIntegers().write(0, this.fakePlayerIds[i]);
+			}
 		}
 
 		return packets;

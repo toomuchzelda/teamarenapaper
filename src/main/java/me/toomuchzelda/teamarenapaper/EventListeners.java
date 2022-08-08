@@ -355,7 +355,7 @@ public class EventListeners implements Listener
 			}
 		}
 
-		if(!event.isCancelled()) {
+		if(!event.isCancelled() && FakeHitboxManager.ACTIVE) {
 			FakeHitboxManager.getFakeHitbox(player).updatePosition(event.getTo());
 		}
 	}
@@ -531,13 +531,8 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void playerTeleport(PlayerTeleportEvent event) {
 		PlayerTeleportEvent.TeleportCause cause = event.getCause();
-		if(cause == PlayerTeleportEvent.TeleportCause.COMMAND ||
-			cause == PlayerTeleportEvent.TeleportCause.PLUGIN ||
-			cause == PlayerTeleportEvent.TeleportCause.UNKNOWN) //unkown is often rubber-bands and lagbacks
-			return;
 
 		if(Main.getGame() != null) {
-
 			if(cause == PlayerTeleportEvent.TeleportCause.NETHER_PORTAL ||
 				cause == PlayerTeleportEvent.TeleportCause.END_PORTAL ||
 				cause == PlayerTeleportEvent.TeleportCause.END_GATEWAY) {
@@ -569,6 +564,10 @@ public class EventListeners implements Listener
 				p.sendMessage(CaptureTheFlag.CANT_TELEPORT_HOLDING_FLAG_MESSAGE);
 				p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.AMBIENT, 2, 0.5f);
 			}
+		}
+
+		if(!event.isCancelled() && FakeHitboxManager.ACTIVE) {
+			FakeHitboxManager.getFakeHitbox(event.getPlayer()).updatePosition(event.getTo());
 		}
 	}
 
