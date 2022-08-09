@@ -66,7 +66,7 @@ public final class Main extends JavaPlugin
 
 		// delete temporarily loaded map if any
 		if (teamArena != null) {
-			teamArena.cleanUp();
+			teamArena.cleanUp(null);
 		}
 
 		HandlerList.unregisterAll(this);
@@ -126,7 +126,7 @@ public final class Main extends JavaPlugin
 	}
 
 	public static void setGame(TeamArena newGame) {
-		teamArena.cleanUp();
+		teamArena.cleanUp(newGame);
 
 		//might as well reset
 		ItemUtils._uniqueName = 0;

@@ -94,12 +94,20 @@ public class PacketListeners
 					if(mover != null) {
 						FakeHitbox hitbox = FakeHitboxManager.getFakeHitbox(mover);
 						//don't send move packets for fake hitboxes unless the receiver is actually seeing them
-						if(hitbox.getFakeViewer(viewer).isSeeingHitboxes()) {
-							if (event.getPacketType() == PacketType.Play.Server.ENTITY_TELEPORT) {
+						FakeHitboxViewer hitboxViewer = hitbox.getFakeViewer(viewer);
+						if(hitboxViewer.isSeeingHitboxes()) {
+							//send a precise teleport packet if its right after spawning as desyncs happen here
+							if (event.getPacketType() == PacketType.Play.Server.ENTITY_TELEPORT ||
+									hitboxViewer.getHitboxSpawnTime() < TeamArena.getGameTick()) {
+								hitboxViewer.setHitboxSpawnTime(Integer.MAX_VALUE);
 								PlayerUtils.sendPacket(viewer, hitbox.getTeleportPackets());
 							}
 							else {
-								PlayerUtils.sendPacket(viewer, hitbox.createRelMovePackets(packet));
+								PacketContainer[] movePackets = hitbox.createRelMovePackets(packet);
+								if(movePackets != null) {
+									PlayerUtils.sendPacket(viewer, movePackets);
+									//Bukkit.broadcastMessage(TeamArena.getGameTick() + " rel move sent");
+								}
 							}
 						}
 					}

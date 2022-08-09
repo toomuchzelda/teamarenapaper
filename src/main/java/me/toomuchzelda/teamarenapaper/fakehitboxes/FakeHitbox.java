@@ -138,6 +138,7 @@ public class FakeHitbox
 	void tick() {
 		var iter = this.viewers.entrySet().iterator();
 		Location ownerLoc = this.owner.getLocation();
+		final int currentTick = TeamArena.getGameTick();
 		while(iter.hasNext()) {
 			var entry = iter.next();
 			Player playerViewer = entry.getKey();
@@ -158,14 +159,13 @@ public class FakeHitbox
 					//need to spawn / remove the hitboxes for viewer
 					if (nowInRange) {
 						PlayerUtils.sendPacket(playerViewer, getSpawnAndMetadataPackets());
+						fakeHitboxViewer.hitboxSpawnTime = currentTick;
 						//Bukkit.broadcastMessage("sent spawn packets from " + this.owner.getName() + " to " + playerViewer.getName());
 					}
 					else {
 						PlayerUtils.sendPacket(playerViewer, getRemoveEntitiesPacket());
 					}
 				}
-
-				//TODO: adjust coords on swimming and trident
 			}
 		}
 	}
@@ -263,20 +263,34 @@ public class FakeHitbox
 		return this.teleportPackets;
 	}
 
-	public PacketContainer[] createRelMovePackets(PacketContainer movePacket) {
-		PacketContainer[] packets = new PacketContainer[4];
-		for(int i = 0; i < 4; i++) {
-			//adjust positioning if needed
-			HitboxPose pose = HitboxPose.getFromBukkit(this.owner.getPose());
-			//too hard to create new rel move packets for fancy poses, just precise teleport to correct position
-			// also use precise if it's immediately after a pose change, as those tend to create desyncs.
-			if (pose != HitboxPose.OTHER || this.lastPoseChangeTime == TeamArena.getGameTick() - 1) {
-				packets[i] = this.teleportPackets[i];
-			}
-			else {
-				packets[i] = movePacket.shallowClone();
+	public @Nullable PacketContainer[] createRelMovePackets(PacketContainer movePacket) {
+		PacketContainer[] packets = null;
+
+		//hard to create new rel move packets for fancy poses, just precise teleport to correct position
+		// also, use teleport if it's immediately after a pose change, as those tend to create desyncs.
+		final HitboxPose pose = HitboxPose.getFromBukkit(this.owner.getPose());
+		final int currentTick = TeamArena.getGameTick();
+		if (pose != HitboxPose.OTHER ||
+				this.lastPoseChangeTime == currentTick - 1 ||
+				this.lastPoseChangeTime == currentTick - 2) {
+
+			packets = new PacketContainer[4];
+			System.arraycopy(this.teleportPackets, 0, packets, 0, 4);
+		}
+		//ignore look-only packets as the direction hitboxes face is not important
+		else if(movePacket.getType() == PacketType.Play.Server.REL_ENTITY_MOVE_LOOK ||
+				movePacket.getType() == PacketType.Play.Server.REL_ENTITY_MOVE) {
+			packets = new PacketContainer[4];
+			for(int i = 0; i < 4; i++) {
+				packets[i] = new PacketContainer(PacketType.Play.Server.REL_ENTITY_MOVE);
 				//replace the entity id
 				packets[i].getIntegers().write(0, this.fakePlayerIds[i]);
+				StructureModifier<Short> movePacketShorts = movePacket.getShorts();
+				StructureModifier<Short> newPacketShorts = packets[i].getShorts();
+
+				for (int idx = 0; idx < 3; idx++) {
+					newPacketShorts.write(idx, movePacketShorts.read(idx));
+				}
 			}
 		}
 
