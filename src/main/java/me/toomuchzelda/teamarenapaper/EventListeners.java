@@ -13,6 +13,7 @@ import io.papermc.paper.event.player.AsyncChatEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
 import me.toomuchzelda.teamarenapaper.explosions.EntityExplosionInfo;
 import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
+import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitbox;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
@@ -356,7 +357,8 @@ public class EventListeners implements Listener
 		}
 
 		if(!event.isCancelled() && FakeHitboxManager.ACTIVE) {
-			FakeHitboxManager.getFakeHitbox(player).updatePosition(event.getTo());
+			//don't need to updateClients here, packets will be sent after event by server
+			FakeHitboxManager.getFakeHitbox(player).updatePosition(event.getTo(), player.getPose(), false);
 		}
 	}
 
@@ -567,7 +569,8 @@ public class EventListeners implements Listener
 		}
 
 		if(!event.isCancelled() && FakeHitboxManager.ACTIVE) {
-			FakeHitboxManager.getFakeHitbox(event.getPlayer()).updatePosition(event.getTo());
+			//don't need to updateClients here, packets will be sent after this event.
+			FakeHitboxManager.getFakeHitbox(event.getPlayer()).updatePosition(event.getTo(), event.getPlayer().getPose(), false);
 		}
 	}
 
@@ -622,6 +625,14 @@ public class EventListeners implements Listener
 			if(!event.isCancelled() && event.getEntity() instanceof Player p) {
 				Main.getPlayerInfo(p).getKillAssistTracker().heal(event.getAmount());
 			}
+		}
+	}
+
+	@EventHandler
+	public void entityPoseChange(EntityPoseChangeEvent event) {
+		if(FakeHitboxManager.ACTIVE && event.getEntity() instanceof Player player) {
+			FakeHitbox hitbox = FakeHitboxManager.getFakeHitbox(player);
+			hitbox.handlePoseChange(event);
 		}
 	}
 

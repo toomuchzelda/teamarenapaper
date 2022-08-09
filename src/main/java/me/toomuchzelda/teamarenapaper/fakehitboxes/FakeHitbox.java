@@ -8,6 +8,7 @@ import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import com.mojang.authlib.GameProfile;
 import io.papermc.paper.adventure.PaperAdventure;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.Component;
@@ -18,6 +19,7 @@ import net.minecraft.world.level.GameType;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.bukkit.event.entity.EntityPoseChangeEvent;
 import org.bukkit.util.Vector;
 
 import javax.annotation.Nullable;
@@ -60,6 +62,7 @@ public class FakeHitbox
 	private final Map<Player, FakeHitboxViewer> viewers;
 	//[fakePlayerIndex][x/y/z]
 	private final Vector[] coordinates;
+	private int lastPoseChangeTime;
 
 	public FakeHitbox(Player owner) {
 		this.owner = owner;
@@ -128,7 +131,8 @@ public class FakeHitbox
 
 		this.playerInfoEntries = playerUpdates;
 
-		this.updatePosition(loc);
+		this.updatePosition(loc, owner.getPose(), false);
+		this.lastPoseChangeTime = 0;
 	}
 
 	void tick() {
@@ -169,42 +173,29 @@ public class FakeHitbox
 	/**
 	 * Update position in packets and calculate position for swimming/riptide pose if needed.
 	 */
-	public void updatePosition(Location newPosition) {
-		org.bukkit.entity.Pose pose = this.owner.getPose();
+	public void updatePosition(Location newPosition, org.bukkit.entity.Pose pose, boolean updateClients) {
 		HitboxPose boxPose = HitboxPose.getFromBukkit(pose);
 
-		if(boxPose == HitboxPose.RIPTIDING) {
-			//todo: swimming positions here
-			for(int i = 0; i < 4; i++) {
-				Vector offset = OFFSETS[i];
-
-				coordinates[i].setX(newPosition.getX() + offset.getX());
-				coordinates[i].setY(newPosition.getY() + 4);
-				coordinates[i].setZ(newPosition.getZ() + offset.getZ());
-			}
-		}
-		else if(boxPose == HitboxPose.SWIMMING) {
-			Vector direction = newPosition.getDirection();
-			Vector newDir = new Vector();
-			for(int i = 0; i < 4; i++) {
-				getBoxPosition(newDir, boxPose, newPosition, direction, i);
-				MathUtils.copyVector(coordinates[i], newDir);
-			}
-		}
-		else {
-			for(int i = 0; i < 4; i++) {
-				Vector offset = OFFSETS[i];
-
-				coordinates[i].setY(newPosition.getY());
-				coordinates[i].setX(newPosition.getX() + offset.getX());
-				coordinates[i].setZ(newPosition.getZ() + offset.getZ());
-			}
+		Vector direction = newPosition.getDirection();
+		Vector newPos = new Vector();
+		for(int i = 0; i < 4; i++) {
+			getBoxPosition(newPos, boxPose, newPosition, direction, i);
+			MathUtils.copyVector(coordinates[i], newPos);
 		}
 
 		//update the packets
 		for(int i = 0; i < 4; i++) {
 			writeDoubles(spawnPlayerPackets[i], coordinates[i]);
 			writeDoubles(teleportPackets[i], coordinates[i]);
+		}
+
+		//update positions on client if needed
+		if(updateClients) {
+			for(var entry : this.viewers.entrySet()) {
+				if(entry.getValue().isSeeingHitboxes) {
+					PlayerUtils.sendPacket(entry.getKey(), teleportPackets);
+				}
+			}
 		}
 	}
 
@@ -213,18 +204,45 @@ public class FakeHitbox
 	 * reduce Object allocation.
 	 */
 	private static void getBoxPosition(Vector container, HitboxPose pose, Location ownerLoc, Vector ownerDir, int boxNum) {
-		container.setX(ownerDir.getX());
-		container.setY(ownerDir.getY());
-		container.setZ(ownerDir.getZ());
+		if(pose == HitboxPose.OTHER) {
+			Vector offset = OFFSETS[boxNum];
 
-		if(pose == HitboxPose.SWIMMING) {
+			container.setX(ownerLoc.getX() + offset.getX());
+			container.setY(ownerLoc.getY());
+			container.setZ(ownerLoc.getZ() + offset.getZ());
+		}
+		else {
+			MathUtils.copyVector(container, ownerDir);
+
 			//align the boxes along the length of the body
-			// the original hitbox is at the player's feet, so have these extend from there
-			double mult = ((double) boxNum + -2) * 0.36d;
+			// the original hitbox is at the player's feet (riptiding) or centre (swimming), so have these extend from there
+			double mult;
+			if(pose == HitboxPose.SWIMMING) {
+				// skip one boxNum iteration as the player's real hitbox already covers the centre
+				if(boxNum >= 2)
+					boxNum++;
+
+				mult = ((double) boxNum - 2) * 0.36d;
+			}
+			else { //riptiding
+				//player's real hitbox is at their feet.
+				mult = ((double) boxNum + 1) * 0.36d;
+			}
+
 			container.multiply(mult);
 			container.setX(container.getX() + ownerLoc.getX());
 			container.setY(container.getY() + ownerLoc.getY());
 			container.setZ(container.getZ() + ownerLoc.getZ());
+		}
+	}
+
+	public void handlePoseChange(EntityPoseChangeEvent event) {
+		HitboxPose prevPose = HitboxPose.getFromBukkit(event.getEntity().getPose());
+		HitboxPose newPose = HitboxPose.getFromBukkit(event.getPose());
+
+		if(newPose != prevPose) {
+			this.updatePosition(event.getEntity().getLocation(), event.getPose(), true);
+			this.lastPoseChangeTime = TeamArena.getGameTick();
 		}
 	}
 
@@ -250,9 +268,9 @@ public class FakeHitbox
 		for(int i = 0; i < 4; i++) {
 			//adjust positioning if needed
 			HitboxPose pose = HitboxPose.getFromBukkit(this.owner.getPose());
-			if (pose == HitboxPose.SWIMMING && movePacket.getType() == PacketType.Play.Server.REL_ENTITY_MOVE_LOOK ||
-					movePacket.getType() == PacketType.Play.Server.ENTITY_LOOK) {
-				//too hard to create new rel move packets, just precise teleport to correct position
+			//too hard to create new rel move packets for fancy poses, just precise teleport to correct position
+			// also use precise if it's immediately after a pose change, as those tend to create desyncs.
+			if (pose != HitboxPose.OTHER || this.lastPoseChangeTime == TeamArena.getGameTick() - 1) {
 				packets[i] = this.teleportPackets[i];
 			}
 			else {
