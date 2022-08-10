@@ -20,6 +20,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSpy;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.minecraft.network.chat.PlayerChatMessage;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.util.Crypt;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -232,17 +233,7 @@ public class PacketListeners
 					packet.getPlayerInfoDataLists().write(0, playerInfoList);
 				}
 			} else if (event.getPacketType() == PacketType.Play.Server.CHAT) {
-				var nmsPacket = (ClientboundPlayerChatPacket) packet.getHandle();
-
-				var newNmsPacket = new ClientboundPlayerChatPacket(
-						nmsPacket.unsignedContent().orElseGet(nmsPacket::signedContent),
-						nmsPacket.unsignedContent(),
-						nmsPacket.typeId(),
-						nmsPacket.sender(),
-						nmsPacket.timeStamp(),
-						new Crypt.SaltSignaturePair(0, new byte[0]) // invalid if arr.length == 0
-				);
-				event.setPacket(new PacketContainer(PacketType.Play.Server.CHAT, newNmsPacket));
+				//TODO chat system
 			}
 		}
 
