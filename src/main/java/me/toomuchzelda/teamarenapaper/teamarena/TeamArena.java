@@ -295,11 +295,11 @@ public abstract class TeamArena
 		info.kit.giveKit(player, true, info);
 	}
 
-	public void cleanUp(@Nullable TeamArena newGame) {
+	public void cleanUp() {
 		for (Player player : gameWorld.getPlayers()) {
 			//should have been teleported already in the team arena constructor, but sometimes fails?
-			if(newGame != null) {
-				boolean teleSuccess = player.teleport(newGame.spawnPos);
+			if(Main.getGame() != null) {
+				boolean teleSuccess = player.teleport(Main.getGame().spawnPos);
 				if(!teleSuccess) {
 					player.kick(Component.text("Something went horribly wrong!!! Oh my god!!! OH MY GOOODDDD!!!!!!!!"
 							, NamedTextColor.YELLOW));

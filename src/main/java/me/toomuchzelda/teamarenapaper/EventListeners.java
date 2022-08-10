@@ -117,6 +117,9 @@ public class EventListeners implements Listener
 
 			PacketEntityManager.cleanUp();
 
+			//might as well reset
+			ItemUtils._uniqueName = 0;
+
 			// initialize next game
 			if (TeamArena.nextGameType == null) {
 				TeamArena.nextGameType = GameType.values()[MathUtils.random.nextInt(GameType.values().length)];
