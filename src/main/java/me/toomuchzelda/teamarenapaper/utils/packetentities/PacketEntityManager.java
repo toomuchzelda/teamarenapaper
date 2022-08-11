@@ -1,7 +1,6 @@
 package me.toomuchzelda.teamarenapaper.utils.packetentities;
 
 import com.destroystokyo.paper.event.player.PlayerUseUnknownEntityEvent;
-import me.toomuchzelda.teamarenapaper.Main;
 
 import java.util.LinkedHashMap;
 
@@ -36,14 +35,13 @@ public class PacketEntityManager
 		}
 	}
 
-	public static void handleInteract(PlayerUseUnknownEntityEvent event) {
+	public static boolean handleInteract(PlayerUseUnknownEntityEvent event) {
 		PacketEntity pEnt = ALL_PACKET_ENTITIES.get(event.getEntityId());
 		if(pEnt != null) {
 			pEnt.onInteract(event.getPlayer(), event.getHand(), event.isAttack());
+			return true;
 		}
-		else {
-			Main.logger().warning(event.getPlayer().getName() + " interacted on an Unknown Entity that is not a " +
-					"PacketEntity");
-		}
+
+		return false;
 	}
 }

@@ -13,6 +13,8 @@ import io.papermc.paper.event.player.AsyncChatEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
 import me.toomuchzelda.teamarenapaper.explosions.EntityExplosionInfo;
 import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
+import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitbox;
+import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
@@ -115,6 +117,9 @@ public class EventListeners implements Listener
 
 			PacketEntityManager.cleanUp();
 
+			//might as well reset
+			ItemUtils._uniqueName = 0;
+
 			// initialize next game
 			if (TeamArena.nextGameType == null) {
 				TeamArena.nextGameType = GameType.values()[MathUtils.random.nextInt(GameType.values().length)];
@@ -144,6 +149,13 @@ public class EventListeners implements Listener
 			e.printStackTrace();
 		}
 
+		try {
+			FakeHitboxManager.tick();
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+
 		//every 3 minutes
 		int count = event.getTickNumber() % (3 * 60  *20);
 		if(count == 0) {
@@ -153,6 +165,9 @@ public class EventListeners implements Listener
 			for(PlayerInfo pinfo : Main.getPlayerInfos()) {
 				pinfo.getMetadataViewer().cleanUp();
 			}
+		}
+		else if(count == 20) {
+			FakeHitboxManager.cleanUp();
 		}
 
 		PacketListeners.cancelDamageSounds = true;
@@ -172,17 +187,17 @@ public class EventListeners implements Listener
 	//these three events are called in this order
 	@EventHandler
 	public void playerLogin(PlayerLoginEvent event) {
-		UUID uuid = event.getPlayer().getUniqueId();
+		Player player = event.getPlayer();
+		UUID uuid = player.getUniqueId();
 		PlayerInfo playerInfo;
 
 		//todo: read perms from db or other
-		if (event.getPlayer().isOp()) {
-			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.OWNER, event.getPlayer());
-			Player player = event.getPlayer();
+		if (player.isOp()) {
+			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.OWNER, player);
 			Bukkit.getScheduler().runTask(Main.getPlugin(),
 					() -> player.sendMessage(Component.text("Your rank has been updated to OWNER", NamedTextColor.GREEN)));
 		} else {
-			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.ALL, event.getPlayer());
+			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.ALL, player);
 		}
 
 		synchronized (preferenceFutureMap) {
@@ -195,9 +210,10 @@ public class EventListeners implements Listener
 			playerInfo.setPreferenceValues(future.join());
 		}
 
-		Main.addPlayerInfo(event.getPlayer(), playerInfo);
-		Main.playerIdLookup.put(event.getPlayer().getEntityId(), event.getPlayer());
-		Main.getGame().loggingInPlayer(event.getPlayer(), playerInfo);
+		Main.addPlayerInfo(player, playerInfo);
+		Main.playerIdLookup.put(player.getEntityId(), player);
+		FakeHitboxManager.addFakeHitbox(player);
+		Main.getGame().loggingInPlayer(player, playerInfo);
 	}
 
 	@EventHandler
@@ -213,6 +229,7 @@ public class EventListeners implements Listener
 		Main.getPlayerInfo(player).getScoreboard().set();
 		// send sidebar objectives
 		SidebarManager.getInstance(player).registerObjectives(player);
+
 		Main.getGame().joiningPlayer(player);
 	}
 
@@ -248,10 +265,12 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void playerQuit(PlayerQuitEvent event) {
 		event.quitMessage(null);
-		Main.getGame().leavingPlayer(event.getPlayer());
+		Player leaver = event.getPlayer();
+		Main.getGame().leavingPlayer(leaver);
 		//Main.getPlayerInfo(event.getPlayer()).nametag.remove();
-		Main.removePlayerInfo(event.getPlayer());
-		Main.playerIdLookup.remove(event.getPlayer().getEntityId());
+		FakeHitboxManager.removeFakeHitbox(leaver);
+		Main.removePlayerInfo(leaver);
+		Main.playerIdLookup.remove(leaver.getEntityId());
 	}
 
 	@EventHandler
@@ -338,6 +357,11 @@ public class EventListeners implements Listener
 					}, 40);
 				}
 			}
+		}
+
+		if(!event.isCancelled() && FakeHitboxManager.ACTIVE) {
+			//don't need to updateClients here, packets will be sent after event by server
+			FakeHitboxManager.getFakeHitbox(player).updatePosition(event.getTo(), player.getPose(), false);
 		}
 	}
 
@@ -512,44 +536,51 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void playerTeleport(PlayerTeleportEvent event) {
 		PlayerTeleportEvent.TeleportCause cause = event.getCause();
-		if(cause == PlayerTeleportEvent.TeleportCause.COMMAND ||
-			cause == PlayerTeleportEvent.TeleportCause.PLUGIN ||
-			cause == PlayerTeleportEvent.TeleportCause.UNKNOWN) //unkown is often rubber-bands and lagbacks
-			return;
 
 		if(Main.getGame() != null) {
+			//don't do any game logic if it's done by plugin or a command
+			// unknown also tends to be things like server rubber-banding
+			if(cause != PlayerTeleportEvent.TeleportCause.PLUGIN &&
+					cause != PlayerTeleportEvent.TeleportCause.UNKNOWN &&
+					cause != PlayerTeleportEvent.TeleportCause.COMMAND) {
 
-			if(cause == PlayerTeleportEvent.TeleportCause.NETHER_PORTAL ||
-				cause == PlayerTeleportEvent.TeleportCause.END_PORTAL ||
-				cause == PlayerTeleportEvent.TeleportCause.END_GATEWAY) {
-				event.setCancelled(true);
-			}
-			else if(!Main.getGame().getBorder().contains(event.getTo().toVector())) {
-				event.setCancelled(true);
+				if(cause == PlayerTeleportEvent.TeleportCause.NETHER_PORTAL ||
+						cause == PlayerTeleportEvent.TeleportCause.END_PORTAL ||
+						cause == PlayerTeleportEvent.TeleportCause.END_GATEWAY) {
+					event.setCancelled(true);
+				}
+				else if(!Main.getGame().getBorder().contains(event.getTo().toVector())) {
+					event.setCancelled(true);
 
-				if (cause == PlayerTeleportEvent.TeleportCause.ENDER_PEARL) {
-					event.getPlayer().sendMessage(Component.text("One of your ender pearls landed outside the border. " +
-							"Aim better!").color(TextColors.ERROR_RED));
+					if (cause == PlayerTeleportEvent.TeleportCause.ENDER_PEARL) {
+						event.getPlayer().sendMessage(Component.text("One of your ender pearls landed outside the border. " +
+								"Aim better!").color(TextColors.ERROR_RED));
+					}
+					else if(cause == PlayerTeleportEvent.TeleportCause.CHORUS_FRUIT) {
+						event.getPlayer().sendMessage(Component.text("This fruit tried to take you outside the border, " +
+										"so now you just go nowhere because I have deemed finding a safe alternative position" +
+										" to be too much trouble (i am lazy). Here's a free diamond! - toomuchzelda")
+								.color(TextColors.ERROR_RED));
+						event.getPlayer().getInventory().addItem(new ItemStack(Material.DIAMOND));
+					}
 				}
-				else if(cause == PlayerTeleportEvent.TeleportCause.CHORUS_FRUIT) {
-					event.getPlayer().sendMessage(Component.text("This fruit tried to take you outside the border, " +
-									"so now you just go nowhere because I have deemed finding a safe alternative position" +
-									" to be too much trouble (i am lazy). Here's a free diamond! - toomuchzelda")
-							.color(TextColors.ERROR_RED));
-					event.getPlayer().getInventory().addItem(new ItemStack(Material.DIAMOND));
-				}
-			}
 
-			if(Main.getGame() instanceof CaptureTheFlag ctf && ctf.isFlagCarrier(event.getPlayer())) {
-				Player p = event.getPlayer();
-				event.setCancelled(true);
-				PlayerInfo pinfo = Main.getPlayerInfo(p);
-				if(pinfo.getPreference(Preferences.RECEIVE_GAME_TITLES)) {
-					PlayerUtils.sendTitle(p, Component.empty(), CaptureTheFlag.CANT_TELEPORT_HOLDING_FLAG_TITLE, 10, 25, 10);
+				if(Main.getGame() instanceof CaptureTheFlag ctf && ctf.isFlagCarrier(event.getPlayer())) {
+					Player p = event.getPlayer();
+					event.setCancelled(true);
+					PlayerInfo pinfo = Main.getPlayerInfo(p);
+					if(pinfo.getPreference(Preferences.RECEIVE_GAME_TITLES)) {
+						PlayerUtils.sendTitle(p, Component.empty(), CaptureTheFlag.CANT_TELEPORT_HOLDING_FLAG_TITLE, 10, 25, 10);
+					}
+					p.sendMessage(CaptureTheFlag.CANT_TELEPORT_HOLDING_FLAG_MESSAGE);
+					p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.AMBIENT, 2, 0.5f);
 				}
-				p.sendMessage(CaptureTheFlag.CANT_TELEPORT_HOLDING_FLAG_MESSAGE);
-				p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.AMBIENT, 2, 0.5f);
 			}
+		}
+
+		if(!event.isCancelled() && FakeHitboxManager.ACTIVE) {
+			//don't need to updateClients here, packets will be sent after this event.
+			FakeHitboxManager.getFakeHitbox(event.getPlayer()).updatePosition(event.getTo(), event.getPlayer().getPose(), false);
 		}
 	}
 
@@ -604,6 +635,14 @@ public class EventListeners implements Listener
 			if(!event.isCancelled() && event.getEntity() instanceof Player p) {
 				Main.getPlayerInfo(p).getKillAssistTracker().heal(event.getAmount());
 			}
+		}
+	}
+
+	@EventHandler
+	public void entityPoseChange(EntityPoseChangeEvent event) {
+		if(FakeHitboxManager.ACTIVE && event.getEntity() instanceof Player player) {
+			FakeHitbox hitbox = FakeHitboxManager.getFakeHitbox(player);
+			hitbox.handlePoseChange(event);
 		}
 	}
 
@@ -739,17 +778,27 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void playerUseUnknownEntity(PlayerUseUnknownEntityEvent event) {
 		//prevent right clicks being handled 4 times
+		boolean handle = false;
 		if(!event.isAttack()) {
 			PlayerInfo pinfo = Main.getPlayerInfo(event.getPlayer());
 			int currentTick = TeamArena.getGameTick();
 			int idx = event.getHand().ordinal();
 			if (pinfo.lastInteractUnknownEntityTimes[idx] != currentTick) {
 				pinfo.lastInteractUnknownEntityTimes[idx] = currentTick;
-				PacketEntityManager.handleInteract(event);
+				handle = true;
 			}
 		}
 		else {
-			PacketEntityManager.handleInteract(event);
+			handle = true;
+		}
+
+		if(handle) {
+			boolean success = PacketEntityManager.handleInteract(event);
+
+			if(!success) {
+				Main.logger().warning(event.getPlayer().getName() + " used an Unknown Entity that is not a PacketEntity" +
+						" or a FakeHitbox");
+			}
 		}
 	}
 

@@ -87,6 +87,7 @@ public final class Main extends JavaPlugin
 		commandMap.register(fallbackPrefix, new CommandTicTacToe());
 		commandMap.register(fallbackPrefix, new CommandCallvote());
 		commandMap.register(fallbackPrefix, new CommandTeamChat());
+		commandMap.register(fallbackPrefix, new CommandFakeHitboxes());
 	}
 
 	public static PlayerInfo getPlayerInfo(Player player) {
@@ -126,11 +127,8 @@ public final class Main extends JavaPlugin
 	}
 
 	public static void setGame(TeamArena newGame) {
-		teamArena.cleanUp();
-
-		//might as well reset
-		ItemUtils._uniqueName = 0;
-
+		TeamArena oldGame = teamArena;
 		teamArena = newGame;
+		oldGame.cleanUp();
 	}
 }

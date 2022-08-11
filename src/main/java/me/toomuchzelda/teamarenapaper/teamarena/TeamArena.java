@@ -245,7 +245,10 @@ public abstract class TeamArena
 			Player p = entry.getKey();
 			PlayerInfo pinfo = entry.getValue();
 
-			p.teleport(spawnPos);
+			boolean tele = p.teleport(spawnPos);
+			if(!tele) {
+				Main.logger().severe("Could not teleport " + p.getName() + " to new game world " + gameWorld.getName());
+			}
 			players.add(p);
 
 			pinfo.spawnPoint = spawnPos;
@@ -294,7 +297,18 @@ public abstract class TeamArena
 
 	public void cleanUp() {
 		for (Player player : gameWorld.getPlayers()) {
-			player.kick(Component.text("You have been evacuated!", NamedTextColor.YELLOW));
+			//should have been teleported already in the team arena constructor, but sometimes fails?
+			if(Main.getGame() != null) {
+				boolean teleSuccess = player.teleport(Main.getGame().spawnPos);
+				if(!teleSuccess) {
+					player.kick(Component.text("Something went horribly wrong!!! Oh my god!!! OH MY GOOODDDD!!!!!!!!"
+							, NamedTextColor.YELLOW));
+					Main.logger().severe("Teleporting " + player.getName() + " in cleanUp() fallback failed");
+				}
+			}
+			else {
+				player.kick(TextUtils.getRGBManiacComponent(Component.text("Server closed uwu"), Style.empty(), 0d));
+			}
 		}
 		if (Bukkit.unloadWorld(gameWorld, false)) {
 			FileUtils.delete(worldFile);

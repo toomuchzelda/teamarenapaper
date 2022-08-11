@@ -23,8 +23,6 @@ import java.util.stream.Stream;
 
 /**
  * @author toomuchzelda
- * was going to refactor to use Player#getScoreboard() instead of storing this object in PlayerInfo,
- * but that getter is also a Hash lookup so meh
  */
 public class PlayerScoreboard
 {

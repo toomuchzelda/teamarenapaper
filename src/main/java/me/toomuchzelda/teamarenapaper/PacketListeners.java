@@ -11,6 +11,9 @@ import com.comphenix.protocol.wrappers.PlayerInfoData;
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Pair;
 import io.papermc.paper.adventure.PaperAdventure;
+import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitbox;
+import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
+import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxViewer;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.DisguiseManager;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
@@ -33,6 +36,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.LinkedList;
+import java.util.List;
+
 public class PacketListeners
 {
 	/**
@@ -43,15 +49,11 @@ public class PacketListeners
 
 	public PacketListeners(JavaPlugin plugin) {
 
-		//commented out as not using holograms (keeping in case future versions support more
-		// rgb stuff)
-		//Spawn player's nametag hologram whenever the player is spawned on a client
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.NAMED_ENTITY_SPAWN) //packet for players coming in viewable range
 		{
 			@Override
 			public void onPacketSending(PacketEvent event) {
-
 				int id = event.getPacket().getIntegers().read(0);
 
 				//if the receiver of this packet is supposed to view a disguise instead of the actual player
@@ -59,12 +61,97 @@ public class PacketListeners
 				// for the sake of not appearing in the tab list
 				DisguiseManager.Disguise disguise = DisguiseManager.getDisguiseSeeing(id, event.getPlayer());
 				if(disguise != null && disguise.viewers.get(event.getPlayer()) < TeamArena.getGameTick()) {
-					//order of packets is important
-
 					Player player = event.getPlayer();
 					player.hidePlayer(Main.getPlugin(), disguise.disguisedPlayer); //just do this to handle the player infos stuff
 					player.showPlayer(Main.getPlugin(), disguise.disguisedPlayer); //also spawns them for us so we can cancel this event
 					event.setCancelled(true);
+				}
+
+				if(FakeHitboxManager.ACTIVE && !event.isCancelled()) {
+					Player viewer = event.getPlayer();
+					FakeHitbox hitbox = FakeHitboxManager.getByPlayerId(id);
+					FakeHitboxViewer boxViewer = hitbox.getFakeViewer(viewer);
+					//set this to true then spawn packets get sent in FakeHitbox tick if / when needed
+					boxViewer.setSeeingRealPlayer(true);
+				}
+			}
+		});
+
+		//when moving player also move their hitboxes with them
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(Main.getPlugin(),
+				PacketType.Play.Server.REL_ENTITY_MOVE, PacketType.Play.Server.REL_ENTITY_MOVE_LOOK,
+				PacketType.Play.Server.ENTITY_LOOK,
+				PacketType.Play.Server.ENTITY_TELEPORT)
+		{
+			@Override
+			public void onPacketSending(PacketEvent event) {
+				if(FakeHitboxManager.ACTIVE) {
+					PacketContainer packet = event.getPacket();
+
+					int id = packet.getIntegers().read(0);
+					Player mover = Main.playerIdLookup.get(id);
+					Player viewer = event.getPlayer();
+
+					if(mover != null) {
+						FakeHitbox hitbox = FakeHitboxManager.getFakeHitbox(mover);
+						//don't send move packets for fake hitboxes unless the receiver is actually seeing them
+						FakeHitboxViewer hitboxViewer = hitbox.getFakeViewer(viewer);
+						if(hitboxViewer.isSeeingHitboxes()) {
+							//send a precise teleport packet if its right after spawning as desyncs happen here
+							if (event.getPacketType() == PacketType.Play.Server.ENTITY_TELEPORT ||
+									hitboxViewer.getHitboxSpawnTime() < TeamArena.getGameTick()) {
+								hitboxViewer.setHitboxSpawnTime(Integer.MAX_VALUE);
+								PlayerUtils.sendPacket(viewer, hitbox.getTeleportPackets());
+							}
+							else {
+								PacketContainer[] movePackets = hitbox.createRelMovePackets(packet);
+								if(movePackets != null) {
+									PlayerUtils.sendPacket(viewer, movePackets);
+									//Bukkit.broadcastMessage(TeamArena.getGameTick() + " rel move sent");
+								}
+							}
+						}
+					}
+				}
+			}
+		});
+
+		//remove fake hitbox entities when player can't see the original player
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
+				PacketType.Play.Server.ENTITY_DESTROY) {
+			@Override
+			public void onPacketSending(PacketEvent event) {
+				if(FakeHitboxManager.ACTIVE) {
+					ClientboundRemoveEntitiesPacket nmsPacket = (ClientboundRemoveEntitiesPacket) event.getPacket().getHandle();
+					var iter = nmsPacket.getEntityIds().listIterator();
+					while(iter.hasNext()) {
+						FakeHitbox removingHitbox = FakeHitboxManager.getByPlayerId(iter.nextInt());
+						if(removingHitbox != null) {
+							FakeHitboxViewer viewerBox = removingHitbox.getFakeViewer(event.getPlayer());
+							viewerBox.setSeeingRealPlayer(false);
+							if(viewerBox.isSeeingHitboxes()) {
+								viewerBox.setSeeingHitboxes(false);
+								for (int i : removingHitbox.getFakePlayerIds()) {
+									iter.add(i);
+								}
+							}
+						}
+					}
+				}
+			}
+		});
+
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
+				PacketType.Play.Client.USE_ENTITY) {
+			@Override
+			public void onPacketReceiving(PacketEvent event) {
+				PacketContainer packet = event.getPacket();
+				StructureModifier<Integer> ints = packet.getIntegers();
+				int interactedId = ints.read(0);
+				//will return Player if a fake hitbox was interacted
+				Player fakeHitboxPlayer = FakeHitboxManager.getByFakeId(interactedId);
+				if(fakeHitboxPlayer != null) {
+					ints.write(0, fakeHitboxPlayer.getEntityId());
 				}
 			}
 		});
@@ -79,18 +166,41 @@ public class PacketListeners
 				if(action == ClientboundPlayerInfoPacket.Action.ADD_PLAYER ||
 						action == ClientboundPlayerInfoPacket.Action.REMOVE_PLAYER) {
 
-					var iter = nmsPacket.getEntries().listIterator();//clonedList.listIterator(0);
+					//make a copy of the list before making modifications as it gets re-used and sent to multiple
+					// players who we may not want to see these modifications
+					List<ClientboundPlayerInfoPacket.PlayerUpdate> copyList = new LinkedList<>(nmsPacket.getEntries());
+
+					boolean modified = false;
+					var iter = copyList.listIterator();
 					while(iter.hasNext()) {
 						ClientboundPlayerInfoPacket.PlayerUpdate update = iter.next();
 
 						GameProfile profile = update.getProfile();
-						Player player = Bukkit.getPlayer(profile.getId());
 
-						if (player == null)
+						//add the fake player hitbox player infos
+						if(FakeHitboxManager.ACTIVE) {
+							if(!profile.getId().equals(event.getPlayer().getUniqueId())) {
+								FakeHitbox hitbox = FakeHitboxManager.getByPlayerUuid(profile.getId());
+								if(hitbox != null) {
+									modified = true;
+									for (ClientboundPlayerInfoPacket.PlayerUpdate playerUpdate : hitbox.getPlayerInfoEntries()) {
+										//reset the listiterator state so it does not throw if subsequent
+										// iter.set is called
+										iter.previous();
+										iter.add(playerUpdate);
+										iter.next();
+									}
+								}
+							}
+						}
+
+						Player pinfoPlayer = Bukkit.getPlayer(profile.getId());
+						if (pinfoPlayer == null)
 							continue;
 
-						DisguiseManager.Disguise disguise = DisguiseManager.getDisguiseSeeing(player, event.getPlayer());
+						DisguiseManager.Disguise disguise = DisguiseManager.getDisguiseSeeing(pinfoPlayer, event.getPlayer());
 						if(disguise != null) {
+							modified = true;
 							if(action == ClientboundPlayerInfoPacket.Action.ADD_PLAYER) {
 
 								var replacementUpdate =
@@ -103,7 +213,6 @@ public class PacketListeners
 										new ClientboundPlayerInfoPacket.PlayerUpdate(disguise.tabListGameProfile,
 												update.getLatency(), update.getGameMode(), update.getDisplayName(), null);
 
-								//i think this will run after this packet listener
 								// remove the player info of the disguised player so they don't appear in tab list
 								// do it 2 ticks later as too quick will not make the skin appear correctly
 								Bukkit.getScheduler().runTaskLater(Main.getPlugin(),
@@ -122,6 +231,12 @@ public class PacketListeners
 								iter.add(tabListUpdate);
 							}
 						}
+					}
+
+					if(modified) {
+						PacketContainer copy = event.getPacket().shallowClone();
+						copy.getModifier().write(1, copyList);
+						event.setPacket(copy);
 					}
 				}
 			}
@@ -209,7 +324,18 @@ public class PacketListeners
 				PacketContainer packet = event.getPacket();
 
 				MetadataViewer metadataViewer = Main.getPlayerInfo(event.getPlayer()).getMetadataViewer();
-				event.setPacket(metadataViewer.adjustMetadataPacket(packet));
+				packet = metadataViewer.adjustMetadataPacket(packet);
+
+				//make fake hitboxes copy the player's pose (if it is a player and fake hitboxes are active and there
+				// is a pose in the outgoing metadata)
+				FakeHitbox hitbox = FakeHitboxManager.getByPlayerId(packet.getIntegers().read(0));
+				if(hitbox != null) {
+					PacketContainer[] newPackets = hitbox.createPoseMetadataPackets(packet);
+					if(newPackets != null)
+						PlayerUtils.sendPacket(event.getPlayer(), newPackets);
+				}
+
+				event.setPacket(packet);
 			}
 		});
 

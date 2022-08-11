@@ -58,6 +58,10 @@ public class MathUtils
 		return Math.max(Math.min(value, max), min);
 	}
 
+	public static boolean inRange(int min, int max, int value) {
+		return value >= min && value <= max;
+	}
+
 	public static Color randomColor() {
 		int r = randomMax(255);
 		int g = randomMax(255);
@@ -97,4 +101,9 @@ public class MathUtils
 		}
 	}
 
+	public static void copyVector(Vector dest, Vector src) {
+		dest.setX(src.getX());
+		dest.setY(src.getY());
+		dest.setZ(src.getZ());
+	}
 }
