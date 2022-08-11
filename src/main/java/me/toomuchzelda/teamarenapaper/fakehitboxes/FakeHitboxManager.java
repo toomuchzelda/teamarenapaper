@@ -18,6 +18,11 @@ public class FakeHitboxManager
 	 * Whether to use fake hitboxes or no
 	 */
 	public static final boolean ACTIVE = true;
+	/**
+	 * Whether fake hitbox players should be visible or not. For debugging.
+	 * true = visible.
+	 */
+	public static boolean show = false;
 
 	/**
 	 * Store the fake hitboxes here instead of in player's PlayerInfo object as it need to persists after the PlayerInfo
@@ -97,6 +102,15 @@ public class FakeHitboxManager
 	public static void cleanUp() {
 		if(ACTIVE) {
 			FAKE_PLAYER_LOOKUP.entrySet().removeIf(integerPlayerEntry -> !integerPlayerEntry.getValue().isOnline());
+		}
+	}
+
+	public static void setVisibility(boolean visibility) {
+		if(show != visibility) {
+			show = visibility;
+			for(var entry : FAKE_HITBOXES.values()) {
+				entry.invalidateViewers();
+			}
 		}
 	}
 }

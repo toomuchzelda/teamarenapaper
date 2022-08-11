@@ -538,36 +538,43 @@ public class EventListeners implements Listener
 		PlayerTeleportEvent.TeleportCause cause = event.getCause();
 
 		if(Main.getGame() != null) {
-			if(cause == PlayerTeleportEvent.TeleportCause.NETHER_PORTAL ||
-				cause == PlayerTeleportEvent.TeleportCause.END_PORTAL ||
-				cause == PlayerTeleportEvent.TeleportCause.END_GATEWAY) {
-				event.setCancelled(true);
-			}
-			else if(!Main.getGame().getBorder().contains(event.getTo().toVector())) {
-				event.setCancelled(true);
+			//don't do any game logic if it's done by plugin or a command
+			// unknown also tends to be things like server rubber-banding
+			if(cause != PlayerTeleportEvent.TeleportCause.PLUGIN &&
+					cause != PlayerTeleportEvent.TeleportCause.UNKNOWN &&
+					cause != PlayerTeleportEvent.TeleportCause.COMMAND) {
 
-				if (cause == PlayerTeleportEvent.TeleportCause.ENDER_PEARL) {
-					event.getPlayer().sendMessage(Component.text("One of your ender pearls landed outside the border. " +
-							"Aim better!").color(TextColors.ERROR_RED));
+				if(cause == PlayerTeleportEvent.TeleportCause.NETHER_PORTAL ||
+						cause == PlayerTeleportEvent.TeleportCause.END_PORTAL ||
+						cause == PlayerTeleportEvent.TeleportCause.END_GATEWAY) {
+					event.setCancelled(true);
 				}
-				else if(cause == PlayerTeleportEvent.TeleportCause.CHORUS_FRUIT) {
-					event.getPlayer().sendMessage(Component.text("This fruit tried to take you outside the border, " +
-									"so now you just go nowhere because I have deemed finding a safe alternative position" +
-									" to be too much trouble (i am lazy). Here's a free diamond! - toomuchzelda")
-							.color(TextColors.ERROR_RED));
-					event.getPlayer().getInventory().addItem(new ItemStack(Material.DIAMOND));
-				}
-			}
+				else if(!Main.getGame().getBorder().contains(event.getTo().toVector())) {
+					event.setCancelled(true);
 
-			if(Main.getGame() instanceof CaptureTheFlag ctf && ctf.isFlagCarrier(event.getPlayer())) {
-				Player p = event.getPlayer();
-				event.setCancelled(true);
-				PlayerInfo pinfo = Main.getPlayerInfo(p);
-				if(pinfo.getPreference(Preferences.RECEIVE_GAME_TITLES)) {
-					PlayerUtils.sendTitle(p, Component.empty(), CaptureTheFlag.CANT_TELEPORT_HOLDING_FLAG_TITLE, 10, 25, 10);
+					if (cause == PlayerTeleportEvent.TeleportCause.ENDER_PEARL) {
+						event.getPlayer().sendMessage(Component.text("One of your ender pearls landed outside the border. " +
+								"Aim better!").color(TextColors.ERROR_RED));
+					}
+					else if(cause == PlayerTeleportEvent.TeleportCause.CHORUS_FRUIT) {
+						event.getPlayer().sendMessage(Component.text("This fruit tried to take you outside the border, " +
+										"so now you just go nowhere because I have deemed finding a safe alternative position" +
+										" to be too much trouble (i am lazy). Here's a free diamond! - toomuchzelda")
+								.color(TextColors.ERROR_RED));
+						event.getPlayer().getInventory().addItem(new ItemStack(Material.DIAMOND));
+					}
 				}
-				p.sendMessage(CaptureTheFlag.CANT_TELEPORT_HOLDING_FLAG_MESSAGE);
-				p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.AMBIENT, 2, 0.5f);
+
+				if(Main.getGame() instanceof CaptureTheFlag ctf && ctf.isFlagCarrier(event.getPlayer())) {
+					Player p = event.getPlayer();
+					event.setCancelled(true);
+					PlayerInfo pinfo = Main.getPlayerInfo(p);
+					if(pinfo.getPreference(Preferences.RECEIVE_GAME_TITLES)) {
+						PlayerUtils.sendTitle(p, Component.empty(), CaptureTheFlag.CANT_TELEPORT_HOLDING_FLAG_TITLE, 10, 25, 10);
+					}
+					p.sendMessage(CaptureTheFlag.CANT_TELEPORT_HOLDING_FLAG_MESSAGE);
+					p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.AMBIENT, 2, 0.5f);
+				}
 			}
 		}
 

@@ -142,14 +142,16 @@ public class FakeHitbox
 		while(iter.hasNext()) {
 			var entry = iter.next();
 			Player playerViewer = entry.getKey();
+			FakeHitboxViewer fakeHitboxViewer = entry.getValue();
 
 			if(!playerViewer.isOnline()) {
+				if(fakeHitboxViewer.isSeeingHitboxes)
+					PlayerUtils.sendPacket(playerViewer, getRemoveEntitiesPacket());
+
 				iter.remove();
-				PlayerUtils.sendPacket(playerViewer, getRemoveEntitiesPacket());
 				continue;
 			}
 
-			FakeHitboxViewer fakeHitboxViewer = entry.getValue();
 			if (fakeHitboxViewer.isSeeingRealPlayer) {
 				double distSqr = playerViewer.getLocation().distanceSquared(ownerLoc);
 				boolean nowInRange = distSqr <= VIEWING_RADIUS_SQR;
@@ -179,7 +181,7 @@ public class FakeHitbox
 		Vector direction = newPosition.getDirection();
 		Vector newPos = new Vector();
 		for(int i = 0; i < 4; i++) {
-			getBoxPosition(newPos, boxPose, newPosition, direction, i);
+			calcBoxPosition(newPos, boxPose, newPosition, direction, i);
 			MathUtils.copyVector(coordinates[i], newPos);
 		}
 
@@ -203,7 +205,7 @@ public class FakeHitbox
 	 * Calcualte new box number position. Take in Vectors from caller instead of constructing new ones to
 	 * reduce Object allocation.
 	 */
-	private static void getBoxPosition(Vector container, HitboxPose pose, Location ownerLoc, Vector ownerDir, int boxNum) {
+	private static void calcBoxPosition(Vector container, HitboxPose pose, Location ownerLoc, Vector ownerDir, int boxNum) {
 		if(pose == HitboxPose.OTHER) {
 			Vector offset = OFFSETS[boxNum];
 
@@ -246,6 +248,17 @@ public class FakeHitbox
 		}
 	}
 
+	/**
+	 * Invalidate all player's viewing hitbox status so they will be refreshed on next tick call.
+	 */
+	public void invalidateViewers() {
+		var iter = this.viewers.entrySet().iterator();
+		while(iter.hasNext()) {
+			var entry = iter.next();
+			entry.getValue().isSeeingHitboxes = !entry.getValue().isSeeingHitboxes;
+		}
+	}
+
 	public FakeHitboxViewer getFakeViewer(Player viewer) {
 		return this.viewers.computeIfAbsent(viewer, player1 -> new FakeHitboxViewer());
 	}
@@ -255,8 +268,10 @@ public class FakeHitbox
 	}
 
 	public PacketContainer[] getSpawnAndMetadataPackets() {
-		//return spawnAndMetaPackets;
-		return spawnPlayerPackets;
+		if(FakeHitboxManager.show)
+			return spawnPlayerPackets;
+		else
+			return spawnAndMetaPackets;
 	}
 
 	public PacketContainer[] getTeleportPackets() {
@@ -274,8 +289,7 @@ public class FakeHitbox
 				this.lastPoseChangeTime == currentTick - 1 ||
 				this.lastPoseChangeTime == currentTick - 2) {
 
-			packets = new PacketContainer[4];
-			System.arraycopy(this.teleportPackets, 0, packets, 0, 4);
+			packets = this.teleportPackets;
 		}
 		//ignore look-only packets as the direction hitboxes face is not important
 		else if(movePacket.getType() == PacketType.Play.Server.REL_ENTITY_MOVE_LOOK ||
