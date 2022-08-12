@@ -14,12 +14,17 @@ import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoPacket;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.phys.AABB;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
+import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityPoseChangeEvent;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
 import javax.annotation.Nullable;
@@ -62,12 +67,15 @@ public class FakeHitbox
 	private final Map<Player, FakeHitboxViewer> viewers;
 	//[fakePlayerIndex][x/y/z]
 	private final Vector[] coordinates;
+	//if each of these fake players is colliding with a wall
+	private final boolean[] collidings;
 	private int lastPoseChangeTime;
 
 	public FakeHitbox(Player owner) {
 		this.owner = owner;
 		viewers = new LinkedHashMap<>();
 		coordinates = new Vector[4];
+		collidings = new boolean[4];
 		spawnPlayerPackets = new PacketContainer[4];
 		teleportPackets = new PacketContainer[4];
 		metadataPackets = new PacketContainer[4];
@@ -119,6 +127,7 @@ public class FakeHitbox
 
 			fakePlayerIds[i] = fPlayer.entityId;
 			coordinates[i] = loc.toVector();
+			collidings[i] = false;
 
 			FakeHitboxManager.addFakeLookupEntry(fPlayer.entityId, owner);
 		}
@@ -175,34 +184,64 @@ public class FakeHitbox
 	/**
 	 * Update position in packets and calculate position for swimming/riptide pose if needed.
 	 */
-	public void updatePosition(Location newPosition, org.bukkit.entity.Pose pose, boolean updateClients) {
-		HitboxPose boxPose = HitboxPose.getFromBukkit(pose);
+	public void updatePosition(Location newLocation, org.bukkit.entity.Pose bukkitPose, final boolean updateClients) {
+		HitboxPose boxPose = HitboxPose.getFromBukkit(bukkitPose);
 
-		Vector direction = newPosition.getDirection();
+		Vector direction = newLocation.getDirection();
 		Vector newPos = new Vector();
+		Vector currentPos = newLocation.toVector();
+		//get bounding box dimensions based on new, not current pose
+		EntityDimensions nmsDimensions = ((CraftPlayer) this.owner).getHandle().getDimensions(Pose.values()[bukkitPose.ordinal()]);
+		boolean[] updateThisBox = new boolean[4];
+		boolean updateAny = updateClients;
+		int currentTick = TeamArena.getGameTick();
 		for(int i = 0; i < 4; i++) {
-			calcBoxPosition(newPos, boxPose, newPosition, direction, i);
-			MathUtils.copyVector(coordinates[i], newPos);
-		}
+			updateThisBox[i] = updateClients;
+			calcBoxPosition(newPos, boxPose, newLocation, direction, i);
 
-		//update the packets
-		for(int i = 0; i < 4; i++) {
+			//check for collision with blocks. put in same position as real player if there is a collision
+			// don't want fake hitboxes to peek through walls and such
+			//following code taken from bukkit CraftRegionAccessor#hasCollisionsIn(BoundingBox);
+			AABB nmsBoundingBox = nmsDimensions.makeBoundingBox(newPos.getX(), newPos.getY(), newPos.getZ());
+			boolean noCollision = ((CraftWorld) newLocation.getWorld()).getHandle().noCollision(nmsBoundingBox);
+			if(noCollision) {
+				MathUtils.copyVector(coordinates[i], newPos);
+				//was previously colliding and stopped, update precise pos
+				if(this.collidings[i]) {
+					this.collidings[i] = false;
+					updateThisBox[i] = true;
+					updateAny = true;
+				}
+			}
+			else {
+				MathUtils.copyVector(coordinates[i], currentPos);
+				updateThisBox[i] = true;
+				updateAny = true;
+				//consider it a pose change so precise teleport will be used in following rel move packet(s)
+				this.lastPoseChangeTime = currentTick;
+				this.collidings[i] = true;
+			}
+
+			//update the packets
 			writeDoubles(spawnPlayerPackets[i], coordinates[i]);
 			writeDoubles(teleportPackets[i], coordinates[i]);
 		}
 
 		//update positions on client if needed
-		if(updateClients) {
-			for(var entry : this.viewers.entrySet()) {
-				if(entry.getValue().isSeeingHitboxes) {
-					PlayerUtils.sendPacket(entry.getKey(), teleportPackets);
+		if(updateAny) {
+			for (var entry : this.viewers.entrySet()) {
+				if (entry.getValue().isSeeingHitboxes) {
+					for (int i = 0; i < 4; i++) {
+						if (updateThisBox[i])
+							PlayerUtils.sendPacket(entry.getKey(), teleportPackets);
+					}
 				}
 			}
 		}
 	}
 
 	/**
-	 * Calcualte new box number position. Take in Vectors from caller instead of constructing new ones to
+	 * Calculate new box number position. Take in Vectors from caller instead of constructing new ones to
 	 * reduce Object allocation.
 	 */
 	private static void calcBoxPosition(Vector container, HitboxPose pose, Location ownerLoc, Vector ownerDir, int boxNum) {
@@ -235,6 +274,13 @@ public class FakeHitbox
 			container.setX(container.getX() + ownerLoc.getX());
 			container.setY(container.getY() + ownerLoc.getY());
 			container.setZ(container.getZ() + ownerLoc.getZ());
+
+			//don't go down/upwards into blocks
+			Location heightLoc = ownerLoc.clone();
+			heightLoc.setY(container.getY());
+			if(heightLoc.getBlock().isSolid()) {
+				container.setY(ownerLoc.getY());
+			}
 		}
 	}
 
@@ -286,8 +332,7 @@ public class FakeHitbox
 		final HitboxPose pose = HitboxPose.getFromBukkit(this.owner.getPose());
 		final int currentTick = TeamArena.getGameTick();
 		if (pose != HitboxPose.OTHER ||
-				this.lastPoseChangeTime == currentTick - 1 ||
-				this.lastPoseChangeTime == currentTick - 2) {
+				(this.lastPoseChangeTime >= currentTick - 3 && this.lastPoseChangeTime <= currentTick)) {
 
 			packets = this.teleportPackets;
 		}
