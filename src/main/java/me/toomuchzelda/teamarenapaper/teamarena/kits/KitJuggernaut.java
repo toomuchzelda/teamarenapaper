@@ -15,9 +15,10 @@ public class KitJuggernaut extends Kit {
                 new ItemStack(Material.NETHERITE_LEGGINGS),
                 new ItemStack(Material.NETHERITE_BOOTS));
 
-        ItemStack sword = new ItemStack(Material.WOODEN_SWORD);
+        ItemStack sword = new ItemStack(Material.STONE_SWORD);
         ItemMeta swordMeta = sword.getItemMeta();
-        swordMeta.addEnchant(Enchantment.SWEEPING_EDGE, 1, true);
+        swordMeta.addEnchant(Enchantment.SWEEPING_EDGE, 3, true);
+		swordMeta.addEnchant(Enchantment.KNOCKBACK, 1, true);
         sword.setItemMeta(swordMeta);
 
         setItems(sword);

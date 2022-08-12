@@ -231,7 +231,7 @@ public class DamageType {
     private boolean _melee;
 	private boolean _projectile;
     private final String _name;
-    //mainly for getting correct damage sound from nms in EntityUtils.playHurtAnimation
+    //for getting correct damage sound from nms in EntityUtils.playHurtAnimation
     private DamageSource nmsDamageSource;
 	private DamageTimes.TrackedDamageTypes trackedType;
 

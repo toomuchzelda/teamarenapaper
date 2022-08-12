@@ -1,15 +1,68 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
-import org.bukkit.Bukkit;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.potion.PotionEffect;
 
 import java.util.Map;
 
 public class DamageCalculator
 {
+	/**
+	 * Calculate the damage a LivingEntity would do to an Entity victim in a regular melee attack,
+	 * considering all enchantments, armour etc.
+	 * @return a double[] with values:
+	 * 0: Item base damage.
+	 * 1: Item enchantment damage.
+	 * 2: Damage dealt on the victim after considering armour.
+	 */
+	public static double[] calcItemDamageOnEntity(LivingEntity attacker, ItemStack weapon, DamageType damageType,
+														boolean critical, Entity victim) {
+		double[] results = new double[3];
+
+		//recalculate the damage done by the item
+		double itemDamage = DamageNumbers.getMaterialBaseDamage(weapon.getType());
+		//add damage from potion effects (strength and weakness)
+		for(PotionEffect potEffect : attacker.getActivePotionEffects()) {
+			itemDamage += DamageNumbers.getPotionEffectDamage(potEffect);
+		}
+		//crit
+		if(critical) {
+			itemDamage = DamageNumbers.getCritDamage(itemDamage);
+		}
+
+		results[0] = itemDamage;
+
+		//add enchantments
+		if(victim instanceof LivingEntity livingVictim) {
+			double enchDamage = DamageCalculator.calcItemEnchantDamage(weapon, livingVictim);
+			results[1] = enchDamage;
+			itemDamage += enchDamage;
+
+			//do armor calc on victim
+			results[2] = DamageCalculator.calcArmorReducedDamage(damageType, itemDamage, livingVictim);
+		}
+		else {
+			results[2] = itemDamage;
+		}
+
+		if(damageType.is(DamageType.SWEEP_ATTACK)) {
+			double sweepLevels = weapon.getEnchantmentLevel(Enchantment.SWEEPING_EDGE);
+			//1 + Attack_Damage × (Sweeping_Edge_Level / (Sweeping_Edge_Level + 1));
+			results[2] = 1d + (results[2] * (sweepLevels / (sweepLevels + 1d)));
+			//set the weapon base damage to half a heart?
+			// sweep attacks do half a heart if there is no sweeping edge enchantment
+			// so i suppose item base damage should be 1, and enchantment damage should be the damage added by
+			// sweeping edge, if any.
+			results[1] = Math.max(0d, results[2] - 1d);
+			results[0] = 1d;
+		}
+
+		return results;
+	}
+
 	/**
 	 * Percentage of damage to be blocked by the victim's armor, ignoring enchantments, for this DamageType
 	 * @return percent in range 0.0 to 1.0
@@ -79,16 +132,11 @@ public class DamageCalculator
 		return damage;
 	}
 
-	//PlayerInventory.getArmorContents doesn't create copies of ItemStacks, probably faster than
-	// EntityEquipment.getArmorContents
 	private static ItemStack[] getArmor(LivingEntity living) {
-		ItemStack[] armor = null;
-		if(living instanceof Player p)
-			armor = p.getInventory().getArmorContents();
-		else if(living.getEquipment() != null)
+		ItemStack[] armor;
+		if(living.getEquipment() != null)
 			armor = living.getEquipment().getArmorContents();
-
-		if(armor == null)
+		else
 			armor = new ItemStack[0];
 
 		return armor;

@@ -25,7 +25,6 @@ import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.potion.PotionEffect;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
@@ -216,35 +215,12 @@ public class DamageEvent {
 					//item used during the attack, if applicable
 					ItemStack item = living.getEquipment().getItemInMainHand();
 
-					//recalculate the damage done by the item
-					double itemDamage = DamageNumbers.getMaterialBaseDamage(item.getType());
-					//add damage from potion effects (strength and weakness)
-					for(PotionEffect potEffect : living.getActivePotionEffects()) {
-						itemDamage += DamageNumbers.getPotionEffectDamage(potEffect);
-						//Bukkit.broadcastMessage("added " + potEffect.getType().getName() + ", new total: " + itemDamage);
-					}
-					//crit
-					if(critical) {
-						itemDamage = DamageNumbers.getCritDamage(itemDamage);
-					}
+					double[] damages = DamageCalculator.calcItemDamageOnEntity(living, item, damageType, critical, victim);
+					damageEvent.baseDamage = damages[0];
+					damageEvent.enchantDamage = damages[1];
+					finalDamage = damages[2];
 
-					damageEvent.baseDamage = itemDamage;
-
-					//Bukkit.broadcastMessage("Custom base damage: " + itemDamage);
-
-					//add enchantments
-					if(victim instanceof LivingEntity livingVictim) {
-						double enchDamage = DamageCalculator.calcItemEnchantDamage(item, livingVictim);
-						itemDamage += enchDamage;
-						//Bukkit.broadcastMessage("Custom ench damage: " + enchDamage);
-						//do armor calc on victim
-						finalDamage = DamageCalculator.calcArmorReducedDamage(damageType, itemDamage, livingVictim);
-						alreadyCalcedArmor = true;
-
-						damageEvent.enchantDamage = enchDamage;
-					}
-
-					rawDamage = itemDamage;
+					alreadyCalcedArmor = true;
 
 					//halve the strength of knockback enchantments
 					knockbackLevels += ((float) item.getEnchantmentLevel(Enchantment.KNOCKBACK)) / 2;
