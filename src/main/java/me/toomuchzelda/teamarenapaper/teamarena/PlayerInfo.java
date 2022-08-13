@@ -12,6 +12,7 @@ import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Damageable;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -82,9 +83,13 @@ public class PlayerInfo
 		preferences.put(preference, value);
 	}
 
-	@SuppressWarnings("unchecked") //bad cod emoment
+	@SuppressWarnings("unchecked")
 	public <T> T getPreference(Preference<T> preference) {
 		return (T) preferences.getOrDefault(preference, preference.getDefaultValue());
+	}
+
+	public boolean hasCosmeticItem(NamespacedKey key) {
+		return true;
 	}
 
 	/**

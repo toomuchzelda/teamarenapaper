@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.utils;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
@@ -75,5 +76,13 @@ public class FileUtils {
 			Main.logger().info("Failed to delete " + file.getAbsolutePath());
 			ex.printStackTrace();
 		}
+	}
+
+	public record FileInfo(String fileName, @NotNull String fileExtension) {}
+	public static FileInfo getFileExtension(String fileName) {
+		int idx = fileName.lastIndexOf('.');
+		if (idx == -1)
+			return new FileInfo(fileName, "");
+		return new FileInfo(fileName.substring(0, idx), fileName.substring(idx + 1));
 	}
 }

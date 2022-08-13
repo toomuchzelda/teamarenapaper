@@ -216,12 +216,7 @@ public class CommandDebug extends CustomCommand {
 		} else {
 			kitNames = Set.of();
 		}
-		// Truth table
-		// Action    | Contains | Kit allowed
-		// block (T) | T        | F
-		// block (T) | F        | T
-		// allow (F) | T        | T
-		// allow (F) | F        | F
+		// XOR
 		kitPredicate = kit -> block != kitNames.contains(kit.getName().toLowerCase(Locale.ENGLISH));
 		sender.sendMessage(Component.text("Set kit restrictions to: " +
 				args[2] + " " + kitNames, NamedTextColor.GREEN));
@@ -411,6 +406,12 @@ public class CommandDebug extends CustomCommand {
 						testPacketEntity = null;
 					}
 				}
+			}
+			case "graffititest" -> {
+				if (args.length < 2)
+					throw throwUsage("/debug graffititest <graffiti>");
+				NamespacedKey graffiti = NamespacedKey.fromString(args[1]);
+				Main.getGame().graffiti.spawnGraffiti(player, graffiti);
 			}
 			default -> showUsage(sender);
 		}

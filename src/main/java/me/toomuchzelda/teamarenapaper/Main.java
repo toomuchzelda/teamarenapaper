@@ -10,7 +10,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy.SearchAndDestroy;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.FileUtils;
-import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandMap;
 import org.bukkit.entity.Player;
@@ -66,7 +65,9 @@ public final class Main extends JavaPlugin
 
 		// delete temporarily loaded map if any
 		if (teamArena != null) {
-			teamArena.cleanUp();
+			TeamArena oldGame = teamArena;
+			teamArena = null;
+			oldGame.cleanUp();
 		}
 
 		HandlerList.unregisterAll(this);

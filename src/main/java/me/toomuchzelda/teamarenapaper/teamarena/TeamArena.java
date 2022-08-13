@@ -121,6 +121,7 @@ public abstract class TeamArena
 	private final List<DamageIndicatorHologram> activeDamageIndicators = new LinkedList<>();
 
 	public final MiniMapManager miniMap;
+	public final GraffitiManager graffiti;
 
 	public TeamArena() {
 		Main.logger().info("Reading info from " + getMapPath().getPath() + ':');
@@ -236,6 +237,7 @@ public abstract class TeamArena
 		PlayerListScoreManager.removeScores();
 
 		miniMap = new MiniMapManager(this);
+		graffiti = new GraffitiManager(this);
 
 		DamageTimes.clear();
 
@@ -298,15 +300,12 @@ public abstract class TeamArena
 	public void cleanUp() {
 		for (Player player : gameWorld.getPlayers()) {
 			//should have been teleported already in the team arena constructor, but sometimes fails?
-			if(Main.getGame() != null) {
-				boolean teleSuccess = player.teleport(Main.getGame().spawnPos);
-				if(!teleSuccess) {
-					player.kick(Component.text("Something went horribly wrong!!! Oh my god!!! OH MY GOOODDDD!!!!!!!!"
-							, NamedTextColor.YELLOW));
+			if (Main.getGame() != null) {
+				if(!player.teleport(Main.getGame().spawnPos)) {
+					player.kick(Component.text("Something went horribly wrong!!! Oh my god!!! OH MY GOOODDDD!!!!!!!!", NamedTextColor.YELLOW));
 					Main.logger().severe("Teleporting " + player.getName() + " in cleanUp() fallback failed");
 				}
-			}
-			else {
+			} else {
 				player.kick(TextUtils.getRGBManiacComponent(Component.text("Server closed uwu"), Style.empty(), 0d));
 			}
 		}
@@ -396,6 +395,7 @@ public abstract class TeamArena
 		}
 
 		tickSidebar();
+		graffiti.tick();
 	}
 
 	public void preGameTick() {
@@ -714,9 +714,12 @@ public abstract class TeamArena
 			Player clicker = event.getPlayer();
 			PlayerInfo pinfo = Main.getPlayerInfo(clicker);
 			TeamArenaTeam team = pinfo.team;
-			if (miniMap.isMapItem(event.getItem())) {
+			if (miniMap.isMapItem(event.getItem()) && event.useItemInHand() != Event.Result.DENY) {
 				event.setUseItemInHand(Event.Result.DENY);
-				Inventories.openInventory(clicker, new SpectateInventory(isSpectator(clicker) ? null : team));
+				event.setUseInteractedBlock(Event.Result.DENY);
+				// TODO fix respawning players being able to see other teams
+				var teamFilter = isSpectator(clicker) ? null : team;
+				Inventories.openInventory(clicker, new SpectateInventory(teamFilter));
 				return;
 			}
 			//right click to glow teammates, left click to ping to nearby teammates
@@ -967,6 +970,7 @@ public abstract class TeamArena
 		}
 
 		miniMap.cleanUp();
+		graffiti.cleanUp();
 
 		players.clear();
 		spectators.clear();

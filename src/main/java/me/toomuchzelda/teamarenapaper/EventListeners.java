@@ -11,6 +11,7 @@ import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
+import io.papermc.paper.event.player.PlayerItemFrameChangeEvent;
 import me.toomuchzelda.teamarenapaper.explosions.EntityExplosionInfo;
 import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitbox;
@@ -685,14 +686,32 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void playerDropItem(PlayerDropItemEvent event) {
-		if(event.getPlayer().getGameMode() != GameMode.CREATIVE) {
+		Player player = event.getPlayer();
+		if (player.getGameMode() != GameMode.CREATIVE) {
 			event.setCancelled(true);
 		}
 
-		if(Main.getGame() != null && Main.getGame().getGameState() == LIVE) {
-			Ability[] abilities = Kit.getAbilities(event.getPlayer());
-			for (Ability a : abilities) {
-				a.onPlayerDropItem(event);
+		TeamArena game = Main.getGame();
+		if (game != null) {
+			if (game.miniMap.isMapItem(event.getItemDrop().getItemStack()) &&
+				player.getCooldown(Material.FILLED_MAP) == 0 && player.isSneaking()) {
+				player.setCooldown(Material.FILLED_MAP, 40 * 20);
+				var playerInfo = Main.getPlayerInfo(player);
+				// spawn a random owned graffiti
+				var ownedGraffiti = game.graffiti.getAllGraffiti().stream()
+					.filter(playerInfo::hasCosmeticItem)
+					.toList();
+				if (ownedGraffiti.size() != 0) {
+					game.graffiti.spawnGraffiti(player, ownedGraffiti.get(MathUtils.random.nextInt(ownedGraffiti.size())));
+					event.setCancelled(true);
+					return;
+				}
+			}
+
+			if (game.getGameState() == LIVE) {
+				for (Ability a : Kit.getAbilities(player)) {
+					a.onPlayerDropItem(event);
+				}
 			}
 		}
 	}
@@ -839,4 +858,15 @@ public class EventListeners implements Listener
 	public void onMOTD(PaperServerListPingEvent e) {
 		e.motd(MOTD);
 	}
+
+	// nice class
+	@EventHandler
+	public void onItemFrame(PlayerItemFrameChangeEvent e) {
+		if (e.getAction() != PlayerItemFrameChangeEvent.ItemFrameChangeAction.PLACE)
+			return;
+//		if (isMapItem(e.getItemStack()))
+		if (e.getItemStack().getType() == Material.FILLED_MAP) // who even cares
+			e.setCancelled(true);
+	}
+
 }

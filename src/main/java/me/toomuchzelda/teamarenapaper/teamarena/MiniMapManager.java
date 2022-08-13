@@ -263,8 +263,9 @@ public class MiniMapManager {
 					int blockZ = (centerZ / blocksPerPixel + mapZ - 64) * blocksPerPixel;
 
 					// check if within map borders
-					boolean isOutsideBorder = blockX < box.getMinX() || blockX + blocksPerPixel > box.getMaxX() ||
-							blockZ < box.getMinZ() || blockZ + blocksPerPixel > box.getMaxZ();
+					// render every block outside of map borders
+					boolean isOutsideBorder = false/*blockX < box.getMinX() || blockX + blocksPerPixel > box.getMaxX() ||
+							blockZ < box.getMinZ() || blockZ + blocksPerPixel > box.getMaxZ()*/;
 
 					Multiset<MaterialColor> multiset = LinkedHashMultiset.create();
 					var chunk = (LevelChunk) world.getChunk(blockX >> 4, blockZ >> 4, ChunkStatus.FULL, false);
@@ -280,7 +281,6 @@ public class MiniMapManager {
 					BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 					BlockPos.MutableBlockPos pos1 = new BlockPos.MutableBlockPos();
 
-					MaterialColor materialmapcolor;
 					for (int i = 0; i < blocksPerPixel; ++i) {
 						for (int j = 0; j < blocksPerPixel; ++j) {
 							if (isOutsideBorder) {
@@ -325,32 +325,32 @@ public class MiniMapManager {
 					}
 
 					k3 /= blocksPerPixel * blocksPerPixel;
-					materialmapcolor = Iterables.getFirst(Multisets.copyHighestCountFirst(multiset), MaterialColor.NONE);
+					MaterialColor materialColor = Iterables.getFirst(Multisets.copyHighestCountFirst(multiset), MaterialColor.NONE);
 					double d2;
-					MaterialColor.Brightness materialmapcolor_a;
+					MaterialColor.Brightness brightness;
 
-					if (materialmapcolor == MaterialColor.WATER) {
+					if (materialColor == MaterialColor.WATER) {
 						d2 = (double) k3 * 0.1D + (double) (mapX + mapZ & 1) * 0.2D;
 						if (d2 < 0.5D) {
-							materialmapcolor_a = MaterialColor.Brightness.HIGH;
+							brightness = MaterialColor.Brightness.HIGH;
 						} else if (d2 > 0.9D) {
-							materialmapcolor_a = MaterialColor.Brightness.LOW;
+							brightness = MaterialColor.Brightness.LOW;
 						} else {
-							materialmapcolor_a = MaterialColor.Brightness.NORMAL;
+							brightness = MaterialColor.Brightness.NORMAL;
 						}
 					} else {
 						d2 = (d1 - d0) * 4.0D / (double) (blocksPerPixel + 4) + ((double) (mapX + mapZ & 1) - 0.5D) * 0.4D;
 						if (d2 > 0.6D) {
-							materialmapcolor_a = MaterialColor.Brightness.HIGH;
+							brightness = MaterialColor.Brightness.HIGH;
 						} else if (d2 < -0.6D) {
-							materialmapcolor_a = MaterialColor.Brightness.LOW;
+							brightness = MaterialColor.Brightness.LOW;
 						} else {
-							materialmapcolor_a = MaterialColor.Brightness.NORMAL;
+							brightness = MaterialColor.Brightness.NORMAL;
 						}
 					}
 
 					d0 = d1;
-					canvas.setPixel(mapX, mapZ, materialmapcolor.getPackedId(materialmapcolor_a));
+					canvas.setPixel(mapX, mapZ, materialColor.getPackedId(brightness));
 				}
 			}
 		}
