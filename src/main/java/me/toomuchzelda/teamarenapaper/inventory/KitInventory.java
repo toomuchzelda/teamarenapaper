@@ -1,16 +1,19 @@
 package me.toomuchzelda.teamarenapaper.inventory;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.sql.DBSetDefaultKit;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.KitDemolitions;
+import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
@@ -19,6 +22,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 
+import java.sql.SQLException;
 import java.util.*;
 
 public class KitInventory implements InventoryProvider {
@@ -57,7 +61,7 @@ public class KitInventory implements InventoryProvider {
 		boolean disabled = !CommandDebug.kitPredicate.test(kit);
 
 		String desc = kit.getDescription();
-		// word wrapping because some command-loving idiot didn't add line breaks in kit descriptions
+		// word wrapping
 		List<Component> loreLines = new ArrayList<>(TextUtils.wrapString(desc, LORE_STYLE, 200));
 
 		if (selected) {
@@ -117,20 +121,30 @@ public class KitInventory implements InventoryProvider {
 			else if (i == 53)
 				inventory.set(i, ItemBuilder.of(Material.ENDER_CHEST)
 						.displayName(Component.text("Save as default kit", NamedTextColor.YELLOW))
-						.lore(TextUtils.toLoreList("""
+						/*.lore(TextUtils.toLoreList("""
 								Warning: Unfortunately, the default kit is not
 								actually saved. To make your changes persist
-								across sessions, nag toomuchzelda.""", NamedTextColor.GRAY))
+								across sessions, nag toomuchzelda.""", NamedTextColor.GRAY))*/
 						.toClickableItem(e -> {
 							Player clicker = (Player) e.getWhoClicked();
 							PlayerInfo playerInfo = Main.getPlayerInfo(clicker);
 							playerInfo.defaultKit = playerInfo.kit.getName();
-							clicker.playSound(clicker, Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1);
-							clicker.sendMessage(Component.textOfChildren(
-									Component.text("Saved ", NamedTextColor.GREEN),
-									Component.text(playerInfo.defaultKit, NamedTextColor.YELLOW),
-									Component.text(" as your default kit.", NamedTextColor.GREEN)
-							));
+							DBSetDefaultKit dbSetKit = new DBSetDefaultKit(clicker, playerInfo.kit);
+							Bukkit.getScheduler().runTaskAsynchronously(Main.getPlugin(), bukkitTask -> {
+								try {
+									dbSetKit.run();
+									clicker.playSound(clicker, Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1);
+									clicker.sendMessage(Component.textOfChildren(
+											Component.text("Saved ", NamedTextColor.GREEN),
+											Component.text(playerInfo.defaultKit, NamedTextColor.YELLOW),
+											Component.text(" as your default kit.", NamedTextColor.GREEN)
+									));
+								}
+								catch (SQLException ex) {
+									clicker.sendMessage(Component.text("Failed to save kit", TextColors.ERROR_RED));
+								}
+							});
+
 							Inventories.closeInventory(clicker, KitInventory.class);
 						})
 				);

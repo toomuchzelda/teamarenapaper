@@ -15,6 +15,7 @@ import me.toomuchzelda.teamarenapaper.explosions.EntityExplosionInfo;
 import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitbox;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
+import me.toomuchzelda.teamarenapaper.sql.DBSetPlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
@@ -57,6 +58,7 @@ import org.jetbrains.annotations.NotNull;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 
 import java.lang.reflect.Constructor;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
@@ -68,6 +70,7 @@ public class EventListeners implements Listener
 {
 
 	public static final boolean[] BREAKABLE_BLOCKS;
+	private final HashMap<UUID, CompletableFuture<Map<Preference<?>, ?>>> preferenceFutureMap = new HashMap<>();
 
 	static {
 		BREAKABLE_BLOCKS = new boolean[Material.values().length];
@@ -173,13 +176,25 @@ public class EventListeners implements Listener
 		PacketListeners.cancelDamageSounds = true;
 	}
 
-	private final HashMap<UUID, CompletableFuture<Map<Preference<?>, ?>>> preferenceFutureMap = new HashMap<>();
 	@EventHandler(priority = EventPriority.MONITOR)
-	public void asyncPlayerPreLogin(AsyncPlayerPreLoginEvent e) {
-		if (e.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED)
+	public void asyncPlayerPreLogin(AsyncPlayerPreLoginEvent event) {
+		if (event.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED)
 			return;
+
+		DBSetPlayerInfo setPlayerInfo = new DBSetPlayerInfo(event.getUniqueId(), event.getName());
+		//don't need bukkit async scheduler as this event is called async
+		try {
+			setPlayerInfo.run();
+		}
+		catch(SQLException e) {
+			event.setLoginResult(AsyncPlayerPreLoginEvent.Result.KICK_OTHER);
+			event.kickMessage(Component.text("Could not update PlayerInfo in AsyncPreLogin! Please tell an admin.",
+					TextColors.ERROR_RED));
+			return;
+		}
+
 		synchronized (preferenceFutureMap) {
-			preferenceFutureMap.put(e.getUniqueId(), PreferenceManager.fetchPreferences(e.getUniqueId()));
+			preferenceFutureMap.put(event.getUniqueId(), PreferenceManager.fetchPreferences(event.getUniqueId()));
 		}
 	}
 

@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper;
 
 import com.comphenix.protocol.ProtocolLibrary;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
+import me.toomuchzelda.teamarenapaper.sql.DatabaseManager;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.*;
@@ -40,6 +41,9 @@ public final class Main extends JavaPlugin
 		logger = this.getLogger();
 		logger.info("Starting TMA");
 
+		getConfig().options().copyDefaults(true);
+		saveConfig();
+
 		// load important classes
 		Preferences.registerPreferences();
 		FileUtils.init();
@@ -47,6 +51,8 @@ public final class Main extends JavaPlugin
 		int initialCapacity = Bukkit.getMaxPlayers();
 		playerInfo = Collections.synchronizedMap(new LinkedHashMap<>(initialCapacity));
 		playerIdLookup = Collections.synchronizedMap(new HashMap<>(initialCapacity));
+
+		DatabaseManager.init();
 
 		eventListeners = new EventListeners(this);
 		packetListeners = new PacketListeners(this);
@@ -71,6 +77,8 @@ public final class Main extends JavaPlugin
 
 		HandlerList.unregisterAll(this);
 		ProtocolLibrary.getProtocolManager().removePacketListeners(this);
+
+		DatabaseManager.close();
 	}
 
 	private static void registerCommands() {

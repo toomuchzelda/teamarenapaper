@@ -14,6 +14,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -52,7 +53,7 @@ public abstract class Kit {
         this.items = new ItemStack[0];
         this.abilities = new Ability[0];
 
-        activeUsers = ConcurrentHashMap.newKeySet();
+        activeUsers = new LinkedHashSet<>();
     }
 
 	public Kit setCategory(@NotNull KitCategory category) {
