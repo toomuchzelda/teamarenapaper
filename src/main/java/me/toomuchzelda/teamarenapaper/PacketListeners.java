@@ -18,14 +18,13 @@ import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.DisguiseManager;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSpy;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.minecraft.network.chat.PlayerChatMessage;
 import net.minecraft.network.protocol.game.*;
-import net.minecraft.util.Crypt;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import org.bukkit.Bukkit;
@@ -38,6 +37,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.UUID;
 
 public class PacketListeners
 {
@@ -344,22 +344,28 @@ public class PacketListeners
 
 	private static class NoChatKeys extends PacketAdapter {
 		NoChatKeys() {
-			super(Main.getPlugin(), PacketType.Play.Server.PLAYER_INFO, PacketType.Play.Server.CHAT, PacketType.Play.Client.CHAT_PREVIEW);
+			super(Main.getPlugin(), PacketType.Play.Server.PLAYER_INFO,
+					PacketType.Play.Client.CHAT_PREVIEW,
+					PacketType.Play.Client.CHAT,
+					PacketType.Play.Client.CHAT_COMMAND);
 		}
 
 		@Override
 		public void onPacketSending(PacketEvent event) {
 			var packet = event.getPacket();
-			if (event.getPacketType() == PacketType.Play.Server.PLAYER_INFO) {
-				if (packet.getPlayerInfoAction().read(0) == EnumWrappers.PlayerInfoAction.ADD_PLAYER) {
-					var playerInfoList = packet.getPlayerInfoDataLists().read(0);
-					playerInfoList.replaceAll(data ->
-							new PlayerInfoData(data.getProfile(), data.getLatency(), data.getGameMode(),
-									data.getDisplayName(), null));
-					packet.getPlayerInfoDataLists().write(0, playerInfoList);
-				}
-			} else if (event.getPacketType() == PacketType.Play.Server.CHAT) {
-				//TODO chat system
+			if (packet.getPlayerInfoAction().read(0) == EnumWrappers.PlayerInfoAction.ADD_PLAYER) {
+				var playerInfoList = packet.getPlayerInfoDataLists().read(0);
+				UUID viewerUuid = event.getPlayer().getUniqueId();
+				playerInfoList.replaceAll(data -> {
+					if(!viewerUuid.equals(data.getProfile().getUUID())) {
+						return new PlayerInfoData(data.getProfile(), data.getLatency(), data.getGameMode(),
+								data.getDisplayName(), null);
+					}
+					else {
+						return data;
+					}
+				});
+				packet.getPlayerInfoDataLists().write(0, playerInfoList);
 			}
 		}
 
@@ -367,19 +373,32 @@ public class PacketListeners
 		public void onPacketReceiving(PacketEvent event) {
 			var packet = event.getPacket();
 			var player = event.getPlayer();
-			if (!player.isOp())
-				return;
 
-			if (event.getPacketType() == PacketType.Play.Client.CHAT_PREVIEW) {
-				var nmsPacket = (ServerboundChatPreviewPacket) packet.getHandle();
-				String message = nmsPacket.query();
-				var preview = MiniMessage.miniMessage().deserialize(message);
-
-				var response = new ClientboundChatPreviewPacket(nmsPacket.queryId(),
-						PaperAdventure.asVanilla(preview));
-
-				PlayerUtils.sendPacket(event.getPlayer(), response);
+			if (packet.getType() == PacketType.Play.Client.CHAT ||
+					packet.getType() == PacketType.Play.Client.CHAT_COMMAND) {
 				event.setCancelled(true);
+
+				final String originalMessage;
+				if(event.getPacketType() == PacketType.Play.Client.CHAT)
+					originalMessage = event.getPacket().getStrings().read(0);
+				else
+					originalMessage = "/" + event.getPacket().getStrings().read(0);
+
+				Bukkit.getScheduler().runTask(Main.getPlugin(), bukkitTask -> {
+					event.getPlayer().chat(originalMessage);
+				});
+			}
+			else if (packet.getType() == PacketType.Play.Client.CHAT_PREVIEW) {
+				if (Main.getPlayerInfo(player).permissionLevel.compareTo(CustomCommand.PermissionLevel.MOD) >= 0) {
+					var nmsPacket = (ServerboundChatPreviewPacket) packet.getHandle();
+					String message = nmsPacket.query();
+					var preview = MiniMessage.miniMessage().deserialize(message);
+
+					var response = new ClientboundChatPreviewPacket(nmsPacket.queryId(), PaperAdventure.asVanilla(preview));
+
+					PlayerUtils.sendPacket(event.getPlayer(), response);
+					event.setCancelled(true);
+				}
 			}
 		}
 	}

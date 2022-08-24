@@ -32,6 +32,7 @@ import me.toomuchzelda.teamarenapaper.utils.*;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -188,8 +189,9 @@ public class EventListeners implements Listener
 		}
 		catch(SQLException e) {
 			event.setLoginResult(AsyncPlayerPreLoginEvent.Result.KICK_OTHER);
-			event.kickMessage(Component.text("Could not update PlayerInfo in AsyncPreLogin! Please tell an admin.",
-					TextColors.ERROR_RED));
+			event.kickMessage(TextUtils.getRGBManiacComponent(
+					Component.text("Could not update DBPlayerInfo in AsyncPreLogin! Please tell an admin."),
+					Style.empty(), 0d));
 			return;
 		}
 
@@ -270,11 +272,10 @@ public class EventListeners implements Listener
 	}
 
 	@EventHandler
-	public void playerChat(AsyncChatEvent event) {
-		if (!event.getPlayer().isOp())
-			return;
-		var parsed = MiniMessage.miniMessage().deserialize(PlainTextComponentSerializer.plainText().serialize(event.message()));
-		event.message(parsed);
+	public void asyncChat(AsyncChatEvent event) {
+		if (Main.getPlayerInfo(event.getPlayer()).permissionLevel.compareTo(CustomCommand.PermissionLevel.MOD) >= 0) {
+			event.message(MiniMessage.miniMessage().deserialize(PlainTextComponentSerializer.plainText().serialize(event.message())));
+		}
 	}
 
 	@EventHandler
