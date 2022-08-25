@@ -7,6 +7,8 @@ import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import com.destroystokyo.paper.event.player.PlayerUseUnknownEntityEvent;
 import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
+import com.destroystokyo.paper.profile.CraftPlayerProfile;
+import com.destroystokyo.paper.profile.PlayerProfile;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.AsyncChatEvent;
@@ -15,7 +17,9 @@ import me.toomuchzelda.teamarenapaper.explosions.EntityExplosionInfo;
 import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitbox;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
+import me.toomuchzelda.teamarenapaper.sql.DBGetUuidByName;
 import me.toomuchzelda.teamarenapaper.sql.DBSetPlayerInfo;
+import me.toomuchzelda.teamarenapaper.sql.DatabaseManager;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
@@ -182,8 +186,27 @@ public class EventListeners implements Listener
 		if (event.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED)
 			return;
 
+		//if in offline mode, get UUID from stored playerinfo, by the player's name.
+		// for players joining for the first time a temporary entry in the PlayerInfo table
+		// is made for them and deleted afterwards.
+		// why do i need offline mode? it is very good in testing with bots
+		if(!DatabaseManager.ONLINE_MODE) {
+			//don't need bukkit async scheduler as this event is called async
+			DBGetUuidByName getUuidByName = new DBGetUuidByName(event.getName());
+			try {
+				UUID newUuid = getUuidByName.run();
+				if(newUuid != null) {
+					PlayerProfile old = event.getPlayerProfile();
+					PlayerProfile newProfile = new CraftPlayerProfile(newUuid, old.getName());
+					newProfile.setTextures(old.getTextures());
+					newProfile.setProperties(old.getProperties());
+					event.setPlayerProfile(newProfile);
+				}
+			}
+			catch (SQLException ignored) {}
+		}
+
 		DBSetPlayerInfo setPlayerInfo = new DBSetPlayerInfo(event.getUniqueId(), event.getName());
-		//don't need bukkit async scheduler as this event is called async
 		try {
 			setPlayerInfo.run();
 		}

@@ -2,17 +2,20 @@ package me.toomuchzelda.teamarenapaper.sql;
 
 import me.toomuchzelda.teamarenapaper.Main;
 
+import javax.annotation.Nullable;
 import java.sql.Connection;
 import java.sql.SQLException;
 
-public abstract class DBOperation
+public abstract class DBOperation<T>
 {
-	protected abstract void execute(Connection connection) throws SQLException;
+	protected abstract T execute(Connection connection) throws SQLException;
 
-	public void run() throws SQLException {
+	public @Nullable T run() throws SQLException {
+		T value;
 		if(DatabaseManager.isActive()) {
 			try {
-				this.execute(DatabaseManager.getConnection());
+				Main.logger().info("DB: " + this.getClass().getSimpleName() + ' ' + this.getLogMessage());
+				value = this.execute(DatabaseManager.getConnection());
 			}
 			catch (SQLException e) {
 				Main.logger().severe(e.getMessage());
@@ -21,5 +24,16 @@ public abstract class DBOperation
 				throw e;
 			}
 		}
+		else {
+			value = getDefaultValue();
+		}
+
+		return value;
 	}
+
+	protected T getDefaultValue() {
+		return null;
+	}
+
+	protected abstract String getLogMessage();
 }

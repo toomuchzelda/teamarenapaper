@@ -7,7 +7,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
-public class DBSetDefaultKit extends DBOperation
+public class DBSetDefaultKit extends DBOperation<Void>
 {
 	private final String uuid;
 	private final String kitName;
@@ -18,16 +18,22 @@ public class DBSetDefaultKit extends DBOperation
 	}
 
 	@Override
-	protected void execute(Connection connection) throws SQLException {
+	protected java.lang.Void execute(Connection connection) throws SQLException {
 		try (PreparedStatement stmt = connection.prepareStatement("INSERT INTO DefaultKits VALUES (?,?) " +
-				"ON CONFLICT(uuid) DO UPDATE SET uuid=?, kit=?;")) {
+				"ON CONFLICT(uuid) DO UPDATE SET kit=?;")) {
 
 			stmt.setString(1, uuid);
 			stmt.setString(2, kitName);
-			stmt.setString(3, uuid);
-			stmt.setString(4, kitName);
+			stmt.setString(3, kitName);
 
 			stmt.execute();
 		}
+
+		return null;
+	}
+
+	@Override
+	protected String getLogMessage() {
+		return "uuid=" + uuid + ",kitName:" + kitName;
 	}
 }

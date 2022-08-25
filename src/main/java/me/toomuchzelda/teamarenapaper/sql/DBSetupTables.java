@@ -4,12 +4,13 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-public class DBSetupTables extends DBOperation
+public class DBSetupTables extends DBOperation<Void>
 {
 	@Override
-	public void execute(Connection connection) throws SQLException {
+	public Void execute(Connection connection) throws SQLException {
 		try (Statement stmt = connection.createStatement()) {
-			//INTEGERs are unix time
+			//firstjoin lastjoin are unix time in seconds
+			//temp is for offline-mode new players, will be deleted after. 1 = temporary.
 			final String createPlayerInfo =
 					"""
 					CREATE TABLE IF NOT EXISTS PlayerInfo (
@@ -17,12 +18,13 @@ public class DBSetupTables extends DBOperation
 						name VARCHAR(16) NOT NULL,
 						firstjoin INTEGER NOT NULL,
 						lastjoin INTEGER NOT NULL CHECK (lastjoin >= firstjoin),
+						temp INTEGER NOT NULL,
 
 						PRIMARY KEY (uuid)
 					);
 					""";
 
-			final String createPreferencesTable =
+			final String createDefaultKits =
 					"""
 					CREATE TABLE IF NOT EXISTS DefaultKits (
 						uuid CHAR(36) NOT NULL,
@@ -34,9 +36,14 @@ public class DBSetupTables extends DBOperation
 					""";
 
 			stmt.execute(createPlayerInfo);
-			stmt.execute(createPreferencesTable);
-
-			stmt.close();
+			stmt.execute(createDefaultKits);
 		}
+
+		return null;
+	}
+
+	@Override
+	protected String getLogMessage() {
+		return "Setting up tables";
 	}
 }

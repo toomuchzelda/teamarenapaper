@@ -72,7 +72,9 @@ public final class Main extends JavaPlugin
 
 		// delete temporarily loaded map if any
 		if (teamArena != null) {
-			teamArena.cleanUp();
+			TeamArena temp = teamArena;
+			teamArena = null;
+			temp.cleanUp();
 		}
 
 		HandlerList.unregisterAll(this);
