@@ -128,6 +128,10 @@ public final class ItemBuilder {
         return this;
     }
 
+	public ItemBuilder hideAll() {
+		return hide(ItemFlag.values());
+	}
+
     public ItemStack build() {
         stack.setItemMeta(meta);
         return stack;

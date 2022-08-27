@@ -855,18 +855,19 @@ public class EventListeners implements Listener
 			TextUtils.getUselessRGBText("UnbalancedBS", TextColor.color(0x631773), TextColor.color(0xff00f2))
 	);
 	@EventHandler
-	public void onMOTD(PaperServerListPingEvent e) {
+	public void onMotd(PaperServerListPingEvent e) {
 		e.motd(MOTD);
 	}
 
-	// nice class
 	@EventHandler
 	public void onItemFrame(PlayerItemFrameChangeEvent e) {
-		if (e.getAction() != PlayerItemFrameChangeEvent.ItemFrameChangeAction.PLACE)
-			return;
-//		if (isMapItem(e.getItemStack()))
-		if (e.getItemStack().getType() == Material.FILLED_MAP) // who even cares
+		if (e.getPlayer().getGameMode() != GameMode.CREATIVE)
 			e.setCancelled(true);
+	}
+
+	@EventHandler
+	public void onSwapMainHand(PlayerSwapHandItemsEvent e) {
+		Main.getGame().graffiti.onSwapHandItems(e);
 	}
 
 }

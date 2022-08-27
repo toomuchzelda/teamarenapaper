@@ -7,6 +7,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
@@ -322,7 +323,7 @@ public class KitSpy extends Kit
 		}
 
 		@Override
-		public Component getTitle(Player player) {
+		public @NotNull Component getTitle(Player player) {
 			return Component.text("Spy Inventory");
 		}
 

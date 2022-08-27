@@ -1,8 +1,10 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
+import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
+import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.KillAssistTracker;
@@ -16,12 +18,10 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Damageable;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 //container class to store per-player info
 public class PlayerInfo
@@ -37,6 +37,8 @@ public class PlayerInfo
 	public String defaultKit;
 
 	private Map<Preference<?>, Object> preferences = new HashMap<>();
+
+	private Map<CosmeticType, NamespacedKey> selectedCosmetic = new EnumMap<>(CosmeticType.class);
 
 	private final Map<String, Integer> messageCooldowns = new HashMap<>();
 	private final LinkedList<DamageLogEntry> damageReceivedLog;
@@ -79,6 +81,15 @@ public class PlayerInfo
 		preferences = new HashMap<>(values); // disgusting and slow
 	}
 
+	public boolean hasPreference(Preference<?> preference) {
+		Object value = preferences.get(preference);
+		return value != null && !preference.getDefaultValue().equals(value);
+	}
+
+	public <T> void resetPreference(Preference<T> preference) {
+		preferences.remove(preference);
+	}
+
 	public <T> void setPreference(Preference<T> preference, T value) {
 		preferences.put(preference, value);
 	}
@@ -88,8 +99,29 @@ public class PlayerInfo
 		return (T) preferences.getOrDefault(preference, preference.getDefaultValue());
 	}
 
+	public Map<Preference<?>, ?> getPreferences() {
+		return Collections.unmodifiableMap(preferences);
+	}
+
 	public boolean hasCosmeticItem(NamespacedKey key) {
 		return true;
+	}
+
+	public Set<NamespacedKey> getCosmeticItems(CosmeticType type) {
+		return switch (type) {
+			case GRAFFITI -> Main.getGame().graffiti.getAllGraffiti();
+		};
+	}
+
+	public Optional<NamespacedKey> getSelectedCosmetic(CosmeticType type) {
+		return Optional.ofNullable(selectedCosmetic.get(type));
+	}
+
+	public void setSelectedCosmetic(@NotNull CosmeticType type, @NotNull NamespacedKey key) {
+		if (!type.checkKey(key)) {
+			throw new IllegalArgumentException("key incompatible with type");
+		}
+		selectedCosmetic.put(type, key);
 	}
 
 	/**

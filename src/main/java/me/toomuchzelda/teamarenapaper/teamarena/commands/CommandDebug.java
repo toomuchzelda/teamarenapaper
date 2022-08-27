@@ -6,6 +6,7 @@ import me.toomuchzelda.teamarenapaper.inventory.*;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
@@ -420,7 +421,8 @@ public class CommandDebug extends CustomCommand {
 	@Override
 	public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
 		if (args.length == 1) {
-			return Arrays.asList("hide", "gui", "guitest", "game", "setrank", "setteam", "setkit", "setgame", "setnextgame", "votetest", "draw");
+			return Arrays.asList("hide", "gui", "guitest", "game", "setrank", "setteam", "setkit",
+				"setgame", "setnextgame", "votetest", "draw", "graffititest");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");
@@ -433,6 +435,7 @@ public class CommandDebug extends CustomCommand {
 				case "setkit" -> Main.getGame().getTabKitList();
 				case "setgame", "setnextgame" -> Arrays.stream(GameType.values()).map(Enum::name).toList();
 				case "draw" -> Arrays.asList("text", "area", "clear", "invalidatebase");
+				case "graffititest" -> Main.getGame().graffiti.getAllGraffiti().stream().map(NamespacedKey::toString).toList();
 				default -> Collections.emptyList();
 			};
 		} else if (args.length == 3) {
@@ -464,7 +467,7 @@ public class CommandDebug extends CustomCommand {
 		TabBar<@NotNull Material> tab = new TabBar<>(Material.BLACK_WOOL);
 
 		@Override
-		public Component getTitle(Player player) {
+		public @NotNull Component getTitle(Player player) {
 			return Component.text("Tab test");
 		}
 

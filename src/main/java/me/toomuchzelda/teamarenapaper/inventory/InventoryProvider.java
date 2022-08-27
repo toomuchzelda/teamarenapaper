@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.inventory;
 import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
@@ -14,6 +15,7 @@ import java.util.function.Consumer;
  * @author jacky8399
  */
 public interface InventoryProvider {
+	@NotNull
     Component getTitle(Player player);
 
     int getRows();
@@ -25,7 +27,7 @@ public interface InventoryProvider {
     default void update(Player player, InventoryAccessor inventory) {}
 
     // Called when the inventory is closed
-    default void close(Player player) {}
+    default void close(Player player, InventoryCloseEvent.Reason reason) {}
 
     interface InventoryAccessor {
         void set(int slot, @Nullable ItemStack stack, @Nullable Consumer<InventoryClickEvent> eventHandler);

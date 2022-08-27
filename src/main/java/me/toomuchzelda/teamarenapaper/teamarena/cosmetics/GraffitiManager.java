@@ -1,14 +1,20 @@
-package me.toomuchzelda.teamarenapaper.teamarena;
+package me.toomuchzelda.teamarenapaper.teamarena.cosmetics;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
+import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.FileUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockSupport;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.inventory.meta.MapMeta;
 import org.bukkit.map.MapCanvas;
 import org.bukkit.map.MapRenderer;
@@ -173,6 +179,32 @@ public class GraffitiManager {
 			} catch (IOException ex) {
 				logger.warning("Failed to read image " + file.getPath());
 			}
+		}
+	}
+
+	private static final WeakHashMap<Player, Integer> itemSwapTimes = new WeakHashMap<>();
+	private static final int ITEM_SWAP_DURATION = 20;
+	private static final WeakHashMap<Player, Integer> graffitiCooldown = new WeakHashMap<>();
+	private static final int GRAFFITI_COOLDOWN = 40 * 20;
+	public void onSwapHandItems(PlayerSwapHandItemsEvent e) {
+		Player player = e.getPlayer();
+		int now = TeamArena.getGameTick();
+		Integer lastSwapTick = itemSwapTimes.put(player, now);
+		if (lastSwapTick != null && now - lastSwapTick <= ITEM_SWAP_DURATION) {
+			PlayerInfo playerInfo = Main.getPlayerInfo(player);
+			playerInfo.getSelectedCosmetic(CosmeticType.GRAFFITI)
+				.ifPresent(graffiti -> {
+					int lastGraffiti = graffitiCooldown.getOrDefault(player, 0);
+					int ticksElapsed = now - lastGraffiti;
+					if (ticksElapsed >= GRAFFITI_COOLDOWN) {
+						graffitiCooldown.put(player, now);
+						spawnGraffiti(player, graffiti);
+					} else {
+						player.sendMessage(Component.text("Graffiti cooldown: " +
+							TextUtils.ONE_DECIMAL_POINT.format((GRAFFITI_COOLDOWN - ticksElapsed) / 20f) + "s",
+							NamedTextColor.RED));
+					}
+				});
 		}
 	}
 }

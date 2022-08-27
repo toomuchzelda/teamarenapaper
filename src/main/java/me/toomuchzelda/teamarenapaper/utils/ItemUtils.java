@@ -4,17 +4,18 @@ import com.destroystokyo.paper.MaterialSetTag;
 import me.toomuchzelda.teamarenapaper.Main;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.ChatColor;
-import org.bukkit.Color;
-import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
+import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
+import org.bukkit.inventory.meta.SkullMeta;
 import org.jetbrains.annotations.NotNull;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class ItemUtils {
     public static int _uniqueName = 0;
@@ -156,4 +157,23 @@ public class ItemUtils {
 
         return string.toString();
     }
+
+	public static ItemStack createPlayerHead(String textureUrl) {
+		URL url;
+		try {
+			url = new URL("https://textures.minecraft.net/texture/" + textureUrl);
+		} catch (MalformedURLException ex) {
+			throw new IllegalArgumentException("textureUrl", ex);
+		}
+
+		var stack = new ItemStack(Material.PLAYER_HEAD);
+		var meta = (SkullMeta) stack.getItemMeta();
+		var profile = Bukkit.createProfile(UUID.randomUUID());
+		var textures = profile.getTextures();
+		textures.setSkin(url);
+		profile.setTextures(textures);
+		meta.setPlayerProfile(profile);
+		stack.setItemMeta(meta);
+		return stack;
+	}
 }
