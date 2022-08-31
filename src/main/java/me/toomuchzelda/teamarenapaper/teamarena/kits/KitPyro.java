@@ -223,7 +223,7 @@ public class KitPyro extends Kit
 				}
 
 				location.add(velocity);
-				world.spawnParticle(Particle.REDSTONE, location, 1, 0, 0, 0, 0, dustOptions);
+				player.spawnParticle(Particle.REDSTONE, location, 1, 0, 0, 0, 0, dustOptions);
 				velocity.multiply(0.99); // drag
 				velocity.subtract(acceleration);
 			}

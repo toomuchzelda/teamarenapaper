@@ -63,7 +63,7 @@ public final class Inventories implements Listener {
             }
             if (old != null) {
                 try {
-                    old.provider.close(player);
+                    old.provider.close(player, InventoryCloseEvent.Reason.OPEN_NEW);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -120,7 +120,7 @@ public final class Inventories implements Listener {
             if (debug)
                 Main.logger().info("[GUI] Closed GUI has provider " + data.provider);
             try {
-                data.provider.close(player);
+                data.provider.close(player, e.getReason());
             } catch (Exception ex) {
                 ex.printStackTrace();
             }

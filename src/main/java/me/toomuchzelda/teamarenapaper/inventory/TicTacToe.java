@@ -9,7 +9,9 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -242,7 +244,7 @@ public class TicTacToe {
         }
 
         @Override
-        public Component getTitle(Player player) {
+        public @NotNull Component getTitle(Player player) {
             return Component.text("Tic Tac Toe").color(NamedTextColor.GOLD);
         }
 
@@ -264,7 +266,7 @@ public class TicTacToe {
                 .displayName(Component.text("...").color(NamedTextColor.WHITE).decoration(TextDecoration.ITALIC, false)).build();
 
         @Override
-        public void close(Player player) {
+        public void close(Player player, InventoryCloseEvent.Reason reason) {
             if (game != null) {
                 State winner = game.winner;
                 if (winner == null) {

@@ -2,7 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
-import me.toomuchzelda.teamarenapaper.inventory.KitInventory;
+import me.toomuchzelda.teamarenapaper.teamarena.inventory.KitInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import net.kyori.adventure.text.Component;

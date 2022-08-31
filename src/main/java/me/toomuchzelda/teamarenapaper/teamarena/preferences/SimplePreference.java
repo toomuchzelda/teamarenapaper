@@ -1,5 +1,11 @@
 package me.toomuchzelda.teamarenapaper.teamarena.preferences;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Keyed;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,23 +23,25 @@ public class SimplePreference<T> extends Preference<T> {
 	public final Function<T, String> toStringFunction;
 	public final Function<String, T> fromStringFunction;
 
-	private final ArrayList<String> tabSugguestions;
+	private final List<String> tabSuggestions;
+
+	private Component displayName;
+	private ItemStack icon = new ItemStack(Material.PAPER);
 
 	public SimplePreference(String name, String description, Class<T> clazz,
 							@NotNull T defaultValue,
 							@Nullable Collection<? extends T> values,
 							Function<T, String> toStringFunction, Function<String, T> fromStringFunction) {
 		super(name, description);
+		// capitalize first character
+		setDisplayName(name.substring(0, 1).toUpperCase() + name.substring(1).replace('_', ' '));
 		this.clazz = clazz;
 		this.defaultValue = defaultValue;
 		this.values = values;
 		if (values != null) {
-			this.tabSugguestions = new ArrayList<>(values.size());
-			for (T value : values) {
-				tabSugguestions.add(toStringFunction.apply(value));
-			}
+			this.tabSuggestions = values.stream().map(toStringFunction).toList();
 		} else {
-			this.tabSugguestions = null;
+			this.tabSuggestions = null;
 		}
 		this.toStringFunction = toStringFunction;
 		this.fromStringFunction = fromStringFunction;
@@ -68,6 +76,30 @@ public class SimplePreference<T> extends Preference<T> {
 		return of(name, description, clazz, defaultValue, t -> true);
 	}
 
+	public static SimplePreference<NamespacedKey> of(String name, String description, NamespacedKey defaultValue, Collection<? extends NamespacedKey> values, Predicate<NamespacedKey> predicate) {
+		return new SimplePreference<>(name, description, NamespacedKey.class,
+			defaultValue, values, NamespacedKey::toString, input -> {
+			NamespacedKey result = NamespacedKey.fromString(input);
+			if (result == null)
+				throw new IllegalArgumentException("Invalid resource location " + input);
+			if (!predicate.test(result))
+				throw new IllegalArgumentException("Illegal resource location " + result);
+			return result;
+		});
+	}
+
+	public static <T extends Keyed> SimplePreference<T> ofKeyed(String name, String description, Class<T> clazz,
+																T defaultValue, @Nullable Collection<? extends T> values,
+																Function<NamespacedKey, T> registry) {
+		return new SimplePreference<>(name, description, clazz, defaultValue, values, value -> value.getKey().toString(),
+			input -> {
+				NamespacedKey result = NamespacedKey.fromString(input);
+				if (result == null)
+					throw new IllegalArgumentException("Invalid resource location " + input);
+				return Objects.requireNonNull(registry.apply(result), "Illegal resource location " + input);
+			});
+	}
+
 	/**
 	 * @param predicate Predicate to indicate whether the numerical value is allowed
 	 */
@@ -79,7 +111,7 @@ public class SimplePreference<T> extends Preference<T> {
 			throw new IllegalArgumentException("Invalid class " + clazz.getSimpleName());
 		}
 		return new SimplePreference<>(name, description, clazz, defaultValue, null,
-				Object::toString, arg -> {
+				Number::toString, arg -> {
 			try {
 				@SuppressWarnings("unchecked")
 				T value = (T) valueOfMethod.invoke(null, arg);
@@ -104,7 +136,7 @@ public class SimplePreference<T> extends Preference<T> {
 
 	@Override
 	public @Nullable List<String> getTabSuggestions() {
-		return tabSugguestions != null ? Collections.unmodifiableList(tabSugguestions) : null;
+		return tabSuggestions != null ? Collections.unmodifiableList(tabSuggestions) : null;
 	}
 
 	@Override
@@ -115,5 +147,35 @@ public class SimplePreference<T> extends Preference<T> {
 	@Override
 	public T deserialize(String arg) throws IllegalArgumentException {
 		return fromStringFunction.apply(arg);
+	}
+
+	@Override
+	public Component getDisplayName() {
+		return displayName;
+	}
+
+	public SimplePreference<T> setDisplayName(Component component) {
+		displayName = component;
+		return this;
+	}
+
+	public SimplePreference<T> setDisplayName(String string) {
+		displayName = Component.text(string, NamedTextColor.WHITE);
+		return this;
+	}
+
+	@Override
+	public @NotNull ItemStack getIcon() {
+		return icon;
+	}
+
+	public SimplePreference<T> setIcon(Material icon) {
+		this.icon = new ItemStack(icon);
+		return this;
+	}
+
+	public SimplePreference<T> setIcon(ItemStack icon) {
+		this.icon = icon.clone();
+		return this;
 	}
 }

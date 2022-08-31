@@ -1,5 +1,8 @@
 package me.toomuchzelda.teamarenapaper.teamarena.preferences;
 
+import net.kyori.adventure.text.Component;
+import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -25,13 +28,22 @@ public abstract class Preference<T> {
 
 		PREFERENCES.put(name, this);
 	}
-	
+
 	public String getName() {
 		return name;
 	}
-	
+
+	public Component getDisplayName() {
+		return Component.text(name);
+	}
+
 	public String getDescription() {
 		return description;
+	}
+
+	@NotNull
+	public ItemStack getIcon() {
+		return new ItemStack(Material.PAPER);
 	}
 
 	@NotNull
@@ -43,7 +55,7 @@ public abstract class Preference<T> {
 	 */
 	@Nullable
 	public abstract Collection<? extends T> getValues();
-	
+
 	@Nullable
 	public abstract List<String> getTabSuggestions();
 

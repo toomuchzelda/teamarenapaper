@@ -5,18 +5,16 @@ import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.InventoryProvider;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.engineer.Sentry;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.engineer.Teleporter;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
 
 public class BuildingInventory implements InventoryProvider {
 
 	@Override
-	public Component getTitle(Player player) {
+	public @NotNull Component getTitle(Player player) {
 		return Component.text("Click Building to Destroy");
 	}
 

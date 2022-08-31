@@ -21,8 +21,10 @@ import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.*;
+import java.util.Locale;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -55,9 +57,9 @@ public class TextUtils {
 
 	public static TextComponent formatDuration(@NotNull Duration duration, @NotNull ZonedDateTime time, @Nullable Locale locale) {
 		var timeString = time.format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.LONG)
-				.localizedBy(locale == null ? Locale.getDefault() : locale));
+			.localizedBy(locale == null ? Locale.getDefault() : locale));
 		return formatDuration(duration)
-				.hoverEvent(HoverEvent.showText(Component.text(timeString, NamedTextColor.YELLOW)));
+			.hoverEvent(HoverEvent.showText(Component.text(timeString, NamedTextColor.YELLOW)));
 	}
 
 	public static final Style PLAIN_STYLE = Style.style(builder -> {
@@ -194,9 +196,9 @@ public class TextUtils {
 					backgroundString.appendCodePoint(codePoints[i]);
 				}
 				return Component.textOfChildren(
-						Component.text(foregroundString.toString(), foreground),
-						Component.text(Character.toString(codePoint), cursor),
-						Component.text(backgroundString.toString(), background)
+					Component.text(foregroundString.toString(), foreground),
+					Component.text(Character.toString(codePoint), cursor),
+					Component.text(backgroundString.toString(), background)
 				);
 			} else {
 				foregroundString.appendCodePoint(codePoint);
@@ -242,7 +244,7 @@ public class TextUtils {
 				builder.append(Component.text(PROGRESS_BLOCK[7], background));
 			} else {
 				builder.append(Component.text(PROGRESS_BLOCK[eightsBehind - 1], foreground),
-						Component.text(PROGRESS_BLOCK[7 - eightsBehind], background));
+					Component.text(PROGRESS_BLOCK[7 - eightsBehind], background));
 			}
 		}
 		// blocks fully ahead of the progress
@@ -268,7 +270,7 @@ public class TextUtils {
 				var background = TextColor.color(awtColor.darker().getRGB());
 				var foreground = TextColor.color(awtColor.brighter().brighter().getRGB());
 				rgbComponent = getProgressText(text.content(), background, foreground, background,
-						offset % 1d);
+					offset % 1d);
 			}
 			builder.append(text.style(style).content("").children(rgbComponent.children()));
 		} else {
@@ -284,24 +286,54 @@ public class TextUtils {
 
 	public static Title createTitle(Component title, Component subtitle, int fadeInTicks, int stayTicks, int fadeOutTicks) {
 		return Title.title(title, subtitle, Title.Times.times(
-				Duration.ofMillis(fadeInTicks * 50L),
-				Duration.ofMillis(stayTicks * 50L),
-				Duration.ofMillis(fadeOutTicks * 50L)
+			Duration.ofMillis(fadeInTicks * 50L),
+			Duration.ofMillis(stayTicks * 50L),
+			Duration.ofMillis(fadeOutTicks * 50L)
 		));
 	}
 
 	private static final Pattern SAFE_TO_WRAP = Pattern.compile("\\s|\\n");
+	public static final int DEFAULT_WIDTH = 150;
+
+	public static List<Component> wrapString(String string, Style style) {
+		return wrapString(string, style, DEFAULT_WIDTH);
+	}
+
 	public static List<Component> wrapString(String string, Style style, int maxWidth) {
+		return wrapString(string, style, maxWidth, false);
+	}
+
+	public static List<Component> wrapString(String string, Style style, int maxWidth, boolean preserveNewlines) {
 		List<Component> lines = new ArrayList<>();
-		StringJoiner line = new StringJoiner(" ");
-		for (String word : SAFE_TO_WRAP.split(string)) {
-			// arbitrary width
-			if (TextUtils.measureWidth(line.toString()) < maxWidth) {
-				line.add(word);
+		StringBuilder line = new StringBuilder();
+		String[] split = preserveNewlines ? string.split(" ") : SAFE_TO_WRAP.split(string);
+		for (String word : split) {
+			// check if line contains newline and make an effort to retain them
+			if (preserveNewlines && word.indexOf('\n') > -1) {
+				String[] innerLines = word.split("\\n");
+				for (int i = 0; i < innerLines.length - 1; i++) {
+					String innerLine = innerLines[i];
+					if (!line.isEmpty()) {
+						lines.add(Component.text(line.append(' ').append(innerLine).toString(), style));
+						line.delete(0, line.length());
+					} else {
+						lines.add(Component.text(innerLine, style));
+					}
+				}
+				// line should be empty by now
+				line.append(innerLines[innerLines.length - 1]);
+				continue;
+			}
+
+			var currentLine = line.toString();
+			if (TextUtils.measureWidth(currentLine) < maxWidth) {
+				if (!line.isEmpty())
+					line.append(' ');
+				line.append(word);
 			} else {
-				lines.add(Component.text(line.toString(), style));
-				line = new StringJoiner(" ");
-				line.add(word);
+				lines.add(Component.text(currentLine, style));
+				line.delete(0, line.length());
+				line.append(word);
 			}
 		}
 		// final line
@@ -313,10 +345,10 @@ public class TextUtils {
 		// TODO this won't create a new object, but use decorationIfAbsent when Adventure is updated
 		Style styleNoItalics = style.decoration(TextDecoration.ITALIC, false);
 		MiniMessage miniMessage = MiniMessage.builder()
-				.postProcessor(component -> component.compact().style(styleNoItalics))
-				.build();
-		return string.lines()
-			.map(line -> {
+			.postProcessor(component -> component.compact().style(s -> s.merge(styleNoItalics,
+				Style.Merge.Strategy.IF_ABSENT_ON_TARGET))) // lets lines override the global style
+			.build();
+		return string.lines().map(line -> {
 				if (line.isEmpty())
 					return Component.empty();
 				else if (line.indexOf('<') > -1)

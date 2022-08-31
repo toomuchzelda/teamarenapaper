@@ -1,6 +1,7 @@
-package me.toomuchzelda.teamarenapaper.inventory;
+package me.toomuchzelda.teamarenapaper.teamarena.inventory;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.inventory.*;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
@@ -34,7 +35,7 @@ public class SpectateInventory implements InventoryProvider {
 	}
 
 	@Override
-	public Component getTitle(Player player) {
+	public @NotNull Component getTitle(Player player) {
 		return Component.text(teamFilter != null ? "Teammates" : "Players");
 	}
 
@@ -107,14 +108,13 @@ public class SpectateInventory implements InventoryProvider {
 		boolean showKit = showKitButton.getState();
 		var viewerLocation = player.getLocation();
 
-		List<ClickableItem> headItems = teamPlayers.stream()
+		List<? extends Player> shownPlayers = teamPlayers.stream()
 				.filter(target -> game.getPlayers().contains(target)) // check if alive
 				.sorted(comparator)
-				.map(target -> playerToItem(target, viewerLocation, showKit))
 				.toList();
 
-		pagination.showPageItems(inventory, headItems, 9, 45);
-		if (headItems.size() > 9 * 4) { // max 4 rows
+		pagination.showPageItems(inventory, shownPlayers, target -> playerToItem(target, viewerLocation, showKit), 9, 45);
+		if (shownPlayers.size() > 9 * 4) { // max 4 rows
 			// set page items
 			inventory.set(45, pagination.getPreviousPageItem(inventory));
 			inventory.set(53, pagination.getNextPageItem(inventory));

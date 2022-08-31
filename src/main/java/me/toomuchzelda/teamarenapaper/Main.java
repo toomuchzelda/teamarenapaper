@@ -11,7 +11,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy.SearchAndDestroy;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.FileUtils;
-import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandMap;
 import org.bukkit.entity.Player;

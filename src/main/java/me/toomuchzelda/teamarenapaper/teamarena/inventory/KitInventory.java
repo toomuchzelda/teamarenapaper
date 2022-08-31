@@ -1,9 +1,12 @@
-package me.toomuchzelda.teamarenapaper.inventory;
+package me.toomuchzelda.teamarenapaper.teamarena.inventory;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.inventory.*;
 import me.toomuchzelda.teamarenapaper.sql.DBSetDefaultKit;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.KitDemolitions;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
@@ -19,8 +22,10 @@ import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.NotNull;
 
 import java.sql.SQLException;
 import java.util.*;
@@ -44,8 +49,8 @@ public class KitInventory implements InventoryProvider {
 	}
 
 	@Override
-	public Component getTitle(Player player) {
-		return Component.text("Select kit").color(NamedTextColor.BLUE);
+	public @NotNull Component getTitle(Player player) {
+		return Component.text("Select kit", NamedTextColor.BLUE);
 	}
 
 	@Override
@@ -62,7 +67,7 @@ public class KitInventory implements InventoryProvider {
 
 		String desc = kit.getDescription();
 		// word wrapping
-		List<Component> loreLines = new ArrayList<>(TextUtils.wrapString(desc, LORE_STYLE, 200));
+		List<Component> loreLines = new ArrayList<>(TextUtils.wrapString(desc, LORE_STYLE));
 
 		if (selected) {
 			loreLines.add(Component.empty());
@@ -95,6 +100,9 @@ public class KitInventory implements InventoryProvider {
 		);
 	}
 
+
+	private static final ItemStack BORDER = ItemBuilder.of(Material.BLACK_STAINED_GLASS_PANE).displayName(Component.empty()).build();
+
 	@Override
 	public void init(Player player, InventoryAccessor inventory) {
 		Main.getGame().interruptRespawn(player);
@@ -110,7 +118,6 @@ public class KitInventory implements InventoryProvider {
 
 
 		// 6th row
-		ItemStack borderItem = ItemBuilder.of(Material.BLACK_STAINED_GLASS_PANE).displayName(Component.empty()).build();
 		// max 4 rows
 		boolean showPageItems = kits.size() > 9 * 4;
 		for (int i = 45; i < 54; i++) {
@@ -149,20 +156,19 @@ public class KitInventory implements InventoryProvider {
 						})
 				);
 			else
-				inventory.set(i, borderItem);
+				inventory.set(i, BORDER);
 		}
 
 		Kit selected = Main.getPlayerInfo(player).kit;
 		KitCategory filter = categoryTab.getCurrentTab();
-		List<ClickableItem> kitItems = kits.stream()
+		List<Kit> shownKits = kits.stream()
 				.filter(kit -> filter == null || kit.getCategory() == filter)
-				.map(kit -> getKitItem(kit, kit == selected))
 				.toList();
-		pagination.showPageItems(inventory, kitItems, 9, 45);
+		pagination.showPageItems(inventory, shownKits, kit -> getKitItem(kit, kit == selected), 9, 45);
 	}
 
 	@Override
-	public void close(Player player) {
+	public void close(Player player, InventoryCloseEvent.Reason reason) {
 		Main.getGame().setToRespawn(player);
 	}
 
@@ -170,22 +176,4 @@ public class KitInventory implements InventoryProvider {
 			.displayName(Component.text("All kits", NamedTextColor.WHITE))
 			.lore(Component.text("Show all kits in Team Arena", NamedTextColor.GRAY))
 			.build();
-
-	static final Map<KitCategory, Set<Class<? extends Kit>>> KIT_CATEGORIES = Map.of(
-			KitCategory.FIGHTER, Set.of(
-					KitTrooper.class, KitValkyrie.class, KitJuggernaut.class, KitRewind.class
-			),
-			KitCategory.RANGED, Set.of(
-					KitArcher.class, KitBurst.class, KitPyro.class, KitSniper.class
-			),
-			KitCategory.SUPPORT, Set.of(
-					KitDemolitions.class
-			),
-			KitCategory.STEALTH, Set.of(
-					KitGhost.class, KitSpy.class, KitNinja.class
-			),
-			KitCategory.UTILITY, Set.of(
-					KitVenom.class
-			)
-	);
 }
