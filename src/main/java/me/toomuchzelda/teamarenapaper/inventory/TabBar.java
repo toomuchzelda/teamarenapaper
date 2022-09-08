@@ -37,7 +37,7 @@ public class TabBar<T> {
 		currentTab = tab;
 	}
 
-	protected boolean goToTab(@Nullable T tab, InventoryProvider.InventoryAccessor inventory) {
+	public boolean goToTab(@Nullable T tab, InventoryProvider.InventoryAccessor inventory) {
 		if (!Objects.equals(getCurrentTab(), tab)) {
 			setCurrentTab(tab);
 			inventory.invalidate();
@@ -67,7 +67,7 @@ public class TabBar<T> {
 		return this;
 	}
 
-	private void playSound(InventoryClickEvent event) {
+	public void playSound(InventoryClickEvent event) {
 		if (clickSound != null) {
 			event.getWhoClicked().playSound(clickSound);
 		}

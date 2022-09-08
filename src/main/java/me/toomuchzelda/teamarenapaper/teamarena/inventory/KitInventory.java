@@ -59,7 +59,7 @@ public class KitInventory implements InventoryProvider {
 	private static final Style LORE_STYLE = Style.style(NamedTextColor.YELLOW);
 	private static final TextComponent SELECTED_COMPONENT = Component.text("Currently selected!", NamedTextColor.GREEN, TextDecoration.BOLD);
 
-	public static ClickableItem getKitItem(Kit kit, boolean selected) {
+	private static ClickableItem kitToItem(Kit kit, boolean selected) {
 		boolean disabled = !CommandDebug.kitPredicate.test(kit);
 
 		String desc = kit.getDescription();
@@ -76,24 +76,24 @@ public class KitInventory implements InventoryProvider {
 		}
 
 		return ClickableItem.of(
-				ItemBuilder.from(disabled ? new ItemStack(Material.BARRIER) : kit.getIcon())
-						.displayName(Component.text(kit.getName(),
-								disabled ? NAME_STYLE.decorate(TextDecoration.STRIKETHROUGH) : NAME_STYLE))
-						.lore(loreLines)
-						.hide(ItemFlag.values())
-						.meta(meta -> {
-							if (selected) {
-								meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
-							}
-						})
-						.build(),
-				e -> {
-					if (!CommandDebug.kitPredicate.test(kit))
-						return;
-					Player player = (Player) e.getWhoClicked();
-					Main.getGame().selectKit(player, kit);
-					Inventories.closeInventory(player, KitInventory.class);
-				}
+			ItemBuilder.from(disabled ? new ItemStack(Material.BARRIER) : kit.getIcon())
+				.displayName(Component.text(kit.getName(),
+					disabled ? NAME_STYLE.decorate(TextDecoration.STRIKETHROUGH) : NAME_STYLE))
+				.lore(loreLines)
+				.hide(ItemFlag.values())
+				.meta(meta -> {
+					if (selected) {
+						meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
+					}
+				})
+				.build(),
+			e -> {
+				if (!CommandDebug.kitPredicate.test(kit))
+					return;
+				Player player = (Player) e.getWhoClicked();
+				Main.getGame().selectKit(player, kit);
+				Inventories.closeInventory(player, KitInventory.class);
+			}
 		);
 	}
 
@@ -104,14 +104,13 @@ public class KitInventory implements InventoryProvider {
 	public void init(Player player, InventoryAccessor inventory) {
 		Main.getGame().interruptRespawn(player);
 
-		// include null tab to specify no filter
-		categoryTab.showTabs(inventory,
-				Arrays.asList(null, KitCategory.FIGHTER, KitCategory.RANGED,
-						KitCategory.SUPPORT, KitCategory.STEALTH, KitCategory.UTILITY),
-				(category, selected) -> category == null ?
-						TabBar.highlightIfSelected(ALL_TAB_ITEM, selected) :
-						category.display(selected),
-				0, 9, true);
+		categoryTab.showTabs(inventory, Arrays.asList(KitCategory.values()), KitCategory::display, 0, 9, true);
+		// extra button to show all tabs
+		inventory.set(0, TabBar.highlightIfSelected(ALL_TAB_ITEM, categoryTab.getCurrentTab() == null),
+			e -> {
+				if (categoryTab.goToTab(null, inventory))
+					categoryTab.playSound(e);
+			});
 
 
 		// 6th row
@@ -124,23 +123,19 @@ public class KitInventory implements InventoryProvider {
 				inventory.set(i, pagination.getNextPageItem(inventory));
 			else if (i == 53)
 				inventory.set(i, ItemBuilder.of(Material.ENDER_CHEST)
-						.displayName(Component.text("Save as default kit", NamedTextColor.YELLOW))
-						.lore(TextUtils.toLoreList("""
-								Warning: Unfortunately, the default kit is not
-								actually saved. To make your changes persist
-								across sessions, nag toomuchzelda.""", NamedTextColor.GRAY))
-						.toClickableItem(e -> {
-							Player clicker = (Player) e.getWhoClicked();
-							PlayerInfo playerInfo = Main.getPlayerInfo(clicker);
-							playerInfo.defaultKit = playerInfo.kit.getName();
-							clicker.playSound(clicker, Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1);
-							clicker.sendMessage(Component.textOfChildren(
-									Component.text("Saved ", NamedTextColor.GREEN),
-									Component.text(playerInfo.defaultKit, NamedTextColor.YELLOW),
-									Component.text(" as your default kit.", NamedTextColor.GREEN)
-							));
-							Inventories.closeInventory(clicker, KitInventory.class);
-						})
+					.displayName(Component.text("Save as default kit", NamedTextColor.YELLOW))
+					.toClickableItem(e -> {
+						Player clicker = (Player) e.getWhoClicked();
+						PlayerInfo playerInfo = Main.getPlayerInfo(clicker);
+						playerInfo.defaultKit = playerInfo.kit.getName();
+						clicker.playSound(clicker, Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1);
+						clicker.sendMessage(Component.text().color(NamedTextColor.GREEN).append(
+							Component.text("Saved "),
+							Component.text(playerInfo.defaultKit, NamedTextColor.YELLOW),
+							Component.text(" as your default kit.")
+						));
+						Inventories.closeInventory(clicker, KitInventory.class);
+					})
 				);
 			else
 				inventory.set(i, BORDER);
@@ -149,9 +144,10 @@ public class KitInventory implements InventoryProvider {
 		Kit selected = Main.getPlayerInfo(player).kit;
 		KitCategory filter = categoryTab.getCurrentTab();
 		List<Kit> shownKits = kits.stream()
-				.filter(kit -> filter == null || kit.getCategory() == filter)
-				.toList();
-		pagination.showPageItems(inventory, shownKits, kit -> getKitItem(kit, kit == selected), 9, 45);
+			.filter(kit -> filter == null || kit.getCategory() == filter)
+			.toList();
+		pagination.showPageItems(inventory, shownKits, kit -> kitToItem(kit, kit == selected),
+			9, 45, true);
 	}
 
 	@Override
@@ -160,7 +156,7 @@ public class KitInventory implements InventoryProvider {
 	}
 
 	private static final ItemStack ALL_TAB_ITEM = ItemBuilder.of(Material.BOOK)
-			.displayName(Component.text("All kits", NamedTextColor.WHITE))
-			.lore(Component.text("Show all kits in Team Arena", NamedTextColor.GRAY))
-			.build();
+		.displayName(Component.text("All kits", NamedTextColor.WHITE))
+		.lore(Component.text("Show all kits in Team Arena", NamedTextColor.GRAY))
+		.build();
 }

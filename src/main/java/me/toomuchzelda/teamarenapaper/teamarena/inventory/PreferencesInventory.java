@@ -7,18 +7,11 @@ import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.ComponentLike;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
-import org.bukkit.conversations.ConversationAbandonedListener;
-import org.bukkit.conversations.ConversationContext;
-import org.bukkit.conversations.ConversationFactory;
-import org.bukkit.conversations.Prompt;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemStack;
@@ -28,7 +21,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 
 public class PreferencesInventory implements InventoryProvider {
 	@Override
@@ -64,7 +56,7 @@ public class PreferencesInventory implements InventoryProvider {
 			.stream()
 			.sorted(Comparator.comparing(Preference::getName))
 			.toList();
-		pagination.showPageItems(inventory, preferences, pref -> prefToItem(this, inventory, pref, playerInfo), 9, 45);
+		pagination.showPageItems(inventory, preferences, pref -> prefToItem(this, inventory, pref, playerInfo), 9, 45, true);
 		if (pagination.getMaxPage() > 1) {
 			inventory.set(45, pagination.getPreviousPageItem(inventory));
 			inventory.set(53, pagination.getNextPageItem(inventory));
@@ -91,27 +83,33 @@ public class PreferencesInventory implements InventoryProvider {
 	private static <T> ClickableItem prefToItem(InventoryProvider parent, InventoryAccessor inventory, Preference<T> preference, T current) {
 		var builder = ItemBuilder.from(preference.getIcon().clone())
 			.displayName(preference.getDisplayName())
-			.lore(TextUtils.wrapString(preference.getDescription(), Style.style(NamedTextColor.YELLOW), 200, true))
+			.lore(TextUtils.wrapString(preference.getDescription(), Style.style(NamedTextColor.YELLOW),
+				TextUtils.DEFAULT_WIDTH, true))
 			.hideAll();
 		if (inventory != null) {
 			String currentValue = preference.serialize(current);
 			String defaultValue = preference.serialize(preference.getDefaultValue());
+			boolean canChange = preference.getValues() != null;
+			String editMessage = canChange ?
+				"Left click to <green>edit</green> this preference" :
+				"<dark_red>This preference cannot be changed in the GUI.</dark_red>";
 			return builder.addLore(TextUtils.toLoreList("""
 
 						<aqua>Currently set to: <current></aqua>
-						Left click to <green>edit</green> this preference.
+						<edit_message>
 						Right click to <red>reset</red> this preference to <yellow><default></yellow>.
 						<dark_gray>ID: <pref_id></dark_gray>
 						""", NamedTextColor.GRAY,
 					Placeholder.component("current", Component.text(currentValue, NamedTextColor.YELLOW)),
 					Placeholder.component("default", Component.text(defaultValue, NamedTextColor.YELLOW)),
-					Placeholder.unparsed("pref_id", preference.getName())))
+					Placeholder.unparsed("pref_id", preference.getName()),
+					Placeholder.parsed("edit_message", editMessage)))
 				.toClickableItem(e -> {
 					Player player = (Player) e.getWhoClicked();
 					if (e.isRightClick()) {
 						changePreference(player, preference, preference.getDefaultValue());
 						inventory.invalidate();
-					} else {
+					} else if (canChange) {
 						doEditPreference(player, preference, parent);
 					}
 				});
@@ -125,57 +123,7 @@ public class PreferencesInventory implements InventoryProvider {
 		if (values != null) {
 			var inventory = new PreferenceEditInventory<>(preference, List.copyOf(values), parent);
 			Inventories.openInventory(player, inventory);
-		} else {
-			Inventories.closeInventory(player, PreferencesInventory.class);
-			doChatEditPreference(player, preference, e -> Inventories.openInventory(player, parent));
 		}
-	}
-
-	private static <T> void doChatEditPreference(Player player, Preference<T> preference, ConversationAbandonedListener listener) {
-		var prompt = new Prompt() {
-			@Override
-			public @NotNull String getPromptText(@NotNull ConversationContext context) {
-				String currentValue = preference.serialize(Main.getPlayerInfo(player).getPreference(preference));
-				String defaultValue = preference.serialize(preference.getDefaultValue());
-				// adventure is a good API with no flaws whatsoever
-				var message = Component.text().color(NamedTextColor.YELLOW)
-					.append(Component.text("Please enter a value for "),
-						Component.text(preference.getName(), NamedTextColor.AQUA),
-						Component.text("\nType \"exit\" to abort operation."),
-						Component.text("\nCurrent value: "),
-						Component.text(currentValue, NamedTextColor.GREEN),
-						Component.text("\nDefault value: "),
-						Component.text(defaultValue, NamedTextColor.WHITE),
-						Component.text("\n\n" + preference.getDescription(), NamedTextColor.GRAY))
-					.build();
-				return LegacyComponentSerializer.legacySection().serialize(message);
-			}
-
-			@Override
-			public boolean blocksForInput(@NotNull ConversationContext context) {
-				return true;
-			}
-
-			@Override
-			public @Nullable Prompt acceptInput(@NotNull ConversationContext context, @Nullable String input) {
-				Objects.requireNonNull(input);
-				try {
-					Player player = (Player) context.getForWhom();
-					T value = preference.deserialize(input);
-					changePreference(player, preference, value);
-					return Prompt.END_OF_CONVERSATION;
-				} catch (IllegalArgumentException ex) {
-					return this; // continue asking
-				}
-			}
-		};
-
-		player.beginConversation(new ConversationFactory(Main.getPlugin())
-			.withModality(true)
-			.withFirstPrompt(prompt)
-			.withEscapeSequence("exit")
-			.addConversationAbandonedListener(listener)
-			.buildConversation(player));
 	}
 
 	public static class PreferenceEditInventory<T> implements InventoryProvider {
@@ -213,7 +161,10 @@ public class PreferencesInventory implements InventoryProvider {
 			T defaultValue = preference.getDefaultValue();
 			inventory.set(0, ItemBuilder.of(Material.BARRIER)
 				.displayName(Component.text("Go back", NamedTextColor.RED))
-				.toClickableItem(e -> Bukkit.getScheduler().runTask(Main.getPlugin(), () -> player.closeInventory()))
+				.toClickableItem(e -> {
+					if (parent != null)
+						Inventories.openInventory(player, parent);
+				})
 			);
 			inventory.set(1, ItemBuilder.of(Material.ANVIL)
 				.displayName(Component.text("Reset", NamedTextColor.GRAY))
@@ -221,19 +172,9 @@ public class PreferencesInventory implements InventoryProvider {
 					Component.text(preference.serialize(defaultValue), NamedTextColor.AQUA))
 				.toClickableItem(e -> changePreference(player, preference, defaultValue))
 			);
-			inventory.set(2, ItemBuilder.of(Material.BIRCH_SIGN)
-				.displayName(Component.text("Input new value", NamedTextColor.AQUA))
-				.lore(TextUtils.wrapString("Some preferences may accept values in addition to the provided " +
-					"options. Click here to input a new value in chat.",
-					Style.style(NamedTextColor.GRAY)))
-				.toClickableItem(e -> {
-					Inventories.closeInventory(player, PreferenceEditInventory.class);
-					doChatEditPreference(player, preference, e2 -> Inventories.openInventory(player, this));
-				})
-			);
 			inventory.set(4, prefToItem(null, null, preference, currentValue));
-
-			pagination.showPageItems(inventory, values, option -> prefOptionToItem(inventory, option, currentValue.equals(option)), 9, 45);
+			pagination.showPageItems(inventory, values, option -> prefOptionToItem(inventory, option, currentValue.equals(option)),
+				9, 45, true);
 			if (pagination.getMaxPage() > 1) {
 				inventory.set(45, pagination.getPreviousPageItem(inventory));
 				inventory.set(53, pagination.getNextPageItem(inventory));
@@ -249,19 +190,20 @@ public class PreferencesInventory implements InventoryProvider {
 
 		private ClickableItem prefOptionToItem(InventoryAccessor inventory, T option, boolean selected) {
 			String name = preference.serialize(option);
-			return ItemBuilder.of(Material.PAPER)
-				.displayName(Component.text(name, NamedTextColor.YELLOW))
-				.lore(selected ? new ComponentLike[] {Component.text("Currently selected!", NamedTextColor.GREEN)} : new ComponentLike[0])
-				.toClickableItem(e -> {
-					Player player = (Player) e.getWhoClicked();
-					changePreference(player, preference, option);
+			var builder = ItemBuilder.of(selected ? Material.MAP : Material.PAPER)
+				.displayName(Component.text(name, NamedTextColor.YELLOW));
+			if (selected)
+				builder.lore(Component.text("Currently selected!", NamedTextColor.GREEN));
+			return builder.toClickableItem(e -> {
+				Player player = (Player) e.getWhoClicked();
+				changePreference(player, preference, option);
 
-					if (parent != null) {
-						Inventories.openInventory(player, parent);
-					} else {
-						inventory.invalidate();
-					}
-				});
+				if (parent != null) {
+					Inventories.openInventory(player, parent);
+				} else {
+					inventory.invalidate();
+				}
+			});
 		}
 	}
 }

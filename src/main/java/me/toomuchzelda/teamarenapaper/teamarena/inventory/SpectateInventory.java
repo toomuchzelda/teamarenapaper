@@ -31,7 +31,7 @@ public class SpectateInventory implements InventoryProvider {
 	public SpectateInventory(@Nullable TeamArenaTeam teamFilter) {
 		this.teamFilter = teamFilter;
 		this.teamFilterTab = new TabBar<>(teamFilter)
-				.setClickSound(Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.BLOCKS, 0.5f, 1);
+			.setClickSound(Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.BLOCKS, 0.5f, 1);
 	}
 
 	@Override
@@ -45,33 +45,36 @@ public class SpectateInventory implements InventoryProvider {
 	}
 
 	protected static final ItemStack BORDER = ItemBuilder.of(Material.BLACK_STAINED_GLASS_PANE)
-			.displayName(Component.empty())
-			.build();
+		.displayName(Component.empty())
+		.build();
 
 	// advanced options
 	protected SwitchItem<Boolean> showOptionsButton = SwitchItem.ofBoolean(false,
-			ItemBuilder.of(Material.CHAIN_COMMAND_BLOCK)
-					.displayName(Component.text("Hide advanced options", NamedTextColor.YELLOW))
-					.build(),
-			ItemBuilder.of(Material.COMMAND_BLOCK)
-					.displayName(Component.text("Show advanced options", NamedTextColor.YELLOW))
-					.build()
+		ItemBuilder.of(Material.CHAIN_COMMAND_BLOCK)
+			.displayName(Component.text("Hide advanced options", NamedTextColor.YELLOW))
+			.build(),
+		ItemBuilder.of(Material.COMMAND_BLOCK)
+			.displayName(Component.text("Show advanced options", NamedTextColor.YELLOW))
+			.build()
 	);
+
 	protected SwitchItem<SortOption> sortByButton = SwitchItem.ofSimple(List.of(SortOption.values()), SortOption.BY_NAME,
-			ItemBuilder.of(Material.PAPER)
-					.displayName(Component.text("Sort players by", NamedTextColor.AQUA))
-					.lore(Component.empty())
-					.build(),
-			SwitchItem.applyStyleWhenSelected(SortOption::display)
+		ItemBuilder.of(Material.PAPER)
+			.displayName(Component.text("Sort players by", NamedTextColor.AQUA))
+			.lore(Component.empty())
+			.build(),
+		SwitchItem.applyStyleWhenSelected(SortOption::display)
 	).setClickSound(Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.BLOCKS, 0.5f, 1);
-	protected SwitchItem<Boolean> showKitButton = SwitchItem.ofBoolean(false,
-			ItemBuilder.of(Material.PLAYER_HEAD)
-					.displayName(Component.text("Show player skins", NamedTextColor.BLUE))
-					.build(),
-			ItemBuilder.of(Material.IRON_SWORD)
-					.displayName(Component.text("Show player kits", NamedTextColor.BLUE))
-					.hide(ItemFlag.values())
-					.build()
+
+	// show kits by default
+	protected SwitchItem<Boolean> showKitButton = SwitchItem.ofBoolean(true,
+		ItemBuilder.of(Material.PLAYER_HEAD)
+			.displayName(Component.text("Show player skins", NamedTextColor.BLUE))
+			.build(),
+		ItemBuilder.of(Material.IRON_SWORD)
+			.displayName(Component.text("Show player kits", NamedTextColor.BLUE))
+			.hide(ItemFlag.values())
+			.build()
 	);
 
 	@Override
@@ -91,8 +94,8 @@ public class SpectateInventory implements InventoryProvider {
 			}
 		} else {
 			teamFilterTab.showTabs(inventory, getTeams(playerTeam),
-					this::teamToItem,
-					0, end, false);
+				this::teamToItem,
+				0, end, false);
 		}
 
 		if (showOptions) {
@@ -109,11 +112,11 @@ public class SpectateInventory implements InventoryProvider {
 		var viewerLocation = player.getLocation();
 
 		List<? extends Player> shownPlayers = teamPlayers.stream()
-				.filter(target -> game.getPlayers().contains(target)) // check if alive
-				.sorted(comparator)
-				.toList();
+			.filter(target -> game.getPlayers().contains(target)) // check if alive
+			.sorted(comparator)
+			.toList();
 
-		pagination.showPageItems(inventory, shownPlayers, target -> playerToItem(target, viewerLocation, showKit), 9, 45);
+		pagination.showPageItems(inventory, shownPlayers, target -> playerToItem(target, viewerLocation, showKit), 9, 45, true);
 		if (shownPlayers.size() > 9 * 4) { // max 4 rows
 			// set page items
 			inventory.set(45, pagination.getPreviousPageItem(inventory));
@@ -137,20 +140,20 @@ public class SpectateInventory implements InventoryProvider {
 		if (priority != null)
 			teams.add(priority);
 		Arrays.stream(gameTeams)
-				.filter(team -> team != priority) // the prioritized team will be already added
-				.sorted(Comparator.comparing(TeamArenaTeam::isAlive)
-						.thenComparing(TeamArenaTeam::getName))
-				.forEachOrdered(teams::add);
+			.filter(team -> team != priority) // the prioritized team will be already added
+			.sorted(Comparator.comparing(TeamArenaTeam::isAlive)
+				.thenComparing(TeamArenaTeam::getName))
+			.forEachOrdered(teams::add);
 
 		return teams;
 	}
 
 	protected static final ItemStack ALL_PLAYERS = ItemBuilder.of(Material.PLAYER_HEAD)
-			.displayName(Component.text("Show all players", NamedTextColor.YELLOW))
-			.build();
+		.displayName(Component.text("Show all players", NamedTextColor.YELLOW))
+		.build();
 	protected static final ItemStack ALL_PLAYERS_SELECTED = ItemBuilder.of(Material.ZOMBIE_HEAD)
-			.displayName(Component.text("Show all players", NamedTextColor.AQUA))
-			.build();
+		.displayName(Component.text("Show all players", NamedTextColor.AQUA))
+		.build();
 
 	protected ItemStack teamToItem(@Nullable TeamArenaTeam team, boolean selected) {
 		if (team == null) {
@@ -183,35 +186,37 @@ public class SpectateInventory implements InventoryProvider {
 
 		var uuid = player.getUniqueId();
 		return ItemBuilder.of(showKit ? kit.getIcon().getType() : Material.PLAYER_HEAD)
-				.displayName(playerInfo.team.colourWord(player.getName()))
-				.lore(Component.textOfChildren(
-								Component.text("Kit: ", NamedTextColor.GRAY),
-								Component.text(kit.getName(), kit.getCategory().textColor())
-						),
-						Component.textOfChildren(
-								Component.text("Distance: ", NamedTextColor.GRAY),
-								Component.text(TextUtils.ONE_DECIMAL_POINT.format(distance) + " block(s)", NamedTextColor.YELLOW)
-						)
+			.displayName(playerInfo.team.colourWord(player.getName()))
+			.lore(Component.textOfChildren(
+					Component.text("Kit: ", NamedTextColor.GRAY),
+					Component.text(kit.getName(), kit.getCategory().textColor())
+				),
+				Component.textOfChildren(
+					Component.text("Distance: ", NamedTextColor.GRAY),
+					Component.text(TextUtils.ONE_DECIMAL_POINT.format(distance) + " block(s)", NamedTextColor.YELLOW)
 				)
-				.meta(SkullMeta.class, skullMeta -> skullMeta.setOwningPlayer(player))
-				.toClickableItem(e -> {
-					Player destination = Bukkit.getPlayer(uuid);
-					Player viewer = (Player) e.getWhoClicked();
-					if (Main.getGame().isSpectator(viewer) && destination != null) {
-						viewer.teleport(destination);
-					}
-				});
+			)
+			.meta(SkullMeta.class, skullMeta -> skullMeta.setOwningPlayer(player))
+			.toClickableItem(e -> {
+				Player destination = Bukkit.getPlayer(uuid);
+				Player viewer = (Player) e.getWhoClicked();
+				if (Main.getGame().isSpectator(viewer) && destination != null) {
+					viewer.teleport(destination);
+				}
+			});
 	}
 
-	public enum SortOption {
+	enum SortOption {
 		BY_NAME(ignored -> Comparator.comparing(Player::getName),
-				Component.text("their name (A-Z)", NamedTextColor.WHITE)),
+			Component.text("their name (A-Z)", NamedTextColor.WHITE)),
+		BY_NAME_DESC(ignored -> Comparator.comparing(Player::getName, Comparator.reverseOrder()),
+			Component.text("their name (A-Z)", NamedTextColor.WHITE)),
 		BY_DISTANCE(viewer -> {
 			Location viewerLocation = viewer.getLocation();
 			return Comparator.comparingDouble(player -> player.getLocation().distance(viewerLocation));
 		}, Component.text("their distance to you", NamedTextColor.WHITE)),
 		BY_KIT(ignored -> Comparator.comparing(player -> Main.getPlayerInfo(player).activeKit, Kit.COMPARATOR),
-				Component.text("their selected kit", NamedTextColor.WHITE));
+			Component.text("their selected kit", NamedTextColor.WHITE));
 
 		final Function<Player, Comparator<Player>> comparator;
 		final Component display;

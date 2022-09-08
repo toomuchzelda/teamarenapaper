@@ -120,7 +120,7 @@ public class SwitchItem<T> {
 	public static <T> BiFunction<T, Boolean, Component> applyStyleWhenSelected(Function<T, Component> lineFunction, Style style) {
 		return (state, selected) -> {
 			var component = lineFunction.apply(state);
-			return selected ? component.style(style) : component;
+			return selected ? component.style(s -> s.merge(style, Style.Merge.Strategy.ALWAYS)) : component;
 		};
 	}
 
