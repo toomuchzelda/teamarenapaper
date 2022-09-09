@@ -79,7 +79,7 @@ public class PlayerInfo
 	}
 
 	public void setPreferenceValues(Map<Preference<?>, ?> values) {
-		preferences = new HashMap<>(values); // disgusting and slow
+		preferences = new HashMap<>(values);
 	}
 
 	public boolean hasPreference(Preference<?> preference) {

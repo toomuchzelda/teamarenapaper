@@ -18,10 +18,7 @@ import me.toomuchzelda.teamarenapaper.explosions.EntityExplosionInfo;
 import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitbox;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
-import me.toomuchzelda.teamarenapaper.sql.DBGetDefaultKit;
-import me.toomuchzelda.teamarenapaper.sql.DBGetUuidByName;
-import me.toomuchzelda.teamarenapaper.sql.DBSetPlayerInfo;
-import me.toomuchzelda.teamarenapaper.sql.DatabaseManager;
+import me.toomuchzelda.teamarenapaper.sql.*;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
@@ -32,7 +29,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
-import me.toomuchzelda.teamarenapaper.teamarena.preferences.PreferenceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
@@ -217,6 +213,8 @@ public class EventListeners implements Listener
 		}
 
 		final UUID uuid = event.getUniqueId();
+
+		//update player info, cancel and return if fail
 		DBSetPlayerInfo setPlayerInfo = new DBSetPlayerInfo(uuid, event.getName());
 		try {
 			setPlayerInfo.run();
@@ -230,9 +228,21 @@ public class EventListeners implements Listener
 		}
 
 		//load preferences from DB
-		preferenceFutureMap.put(uuid, PreferenceManager.fetchPreferences(uuid));
+		// cancel and return if fail
+		DBGetPreferences getPreferences = new DBGetPreferences(uuid);
+		Map<Preference<?>, ?> retrievedPrefs;
+		try {
+			retrievedPrefs = getPreferences.run();
+			preferenceFutureMap.put(uuid, retrievedPrefs);
+		}
+		catch (SQLException e) {
+			event.setLoginResult(AsyncPlayerPreLoginEvent.Result.KICK_OTHER);
+			event.kickMessage(Component.text("Could not retrieve preferences! Run for your lives!!!", MathUtils.randomTextColor()));
+			return;
+		}
 
 		//load default kit from DB
+		// log error and just use default kit if fail
 		DBGetDefaultKit getDefaultKit = new DBGetDefaultKit(uuid);
 		String defaultKit;
 		try {
@@ -269,6 +279,23 @@ public class EventListeners implements Listener
 			event.disallow(Result.KICK_OTHER, Component.text("Failed to load preferences!")
 					.color(TextColors.ERROR_RED));
 			return;
+		}
+		//null values are inserted in the DBGetPreferences operation to signal that a previously
+		// stored value is now invalid for some reason.
+		// so notify the player here of that.
+		for(var entry : prefMap.entrySet()) {
+			Preference<?> pref = entry.getKey();
+			if(entry.getValue() == null) {
+				((Map.Entry<Preference<?>, Object> ) entry).setValue(pref.getDefaultValue());
+				Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
+					player.sendMessage(Component.text(
+							"Your previous set value for preference " + pref.getName() +
+									" is now invalid and has been reset to default: " + pref.getDefaultValue().toString() +
+									". This may have happened because the preference itself was changed or perhaps due to " +
+									"some extraneous shenanigans and perchance, a sizeable portion of tomfoolery.",
+							TextColors.ERROR_RED));}
+				);
+			}
 		}
 		playerInfo.setPreferenceValues(prefMap);
 
@@ -334,7 +361,19 @@ public class EventListeners implements Listener
 		Main.getGame().leavingPlayer(leaver);
 		//Main.getPlayerInfo(event.getPlayer()).nametag.remove();
 		FakeHitboxManager.removeFakeHitbox(leaver);
-		Main.removePlayerInfo(leaver);
+		PlayerInfo pinfo = Main.removePlayerInfo(leaver);
+
+		//save preferences when leaving
+		Bukkit.getScheduler().runTaskAsynchronously(Main.getPlugin(), bukkitTask -> {
+			DBSetPreferences setPreferences = new DBSetPreferences(leaver, pinfo);
+			try {
+				setPreferences.run();
+			}
+			catch (SQLException e) {
+				Main.logger().severe("Failed to save preferences for " + leaver.getName());
+			}
+		});
+
 		Main.playerIdLookup.remove(leaver.getEntityId());
 	}
 

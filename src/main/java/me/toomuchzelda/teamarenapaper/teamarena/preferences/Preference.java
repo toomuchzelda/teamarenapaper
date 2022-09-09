@@ -13,6 +13,8 @@ import java.util.regex.Pattern;
 
 /**
  * @author jacky
+ *
+ * The preference name is used as the database key and thus must never be changed!!!!
  */
 public abstract class Preference<T> {
 	protected final String name;
@@ -76,5 +78,9 @@ public abstract class Preference<T> {
 	@Override
 	public String toString() {
 		return "Preference{name=" + name + "}";
+	}
+
+	public static Preference<?> getByName(String name) {
+		return PREFERENCES.get(name);
 	}
 }
