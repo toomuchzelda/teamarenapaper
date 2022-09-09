@@ -18,6 +18,7 @@ import me.toomuchzelda.teamarenapaper.explosions.EntityExplosionInfo;
 import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitbox;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
+import me.toomuchzelda.teamarenapaper.sql.DBGetDefaultKit;
 import me.toomuchzelda.teamarenapaper.sql.DBGetUuidByName;
 import me.toomuchzelda.teamarenapaper.sql.DBSetPlayerInfo;
 import me.toomuchzelda.teamarenapaper.sql.DatabaseManager;
@@ -47,7 +48,6 @@ import org.bukkit.command.Command;
 import org.bukkit.craftbukkit.v1_19_R1.CraftWorldBorder;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
@@ -67,7 +67,7 @@ import java.lang.reflect.Constructor;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static me.toomuchzelda.teamarenapaper.teamarena.GameState.DEAD;
 import static me.toomuchzelda.teamarenapaper.teamarena.GameState.LIVE;
@@ -76,7 +76,8 @@ public class EventListeners implements Listener
 {
 
 	public static final boolean[] BREAKABLE_BLOCKS;
-	private final HashMap<UUID, CompletableFuture<Map<Preference<?>, ?>>> preferenceFutureMap = new HashMap<>();
+	private final ConcurrentHashMap<UUID, Map<Preference<?>, ?>> preferenceFutureMap = new ConcurrentHashMap<>();
+	private final ConcurrentHashMap<UUID, String> defaultKitMap = new ConcurrentHashMap<>();
 
 	static {
 		BREAKABLE_BLOCKS = new boolean[Material.values().length];
@@ -182,7 +183,7 @@ public class EventListeners implements Listener
 		PacketListeners.cancelDamageSounds = true;
 	}
 
-	@EventHandler(priority = EventPriority.MONITOR)
+	@EventHandler
 	public void asyncPlayerPreLogin(AsyncPlayerPreLoginEvent event) {
 		if (event.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED)
 			return;
@@ -204,10 +205,19 @@ public class EventListeners implements Listener
 					event.setPlayerProfile(newProfile);
 				}
 			}
-			catch (SQLException ignored) {}
+			catch (SQLException | IllegalArgumentException exception) {
+				//sql exception will already be printed
+				if(exception instanceof IllegalArgumentException)
+					exception.printStackTrace();
+
+				event.setLoginResult(AsyncPlayerPreLoginEvent.Result.KICK_OTHER);
+				event.kickMessage(Component.text("Database error"));
+				return;
+			}
 		}
 
-		DBSetPlayerInfo setPlayerInfo = new DBSetPlayerInfo(event.getUniqueId(), event.getName());
+		final UUID uuid = event.getUniqueId();
+		DBSetPlayerInfo setPlayerInfo = new DBSetPlayerInfo(uuid, event.getName());
 		try {
 			setPlayerInfo.run();
 		}
@@ -219,11 +229,21 @@ public class EventListeners implements Listener
 			return;
 		}
 
-		synchronized (preferenceFutureMap) {
-			preferenceFutureMap.put(event.getUniqueId(), PreferenceManager.fetchPreferences(event.getUniqueId()));
-		}
-	}
+		//load preferences from DB
+		preferenceFutureMap.put(uuid, PreferenceManager.fetchPreferences(uuid));
 
+		//load default kit from DB
+		DBGetDefaultKit getDefaultKit = new DBGetDefaultKit(uuid);
+		String defaultKit;
+		try {
+			defaultKit = getDefaultKit.run();
+		}
+		catch(SQLException e) {
+			defaultKit = getDefaultKit.getDefaultValue();
+			Main.logger().severe("Could not load default kit for " + uuid.toString() + ", username " + event.getName());
+		}
+		defaultKitMap.put(uuid, defaultKit);
+	}
 
 	//these three events are called in this order
 	@EventHandler
@@ -241,15 +261,20 @@ public class EventListeners implements Listener
 			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.ALL, player);
 		}
 
-		synchronized (preferenceFutureMap) {
-			CompletableFuture<Map<Preference<?>, ?>> future = preferenceFutureMap.remove(uuid);
-			if (future == null) {
-				event.disallow(Result.KICK_OTHER, Component.text("Failed to load preferences!")
-						.color(TextColors.ERROR_RED));
-				return;
-			}
-			playerInfo.setPreferenceValues(future.join());
+		//remove the default kit now so if the preferences are null and the method returns here
+		// there isn't a memory leak in the map.
+		String defaultKit = defaultKitMap.remove(uuid);
+		Map<Preference<?>, ?> prefMap = preferenceFutureMap.remove(uuid);
+		if (prefMap == null) {
+			event.disallow(Result.KICK_OTHER, Component.text("Failed to load preferences!")
+					.color(TextColors.ERROR_RED));
+			return;
 		}
+		playerInfo.setPreferenceValues(prefMap);
+
+		if(defaultKit == null)
+			defaultKit = DBGetDefaultKit.DEFAULT_KIT;
+		playerInfo.defaultKit = defaultKit;
 
 		Main.addPlayerInfo(player, playerInfo);
 		Main.playerIdLookup.put(player.getEntityId(), player);

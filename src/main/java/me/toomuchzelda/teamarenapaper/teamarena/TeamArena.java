@@ -306,9 +306,9 @@ public abstract class TeamArena
 					player.kick(Component.text("Something went horribly wrong!!! Oh my god!!! OH MY GOOODDDD!!!!!!!!", NamedTextColor.YELLOW));
 					Main.logger().severe("Teleporting " + player.getName() + " in cleanUp() fallback failed");
 				}
-			} else {
+			} /*else {
 				player.kick(TextUtils.getRGBManiacComponent(Component.text("Server closed uwu"), Style.empty(), 0d));
-			}
+			}*/
 		}
 		if (Bukkit.unloadWorld(gameWorld, false)) {
 			FileUtils.delete(worldFile);

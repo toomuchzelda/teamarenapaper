@@ -1,18 +1,21 @@
 package me.toomuchzelda.teamarenapaper.sql;
 
-import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.UUID;
 
 public class DBGetDefaultKit extends DBOperation<String>
 {
+	public static final String DEFAULT_KIT = "Trooper";
+
 	private final String uuid;
 
-	public DBGetDefaultKit(Player player) {
-		this.uuid = player.getUniqueId().toString();
+	public DBGetDefaultKit(UUID uuid) {
+		this.uuid = uuid.toString();
 	}
 
 	@Override
@@ -21,10 +24,18 @@ public class DBGetDefaultKit extends DBOperation<String>
 			stmt.setString(1, uuid);
 
 			ResultSet result = stmt.executeQuery();
-			result.next();
-
-			return result.getString(1);
+			if(result.next()) {//a player may not have a default kit set
+				return result.getString(1);
+			}
+			else {
+				return DEFAULT_KIT;
+			}
 		}
+	}
+
+	@Override
+	public @NotNull String getDefaultValue() {
+		return DEFAULT_KIT;
 	}
 
 	@Override

@@ -63,7 +63,8 @@ public class PlayerInfo
 		nametag = null;
 		kit = null;
 		activeKit = null;
-		defaultKit = "Trooper";
+		//should now be initialised in EventListeners
+		//defaultKit = "Trooper";
 
 		this.permissionLevel = permissionLevel;
 		damageReceivedLog = new LinkedList<>();

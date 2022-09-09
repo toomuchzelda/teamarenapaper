@@ -10,7 +10,7 @@ public abstract class DBOperation<T>
 {
 	protected abstract T execute(Connection connection) throws SQLException;
 
-	public @Nullable T run() throws SQLException {
+	public final T run() throws SQLException {
 		T value;
 		if(DatabaseManager.isActive()) {
 			try {
@@ -31,7 +31,7 @@ public abstract class DBOperation<T>
 		return value;
 	}
 
-	protected T getDefaultValue() {
+	protected @Nullable T getDefaultValue() {
 		return null;
 	}
 
