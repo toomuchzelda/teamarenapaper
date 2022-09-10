@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper;
 
 import com.comphenix.protocol.ProtocolLibrary;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
+import me.toomuchzelda.teamarenapaper.sql.DBSetPreferences;
 import me.toomuchzelda.teamarenapaper.sql.DatabaseManager;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
@@ -68,6 +69,9 @@ public final class Main extends JavaPlugin
 	@Override
 	public void onDisable() {
 		// Plugin shutdown logic
+
+		//synchronously save all player's preferences
+		DBSetPreferences.savePlayerPreferences(Bukkit.getOnlinePlayers());
 
 		// delete temporarily loaded map if any
 		if (teamArena != null) {

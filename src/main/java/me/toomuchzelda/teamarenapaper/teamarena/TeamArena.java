@@ -960,8 +960,8 @@ public abstract class TeamArena
 			pinfo.kit = null;
 			//unglow before setting pinfo.team to null as it needs that.
 			setViewingGlowingTeammates(pinfo, false, false);
-			pinfo.team = null;
-			pinfo.spawnPoint = null;
+			//pinfo.team = null;
+			//pinfo.spawnPoint = null;
 		}
 
 		for(Kit kit : kits.values()) {

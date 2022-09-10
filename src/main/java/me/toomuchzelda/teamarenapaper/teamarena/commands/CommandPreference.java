@@ -19,8 +19,8 @@ import java.util.*;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class CommandPreference extends CustomCommand {
-    public static final TextColor HEADINGS = NamedTextColor.BLUE;
-    public static final TextColor TEXT = NamedTextColor.WHITE;
+    public static final TextColor HEADINGS = TextColor.color(37, 95, 221);
+    public static final TextColor TEXT = TextColor.color(242, 242, 214);
 
 
     public CommandPreference() {

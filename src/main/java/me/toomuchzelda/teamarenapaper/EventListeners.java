@@ -364,15 +364,7 @@ public class EventListeners implements Listener
 		PlayerInfo pinfo = Main.removePlayerInfo(leaver);
 
 		//save preferences when leaving
-		Bukkit.getScheduler().runTaskAsynchronously(Main.getPlugin(), bukkitTask -> {
-			DBSetPreferences setPreferences = new DBSetPreferences(leaver, pinfo);
-			try {
-				setPreferences.run();
-			}
-			catch (SQLException e) {
-				Main.logger().severe("Failed to save preferences for " + leaver.getName());
-			}
-		});
+		DBSetPreferences.asyncSavePlayerPreferences(leaver, pinfo);
 
 		Main.playerIdLookup.remove(leaver.getEntityId());
 	}
