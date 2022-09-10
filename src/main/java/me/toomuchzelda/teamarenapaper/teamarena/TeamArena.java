@@ -306,9 +306,9 @@ public abstract class TeamArena
 					player.kick(Component.text("Something went horribly wrong!!! Oh my god!!! OH MY GOOODDDD!!!!!!!!", NamedTextColor.YELLOW));
 					Main.logger().severe("Teleporting " + player.getName() + " in cleanUp() fallback failed");
 				}
-			} else {
+			} /*else {
 				player.kick(TextUtils.getRGBManiacComponent(Component.text("Server closed uwu"), Style.empty(), 0d));
-			}
+			}*/
 		}
 		if (Bukkit.unloadWorld(gameWorld, false)) {
 			FileUtils.delete(worldFile);
@@ -960,8 +960,8 @@ public abstract class TeamArena
 			pinfo.kit = null;
 			//unglow before setting pinfo.team to null as it needs that.
 			setViewingGlowingTeammates(pinfo, false, false);
-			pinfo.team = null;
-			pinfo.spawnPoint = null;
+			//pinfo.team = null;
+			//pinfo.spawnPoint = null;
 		}
 
 		for(Kit kit : kits.values()) {

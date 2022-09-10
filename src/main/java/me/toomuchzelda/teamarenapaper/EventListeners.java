@@ -7,6 +7,8 @@ import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import com.destroystokyo.paper.event.player.PlayerUseUnknownEntityEvent;
 import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
+import com.destroystokyo.paper.profile.CraftPlayerProfile;
+import com.destroystokyo.paper.profile.PlayerProfile;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.AsyncChatEvent;
@@ -16,6 +18,7 @@ import me.toomuchzelda.teamarenapaper.explosions.EntityExplosionInfo;
 import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitbox;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
+import me.toomuchzelda.teamarenapaper.sql.*;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
@@ -26,12 +29,12 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
-import me.toomuchzelda.teamarenapaper.teamarena.preferences.PreferenceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -41,7 +44,6 @@ import org.bukkit.command.Command;
 import org.bukkit.craftbukkit.v1_19_R1.CraftWorldBorder;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
@@ -58,9 +60,10 @@ import org.jetbrains.annotations.NotNull;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 
 import java.lang.reflect.Constructor;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static me.toomuchzelda.teamarenapaper.teamarena.GameState.DEAD;
 import static me.toomuchzelda.teamarenapaper.teamarena.GameState.LIVE;
@@ -69,6 +72,8 @@ public class EventListeners implements Listener
 {
 
 	public static final boolean[] BREAKABLE_BLOCKS;
+	private final ConcurrentHashMap<UUID, Map<Preference<?>, ?>> preferenceFutureMap = new ConcurrentHashMap<>();
+	private final ConcurrentHashMap<UUID, String> defaultKitMap = new ConcurrentHashMap<>();
 
 	static {
 		BREAKABLE_BLOCKS = new boolean[Material.values().length];
@@ -174,16 +179,81 @@ public class EventListeners implements Listener
 		PacketListeners.cancelDamageSounds = true;
 	}
 
-	private final HashMap<UUID, CompletableFuture<Map<Preference<?>, ?>>> preferenceFutureMap = new HashMap<>();
-	@EventHandler(priority = EventPriority.MONITOR)
-	public void asyncPlayerPreLogin(AsyncPlayerPreLoginEvent e) {
-		if (e.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED)
+	@EventHandler
+	public void asyncPlayerPreLogin(AsyncPlayerPreLoginEvent event) {
+		if (event.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED)
 			return;
-		synchronized (preferenceFutureMap) {
-			preferenceFutureMap.put(e.getUniqueId(), PreferenceManager.fetchPreferences(e.getUniqueId()));
-		}
-	}
 
+		//if in offline mode, get UUID from stored playerinfo, by the player's name.
+		// for players joining for the first time a temporary entry in the PlayerInfo table
+		// is made for them and deleted afterwards.
+		// why do i need offline mode? it is very good in testing with bots
+		if(!DatabaseManager.ONLINE_MODE) {
+			//don't need bukkit async scheduler as this event is called async
+			DBGetUuidByName getUuidByName = new DBGetUuidByName(event.getName());
+			try {
+				UUID newUuid = getUuidByName.run();
+				if(newUuid != null) {
+					PlayerProfile old = event.getPlayerProfile();
+					PlayerProfile newProfile = new CraftPlayerProfile(newUuid, old.getName());
+					newProfile.setTextures(old.getTextures());
+					newProfile.setProperties(old.getProperties());
+					event.setPlayerProfile(newProfile);
+				}
+			}
+			catch (SQLException | IllegalArgumentException exception) {
+				//sql exception will already be printed
+				if(exception instanceof IllegalArgumentException)
+					exception.printStackTrace();
+
+				event.setLoginResult(AsyncPlayerPreLoginEvent.Result.KICK_OTHER);
+				event.kickMessage(Component.text("Database error"));
+				return;
+			}
+		}
+
+		final UUID uuid = event.getUniqueId();
+
+		//update player info, cancel and return if fail
+		DBSetPlayerInfo setPlayerInfo = new DBSetPlayerInfo(uuid, event.getName());
+		try {
+			setPlayerInfo.run();
+		}
+		catch(SQLException e) {
+			event.setLoginResult(AsyncPlayerPreLoginEvent.Result.KICK_OTHER);
+			event.kickMessage(TextUtils.getRGBManiacComponent(
+					Component.text("Could not update DBPlayerInfo in AsyncPreLogin! Please tell an admin."),
+					Style.empty(), 0d));
+			return;
+		}
+
+		//load preferences from DB
+		// cancel and return if fail
+		DBGetPreferences getPreferences = new DBGetPreferences(uuid);
+		Map<Preference<?>, ?> retrievedPrefs;
+		try {
+			retrievedPrefs = getPreferences.run();
+			preferenceFutureMap.put(uuid, retrievedPrefs);
+		}
+		catch (SQLException e) {
+			event.setLoginResult(AsyncPlayerPreLoginEvent.Result.KICK_OTHER);
+			event.kickMessage(Component.text("Could not retrieve preferences! Run for your lives!!!", MathUtils.randomTextColor()));
+			return;
+		}
+
+		//load default kit from DB
+		// log error and just use default kit if fail
+		DBGetDefaultKit getDefaultKit = new DBGetDefaultKit(uuid);
+		String defaultKit;
+		try {
+			defaultKit = getDefaultKit.run();
+		}
+		catch(SQLException e) {
+			defaultKit = getDefaultKit.getDefaultValue();
+			Main.logger().severe("Could not load default kit for " + uuid.toString() + ", username " + event.getName());
+		}
+		defaultKitMap.put(uuid, defaultKit);
+	}
 
 	//these three events are called in this order
 	@EventHandler
@@ -201,15 +271,37 @@ public class EventListeners implements Listener
 			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.ALL, player);
 		}
 
-		synchronized (preferenceFutureMap) {
-			CompletableFuture<Map<Preference<?>, ?>> future = preferenceFutureMap.remove(uuid);
-			if (future == null) {
-				event.disallow(Result.KICK_OTHER, Component.text("Failed to load preferences!")
-						.color(TextColors.ERROR_RED));
-				return;
-			}
-			playerInfo.setPreferenceValues(future.join());
+		//remove the default kit now so if the preferences are null and the method returns here
+		// there isn't a memory leak in the map.
+		String defaultKit = defaultKitMap.remove(uuid);
+		Map<Preference<?>, ?> prefMap = preferenceFutureMap.remove(uuid);
+		if (prefMap == null) {
+			event.disallow(Result.KICK_OTHER, Component.text("Failed to load preferences!")
+					.color(TextColors.ERROR_RED));
+			return;
 		}
+		//null values are inserted in the DBGetPreferences operation to signal that a previously
+		// stored value is now invalid for some reason.
+		// so notify the player here of that.
+		for(var entry : prefMap.entrySet()) {
+			Preference<?> pref = entry.getKey();
+			if(entry.getValue() == null) {
+				((Map.Entry<Preference<?>, Object> ) entry).setValue(pref.getDefaultValue());
+				Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
+					player.sendMessage(Component.text(
+							"Your previous set value for preference " + pref.getName() +
+									" is now invalid and has been reset to default: " + pref.getDefaultValue().toString() +
+									". This may have happened because the preference itself was changed or perhaps due to " +
+									"some extraneous shenanigans and perchance, a sizeable portion of tomfoolery.",
+							TextColors.ERROR_RED));}
+				);
+			}
+		}
+		playerInfo.setPreferenceValues(prefMap);
+
+		if(defaultKit == null)
+			defaultKit = DBGetDefaultKit.DEFAULT_KIT;
+		playerInfo.defaultKit = defaultKit;
 
 		Main.addPlayerInfo(player, playerInfo);
 		Main.playerIdLookup.put(player.getEntityId(), player);
@@ -256,11 +348,10 @@ public class EventListeners implements Listener
 	}
 
 	@EventHandler
-	public void playerChat(AsyncChatEvent event) {
-		if (!event.getPlayer().isOp())
-			return;
-		var parsed = MiniMessage.miniMessage().deserialize(PlainTextComponentSerializer.plainText().serialize(event.message()));
-		event.message(parsed);
+	public void asyncChat(AsyncChatEvent event) {
+		if (Main.getPlayerInfo(event.getPlayer()).permissionLevel.compareTo(CustomCommand.PermissionLevel.MOD) >= 0) {
+			event.message(MiniMessage.miniMessage().deserialize(PlainTextComponentSerializer.plainText().serialize(event.message())));
+		}
 	}
 
 	@EventHandler
@@ -270,7 +361,11 @@ public class EventListeners implements Listener
 		Main.getGame().leavingPlayer(leaver);
 		//Main.getPlayerInfo(event.getPlayer()).nametag.remove();
 		FakeHitboxManager.removeFakeHitbox(leaver);
-		Main.removePlayerInfo(leaver);
+		PlayerInfo pinfo = Main.removePlayerInfo(leaver);
+
+		//save preferences when leaving
+		DBSetPreferences.asyncSavePlayerPreferences(leaver, pinfo);
+
 		Main.playerIdLookup.remove(leaver.getEntityId());
 	}
 

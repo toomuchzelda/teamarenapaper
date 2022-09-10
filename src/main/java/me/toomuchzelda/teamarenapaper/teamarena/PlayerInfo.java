@@ -63,7 +63,8 @@ public class PlayerInfo
 		nametag = null;
 		kit = null;
 		activeKit = null;
-		defaultKit = "Trooper";
+		//should now be initialised in EventListeners
+		//defaultKit = "Trooper";
 
 		this.permissionLevel = permissionLevel;
 		damageReceivedLog = new LinkedList<>();
@@ -78,7 +79,7 @@ public class PlayerInfo
 	}
 
 	public void setPreferenceValues(Map<Preference<?>, ?> values) {
-		preferences = new HashMap<>(values); // disgusting and slow
+		preferences = new HashMap<>(values);
 	}
 
 	public boolean hasPreference(Preference<?> preference) {

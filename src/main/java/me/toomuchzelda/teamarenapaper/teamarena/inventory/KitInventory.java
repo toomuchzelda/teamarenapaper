@@ -2,16 +2,21 @@ package me.toomuchzelda.teamarenapaper.teamarena.inventory;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.*;
+import me.toomuchzelda.teamarenapaper.sql.DBSetDefaultKit;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.KitDemolitions;
+import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
@@ -22,10 +27,8 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
+import java.sql.SQLException;
+import java.util.*;
 
 public class KitInventory implements InventoryProvider {
 
@@ -63,7 +66,7 @@ public class KitInventory implements InventoryProvider {
 		boolean disabled = !CommandDebug.kitPredicate.test(kit);
 
 		String desc = kit.getDescription();
-		// word wrapping because some command-loving idiot didn't add line breaks in kit descriptions
+		// word wrapping
 		List<Component> loreLines = new ArrayList<>(TextUtils.wrapString(desc, LORE_STYLE));
 
 		if (selected) {
@@ -128,12 +131,22 @@ public class KitInventory implements InventoryProvider {
 						Player clicker = (Player) e.getWhoClicked();
 						PlayerInfo playerInfo = Main.getPlayerInfo(clicker);
 						playerInfo.defaultKit = playerInfo.kit.getName();
-						clicker.playSound(clicker, Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1);
-						clicker.sendMessage(Component.text().color(NamedTextColor.GREEN).append(
-							Component.text("Saved "),
-							Component.text(playerInfo.defaultKit, NamedTextColor.YELLOW),
-							Component.text(" as your default kit.")
-						));
+						DBSetDefaultKit dbSetKit = new DBSetDefaultKit(clicker, playerInfo.kit);
+						Bukkit.getScheduler().runTaskAsynchronously(Main.getPlugin(), bukkitTask -> {
+							try {
+								dbSetKit.run();
+								clicker.playSound(clicker, Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1);
+								clicker.sendMessage(Component.text().color(NamedTextColor.GREEN).append(
+										Component.text("Saved "),
+										Component.text(playerInfo.defaultKit, NamedTextColor.YELLOW),
+										Component.text(" as your default kit.")
+								));
+							}
+							catch (SQLException ex) {
+								clicker.sendMessage(Component.text("Failed to save kit", TextColors.ERROR_RED));
+							}
+						});
+
 						Inventories.closeInventory(clicker, KitInventory.class);
 					})
 				);

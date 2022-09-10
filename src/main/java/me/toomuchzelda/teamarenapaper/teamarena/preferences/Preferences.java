@@ -91,6 +91,7 @@ public class Preferences {
 		.setIcon(Material.LEATHER_CHESTPLATE);
 
 	public static final Preference<Float> EXPLOSION_VOLUME_MULTIPLIER = SimplePreference.of("explosion_volume",
-			"Change the volume of explosions. 1 = normal, 0.5 = half, 0 = silent, etc.", Float.class, 1f)
-		.setIcon(Material.TNT);
+					"Change the volume of explosions. 1 = normal, 0.5 = half, 0 = silent, etc.", Float.class, 1f,
+					aFloat -> aFloat > 0f && aFloat <= 100f)
+			.setIcon(Material.TNT);
 }

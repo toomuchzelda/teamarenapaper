@@ -2,6 +2,8 @@ package me.toomuchzelda.teamarenapaper;
 
 import com.comphenix.protocol.ProtocolLibrary;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
+import me.toomuchzelda.teamarenapaper.sql.DBSetPreferences;
+import me.toomuchzelda.teamarenapaper.sql.DatabaseManager;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.*;
@@ -39,6 +41,9 @@ public final class Main extends JavaPlugin
 		logger = this.getLogger();
 		logger.info("Starting TMA");
 
+		getConfig().options().copyDefaults(true);
+		saveConfig();
+
 		// load important classes
 		Preferences.registerPreferences();
 		FileUtils.init();
@@ -46,6 +51,8 @@ public final class Main extends JavaPlugin
 		int initialCapacity = Bukkit.getMaxPlayers();
 		playerInfo = Collections.synchronizedMap(new LinkedHashMap<>(initialCapacity));
 		playerIdLookup = Collections.synchronizedMap(new HashMap<>(initialCapacity));
+
+		DatabaseManager.init();
 
 		eventListeners = new EventListeners(this);
 		packetListeners = new PacketListeners(this);
@@ -63,15 +70,20 @@ public final class Main extends JavaPlugin
 	public void onDisable() {
 		// Plugin shutdown logic
 
+		//synchronously save all player's preferences
+		DBSetPreferences.savePlayerPreferences(Bukkit.getOnlinePlayers());
+
 		// delete temporarily loaded map if any
 		if (teamArena != null) {
-			TeamArena oldGame = teamArena;
+			TeamArena temp = teamArena;
 			teamArena = null;
-			oldGame.cleanUp();
+			temp.cleanUp();
 		}
 
 		HandlerList.unregisterAll(this);
 		ProtocolLibrary.getProtocolManager().removePacketListeners(this);
+
+		DatabaseManager.close();
 	}
 
 	private static void registerCommands() {
@@ -111,8 +123,8 @@ public final class Main extends JavaPlugin
 		playerInfo.put(player, info);
 	}
 
-	public static void removePlayerInfo(Player player) {
-		playerInfo.remove(player);
+	public static PlayerInfo removePlayerInfo(Player player) {
+		return playerInfo.remove(player);
 	}
 
 	public static Logger logger() {
