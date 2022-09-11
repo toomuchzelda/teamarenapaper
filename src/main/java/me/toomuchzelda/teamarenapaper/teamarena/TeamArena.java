@@ -202,12 +202,12 @@ public abstract class TeamArena
 		gameWorld.setGameRule(GameRule.SHOW_DEATH_MESSAGES, false);
 		gameWorld.setDifficulty(Difficulty.NORMAL);
 
-		if (mapInfo.weatherType == 2)
+		/*if (mapInfo.weatherType == 2)
 			gameWorld.setThundering(true);
 		else if (mapInfo.weatherType == 1)
 			gameWorld.setStorm(true);
 		else
-			gameWorld.setClearWeatherDuration(6000); //5 minutes
+			gameWorld.setClearWeatherDuration(6000); //5 minutes*/
 
 		//force disable relative projectile velocity (projectiles inheriting the velocity of their shooter)
 		((CraftWorld) gameWorld).getHandle().paperConfig().misc.disableRelativeProjectileVelocity = true;
@@ -1683,17 +1683,17 @@ public abstract class TeamArena
 		}
 
 		//Create the teams
-		Map<String, Map<String, ArrayList<String>>> teamsMap =
-				(Map<String, Map<String, ArrayList<String>>>) map.get("Teams");
+		Map<String, Map<String, List<String>>> teamsMap =
+				(Map<String, Map<String, List<String>>>) map.get("Teams");
 
 		int numOfTeams = teamsMap.size();
 		teams = new TeamArenaTeam[numOfTeams];
 		int teamsArrIndex = 0;
 
-		for (Map.Entry<String, Map<String, ArrayList<String>>> entry : teamsMap.entrySet()) {
+		for (Map.Entry<String, Map<String, List<String>>> entry : teamsMap.entrySet()) {
 			String teamName = entry.getKey();
 
-			Map<String, ArrayList<String>> spawnsYaml = entry.getValue();
+			Map<String, List<String>> spawnsYaml = entry.getValue();
 
 			//if it's a legacy RWF team
 			//TeamColours teamColour = TeamColours.valueOf(teamName);
@@ -1724,7 +1724,7 @@ public abstract class TeamArena
 				teamArenaTeam = new TeamArenaTeam(teamName, simpleName, first, second, null);*/
 			}
 
-			ArrayList<String> spawnsList = spawnsYaml.get("Spawns");
+			List<String> spawnsList = spawnsYaml.get("Spawns");
 			Location[] locArray = new Location[spawnsList.size()];
 
 			int index = 0;

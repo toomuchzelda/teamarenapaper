@@ -1,0 +1,175 @@
+package me.toomuchzelda.teamarenapaper.teamarena.gamescheduler;
+
+import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.Hill;
+import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import org.bukkit.util.BoundingBox;
+import org.bukkit.util.Vector;
+import org.yaml.snakeyaml.Yaml;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.*;
+
+/**
+ * @author toomuchzelda
+ *
+ * Class that represents a Team Arena map.
+ *
+ * Contains:
+ * - the path to the world folder
+ * - the name of the Map (not the world's directory)
+ * - all the map's configurations
+ */
+public class TeamArenaMap
+{
+	private record KothHill(String name, Vector minCorner, Vector maxCorner, int time) {}
+	private record KOTHInfo(boolean randomOrder, List<KothHill> hills) {}
+
+	private record CTFInfo(int capsToWin, Map<String, Vector> teamFlags) {}
+
+	private record SNDInfo(boolean randomBases, Map<String, List<Vector>> teamBombs) {}
+
+	private final String name;
+	private final String authors;
+	private final String description;
+
+	private final boolean doDaylightCycle;
+	private final boolean doWeatherCycle;
+
+	private final Vector minBorderCorner;
+	private final Vector maxBorderCorner;
+
+	private final Map<String, Vector[]> teamSpawns;
+
+	private final KOTHInfo kothInfo;
+	private final CTFInfo ctfInfo;
+	private final SNDInfo sndInfo;
+
+
+	TeamArenaMap(String pathToWorld) throws IOException {
+		File file = new File(pathToWorld);
+
+		//parse the Main config (MainConfig.yml)
+		File mainFile = new File(file, "MainConfig.yml");
+		Yaml yaml = new Yaml();
+		try (FileInputStream mainInput = new FileInputStream(mainFile)) {
+			Map<String, Object> mainMap = yaml.load(mainInput);
+
+			this.name = (String) mainMap.get("Name");
+			this.authors = (String) mainMap.get("Author");
+			this.description = (String) mainMap.get("Description");
+
+			boolean doDayCycle;
+			try {
+				doDayCycle = (boolean) mainMap.get("DoDaylightCycle");
+			}
+			//the element doesn't exist, or spelled incorrectly and recognized by snakeyaml as a String instead of a boolean
+			catch(NullPointerException | ClassCastException e) {
+				doDayCycle = false;
+			}
+			this.doDaylightCycle = doDayCycle;
+
+			boolean doWeatherCycle;
+			try {
+				doWeatherCycle = (boolean) mainMap.get("DoWeatherCycle");
+			}
+			catch(NullPointerException | ClassCastException e) {
+				doWeatherCycle = false;
+			}
+			this.doWeatherCycle = doWeatherCycle;
+
+			//Map border
+			// Only supports rectangular prism borders as of now
+			List<String> borders = (List<String>) mainMap.get("Border");
+			Vector vec1 = BlockUtils.parseCoordsToVec(borders.get(0), 0, 0, 0);
+			Vector vec2 = BlockUtils.parseCoordsToVec(borders.get(1), 0, 0, 0);
+			this.minBorderCorner = Vector.getMinimum(vec1, vec2);
+			this.maxBorderCorner = Vector.getMaximum(vec1, vec2).add(new Vector(1, 1, 1));
+
+			//load team spawns
+			Map<String, Map<String, List<String>>> teamsMap =
+					(Map<String, Map<String, List<String>>>) mainMap.get("Teams");
+
+			int numOfTeams = teamsMap.size();
+			this.teamSpawns = new HashMap<>(numOfTeams);
+			for (Map.Entry<String, Map<String, List<String>>> entry : teamsMap.entrySet()) {
+				String teamName = entry.getKey();
+
+				Map<String, List<String>> spawnsYaml = entry.getValue();
+
+				List<String> spawnsList = spawnsYaml.get("Spawns");
+				Vector[] vecArray = new Vector[spawnsList.size()];
+
+				int index = 0;
+				for (String loc : spawnsList) {
+					Vector coords = BlockUtils.parseCoordsToVec(loc, 0.5, 0, 0.5);
+
+					vecArray[index] = coords;
+					index++;
+				}
+				this.teamSpawns.put(teamName, vecArray);
+			}
+
+			//TODO: run spawn location at TeamArena construction time
+			// and locations that point to mid
+		}
+
+		//parse KOTH config if present
+		File kothFile = new File(file, "KOTHConfig.yml");
+		if(kothFile.exists() && kothFile.isFile()) {
+			KOTHInfo kothInfo;
+			try (FileInputStream kothInput = new FileInputStream(kothFile)) {
+				Map<String, Object> kothMap = yaml.load(kothInput);
+
+				boolean randomHillOrder;
+				try {
+					randomHillOrder = (boolean) kothMap.get("RandomHillOrder");
+				}
+				catch(NullPointerException | ClassCastException e) {
+					Main.logger().warning("Invalid RandomHillOrder! Must be true/false. Defaulting to false. In file " +
+							kothFile.getName());
+					randomHillOrder = false;
+				}
+
+				Map<String, List<String>> hillsMap = (Map<String, List<String>>) kothMap.get("Hills");
+				Iterator<Map.Entry<String, List<String>>> hillsIter = hillsMap.entrySet().iterator();
+
+				KothHill[] hills = new KothHill[hillsMap.size()];
+				int index = 0;
+				while(hillsIter.hasNext()) {
+					Map.Entry<String, List<String>> entry = hillsIter.next();
+
+					String name = entry.getKey();
+					String coordOne = entry.getValue().get(0);
+					String coordTwo = entry.getValue().get(1);
+					String timeString = entry.getValue().get(2);
+
+					int time = Integer.parseInt(timeString.split(",")[1]);
+
+					Vector one = BlockUtils.parseCoordsToVec(coordOne, 0, 0, 0);
+					Vector two = BlockUtils.parseCoordsToVec(coordTwo, 0, 0, 0);
+
+					Vector minCorner = Vector.getMinimum(one, two);
+					Vector maxCorner = Vector.getMaximum(one, two);
+
+					hills[index++] = new KothHill(name, minCorner, maxCorner, time);
+				}
+
+				kothInfo = new KOTHInfo(randomHillOrder, List.of(hills));
+			}
+			//just run with koth not available
+			catch (Exception e) {
+				Main.logger().warning("Error when parsing Koth config for " + file.getName());
+				kothInfo = null;
+			}
+
+			this.kothInfo = kothInfo;
+		}
+		else {
+			this.kothInfo = null;
+		}
+	}
+}

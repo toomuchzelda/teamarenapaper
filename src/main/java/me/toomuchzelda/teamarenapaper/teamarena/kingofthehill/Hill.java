@@ -19,7 +19,6 @@ public class Hill {
     private final BoundingBox border;
     //time in seconds
     private final int time;
-    private boolean done;
 
     private RealHologram hologram;
 
@@ -27,7 +26,6 @@ public class Hill {
         this.name = name;
         this.border = border;
         this.time = time;
-        this.done = false;
 
         hologram = new RealHologram(border.getCenter().toLocation(world), RealHologram.Alignment.TOP, Component.text("Hill: " + name));
     }
@@ -135,14 +133,6 @@ public class Hill {
 
     public BoundingBox getBorder() {
         return border;
-    }
-
-    public boolean isDone() {
-        return done;
-    }
-
-    public void setDone() {
-        done = true;
     }
 
     public int getHillTime() {
