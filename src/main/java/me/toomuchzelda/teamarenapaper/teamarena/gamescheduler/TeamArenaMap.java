@@ -1,10 +1,11 @@
 package me.toomuchzelda.teamarenapaper.teamarena.gamescheduler;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.Hill;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy.Bomb;
+import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
 import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import org.bukkit.util.BoundingBox;
+import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
 import org.yaml.snakeyaml.Yaml;
 
@@ -30,7 +31,7 @@ public class TeamArenaMap
 
 	private record CTFInfo(int capsToWin, Map<String, Vector> teamFlags) {}
 
-	private record SNDInfo(boolean randomBases, Map<String, List<Vector>> teamBombs) {}
+	private record SNDInfo(boolean randomBases, Map<String, List<BlockVector>> teamBombs) {}
 
 	private final String name;
 	private final String authors;
@@ -119,8 +120,8 @@ public class TeamArenaMap
 
 		//parse KOTH config if present
 		File kothFile = new File(file, "KOTHConfig.yml");
+		KOTHInfo kothInfo = null;
 		if(kothFile.exists() && kothFile.isFile()) {
-			KOTHInfo kothInfo;
 			try (FileInputStream kothInput = new FileInputStream(kothFile)) {
 				Map<String, Object> kothMap = yaml.load(kothInput);
 
@@ -165,11 +166,79 @@ public class TeamArenaMap
 				Main.logger().warning("Error when parsing Koth config for " + file.getName());
 				kothInfo = null;
 			}
+		}
+		this.kothInfo = kothInfo;
 
-			this.kothInfo = kothInfo;
+		//parse CTF config if present
+		File ctfFile = new File(file, "CTFConfig.yml");
+		CTFInfo ctfInfo = null;
+		if(ctfFile.exists() && ctfFile.isFile()) {
+			try (FileInputStream ctfInput = new FileInputStream(ctfFile)) {
+				Map<String, Object> ctfMap = yaml.load(ctfInput);
+
+				int capsToWin = 3;
+				Map<String, Vector> teamFlags = new HashMap<>();
+				for (Map.Entry<String, Object> entry : ctfMap.entrySet()) {
+					if (entry.getKey().equalsIgnoreCase("CapsToWin")) {
+						try {
+							capsToWin = (Integer) entry.getValue();
+						} catch (NullPointerException | ClassCastException e) {
+							Main.logger().warning("Invalid CapsToWin! Must be an integer number (no decimals!). Defaulting to 3");
+						}
+					} else if(this.teamSpawns.containsKey(entry.getKey())) {
+						//if is a team that was added in MainConfig.yml
+						Vector teamsFlagLoc = BlockUtils.parseCoordsToVec((String) entry.getValue(), 0.5, -0.4, 0.5);
+						teamFlags.put(entry.getKey(), teamsFlagLoc);
+					}
+					else {
+						Main.logger().warning("Unknown entry in CTF config for " + file.getName() + ": " + entry.getKey());
+					}
+				}
+				ctfInfo = new CTFInfo(capsToWin, teamFlags);
+			}
+			catch (Exception e) {
+				Main.logger().warning("Error when parsing CTF config for " + file.getName());
+			}
 		}
-		else {
-			this.kothInfo = null;
+		this.ctfInfo = ctfInfo;
+
+		//parse SND config if present
+		File sndFile = new File(file, "SNDConfig.yml");
+		SNDInfo sndInfo = null;
+		if(sndFile.exists() && sndFile.isFile()) {
+			try (FileInputStream sndInput = new FileInputStream(sndFile)) {
+				Map<String, Object> sndMap = yaml.load(sndInput);
+
+				Map<String, List<BlockVector>> teamBombs = new HashMap<>(sndMap.size());
+				boolean randomBases = false;
+
+				for (Map.Entry<String, Object> entry : sndMap.entrySet()) {
+					if (entry.getKey().equalsIgnoreCase("Random Base")) {
+						try {
+							randomBases = (boolean) entry.getValue();
+						} catch (NullPointerException | ClassCastException e) {
+							Main.logger().warning("Invalid random base value in SND config for " + file.getName());
+						}
+					}
+					else if (this.teamSpawns.containsKey(entry.getKey())) {
+						List<String> configBombs = (List<String>) entry.getValue();
+						List<BlockVector> bombs = new ArrayList<>(configBombs.size());
+						for(String bombCoords : configBombs) {
+							BlockVector blockVector = BlockUtils.parseCoordsToVec(bombCoords, 0, 0, 0).toBlockVector();
+							bombs.add(blockVector);
+						}
+						teamBombs.put(entry.getKey(), bombs);
+					}
+					else {
+						Main.logger().warning("Unknown entry " + entry.getKey() + " in SND config for " + file.getName());
+					}
+				}
+				sndInfo = new SNDInfo(randomBases, teamBombs);
+			}
+			catch (Exception e) {
+				Main.logger().warning("Error when parsing SND config for " + file.getName());
+			}
 		}
+		this.sndInfo = sndInfo;
 	}
 }
