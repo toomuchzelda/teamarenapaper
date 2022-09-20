@@ -1,9 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.gamescheduler;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
-import me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy.Bomb;
-import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
 import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
 import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
@@ -26,12 +23,12 @@ import java.util.*;
  */
 public class TeamArenaMap
 {
-	private record KothHill(String name, Vector minCorner, Vector maxCorner, int time) {}
-	private record KOTHInfo(boolean randomOrder, List<KothHill> hills) {}
+	public record KothHill(String name, Vector minCorner, Vector maxCorner, int time) {}
+	public record KOTHInfo(boolean randomOrder, List<KothHill> hills) {}
 
-	private record CTFInfo(int capsToWin, Map<String, Vector> teamFlags) {}
+	public record CTFInfo(int capsToWin, Map<String, Vector> teamFlags) {}
 
-	private record SNDInfo(boolean randomBases, Map<String, List<BlockVector>> teamBombs) {}
+	public record SNDInfo(boolean randomBases, Map<String, List<BlockVector>> teamBombs) {}
 
 	private final String name;
 	private final String authors;
@@ -49,12 +46,24 @@ public class TeamArenaMap
 	private final CTFInfo ctfInfo;
 	private final SNDInfo sndInfo;
 
+	public String toString() {
+		return "name: " + name
+				+ ", authors: " + authors
+				+ ", description: " + description
+				+ ", doDaylightCycle: " + doDaylightCycle
+				+ ", doWeatherCycle: " + doWeatherCycle
+				+ ", minBorderCorner: " + minBorderCorner.toString()
+				+ ", maxBorderCorner: " + maxBorderCorner.toString()
+				+ ", teamSpawns keys: " + teamSpawns.keySet().toString()
+				+ ", kothInfo: " + kothInfo.toString()
+				+ ", ctfInfo: " + ctfInfo.toString()
+				+ ", sndInfo: " + sndInfo.toString();
+	}
 
-	TeamArenaMap(String pathToWorld) throws IOException {
-		File file = new File(pathToWorld);
+	TeamArenaMap(File worldFolder) throws IOException {
 
 		//parse the Main config (MainConfig.yml)
-		File mainFile = new File(file, "MainConfig.yml");
+		File mainFile = new File(worldFolder, "MainConfig.yml");
 		Yaml yaml = new Yaml();
 		try (FileInputStream mainInput = new FileInputStream(mainFile)) {
 			Map<String, Object> mainMap = yaml.load(mainInput);
@@ -119,7 +128,7 @@ public class TeamArenaMap
 		}
 
 		//parse KOTH config if present
-		File kothFile = new File(file, "KOTHConfig.yml");
+		File kothFile = new File(worldFolder, "KOTHConfig.yml");
 		KOTHInfo kothInfo = null;
 		if(kothFile.exists() && kothFile.isFile()) {
 			try (FileInputStream kothInput = new FileInputStream(kothFile)) {
@@ -163,14 +172,14 @@ public class TeamArenaMap
 			}
 			//just run with koth not available
 			catch (Exception e) {
-				Main.logger().warning("Error when parsing Koth config for " + file.getName());
+				Main.logger().warning("Error when parsing Koth config for " + worldFolder.getName());
 				kothInfo = null;
 			}
 		}
 		this.kothInfo = kothInfo;
 
 		//parse CTF config if present
-		File ctfFile = new File(file, "CTFConfig.yml");
+		File ctfFile = new File(worldFolder, "CTFConfig.yml");
 		CTFInfo ctfInfo = null;
 		if(ctfFile.exists() && ctfFile.isFile()) {
 			try (FileInputStream ctfInput = new FileInputStream(ctfFile)) {
@@ -191,19 +200,19 @@ public class TeamArenaMap
 						teamFlags.put(entry.getKey(), teamsFlagLoc);
 					}
 					else {
-						Main.logger().warning("Unknown entry in CTF config for " + file.getName() + ": " + entry.getKey());
+						Main.logger().warning("Unknown entry in CTF config for " + worldFolder.getName() + ": " + entry.getKey());
 					}
 				}
 				ctfInfo = new CTFInfo(capsToWin, teamFlags);
 			}
 			catch (Exception e) {
-				Main.logger().warning("Error when parsing CTF config for " + file.getName());
+				Main.logger().warning("Error when parsing CTF config for " + worldFolder.getName());
 			}
 		}
 		this.ctfInfo = ctfInfo;
 
 		//parse SND config if present
-		File sndFile = new File(file, "SNDConfig.yml");
+		File sndFile = new File(worldFolder, "SNDConfig.yml");
 		SNDInfo sndInfo = null;
 		if(sndFile.exists() && sndFile.isFile()) {
 			try (FileInputStream sndInput = new FileInputStream(sndFile)) {
@@ -217,7 +226,7 @@ public class TeamArenaMap
 						try {
 							randomBases = (boolean) entry.getValue();
 						} catch (NullPointerException | ClassCastException e) {
-							Main.logger().warning("Invalid random base value in SND config for " + file.getName());
+							Main.logger().warning("Invalid random base value in SND config for " + worldFolder.getName());
 						}
 					}
 					else if (this.teamSpawns.containsKey(entry.getKey())) {
@@ -230,15 +239,59 @@ public class TeamArenaMap
 						teamBombs.put(entry.getKey(), bombs);
 					}
 					else {
-						Main.logger().warning("Unknown entry " + entry.getKey() + " in SND config for " + file.getName());
+						Main.logger().warning("Unknown entry " + entry.getKey() + " in SND config for " + worldFolder.getName());
 					}
 				}
 				sndInfo = new SNDInfo(randomBases, teamBombs);
 			}
 			catch (Exception e) {
-				Main.logger().warning("Error when parsing SND config for " + file.getName());
+				Main.logger().warning("Error when parsing SND config for " + worldFolder.getName());
 			}
 		}
 		this.sndInfo = sndInfo;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public String getAuthors() {
+		return authors;
+	}
+
+	public String getDescription() {
+		return description;
+	}
+
+	public boolean isDoDaylightCycle() {
+		return doDaylightCycle;
+	}
+
+	public boolean isDoWeatherCycle() {
+		return doWeatherCycle;
+	}
+
+	public Vector getMinBorderCorner() {
+		return minBorderCorner;
+	}
+
+	public Vector getMaxBorderCorner() {
+		return maxBorderCorner;
+	}
+
+	public Map<String, Vector[]> getTeamSpawns() {
+		return teamSpawns;
+	}
+
+	public KOTHInfo getKothInfo() {
+		return this.kothInfo;
+	}
+
+	public CTFInfo getCtfInfo() {
+		return this.ctfInfo;
+	}
+
+	public SNDInfo getSndInfo() {
+		return this.sndInfo;
 	}
 }
