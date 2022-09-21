@@ -2,6 +2,8 @@ package me.toomuchzelda.teamarenapaper.teamarena.gamescheduler;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.GameType;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,11 +18,8 @@ import java.util.*;
  * until the end of the queue is reached. Then all gametypes are marked as unplayed, shuffled again, and played again.
  *
  * Maps are done the same, except a map is only taken from it's queue when that gametype is being played.
- *
- * To prevent a map being played twice in a row (but with different GameTypes) the last played map is simply kept
- * in a field and checked when choosing the next map. To keep the order of the Map queue good, the map's position
- * in the queue will be swapped down one. If there are no other maps remaining then the queue of the
- * desired GameType will be cleared and shuffled 1 game early and another map will be picked from there.
+ * It is possible for a map to play twice in a row if it is picked from two gametype's separate map queues when
+ * played after the other.
  */
 public class GameScheduler
 {
@@ -30,23 +29,45 @@ public class GameScheduler
 	private static final List<TeamArenaMap> CTF_MAPS;
 	private static final List<TeamArenaMap> SND_MAPS;
 
-	private static class GameQueueEntry {
-		GameType gameType;
-		boolean played;
+	//array index, track how much of the queue has been played
+	private static int gameTypeCtr;
+	private static final GameType[] GAMETYPE_Q;
+
+	private static class MapQueue {
+		ArrayList<TeamArenaMap> queue;
+
+		//remove from one, insert in random order to other.
+		ArrayList<TeamArenaMap> queueOne;
+		ArrayList<TeamArenaMap> queueTwo;
+
+		MapQueue(Collection<TeamArenaMap> maps) {
+			this.queueOne = new ArrayList<>(maps);
+			this.queueTwo = new ArrayList<>(maps.size());
+			this.queue = queueOne;
+
+			Collections.shuffle(queue, MathUtils.random);
+		}
+
+		TeamArenaMap getNextMap() {
+			TeamArenaMap chosen = queue.remove(queue.size() - 1);
+			ArrayList<TeamArenaMap> otherQueue = queue == queueOne ? queueTwo : queueOne;
+			//put the chosen map into a random place in the other queue (queue to be used after current one
+			// is depleted)
+			otherQueue.add(MathUtils.randomMax(otherQueue.size()), chosen);
+			//played the whole queue, shuffle and restart
+			if(queue.isEmpty()) {
+				queue = otherQueue;
+			}
+
+			return chosen;
+		}
 	}
-
-	private static class MapQueueEntry {
-		TeamArenaMap map;
-		boolean played;
-	}
-
-	private static final GameQueueEntry[] GAMETYPE_Q;
-
-	private static final MapQueueEntry[] KOTH_MAP_Q;
-	private static final MapQueueEntry[] CTF_MAP_Q;
-	private static final MapQueueEntry[] SND_MAP_Q;
+	private static final Map<GameType, MapQueue> GAME_TYPE_MAP_QUEUE;
 
 	private static TeamArenaMap lastPlayedMap;
+	//for admin intervention: if not null, just use these and do not disturb the queue.
+	public static GameType nextGameType;
+	public static TeamArenaMap nextMap;
 
 	static {
 		File mapsFolder = new File("Maps");
@@ -84,40 +105,51 @@ public class GameScheduler
 		}
 
 		//setup gametype queue
-		GAMETYPE_Q = new GameQueueEntry[GameType.values().length];
-		for(int i = 0; i < GameType.values().length; i++) {
-			GameQueueEntry entry = new GameQueueEntry();
-			entry.gameType = GameType.values()[i];
-			entry.played = false;
-			GAMETYPE_Q[i] = entry;
-		}
+		GAMETYPE_Q = new GameType[GameType.values().length];
+		System.arraycopy(GameType.values(), 0, GAMETYPE_Q, 0, GameType.values().length);
+		MathUtils.shuffleArray(GAMETYPE_Q);
 
 		//setup map queues
-		CTF_MAP_Q = new MapQueueEntry[CTF_MAPS.size()];
-		int i = 0;
-		for(TeamArenaMap tmaMap : CTF_MAPS) {
-			MapQueueEntry mapEntry = new MapQueueEntry();
-			mapEntry.map = tmaMap;
-			mapEntry.played = false;
-			CTF_MAP_Q[i++] = mapEntry;
+		GAME_TYPE_MAP_QUEUE = new EnumMap<GameType, MapQueue>(GameType.class);
+
+		GAME_TYPE_MAP_QUEUE.put(GameType.CTF, new MapQueue(CTF_MAPS));
+		GAME_TYPE_MAP_QUEUE.put(GameType.KOTH, new MapQueue(KOTH_MAPS));
+		GAME_TYPE_MAP_QUEUE.put(GameType.SND, new MapQueue(SND_MAPS));
+
+		lastPlayedMap = null;
+
+		nextGameType = null;
+		nextMap = null;
+
+		gameTypeCtr = 0;
+	}
+
+	public static TeamArena getNextGame() {
+		GameType gameType = null;
+		if(nextGameType != null) {
+			gameType = nextGameType;
+			nextGameType = null;
+		}
+		//next game type has not been specified manually by an admin so pick one from Q
+		else {
+			gameType = GAMETYPE_Q[gameTypeCtr++];
+			//if all have been played, shuffle
+			if(gameTypeCtr == GAMETYPE_Q.length) {
+				gameTypeCtr = 0;
+				MathUtils.shuffleArray(GAMETYPE_Q);
+			}
 		}
 
-		KOTH_MAP_Q = new MapQueueEntry[KOTH_MAPS.size()];
-		i = 0;
-		for(TeamArenaMap tmaMap : KOTH_MAPS) {
-			MapQueueEntry mapEntry = new MapQueueEntry();
-			mapEntry.map = tmaMap;
-			mapEntry.played = false;
-			KOTH_MAP_Q[i++] = mapEntry;
+		TeamArenaMap map;
+		if(nextMap != null) {
+			map = nextMap;
+			nextMap = null;
+		}
+		else {
+			MapQueue mapQueue = GAME_TYPE_MAP_QUEUE.get(gameType);
+			map = mapQueue.getNextMap();
 		}
 
-		SND_MAP_Q = new MapQueueEntry[SND_MAPS.size()];
-		i = 0;
-		for(TeamArenaMap tmaMap : SND_MAPS) {
-			MapQueueEntry mapEntry = new MapQueueEntry();
-			mapEntry.map = tmaMap;
-			mapEntry.played = false;
-			SND_MAP_Q[i++] = mapEntry;
-		}
+		//construct team arena game here
 	}
 }
