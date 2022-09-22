@@ -8,6 +8,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy.SearchAndDestroy;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
@@ -58,7 +59,8 @@ public final class Main extends JavaPlugin
 		packetListeners = new PacketListeners(this);
 		Bukkit.getPluginManager().registerEvents(Inventories.INSTANCE, this);
 
-		teamArena = new SearchAndDestroy();//new CaptureTheFlag(); //new KingOfTheHill();
+		//teamArena = new SearchAndDestroy();//new CaptureTheFlag(); //new KingOfTheHill();
+		teamArena = GameScheduler.getNextGame();
 
 		EntityUtils.cacheReflection();
 		DamageType.checkDamageTypes();

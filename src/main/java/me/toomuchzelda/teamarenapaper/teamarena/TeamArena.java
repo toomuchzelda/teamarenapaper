@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
+import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.KitInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
@@ -41,11 +42,8 @@ import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.yaml.snakeyaml.Yaml;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.util.*;
 
 //main game class
@@ -55,8 +53,9 @@ public abstract class TeamArena
 	@Nullable
 	public static String nextMapName = null;
 
-	private final File worldFile;
+	private final File tempWorldFile;
 	public World gameWorld;
+	private final TeamArenaMap gameMap;
 
 	//ticks of wait time before teams are decided
 	protected static final int PRE_TEAMS_TIME = 25 * 20;
@@ -115,8 +114,6 @@ public abstract class TeamArena
 	public static final Component OWN_TEAM_PREFIX = Component.text("▶ ");
 	public static final Component OWN_TEAM_PREFIX_DANGER = OWN_TEAM_PREFIX.color(NamedTextColor.RED);
 
-	protected MapInfo mapInfo;
-
 	protected Queue<DamageEvent> damageQueue;
 
 	private final List<DamageIndicatorHologram> activeDamageIndicators = new LinkedList<>();
@@ -124,29 +121,16 @@ public abstract class TeamArena
 	public final MiniMapManager miniMap;
 	public final GraffitiManager graffiti;
 
-	public TeamArena() {
-		Main.logger().info("Reading info from " + getMapPath().getPath() + ':');
-		File[] maps = getMapPath().listFiles();
-		if (maps == null || maps.length == 0) {
-			throw new IllegalStateException(getMapPath().getAbsolutePath() + " is empty");
-		}
+	public TeamArena(TeamArenaMap map) {
+		File worldFile = map.getFile();
+		Main.logger().info("Loading world: " + map.getName() + ", file: " + worldFile.getAbsolutePath());
+		//Main.logger().info("Reading info from " + getMapPath().getPath() + ':');
 
 		//copy the map to another directory and load from there to avoid any accidental modifying of the original
 		// map
-		File source;
-		if (nextMapName != null) {
-			source = new File(getMapPath(), nextMapName);
-			nextMapName = null;
-			if (!source.exists()) {
-				throw new IllegalStateException("Map " + source.getName() + " does not exist!");
-			}
-		} else {
-			source = maps[MathUtils.random.nextInt(maps.length)];
-		}
-		Main.logger().info("Loading map: " + source.getAbsolutePath());
-		File dest = new File("temp_" + source.getName().toLowerCase(Locale.ENGLISH) + "_" + System.currentTimeMillis());
+		File dest = new File("temp_" + worldFile.getName().toLowerCase(Locale.ENGLISH) + "_" + System.currentTimeMillis());
 		if (dest.mkdir()) {
-			FileUtils.copyFolder(source, dest);
+			FileUtils.copyFolder(worldFile, dest);
 			//delete the uid.dat
 			for (File uid : dest.listFiles()) {
 				if (uid.getName().equalsIgnoreCase("uid.dat")) {
@@ -160,30 +144,21 @@ public abstract class TeamArena
 			throw new IllegalArgumentException("Couldn't create new directory for temp map " + dest.getAbsolutePath());
 		}
 		dest.deleteOnExit();
-		worldFile = dest;
+		this.tempWorldFile = dest;
 		WorldCreator worldCreator = new WorldCreator(dest.getName());
 		gameWorld = worldCreator.createWorld();
 
-		//parse config before world gamerules to know world options
-		File configFile = new File(source, "config.yml");
-		Yaml yaml = new Yaml();
-		Main.logger().info("Reading config YAML: " + configFile);
-
-
-		try (var fileStream = new FileInputStream(configFile)) {
-			Map<String, Object> map = yaml.load(fileStream);
-			parseConfig(map);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		//load the map config into real game stuff (teams, and sub-game things)
+		this.gameMap = map;
+		loadConfig(map);
 
 		gameWorld.setSpawnLocation(spawnPos);
 		gameWorld.setAutoSave(false);
 		gameWorld.setGameRule(GameRule.DISABLE_RAIDS, true);
 		gameWorld.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS,false);
 		gameWorld.setGameRule(GameRule.DO_INSOMNIA,	false);
-		gameWorld.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, mapInfo.doDaylightCycle);
-		gameWorld.setGameRule(GameRule.DO_WEATHER_CYCLE, mapInfo.doWeatherCycle);
+		gameWorld.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, map.isDoDaylightCycle());
+		gameWorld.setGameRule(GameRule.DO_WEATHER_CYCLE, map.isDoWeatherCycle());
 		//undecided
 		gameWorld.setGameRule(GameRule.DO_ENTITY_DROPS, false);
 		gameWorld.setGameRule(GameRule.DO_FIRE_TICK, false);
@@ -271,7 +246,7 @@ public abstract class TeamArena
 			p.getInventory().clear();
 			giveLobbyItems(p);
 
-			mapInfo.sendMapInfo(p);
+			this.sendGameAndMapInfo(p);
 		}
 	}
 
@@ -311,7 +286,7 @@ public abstract class TeamArena
 			}*/
 		}
 		if (Bukkit.unloadWorld(gameWorld, false)) {
-			FileUtils.delete(worldFile);
+			FileUtils.delete(tempWorldFile);
 		} else {
 			Main.logger().severe("Failed to unload world " + gameWorld.getName());
 		}
@@ -1452,7 +1427,7 @@ public abstract class TeamArena
 	public void joiningPlayer(Player player) {
 		player.setGameMode(GameMode.SURVIVAL);
 		player.getAttribute(Attribute.GENERIC_ATTACK_SPEED).setBaseValue(999999);
-		mapInfo.sendMapInfo(player);
+		this.sendGameAndMapInfo(player);
 		if (gameState.isPreGame()) {
 			//decided from loggingInPlayer(Player)
 			Main.getPlayerInfo(player).team.addMembers(player);
@@ -1601,106 +1576,59 @@ public abstract class TeamArena
 		}
 	}
 
-	public void parseConfig(Map<String, Object> map) {
-		//basic info
-		mapInfo = new MapInfo();
-		mapInfo.gameType = getGameName();
-		mapInfo.name = (String) map.get("Name");
-		mapInfo.author = (String) map.get("Author");
-		mapInfo.description = (String) map.get("Description");
+	public void sendGameAndMapInfo(Player player) {
+		player.sendMessage(Component.textOfChildren(
+				Component.text("GameType: ", NamedTextColor.GOLD),
+				this.getGameName(),
+				Component.newline(),
+				this.gameMap.getMapInfoComponent()
+		));
+	}
 
-		try {
-			mapInfo.doDaylightCycle = (boolean) map.get("DoDaylightCycle");
-		}
-		//the element doesn't exist, or spelled incorrectly and recognized by snakeyaml as a String instead of a boolean
-		catch(NullPointerException | ClassCastException e) {
-			mapInfo.doDaylightCycle = false;
-			//e.printStackTrace();
-		}
-
-		try {
-			String weather = (String) map.get("Weather");
-
-			if(weather.equalsIgnoreCase("DOWNPOUR"))
-				mapInfo.weatherType = 1;
-			else if(weather.equalsIgnoreCase("THUNDER"))
-				mapInfo.weatherType = 2;
-			else
-				mapInfo.weatherType = 0;
-
-		}
-		catch(NullPointerException | ClassCastException e) {
-			mapInfo.weatherType = 0;
-			//e.printStackTrace();
-		}
-
-		try {
-			mapInfo.doWeatherCycle = (boolean) map.get("DoWeatherCycle");
-		}
-		catch(NullPointerException | ClassCastException e) {
-			mapInfo.doWeatherCycle = false;
-			//e.printStackTrace();
-		}
+	public void loadConfig(TeamArenaMap map) {
+		Main.logger().info("Loading map config data");
+		Main.logger().info(map.toString());
 
 		//Map border
 		// Only supports rectangular prism borders as of now
-		ArrayList<String> borders = (ArrayList<String>) map.get("Border");
-		Vector vec1 = BlockUtils.parseCoordsToVec(borders.get(0), 0, 0, 0);
-		Vector vec2 = BlockUtils.parseCoordsToVec(borders.get(1), 0, 0, 0);
-		Vector corner1 = Vector.getMinimum(vec1, vec2);
-		Vector corner2 = Vector.getMaximum(vec1, vec2).add(new Vector(1, 1, 1));
-		border = BoundingBox.of(corner1, corner2);
+		Vector minCorner = map.getMinBorderCorner();
+		Vector maxCorner = map.getMaxBorderCorner();
+		border = BoundingBox.of(minCorner, maxCorner);
 
 		//calculate spawnpoint based on map border
 		Vector centre = border.getCenter();
-			/*Vec spawnpoint = BlockStuff.getFloor(centre, instance);
-			//if not safe to spawn just spawn them in the sky
-			if(spawnpoint == null) {
-				spawnpoint = new Vec(centre.x(), 255, centre.z());
-			}*/
 		int y = gameWorld.getHighestBlockYAt(centre.getBlockX(), centre.getBlockZ());
 		int worldSpawnY = gameWorld.getSpawnLocation().getBlockY();
-
 		if(Math.abs(centre.getY() - y) < Math.abs(centre.getY() - worldSpawnY)) {
 			centre.setY(y);
 		}
 		else {
 			centre.setY(worldSpawnY);
 		}
-
-		//centre.setY(y);
-
 		spawnPos = centre.toLocation(gameWorld, 90, 0);
 		spawnPos.setY(spawnPos.getY() + 2);
 
-
 		//if both Y are 0 then have no ceiling
 		// do this after spawnpoint calculation otherwise it's trouble
-		if(vec1.getY() == vec2.getY()) {
-			corner1.setY(gameWorld.getMinHeight());
-			corner2.setY(gameWorld.getMaxHeight());
-			border = BoundingBox.of(corner1, corner2);
+		if(!map.hasVerticalBorder()) {
+			minCorner.setY(gameWorld.getMinHeight() - 20);
+			maxCorner.setY(gameWorld.getMaxHeight() + 50);
+			border = BoundingBox.of(minCorner, maxCorner);
 		}
 
 		//Create the teams
-		Map<String, Map<String, List<String>>> teamsMap =
-				(Map<String, Map<String, List<String>>>) map.get("Teams");
-
-		int numOfTeams = teamsMap.size();
+		int numOfTeams = map.getTeamSpawns().size();
 		teams = new TeamArenaTeam[numOfTeams];
 		int teamsArrIndex = 0;
 
-		for (Map.Entry<String, Map<String, List<String>>> entry : teamsMap.entrySet()) {
+		for (Map.Entry<String, Vector[]> entry : map.getTeamSpawns().entrySet()) {
 			String teamName = entry.getKey();
-
-			Map<String, List<String>> spawnsYaml = entry.getValue();
 
 			//if it's a legacy RWF team
 			//TeamColours teamColour = TeamColours.valueOf(teamName);
 			TeamArenaTeam teamArenaTeam = LegacyTeams.fromRWF(teamName);
 			if (teamArenaTeam == null) {
-				Main.logger().severe("RGB teams are dead!");
-				return;
+				throw new IllegalArgumentException("Bad team name! Use RED, BLUE, DARK_GRAY, etc.");
 
 				// RGB teams are finally dead
 				//it's not a legacy rwf team
@@ -1724,13 +1652,12 @@ public abstract class TeamArena
 				teamArenaTeam = new TeamArenaTeam(teamName, simpleName, first, second, null);*/
 			}
 
-			List<String> spawnsList = spawnsYaml.get("Spawns");
-			Location[] locArray = new Location[spawnsList.size()];
+			Vector[] spawnVecs = entry.getValue();
+			Location[] locArray = new Location[spawnVecs.length];
 
 			int index = 0;
-			for (String loc : spawnsList) {
-				Vector coords = BlockUtils.parseCoordsToVec(loc, 0.5, 0, 0.5);
-				Location location = coords.toLocation(gameWorld);
+			for (Vector vec : spawnVecs) {
+				Location location = vec.toLocation(gameWorld);
 				Vector direction = centre.clone().setY(0).subtract(location.toVector().setY(0));
 
 				direction.normalize();
@@ -1835,8 +1762,15 @@ public abstract class TeamArena
 		return null;
 	}
 
-	public File getWorldFile() {
-		return worldFile;
+	//Get by config names like "RED", "BLUE" etc.
+	protected TeamArenaTeam getTeamByLegacyConfigName(String name) {
+		name = name.replace('_', ' ');
+		for(TeamArenaTeam team : this.teams) {
+			if(team.getSimpleName().equalsIgnoreCase(name))
+				return team;
+		}
+
+		return null;
 	}
 
 	public GameState getGameState() {

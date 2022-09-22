@@ -4,6 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
@@ -122,8 +123,8 @@ public class CaptureTheFlag extends TeamArena
 			flagHolders.remove(player);
 	}
 
-	public CaptureTheFlag() {
-		super();
+	public CaptureTheFlag(TeamArenaMap map) {
+		super(map);
 	}
 
 	@Override
@@ -874,38 +875,29 @@ public class CaptureTheFlag extends TeamArena
 	}
 
 	@Override
-	public void parseConfig(Map<String, Object> map) {
-		super.parseConfig(map);
+	public void loadConfig(TeamArenaMap map) {
+		super.loadConfig(map);
 
 		flagStands = new HashMap<>();
 		teamToFlags = new HashMap<>();
 
-		Map<String, Object> customFlags = (Map<String, Object>) map.get("Custom");
-
-		Main.logger().info("Custom Info: ");
-		Main.logger().info(customFlags.toString());
+		TeamArenaMap.CTFInfo ctfConfig = map.getCtfInfo();
+		if(ctfConfig == null) {
+			throw new IllegalArgumentException("CaptureTheFlag constructor called with non-CTF map");
+		}
 
 		flagItems = new HashSet<>();
-		for (Map.Entry<String, Object> entry : customFlags.entrySet()) {
-			if (entry.getKey().equalsIgnoreCase("CapsToWin")) {
-				try {
-					capsToWin = (Integer) entry.getValue();//Integer.parseInt(entry.getValue());
-				} catch (NullPointerException | ClassCastException e) {
-					Main.logger().warning("Invalid CapsToWin! Must be an integer number (no decimals!). Defaulting to 3");
-					e.printStackTrace();
-					capsToWin = 3;
-				}
-			} else {
-				TeamArenaTeam team = getTeamByName(entry.getKey());
-				if (team == null) {
-					throw new IllegalArgumentException("Unknown team " + entry.getKey() + "!!!! Use the team's full name i.e \"Red Team:\"");
-				}
-
-				Location teamsFlagLoc = BlockUtils.parseCoordsToVec((String) entry.getValue(), 0.5, -0.4, 0.5).toLocation(gameWorld);
-				Flag flag = new Flag(this, team, teamsFlagLoc);
-
-				teamToFlags.put(team, flag);
+		this.capsToWin = ctfConfig.capsToWin();
+		for (Map.Entry<String, Vector> entry : ctfConfig.teamFlags().entrySet()) {
+			TeamArenaTeam team = getTeamByLegacyConfigName(entry.getKey());
+			if (team == null) {
+				throw new IllegalArgumentException("Unknown team " + entry.getKey());
 			}
+
+			Location teamsFlagLoc = entry.getValue().toLocation(gameWorld);
+			Flag flag = new Flag(this, team, teamsFlagLoc);
+
+			teamToFlags.put(team, flag);
 		}
 	}
 

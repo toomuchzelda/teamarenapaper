@@ -3,10 +3,14 @@ package me.toomuchzelda.teamarenapaper.teamarena.gamescheduler;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.GameType;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
+import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
+import me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy.SearchAndDestroy;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.util.*;
 
 /**
@@ -64,12 +68,12 @@ public class GameScheduler
 	}
 	private static final Map<GameType, MapQueue> GAME_TYPE_MAP_QUEUE;
 
-	private static TeamArenaMap lastPlayedMap;
 	//for admin intervention: if not null, just use these and do not disturb the queue.
 	public static GameType nextGameType;
 	public static TeamArenaMap nextMap;
 
 	static {
+		Main.logger().info("Loading maps configs...");
 		File mapsFolder = new File("Maps");
 		File[] maps = mapsFolder.listFiles();
 
@@ -110,13 +114,11 @@ public class GameScheduler
 		MathUtils.shuffleArray(GAMETYPE_Q);
 
 		//setup map queues
-		GAME_TYPE_MAP_QUEUE = new EnumMap<GameType, MapQueue>(GameType.class);
+		GAME_TYPE_MAP_QUEUE = new EnumMap<>(GameType.class);
 
 		GAME_TYPE_MAP_QUEUE.put(GameType.CTF, new MapQueue(CTF_MAPS));
 		GAME_TYPE_MAP_QUEUE.put(GameType.KOTH, new MapQueue(KOTH_MAPS));
 		GAME_TYPE_MAP_QUEUE.put(GameType.SND, new MapQueue(SND_MAPS));
-
-		lastPlayedMap = null;
 
 		nextGameType = null;
 		nextMap = null;
@@ -125,7 +127,7 @@ public class GameScheduler
 	}
 
 	public static TeamArena getNextGame() {
-		GameType gameType = null;
+		GameType gameType;
 		if(nextGameType != null) {
 			gameType = nextGameType;
 			nextGameType = null;
@@ -150,6 +152,14 @@ public class GameScheduler
 			map = mapQueue.getNextMap();
 		}
 
-		//construct team arena game here
+		TeamArena newGame;
+		if(gameType == GameType.KOTH)
+			newGame = new KingOfTheHill(map);
+		else if(gameType == GameType.CTF)
+			newGame = new CaptureTheFlag(map);
+		else
+			newGame = new SearchAndDestroy(map);
+
+		return newGame;
 	}
 }

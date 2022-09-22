@@ -2,6 +2,8 @@ package me.toomuchzelda.teamarenapaper.teamarena.gamescheduler;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
 import org.yaml.snakeyaml.Yaml;
@@ -39,12 +41,19 @@ public class TeamArenaMap
 
 	private final Vector minBorderCorner;
 	private final Vector maxBorderCorner;
+	//if there is a floor/ceiling border or not.
+	private final boolean noVerticalBorder;
 
 	private final Map<String, Vector[]> teamSpawns;
 
 	private final KOTHInfo kothInfo;
 	private final CTFInfo ctfInfo;
 	private final SNDInfo sndInfo;
+
+	private final File file;
+
+	//info about the map that gets sent to players when they join / map loads
+	private Component infoComponent;
 
 	public String toString() {
 		return "name: " + name
@@ -54,14 +63,15 @@ public class TeamArenaMap
 				+ ", doWeatherCycle: " + doWeatherCycle
 				+ ", minBorderCorner: " + minBorderCorner.toString()
 				+ ", maxBorderCorner: " + maxBorderCorner.toString()
+				+ ", noVerticalBorder: " + noVerticalBorder
 				+ ", teamSpawns keys: " + teamSpawns.keySet().toString()
-				+ ", kothInfo: " + kothInfo.toString()
-				+ ", ctfInfo: " + ctfInfo.toString()
-				+ ", sndInfo: " + sndInfo.toString();
+				+ ", kothInfo: " + (kothInfo != null ? kothInfo.toString() : "null")
+				+ ", ctfInfo: " + (ctfInfo != null ? ctfInfo.toString() : "null")
+				+ ", sndInfo: " + (sndInfo != null ? sndInfo.toString() : "null");
 	}
 
 	TeamArenaMap(File worldFolder) throws IOException {
-
+		this.file = worldFolder;
 		//parse the Main config (MainConfig.yml)
 		File mainFile = new File(worldFolder, "MainConfig.yml");
 		Yaml yaml = new Yaml();
@@ -99,6 +109,9 @@ public class TeamArenaMap
 			this.minBorderCorner = Vector.getMinimum(vec1, vec2);
 			this.maxBorderCorner = Vector.getMaximum(vec1, vec2).add(new Vector(1, 1, 1));
 
+			//if the Y values are the same consider there no verticle borders
+			this.noVerticalBorder = vec1.getY() == vec2.getY();
+
 			//load team spawns
 			Map<String, Map<String, List<String>>> teamsMap =
 					(Map<String, Map<String, List<String>>>) mainMap.get("Teams");
@@ -122,9 +135,6 @@ public class TeamArenaMap
 				}
 				this.teamSpawns.put(teamName, vecArray);
 			}
-
-			//TODO: run spawn location at TeamArena construction time
-			// and locations that point to mid
 		}
 
 		//parse KOTH config if present
@@ -251,6 +261,18 @@ public class TeamArenaMap
 		this.sndInfo = sndInfo;
 	}
 
+	public Component getMapInfoComponent() {
+		if(infoComponent == null) {
+			infoComponent = Component.text()
+					.append(Component.text("Map Name: " , NamedTextColor.GOLD), Component.text(name, NamedTextColor.YELLOW), Component.newline(),
+							Component.text("Author(s): ", NamedTextColor.GOLD), Component.text(authors, NamedTextColor.YELLOW), Component.newline(),
+							Component.text("Description: ", NamedTextColor.GOLD), Component.text(description, NamedTextColor.YELLOW))
+					.build();
+		}
+
+		return this.infoComponent;
+	}
+
 	public String getName() {
 		return name;
 	}
@@ -279,6 +301,10 @@ public class TeamArenaMap
 		return maxBorderCorner;
 	}
 
+	public boolean hasVerticalBorder() {
+		return !noVerticalBorder;
+	}
+
 	public Map<String, Vector[]> getTeamSpawns() {
 		return teamSpawns;
 	}
@@ -293,5 +319,9 @@ public class TeamArenaMap
 
 	public SNDInfo getSndInfo() {
 		return this.sndInfo;
+	}
+
+	public File getFile() {
+		return this.file;
 	}
 }
