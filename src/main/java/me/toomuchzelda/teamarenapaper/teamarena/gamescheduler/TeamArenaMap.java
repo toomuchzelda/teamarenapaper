@@ -1,7 +1,9 @@
 package me.toomuchzelda.teamarenapaper.teamarena.gamescheduler;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.GameType;
 import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.util.BlockVector;
@@ -46,12 +48,12 @@ public class TeamArenaMap
 
 	private final Map<String, Vector[]> teamSpawns;
 
+	private final List<GameType> gameTypes;
 	private final KOTHInfo kothInfo;
 	private final CTFInfo ctfInfo;
 	private final SNDInfo sndInfo;
 
 	private final File file;
-
 	//info about the map that gets sent to players when they join / map loads
 	private Component infoComponent;
 
@@ -72,6 +74,7 @@ public class TeamArenaMap
 
 	TeamArenaMap(File worldFolder) throws IOException {
 		this.file = worldFolder;
+		this.gameTypes = new ArrayList<>(GameType.values().length);
 		//parse the Main config (MainConfig.yml)
 		File mainFile = new File(worldFolder, "MainConfig.yml");
 		Yaml yaml = new Yaml();
@@ -187,6 +190,8 @@ public class TeamArenaMap
 			}
 		}
 		this.kothInfo = kothInfo;
+		if(kothInfo != null)
+			this.gameTypes.add(GameType.KOTH);
 
 		//parse CTF config if present
 		File ctfFile = new File(worldFolder, "CTFConfig.yml");
@@ -220,6 +225,8 @@ public class TeamArenaMap
 			}
 		}
 		this.ctfInfo = ctfInfo;
+		if(ctfInfo != null)
+			this.gameTypes.add(GameType.CTF);
 
 		//parse SND config if present
 		File sndFile = new File(worldFolder, "SNDConfig.yml");
@@ -259,6 +266,8 @@ public class TeamArenaMap
 			}
 		}
 		this.sndInfo = sndInfo;
+		if(sndInfo != null)
+			this.gameTypes.add(GameType.SND);
 	}
 
 	public Component getMapInfoComponent() {
@@ -307,6 +316,18 @@ public class TeamArenaMap
 
 	public Map<String, Vector[]> getTeamSpawns() {
 		return teamSpawns;
+	}
+
+	public boolean hasGameType(GameType type) {
+		return this.gameTypes.contains(type);
+	}
+
+	public GameType getRandomGameType() {
+		return this.gameTypes.get(MathUtils.random.nextInt(gameTypes.size()));
+	}
+
+	public List<GameType> getGameTypes() {
+		return this.gameTypes;
 	}
 
 	public KOTHInfo getKothInfo() {

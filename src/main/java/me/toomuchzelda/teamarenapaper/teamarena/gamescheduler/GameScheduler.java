@@ -7,6 +7,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
 import me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy.SearchAndDestroy;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import org.bukkit.Bukkit;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,9 +30,10 @@ public class GameScheduler
 {
 	private static final List<TeamArenaMap> ALL_MAPS;
 
-	private static final List<TeamArenaMap> KOTH_MAPS;
+	private static final Map<GameType, List<TeamArenaMap>> GAMETYPE_MAPS;
+	/*private static final List<TeamArenaMap> KOTH_MAPS;
 	private static final List<TeamArenaMap> CTF_MAPS;
-	private static final List<TeamArenaMap> SND_MAPS;
+	private static final List<TeamArenaMap> SND_MAPS;*/
 
 	//array index, track how much of the queue has been played
 	private static int gameTypeCtr;
@@ -58,7 +60,7 @@ public class GameScheduler
 			//put the chosen map into a random place in the other queue (queue to be used after current one
 			// is depleted)
 			otherQueue.add(MathUtils.randomMax(otherQueue.size()), chosen);
-			//played the whole queue, shuffle and restart
+			//played the whole queue, restart
 			if(queue.isEmpty()) {
 				queue = otherQueue;
 			}
@@ -84,9 +86,10 @@ public class GameScheduler
 		//init Lists
 		ALL_MAPS = new ArrayList<>(maps.length);
 		final int oneThird = maps.length / 3;
-		KOTH_MAPS = new ArrayList<>(oneThird);
-		CTF_MAPS = new ArrayList<>(oneThird);
-		SND_MAPS = new ArrayList<>(oneThird);
+		GAMETYPE_MAPS = new EnumMap<>(GameType.class);
+		GAMETYPE_MAPS.put(GameType.KOTH, new ArrayList<>(oneThird));
+		GAMETYPE_MAPS.put(GameType.CTF, new ArrayList<>(oneThird));
+		GAMETYPE_MAPS.put(GameType.SND, new ArrayList<>(oneThird));
 
 		for(File mapFolder : maps) {
 			try {
@@ -94,14 +97,21 @@ public class GameScheduler
 				ALL_MAPS.add(parsedConfig);
 
 				//add to specific lists if has config for that gametype.
-				if(parsedConfig.getKothInfo() != null)
-					KOTH_MAPS.add(parsedConfig);
+				/*if(parsedConfig.getKothInfo() != null) {
+					GAMETYPE_MAPS.get(GameType.KOTH).add(parsedConfig);
+				}
 
-				if(parsedConfig.getCtfInfo() != null)
-					CTF_MAPS.add(parsedConfig);
+				if(parsedConfig.getCtfInfo() != null) {
+					GAMETYPE_MAPS.get(GameType.CTF).add(parsedConfig);
+				}
 
-				if(parsedConfig.getSndInfo() != null)
-					SND_MAPS.add(parsedConfig);
+				if(parsedConfig.getSndInfo() != null) {
+					GAMETYPE_MAPS.get(GameType.SND).add(parsedConfig);
+				}*/
+
+				for(GameType mapGameType : parsedConfig.getGameTypes()) {
+					GAMETYPE_MAPS.get(mapGameType).add(parsedConfig);
+				}
 			}
 			catch (IOException e) {
 				Main.logger().warning("Error when parsing config for map " + mapFolder.getName());
@@ -116,9 +126,9 @@ public class GameScheduler
 		//setup map queues
 		GAME_TYPE_MAP_QUEUE = new EnumMap<>(GameType.class);
 
-		GAME_TYPE_MAP_QUEUE.put(GameType.CTF, new MapQueue(CTF_MAPS));
-		GAME_TYPE_MAP_QUEUE.put(GameType.KOTH, new MapQueue(KOTH_MAPS));
-		GAME_TYPE_MAP_QUEUE.put(GameType.SND, new MapQueue(SND_MAPS));
+		GAME_TYPE_MAP_QUEUE.put(GameType.CTF, new MapQueue(GAMETYPE_MAPS.get(GameType.CTF)));
+		GAME_TYPE_MAP_QUEUE.put(GameType.KOTH, new MapQueue(GAMETYPE_MAPS.get(GameType.KOTH)));
+		GAME_TYPE_MAP_QUEUE.put(GameType.SND, new MapQueue(GAMETYPE_MAPS.get(GameType.SND)));
 
 		nextGameType = null;
 		nextMap = null;
@@ -139,6 +149,7 @@ public class GameScheduler
 			if(gameTypeCtr == GAMETYPE_Q.length) {
 				gameTypeCtr = 0;
 				MathUtils.shuffleArray(GAMETYPE_Q);
+				//Bukkit.broadcastMessage("shuffled gametypes");
 			}
 		}
 
@@ -146,6 +157,13 @@ public class GameScheduler
 		if(nextMap != null) {
 			map = nextMap;
 			nextMap = null;
+
+			//the chosen map's GameType can conflict with what was picked above
+			// just have the map's one override
+			if(!map.hasGameType(gameType)) {
+				Main.logger().warning("map didn't have gametype, chose random from map");
+				gameType = map.getRandomGameType();
+			}
 		}
 		else {
 			MapQueue mapQueue = GAME_TYPE_MAP_QUEUE.get(gameType);
@@ -161,5 +179,13 @@ public class GameScheduler
 			newGame = new SearchAndDestroy(map);
 
 		return newGame;
+	}
+
+	public static List<TeamArenaMap> getAllMaps() {
+		return ALL_MAPS;
+	}
+
+	public static List<TeamArenaMap> getMaps(GameType gameType) {
+		return GAMETYPE_MAPS.get(gameType);
 	}
 }
