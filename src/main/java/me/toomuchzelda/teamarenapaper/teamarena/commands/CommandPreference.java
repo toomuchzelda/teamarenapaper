@@ -25,7 +25,7 @@ public class CommandPreference extends CustomCommand {
 
     public CommandPreference() {
         super("preference", "Change or view player preferences",
-                "/preference <change/info> <preference> [value]", PermissionLevel.ALL);
+                "/preference <change/info> <preference> [value]", PermissionLevel.ALL, "pref", "prefs");
     }
 
     @Override

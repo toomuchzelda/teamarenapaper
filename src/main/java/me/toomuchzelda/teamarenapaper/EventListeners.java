@@ -22,6 +22,7 @@ import me.toomuchzelda.teamarenapaper.sql.*;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandTeamChat;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
@@ -37,7 +38,6 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.command.Command;
@@ -255,6 +255,9 @@ public class EventListeners implements Listener
 		defaultKitMap.put(uuid, defaultKit);
 	}
 
+	// disable certain vanilla and bukkit commands
+	List<String> DISABLED_PERMISSIONS = List.of("minecraft.command.me", "minecraft.command.msg", "minecraft.command.teammsg", "minecraft.command.say", "bukkit.command.version", "bukkit.command.plugins");
+
 	//these three events are called in this order
 	@EventHandler
 	public void playerLogin(PlayerLoginEvent event) {
@@ -263,6 +266,9 @@ public class EventListeners implements Listener
 		PlayerInfo playerInfo;
 
 		//todo: read perms from db or other
+		var permissions = player.addAttachment(Main.getPlugin());
+		DISABLED_PERMISSIONS.forEach(perm -> permissions.setPermission(perm, false));
+
 		if (player.isOp()) {
 			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.OWNER, player);
 			Bukkit.getScheduler().runTask(Main.getPlugin(),
@@ -349,8 +355,20 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void asyncChat(AsyncChatEvent event) {
-		if (Main.getPlayerInfo(event.getPlayer()).permissionLevel.compareTo(CustomCommand.PermissionLevel.MOD) >= 0) {
-			event.message(MiniMessage.miniMessage().deserialize(PlainTextComponentSerializer.plainText().serialize(event.message())));
+		event.setCancelled(true);
+
+		var player = event.getPlayer();
+		var playerInfo = Main.getPlayerInfo(player);
+		var message = PlainTextComponentSerializer.plainText().serialize(event.message());
+
+		boolean useTeamChat = playerInfo.getPreference(Preferences.TEAM_CHAT_BY_DEFAULT);
+		var game = Main.getGame();
+		// send to team chat if player has set preference to true
+		// AND the player can use team chat
+		if (useTeamChat && game.canTeamChatNow(player)) {
+			CommandTeamChat.sendTeamMessage(player, playerInfo, message);
+		} else {
+			CommandTeamChat.sendGlobalMessage(player, playerInfo, message);
 		}
 	}
 

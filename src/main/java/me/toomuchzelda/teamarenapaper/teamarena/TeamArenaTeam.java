@@ -7,7 +7,6 @@ import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -85,7 +84,7 @@ public class TeamArenaTeam
 		this.dyeColour = dyeColor;
 
 		this.RGBColour = TextColor.color(colour.asRGB());
-		this.RGBSecondColor = TextColor.color(colour.asRGB());
+		this.RGBSecondColor = TextColor.color((secondColour != null ? secondColour : colour).asRGB());
 
 		spawns = null;
 		score = 0;
@@ -339,35 +338,11 @@ public class TeamArenaTeam
 
 	//create gradient component word like player name or team name
 	public Component colourWord(String str) {
-		Component component;
-		if(secondColour != null) {
-			//component = TextUtils.getUselessRGBText(str, getRGBTextColor(), getRGBSecondTextColor());
-			TextComponent.Builder builder = Component.text();
-			for (float i = 0; i < str.length(); i++) {
-				//percentage of second colour to use, leftover is percentage of first colour
-				// from 0 to 1
-				float percentage = (i / (float) str.length());
-
-				Vector colour1 = new Vector(colour.getRed(), colour.getGreen(), colour.getBlue());
-				Vector colour2 = new Vector(secondColour.getRed(), secondColour.getGreen(), secondColour.getBlue());
-
-				colour1.multiply(1 - percentage);
-				colour2.multiply(percentage);
-
-				TextColor result = TextColor.color((int) (colour1.getX() + colour2.getX()),
-						(int) (colour1.getY() + colour2.getY()),
-						(int) (colour1.getZ() + colour2.getZ()));
-
-
-				builder.append(Component.text(str.charAt((int) i)).color(result));
-			}
-
-			component = builder.build();
+		if (secondColour != null) {
+			return TextUtils.getUselessRGBText(str, getRGBTextColor(), getRGBSecondTextColor());
+		} else {
+			return Component.text(str, getRGBTextColor());
 		}
-		else {
-			component = Component.text(str, getRGBTextColor());
-		}
-		return component;
 	}
 
 	public void unregister() {
