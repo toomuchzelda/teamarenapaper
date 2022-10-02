@@ -86,13 +86,9 @@ public class Preferences {
 		// https://minecraft-heads.com/custom-heads/alphabet/24498-information
 		.setIcon(ItemUtils.createPlayerHead("d01afe973c5482fdc71e6aa10698833c79c437f21308ea9a1a095746ec274a0f"));
 
-	public static final Preference<Boolean> TEAM_CHAT_BY_DEFAULT = SimplePreference.of("team_chat_by_default",
-		"Speak in team chat whenever possible.\nUse /t <message> or /shout <message> to speak in the other chat.", false)
-		.setIcon(Material.LEATHER_CHESTPLATE);
-
 	public static final Preference<Boolean> TEAM_CHAT_SOUND = SimplePreference.of("team_chat_sound",
 			"Hear a sound when receiving a team chat message", true)
-		.setIcon(Material.BELL);
+		.setIcon(Material.LEATHER_CHESTPLATE);
 
 	public static final Preference<Float> EXPLOSION_VOLUME_MULTIPLIER = SimplePreference.of("explosion_volume",
 					"Change the volume of explosions. 1 = normal, 0.5 = half, 0 = silent, etc.", Float.class, 1f,
