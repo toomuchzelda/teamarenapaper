@@ -26,6 +26,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
@@ -59,7 +60,6 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 
-import java.lang.reflect.Constructor;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.Map.Entry;
@@ -131,14 +131,8 @@ public class EventListeners implements Listener
 				TeamArena.nextGameType = GameType.values()[MathUtils.random.nextInt(GameType.values().length)];
 			}
 
-			try {
-				Constructor<? extends TeamArena> constructor = TeamArena.nextGameType.gameClazz.getConstructor();
-				TeamArena game = constructor.newInstance();
-				Main.setGame(game);
-				TeamArena.nextGameType = null;
-			} catch (ReflectiveOperationException ex) {
-				throw new Error("Failed to create game reflectively", ex);
-			}
+			//create the next game
+			Main.setGame(GameScheduler.getNextGame());
 		}
 
 		try {

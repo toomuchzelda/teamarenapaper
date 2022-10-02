@@ -3,8 +3,8 @@ package me.toomuchzelda.teamarenapaper.teamarena.kingofthehill;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
+import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
@@ -49,8 +49,8 @@ public class KingOfTheHill extends TeamArena
 
 	private final Map<TeamArenaTeam, Component> sidebarCache = new LinkedHashMap<>();
 
-	public KingOfTheHill() {
-		super();
+	public KingOfTheHill(TeamArenaMap map) {
+		super(map);
 
 		hillCapProgresses = new HashMap<>();
 		hillIndex = 0;
@@ -136,7 +136,7 @@ public class KingOfTheHill extends TeamArena
 						coloursList.add(team.getColour());
 
 					//70% of the team be on Hill for max points, any more doesn't grant more
-					toEarn = (float) numPlayers / ((float) team.getPlayerMembers().size() * 0.7f);
+					toEarn = numPlayers / ((float) team.getPlayerMembers().size() * 0.7f);
 
 					if(toEarn > 1f)
 						toEarn = 1f;
@@ -407,8 +407,6 @@ public class KingOfTheHill extends TeamArena
 	}
 
 	public void nextHillOrEnd(boolean forceEnd) {
-		activeHill.setDone();
-
 		//add their current hill points to total
 		for(TeamArenaTeam team : teams) {
 			team.score2 += team.score;
@@ -526,42 +524,24 @@ public class KingOfTheHill extends TeamArena
 	}
 
 	@Override
-	public void parseConfig(Map<String, Object> map) {
-		super.parseConfig(map);
+	public void loadConfig(TeamArenaMap map) {
+		super.loadConfig(map);
 
-		Map<String, Object> custom = (Map<String, Object>) map.get("Custom");
-
-		Main.logger().info("Custom INfo: ");
-		Main.logger().info(custom.toString());
-
-		try {
-			randomHillOrder = (boolean) custom.get("RandomHillOrder");
-		}
-		catch(NullPointerException | ClassCastException e) {
-			Main.logger().warning("Invalid RandomHillOrder! Must be true/false. Defaulting to false");
-			e.printStackTrace();
-			randomHillOrder = false;
+		TeamArenaMap.KOTHInfo kothInfo = map.getKothInfo();
+		if(kothInfo == null) {
+			throw new IllegalArgumentException("Koth constructor has been called with a non-KOTH map");
 		}
 
-		Map<String, ArrayList<String>> hillsMap = (Map<String, ArrayList<String>>) custom.get("Hills");
-		Iterator<Map.Entry<String, ArrayList<String>>> hillsIter = hillsMap.entrySet().iterator();
+		this.randomHillOrder = kothInfo.randomOrder();
 
-		Hill[] hills = new Hill[hillsMap.size()];
+		List<TeamArenaMap.KothHill> hillConfigs = kothInfo.hills();
+
+		Hill[] hills = new Hill[hillConfigs.size()];
 		int index = 0;
-		while(hillsIter.hasNext()) {
-			Map.Entry<String, ArrayList<String>> entry = hillsIter.next();
-
-			String name = entry.getKey();
-			String coordOne = entry.getValue().get(0);
-			String coordTwo = entry.getValue().get(1);
-			String timeString = entry.getValue().get(2);
-
-			int time = Integer.parseInt(timeString.split(",")[1]);
-
-			double[] one = BlockUtils.parseCoords(coordOne, 0, 0, 0);
-			double[] two = BlockUtils.parseCoords(coordTwo, 0, 0, 0);
-
-			BoundingBox hillBox = new BoundingBox(one[0], one[1], one[2], two[0], two[1], two[2]);
+		for (TeamArenaMap.KothHill hillInfo : hillConfigs) {
+			String name = hillInfo.name();
+			BoundingBox hillBox = BoundingBox.of(hillInfo.minCorner(), hillInfo.maxCorner());
+			int time = hillInfo.time();
 
 			hills[index] = new Hill(name, hillBox, time, gameWorld);
 			index++;

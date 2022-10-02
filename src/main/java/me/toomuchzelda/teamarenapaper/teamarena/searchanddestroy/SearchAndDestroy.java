@@ -5,6 +5,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
@@ -144,8 +145,8 @@ public class SearchAndDestroy extends TeamArena
 		POISON_NOW_MESSAGE = builder.build();
 	}
 
-	public SearchAndDestroy() {
-		super();
+	public SearchAndDestroy(TeamArenaMap map) {
+		super(map);
 
 		double longest = 0d;
 		for(List<Bomb> bombsList : teamBombs.values()) {
@@ -615,46 +616,38 @@ public class SearchAndDestroy extends TeamArena
 	}
 
 	@Override
-	public void parseConfig(Map<String, Object> map) {
-		super.parseConfig(map);
+	public void loadConfig(TeamArenaMap map) {
+		super.loadConfig(map);
 
-		Map<String, Object> customFlags = (Map<String, Object>) map.get("Custom");
+		TeamArenaMap.SNDInfo sndConfig = map.getSndInfo();
+		if(sndConfig == null) {
+			throw new IllegalArgumentException("SearchAndDestroy constructor called with a non-SND map.");
+		}
 
-		Main.logger().info("Custom Info: ");
-		Main.logger().info(customFlags.toString());
-
-		this.teamBombs = new HashMap<>(customFlags.size());
+		this.teamBombs = new HashMap<>(sndConfig.teamBombs().size());
 		this.bombPositions = new HashMap<>();
-		for (Map.Entry<String, Object> entry : customFlags.entrySet()) {
-			if (entry.getKey().equalsIgnoreCase("Random Base")) {
-				try {
-					randomBases = (boolean) entry.getValue();
-				} catch (NullPointerException | ClassCastException e) {
-					//do nothing
+
+		this.randomBases = sndConfig.randomBases();
+		for (Map.Entry<String, List<BlockVector>> entry : sndConfig.teamBombs().entrySet()) {
+			TeamArenaTeam team = getTeamByLegacyConfigName(entry.getKey());
+			if (team == null) {
+				throw new IllegalArgumentException("Bad team " + entry.getKey() + " in SND map config");
+			}
+
+			List<BlockVector> bombVecs = entry.getValue();
+			List<Bomb> bombs = new ArrayList<>(bombVecs.size());
+			for(BlockVector bombLoc : bombVecs) {
+				Bomb bomb = new Bomb(team, bombLoc.toLocation(this.gameWorld));
+				bombs.add(bomb);
+
+				Main.logger().info("Adding " + bomb.toString());
+
+				if(bombPositions.put(bombLoc, bomb) != null) {
+					throw new IllegalArgumentException("Two bombs are in the same position! Check the map's SNDConfig.yml");
 				}
 			}
-			else {
-				TeamArenaTeam team = getTeamByRWFConfig(entry.getKey());
-				if (team == null) {
-					throw new IllegalArgumentException("Unknown team " + entry.getKey() + " Use BLUE or RED etc.(proper support coming later)");
-				}
 
-				List<String> configBombs = (List<String>) entry.getValue();
-				List<Bomb> bombs = new ArrayList<>(configBombs.size());
-				for(String bombCoords : configBombs) {
-					BlockVector blockVector = BlockUtils.parseCoordsToVec(bombCoords, 0, 0, 0).toBlockVector();
-					Bomb bomb = new Bomb(team, blockVector.toLocation(this.gameWorld));
-					bombs.add(bomb);
-
-					Main.logger().info("Adding " + bomb.toString());
-
-					if(bombPositions.put(blockVector, bomb) != null) {
-						throw new IllegalArgumentException("Two bombs are in the same position! Check the map's config.yml");
-					}
-				}
-
-				teamBombs.put(team, bombs);
-			}
+			teamBombs.put(team, bombs);
 		}
 	}
 

@@ -15,6 +15,7 @@ import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import net.minecraft.world.entity.LivingEntity;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.block.Block;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftLivingEntity;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
@@ -67,6 +68,11 @@ public class Flag
 		this.team = team;
 		this.baseLoc = baseLoc;
 		this.currentLoc = baseLoc.clone();
+
+		//on maps made for SND there may be a TNT block at the flag location - just remove it
+		Block block = baseLoc.getBlock();
+		if(block.getType() == Material.TNT)
+			block.setType(Material.AIR);
 
 		stand = (ArmorStand) baseLoc.getWorld().spawnEntity(baseLoc, EntityType.ARMOR_STAND);
 		//stand.setMarker(true);

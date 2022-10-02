@@ -36,7 +36,6 @@ public class CommandDebug extends CustomCommand {
 
 	// TODO temporary feature
 	public static boolean ignoreWinConditions;
-	public static boolean allowSniper = false;
 	public static boolean sniperAccuracy;
 	public static Predicate<Kit> kitPredicate = ignored -> true;
 
@@ -146,27 +145,6 @@ public class CommandDebug extends CustomCommand {
 							Component.text("Your kit has been updated to ", NamedTextColor.GREEN),
 							kit.getDisplayName()
 					));
-				}
-			}
-			case "setgame", "setnextgame" -> {
-				if (args.length < 2)
-					throw throwUsage("/debug " + args[0] + " <game> [map]");
-
-				TeamArena.nextGameType = GameType.valueOf(args[1]);
-				if (args.length > 2) {
-					TeamArena.nextMapName = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
-				} else {
-					TeamArena.nextMapName = null;
-				}
-				sender.sendMessage(Component.textOfChildren(
-						Component.text("Set game mode to ", NamedTextColor.GREEN),
-						Component.text(TeamArena.nextGameType.name(), NamedTextColor.YELLOW),
-						Component.text(" and map to ", NamedTextColor.GREEN),
-						Component.text(TeamArena.nextMapName != null ? TeamArena.nextMapName : "random", NamedTextColor.YELLOW)
-				));
-				// abort the current game
-				if ("setgame".equalsIgnoreCase(args[0])) {
-					skipGameState(GameState.DEAD);
 				}
 			}
 			case "explode" -> {
@@ -433,7 +411,6 @@ public class CommandDebug extends CustomCommand {
 						.map(team -> team.getSimpleName().replace(' ', '_'))
 						.toList();
 				case "setkit" -> Main.getGame().getTabKitList();
-				case "setgame", "setnextgame" -> Arrays.stream(GameType.values()).map(Enum::name).toList();
 				case "draw" -> Arrays.asList("text", "area", "clear", "invalidatebase");
 				case "graffititest" -> Main.getGame().graffiti.getAllGraffiti().stream().map(NamespacedKey::toString).toList();
 				default -> Collections.emptyList();
@@ -447,15 +424,6 @@ public class CommandDebug extends CustomCommand {
 					case "kitfilter" -> Arrays.asList("allow", "block");
 					default -> Arrays.asList("true", "false");
 				};
-				case "setgame", "setnextgame" -> {
-					String gameMode = args[1].toUpperCase(Locale.ENGLISH);
-					File mapContainer = new File("Maps" + File.separator + gameMode);
-					if (!mapContainer.exists() || !mapContainer.isDirectory())
-						yield Collections.emptyList();
-
-					String[] files = mapContainer.list();
-					yield files != null ? Arrays.asList(files) : Collections.emptyList();
-				}
 				default -> Collections.emptyList();
 			};
 		}

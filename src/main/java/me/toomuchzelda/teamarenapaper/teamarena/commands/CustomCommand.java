@@ -149,13 +149,6 @@ public abstract class CustomCommand extends Command {
 		}
 	}
 
-    //todo: a system for commands that have multiple word arguments ie. /give player item amount etc
-    // whatever that means
-//    @Deprecated
-//    public static List<String> filterCompletions(List<String> allArgs, String... args) {
-//        return Collections.emptyList();
-//    }
-
     public static CustomCommand getFromName(String name) {
         return PLUGIN_COMMANDS.get(name);
     }

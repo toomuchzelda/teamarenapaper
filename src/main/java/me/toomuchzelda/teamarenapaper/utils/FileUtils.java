@@ -73,7 +73,7 @@ public class FileUtils {
 			}
 			Main.logger().info("Deleted file " + file.getAbsolutePath());
 		} catch (IOException ex) {
-			Main.logger().info("Failed to delete " + file.getAbsolutePath());
+			Main.logger().warning("Failed to delete " + file.getAbsolutePath());
 			ex.printStackTrace();
 		}
 	}
