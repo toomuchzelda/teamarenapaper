@@ -7,11 +7,9 @@ import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
 import me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy.SearchAndDestroy;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import org.bukkit.Bukkit;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Constructor;
 import java.util.*;
 
 /**

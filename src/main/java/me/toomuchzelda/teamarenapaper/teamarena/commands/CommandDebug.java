@@ -424,15 +424,6 @@ public class CommandDebug extends CustomCommand {
 					case "kitfilter" -> Arrays.asList("allow", "block");
 					default -> Arrays.asList("true", "false");
 				};
-				case "setgame", "setnextgame" -> {
-					String gameMode = args[1].toUpperCase(Locale.ENGLISH);
-					File mapContainer = new File("Maps" + File.separator + gameMode);
-					if (!mapContainer.exists() || !mapContainer.isDirectory())
-						yield Collections.emptyList();
-
-					String[] files = mapContainer.list();
-					yield files != null ? Arrays.asList(files) : Collections.emptyList();
-				}
 				default -> Collections.emptyList();
 			};
 		}
