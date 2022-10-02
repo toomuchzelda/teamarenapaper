@@ -1,8 +1,11 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
+import io.papermc.paper.event.player.AsyncChatEvent;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandTeamChat;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.KitInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
@@ -741,6 +744,30 @@ public abstract class TeamArena
 
 	public void onPlaceBlock(BlockPlaceEvent event) {}
 
+	public void onChat(AsyncChatEvent event) {
+		event.setCancelled(true);
+
+		final Player chatter = event.getPlayer();
+		final PlayerInfo pinfo = Main.getPlayerInfo(chatter);
+		//if player is defaulting to team chat
+		if(this.canTeamChatNow(chatter) && pinfo.getPreference(Preferences.DEFAULT_TEAM_CHAT)) {
+			//put their message in team chat if teams have been decided
+			CommandTeamChat.sendTeamMessage(pinfo.team, chatter, event.message());
+		}
+		else { //else global chat
+			Bukkit.broadcast(constructChatMessage(chatter, event.message()));
+		}
+	}
+
+	private static final Component COLON_SPACE = Component.text(": ");
+	public Component constructChatMessage(Player sender, Component message) {
+		return Component.text()
+				.append(EntityUtils.getComponent(sender))
+				.append(COLON_SPACE)
+				.append(message)
+				.build();
+	}
+
 	public void regenTick() {
 		if(gameTick % 60 == 0) {
 			Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
@@ -959,6 +986,13 @@ public abstract class TeamArena
 
 
 	public void prepDead() {
+		for(Player p : Bukkit.getOnlinePlayers()) {
+			PlayerUtils.resetState(p);
+			for(TeamArenaTeam team : teams) {
+				p.hideBossBar(team.bossBar);
+			}
+		}
+
 		for (TeamArenaTeam team : teams) {
 			//team.removeAllMembers();
 			team.unregister();
@@ -967,12 +1001,6 @@ public abstract class TeamArena
 		spectatorTeam.unregister();
 		noTeamTeam.unregister();
 
-		for(Player p : Bukkit.getOnlinePlayers()) {
-			PlayerUtils.resetState(p);
-			for(TeamArenaTeam team : teams) {
-				p.hideBossBar(team.bossBar);
-			}
-		}
 		// remove map
 		miniMap.removeMapView();
 
@@ -1034,13 +1062,11 @@ public abstract class TeamArena
 				if (team.getPlayerMembers().size() > maxTeamSize)
 				{
 					//peek not pop, since removeMembers will remove them from the Stack
-					Entity removed = team.lastIn.peek();
+					Player removed = team.getLastJoinedPlayer();
 					//team.removeMembers(removed);
 					noTeamTeam.addMembers(removed);
-					if(removed instanceof Player p) {
-						p.sendMessage(Component.text("A player left, so you were removed from your chosen team for balance. Sorry!").color(NamedTextColor.AQUA));
-						p.playSound(p.getLocation(), Sound.ENTITY_CHICKEN_HURT, SoundCategory.AMBIENT, 2f, 1f);
-					}
+					removed.sendMessage(Component.text("A player left, so you were removed from your chosen team for balance. Sorry!").color(NamedTextColor.AQUA));
+					removed.playSound(removed.getLocation(), Sound.ENTITY_CHICKEN_HURT, SoundCategory.AMBIENT, 2f, 1f);
 				}
 			}
 		}

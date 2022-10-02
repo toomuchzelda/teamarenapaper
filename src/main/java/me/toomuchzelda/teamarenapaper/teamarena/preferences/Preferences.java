@@ -88,10 +88,14 @@ public class Preferences {
 
 	public static final Preference<Boolean> TEAM_CHAT_SOUND = SimplePreference.of("team_chat_sound",
 			"Hear a sound when receiving a team chat message", true)
-		.setIcon(Material.LEATHER_CHESTPLATE);
+		.setIcon(Material.BELL);
 
 	public static final Preference<Float> EXPLOSION_VOLUME_MULTIPLIER = SimplePreference.of("explosion_volume",
 					"Change the volume of explosions. 1 = normal, 0.5 = half, 0 = silent, etc.", Float.class, 1f,
 					aFloat -> aFloat > 0f && aFloat <= 100f)
 			.setIcon(Material.TNT);
+
+	public static final Preference<Boolean> DEFAULT_TEAM_CHAT = SimplePreference.of("default_team_chat",
+			"Whether your chat messages should go to team chat instead of all chat by default. (Use /t to talk in the opposite chat)",
+			false).setIcon(Material.GOAT_HORN);
 }

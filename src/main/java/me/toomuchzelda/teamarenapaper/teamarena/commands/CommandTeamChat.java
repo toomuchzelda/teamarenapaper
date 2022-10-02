@@ -1,13 +1,15 @@
 package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.TextDecoration;
+import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.command.CommandSender;
@@ -26,7 +28,8 @@ public class CommandTeamChat extends CustomCommand
 	public static final String TEAM_CHAT_PREFIX = "TEAM CHAT ";
 
 	public CommandTeamChat() {
-		super("teamchat", "Send a message only your teammates can see", "/teamchat [message]", PermissionLevel.ALL, "t");
+		super("teamchat", "Send a message only your teammates can see (or to global depending on your preference)",
+				"/teamchat [message]", PermissionLevel.ALL, "t");
 	}
 
 	@Override
@@ -34,15 +37,17 @@ public class CommandTeamChat extends CustomCommand
 		if(sender instanceof Player player) {
 			TeamArena game = Main.getGame();
 			if(game.canTeamChatNow(player)) {
-				TeamArenaTeam playersTeam = Main.getPlayerInfo(player).team;
-				Component message = constructMessage(playersTeam, player, args);
+				PlayerInfo pinfo = Main.getPlayerInfo(player);
+				TeamArenaTeam playersTeam = pinfo.team;
+				Component msgComponent = TextUtils.stringArrayToComponent(args);
 
-				playersTeam.getPlayerMembers().forEach(receiver -> {
-					receiver.sendMessage(message);
-					if(Main.getPlayerInfo(receiver).getPreference(Preferences.TEAM_CHAT_SOUND)) {
-						receiver.playSound(receiver, Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.PLAYERS, 0.2f, 0.5f);
-					}
-				});
+				//they are defaulting to team chat, so the /t command should post to global chat instead
+				if(pinfo.getPreference(Preferences.DEFAULT_TEAM_CHAT)) {
+					Bukkit.broadcast(Main.getGame().constructChatMessage(player, msgComponent));
+				}
+				else {
+					sendTeamMessage(playersTeam, player, msgComponent);
+				}
 			}
 			else {
 				sender.sendMessage(CANT_CHAT_NOW);
@@ -61,22 +66,26 @@ public class CommandTeamChat extends CustomCommand
 		return Collections.emptyList();
 	}
 
-	public static Component constructMessage(TeamArenaTeam team, Player sender, String... message) {
-		TextComponent.Builder messageBuilder = Component.text();
-		for(int i = 0; i < message.length; i++) {
-			String word = message[i];
-			messageBuilder.append(Component.text(word));
-
-			//manually include spaces
-			if(i != message.length - 1) {
-				messageBuilder.append(Component.space());
-			}
-		}
-		Component messageContents = messageBuilder.build();
-
-		return Component.text().append(team.colourWord(TEAM_CHAT_PREFIX).decoration(TextDecoration.BOLD, true))
+	/** Construct the team chat message Component */
+	private static Component constructMessage(TeamArenaTeam team, Player sender, Component message) {
+		return Component.text()
+				.append(team.colourWord(TEAM_CHAT_PREFIX).decoration(TextDecoration.BOLD, true))
 				.append(sender.playerListName())
 				.append(Component.space())
-				.append(messageContents).build();
+				.append(message).build();
+	}
+
+	public static void sendTeamMessage(TeamArenaTeam team, Player sender, Component message) {
+		Component finalMessage = constructMessage(team, sender, message);
+
+		//need to manually log non-broadcasted messages
+		Main.componentLogger().info(finalMessage);
+
+		team.getPlayerMembers().forEach(receiver -> {
+			receiver.sendMessage(finalMessage);
+			if(Main.getPlayerInfo(receiver).getPreference(Preferences.TEAM_CHAT_SOUND)) {
+				receiver.playSound(receiver, Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.PLAYERS, 0.2f, 0.5f);
+			}
+		});
 	}
 }

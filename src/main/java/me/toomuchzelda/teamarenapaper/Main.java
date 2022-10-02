@@ -13,6 +13,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy.SearchAndDestroy;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.FileUtils;
+import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandMap;
 import org.bukkit.entity.Player;
@@ -28,6 +29,7 @@ public final class Main extends JavaPlugin
 	private static EventListeners eventListeners;
 	private static PacketListeners packetListeners;
 	private static Logger logger;
+	private static ComponentLogger componentLogger;
 
 	private static Main plugin;
 
@@ -40,6 +42,7 @@ public final class Main extends JavaPlugin
 		plugin = this;
 
 		logger = this.getLogger();
+		componentLogger = this.getComponentLogger();
 		logger.info("Starting TMA");
 
 		getConfig().options().copyDefaults(true);
@@ -132,6 +135,10 @@ public final class Main extends JavaPlugin
 
 	public static Logger logger() {
 		return logger;
+	}
+
+	public static ComponentLogger componentLogger() {
+		return componentLogger;
 	}
 
 	public static Main getPlugin() {

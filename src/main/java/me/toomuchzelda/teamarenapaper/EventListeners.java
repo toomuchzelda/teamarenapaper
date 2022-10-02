@@ -346,6 +346,8 @@ public class EventListeners implements Listener
 		if (Main.getPlayerInfo(event.getPlayer()).permissionLevel.compareTo(CustomCommand.PermissionLevel.MOD) >= 0) {
 			event.message(MiniMessage.miniMessage().deserialize(PlainTextComponentSerializer.plainText().serialize(event.message())));
 		}
+
+		Main.getGame().onChat(event);
 	}
 
 	@EventHandler

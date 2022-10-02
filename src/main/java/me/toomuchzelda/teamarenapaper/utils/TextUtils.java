@@ -367,4 +367,17 @@ public class TextUtils {
 		return toLoreList(string, Style.empty(), tagResolvers);
 	}
 
+	public static Component stringArrayToComponent(String... strings) {
+		TextComponent.Builder messageBuilder = Component.text();
+		for(int i = 0; i < strings.length; i++) {
+			String word = strings[i];
+			messageBuilder.append(Component.text(word));
+
+			//manually include spaces
+			if(i != strings.length - 1) {
+				messageBuilder.append(Component.space());
+			}
+		}
+		return messageBuilder.build();
+	}
 }

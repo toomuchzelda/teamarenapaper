@@ -63,11 +63,7 @@ public class TeamArenaTeam
 	private Team paperTeam;
 
 	private Location[] spawns;
-	private final Set<Player> playerMembers = new LinkedHashSet<>();
-
-	//if someone needs to be booted out when a player leaves before game start
-	//only used before teams decided
-	public final Stack<Player> lastIn = new Stack<>();
+	private final LinkedHashSet<Player> playerMembers = new LinkedHashSet<>();
 
 	//next spawn position to use
 	public int spawnsIndex;
@@ -85,7 +81,10 @@ public class TeamArenaTeam
 		this.dyeColour = dyeColor;
 
 		this.RGBColour = TextColor.color(colour.asRGB());
-		this.RGBSecondColor = TextColor.color(colour.asRGB());
+		if(secondColour != null)
+			this.RGBSecondColor = TextColor.color(secondColour.asRGB());
+		else
+			this.RGBSecondColor = null;
 
 		spawns = null;
 		score = 0;
@@ -228,7 +227,6 @@ public class TeamArenaTeam
 				updateNametag(player);
 
 				playerMembers.add(player);
-				lastIn.push(player);
 
 				Main.getGame().onTeamSwitch(player, team, this);
 			}
@@ -257,7 +255,6 @@ public class TeamArenaTeam
 			{
 				Main.getPlayerInfo(player).team = null;
 				playerMembers.remove(player);
-				lastIn.remove(player);
 
 				if(callEvent)
 					Main.getGame().onTeamSwitch(player, this, null);
@@ -271,7 +268,6 @@ public class TeamArenaTeam
 		{
 			Main.getPlayerInfo(player).team = null;
 			playerMembers.remove(player);
-			lastIn.remove(player);
 
 			Main.getGame().onTeamSwitch(player, this, null);
 		}
@@ -288,6 +284,16 @@ public class TeamArenaTeam
 
 	public Set<Player> getPlayerMembers() {
 		return playerMembers;
+	}
+
+	public Player getLastJoinedPlayer() {
+		Player last = null;
+		//LinkedHashSet doesn't ahve a getter for last element
+		for(Player p : playerMembers) {
+			last = p;
+		}
+
+		return last;
 	}
 
 	public boolean isAlive() {
@@ -341,8 +347,8 @@ public class TeamArenaTeam
 	public Component colourWord(String str) {
 		Component component;
 		if(secondColour != null) {
-			//component = TextUtils.getUselessRGBText(str, getRGBTextColor(), getRGBSecondTextColor());
-			TextComponent.Builder builder = Component.text();
+			component = TextUtils.getUselessRGBText(str, getRGBTextColor(), getRGBSecondTextColor());
+			/*TextComponent.Builder builder = Component.text();
 			for (float i = 0; i < str.length(); i++) {
 				//percentage of second colour to use, leftover is percentage of first colour
 				// from 0 to 1
@@ -362,7 +368,7 @@ public class TeamArenaTeam
 				builder.append(Component.text(str.charAt((int) i)).color(result));
 			}
 
-			component = builder.build();
+			component = builder.build();*/
 		}
 		else {
 			component = Component.text(str, getRGBTextColor());

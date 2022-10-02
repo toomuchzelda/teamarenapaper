@@ -567,7 +567,7 @@ public class KingOfTheHill extends TeamArena
 
 	@Override
 	public boolean canTeamChatNow(Player player) {
-		return gameState == GameState.LIVE || gameState.teamsChosen();
+		return gameState != GameState.PREGAME && gameState != GameState.DEAD;
 	}
 
 	@Override

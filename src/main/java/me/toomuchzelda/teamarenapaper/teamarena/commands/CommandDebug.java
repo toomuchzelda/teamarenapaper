@@ -149,7 +149,7 @@ public class CommandDebug extends CustomCommand {
 			}
 			case "explode" -> {
 				if(args.length < 2) {
-					throw throwUsage("rad, guar, damage, knockbackStrength");
+					throw throwUsage("rad, guar, damage, minDamage, knockbackStrength");
 				}
 
 				Player p = (Player) sender;
