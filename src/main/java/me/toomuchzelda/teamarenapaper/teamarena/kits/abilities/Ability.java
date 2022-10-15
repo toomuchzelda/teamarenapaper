@@ -109,6 +109,7 @@ public abstract class Ability {
 	/**
 	 * When a projectile shot by this user hits an entity
 	 * @param event
+	 * @deprecated Try to use ProjectileHitEvent instead
 	 */
 	public void onProjectileHitEntity(ProjectileCollideEvent event) {}
 

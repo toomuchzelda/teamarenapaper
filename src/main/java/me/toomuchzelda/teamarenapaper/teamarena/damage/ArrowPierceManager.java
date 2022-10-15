@@ -6,20 +6,18 @@ import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.Entity;
 import org.bukkit.util.Vector;
 
-import java.util.ArrayList;
-import java.util.Hashtable;
+import java.util.*;
 
 //maybe not needed, uhhhhhh
 public class ArrowPierceManager {
 
-    public static final Hashtable<AbstractArrow, ArrowInfo> piercedEntitiesMap = new Hashtable<>();
-
+    private static final Map<AbstractArrow, ArrowInfo> PIERCED_ENTITIES_MAP = new LinkedHashMap<>();
 
     public static void addOrUpdateInfo(AbstractArrow arrow) {
-        ArrowInfo info = piercedEntitiesMap.get(arrow);
+        ArrowInfo info = PIERCED_ENTITIES_MAP.get(arrow);
         if(info == null) {
             info = new ArrowInfo();
-            info.piercedEntities = new ArrayList<>(arrow.getPierceLevel());
+            info.piercedEntities = new ArrayList<>(Math.min(arrow.getPierceLevel(), 20));
             info.velocity = arrow.getVelocity();
             info.pitch = arrow.getLocation().getPitch();
             info.yaw = arrow.getLocation().getYaw();
@@ -27,7 +25,7 @@ public class ArrowPierceManager {
             info.lastUpdated = TeamArena.getGameTick();
 
             //Bukkit.broadcastMessage("added new arrowInfo to map");
-            piercedEntitiesMap.put(arrow, info);
+            PIERCED_ENTITIES_MAP.put(arrow, info);
         }
         //slightly unelegant, but sometimes an arrow may collide with two entities in one tick
         // this fires two EntityDamageByEntityEvents, which means the first one will go through and update the
@@ -36,7 +34,6 @@ public class ArrowPierceManager {
         // one will update these fields with the arrow's bounced back movement + direction which is undesirable.
         // so just check to make sure these aren't updated twice in the same tick
         else if(info.lastUpdated != TeamArena.getGameTick()) {
-
             info.velocity = arrow.getVelocity();
             info.pitch = arrow.getLocation().getPitch();
             info.yaw = arrow.getLocation().getYaw();
@@ -45,7 +42,7 @@ public class ArrowPierceManager {
     }
 
     public static void fixArrowMovement(AbstractArrow arrow) {
-        ArrowInfo info = piercedEntitiesMap.get(arrow);
+        ArrowInfo info = PIERCED_ENTITIES_MAP.get(arrow);
 
         net.minecraft.world.entity.projectile.AbstractArrow nmsArrow = ((CraftArrow) arrow).getHandle();
 
@@ -56,12 +53,9 @@ public class ArrowPierceManager {
 
 
     public static PierceType canPierce(AbstractArrow arrow, Entity piercedEntity) {
-        ArrowInfo info = piercedEntitiesMap.get(arrow);
+        ArrowInfo info = PIERCED_ENTITIES_MAP.get(arrow);
 
-        //memory address
-        //Bukkit.broadcastMessage(info.toString());
-
-        ArrayList<Entity> hitList = info.piercedEntities;
+        List<Entity> hitList = info.piercedEntities;
 
         //Bukkit.broadcastMessage(hitList.toString());
 
@@ -80,6 +74,10 @@ public class ArrowPierceManager {
         else
             return PierceType.PIERCE;
     }
+
+	public static void removeInfo(AbstractArrow arrow) {
+		PIERCED_ENTITIES_MAP.remove(arrow);
+	}
 
     public enum PierceType
     {
@@ -102,6 +100,6 @@ public class ArrowPierceManager {
 
     //just in case
     public static void cleanUp() {
-        piercedEntitiesMap.entrySet().removeIf(entry -> !entry.getKey().isValid());
+        PIERCED_ENTITIES_MAP.entrySet().removeIf(entry -> !entry.getKey().isValid());
     }
 }

@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper;
 
 import com.destroystokyo.paper.event.block.TNTPrimeEvent;
+import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import com.destroystokyo.paper.event.player.PlayerAdvancementCriterionGrantEvent;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
@@ -699,7 +700,7 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void projectileHit(ProjectileHitEvent event) {
 		if(Main.getGame() != null) {
-			if(event.getHitBlock() != null && event.getEntity().getShooter() instanceof Player p) {
+			if(event.getEntity().getShooter() instanceof Player p) {
 				Ability[] abilities = Kit.getAbilities(p);
 				for(Ability a : abilities) {
 					if(a instanceof KitPyro.PyroAbility pyroAbility) {
@@ -922,6 +923,16 @@ public class EventListeners implements Listener
 		Player player = event.getPlayer();
 		if(KitVenom.POISONED_ENTITIES.containsKey((LivingEntity)player)){
 			event.setCancelled(true);
+		}
+	}
+
+	/**
+	 * Clean up despawning arrows from ArrowPierceManager
+	 */
+	@EventHandler
+	public void entityRemoveFromWorld(EntityRemoveFromWorldEvent event) {
+		if(event.getEntity() instanceof AbstractArrow arrow) {
+			ArrowPierceManager.removeInfo(arrow);
 		}
 	}
 

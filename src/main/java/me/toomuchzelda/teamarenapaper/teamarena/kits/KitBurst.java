@@ -48,7 +48,7 @@ public class KitBurst extends Kit
 		bowMeta.addEnchant(Enchantment.QUICK_CHARGE, 1, true);
 		crossbow.setItemMeta(bowMeta);
 
-		ItemStack firework = new ItemStack(Material.FIREWORK_ROCKET, 2);
+		ItemStack firework = new ItemStack(Material.FIREWORK_ROCKET, 64);
 
 		ItemStack rocketLauncher = ItemBuilder.of(Material.FURNACE_MINECART)
 				.displayName(Component.text("Rocket Launcher"))

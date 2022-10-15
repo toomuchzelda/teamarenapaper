@@ -36,7 +36,7 @@ public class FakeHitbox
 	private static final Vector[] OFFSETS;
 	//metadata to make them invisible
 	private static final List<WrappedWatchableObject> METADATA;
-	public static final String USERNAME = "zzzzzzzzzzzzzzzz";
+	public static final String USERNAME = "zzzzzz";
 	public static final double VIEWING_RADIUS = 17d;
 	public static final double VIEWING_RADIUS_SQR = VIEWING_RADIUS * VIEWING_RADIUS;
 

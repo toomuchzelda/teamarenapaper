@@ -46,7 +46,8 @@ public class KitPyro extends Kit
 
 		Style style = Style.style(TextUtils.RIGHT_CLICK_TO).decoration(TextDecoration.ITALIC, false);
 		List<Component> lore = TextUtils.wrapString(
-				"Shoot the floor to spawn a searing flame that lasts for a few seconds", style, 200);
+				"Shoot a flaming arrow that lights the floor on fire and sears any enemies that stand in it!\n" +
+						"The arrow will bounce off walls and ceilings so you can land some epic trick shots.", style, 200);
 		meta.lore(lore);
 		MOLOTOV_BOW.setItemMeta(meta);
 	}
@@ -109,6 +110,7 @@ public class KitPyro extends Kit
 						if (shooter.getExp() == 1f || shooter.getGameMode() == GameMode.CREATIVE) {
 							shooter.setExp(0f);
 							arrow.setColor(MOLOTOV_ARROW_COLOR);
+							arrow.setPierceLevel(127); //don't want it directly colliding with players
 							MOLOTOV_RECHARGES.put(shooter, TeamArena.getGameTick());
 						} else {
 							event.setCancelled(true);
@@ -260,25 +262,32 @@ public class KitPyro extends Kit
 			//shooter will always be a player because this method will only be called if the projectile of a pyro hits smth
 			ACTIVE_MOLOTOVS.add(new MolotovInfo(box, owner, Main.getPlayerInfo(owner).team.getColour(), TeamArena.getGameTick()));
 
-			location.getWorld().playSound(location, Sound.ITEM_FIRECHARGE_USE, 0.5f, 0.5f);
+			location.getWorld().playSound(location, Sound.ENTITY_PLAYER_ATTACK_STRONG, 2, 2f);
+			location.getWorld().playSound(location, Sound.BLOCK_FIRE_AMBIENT, 2, 0.5f);
 		}
 
 		//called manually in EventListeners.projectileHit
 		// spawn the molotov effect
 		public void onProjectileHit(ProjectileHitEvent event) {
-			var entity = event.getEntity();
+			Projectile projectile = event.getEntity();
 
-			if (entity instanceof Arrow || entity instanceof Snowball) {
+			if (projectile instanceof Arrow || projectile instanceof Snowball) {
 				// use the colour to know if it's a molotov arrow
-				if (entity instanceof Arrow arrow && !Objects.equals(arrow.getColor(), MOLOTOV_ARROW_COLOR))
+				if (projectile instanceof Arrow arrow && !Objects.equals(arrow.getColor(), MOLOTOV_ARROW_COLOR))
 					return;
 
-				if (event.getHitBlock() == null)
-					return;
+				//if it's a molotov and it hit a mob, slow the arrow down on X and Z significantly
+				// and don't register the hit
+				if(event.getHitEntity() != null && event.getHitEntity() instanceof LivingEntity) {
+					Vector vel = projectile.getVelocity();
+					vel.setX(vel.getX() * 0.4);
+					vel.setZ(vel.getZ() * 0.4);
+					projectile.setVelocity(vel);
+				}
 
 				if (event.getHitBlockFace() == BlockFace.UP) {
 					//shooter will always be a player because this method will only be called if the projectile of a pyro hits smth
-					Player player = (Player) entity.getShooter();
+					Player player = (Player) projectile.getShooter();
 					Location loc = event.getEntity().getLocation();
 					loc.setY(event.getHitBlock().getY() + 1); //set it to floor level of hit floor
 
@@ -297,10 +306,10 @@ public class KitPyro extends Kit
 					// https://math.stackexchange.com/questions/13261/how-to-get-a-reflection-vector
 					Vector newVelocity = velocity.subtract(dirVector.multiply(2 * velocity.dot(dirVector)));
 					newVelocity.multiply(0.25);
-					entity.getWorld().spawn(entity.getLocation(), entity.getClass(), newProjectile -> {
-						newProjectile.setShooter(entity.getShooter());
+					projectile.getWorld().spawn(projectile.getLocation(), projectile.getClass(), newProjectile -> {
+						newProjectile.setShooter(projectile.getShooter());
 						newProjectile.setVelocity(newVelocity);
-						if (entity instanceof Arrow arrow) {
+						if (projectile instanceof Arrow arrow) {
 							Arrow newArrow = (Arrow) newProjectile;
 							newArrow.setColor(arrow.getColor());
 							newArrow.setDamage(arrow.getDamage());
@@ -308,18 +317,28 @@ public class KitPyro extends Kit
 							newArrow.setShotFromCrossbow(arrow.isShotFromCrossbow());
 							newArrow.setPickupStatus(arrow.getPickupStatus());
 						} else {
-							Snowball snowball = (Snowball) entity;
+							Snowball snowball = (Snowball) projectile;
 							Snowball newSnowball = (Snowball) newProjectile;
 							newSnowball.setItem(snowball.getItem());
 							newSnowball.setVisualFire(snowball.isVisualFire());
 						}
 					});
-					entity.remove();
+					projectile.remove();
 				}
 			}
 		}
 
+		//Cancel all damage from molotov arrow direct hits.
 		@Override
+		public void onAttemptedAttack(DamageEvent event) {
+			if(event.getDamageType().isProjectile() && event.getAttacker() instanceof Arrow arrow) {
+				if(MOLOTOV_ARROW_COLOR.equals(arrow.getColor())) {
+					event.setCancelled(true);
+				}
+			}
+		}
+
+		/*@Override
 		public void onProjectileHitEntity(ProjectileCollideEvent event) {
 			if (event.getEntity() instanceof Arrow arrow) {
 				if (arrow.getColor() != null && arrow.getColor().equals(MOLOTOV_ARROW_COLOR)) {
@@ -330,7 +349,7 @@ public class KitPyro extends Kit
 					arrow.setVelocity(vel);
 				}
 			}
-		}
+		}*/
 
 		@Override
 		public void onInteract(PlayerInteractEvent event) {
@@ -375,7 +394,7 @@ public class KitPyro extends Kit
 
 		@Override
 		public void onDeath(DamageEvent event) {
-			PREVIEW_ENTITIES.remove((Player) event.getVictim());
+			PREVIEW_ENTITIES.remove(event.getPlayerVictim());
 			MOLOTOV_RECHARGES.remove(event.getPlayerVictim());
 		}
 	}
