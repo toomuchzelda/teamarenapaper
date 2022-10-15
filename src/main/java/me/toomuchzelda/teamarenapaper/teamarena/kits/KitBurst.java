@@ -7,6 +7,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
@@ -24,6 +25,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static me.toomuchzelda.teamarenapaper.teamarena.kits.KitBurst.BurstAbility.ROCKET_CD;
@@ -66,12 +68,21 @@ public class KitBurst extends Kit
 
 	public static class BurstAbility extends Ability
 	{
-		public static final List<ShulkerBullet> ACTIVE_ROCKETS = new ArrayList<>();
+		private static final List<ShulkerBullet> ACTIVE_ROCKETS = new ArrayList<>();
+		//possible firework effects for fired fireworks
+		private static final List<FireworkEffect.Type> FIREWORK_EFFECTS;
 
 		public static final int ROCKET_CD = 120;
 		public static final double ROCKET_BLAST_RADIUS = 2.5;
 		public static final DamageType ROCKET_HURT_SELF = new DamageType(DamageType.BURST_ROCKET,
 				"%Killed% was caught in their own Rocket explosion");
+
+		static {
+			FIREWORK_EFFECTS = new ArrayList<>(FireworkEffect.Type.values().length);
+			FIREWORK_EFFECTS.addAll(Arrays.asList(FireworkEffect.Type.values()));
+			FIREWORK_EFFECTS.remove(FireworkEffect.Type.BALL_LARGE);
+			FIREWORK_EFFECTS.remove(FireworkEffect.Type.BURST);
+		}
 
 		@Override
 		public void unregisterAbility() {
@@ -89,6 +100,14 @@ public class KitBurst extends Kit
 
 				shooter.playSound(shooter, Sound.ENTITY_ARROW_HIT_PLAYER, 1.0f, 1.0f);
 			}
+			//reduce knockback from fireworks
+			else if(event.getAttacker() instanceof Firework) {
+				//buff damage a bit
+				event.setFinalDamage(event.getFinalDamage() * 1.5d);
+				if(event.hasKnockback()) {
+					event.setKnockback(event.getKnockback().multiply(0.55d));
+				}
+			}
 		}
 
 		@Override
@@ -98,12 +117,17 @@ public class KitBurst extends Kit
 
 				FireworkMeta meta = firework.getFireworkMeta();
 				meta.clearEffects();
-				FireworkEffect effect = FireworkEffect.builder().trail(true).with(FireworkEffect.Type.BALL)
-						.flicker(true).withColor(team.getColour()).build();
+				FireworkEffect effect = FireworkEffect.builder()
+						.trail(true)
+						.with(FIREWORK_EFFECTS.get(MathUtils.randomMax(FIREWORK_EFFECTS.size() - 1)))
+						.flicker(true)
+						.withColor(team.getColour())
+						.build();
 
 				meta.addEffect(effect);
 				//meta.setPower(1);
 				firework.setFireworkMeta(meta);
+				firework.setVelocity(firework.getVelocity().multiply(0.7));
 			}
 		}
 
