@@ -72,7 +72,7 @@ import static me.toomuchzelda.teamarenapaper.teamarena.GameState.LIVE;
 public class EventListeners implements Listener
 {
 
-	public static final boolean[] BREAKABLE_BLOCKS;
+	private static final boolean[] BREAKABLE_BLOCKS;
 	private final ConcurrentHashMap<UUID, Map<Preference<?>, ?>> preferenceFutureMap = new ConcurrentHashMap<>();
 	private final ConcurrentHashMap<UUID, String> defaultKitMap = new ConcurrentHashMap<>();
 
@@ -82,13 +82,17 @@ public class EventListeners implements Listener
 
 		for(Material mat : Material.values()) {
 			if(mat.isBlock() && !mat.isCollidable() && !mat.name().endsWith("SIGN") && !mat.name().endsWith("TORCH")) {
-				setBlockBreakable(mat);
+				setBlockBreakable(mat, true);
 			}
+
+			//don't break big dripleaf as may be part of map path
+			setBlockBreakable(Material.BIG_DRIPLEAF_STEM, false);
+			setBlockBreakable(Material.BIG_DRIPLEAF, false);
 		}
 	}
 
-	private static void setBlockBreakable(Material mat) {
-		BREAKABLE_BLOCKS[mat.ordinal()] = true;
+	private static void setBlockBreakable(Material mat, boolean breakable) {
+		BREAKABLE_BLOCKS[mat.ordinal()] = breakable;
 	}
 
 	private static boolean isBlockBreakable(Material mat) {
@@ -461,13 +465,19 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void blockBreak(BlockBreakEvent event) {
 		//Handling breaking teleporter blocks
-		if(Main.getGame() != null && Main.getGame().getGameState() == LIVE){
-			BuildingManager.EventListener.onBlockBreak(event);
-		}
+		if(Main.getGame() != null) {
+			GameState state = Main.getGame().getGameState();
+			if (state == LIVE) {
+				BuildingManager.EventListener.onBlockBreak(event);
 
-		if(event.getPlayer().getGameMode() != GameMode.CREATIVE) {
-			if(!isBlockBreakable(event.getBlock().getType()))
+				if (event.getPlayer().getGameMode() != GameMode.CREATIVE) {
+					if (!isBlockBreakable(event.getBlock().getType()))
+						event.setCancelled(true);
+				}
+			}
+			else if (state != GameState.END) {
 				event.setCancelled(true);
+			}
 		}
 	}
 
