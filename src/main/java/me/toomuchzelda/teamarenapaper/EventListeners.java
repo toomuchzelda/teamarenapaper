@@ -81,7 +81,8 @@ public class EventListeners implements Listener
 		Arrays.fill(BREAKABLE_BLOCKS, false);
 
 		for(Material mat : Material.values()) {
-			if(mat.isBlock() && !mat.isCollidable() && !mat.name().endsWith("SIGN") && !mat.name().endsWith("TORCH")) {
+			if(mat.isBlock() && !mat.isCollidable() && !mat.name().endsWith("SIGN") && !mat.name().endsWith("TORCH") &&
+				!mat.name().endsWith("BANNER")) {
 				setBlockBreakable(mat, true);
 			}
 
@@ -467,15 +468,16 @@ public class EventListeners implements Listener
 		//Handling breaking teleporter blocks
 		if(Main.getGame() != null) {
 			GameState state = Main.getGame().getGameState();
-			if (state == LIVE) {
-				BuildingManager.EventListener.onBlockBreak(event);
+			if (state == LIVE || state == GameState.END) {
+				if(state == LIVE)
+					BuildingManager.EventListener.onBlockBreak(event);
 
 				if (event.getPlayer().getGameMode() != GameMode.CREATIVE) {
 					if (!isBlockBreakable(event.getBlock().getType()))
 						event.setCancelled(true);
 				}
 			}
-			else if (state != GameState.END) {
+			else {
 				event.setCancelled(true);
 			}
 		}
