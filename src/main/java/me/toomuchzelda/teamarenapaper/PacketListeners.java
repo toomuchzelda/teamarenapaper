@@ -21,6 +21,8 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSpy;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.trigger.KitTrigger;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.trigger.TriggerCreeper;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -87,31 +89,64 @@ public class PacketListeners
 			public void onPacketSending(PacketEvent event) {
 				if(FakeHitboxManager.ACTIVE) {
 					PacketContainer packet = event.getPacket();
-
 					int id = packet.getIntegers().read(0);
 					Player mover = Main.playerIdLookup.get(id);
-					Player viewer = event.getPlayer();
 
-					if(mover != null) {
+					if (mover != null) {
+						final Player viewer = event.getPlayer();
 						FakeHitbox hitbox = FakeHitboxManager.getFakeHitbox(mover);
 						//don't send move packets for fake hitboxes unless the receiver is actually seeing them
 						FakeHitboxViewer hitboxViewer = hitbox.getFakeViewer(viewer);
-						if(hitboxViewer.isSeeingHitboxes()) {
+						if (hitboxViewer.isSeeingHitboxes()) {
 							//send a precise teleport packet if its right after spawning as desyncs happen here
-							if (event.getPacketType() == PacketType.Play.Server.ENTITY_TELEPORT ||
-									hitboxViewer.getHitboxSpawnTime() < TeamArena.getGameTick()) {
+							if (event.getPacketType() == PacketType.Play.Server.ENTITY_TELEPORT || hitboxViewer.getHitboxSpawnTime() < TeamArena.getGameTick()) {
 								hitboxViewer.setHitboxSpawnTime(Integer.MAX_VALUE);
 								PlayerUtils.sendPacket(viewer, hitbox.getTeleportPackets());
 							}
 							else {
 								PacketContainer[] movePackets = hitbox.createRelMovePackets(packet);
-								if(movePackets != null) {
+								if (movePackets != null) {
 									PlayerUtils.sendPacket(viewer, movePackets);
 									//Bukkit.broadcastMessage(TeamArena.getGameTick() + " rel move sent");
 								}
 							}
 						}
 					}
+				}
+			}
+		});
+
+		 //This packet listener is similar to the above but not the same because the trigger also needs the
+		 // ENTITY_HEAD_ROTATION packet
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(Main.getPlugin(),
+				PacketType.Play.Server.ENTITY_LOOK, PacketType.Play.Server.REL_ENTITY_MOVE,
+				PacketType.Play.Server.REL_ENTITY_MOVE_LOOK,
+				PacketType.Play.Server.ENTITY_TELEPORT, PacketType.Play.Server.ENTITY_HEAD_ROTATION)
+		{
+			@Override
+			public void onPacketSending(PacketEvent event) {
+				//if player is trigger, sync up their trigger creeper's movement and position
+				PacketContainer packet = event.getPacket();
+				final Player mover = Main.playerIdLookup.get(packet.getIntegers().read(0));
+
+				KitTrigger.TriggerAbility.TriggerInfo triggerInfo = KitTrigger.TriggerAbility.getTriggerInfo(mover);
+				if(triggerInfo != null) {
+					final Player viewer = event.getPlayer();
+
+					TriggerCreeper viewedCreeper = triggerInfo.getViewedCreeper(viewer);
+					//create a copy of this packet and change the ID to that of the creeper
+					PacketContainer triggerPacket = packet.shallowClone();
+					triggerPacket.getIntegers().write(0, viewedCreeper.getId());
+
+					if(event.getPacketType() == PacketType.Play.Server.ENTITY_TELEPORT) {
+						//adjust the creeper's Y position
+						double y = packet.getDoubles().read(1);
+						y = viewedCreeper.getYCoordinate(y);
+						triggerPacket.getDoubles().write(1, y);
+					}
+
+					//send the packet immediately
+					PlayerUtils.sendPacket(viewer, triggerPacket);
 				}
 			}
 		});

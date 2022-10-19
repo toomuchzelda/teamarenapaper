@@ -19,12 +19,11 @@ import org.bukkit.inventory.EquipmentSlot;
 
 import javax.annotation.Nullable;
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 /**
  * "Fake" entity the internal server is not aware exists.
- * Packet Entities are valid as long as a reference to them is kept.
+ * Packet Entities are valid from creation until remove() is called.
  *
  * @author toomuchzelda
  */
@@ -178,7 +177,7 @@ public class PacketEntity
 		this.teleportPacket = new PacketContainer(PacketType.Play.Server.ENTITY_TELEPORT);
 		this.teleportPacket.getIntegers().write(0, id);
 
-		this.teleportPacketDoubles = teleportPacket.getDoubles();;
+		this.teleportPacketDoubles = teleportPacket.getDoubles();
 		this.teleportPacketBytes = teleportPacket.getBytes();
 
 		this.updateTeleportPacket(this.location);
@@ -230,7 +229,7 @@ public class PacketEntity
 		this.headPacketBytes.write(0, angleToByte(yaw));
 	}
 
-	private void updateTeleportPacket(Location newLocation) {
+	protected void updateTeleportPacket(Location newLocation) {
 		StructureModifier<Double> doubles = this.teleportPacketDoubles;
 		doubles.write(0, newLocation.getX());
 		doubles.write(1, newLocation.getY());
@@ -241,7 +240,7 @@ public class PacketEntity
 		bytes.write(1, angleToByte(newLocation.getPitch()));
 	}
 
-	private void updateSpawnPacket(Location newLocation) {
+	protected void updateSpawnPacket(Location newLocation) {
 		StructureModifier<Double> doubles = this.spawnPacketDoubles;
 		doubles.write(0, newLocation.getX());
 		doubles.write(1, newLocation.getY());
@@ -432,6 +431,13 @@ public class PacketEntity
 	}
 
 	/**
+	 * If this player passes the viewer rule (The viewer rule of this Packet Entity returns true on this player)
+	 */
+	public boolean matchesViewerRule(Player viewer) {
+		return this.viewerRule.test(viewer);
+	}
+
+	/**
 	 * Clear all current viewers and set viewers to provided Player collection
 	 * Does not consider the viewing rule.
 	 */
@@ -493,6 +499,10 @@ public class PacketEntity
 
 	public PacketContainer getSpawnPacket() {
 		return this.spawnPacket;
+	}
+
+	protected PacketContainer getTeleportPacket() {
+		return this.teleportPacket;
 	}
 
 	public Location getLocation() {

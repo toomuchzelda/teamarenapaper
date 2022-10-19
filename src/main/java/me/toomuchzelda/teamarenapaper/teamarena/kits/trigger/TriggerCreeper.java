@@ -5,8 +5,11 @@ import com.comphenix.protocol.events.PacketContainer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
 import net.minecraft.network.protocol.game.ServerboundInteractPacket;
 import net.minecraft.world.InteractionHand;
 import org.bukkit.Location;
@@ -31,23 +34,10 @@ public class TriggerCreeper extends PacketEntity
 
 	@Override
 	public void tick() {
-		Location loc = trigger.getLocation();
-
 		//need to update sneaking metadata to hide the name tag behind blocks
 		boolean playerSneaking = trigger.isSneaking();
-		if(this.data.hasIndex(MetaIndex.CUSTOM_NAME_IDX)) {
-			if (playerSneaking != wasSneaking) {
-				byte newMask;
-				if (playerSneaking)
-					newMask =  MetaIndex.BASE_BITFIELD_SNEAKING_MASK;
-				else
-					newMask = 0;
-				this.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, newMask);
-				this.refreshViewerMetadata();
-				this.wasSneaking = playerSneaking;
-			}
-		}
 
+		Location loc = trigger.getLocation();
 		if(!playerSneaking) {
 			loc.add(0d, 0.25d, 0d);
 		}
@@ -55,6 +45,54 @@ public class TriggerCreeper extends PacketEntity
 			loc.subtract(0d, 0.15d, 0d);
 		}
 		this.move(loc);
+
+		if(playerSneaking != wasSneaking) {
+			if (this.data.hasIndex(MetaIndex.CUSTOM_NAME_IDX)) {
+				byte newMask;
+				if (playerSneaking)
+					newMask = MetaIndex.BASE_BITFIELD_SNEAKING_MASK;
+				else
+					newMask = 0;
+				this.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, newMask);
+				this.refreshViewerMetadata();
+				this.wasSneaking = playerSneaking;
+			}
+
+			//if sneaking status changed, re-send precise loc packet to move the creeper up/down
+			this.updateTeleportPacket(loc);
+			for(Player viewer : this.getRealViewers()) {
+				PlayerUtils.sendPacket(viewer, this.getTeleportPacket());
+			}
+		}
+	}
+
+	/**
+	 * Override this to not send movement packets, since we are doing that in a packet listener
+	 * Do it in the packet listener so that the creeper and player movement won't be weirdly de-synced to viewers
+	 */
+	@Override
+	public void move(Location newLocation) {
+		if(this.location.equals(newLocation))
+			return;
+
+		newLocation = newLocation.clone();
+
+		this.updateSpawnPacket(newLocation);
+		this.location = newLocation;
+	}
+
+	public double getYCoordinate(double playerY) {
+		//need to update sneaking metadata to hide the name tag behind blocks
+		boolean playerSneaking = trigger.isSneaking();
+
+		if(!playerSneaking) {
+			playerY += 0.25d;
+		}
+		else {
+			playerY -= 0.15d;
+		}
+
+		return playerY;
 	}
 
 	@Override

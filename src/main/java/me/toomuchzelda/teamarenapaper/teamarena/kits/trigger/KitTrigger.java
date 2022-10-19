@@ -3,7 +3,6 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.trigger;
 import io.papermc.paper.adventure.PaperAdventure;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
-import me.toomuchzelda.teamarenapaper.metadata.MetadataBitfieldValue;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
@@ -27,7 +26,10 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.Vector;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * @author toomuchzelda
@@ -82,13 +84,15 @@ public class KitTrigger extends Kit
 		public static final double CHANCE_TO_STALL = 0.02d;
 		public static final int MAX_STALL_TIME = 2 * 20;
 		public static final int BOOM_TIME = 2 * 20;
-		public static final int COUNTDOWN_TIME = 3 * 20;
+		public static final int COUNTDOWN_TIME = 5 * 20;
+		public static final float LOWER_BEEPING_BOUND = 0.15f;
+		public static final float UPPER_BEEPING_BOUND = 0.85f;
 
 		private enum TriggerMode {
 			NORMAL, COUNTDOWN, STALLING, BOOMING
 		}
 
-		private static class TriggerInfo {
+		public static class TriggerInfo {
 			public static final int NULL_ALERT_TIME = -1;
 
 			TriggerMode currentMode;
@@ -117,9 +121,20 @@ public class KitTrigger extends Kit
 				teamEntity.refreshViewerMetadata();
 				teamEntity.respawn();
 			}
+
+			public TriggerCreeper getViewedCreeper(Player viewer) {
+				if(enemyEntity.matchesViewerRule(viewer))
+					return enemyEntity;
+				else
+					return teamEntity;
+			}
 		}
 
-		private final Map<Player, TriggerInfo> TRIGGER_INFOS = new HashMap<>();
+		private static final Map<Player, TriggerInfo> TRIGGER_INFOS = new HashMap<>();
+
+		public static TriggerInfo getTriggerInfo(Player player) {
+			return TRIGGER_INFOS.get(player);
+		}
 
 		@Override
 		public void unregisterAbility() {
@@ -224,12 +239,15 @@ public class KitTrigger extends Kit
 			else if(mode == TriggerMode.NORMAL) {
 				stabilityTick(player, newExp);
 
-				//decide if stall
-				boolean stall = MathUtils.random.nextDouble() <= CHANCE_TO_STALL;
-				if(stall) {
-					int stallTime = currentTick + MathUtils.randomMax(MAX_STALL_TIME);
-					info.currentMode = TriggerMode.STALLING;
-					info.timestamp = stallTime;
+				//only chance to stall if balance not urgently high or low
+				if (newExp >= LOWER_BEEPING_BOUND && newExp <= UPPER_BEEPING_BOUND) {
+					//decide if stall
+					boolean stall = MathUtils.random.nextDouble() <= CHANCE_TO_STALL;
+					if (stall) {
+						int stallTime = currentTick + MathUtils.randomMax(MAX_STALL_TIME);
+						info.currentMode = TriggerMode.STALLING;
+						info.timestamp = stallTime;
+					}
 				}
 			}
 			else { //booming
@@ -238,7 +256,7 @@ public class KitTrigger extends Kit
 
 			//play alert sound to trigger and update creepers igniting
 			if(mode == TriggerMode.NORMAL || mode == TriggerMode.STALLING) {
-				if(newExp <= 0.15f || newExp >= 0.85f) {
+				if(newExp <= LOWER_BEEPING_BOUND || newExp >= UPPER_BEEPING_BOUND) {
 					if(info.alertTime == TriggerInfo.NULL_ALERT_TIME) {
 						info.alertTime = currentTick;
 						info.enemyEntity.setMetadata(MetaIndex.CREEPER_STATE_OBJ, 1);
