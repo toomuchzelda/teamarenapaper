@@ -559,6 +559,12 @@ public abstract class TeamArena
 			if(event.isCancelled())
 				continue;
 
+			//ability on confirmed attacks done in this.onConfirmedDamage() called by DamageEvent.executeAttack()
+			if(event.getFinalAttacker() instanceof Player p && event.getVictim() instanceof Player p2) {
+				if(!canAttack(p, p2))
+					event.setCancelled(true);
+			}
+
 			//ability pre-attack events
 			if(event.getFinalAttacker() instanceof Player p) {
 				Ability[] abilities = Kit.getAbilities(p);
@@ -571,12 +577,6 @@ public abstract class TeamArena
 				for(Ability ability : abilities) {
 					ability.onAttemptedDamage(event);
 				}
-			}
-
-			//ability on confirmed attacks done in this.onConfirmedDamage() called by DamageEvent.executeAttack()
-			if(event.getFinalAttacker() instanceof Player p && event.getVictim() instanceof Player p2) {
-				if(!canAttack(p, p2))
-					continue;
 			}
 
 			event.executeAttack();

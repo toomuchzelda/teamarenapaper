@@ -9,6 +9,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
+import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -116,6 +117,8 @@ public abstract class Ability {
 	 * @deprecated Try to use ProjectileHitEvent instead
 	 */
 	public void onProjectileHitEntity(ProjectileCollideEvent event) {}
+
+	public void onProjectileHit(ProjectileHitEvent event) {}
 
 	public void onPlayerDropItem(PlayerDropItemEvent event) {}
 

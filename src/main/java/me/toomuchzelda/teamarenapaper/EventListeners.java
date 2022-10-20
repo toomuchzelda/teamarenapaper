@@ -716,10 +716,7 @@ public class EventListeners implements Listener
 			if(event.getEntity().getShooter() instanceof Player p) {
 				Ability[] abilities = Kit.getAbilities(p);
 				for(Ability a : abilities) {
-					if(a instanceof KitPyro.PyroAbility pyroAbility) {
-						pyroAbility.onProjectileHit(event);
-						return;
-					}
+					a.onProjectileHit(event);
 				}
 			}
 		}

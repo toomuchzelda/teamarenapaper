@@ -268,6 +268,7 @@ public class KitPyro extends Kit
 
 		//called manually in EventListeners.projectileHit
 		// spawn the molotov effect
+		@Override
 		public void onProjectileHit(ProjectileHitEvent event) {
 			Projectile projectile = event.getEntity();
 

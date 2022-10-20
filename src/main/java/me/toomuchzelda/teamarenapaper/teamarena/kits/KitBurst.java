@@ -12,12 +12,10 @@ import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Firework;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.ShulkerBullet;
+import org.bukkit.entity.*;
 import org.bukkit.event.Event;
 import org.bukkit.event.entity.EntityShootBowEvent;
+import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.CrossbowMeta;
@@ -27,6 +25,7 @@ import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 
 import static me.toomuchzelda.teamarenapaper.teamarena.kits.KitBurst.BurstAbility.ROCKET_CD;
@@ -77,9 +76,8 @@ public class KitBurst extends Kit
 		private static final List<ShulkerBullet> ACTIVE_ROCKETS = new ArrayList<>();
 		//possible firework effects for fired fireworks
 		private static final List<FireworkEffect.Type> FIREWORK_EFFECTS;
-		private static final double SHOTGUN_DISTANCE = 7d;
-		private static final double SHOTGUN_DIST_SQR = SHOTGUN_DISTANCE * SHOTGUN_DISTANCE;
-		private static final double SHOTGUN_TARGETTING_ANGLE = Math.PI / 4d;
+		private static final List<Arrow> SHOTGUN_ARROWS = new LinkedList<>();
+		private static final Component SHOTUGUN_FIREWORK_NAME = Component.text("burstfw");
 
 		public static final int ROCKET_CD = 120;
 		public static final double ROCKET_BLAST_RADIUS = 2.5;
@@ -97,6 +95,12 @@ public class KitBurst extends Kit
 		public void unregisterAbility() {
 			ACTIVE_ROCKETS.forEach(Entity::remove);
 			ACTIVE_ROCKETS.clear();
+
+			var shotIter = SHOTGUN_ARROWS.iterator();
+			while(shotIter.hasNext()) {
+				shotIter.next().remove();
+				shotIter.remove();
+			}
 		}
 
 		@Override
@@ -110,11 +114,21 @@ public class KitBurst extends Kit
 				shooter.playSound(shooter, Sound.ENTITY_ARROW_HIT_PLAYER, 1.0f, 1.0f);
 			}
 			//reduce knockback from fireworks
-			else if(event.getAttacker() instanceof Firework) {
-				//buff damage a bit
-				event.setFinalDamage(event.getFinalDamage() * 1.6d);
-				if(event.hasKnockback()) {
-					event.setKnockback(event.getKnockback().multiply(0.55d));
+			else if(event.getAttacker() instanceof Firework fw) {
+				if (SHOTUGUN_FIREWORK_NAME.equals(fw.customName())) {
+					event.setCancelled(true);
+				}
+				else { //it's a firework rocket
+					//buff damage a bit and reduce kb
+					event.setFinalDamage(event.getFinalDamage() * 1.6d);
+					if (event.hasKnockback()) {
+						event.setKnockback(event.getKnockback().multiply(0.55d));
+					}
+
+					//if the burst is in their own explosion range un-cancel the damage
+					if (event.getFinalAttacker() == event.getVictim()) {
+						event.setCancelled(false);
+					}
 				}
 			}
 		}
@@ -129,7 +143,7 @@ public class KitBurst extends Kit
 				FireworkEffect effect = FireworkEffect.builder()
 						.trail(true)
 						.with(FIREWORK_EFFECTS.get(MathUtils.randomMax(FIREWORK_EFFECTS.size() - 1)))
-						.flicker(true)
+						.flicker(false)
 						.withColor(team.getColour())
 						.build();
 
@@ -178,61 +192,54 @@ public class KitBurst extends Kit
 		}
 
 		private void fireShotgun(Player shooter) {
-			//get all players within the firing angle
-			Location shooterEyeLoc = shooter.getEyeLocation();
-			Vector direction = shooterEyeLoc.getDirection();
-
-			record targettedPlayer(Player target, double distance, double angle) {}
-			List<targettedPlayer> targetCandidates = new ArrayList<>(Bukkit.getOnlinePlayers().size() / 5);
-
-			//get all players caught in blast
-			for (Player potentialTarget : Main.getGame().getPlayers()) {
-				Location targetLoc = potentialTarget.getLocation();
-				double distSqr = targetLoc.distanceSquared(shooterEyeLoc);
-				if (distSqr <= SHOTGUN_DIST_SQR) {
-					Vector playerToPoint = targetLoc.subtract(shooterEyeLoc).toVector().normalize();
-					double angle = playerToPoint.angle(direction);
-
-					if (angle <= SHOTGUN_TARGETTING_ANGLE) {
-						targetCandidates.add(new targettedPlayer(potentialTarget, Math.sqrt(distSqr), angle));
-					}
-				}
-			}
-
-			for(targettedPlayer hit : targetCandidates) {
-				shooter.sendMessage("angle:" + hit.angle + "\ndistance:" + hit.distance + "\nplayer:" + hit.target.getName() + "\n==========");
-				//TODO: hurt hit players
-			}
+			final Location shooterEyeLoc = shooter.getEyeLocation();
+			final Vector direction = shooterEyeLoc.getDirection();
 
 			//play the firework effect
-			Location spawnLoc = shooterEyeLoc.toVector().add(direction).toLocation(shooter.getWorld());
+			Vector fWorkDirection = direction.clone();
+			Location spawnLoc = shooterEyeLoc.toVector().add(fWorkDirection).toLocation(shooter.getWorld());
 			//spawnLoc.setDirection(direction); //firework needs to face this way for the effect??
 			Firework fireworkEntity = shooter.getWorld().spawn(spawnLoc, Firework.class);
 
 			//when looking straight, it kind of goes slightly higher than where the user is looking so add a slight
 			// downwards component the more straight they are facing
-			double y = 1d - Math.abs(direction.getY()); //0 = completely up or down, 1 = completely straight
+			double y = 1d - Math.abs(fWorkDirection.getY()); //0 = completely up or down, 1 = completely straight
 			y = 0.16d * y;
-			direction.setY(direction.getY() - y);
-			direction.normalize();
+			fWorkDirection.setY(fWorkDirection.getY() - y);
+			fWorkDirection.normalize();
 
-			fireworkEntity.setVelocity(direction.multiply(2.5d)); //needed for firework effect direction
+			fireworkEntity.setVelocity(fWorkDirection.multiply(2d)); //needed for firework effect direction
 			//set the effect(s)
 			FireworkMeta meta = fireworkEntity.getFireworkMeta();
 			meta.clearEffects();
-			FireworkEffect effect = FireworkEffect.builder()
-					.with(FireworkEffect.Type.BURST)
-					.flicker(true)
-					.trail(false)
-					.withColor(Main.getPlayerInfo(shooter).team.getColour())
-					.withFade(Color.BLACK)
+			FireworkEffect effect = FireworkEffect.builder().with(FireworkEffect.Type.BURST).flicker(false).trail(false).withColor(Main.getPlayerInfo(shooter).team.getColour()).withFade(Color.BLACK)
 					.build();
 
 			meta.addEffect(effect);
 			fireworkEntity.setFireworkMeta(meta);
+			//make this firework identifiable in damage events so can stop it doing any damage to entities
+			//fireworkEntity.customName(SHOTUGUN_FIREWORK_NAME);
+			fireworkEntity.customName(SHOTUGUN_FIREWORK_NAME);
+			fireworkEntity.setShooter(shooter);
+
 
 			//explode immediately
 			fireworkEntity.detonate();
+
+
+			//shoot a bunch of arrows to act like the firework sparks
+			for(int i = 0; i < 20; i++) {
+				Arrow arrow = shooter.getWorld().spawnArrow(shooterEyeLoc, direction, 0.8f, 25f);
+				arrow.setShooter(shooter);
+				arrow.setPickupStatus(AbstractArrow.PickupStatus.CREATIVE_ONLY);
+				arrow.setGravity(false);
+				arrow.setPierceLevel(5);
+				arrow.setDamage(3d);
+				//TODO hide the arrow from all players
+
+
+				SHOTGUN_ARROWS.add(arrow);
+			}
 		}
 
 		public void fireRocket(Player player) {
@@ -256,8 +263,8 @@ public class KitBurst extends Kit
 
 		@Override
 		public void onTick() {
+			//tick rockets
 			List<ShulkerBullet> deadRockets = new ArrayList<>();
-
 			ACTIVE_ROCKETS.forEach(rocket -> {
 				int tick = rocket.getTicksLived();
 				Location loc = rocket.getLocation();
@@ -288,8 +295,32 @@ public class KitBurst extends Kit
 							0, 0, 0, 5.5, particleOptions);
 				}
 			});
-
 			ACTIVE_ROCKETS.removeAll(deadRockets);
+
+
+			//tick shotgun arrows
+			var shotIter = SHOTGUN_ARROWS.iterator();
+			while(shotIter.hasNext()) {
+				Arrow arrow = shotIter.next();
+				Vector newVel = arrow.getVelocity().multiply(0.96);
+				if(newVel.lengthSquared() <= 0.09) { //0.3 squared
+					arrow.remove();
+					shotIter.remove();
+				}
+				else {
+					arrow.setVelocity(newVel);
+				}
+			}
+		}
+
+		@Override
+		public void onProjectileHit(ProjectileHitEvent event) {
+			//all arrows shot by burst are from the shotgun
+			// despawn immediately if hit a block
+			if(event.getEntity() instanceof Arrow arrow && event.getHitBlock() != null) {
+				arrow.remove();
+				event.setCancelled(true);
+			}
 		}
 
 		public void rocketBlast(Location explodeLoc, Player owner) {
