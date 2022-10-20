@@ -36,7 +36,7 @@ public class TextUtils {
 	 * For item lores that have "left click to do x" and/or "right click to do y"
 	 */
 	public static final TextColor LEFT_CLICK_TO = TextColor.color(66, 135, 245);
-	public static final TextColor RIGHT_CLICK_TO = TextColor.color(10, 135, 255);
+	public static final TextColor RIGHT_CLICK_TO = TextColor.color(84, 255, 124);
 
 	public static TextComponent formatDuration(@NotNull Duration duration) {
 		long days = duration.toDaysPart();

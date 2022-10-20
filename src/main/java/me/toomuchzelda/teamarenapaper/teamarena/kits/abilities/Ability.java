@@ -102,6 +102,10 @@ public abstract class Ability {
 	 */
 	public void onItemCooldown(PlayerItemCooldownEvent event) {}
 
+	/**
+	 * When user interacts with something (Mouse buttons or physical interaction)
+	 * Event results may be modified at this point
+	 */
 	public void onInteract(PlayerInteractEvent event) {}
 
 	public void onInteractEntity(PlayerInteractEntityEvent event) {}

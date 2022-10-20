@@ -9,9 +9,9 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
@@ -20,6 +20,7 @@ import org.bukkit.event.Event;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.CrossbowMeta;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.Vector;
@@ -47,7 +48,12 @@ public class KitBurst extends Kit
 
 		ItemStack crossbow = new ItemStack(Material.CROSSBOW);
 		ItemMeta bowMeta = crossbow.getItemMeta();
-		bowMeta.addEnchant(Enchantment.QUICK_CHARGE, 1, true);
+		List<Component> crossbowLore = List.of(
+				Component.text("Right click to load and launch a firework rocket", TextUtils.RIGHT_CLICK_TO),
+				Component.text("Left click while loaded to burst the firework right in front of you", TextUtils.LEFT_CLICK_TO)
+		);
+		bowMeta.lore(crossbowLore);
+		//bowMeta.addEnchant(Enchantment.QUICK_CHARGE, 1, true);
 		crossbow.setItemMeta(bowMeta);
 
 		ItemStack firework = new ItemStack(Material.FIREWORK_ROCKET, 64);
@@ -71,6 +77,9 @@ public class KitBurst extends Kit
 		private static final List<ShulkerBullet> ACTIVE_ROCKETS = new ArrayList<>();
 		//possible firework effects for fired fireworks
 		private static final List<FireworkEffect.Type> FIREWORK_EFFECTS;
+		private static final double SHOTGUN_DISTANCE = 7d;
+		private static final double SHOTGUN_DIST_SQR = SHOTGUN_DISTANCE * SHOTGUN_DISTANCE;
+		private static final double SHOTGUN_TARGETTING_ANGLE = Math.PI / 4d;
 
 		public static final int ROCKET_CD = 120;
 		public static final double ROCKET_BLAST_RADIUS = 2.5;
@@ -103,7 +112,7 @@ public class KitBurst extends Kit
 			//reduce knockback from fireworks
 			else if(event.getAttacker() instanceof Firework) {
 				//buff damage a bit
-				event.setFinalDamage(event.getFinalDamage() * 1.5d);
+				event.setFinalDamage(event.getFinalDamage() * 1.6d);
 				if(event.hasKnockback()) {
 					event.setKnockback(event.getKnockback().multiply(0.55d));
 				}
@@ -139,8 +148,8 @@ public class KitBurst extends Kit
 
 		@Override
 		public void onInteract(PlayerInteractEvent event) {
-			Material mat = event.getMaterial();
-			Player player = event.getPlayer();
+			final Material mat = event.getMaterial();
+			final Player player = event.getPlayer();
 
 			//stop them from accidentally placing the firework down and using it
 			if(event.useItemInHand() != Event.Result.DENY) {
@@ -155,6 +164,75 @@ public class KitBurst extends Kit
 					}
 				}
 			}
+
+			//left-clicking loaded crossbow: fire the shotgun firework
+			if (mat == Material.CROSSBOW && event.getAction().isLeftClick()) {
+				CrossbowMeta meta = (CrossbowMeta) event.getItem().getItemMeta();
+				if(meta.hasChargedProjectiles()) {
+					meta.setChargedProjectiles(null);
+					event.getItem().setItemMeta(meta);
+
+					fireShotgun(player);
+				}
+			}
+		}
+
+		private void fireShotgun(Player shooter) {
+			//get all players within the firing angle
+			Location shooterEyeLoc = shooter.getEyeLocation();
+			Vector direction = shooterEyeLoc.getDirection();
+
+			record targettedPlayer(Player target, double distance, double angle) {}
+			List<targettedPlayer> targetCandidates = new ArrayList<>(Bukkit.getOnlinePlayers().size() / 5);
+
+			//get all players caught in blast
+			for (Player potentialTarget : Main.getGame().getPlayers()) {
+				Location targetLoc = potentialTarget.getLocation();
+				double distSqr = targetLoc.distanceSquared(shooterEyeLoc);
+				if (distSqr <= SHOTGUN_DIST_SQR) {
+					Vector playerToPoint = targetLoc.subtract(shooterEyeLoc).toVector().normalize();
+					double angle = playerToPoint.angle(direction);
+
+					if (angle <= SHOTGUN_TARGETTING_ANGLE) {
+						targetCandidates.add(new targettedPlayer(potentialTarget, Math.sqrt(distSqr), angle));
+					}
+				}
+			}
+
+			for(targettedPlayer hit : targetCandidates) {
+				shooter.sendMessage("angle:" + hit.angle + "\ndistance:" + hit.distance + "\nplayer:" + hit.target.getName() + "\n==========");
+				//TODO: hurt hit players
+			}
+
+			//play the firework effect
+			Location spawnLoc = shooterEyeLoc.toVector().add(direction).toLocation(shooter.getWorld());
+			//spawnLoc.setDirection(direction); //firework needs to face this way for the effect??
+			Firework fireworkEntity = shooter.getWorld().spawn(spawnLoc, Firework.class);
+
+			//when looking straight, it kind of goes slightly higher than where the user is looking so add a slight
+			// downwards component the more straight they are facing
+			double y = 1d - Math.abs(direction.getY()); //0 = completely up or down, 1 = completely straight
+			y = 0.16d * y;
+			direction.setY(direction.getY() - y);
+			direction.normalize();
+
+			fireworkEntity.setVelocity(direction.multiply(2.5d)); //needed for firework effect direction
+			//set the effect(s)
+			FireworkMeta meta = fireworkEntity.getFireworkMeta();
+			meta.clearEffects();
+			FireworkEffect effect = FireworkEffect.builder()
+					.with(FireworkEffect.Type.BURST)
+					.flicker(true)
+					.trail(false)
+					.withColor(Main.getPlayerInfo(shooter).team.getColour())
+					.withFade(Color.BLACK)
+					.build();
+
+			meta.addEffect(effect);
+			fireworkEntity.setFireworkMeta(meta);
+
+			//explode immediately
+			fireworkEntity.detonate();
 		}
 
 		public void fireRocket(Player player) {
