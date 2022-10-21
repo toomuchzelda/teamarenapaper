@@ -49,7 +49,7 @@ public class KitBurst extends Kit
 		ItemMeta bowMeta = crossbow.getItemMeta();
 		List<Component> crossbowLore = List.of(
 				Component.text("Right click to load and launch a firework rocket", TextUtils.RIGHT_CLICK_TO),
-				Component.text("Left click while loaded to burst the firework right in front of you", TextUtils.LEFT_CLICK_TO)
+				Component.text("Left click while loaded to burst the firework right in front of you. Use it like a shotgun!", TextUtils.LEFT_CLICK_TO)
 		);
 		bowMeta.lore(crossbowLore);
 		//bowMeta.addEnchant(Enchantment.QUICK_CHARGE, 1, true);
@@ -76,12 +76,14 @@ public class KitBurst extends Kit
 		private static final List<ShulkerBullet> ACTIVE_ROCKETS = new ArrayList<>();
 		//possible firework effects for fired fireworks
 		private static final List<FireworkEffect.Type> FIREWORK_EFFECTS;
+
 		private static final List<Arrow> SHOTGUN_ARROWS = new LinkedList<>();
 		private static final Component SHOTUGUN_FIREWORK_NAME = Component.text("burstfw");
+		private static final double SHOTGUN_SELF_DAMAGE = 7d;
 
-		public static final int ROCKET_CD = 120;
-		public static final double ROCKET_BLAST_RADIUS = 2.5;
-		public static final DamageType ROCKET_HURT_SELF = new DamageType(DamageType.BURST_ROCKET,
+		static final int ROCKET_CD = 120;
+		private static final double ROCKET_BLAST_RADIUS = 2.5;
+		private static final DamageType ROCKET_HURT_SELF = new DamageType(DamageType.BURST_ROCKET,
 				"%Killed% was caught in their own Rocket explosion");
 
 		static {
@@ -126,10 +128,23 @@ public class KitBurst extends Kit
 					}
 
 					//if the burst is in their own explosion range un-cancel the damage
+					// and make them not the final attacker, so they don't get kill credit for it
 					if (event.getFinalAttacker() == event.getVictim()) {
 						event.setCancelled(false);
+						event.setFinalAttacker(null);
+						event.setDamageType(DamageType.BURST_FIREWORK_SELF);
+					}
+					else {
+						event.setDamageType(DamageType.BURST_FIREWORK);
 					}
 				}
+			}
+			else if (event.getAttacker() instanceof Arrow) { //shotgun
+				if(event.hasKnockback()) {
+					//make each shot combo off each other by adding victims velocity?
+					event.setKnockback(event.getKnockback().multiply(0.55d).add(event.getVictim().getVelocity()));
+				}
+				event.setDamageType(DamageType.BURST_SHOTGUN);
 			}
 		}
 
@@ -181,6 +196,7 @@ public class KitBurst extends Kit
 
 			//left-clicking loaded crossbow: fire the shotgun firework
 			if (mat == Material.CROSSBOW && event.getAction().isLeftClick()) {
+				Bukkit.broadcastMessage("left click for crossbow fired");
 				CrossbowMeta meta = (CrossbowMeta) event.getItem().getItemMeta();
 				if(meta.hasChargedProjectiles()) {
 					meta.setChargedProjectiles(null);
@@ -196,49 +212,63 @@ public class KitBurst extends Kit
 			final Vector direction = shooterEyeLoc.getDirection();
 
 			//play the firework effect
-			Vector fWorkDirection = direction.clone();
-			Location spawnLoc = shooterEyeLoc.toVector().add(fWorkDirection).toLocation(shooter.getWorld());
-			//spawnLoc.setDirection(direction); //firework needs to face this way for the effect??
-			Firework fireworkEntity = shooter.getWorld().spawn(spawnLoc, Firework.class);
+			{
+				Vector fWorkDirection = direction.clone();
+				Location spawnLoc = shooterEyeLoc.toVector().add(fWorkDirection).toLocation(shooter.getWorld());
+				//spawnLoc.setDirection(direction); //firework needs to face this way for the effect??
+				Firework fireworkEntity = shooter.getWorld().spawn(spawnLoc, Firework.class);
 
-			//when looking straight, it kind of goes slightly higher than where the user is looking so add a slight
-			// downwards component the more straight they are facing
-			double y = 1d - Math.abs(fWorkDirection.getY()); //0 = completely up or down, 1 = completely straight
-			y = 0.16d * y;
-			fWorkDirection.setY(fWorkDirection.getY() - y);
-			fWorkDirection.normalize();
+				//when looking straight, it kind of goes slightly higher than where the user is looking so add a slight
+				// downwards component the more straight they are facing
+				double y = 1d - Math.abs(fWorkDirection.getY()); //0 = completely up or down, 1 = completely straight
+				y = 0.16d * y;
+				fWorkDirection.setY(fWorkDirection.getY() - y);
+				fWorkDirection.normalize();
 
-			fireworkEntity.setVelocity(fWorkDirection.multiply(2d)); //needed for firework effect direction
-			//set the effect(s)
-			FireworkMeta meta = fireworkEntity.getFireworkMeta();
-			meta.clearEffects();
-			FireworkEffect effect = FireworkEffect.builder().with(FireworkEffect.Type.BURST).flicker(false).trail(false).withColor(Main.getPlayerInfo(shooter).team.getColour()).withFade(Color.BLACK)
-					.build();
+				fireworkEntity.setVelocity(fWorkDirection.multiply(2d)); //needed for firework effect direction
+				//set the effect(s)
+				FireworkMeta meta = fireworkEntity.getFireworkMeta();
+				meta.clearEffects();
+				FireworkEffect effect = FireworkEffect.builder().with(FireworkEffect.Type.BURST).flicker(false).trail(false).withColor(Main.getPlayerInfo(shooter).team.getColour()).withFade(Color.BLACK)
+						.build();
 
-			meta.addEffect(effect);
-			fireworkEntity.setFireworkMeta(meta);
-			//make this firework identifiable in damage events so can stop it doing any damage to entities
-			//fireworkEntity.customName(SHOTUGUN_FIREWORK_NAME);
-			fireworkEntity.customName(SHOTUGUN_FIREWORK_NAME);
-			fireworkEntity.setShooter(shooter);
+				meta.addEffect(effect);
+				fireworkEntity.setFireworkMeta(meta);
+				//make this firework identifiable in damage events so can stop it doing any damage to entities
+				//fireworkEntity.customName(SHOTUGUN_FIREWORK_NAME);
+				fireworkEntity.customName(SHOTUGUN_FIREWORK_NAME);
+				fireworkEntity.setShooter(shooter);
+
+				//explode immediately
+				fireworkEntity.detonate();
+			}
+
+			//shoot a bunch of arrows to act like the firework sparks and do damage
+			{
+				for (int i = 0; i < 20; i++) {
+					Arrow arrow = shooter.getWorld().spawnArrow(shooterEyeLoc, direction, 0.8f, 25f);
+					arrow.setShooter(shooter);
+					arrow.setPickupStatus(AbstractArrow.PickupStatus.CREATIVE_ONLY);
+					arrow.setGravity(false);
+					arrow.setPierceLevel(5);
+					arrow.setDamage(3d);
+					//TODO hide the arrow from all players
 
 
-			//explode immediately
-			fireworkEntity.detonate();
+					SHOTGUN_ARROWS.add(arrow);
+				}
+			}
 
+			//deal self damage to the burst
+			{
+				//something like a normal punch knockback but in the reverse direction of where they're looking,
+				// disregarding Y
+				Vector kb = direction.clone().setY(0d).normalize().multiply(0.4d).setY(0.4d).multiply(-1d);
 
-			//shoot a bunch of arrows to act like the firework sparks
-			for(int i = 0; i < 20; i++) {
-				Arrow arrow = shooter.getWorld().spawnArrow(shooterEyeLoc, direction, 0.8f, 25f);
-				arrow.setShooter(shooter);
-				arrow.setPickupStatus(AbstractArrow.PickupStatus.CREATIVE_ONLY);
-				arrow.setGravity(false);
-				arrow.setPierceLevel(5);
-				arrow.setDamage(3d);
-				//TODO hide the arrow from all players
-
-
-				SHOTGUN_ARROWS.add(arrow);
+				DamageEvent selfDmg = DamageEvent.newDamageEvent(
+						shooter, SHOTGUN_SELF_DAMAGE, DamageType.BURST_SHOTGUN_SELF, null, false);
+				selfDmg.setKnockback(kb);
+				Main.getGame().queueDamage(selfDmg);
 			}
 		}
 
@@ -303,7 +333,7 @@ public class KitBurst extends Kit
 			while(shotIter.hasNext()) {
 				Arrow arrow = shotIter.next();
 				Vector newVel = arrow.getVelocity().multiply(0.96);
-				if(newVel.lengthSquared() <= 0.09) { //0.3 squared
+				if(newVel.lengthSquared() <= 0.09 || arrow.getTicksLived() >= 17) { //0.3 squared
 					arrow.remove();
 					shotIter.remove();
 				}

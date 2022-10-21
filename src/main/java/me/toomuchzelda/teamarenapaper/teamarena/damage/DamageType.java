@@ -187,6 +187,18 @@ public class DamageType {
 	public static final DamageType BURST_ROCKET = new DamageType("Burst Rocket", "%Killed% was blown up by %Killer%'s rocket")
 			.setExplosion();
 
+	public static final DamageType BURST_FIREWORK = new DamageType("Burst Firework", "%Killed% was blown to shimmering, shining bits by %Killer%'s firework")
+			.setExplosion().setDamageSource(DamageSource.explosion((net.minecraft.world.entity.LivingEntity) null));
+
+	public static final DamageType BURST_FIREWORK_SELF = new DamageType("Badly Aimed Firework", "%Killed% became a part of their firework show")
+			.setIgnoreRate().setExplosion().setDamageSource(DamageSource.explosion((net.minecraft.world.entity.LivingEntity) null));
+
+	public static final DamageType BURST_SHOTGUN = new DamageType("Burst Blast", "%Killed% was killed by %Killer%'s firework shrapnel")
+			.setIgnoreRate().setProjectile();
+
+	public static final DamageType BURST_SHOTGUN_SELF = new DamageType("Burst Blast Self Harm", "%Killed% went trigger happy and blew their fingers off")
+			.setIgnoreRate().setIgnoreArmor().setExplosion().setDamageSource(DamageSource.explosion((net.minecraft.world.entity.LivingEntity) null));
+
 	public static final DamageType EXPLOSIVE_RPG = new DamageType("Explosive RPG", "%Killed% was caught in %Killer%'s RPG")
 			.setExplosion();
 
@@ -203,6 +215,7 @@ public class DamageType {
 
 	public static final DamageType TRIGGER_BOOM = new DamageType("Trigger BOOM", "%Killed% was caught in %Killer%'s explosion of madness")
 			.setExplosion().setIgnoreRate();
+
 
 	/*******************************************************************************************
 	 * 									GAMEMODE DAMAGETYPES

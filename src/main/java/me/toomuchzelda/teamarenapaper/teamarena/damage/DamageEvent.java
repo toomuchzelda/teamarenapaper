@@ -660,6 +660,10 @@ public class DamageEvent {
 		}
 	}
 
+	public void setFinalAttacker(Entity attacker) {
+		this.realAttacker = attacker;
+	}
+
 	public boolean hasKnockback() {
 		return knockback != null;
 	}

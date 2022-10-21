@@ -606,7 +606,7 @@ public abstract class TeamArena
 			playerCause = p;
 		}
 		if(!event.isCancelled()) {
-			if (event.getVictim() instanceof Player p) {
+			if (event.getVictim() instanceof final Player p) {
 				Ability[] abilities = Kit.getAbilities(p);
 				for (Ability ability : abilities) {
 					ability.onReceiveDamage(event);
@@ -625,7 +625,8 @@ public abstract class TeamArena
 					if(event.getFinalDamage() > 0) {
 						pinfo.logDamageReceived(p, event.getDamageType(), event.getFinalDamage(), event.getFinalAttacker(), gameTick);
 
-						if (event.getFinalAttacker() instanceof Player attacker) {
+						//give kill assist credit
+						if (event.getFinalAttacker() instanceof Player attacker && p != attacker) {
 							pinfo.getKillAssistTracker().addDamage(attacker, event.getFinalDamage());
 						}
 					}
@@ -701,7 +702,7 @@ public abstract class TeamArena
 				Inventories.openInventory(clicker, new SpectateInventory(teamFilter));
 				return;
 			}
-			//right click to glow teammates, left click to ping to nearby teammates
+			//right click to glow teammates
 			if(team.getHotbarItem().isSimilar(event.getItem())) {
 				Action action = event.getAction();
 				if(action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK) {
