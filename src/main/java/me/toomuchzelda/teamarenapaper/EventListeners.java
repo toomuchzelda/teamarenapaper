@@ -13,6 +13,7 @@ import com.destroystokyo.paper.profile.PlayerProfile;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.AsyncChatEvent;
+import io.papermc.paper.event.player.PlayerArmSwingEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
 import io.papermc.paper.event.player.PlayerItemFrameChangeEvent;
 import me.toomuchzelda.teamarenapaper.explosions.EntityExplosionInfo;
@@ -42,11 +43,13 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
+import org.bukkit.block.BlockFace;
 import org.bukkit.command.Command;
 import org.bukkit.craftbukkit.v1_19_R1.CraftWorldBorder;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
@@ -57,6 +60,7 @@ import org.bukkit.event.player.PlayerLoginEvent.Result;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.BoundingBox;
+import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
@@ -923,13 +927,45 @@ public class EventListeners implements Listener
 		}
 	}
 
+	/**
+	 * Refer to ServerGamePacketListenerImpl.handleAnimate(ServerboundSwingPacket)
+	 * When arm swing packets are received by server, they don't want to fire PlayerInteractEvent if the
+	 * player interacted with a block or entity. So they use a poorly considered raytrace to see if there
+	 * are any blocks/entities aimed at by the player.
+	 *
+	 * This prevents legitimate PlayerInteractEvents for LEFT_CLICK_AIR from firing if they are looking towards
+	 * an entity with 4.5 blocks (survival mode reach for entities is 3 blocks) and server-side raytraces aren't
+	 * always accurate.
+	 *
+	 * Within the same packet handler method this event is called, so try to figure out if the event should
+	 * actually be called here and call it.
+	 *
+	 * I want LEFT_CLICK_AIR interacts to fire for clicking air OR entities, so I will re-do the check they did here
+	 * and if it hit an entity (and was therefore not fired in the ServerGameListenerImpl) I will fire it myself.
+	 */
 	@EventHandler
-	public void onRecipeUnlock(PlayerRecipeDiscoverEvent e) {
+	public void playerArmSwing(PlayerArmSwingEvent event) {
+		final Player swinger = event.getPlayer();
+		final Location eyeLoc = swinger.getEyeLocation();
+		// 4.5d to replicate the raytrace from the internal packet listener
+		final double distance = swinger.getGameMode() == GameMode.CREATIVE ? 5d : 4.5d;
+
+		final RayTraceResult result = eyeLoc.getWorld().rayTrace(eyeLoc, eyeLoc.getDirection(), distance, FluidCollisionMode.NEVER, false, 0.1, entity -> entity != swinger);
+		//hit an entity, meaning the event wasn't called before so call it now
+		if(result != null && result.getHitEntity() != null) {
+			ItemStack usedItem = swinger.getEquipment().getItem(event.getHand());
+			PlayerInteractEvent interactEvent = new PlayerInteractEvent(swinger, Action.LEFT_CLICK_AIR, usedItem, null, BlockFace.SOUTH, event.getHand(), null);
+			interactEvent.callEvent();
+		}
+	}
+
+	@EventHandler
+	public void playerRecipeDiscover(PlayerRecipeDiscoverEvent e) {
 		e.setCancelled(true);
 	}
 
 	@EventHandler
-	public void onEat(PlayerItemConsumeEvent event){
+	public void playerItemConsume(PlayerItemConsumeEvent event){
 		Player player = event.getPlayer();
 		if(KitVenom.POISONED_ENTITIES.containsKey((LivingEntity)player)){
 			event.setCancelled(true);
@@ -958,13 +994,13 @@ public class EventListeners implements Listener
 			Component.text("               "),
 			TextUtils.getUselessRGBText("Blue Warfare", TextColor.color(0x060894), TextColor.color(0x1ad3f0)),
 			Component.space(),
-			TextUtils.getUselessRainbowText("[1.19]"),
+			TextUtils.getUselessRainbowText("[1.19.2]"),
 			Component.newline(),
 			TextUtils.getUselessRGBText("King of the Hill", TextColor.color(0x595959), TextColor.color(0xadadad)),
 			MOTD_SEPARATOR,
 			TextUtils.getUselessRGBText("Capture the Flag", TextColor.color(0x1d6e16), TextColor.color(0x00ff40)),
 			MOTD_SEPARATOR,
-			TextUtils.getUselessRGBText("UnbalancedBS", TextColor.color(0x631773), TextColor.color(0xff00f2))
+			TextUtils.getUselessRGBText("Search and Destroy", TextColor.color(0x631773), TextColor.color(0xff00f2))
 	);
 	@EventHandler
 	public void onMotd(PaperServerListPingEvent e) {
