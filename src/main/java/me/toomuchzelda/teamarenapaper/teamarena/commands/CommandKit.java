@@ -68,10 +68,10 @@ public class CommandKit extends CustomCommand {
             }
             default -> {
                 if (args.length == 1) {
-                    // we do a little trolling
                     Kit kit = Main.getGame().findKit(args[0]);
                     if (kit != null) {
-                        sender.sendMessage(Component.text("Did you mean: /kit set " + kit.getName() + "?").color(NamedTextColor.YELLOW));
+                        //sender.sendMessage(Component.text("Did you mean: /kit set " + kit.getName() + "?").color(NamedTextColor.YELLOW));
+						Main.getGame().selectKit(player, kit);
                     }
                 }
                 showUsage(sender);
@@ -91,7 +91,7 @@ public class CommandKit extends CustomCommand {
         } else if (args.length == 2 && args[0].equalsIgnoreCase("set")) {
             return Main.getGame().getKits().stream()
 					.filter(CommandDebug.kitPredicate)
-					.map(kit -> kit.getName().toLowerCase())
+					.map(Kit::getName)
 					.toList();
         }
 

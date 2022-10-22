@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.PacketListeners;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowImpaleStatus;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
@@ -28,8 +29,11 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 public class KitGhost extends Kit
 {
+	//for the Sound listener in PacketListener.java, register the name as a constant here
+	public static final String GHOST_NAME = "Ghost";
+
 	public KitGhost() {
-		super("Ghost", "Invisible, sneaky, has ender pearls, and sus O_O! Although it's not very strong, and can't" +
+		super(GHOST_NAME, "Invisible, sneaky, has ender pearls, and sus O_O! Although it's not very strong, and can't" +
 				" push enemies very far", Material.GHAST_TEAR);
 
 		//armor is already set to AIR in Kit.java
@@ -45,6 +49,8 @@ public class KitGhost extends Kit
 		setAbilities(new GhostAbility());
 
 		setCategory(KitCategory.STEALTH);
+
+		PacketListeners.ghostInstance = this;
 	}
 
 	@Override
@@ -57,14 +63,11 @@ public class KitGhost extends Kit
 		@Override
 		public void giveAbility(Player player) {
 			PlayerUtils.setInvisible(player, true);
-			//stop footstep sounds? doesn't work
-			//player.setSilent(true);
 		}
 
 		@Override
 		public void removeAbility(Player player) {
 			PlayerUtils.setInvisible(player, false);
-			//player.setSilent(false);
 		}
 
 		//infinite enderpearls on a cooldown

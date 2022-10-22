@@ -20,6 +20,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.GameState;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitGhost;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSpy;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.trigger.KitTrigger;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.trigger.TriggerCreeper;
@@ -30,6 +31,7 @@ import net.minecraft.network.protocol.game.*;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_19_R1.inventory.CraftItemStack;
@@ -37,9 +39,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 public class PacketListeners
 {
@@ -48,6 +48,35 @@ public class PacketListeners
 	 * but not those made by TeamArena
 	 */
 	public static boolean cancelDamageSounds = false;
+
+	/**
+	 * Lookup table for footstep sounds. Primarily wanted to cancel ghost walking sounds
+	 */
+	private static final boolean[] FOOTSTEP_SOUNDS;
+
+	/**
+	 * The KitGhost instance being used by the current game. Reference kept here for the ghost-cancelling footstep
+	 * listener. The value of this field is assigned in the KitGhost constructor.
+	 */
+	public static KitGhost ghostInstance;
+
+	static {
+		FOOTSTEP_SOUNDS = new boolean[Sound.values().length];
+		Arrays.fill(FOOTSTEP_SOUNDS, false);
+
+		for(Sound s : Sound.values()) {
+			if(s.getKey().getKey().toLowerCase().endsWith("step")) {
+				setFootstep(s, true);
+			}
+
+			setFootstep(Sound.ENTITY_PLAYER_SPLASH, true);
+			setFootstep(Sound.ENTITY_PLAYER_SWIM, true);
+		}
+	}
+
+	private static void setFootstep(Sound sound, boolean isFootstep) {
+		FOOTSTEP_SOUNDS[sound.ordinal()] = isFootstep;
+	}
 
 	public PacketListeners(JavaPlugin plugin) {
 
@@ -278,11 +307,12 @@ public class PacketListeners
 		});
 
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
-				PacketType.Play.Server.NAMED_SOUND_EFFECT, PacketType.Play.Server.ENTITY_SOUND)
+				PacketType.Play.Server.NAMED_SOUND_EFFECT, PacketType.Play.Server.ENTITY_SOUND,
+				PacketType.Play.Server.CUSTOM_SOUND_EFFECT)
 		{
 			@Override
 			public void onPacketSending(PacketEvent event) {
-				Sound sound = event.getPacket().getSoundEffects().read(0);
+				final Sound sound = event.getPacket().getSoundEffects().read(0);
 				if (cancelDamageSounds) {
 					if(sound == Sound.ENTITY_PLAYER_ATTACK_STRONG ||
 							sound == Sound.ENTITY_PLAYER_ATTACK_CRIT ||
@@ -302,6 +332,34 @@ public class PacketListeners
 					float newVolume = floats.read(0);
 					newVolume *= modifier;
 					floats.write(0, newVolume);
+				}
+				//handle ghost footsteps
+				//TODO check the sound category for player
+				else if (FOOTSTEP_SOUNDS[sound.ordinal()] && event.getPacketType() != PacketType.Play.Server.ENTITY_SOUND
+					&& Main.getGame().getGameState() == GameState.LIVE) {
+					StructureModifier<Integer> ints = event.getPacket().getIntegers();
+					final int x = ints.read(0);
+					final int y = ints.read(1);
+					final int z = ints.read(2);
+
+					if(ghostInstance != null) {
+						Set<Player> ghosts = ghostInstance.getActiveUsers();
+						for (Player ghost : ghosts) {
+							Location loc = ghost.getLocation();
+
+							//the coordinates in the packets are doubles, multiplied by 8 and type cast to int.
+							// prioritises the accuracy of the block rather than the decimal precision
+							int ghostX = (int) (loc.getX() * 8);
+							int ghostY = (int) (loc.getY() * 8);
+							int ghostZ = (int) (loc.getZ() * 8);
+
+							if (x == ghostX && y == ghostY && z == ghostZ) {
+								event.setCancelled(true);
+								//Bukkit.broadcastMessage("Cancelled ghost sound " + sound.name());
+								break;
+							}
+						}
+					}
 				}
 			}
 		});

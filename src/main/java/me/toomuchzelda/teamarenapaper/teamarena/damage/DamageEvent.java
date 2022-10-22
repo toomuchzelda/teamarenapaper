@@ -557,14 +557,14 @@ public class DamageEvent {
 					}
 
 					if (isCritical) {
-						p.getWorld().playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_CRIT, SoundCategory.PLAYERS, 1f, 1f);
+						p.getWorld().playSound(p, Sound.ENTITY_PLAYER_ATTACK_CRIT, SoundCategory.PLAYERS, 1f, 1f);
 					}
 					else if (isSweep) {
-						p.getWorld().playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 1f, 1f);
+						p.getWorld().playSound(p, Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 1f, 1f);
 						nmsPlayer.sweepAttack();
 					}
 					else if (wasSprinting) {
-						p.getWorld().playSound(p.getLocation(), Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK, SoundCategory.PLAYERS, 1f, 1f);
+						p.getWorld().playSound(p, Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK, SoundCategory.PLAYERS, 1f, 1f);
 					}
 					else {
 						Sound sound;
@@ -573,7 +573,7 @@ public class DamageEvent {
 						else
 							sound = Sound.ENTITY_PLAYER_ATTACK_WEAK;
 
-						p.getWorld().playSound(p.getLocation(), sound, SoundCategory.PLAYERS, 1f, 1f);
+						p.getWorld().playSound(p, sound, SoundCategory.PLAYERS, 1f, 1f);
 					}
 
 					//reset their attack cooldown
@@ -581,7 +581,7 @@ public class DamageEvent {
 				}
 				else if(damageType.is(DamageType.PROJECTILE)) {
 					Sound sound = Main.getPlayerInfo(p).getPreference(Preferences.BOW_HIT_SOUND);
-					p.playSound(p.getLocation(), sound, SoundCategory.PLAYERS, 2f, 1f);
+					p.playSound(p, sound, SoundCategory.PLAYERS, 2f, 1f);
 				}
 			}
 		}

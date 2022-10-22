@@ -223,14 +223,15 @@ public class EntityUtils {
                 PlayerUtils.sendPacket(p, packet);
 
             category = SoundCategory.PLAYERS;
-            if(!isSilent)
-                p.playSound(entity.getLocation(), sound, category, volume, pitch);
+            if(!isSilent) {
+				p.playSound(entity, sound, category, volume, pitch);
+			}
         }
 
         for (Player p : entity.getTrackedPlayers()) {
             PlayerUtils.sendPacket(p, packet);
             if(!isSilent)
-                p.playSound(entity.getLocation(), sound, category, volume, pitch);
+                p.playSound(entity, sound, category, volume, pitch);
         }
     }
 }
