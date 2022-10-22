@@ -8,6 +8,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitBurst;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
@@ -162,6 +163,10 @@ public class CommandDebug extends CustomCommand {
 				CustomExplosion explosion = new CustomExplosion(p.getLocation().add(0, 0.2, 0),
 						rad, guar, damage, minDamage, knockbackStrength, DamageType.EXPLOSION, p);
 				explosion.explode();
+			}
+			case "burst" -> {
+				KitBurst.BurstAbility.HIDE_SHOTGUN_ARROWS = !KitBurst.BurstAbility.HIDE_SHOTGUN_ARROWS;
+				sender.sendMessage("Set burst show arrows to: " + KitBurst.BurstAbility.HIDE_SHOTGUN_ARROWS);
 			}
 			default -> {
 				return false;
@@ -400,7 +405,7 @@ public class CommandDebug extends CustomCommand {
 	public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
 		if (args.length == 1) {
 			return Arrays.asList("hide", "gui", "guitest", "game", "setrank", "setteam", "setkit",
-				"setgame", "setnextgame", "votetest", "draw", "graffititest");
+				"setgame", "setnextgame", "votetest", "draw", "graffititest", "burst");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");

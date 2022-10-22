@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowImpaleStatus;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
@@ -39,7 +40,6 @@ public class KitGhost extends Kit
 		sword.setItemMeta(swordMeta);
 
 		ItemStack pearls = new ItemStack(Material.ENDER_PEARL);
-
 		setItems(sword, new ItemStack(Material.AIR), pearls);
 
 		setAbilities(new GhostAbility());
@@ -57,7 +57,7 @@ public class KitGhost extends Kit
 		@Override
 		public void giveAbility(Player player) {
 			PlayerUtils.setInvisible(player, true);
-			//stop footstep sounds?
+			//stop footstep sounds? doesn't work
 			//player.setSilent(true);
 		}
 
@@ -101,11 +101,11 @@ public class KitGhost extends Kit
 				}
 				if(pinfo.getPreference(Preferences.KIT_ACTION_BAR)) {
 					Component actionBarText = obf.append(Component.text("Hit by an arrow! " + arrowsInBody +
-							" arrows in you now!").decoration(TextDecoration.BOLD, TextDecoration.State.FALSE)).append(obf);
+							" arrows in you now!").decoration(TextDecoration.OBFUSCATED, TextDecoration.State.FALSE)).append(obf);
 					player.sendActionBar(actionBarText);
 				}
 
-				if (aa.getPierceLevel() > 0) {
+				if (aa.getPierceLevel() > 0 && ArrowImpaleStatus.isImpaling(aa)) {
 					//make arrows stick in the Ghost if it's a piercing projectile (normally doesn't)
 					player.setArrowsInBody(event.getPlayerVictim().getArrowsInBody() + 1);
 				}

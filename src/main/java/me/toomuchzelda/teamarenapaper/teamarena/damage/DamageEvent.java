@@ -411,7 +411,7 @@ public class DamageEvent {
 			updateNDT(dTimes);
 
 			//knockback
-			if(knockback != null) {
+			if(knockback != null && damageType.isKnockback()) {
 				if (victim instanceof Player player) {
 					//send knockback packet without modifying player's velocity
 					Vec3 vec = CraftVector.toNMS(knockback);
@@ -489,7 +489,7 @@ public class DamageEvent {
 			if(isDeath)
 				Main.getGame().handleDeath(this); // run this after to ensure the animations are seen by viewers
 			else if(attacker instanceof AbstractArrow aa && aa.getPierceLevel() == 0 &&
-					damageType.isProjectile()) {
+					damageType.isProjectile() && ArrowImpaleStatus.isImpaling(aa)) {
 				living.setArrowsInBody(living.getArrowsInBody() + 1);
 			}
 

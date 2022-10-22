@@ -194,7 +194,7 @@ public class DamageType {
 			.setIgnoreRate().setExplosion().setDamageSource(DamageSource.explosion((net.minecraft.world.entity.LivingEntity) null));
 
 	public static final DamageType BURST_SHOTGUN = new DamageType("Burst Blast", "%Killed% was killed by %Killer%'s firework shrapnel")
-			.setIgnoreRate().setProjectile();
+			.setIgnoreRate().setProjectile().setNoKnockback();
 
 	public static final DamageType BURST_SHOTGUN_SELF = new DamageType("Burst Blast Self Harm", "%Killed% went trigger happy and blew their fingers off")
 			.setIgnoreRate().setIgnoreArmor().setExplosion().setDamageSource(DamageSource.explosion((net.minecraft.world.entity.LivingEntity) null));

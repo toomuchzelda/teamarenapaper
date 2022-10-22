@@ -4,6 +4,7 @@ import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowImpaleStatus;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
@@ -64,7 +65,7 @@ public class KitBurst extends Kit
 						Component.text("Cooldown: " + ROCKET_CD/20 + " seconds", TextColors.LIGHT_BROWN))
 				.build();
 
-		setItems(sword, crossbow, rocketLauncher, firework);
+		setItems(sword, crossbow, /*rocketLauncher,*/ firework);
 
 		setAbilities(new BurstAbility());
 
@@ -78,8 +79,10 @@ public class KitBurst extends Kit
 		private static final List<FireworkEffect.Type> FIREWORK_EFFECTS;
 
 		private static final List<Arrow> SHOTGUN_ARROWS = new LinkedList<>();
+		//used for identifying the entity in events
 		private static final Component SHOTUGUN_FIREWORK_NAME = Component.text("burstfw");
 		private static final double SHOTGUN_SELF_DAMAGE = 7d;
+		public static boolean HIDE_SHOTGUN_ARROWS = true;
 
 		static final int ROCKET_CD = 120;
 		private static final double ROCKET_BLAST_RADIUS = 2.5;
@@ -115,8 +118,8 @@ public class KitBurst extends Kit
 
 				shooter.playSound(shooter, Sound.ENTITY_ARROW_HIT_PLAYER, 1.0f, 1.0f);
 			}
-			//reduce knockback from fireworks
 			else if(event.getAttacker() instanceof Firework fw) {
+				//if it's damage from the firework used for shotgun visual effect
 				if (SHOTUGUN_FIREWORK_NAME.equals(fw.customName())) {
 					event.setCancelled(true);
 				}
@@ -140,10 +143,6 @@ public class KitBurst extends Kit
 				}
 			}
 			else if (event.getAttacker() instanceof Arrow) { //shotgun
-				if(event.hasKnockback()) {
-					//make each shot combo off each other by adding victims velocity?
-					event.setKnockback(event.getKnockback().multiply(0.55d).add(event.getVictim().getVelocity()));
-				}
 				event.setDamageType(DamageType.BURST_SHOTGUN);
 			}
 		}
@@ -196,7 +195,7 @@ public class KitBurst extends Kit
 
 			//left-clicking loaded crossbow: fire the shotgun firework
 			if (mat == Material.CROSSBOW && event.getAction().isLeftClick()) {
-				Bukkit.broadcastMessage("left click for crossbow fired");
+				//Bukkit.broadcastMessage("left click for crossbow fired");
 				CrossbowMeta meta = (CrossbowMeta) event.getItem().getItemMeta();
 				if(meta.hasChargedProjectiles()) {
 					meta.setChargedProjectiles(null);
@@ -245,15 +244,26 @@ public class KitBurst extends Kit
 
 			//shoot a bunch of arrows to act like the firework sparks and do damage
 			{
-				for (int i = 0; i < 20; i++) {
+				for (int i = 0; i < 40; i++) {
 					Arrow arrow = shooter.getWorld().spawnArrow(shooterEyeLoc, direction, 0.8f, 25f);
 					arrow.setShooter(shooter);
 					arrow.setPickupStatus(AbstractArrow.PickupStatus.CREATIVE_ONLY);
 					arrow.setGravity(false);
 					arrow.setPierceLevel(5);
-					arrow.setDamage(3d);
-					//TODO hide the arrow from all players
+					arrow.setDamage(0.75d);
+					arrow.setSilent(true);
 
+					if(HIDE_SHOTGUN_ARROWS) {
+						for(Player viewer : Bukkit.getOnlinePlayers()) {
+							viewer.hideEntity(Main.getPlugin(), arrow);
+						}
+					}
+
+					//set so won't leave arrows in victims bodies.
+					// Oridinarily it wouldn't since the DamageType is being replaced in the listener
+					// However, if the burst fires, dies, and then hits an arrow, it will leave one because
+					// the burst is no longer considered a current ability user
+					ArrowImpaleStatus.setImpaling(arrow, false);
 
 					SHOTGUN_ARROWS.add(arrow);
 				}
