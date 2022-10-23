@@ -11,7 +11,7 @@ import java.util.*;
 //maybe not needed, uhhhhhh
 public class ArrowPierceManager {
 
-    private static final Map<AbstractArrow, ArrowInfo> PIERCED_ENTITIES_MAP = new LinkedHashMap<>();
+    private static final Map<AbstractArrow, ArrowInfo> PIERCED_ENTITIES_MAP = new WeakHashMap<>();
 
     public static void addOrUpdateInfo(AbstractArrow arrow) {
         ArrowInfo info = PIERCED_ENTITIES_MAP.get(arrow);
@@ -96,10 +96,5 @@ public class ArrowPierceManager {
 
         public ArrowInfo() {
         }
-    }
-
-    //just in case
-    public static void cleanUp() {
-        PIERCED_ENTITIES_MAP.entrySet().removeIf(entry -> !entry.getKey().isValid());
     }
 }

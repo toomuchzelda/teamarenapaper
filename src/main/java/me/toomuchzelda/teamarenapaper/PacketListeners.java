@@ -334,9 +334,11 @@ public class PacketListeners
 					floats.write(0, newVolume);
 				}
 				//handle ghost footsteps
-				//TODO check the sound category for player
-				else if (FOOTSTEP_SOUNDS[sound.ordinal()] && event.getPacketType() != PacketType.Play.Server.ENTITY_SOUND
-					&& Main.getGame().getGameState() == GameState.LIVE) {
+				else if (event.getPacketType() != PacketType.Play.Server.ENTITY_SOUND &&
+						Main.getGame().getGameState() == GameState.LIVE &&
+						FOOTSTEP_SOUNDS[sound.ordinal()] &&
+						event.getPacket().getSoundCategories().read(0) == EnumWrappers.SoundCategory.PLAYERS)
+				{
 					StructureModifier<Integer> ints = event.getPacket().getIntegers();
 					final int x = ints.read(0);
 					final int y = ints.read(1);
@@ -355,7 +357,6 @@ public class PacketListeners
 
 							if (x == ghostX && y == ghostY && z == ghostZ) {
 								event.setCancelled(true);
-								//Bukkit.broadcastMessage("Cancelled ghost sound " + sound.name());
 								break;
 							}
 						}

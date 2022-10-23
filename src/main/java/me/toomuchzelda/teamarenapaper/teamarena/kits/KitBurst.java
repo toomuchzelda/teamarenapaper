@@ -343,7 +343,7 @@ public class KitBurst extends Kit
 			while(shotIter.hasNext()) {
 				Arrow arrow = shotIter.next();
 				Vector newVel = arrow.getVelocity().multiply(0.96);
-				if(newVel.lengthSquared() <= 0.09 || arrow.getTicksLived() >= 17) { //0.3 squared
+				if(/*newVel.lengthSquared() <= 0.09 || */arrow.getTicksLived() >= 17) { //0.3 squared
 					arrow.remove();
 					shotIter.remove();
 				}

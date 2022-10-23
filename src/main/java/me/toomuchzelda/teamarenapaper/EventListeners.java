@@ -169,14 +169,11 @@ public class EventListeners implements Listener
 		//every 3 minutes
 		int count = event.getTickNumber() % (3 * 60  *20);
 		if(count == 0) {
-			ArrowPierceManager.cleanUp();
-		}
-		else if(count == 10) {
 			for(PlayerInfo pinfo : Main.getPlayerInfos()) {
 				pinfo.getMetadataViewer().cleanUp();
 			}
 		}
-		else if(count == 20) {
+		else if(count == 10) {
 			FakeHitboxManager.cleanUp();
 		}
 
