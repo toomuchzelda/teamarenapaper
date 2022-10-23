@@ -52,10 +52,6 @@ import java.util.*;
  * @author onett425
  */
 public class KitVenom extends Kit {
-	public static final HashMap<LivingEntity, Integer> POISONED_ENTITIES = new HashMap<>();
-	//keep track of all the bukkit tasks so we can cancel them in the event of some disaster or crash
-	public static final Set<BukkitTask> LEAP_TASKS = new HashSet<>();
-
 	private static final ItemStack POTION_OF_POISON = ItemBuilder.of(Material.POTION)
 			.meta(PotionMeta.class, potionMeta -> {
 				potionMeta.setBasePotionData(new PotionData(PotionType.POISON));
@@ -87,16 +83,11 @@ public class KitVenom extends Kit {
 
 	public static class VenomAbility extends Ability
 	{
+		public static final HashMap<LivingEntity, Integer> POISONED_ENTITIES = new HashMap<>();
+
 		//clean up
 		public void unregisterAbility() {
 			POISONED_ENTITIES.clear();
-
-			Iterator<BukkitTask> iter = LEAP_TASKS.iterator();
-			while(iter.hasNext()) {
-				BukkitTask task = iter.next();
-				task.cancel();
-				iter.remove();
-			}
 		}
 
 		//When Poison is applied
@@ -169,7 +160,6 @@ public class KitVenom extends Kit {
 							public void run() {
 								if (activeDuration <= 0) {
 									cancel();
-									LEAP_TASKS.remove(this);
 								}
 								else {
 									activeDuration--;
@@ -202,8 +192,6 @@ public class KitVenom extends Kit {
 								}
 							}
 						}.runTaskTimer(Main.getPlugin(), 0, 0);
-
-						LEAP_TASKS.add(runnable);
 					}
 				}
 			}
@@ -222,6 +210,11 @@ public class KitVenom extends Kit {
 				}
 			}
 		}
+
+		public static boolean isVenomBlockingEating(LivingEntity eater) {
+			return POISONED_ENTITIES.containsKey(eater);
+		}
+
 		//Ensures poisonedEntities cannot be healed/eat
 		@Override
 		public void onTick(){

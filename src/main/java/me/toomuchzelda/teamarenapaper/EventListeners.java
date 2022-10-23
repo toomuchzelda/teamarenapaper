@@ -732,7 +732,7 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void entityRegainHealth(EntityRegainHealthEvent event) {
 		if(event.getEntity() instanceof LivingEntity living) {
-			if(KitVenom.POISONED_ENTITIES.containsKey(living)){
+			if(KitVenom.VenomAbility.isVenomBlockingEating(living)) {
 				event.setCancelled(true);
 			}
 
@@ -963,9 +963,12 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void playerItemConsume(PlayerItemConsumeEvent event){
-		Player player = event.getPlayer();
-		if(KitVenom.POISONED_ENTITIES.containsKey((LivingEntity)player)){
+		if(KitVenom.VenomAbility.isVenomBlockingEating(event.getPlayer())) {
 			event.setCancelled(true);
+		}
+
+		for(Ability a : Kit.getAbilities(event.getPlayer())) {
+			a.onConsumeItem(event);
 		}
 	}
 

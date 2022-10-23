@@ -1,7 +1,17 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
+import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Material;
+import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
@@ -29,5 +39,53 @@ public class KitTrooper extends Kit {
         setItems(sword, gapples);
 
 		setCategory(KitCategory.FIGHTER);
+
+		this.setAbilities(new TrooperAbility());
     }
+
+	public static class TrooperAbility extends Ability
+	{
+		private static final int GAPPLE_COOLDOWN_TIME = 15 * 20; //15 secs
+		private static final String COOLDOWN_MSG_KEY = "troopercd";
+
+		/**
+		 * Set a cooldown on eating golden apples
+		 */
+		@Override
+		public void onConsumeItem(PlayerItemConsumeEvent event) {
+			if(!event.isCancelled()) {
+				if(event.getItem().getType() == Material.GOLDEN_APPLE) {
+					final int ticksLeft = event.getPlayer().getCooldown(Material.GOLDEN_APPLE);
+					if(ticksLeft > 0) { //still has cooldown - cancel event
+						event.setCancelled(true);
+					}
+					else { //just ate - set cooldown
+						event.getPlayer().setCooldown(Material.GOLDEN_APPLE, GAPPLE_COOLDOWN_TIME);
+
+					}
+				}
+			}
+			else if(KitVenom.VenomAbility.isVenomBlockingEating(event.getPlayer())) { //event was cancelled before reaching this handler: check if it's venom
+				event.getPlayer().sendMessage(Component.text("You're too sick to eat right now!", TextColor.color(100, 166, 58)));
+			}
+		}
+
+		/**
+		 * Tell them if they try to eat a golden apple while they can't
+		 */
+		@Override
+		public void onInteract(PlayerInteractEvent event) {
+			final Player eater = event.getPlayer();
+			final int ticksLeft = eater.getCooldown(Material.GOLDEN_APPLE);
+			if(event.getMaterial() == Material.GOLDEN_APPLE && ticksLeft > 0 && ticksLeft < (GAPPLE_COOLDOWN_TIME - 20) &&
+					event.getAction().isRightClick() &&
+					Main.getPlayerInfo(eater).messageHasCooldowned(COOLDOWN_MSG_KEY, 3 * 20)) {
+
+				eater.sendMessage(Component.text("You're too full! You can eat another apple in " +
+								(ticksLeft / 20) + " seconds.",	NamedTextColor.LIGHT_PURPLE));
+
+				event.getPlayer().playSound(event.getPlayer(), Sound.ENTITY_DONKEY_EAT, SoundCategory.PLAYERS, 1.5f, 1f);
+			}
+		}
+	}
 }

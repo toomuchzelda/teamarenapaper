@@ -202,7 +202,7 @@ public class DamageType {
 	public static final DamageType EXPLOSIVE_RPG = new DamageType("Explosive RPG", "%Killed% was caught in %Killer%'s RPG")
 			.setExplosion();
 
-	public static final DamageType EXPLOSIVE_GRENADE = new DamageType("Explosive Grenade", "%Killed% thought %Killer%'s grenade was a cozy bonfire and stood near it")
+	public static final DamageType EXPLOSIVE_GRENADE = new DamageType("Explosive Grenade", "%Killed% was blown up by %Killer%'s grenades")
 			.setExplosion();
 
 	public static final DamageType TRIGGER_UNSTABLE_EXPLODE = new DamageType("Trigger Unstable Explosion", "%Killed% tried to hug %Killer%, who exploded from instability")

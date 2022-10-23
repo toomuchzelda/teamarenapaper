@@ -126,7 +126,10 @@ public class PlayerInfo
 	}
 
 	/**
-	 * see if enough time has passed for a message to be sent to player (no spam)
+	 * see if enough time has passed for a message to be sent to player (no spam).
+	 *
+	 * this was intended for chat message cooldowns but can really be used to measure if any amount of time
+	 * has passed for something for a player.
 	 * @param message message, or a key representing the message, to be sent
 	 * @param cooldown number of ticks in between each message sending
 	 * @return the meaning of the universe

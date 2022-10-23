@@ -10,10 +10,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
-import org.bukkit.event.player.PlayerDropItemEvent;
-import org.bukkit.event.player.PlayerInteractEntityEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.*;
 
 import javax.annotation.Nullable;
 
@@ -129,6 +126,11 @@ public abstract class Ability {
 	public void onPlaceBlock(BlockPlaceEvent event) {}
 
 	public void onMove(PlayerMoveEvent event) {}
+
+	/**
+	 * When ability user consumes an item. May be cancelled at this point.
+	 */
+	public void onConsumeItem(PlayerItemConsumeEvent event) {}
 
 	public void onTeamSwitch(Player player, @Nullable TeamArenaTeam oldTeam, @Nullable TeamArenaTeam newTeam) {}
 }

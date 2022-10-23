@@ -19,6 +19,6 @@ public class TeamArenaExplosion extends CustomExplosion
 
 	@Override
 	protected Collection<? extends Entity> getEntitiesToConsider() {
-		return Main.getGame().getPlayers();
+		return Main.getGame().getWorld().getLivingEntities();
 	}
 }
