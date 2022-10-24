@@ -276,17 +276,29 @@ public abstract class TeamArena
 	}
 
 	public void cleanUp() {
-		for (Player player : gameWorld.getPlayers()) {
-			//should have been teleported already in the team arena constructor, but sometimes fails?
-			if (Main.getGame() != null) {
+		if (Main.getGame() != null) {
+			//teleport everyone to new world before unloading: worlds must have no players in them to be unloaded
+			for(Player player : gameWorld.getPlayers()) {
 				if(!player.teleport(Main.getGame().spawnPos)) {
 					player.kick(Component.text("Something went horribly wrong!!! Oh my god!!! OH MY GOOODDDD!!!!!!!!", NamedTextColor.YELLOW));
 					Main.logger().severe("Teleporting " + player.getName() + " in cleanUp() fallback failed");
 				}
-			} /*else {
-				player.kick(TextUtils.getRGBManiacComponent(Component.text("Server closed uwu"), Style.empty(), 0d));
-			}*/
+			}
 		}
+		//no next game, plugin is (should be) disabling
+		// kick everyone so the world can unload and the folder be deleted.
+		else {
+			if(Main.getPlugin().isEnabled()) {
+				Main.logger().severe("Plugin is enabled but next game is null!");
+			}
+
+			for (Player player : Bukkit.getOnlinePlayers()) {
+				player.kick(TextUtils.getRGBManiacComponent(
+						Component.text("Row row, fight the power! (Server is closing (Merging with Mineplex (jk)))"),
+						Style.empty(), 0));
+			}
+		}
+
 		if (Bukkit.unloadWorld(gameWorld, false)) {
 			FileUtils.delete(tempWorldFile);
 		} else {

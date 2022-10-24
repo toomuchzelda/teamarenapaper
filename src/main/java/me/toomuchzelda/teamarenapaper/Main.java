@@ -10,7 +10,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.commands.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy.SearchAndDestroy;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.FileUtils;
 import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
@@ -54,7 +53,7 @@ public final class Main extends JavaPlugin
 
 		int initialCapacity = Bukkit.getMaxPlayers();
 		playerInfo = Collections.synchronizedMap(new LinkedHashMap<>(initialCapacity));
-		playerIdLookup = Collections.synchronizedMap(new HashMap<>(initialCapacity));
+		playerIdLookup = Collections.synchronizedMap(new LinkedHashMap<>(initialCapacity));
 
 		DatabaseManager.init();
 

@@ -367,7 +367,10 @@ public class EventListeners implements Listener
 		PlayerInfo pinfo = Main.removePlayerInfo(leaver);
 
 		//save preferences when leaving
-		DBSetPreferences.asyncSavePlayerPreferences(leaver, pinfo);
+		// do not do this if plugin is disabling, as that is handled in Main.onDisable()
+		if(Main.getPlugin().isEnabled()) {
+			DBSetPreferences.asyncSavePlayerPreferences(leaver, pinfo);
+		}
 
 		Main.playerIdLookup.remove(leaver.getEntityId());
 	}

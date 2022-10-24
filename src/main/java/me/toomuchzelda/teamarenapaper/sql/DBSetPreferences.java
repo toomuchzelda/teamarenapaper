@@ -61,7 +61,7 @@ public class DBSetPreferences extends DBOperation<Void>
 
 	@Override
 	protected String getLogMessage() {
-		return "uuid:" + uuid.toString() + "preferenceMap:" + preferenceMap.toString();
+		return "uuid:" + uuid.toString() + " preferenceMap:" + preferenceMap.toString();
 	}
 
 	public static void savePlayerPreferences(Collection<? extends Player> players) {
@@ -72,6 +72,7 @@ public class DBSetPreferences extends DBOperation<Void>
 			}
 			catch (SQLException e) {
 				Main.logger().severe("Failed to save preferences for " + player.getName());
+				e.printStackTrace();
 			}
 		}
 	}
