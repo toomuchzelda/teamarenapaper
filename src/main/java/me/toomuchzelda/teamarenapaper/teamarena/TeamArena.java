@@ -148,6 +148,9 @@ public abstract class TeamArena
 		dest.deleteOnExit();
 		this.tempWorldFile = dest;
 		WorldCreator worldCreator = new WorldCreator(dest.getName());
+		//specify a ChunkGenerator that doesn't generate anything to ensure no new chunks are generated in game.
+		worldCreator.generator(VoidChunkGenerator.INSTANCE);
+
 		gameWorld = worldCreator.createWorld();
 
 		//load the map config into real game stuff (teams, and sub-game things)
@@ -178,13 +181,6 @@ public abstract class TeamArena
 		gameWorld.setGameRule(GameRule.RANDOM_TICK_SPEED, 0);
 		gameWorld.setGameRule(GameRule.SHOW_DEATH_MESSAGES, false);
 		gameWorld.setDifficulty(Difficulty.NORMAL);
-
-		/*if (mapInfo.weatherType == 2)
-			gameWorld.setThundering(true);
-		else if (mapInfo.weatherType == 1)
-			gameWorld.setStorm(true);
-		else
-			gameWorld.setClearWeatherDuration(6000); //5 minutes*/
 
 		//force disable relative projectile velocity (projectiles inheriting the velocity of their shooter)
 		((CraftWorld) gameWorld).getHandle().paperConfig().misc.disableRelativeProjectileVelocity = true;
