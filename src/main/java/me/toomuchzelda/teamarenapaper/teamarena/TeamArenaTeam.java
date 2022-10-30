@@ -377,6 +377,7 @@ public class TeamArenaTeam
 	}
 
 	public void unregister() {
+		PlayerScoreboard.removeGlobalTeam(paperTeam);
 		paperTeam.unregister();
 	}
 

@@ -43,8 +43,8 @@ public class PlayerScoreboard
 		// attach a dirty listener to detect team unregisters
 		var nms = (ServerScoreboard) ((CraftScoreboard) SCOREBOARD).getHandle();
 		nms.addDirtyListener(() -> {
-			for (var team : GLOBAL_TEAMS) {
-				var teamName = getNameUnsafe(team);
+			for (Team team : GLOBAL_TEAMS) {
+				String teamName = getNameUnsafe(team);
 				if (!removedTeams.add(teamName))
 					continue;
 				if (nms.getPlayerTeam(teamName) == null) {
