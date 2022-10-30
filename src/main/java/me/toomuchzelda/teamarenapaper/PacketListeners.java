@@ -337,28 +337,27 @@ public class PacketListeners
 				else if (event.getPacketType() != PacketType.Play.Server.ENTITY_SOUND &&
 						Main.getGame().getGameState() == GameState.LIVE &&
 						FOOTSTEP_SOUNDS[sound.ordinal()] &&
-						event.getPacket().getSoundCategories().read(0) == EnumWrappers.SoundCategory.PLAYERS)
+						event.getPacket().getSoundCategories().read(0) == EnumWrappers.SoundCategory.PLAYERS &&
+						ghostInstance != null)
 				{
 					StructureModifier<Integer> ints = event.getPacket().getIntegers();
 					final int x = ints.read(0);
 					final int y = ints.read(1);
 					final int z = ints.read(2);
 
-					if(ghostInstance != null) {
-						Set<Player> ghosts = ghostInstance.getActiveUsers();
-						for (Player ghost : ghosts) {
-							Location loc = ghost.getLocation();
+					Set<Player> ghosts = ghostInstance.getActiveUsers();
+					for (Player ghost : ghosts) {
+						Location loc = ghost.getLocation();
 
-							//the coordinates in the packets are doubles, multiplied by 8 and type cast to int.
-							// prioritises the accuracy of the block rather than the decimal precision
-							int ghostX = (int) (loc.getX() * 8);
-							int ghostY = (int) (loc.getY() * 8);
-							int ghostZ = (int) (loc.getZ() * 8);
+						//the coordinates in the packets are doubles, multiplied by 8 and type cast to int.
+						// prioritises the accuracy of the block rather than the decimal precision
+						int ghostX = (int) (loc.getX() * 8);
+						int ghostY = (int) (loc.getY() * 8);
+						int ghostZ = (int) (loc.getZ() * 8);
 
-							if (x == ghostX && y == ghostY && z == ghostZ) {
-								event.setCancelled(true);
-								break;
-							}
+						if (x == ghostX && y == ghostY && z == ghostZ) {
+							event.setCancelled(true);
+							break;
 						}
 					}
 				}

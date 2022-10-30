@@ -619,23 +619,21 @@ public abstract class TeamArena
 					ability.onReceiveDamage(event);
 				}
 
-				if (!event.isCancelled()) {
+				if (!event.isCancelled() && event.getFinalDamage() > 0) {
 					PlayerInfo pinfo = Main.getPlayerInfo(p);
 					//spawn damage indicator hologram
 					// divide by two to display as hearts
-					Component damageText = Component.text(MathUtils.round(event.getFinalDamage() / 2, 2), pinfo.team.getRGBTextColor(), TextDecoration.BOLD);
+					Component damageText = Component.text(MathUtils.round(event.getFinalDamage() / 2, 2), NamedTextColor.YELLOW, TextDecoration.BOLD);
 					Location spawnLoc = p.getLocation();
 					spawnLoc.add(0, MathUtils.randomRange(1.4, 2), 0);
-					DamageIndicatorHologram hologram = new DamageIndicatorHologram(spawnLoc, PlayerUtils.getDamageIndicatorViewers(p, playerCause), damageText);
+					new DamageIndicatorHologram(spawnLoc, PlayerUtils.getDamageIndicatorViewers(p, playerCause), damageText);
 
 					//add to their damage log
-					if(event.getFinalDamage() > 0) {
-						pinfo.logDamageReceived(p, event.getDamageType(), event.getFinalDamage(), event.getFinalAttacker(), gameTick);
+					pinfo.logDamageReceived(p, event.getDamageType(), event.getFinalDamage(), event.getFinalAttacker(), gameTick);
 
-						//give kill assist credit
-						if (event.getFinalAttacker() instanceof Player attacker && p != attacker) {
-							pinfo.getKillAssistTracker().addDamage(attacker, event.getFinalDamage());
-						}
+					//give kill assist credit
+					if (event.getFinalAttacker() instanceof Player attacker && p != attacker) {
+						pinfo.getKillAssistTracker().addDamage(attacker, event.getFinalDamage());
 					}
 				}
 			}

@@ -26,14 +26,14 @@ public class DamageIndicatorHologram extends PacketHologram {
 
 	@Override
     public void tick() {
-        double yPos = Math.sin((double) age / 3);
+        double yPos = Math.sin((double) age / 4);
         double horiPercent = ((double) age * 0.03);
         double x = horizontalDirection.getX() * horiPercent;
         double z = horizontalDirection.getZ() * horiPercent;
 
         this.move(startLoc.clone().add(x, yPos, z));
 
-        if(age++ == 15) {
+        if(age++ >= 15) {
 			this.remove();
 		}
     }
