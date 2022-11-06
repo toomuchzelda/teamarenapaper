@@ -151,7 +151,7 @@ public class KitGhost extends Kit
 						event.setFinalDamage(Math.min(Math.abs(shieldHearts / 2d), 8d));
 
 						//also play a "shield broke" sound
-						ghost.getWorld().playSound(loc, Sound.BLOCK_GLASS_BREAK, 1.5f, 0.8f);
+						ghost.getWorld().playSound(loc, Sound.BLOCK_GLASS_BREAK, 2f, 0.8f);
 						ghost.getWorld().playSound(loc, Sound.BLOCK_GLASS_BREAK, 1.5f, 1.1f);
 					}
 					else {
@@ -162,6 +162,8 @@ public class KitGhost extends Kit
 					newProgress = MathUtils.clamp(0f, 1f, newProgress);
 					sinfo.bar.progress(newProgress);
 
+					//play shield damage sound at an inaccurate location
+					loc.add(MathUtils.randomRange(-2.5d, 2.5d), 0, MathUtils.randomRange(-2.5d, 2.5d));
 					ghost.getWorld().playSound(loc, Sound.ENTITY_SKELETON_DEATH, SoundCategory.PLAYERS, 1f, 2f);
 
 					shielded = true;
