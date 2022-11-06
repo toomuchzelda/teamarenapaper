@@ -118,6 +118,14 @@ public class DamageCalculator
 		return d;
 	}
 
+	/**
+	 * Get the amount of damage done to a LivingEntity for a given raw damage and DamageType, considering their armour
+	 * and armour enchantments.
+	 * @param damageType
+	 * @param damage
+	 * @param victim
+	 * @return
+	 */
 	public static double calcArmorReducedDamage(DamageType damageType, double damage, LivingEntity victim) {
 		//get the amount of damage blocked by their base armor (armor bars above their hotbar)
 		double percentBaseBlocked = 1d - DamageCalculator.calcBlockedDamagePercent(damageType, victim);

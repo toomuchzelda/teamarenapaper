@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowImpaleStatus;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
@@ -24,10 +25,7 @@ import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.Vector;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 import static me.toomuchzelda.teamarenapaper.teamarena.kits.KitBurst.BurstAbility.ROCKET_CD;
 
@@ -75,19 +73,23 @@ public class KitBurst extends Kit
 	public static class BurstAbility extends Ability
 	{
 		private static final List<ShulkerBullet> ACTIVE_ROCKETS = new ArrayList<>();
-		//possible firework effects for fired fireworks
-		private static final List<FireworkEffect.Type> FIREWORK_EFFECTS;
-
-		private static final List<Arrow> SHOTGUN_ARROWS = new LinkedList<>();
-		//used for identifying the entity in events
-		private static final Component SHOTUGUN_FIREWORK_NAME = Component.text("burstfw");
-		private static final double SHOTGUN_SELF_DAMAGE = 7d;
-		public static boolean HIDE_SHOTGUN_ARROWS = true;
-
 		static final int ROCKET_CD = 120;
 		private static final double ROCKET_BLAST_RADIUS = 2.5;
 		private static final DamageType ROCKET_HURT_SELF = new DamageType(DamageType.BURST_ROCKET,
 				"%Killed% was caught in their own Rocket explosion");
+
+		//possible firework effects for fired fireworks
+		private static final List<FireworkEffect.Type> FIREWORK_EFFECTS;
+
+		private static final List<Arrow> SHOTGUN_ARROWS = new LinkedList<>();
+		private static final Map<Component, Set<Entity>> BLAST_HIT_ENTITIES = new HashMap<>();
+
+		//used for identifying the entity in events
+		private static final Component SHOTUGUN_FIREWORK_NAME = Component.text("burstfw");
+		private static final double SHOTGUN_SELF_DAMAGE = 7d;
+		private static final double SHOTGUN_MAX_DAMAGE = 17d;
+		private static final int SHOTGUN_ARROW_LIVE_TICKS = 17;
+		public static boolean HIDE_SHOTGUN_ARROWS = true;
 
 		static {
 			FIREWORK_EFFECTS = new ArrayList<>(FireworkEffect.Type.values().length);
@@ -106,6 +108,8 @@ public class KitBurst extends Kit
 				shotIter.next().remove();
 				shotIter.remove();
 			}
+
+			BLAST_HIT_ENTITIES.clear();
 		}
 
 		@Override
@@ -142,8 +146,24 @@ public class KitBurst extends Kit
 					}
 				}
 			}
-			else if (event.getAttacker() instanceof Arrow) { //shotgun
-				event.setDamageType(DamageType.BURST_SHOTGUN);
+			else if (event.getAttacker() instanceof Arrow arrow) { //may be shotgun
+				//this check is necessary in addition to the projectilehitevent one because of how damage events are
+				// queued and processed later in the tick.
+				Set<Entity> shotgunHitEntities = BLAST_HIT_ENTITIES.get(arrow.customName());
+				if(shotgunHitEntities != null) { //definitely shotgun
+					if(!shotgunHitEntities.add(event.getVictim())) {
+						event.setCancelled(true);
+					}
+					else { //hit
+						//calculate damage linearly on the arrow's ticks lived.
+						double mult = SHOTGUN_ARROW_LIVE_TICKS - arrow.getTicksLived();
+						mult /= SHOTGUN_ARROW_LIVE_TICKS;
+						mult = SHOTGUN_MAX_DAMAGE * mult;
+
+						event.setRawDamage(mult);
+					}
+					event.setDamageType(DamageType.BURST_SHOTGUN);
+				}
 			}
 		}
 
@@ -228,7 +248,8 @@ public class KitBurst extends Kit
 				//set the effect(s)
 				FireworkMeta meta = fireworkEntity.getFireworkMeta();
 				meta.clearEffects();
-				FireworkEffect effect = FireworkEffect.builder().with(FireworkEffect.Type.BURST).flicker(false).trail(false).withColor(Main.getPlayerInfo(shooter).team.getColour()).withFade(Color.BLACK)
+				FireworkEffect effect = FireworkEffect.builder().with(FireworkEffect.Type.BURST).flicker(false)
+						.trail(false).withColor(Main.getPlayerInfo(shooter).team.getColour()).withFade(Color.BLACK)
 						.build();
 
 				meta.addEffect(effect);
@@ -240,18 +261,29 @@ public class KitBurst extends Kit
 
 				//explode immediately
 				fireworkEntity.detonate();
+
+				//play firework launch sound
+				shooter.getWorld().playSound(shooter, Sound.ENTITY_FIREWORK_ROCKET_SHOOT, SoundCategory.PLAYERS, 2f, 0.5f);
 			}
 
 			//shoot a bunch of arrows to act like the firework sparks and do damage
 			{
+				//each arrow will be given a unique name like this. this is to prevent multiple arrows hitting
+				// the same player consecutively, by being able to identify the shotgun blast that an arrow came from
+				// in the projectile hit event.
+				final Component arrowShotId = Component.text(shooter.getName() + TeamArena.getGameTick());
+				BLAST_HIT_ENTITIES.put(arrowShotId, new HashSet<>(5));
+
 				for (int i = 0; i < 40; i++) {
 					Arrow arrow = shooter.getWorld().spawnArrow(shooterEyeLoc, direction, 0.8f, 25f);
 					arrow.setShooter(shooter);
-					arrow.setPickupStatus(AbstractArrow.PickupStatus.CREATIVE_ONLY);
+					arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
 					arrow.setGravity(false);
 					arrow.setPierceLevel(5);
-					arrow.setDamage(0.75d);
+					arrow.setDamage(2d);
 					arrow.setSilent(true);
+
+					arrow.customName(arrowShotId);
 
 					if(HIDE_SHOTGUN_ARROWS) {
 						for(Player viewer : Bukkit.getOnlinePlayers()) {
@@ -260,7 +292,7 @@ public class KitBurst extends Kit
 					}
 
 					//set so won't leave arrows in victims bodies.
-					// Oridinarily it wouldn't since the DamageType is being replaced in the listener
+					// Ordinarily it wouldn't since the DamageType is being replaced in the listener
 					// However, if the burst fires, dies, and then hits an arrow, it will leave one because
 					// the burst is no longer considered a current ability user
 					ArrowImpaleStatus.setImpaling(arrow, false);
@@ -342,12 +374,12 @@ public class KitBurst extends Kit
 			var shotIter = SHOTGUN_ARROWS.iterator();
 			while(shotIter.hasNext()) {
 				Arrow arrow = shotIter.next();
-				Vector newVel = arrow.getVelocity().multiply(0.96);
-				if(/*newVel.lengthSquared() <= 0.09 || */arrow.getTicksLived() >= 17) { //0.3 squared
+				if(arrow.getTicksLived() >= SHOTGUN_ARROW_LIVE_TICKS) {
 					arrow.remove();
 					shotIter.remove();
 				}
 				else {
+					Vector newVel = arrow.getVelocity().multiply(0.96);
 					arrow.setVelocity(newVel);
 				}
 			}
@@ -357,9 +389,19 @@ public class KitBurst extends Kit
 		public void onProjectileHit(ProjectileHitEvent event) {
 			//all arrows shot by burst are from the shotgun
 			// despawn immediately if hit a block
-			if(event.getEntity() instanceof Arrow arrow && event.getHitBlock() != null) {
-				arrow.remove();
-				event.setCancelled(true);
+			if (event.getEntity() instanceof Arrow arrow) {
+				if (event.getHitBlock() != null) {
+					arrow.remove();
+					event.setCancelled(true);
+				}
+				else if (event.getHitEntity() != null) {
+					//see if this arrow is from a shotgun blast, and if the hit player was hit by this blast already
+					Set<Entity> set = BLAST_HIT_ENTITIES.get(arrow.customName());
+					//is a shotgun blast and hit an already hit victim
+					if(set != null && set.contains(event.getHitEntity())) {
+						event.setCancelled(true);
+					}
+				}
 			}
 		}
 

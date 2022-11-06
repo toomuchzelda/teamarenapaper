@@ -218,6 +218,7 @@ public class DamageEvent {
 					double[] damages = DamageCalculator.calcItemDamageOnEntity(living, item, damageType, critical, victim);
 					damageEvent.baseDamage = damages[0];
 					damageEvent.enchantDamage = damages[1];
+					damageEvent.rawDamage = damages[0] + damages[1];
 					finalDamage = damages[2];
 
 					alreadyCalcedArmor = true;
@@ -707,6 +708,24 @@ public class DamageEvent {
 
 	public void setFinalDamage(double damage) {
 		this.finalDamage = damage;
+	}
+
+	/** Get 'raw' damage done, meaning damage before armour calculations on the victim */
+	public double getRawDamage() {
+		return rawDamage;
+	}
+
+	/** Set the 'raw' damage done, meaning damage before victim's armour calculations. This was cause the calculations
+	 * to be re-done and the finalDamage to be re-assigned.
+	 * The DamageEvent's current DamageType is important! It will affect the outcome. */
+	public void setRawDamage(double rawDamage) {
+		if(this.victim instanceof LivingEntity living) {
+			this.finalDamage = DamageCalculator.calcArmorReducedDamage(this.damageType, rawDamage, living);
+		}
+		else {
+			this.finalDamage = rawDamage;
+		}
+		this.rawDamage = rawDamage;
 	}
 
 	public void setDamageType(DamageType damageType) {

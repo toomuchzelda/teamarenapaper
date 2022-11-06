@@ -164,7 +164,6 @@ public class KitGhost extends Kit
 
 					ghost.getWorld().playSound(loc, Sound.ENTITY_SKELETON_DEATH, SoundCategory.PLAYERS, 1f, 2f);
 
-
 					shielded = true;
 				}
 			}
