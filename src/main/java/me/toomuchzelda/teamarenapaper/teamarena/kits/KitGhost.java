@@ -80,8 +80,8 @@ public class KitGhost extends Kit
 
 		private static final Component BOSSBAR_NAME = Component.text("Aetherial shield", NamedTextColor.AQUA);
 		private static final Component BOSSBAR_RED_NAME = Component.text("Aetherial shield" , NamedTextColor.DARK_RED);
-		private static final int SHIELD_COOLDOWN_TIME = 5 * 20; //8 secs
-		private static final float SHIELD_REGEN_PER_TICK = 1f / 15f / 20f; //15 seconds until full
+		private static final int SHIELD_COOLDOWN_TIME = 5 * 20; //5 secs
+		private static final float SHIELD_REGEN_PER_TICK = 1f / 10f / 20f; //10 seconds until full
 		private static final Map<Player, ShieldInfo> SHIELDS = new LinkedHashMap<>();
 
 		@Override
@@ -164,7 +164,7 @@ public class KitGhost extends Kit
 
 					//play shield damage sound at an inaccurate location
 					loc.add(MathUtils.randomRange(-2.5d, 2.5d), 0, MathUtils.randomRange(-2.5d, 2.5d));
-					ghost.getWorld().playSound(loc, Sound.ENTITY_SKELETON_DEATH, SoundCategory.PLAYERS, 1f, 2f);
+					ghost.getWorld().playSound(loc, Sound.ENTITY_SKELETON_DEATH, SoundCategory.PLAYERS, 1f, 2.1f);
 
 					shielded = true;
 				}

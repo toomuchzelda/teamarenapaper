@@ -70,13 +70,11 @@ public abstract class Ability {
 
 	/**
 	 * when the user launches a projectile (not a bow)
-	 * @param event
 	 */
 	public void onLaunchProjectile(PlayerLaunchProjectileEvent event) {}
 
 	/**
 	 * when user shoots a bow
-	 * @param event
 	 */
 	public void onShootBow(EntityShootBowEvent event) {}
 
@@ -110,7 +108,6 @@ public abstract class Ability {
 
 	/**
 	 * When a projectile shot by this user hits an entity
-	 * @param event
 	 * @deprecated Try to use ProjectileHitEvent instead
 	 */
 	public void onProjectileHitEntity(ProjectileCollideEvent event) {}
@@ -131,6 +128,8 @@ public abstract class Ability {
 	 * When ability user consumes an item. May be cancelled at this point.
 	 */
 	public void onConsumeItem(PlayerItemConsumeEvent event) {}
+
+	public void onSwapHandItems(PlayerSwapHandItemsEvent event) {}
 
 	public void onTeamSwitch(Player player, @Nullable TeamArenaTeam oldTeam, @Nullable TeamArenaTeam newTeam) {}
 }

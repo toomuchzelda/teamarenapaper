@@ -1,9 +1,5 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
-import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.ProtocolManager;
-import com.comphenix.protocol.events.PacketContainer;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
@@ -12,10 +8,15 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaExplosion;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
+import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
@@ -45,7 +46,6 @@ Overall lower cooldowns and less burst damage, so it has more consistent damage 
  * @author onett425
  */
 public class KitExplosive extends Kit {
-	// yet another shade of yellow? why??
 	private static final TextColor ITEM_YELLOW = TextColor.color(255, 241, 120);
 
 	public static final ItemStack GRENADE = ItemBuilder.of(Material.FIREWORK_STAR)
@@ -75,7 +75,12 @@ public class KitExplosive extends Kit {
 		public static final int RPG_RECHARGE_TIME = 240;
 		public static final int RPG_MAX_IN_INV = 2;
 		public static final int RPG_CD = 10;
-		public static final double RPG_BLAST_RADIUS = 4.5;
+		public static final double RPG_BLAST_RADIUS = 8;
+		private static final int RPG_CHARGEUP_TIME = 2 * 20; //2 secs
+
+		private static final Component RPG_CHARGE_BOSSBAR_NAME = Component.text("CHARGING", NamedTextColor.YELLOW, TextDecoration.BOLD);
+		private static final Component RPG_CHARGE_ALMOST_READY = Component.text("CHARGING", NamedTextColor.GOLD, TextDecoration.BOLD);
+
 
 		public static final int GRENADE_RECHARGE_TIME = 80;
 		public static final int GRENADE_MAX_ACTIVE = 3;
@@ -84,13 +89,18 @@ public class KitExplosive extends Kit {
 
 		public static final DamageType SELF_RPG = new DamageType(DamageType.EXPLOSIVE_RPG, "%Killed% shot their RPG a bit too close to themselves");
 
-		private record RPGInfo(Arrow rpgArrow, Egg rpgEgg, Player thrower, int spawnTime) {}
+		//info for charging up rpgs
+		private record RPGChargeInfo(Player thrower, BossBar bossbar, int throwTime) {}
+
+		//info for thrown rpgs
+		private record RPGInfo(Arrow rpgArrow, Player thrower, int spawnTime) {}
 		private record GrenadeInfo(Item grenade, Player thrower, Color color, int spawnTime) {}
 
 		//ACTIVE handles behavior of active explosives
 		//RECHARGES handles giving players explosives
 		private static final Map<Player, List<GrenadeInfo>> ACTIVE_GRENADES = new LinkedHashMap<>();
 		private final Map<Player, Integer> GRENADE_RECHARGES = new LinkedHashMap<>();
+		private static final Map<Player, RPGChargeInfo> CHARGING_UP_RPGS = new LinkedHashMap<>();
 		private static final Map<Player, List<RPGInfo>> ACTIVE_RPG = new LinkedHashMap<>();
 		private final Map<Player, Integer> RPG_RECHARGES = new LinkedHashMap<>();
 
@@ -107,6 +117,7 @@ public class KitExplosive extends Kit {
 				rpgs.forEach(rpgInfo -> rpgInfo.rpgArrow().remove());
 				rpgs.clear();
 			});
+			CHARGING_UP_RPGS.clear();
 			ACTIVE_RPG.clear();
 			RPG_RECHARGES.clear();
 		}
@@ -121,6 +132,10 @@ public class KitExplosive extends Kit {
 		public void removeAbility(Player player) {
 			GRENADE_RECHARGES.remove(player);
 			RPG_RECHARGES.remove(player);
+
+			RPGChargeInfo cinfo = CHARGING_UP_RPGS.remove(player);
+			if(cinfo != null)
+				player.hideBossBar(cinfo.bossbar());
 
 			List<RPGInfo> rpgs = ACTIVE_RPG.remove(player);
 			if(rpgs != null) {
@@ -148,20 +163,18 @@ public class KitExplosive extends Kit {
 		public void onTick() {
 			//Handling Grenade Behavior
 			var allGrenadesIter = ACTIVE_GRENADES.entrySet().iterator();
-			while(allGrenadesIter.hasNext()) {
+			while (allGrenadesIter.hasNext()) {
 				var playerGrenadesIter = allGrenadesIter.next().getValue().iterator();
-				while(playerGrenadesIter.hasNext()) {
-					GrenadeInfo grenadeInfo = playerGrenadesIter.next();
+				while (playerGrenadesIter.hasNext()) {
+					final GrenadeInfo grenadeInfo = playerGrenadesIter.next();
 
-					World world = grenadeInfo.thrower().getWorld();
-					Item grenade = grenadeInfo.grenade();
-					Particle.DustOptions particleOptions = new Particle.DustOptions(grenadeInfo.color(), 1);
+					final Item grenade = grenadeInfo.grenade();
+					final Particle.DustOptions particleOptions = new Particle.DustOptions(grenadeInfo.color(), 1);
 
 					//Explode grenade if fuse time passes
 					if (TeamArena.getGameTick() - grenadeInfo.spawnTime >= GRENADE_FUSE_TIME) {
 						//real thrower info is passed on through grenade's thrower field
-						TeamArenaExplosion explosion = new TeamArenaExplosion(null, 2, 0.5,
-								9, 3.5, 0.35, DamageType.EXPLOSIVE_GRENADE, grenade);
+						TeamArenaExplosion explosion = new TeamArenaExplosion(null, 2, 0.5, 10, 3.5, 0.35, DamageType.EXPLOSIVE_GRENADE, grenade);
 						explosion.explode();
 
 						grenade.remove();
@@ -170,14 +183,13 @@ public class KitExplosive extends Kit {
 					//Grenade particles
 					else {
 						//Particles for when grenade has landed
+						World world = grenadeInfo.thrower().getWorld();
 						if (grenade.isOnGround()) {
-							world.spawnParticle(Particle.REDSTONE, grenade.getLocation(),
-									1, 0.25, 0.25, 0.25, particleOptions);
+							world.spawnParticle(Particle.REDSTONE, grenade.getLocation(), 1, 0.25, 0.25, 0.25, particleOptions);
 						}
 						//Particles for when grenade is in motion
 						else {
-							world.spawnParticle(Particle.REDSTONE, grenade.getLocation(),
-									1, particleOptions);
+							world.spawnParticle(Particle.REDSTONE, grenade.getLocation(), 1, particleOptions);
 						}
 					}
 				}
@@ -185,31 +197,73 @@ public class KitExplosive extends Kit {
 
 			//Handling RPG Behavior
 			var allRpgIter = ACTIVE_RPG.entrySet().iterator();
-			while(allRpgIter.hasNext()) {
+			while (allRpgIter.hasNext()) {
 				var playerRpgIter = allRpgIter.next().getValue().iterator();
 				while (playerRpgIter.hasNext()) {
-					RPGInfo rpgInfo = playerRpgIter.next();
+					final RPGInfo rpgInfo = playerRpgIter.next();
 
-					World world = rpgInfo.thrower().getWorld();
-					Player thrower = rpgInfo.thrower();
-					Arrow rpgArrow = rpgInfo.rpgArrow();
-					Egg rpgEgg = rpgInfo.rpgEgg();
-
-					rpgEgg.remove();
+					final World world = rpgInfo.thrower().getWorld();
+					final Player thrower = rpgInfo.thrower();
+					final Arrow rpgArrow = rpgInfo.rpgArrow();
+					final Location arrowLoc = rpgArrow.getLocation();
 
 					//Explode RPG if it hits block or player
-					if (rpgArrow.isInBlock() || rpgArrow.isOnGround() || rpgArrow.isDead()) {
-						rpgBlast(rpgArrow.getLocation(), thrower);
+					if (rpgArrow.isInBlock() || rpgArrow.isOnGround() || rpgArrow.isDead() ||
+							rpgArrow.getTicksLived() >= 38) {
+						rpgBlast(arrowLoc, thrower);
 
-						world.playSound(rpgArrow.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 2.0f, 1.0f);
-						world.spawnParticle(Particle.EXPLOSION_LARGE, rpgArrow.getLocation(), 1);
+						//world.playSound(rpgArrow.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 2.0f, 1.0f);
+						//world.spawnParticle(Particle.EXPLOSION_LARGE, rpgArrow.getLocation(), 1);
 						rpgArrow.remove();
 						playerRpgIter.remove();
 					}
 					//RPG particle trail
 					else {
-						if ((TeamArena.getGameTick() - rpgInfo.spawnTime()) % 2 == 0) {
-							world.spawnParticle(Particle.EXPLOSION_LARGE, rpgArrow.getLocation(), 1);
+						final int currentTick = TeamArena.getGameTick();
+						if ((currentTick - rpgInfo.spawnTime()) % 5 == 0) {
+							world.spawnParticle(Particle.EXPLOSION_LARGE, arrowLoc, 1);
+						}
+
+						if((currentTick - rpgInfo.spawnTime()) % 2 == 0) {
+							//last use of the loc so can mutate it here
+							ParticleUtils.colouredRedstone(arrowLoc, Main.getPlayerInfo(thrower).team.getColour(), 1d, 3f);
+						}
+					}
+				}
+			}
+
+			//Tick RPG launches that are charging up
+			{
+				var iter = CHARGING_UP_RPGS.entrySet().iterator();
+				final int currentTick = TeamArena.getGameTick();
+				while(iter.hasNext()) {
+					var entry = iter.next();
+					final Player thrower = entry.getKey();
+					final RPGChargeInfo cinfo = entry.getValue();
+					final int timeSince = currentTick - cinfo.throwTime();
+
+					if(timeSince % 5 == 0) {
+						thrower.getWorld().playSound(thrower, Sound.BLOCK_ANVIL_PLACE, SoundCategory.PLAYERS, 0.75f, 1.1f);
+					}
+
+					if(timeSince % 2 == 0) {
+						EntityUtils.playCritEffect(thrower);
+					}
+
+					if(timeSince >= RPG_CHARGEUP_TIME) {
+						iter.remove();
+						thrower.hideBossBar(cinfo.bossbar());
+
+						rpgLaunch(thrower);
+					}
+					//still charging: increment the progress bar
+					else {
+						float newProgress = ((float) timeSince) / (float) RPG_CHARGEUP_TIME;
+						newProgress = MathUtils.clamp(0f, 1f, newProgress);
+						cinfo.bossbar().progress(newProgress);
+
+						if(newProgress >= 0.5f) {
+							cinfo.bossbar().name(RPG_CHARGE_ALMOST_READY);
 						}
 					}
 				}
@@ -233,8 +287,8 @@ public class KitExplosive extends Kit {
 
 		public void rpgBlast(Location explodeLoc, Player owner) {
 			//self damage multiplier does not matter here, is overridden in attempted damage
-			SelfHarmingExplosion explosion = new SelfHarmingExplosion(explodeLoc, RPG_BLAST_RADIUS, 1d,
-					8.1, 0.18, 1.575, DamageType.EXPLOSIVE_RPG, owner, 5,0, SELF_RPG);
+			SelfHarmingExplosion explosion = new SelfHarmingExplosion(explodeLoc, RPG_BLAST_RADIUS, 1.3d,
+					24, 1, 1.7, DamageType.EXPLOSIVE_RPG, owner, 1.2d, 1, SELF_RPG);
 			explosion.explode();
 		}
 
@@ -269,38 +323,65 @@ public class KitExplosive extends Kit {
 
 		@Override
 		public void onLaunchProjectile(PlayerLaunchProjectileEvent event) {
-			Material mat = event.getItemStack().getType();
-			Projectile proj = event.getProjectile();
-			Player shooter = event.getPlayer();
-			World world = shooter.getWorld();
-			PlayerInventory inv = shooter.getInventory();
-
+			final Player shooter = event.getPlayer();
 			//Launching RPG
-			if (mat == Material.EGG) {
-				//Only apply CD when thrower is not in creative mode to allow for admin abuse
-				if (shooter.getGameMode() != GameMode.CREATIVE) {
-					shooter.setCooldown(Material.EGG, RPG_CD);
+			if (event.getItemStack().getType() == Material.EGG) {
+				event.setCancelled(true);
+				//make sure they're not already charging up a shot
+				if(!CHARGING_UP_RPGS.containsKey(shooter)) {
+					shooter.getWorld().playSound(shooter, Sound.ENTITY_TNT_PRIMED, SoundCategory.PLAYERS, 3f, 1.1f);
+
+					//start charging their rpg charge
+					BossBar chargeBar = BossBar.bossBar(RPG_CHARGE_BOSSBAR_NAME, 0f, BossBar.Color.YELLOW,
+							BossBar.Overlay.PROGRESS);
+					shooter.showBossBar(chargeBar);
+					CHARGING_UP_RPGS.put(shooter,
+							new RPGChargeInfo(shooter, chargeBar, TeamArena.getGameTick()));
 				}
-				//Resetting RPG recharge time
-				if (ItemUtils.getMaterialCount(inv, RPG.getType()) == RPG_MAX_IN_INV) {
-					RPG_RECHARGES.put(shooter, TeamArena.getGameTick());
-				}
-
-				//Replacing the Egg with an arrow to get the appropriate trajectory
-				Vector vel = proj.getVelocity();
-				Location loc = proj.getLocation();
-				Egg rpgEgg = (Egg) proj;
-
-				Arrow rpgArrow = world.spawn(loc, Arrow.class, arrow -> {
-					arrow.setVelocity(vel);
-					arrow.setSilent(true);
-					arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
-					arrow.setShooter(shooter);
-				});
-
-				List<RPGInfo> list = ACTIVE_RPG.computeIfAbsent(shooter, player -> new LinkedList<>());
-				list.add(new RPGInfo(rpgArrow, rpgEgg, shooter, TeamArena.getGameTick()));
 			}
+		}
+
+		private void rpgLaunch(final Player shooter) {
+			World world = shooter.getWorld();
+
+			//Only apply CD when thrower is not in creative mode to allow for admin abuse
+			if (shooter.getGameMode() != GameMode.CREATIVE) {
+				shooter.setCooldown(Material.EGG, RPG_CD);
+			}
+			//Resetting RPG recharge time
+			PlayerInventory inv = shooter.getInventory();
+			//remove one egg for launch rpg
+			{
+				List<ItemStack> eggs = ItemUtils.getItemsInInventory(RPG, inv);
+				if(eggs.size() == 0) {
+					Main.logger().severe(shooter.getName() + " is firing an RPG but does not have any eggs in their inventory?!");
+					Thread.dumpStack();
+				}
+				else {
+					ItemStack eggStack = eggs.get(0);
+					eggStack.setAmount(eggStack.getAmount() - 1);
+				}
+			}
+
+			if (ItemUtils.getMaterialCount(inv, RPG.getType()) == RPG_MAX_IN_INV) {
+				RPG_RECHARGES.put(shooter, TeamArena.getGameTick());
+			}
+
+			Location loc = shooter.getEyeLocation();
+			Vector vel = loc.getDirection().multiply(1.2d);
+
+			Arrow rpgArrow = world.spawn(loc, Arrow.class, arrow -> {
+				arrow.setVelocity(vel);
+				arrow.setSilent(true);
+				arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
+				arrow.setShooter(shooter);
+			});
+
+			//sound effect
+			shooter.getWorld().playSound(shooter, Sound.ENTITY_FIREWORK_ROCKET_LAUNCH, SoundCategory.PLAYERS, 1.5f, 0.5f);
+
+			List<RPGInfo> list = ACTIVE_RPG.computeIfAbsent(shooter, player -> new LinkedList<>());
+			list.add(new RPGInfo(rpgArrow, shooter, TeamArena.getGameTick()));
 		}
 
 		@Override

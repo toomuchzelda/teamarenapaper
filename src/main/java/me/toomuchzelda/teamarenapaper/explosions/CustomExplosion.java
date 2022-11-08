@@ -80,12 +80,10 @@ public class CustomExplosion
 		final World world = centre.getWorld();
 		final Vector locVector = centre.toVector();
 
-		final double explosionRadius = this.explosionRadius;
-		final double guaranteedRadius = this.guaranteeHitRadius;
-		final double explRadSqr = explosionRadius * explosionRadius;
-		final double guarRadSqr = guaranteedRadius * guaranteedRadius;
+		final double explRadSqr = this.explosionRadius * this.explosionRadius;
+		final double guarRadSqr = this.guaranteeHitRadius * this.guaranteeHitRadius;
 
-		record HitInfo(Entity entity, Vector hitVector, double distance, double damage) {};
+		record HitInfo(Entity entity, Vector hitVector, double distance, double damage) {}
 
 		List<HitInfo> hitEntities = new LinkedList<>();
 		Collection<? extends Entity> allEntities = this.getEntitiesToConsider();

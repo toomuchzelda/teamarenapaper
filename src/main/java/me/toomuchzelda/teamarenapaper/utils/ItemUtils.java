@@ -50,9 +50,9 @@ public class ItemUtils {
 	}
 
 	/**
-	 * get the instance of this item that is in the inventory
+	 * Get the instances of this item that is in the inventory
 	 */
-	public static @NotNull List<ItemStack> getItemInInventory(@NotNull ItemStack originalItem, Inventory inventory) {
+	public static @NotNull List<ItemStack> getItemsInInventory(@NotNull ItemStack originalItem, Inventory inventory) {
 		List<ItemStack> itemsFound = new ArrayList<>();
 
 		for(ItemStack item : inventory) {

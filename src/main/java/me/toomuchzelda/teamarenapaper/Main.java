@@ -75,7 +75,13 @@ public final class Main extends JavaPlugin
 		// Plugin shutdown logic
 
 		//synchronously save all player's preferences
-		DBSetPreferences.savePlayerPreferences(Bukkit.getOnlinePlayers());
+		try {
+			DBSetPreferences.savePlayerPreferences(Bukkit.getOnlinePlayers());
+		}
+		catch (Exception e) {
+			logger().severe("Could not synchronously save player preferences");
+			e.printStackTrace();
+		}
 
 		// delete temporarily loaded map if any
 		if (teamArena != null) {

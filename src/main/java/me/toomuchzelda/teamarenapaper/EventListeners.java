@@ -1011,14 +1011,13 @@ public class EventListeners implements Listener
 	}
 
 	@EventHandler
-	public void onItemFrame(PlayerItemFrameChangeEvent e) {
-		if (e.getPlayer().getGameMode() != GameMode.CREATIVE)
-			e.setCancelled(true);
+	public void playerItemFrameChange(PlayerItemFrameChangeEvent event) {
+		if (event.getAction() != PlayerItemFrameChangeEvent.ItemFrameChangeAction.ROTATE)
+			event.setCancelled(true);
 	}
 
 	@EventHandler
 	public void onSwapMainHand(PlayerSwapHandItemsEvent e) {
 		Main.getGame().graffiti.onSwapHandItems(e);
 	}
-
 }
