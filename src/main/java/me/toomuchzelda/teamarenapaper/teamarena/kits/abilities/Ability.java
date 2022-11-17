@@ -10,6 +10,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.*;
 
 import javax.annotation.Nullable;
@@ -130,6 +132,12 @@ public abstract class Ability {
 	public void onConsumeItem(PlayerItemConsumeEvent event) {}
 
 	public void onSwapHandItems(PlayerSwapHandItemsEvent event) {}
+
+	public void onSwitchItemSlot(PlayerItemHeldEvent event) {}
+
+	public void onInventoryClick(InventoryClickEvent event) {}
+
+	public void onInventoryDrag(InventoryDragEvent event) {}
 
 	public void onTeamSwitch(Player player, @Nullable TeamArenaTeam oldTeam, @Nullable TeamArenaTeam newTeam) {}
 }

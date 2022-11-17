@@ -1,4 +1,4 @@
-package me.toomuchzelda.teamarenapaper.teamarena.kits;
+package me.toomuchzelda.teamarenapaper.teamarena.kits.explosive;
 
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import me.toomuchzelda.teamarenapaper.Main;
@@ -7,6 +7,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaExplosion;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
@@ -19,8 +20,15 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.*;
+import org.bukkit.entity.AbstractArrow;
+import org.bukkit.entity.Arrow;
+import org.bukkit.entity.Item;
+import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerItemHeldEvent;
+import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -28,7 +36,10 @@ import org.bukkit.inventory.meta.FireworkEffectMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.Vector;
 
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 /*
 //Kit Explosive:
 // Primary: Utility
@@ -45,7 +56,8 @@ Overall lower cooldowns and less burst damage, so it has more consistent damage 
 /**
  * @author onett425
  */
-public class KitExplosive extends Kit {
+public class KitExplosive extends Kit
+{
 	private static final TextColor ITEM_YELLOW = TextColor.color(255, 241, 120);
 
 	public static final ItemStack GRENADE = ItemBuilder.of(Material.FIREWORK_STAR)
@@ -72,15 +84,14 @@ public class KitExplosive extends Kit {
 		//recharge time = time to get +1 item back
 		//max active = max # of items you can have active at a time
 		//max in inv = max # of items you can have in inventory
-		public static final int RPG_RECHARGE_TIME = 240;
+		public static final int RPG_RECHARGE_TIME = 16 * 20;
 		public static final int RPG_MAX_IN_INV = 2;
-		public static final int RPG_CD = 10;
+		public static final int RPG_CD = 7 * 20;
 		public static final double RPG_BLAST_RADIUS = 8;
 		private static final int RPG_CHARGEUP_TIME = 2 * 20; //2 secs
 
 		private static final Component RPG_CHARGE_BOSSBAR_NAME = Component.text("CHARGING", NamedTextColor.YELLOW, TextDecoration.BOLD);
 		private static final Component RPG_CHARGE_ALMOST_READY = Component.text("CHARGING", NamedTextColor.GOLD, TextDecoration.BOLD);
-
 
 		public static final int GRENADE_RECHARGE_TIME = 80;
 		public static final int GRENADE_MAX_ACTIVE = 3;
@@ -242,8 +253,8 @@ public class KitExplosive extends Kit {
 					final RPGChargeInfo cinfo = entry.getValue();
 					final int timeSince = currentTick - cinfo.throwTime();
 
-					if(timeSince % 5 == 0) {
-						thrower.getWorld().playSound(thrower, Sound.BLOCK_ANVIL_PLACE, SoundCategory.PLAYERS, 0.75f, 1.1f);
+					if(timeSince % 6 == 0) {
+						thrower.getWorld().playSound(thrower, Sound.BLOCK_ANVIL_PLACE, SoundCategory.PLAYERS, 0.75f, 0.8f);
 					}
 
 					if(timeSince % 2 == 0) {
@@ -287,7 +298,7 @@ public class KitExplosive extends Kit {
 
 		public void rpgBlast(Location explodeLoc, Player owner) {
 			//self damage multiplier does not matter here, is overridden in attempted damage
-			SelfHarmingExplosion explosion = new SelfHarmingExplosion(explodeLoc, RPG_BLAST_RADIUS, 1.3d,
+			RPGExplosion explosion = new RPGExplosion(explodeLoc, RPG_BLAST_RADIUS, 1.3d,
 					24, 1, 1.7, DamageType.EXPLOSIVE_RPG, owner, 1.2d, 1, SELF_RPG);
 			explosion.explode();
 		}
@@ -341,6 +352,32 @@ public class KitExplosive extends Kit {
 			}
 		}
 
+		//stop player from switching items when charging RPG
+		@Override
+		public void onSwitchItemSlot(PlayerItemHeldEvent event) {
+			if(CHARGING_UP_RPGS.containsKey(event.getPlayer())) {
+				event.setCancelled(true);
+			}
+		}
+		@Override
+		public void onSwapHandItems(PlayerSwapHandItemsEvent event) {
+			if (CHARGING_UP_RPGS.containsKey(event.getPlayer())) {
+				event.setCancelled(true);
+			}
+		}
+		@Override
+		public void onInventoryClick(InventoryClickEvent event) {
+			if (CHARGING_UP_RPGS.containsKey((Player) event.getWhoClicked())) {
+				event.setCancelled(true);
+			}
+		}
+		@Override
+		public void onInventoryDrag(InventoryDragEvent event) {
+			if (CHARGING_UP_RPGS.containsKey((Player) event.getWhoClicked())) {
+				event.setCancelled(true);
+			}
+		}
+
 		private void rpgLaunch(final Player shooter) {
 			World world = shooter.getWorld();
 
@@ -378,7 +415,7 @@ public class KitExplosive extends Kit {
 			});
 
 			//sound effect
-			shooter.getWorld().playSound(shooter, Sound.ENTITY_FIREWORK_ROCKET_LAUNCH, SoundCategory.PLAYERS, 1.5f, 0.5f);
+			shooter.getWorld().playSound(shooter, Sound.ENTITY_FIREWORK_ROCKET_LAUNCH, SoundCategory.PLAYERS, 2f, 0.5f);
 
 			List<RPGInfo> list = ACTIVE_RPG.computeIfAbsent(shooter, player -> new LinkedList<>());
 			list.add(new RPGInfo(rpgArrow, shooter, TeamArena.getGameTick()));

@@ -266,7 +266,7 @@ public class CustomExplosion
 	public void playExplosionSound() {
 		Random random = MathUtils.random;
 		Location centre = this.getCentre();
-		centre.getWorld().playSound(centre, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.BLOCKS, 4.0F,
+		centre.getWorld().playSound(centre, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.BLOCKS, 4f,
 				(1f + (random.nextFloat() - random.nextFloat()) * 0.2f) * 0.7f);
 	}
 

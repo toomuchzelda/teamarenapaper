@@ -836,30 +836,36 @@ public class EventListeners implements Listener
 		}
 	}
 
-	@EventHandler(ignoreCancelled = true)
-	public void onPlayerArmorChange(InventoryClickEvent e) {
+	@EventHandler
+	public void onPlayerArmorChange(InventoryClickEvent event) {
 		TeamArena game = Main.getGame();
-		InventoryAction action = e.getAction();
+		InventoryAction action = event.getAction();
 		// these two actions move the current item so check the current item
 		if (action == InventoryAction.MOVE_TO_OTHER_INVENTORY || action == InventoryAction.HOTBAR_SWAP) {
-			if (!game.isWearableArmorPiece(e.getCurrentItem()))
-				e.setCancelled(true);
-			else if (e.getHotbarButton() != -1 && !game.isWearableArmorPiece(e.getView().getBottomInventory().getItem(e.getHotbarButton())))
-				e.setCancelled(true);
-		} else if (e.getSlotType() == InventoryType.SlotType.ARMOR) {
-			if (!game.isWearableArmorPiece(e.getCursor())) {
-				e.setCancelled(true);
+			if (!game.isWearableArmorPiece(event.getCurrentItem()))
+				event.setCancelled(true);
+			else if (event.getHotbarButton() != -1 && !game.isWearableArmorPiece(event.getView().getBottomInventory().getItem(event.getHotbarButton())))
+				event.setCancelled(true);
+		} else if (event.getSlotType() == InventoryType.SlotType.ARMOR) {
+			if (!game.isWearableArmorPiece(event.getCursor())) {
+				event.setCancelled(true);
+			}
+		}
+
+		if(!event.isCancelled()) {
+			for(Ability a : Kit.getAbilities((Player) event.getWhoClicked())) {
+				a.onInventoryClick(event);
 			}
 		}
 	}
 
-	@EventHandler(ignoreCancelled = true)
-	public void onPlayerArmorDrag(InventoryDragEvent e) {
-		ItemStack draggedItem = e.getOldCursor();
+	@EventHandler
+	public void onPlayerArmorDrag(InventoryDragEvent event) {
+		ItemStack draggedItem = event.getOldCursor();
 
 		boolean isDraggingOnArmorSlot = false;
-		if(e.getInventory().getHolder() instanceof HumanEntity) {
-			for(int i : e.getInventorySlots()) {
+		if(event.getInventory().getHolder() instanceof HumanEntity) {
+			for(int i : event.getInventorySlots()) {
 				if(ItemUtils.isArmorSlotIndex(i)) {
 					isDraggingOnArmorSlot = true;
 					break;
@@ -868,7 +874,13 @@ public class EventListeners implements Listener
 		}
 
 		if(isDraggingOnArmorSlot && !Main.getGame().isWearableArmorPiece(draggedItem)) {
-			e.setCancelled(true);
+			event.setCancelled(true);
+		}
+
+		if(!event.isCancelled()) {
+			for(Ability a : Kit.getAbilities((Player) event.getWhoClicked())) {
+				a.onInventoryDrag(event);
+			}
 		}
 	}
 
@@ -1017,7 +1029,18 @@ public class EventListeners implements Listener
 	}
 
 	@EventHandler
-	public void onSwapMainHand(PlayerSwapHandItemsEvent e) {
-		Main.getGame().graffiti.onSwapHandItems(e);
+	public void playerSwapHandItems(PlayerSwapHandItemsEvent event) {
+		Main.getGame().graffiti.onSwapHandItems(event);
+
+		for(Ability a : Kit.getAbilities(event.getPlayer())) {
+			a.onSwapHandItems(event);
+		}
+	}
+
+	@EventHandler
+	public void playerItemHeld(PlayerItemHeldEvent event) {
+		for(Ability a : Kit.getAbilities(event.getPlayer())) {
+			a.onSwitchItemSlot(event);
+		}
 	}
 }
