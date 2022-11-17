@@ -49,7 +49,11 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.util.*;
 
-//main game class
+/**
+ * TeamArena game class. Handles the vast majority of the game's state and mechanics.
+ *
+ * @author toomuchzelda
+ */
 public abstract class TeamArena
 {
 	public static GameType nextGameType = GameType.CTF;
@@ -547,11 +551,12 @@ public abstract class TeamArena
 	public void handlePlayerJoinMidGame(Player player) {
 		TeamArenaTeam team = addToLowestTeam(player, false);
 		//if team was dead before, now becoming alive, show their bossbar
-		if (!team.isAlive()) {
+		// - not anymore
+		/*if (!team.isAlive()) {
 			for (Player viewer : Bukkit.getOnlinePlayers()) {
 				viewer.showBossBar(team.bossBar);
 			}
-		}
+		}*/
 		team.addMembers(player);
 
 		informOfTeam(player);
@@ -912,8 +917,8 @@ public abstract class TeamArena
 			givePlayerItems(player, entry.getValue(), true);
 
 			for(TeamArenaTeam team : teams) {
-				if(team.isAlive())
-					player.showBossBar(team.bossBar);
+				//if(team.isAlive())
+				//	player.showBossBar(team.bossBar);
 
 				team.bossBar.progress(0); //init to 0, normally is 1
 			}
@@ -995,9 +1000,9 @@ public abstract class TeamArena
 	public void prepDead() {
 		for(Player p : Bukkit.getOnlinePlayers()) {
 			PlayerUtils.resetState(p);
-			for(TeamArenaTeam team : teams) {
+			/*for(TeamArenaTeam team : teams) {
 				p.hideBossBar(team.bossBar);
-			}
+			}*/
 		}
 
 		for (TeamArenaTeam team : teams) {
@@ -1483,10 +1488,10 @@ public abstract class TeamArena
 				p.hidePlayer(Main.getPlugin(), player);
 			}
 
-			for (TeamArenaTeam team : teams) {
+			/*for (TeamArenaTeam team : teams) {
 				if (team.isAlive())
 					player.showBossBar(team.bossBar);
-			}
+			}*/
 		}
 	}
 
