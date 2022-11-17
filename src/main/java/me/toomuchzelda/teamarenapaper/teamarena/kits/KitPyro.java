@@ -293,7 +293,7 @@ public class KitPyro extends Kit
 					loc.setY(event.getHitBlock().getY() + 1); //set it to floor level of hit floor
 
 					spawnMolotov(player, loc);
-				} else { // it hit a wall, make it not stick in the wall
+				} else if(event.getHitBlockFace() != null) { // it hit a wall, make it not stick in the wall
 					event.setCancelled(true);
 
 					//credit jacky8399 for bouncing arrow code

@@ -15,6 +15,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
@@ -22,6 +23,7 @@ import org.bukkit.entity.TNTPrimed;
 import org.bukkit.event.Event;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.FireworkMeta;
@@ -251,14 +253,15 @@ public class SearchAndDestroy extends TeamArena
 
 		super.liveTick();
 
-		this.checkWinner();
-
-		if(this.winningTeam != null) {
+		if(this.winningTeam != null) { //possibly assigned by checkWinner() call during the damage tick.
 			this.prepEnd();
 		}
-		//if no winner run end game poison
-		else if(gameState == GameState.LIVE) {
-			poisonTick();
+		else {
+			//if no winner run end game poison
+			if(gameState == GameState.LIVE) {
+				poisonTick();
+			}
+			this.checkWinner();
 		}
 	}
 
@@ -267,6 +270,7 @@ public class SearchAndDestroy extends TeamArena
 	 */
 	public void checkWinner() {
 		TeamArenaTeam winnerTeam = null;
+		int aliveTeamCount = 0;
 		//check if any alive teams have all members dead
 		for(TeamArenaTeam team : teams) {
 			//skip if already dead
@@ -293,17 +297,12 @@ public class SearchAndDestroy extends TeamArena
 				Bukkit.broadcast(message);
 			}
 			else {
-				if(winnerTeam == null) {
-					winnerTeam = team;
-				}
-				else {
-					winnerTeam = null; //there is another alive team, so no winners
-					break;
-				}
+				aliveTeamCount++;
+				winnerTeam = team;
 			}
 		}
 
-		if(!CommandDebug.ignoreWinConditions && winnerTeam != null) {
+		if(!CommandDebug.ignoreWinConditions && winnerTeam != null && aliveTeamCount == 1) {
 			//this method may be called during a damage tick, so signal to end game later instead by assigning
 			// winningTeam
 			this.winningTeam = winnerTeam;
@@ -338,7 +337,7 @@ public class SearchAndDestroy extends TeamArena
 						}
 						else {
 							if(!clickedBomb.isArmed()) {
-								clickedBomb.addClicker(pinfo.team, event.getPlayer(), getGameTick(), Bomb.getArmProgressPerTick(event.getItem()));
+								clickedBomb.addClicker(pinfo.team, event.getPlayer(), getGameTick(), this.getArmProgressPerTick(event.getItem()));
 							}
 							//else handled in interactEntity
 						}
@@ -359,7 +358,7 @@ public class SearchAndDestroy extends TeamArena
 				PlayerInfo pinfo = Main.getPlayerInfo(clicker);
 				if(clickedBomb.getTeam() == pinfo.team) {
 					if(clickedBomb.isArmed()) {
-						clickedBomb.addClicker(pinfo.team, clicker, getGameTick(), Bomb.getArmProgressPerTick(item));
+						clickedBomb.addClicker(pinfo.team, clicker, getGameTick(), this.getArmProgressPerTick(item));
 					}
 					//else Shouldn't be possible to interact with bomb as a TNTPrimed in disarmed state.
 				}
@@ -484,7 +483,7 @@ public class SearchAndDestroy extends TeamArena
 	public void handleDeath(DamageEvent event) {
 		super.handleDeath(event);
 
-		checkWinner();
+		this.checkWinner();
 
 		this.poisonTimeLeft += 10 * 20;
 		if(isPoison && event.getVictim() instanceof Player p) {
@@ -495,9 +494,66 @@ public class SearchAndDestroy extends TeamArena
 	@Override
 	public void givePlayerItems(Player player, PlayerInfo pinfo, boolean clear) {
 		//need to clear and give the fuse first to put it in 1st slot
-		player.getInventory().clear();
-		player.getInventory().addItem(BASE_FUSE);
+		if(clear)
+			player.getInventory().clear();
+
+		player.getInventory().addItem(getFuse(pinfo.kit.getFuseEnchantmentLevel()));
 		super.givePlayerItems(player, pinfo, false);
+	}
+
+	private ItemStack getFuse(int levels) {
+		if(levels <= 0)
+			return BASE_FUSE;
+
+		//need roman numerals 1-10
+		String roman;
+		switch (levels) {
+			case 1 -> roman = "I";
+			case 2 -> roman = "II";
+			case 3 -> roman = "III";
+			case 4 -> roman = "IV";
+			case 5 -> roman = "V";
+			case 6 -> roman = "VI";
+			case 7 -> roman = "VII";
+			case 8 -> roman = "VIII";
+			case 9 -> roman = "IX";
+			case 10 -> roman = "X";
+			default -> roman = "" + levels;
+		}
+
+		ItemStack fuse = BASE_FUSE.clone();
+		ItemMeta fuseMeta = fuse.getItemMeta();
+
+		//we are storing the actual level in the unbreaking enchantment which should be hidden
+		fuseMeta.addEnchant(Enchantment.DURABILITY, levels, true);
+
+		List<Component> lore = fuseMeta.lore();
+		lore.add(0, Component.text("Bomb Technician " + roman, NamedTextColor.AQUA).decoration(TextDecoration.ITALIC, false));
+		fuseMeta.lore(lore);
+
+		fuse.setItemMeta(fuseMeta);
+		//hide enchantments so we can add the unbreaking enchantment to give it the glint, without it
+		// appearing in the item lore.
+		fuse.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+
+		return fuse;
+	}
+
+	/**
+	 * Get how much per tick an item should arm a Bomb. Used for special fuse enchantments
+	 * @param fuse The fuse.
+	 * @return Arm percent per tick in range 0.0 to 1.0
+	 */
+	public float getArmProgressPerTick(ItemStack fuse) {
+		if(fuse.getType() != BASE_FUSE.getType()) {
+			Main.logger().warning("SearchAndDestroy.getArmProgressPerTick called with non-fuse ItemStack");
+			Thread.dumpStack();
+			return 0;
+		}
+
+		float level = (float) fuse.getEnchantmentLevel(Enchantment.DURABILITY);
+		level = MathUtils.clamp(0f, 1f, (1f + level) / 10f / 20f);
+		return level;
 	}
 
 	protected void removeHealing(Player player) {
@@ -649,21 +705,6 @@ public class SearchAndDestroy extends TeamArena
 
 			teamBombs.put(team, bombs);
 		}
-	}
-
-	/**
-	 * For compatibility with RWF 2 snd map config.yml
-	 */
-	protected TeamArenaTeam getTeamByRWFConfig(String name) {
-		int spaceInd = name.indexOf(' ');
-		name = name.substring(0, spaceInd);
-		for(TeamArenaTeam team : teams) {
-			if(team.getSimpleName().toLowerCase().replace(' ', '_').equals(name.toLowerCase())) {
-				return team;
-			}
-		}
-
-		return null;
 	}
 
 	private static final DecimalFormat ONE_DP = new DecimalFormat("0.0");

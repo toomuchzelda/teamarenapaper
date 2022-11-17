@@ -397,15 +397,6 @@ public class Bomb
 		return teamArmInfo.armProgress;
 	}
 
-	/**
-	 * Get how much per tick an item should arm a Bomb. Used for special fuse enchantments
-	 * @param item The fuse.
-	 * @return Arm percent per tick in range 0.0 to 1.0
-	 */
-	public static float getArmProgressPerTick(ItemStack item) {
-		return 1f / 10f / 20f;
-	}
-
 	private record PlayerArmInfo(int startTime, float armingPower) {}
 
 	private static class TeamArmInfo {

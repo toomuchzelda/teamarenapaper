@@ -115,6 +115,8 @@ public class KitDemolitions extends Kit
 				new ItemStack(Material.CHAINMAIL_LEGGINGS), new ItemStack(Material.GOLDEN_BOOTS));
 
 		setCategory(KitCategory.SUPPORT);
+
+		setFuseEnchantLevel(5);
 	}
 
 	public static boolean isValidMineBlock(Block block) {

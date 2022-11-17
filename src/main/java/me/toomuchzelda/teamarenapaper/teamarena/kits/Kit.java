@@ -32,6 +32,7 @@ public abstract class Kit {
     private ItemStack[] armour;
     private ItemStack[] items;
     private Ability[] abilities;
+	private int fuseEnchantLevel;
 
     //active users of a kit ie they are alive and using, not dead and just have the kit selected
     private final Set<Player> activeUsers;
@@ -51,7 +52,8 @@ public abstract class Kit {
         this.armour = armour;
 
         this.items = new ItemStack[0];
-        this.abilities = new Ability[0];
+        this.abilities = EMPTY_ABILITIES;
+		this.fuseEnchantLevel = 0;
 
         activeUsers = new LinkedHashSet<>();
     }
@@ -149,6 +151,10 @@ public abstract class Kit {
         this.abilities = abilities;
     }
 
+	public void setFuseEnchantLevel(int level) {
+		this.fuseEnchantLevel = level;
+	}
+
     public ItemStack getIcon() {
         return display.clone();
     }
@@ -198,6 +204,14 @@ public abstract class Kit {
     public boolean isInvisKit() {
         return false;
     }
+
+	/**
+	 * For SearchAndDestroy, get the level of enchantment the fuse has.
+	 * @return 0 for no enchantment, 1-10 for that level of bomb arming/disarming enchantment.
+	 */
+	public int getFuseEnchantmentLevel() {
+		return this.fuseEnchantLevel;
+	}
 
     /**
      * get abilities of the kit the player is actively using

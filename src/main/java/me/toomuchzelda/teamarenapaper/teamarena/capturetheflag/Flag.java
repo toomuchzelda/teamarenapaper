@@ -70,9 +70,16 @@ public class Flag
 		this.currentLoc = baseLoc.clone();
 
 		//on maps made for SND there may be a TNT block at the flag location - just remove it
-		Block block = baseLoc.getBlock();
-		if(block.getType() == Material.TNT)
-			block.setType(Material.AIR);
+		{
+			Block block = baseLoc.getBlock();
+			if (block.getType() == Material.TNT)
+				block.setType(Material.AIR);
+
+			//baseLoc is slightly in the ground, check the block above it too
+			block = baseLoc.clone().add(0, 1, 0).getBlock();
+			if(block.getType() == Material.TNT)
+				block.setType(Material.AIR);
+		}
 
 		stand = (ArmorStand) baseLoc.getWorld().spawnEntity(baseLoc, EntityType.ARMOR_STAND);
 		//stand.setMarker(true);
