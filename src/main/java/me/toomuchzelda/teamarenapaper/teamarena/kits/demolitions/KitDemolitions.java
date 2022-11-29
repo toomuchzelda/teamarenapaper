@@ -263,6 +263,7 @@ public class KitDemolitions extends Kit
 				else {
 					final Component message = Component.text("You can't place a Mine here", TextColors.ERROR_RED);
 					PlayerUtils.sendKitMessage(event.getPlayer(), message, message);
+					event.getPlayer().updateInventory(); // Refresh the 'placed' block
 				}
 			}
 			else if(mat == REMOTE_DETONATOR_ITEM.getType()) {

@@ -18,7 +18,6 @@ import org.bukkit.block.data.type.Slab;
 import org.bukkit.block.data.type.Stairs;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
 import java.util.*;
@@ -48,6 +47,8 @@ public class Bomb
 	private RealHologram hologram;
 	private final Component title;
 	private final Map<TeamArenaTeam, TeamArmInfo> currentArmers;
+	// The players that armed or disarmed the last arm/disarm event
+	private Set<Player> responsibleArmers;
 
 	private TNTPrimed tnt;
 	private boolean armed = false;
@@ -65,6 +66,7 @@ public class Bomb
 		this.title = owningTeam.getComponentName().append(Component.text("'s Bomb")).decoration(TextDecoration.BOLD, true);
 
 		currentArmers = new LinkedHashMap<>();
+		responsibleArmers = new HashSet<>();
 	}
 
 	public void init() {
@@ -193,6 +195,7 @@ public class Bomb
 		}
 
 		if(armingTeam != null) {
+			this.responsibleArmers = new HashSet<>(currentArmers.get(armingTeam).currentlyClicking.keySet());
 			currentArmers.clear();
 			if(this.isArmed())
 				this.disarm();
@@ -358,7 +361,7 @@ public class Bomb
 		this.explodeMode = effect;
 	}
 
-	private TeamArmInfo getClickers(TeamArenaTeam team) {
+	public TeamArmInfo getClickers(TeamArenaTeam team) {
 		return currentArmers.computeIfAbsent(team, teamArenaTeam -> new TeamArmInfo(TeamArena.getGameTick(), 0f));
 	}
 
@@ -372,6 +375,13 @@ public class Bomb
 
 	public TeamArenaTeam getArmingTeam() {
 		return this.armingTeam;
+	}
+
+	/**
+	 * Get the specific Players that were clicking for the last arm/disarm
+	 */
+	public Set<Player> getResponsibleArmers() {
+		return this.responsibleArmers;
 	}
 
 	public TNTPrimed getTNT() {
@@ -399,7 +409,7 @@ public class Bomb
 
 	private record PlayerArmInfo(int startTime, float armingPower) {}
 
-	private static class TeamArmInfo {
+	static class TeamArmInfo {
 		private int startTime;
 		private float armProgress;
 		private final Map<Player, PlayerArmInfo> currentlyClicking;
@@ -409,6 +419,10 @@ public class Bomb
 			this.armProgress = armProgress;
 
 			this.currentlyClicking = new LinkedHashMap<>();
+		}
+
+		Set<Player> getPlayers() {
+			return this.currentlyClicking.keySet();
 		}
 	}
 

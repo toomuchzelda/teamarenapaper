@@ -35,6 +35,7 @@ import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
 import org.intellij.lang.annotations.RegExp;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.text.DecimalFormat;
 import java.util.*;
@@ -65,18 +66,19 @@ public class SearchAndDestroy extends TeamArena
 	protected int poisonRingIndex = 0;
 	protected double poisonDamage = 1d;
 	protected final double midToFurthestBombDistance;
-	protected double forgiveness = 1d;
 	protected Firework poisonFirework;
 
 	protected final ItemStack BASE_FUSE;
 	public static final Component FUSE_NAME = ItemUtils.noItalics(Component.text("Bomb Fuse", NamedTextColor.GOLD));
-	public static final List<Component> FUSE_LORE;
+	public static final String FUSE_ENCHANT_NAME = "Bomb Technician";
+	private static final List<Component> FUSE_LORE;
 	public static final int SPAM_PERIOD = 4 * 20;
+
 	public static final int TEAM_DEAD_SCORE = 1;
+	public static final int TEAM_LASTMAN_SCORE = 2;
 
 	//sidebar
 	private final Map<TeamArenaTeam, Component> sidebarCache;
-
 
 	//===========MESSAGE STUFF
 	@RegExp
@@ -197,7 +199,7 @@ public class SearchAndDestroy extends TeamArena
 	}
 
 	public void liveTick() {
-		int currentTick = getGameTick();
+		final int currentTick = getGameTick();
 
 		for(Map.Entry<TeamArenaTeam, List<Bomb>> entry : teamBombs.entrySet()) {
 			TeamArenaTeam team = entry.getKey();
@@ -212,13 +214,35 @@ public class SearchAndDestroy extends TeamArena
 					announceBombEvent(bomb, BombEvent.ARMED);
 					//record the tnt block so can check it in entityInteract events
 					this.bombTNTs.put(bomb.getTNT(), bomb);
-					this.poisonTimeLeft += bombAddPoison;
-					bombAddPoison /= 2;
+					this.poisonTimeLeft += this.bombAddPoison;
+					this.bombAddPoison /= 2;
+
+					// Remove the last man standing enchantment if they have it.
+					if(bomb.getArmingTeam().score == TEAM_LASTMAN_SCORE) {
+						for(Player armer : bomb.getResponsibleArmers()) {
+							// Check isDead as someone may have died immediately before, and may remain in the
+							// bomb as a "clicker" for a short time.
+							if(!isDead(armer)) {
+								administerInstantFuse(armer, false);
+							}
+						}
+					}
 				}
 				//just been disarmed, remove TNT from map
 				else if(armedTime == Bomb.JUST_BEEN_DISARMED) {
 					announceBombEvent(bomb, BombEvent.DISARMED);
 					this.bombTNTs.remove(bomb.getTNT());
+
+					// Remove last man standing ench.
+					if(bomb.getTeam().score == TEAM_LASTMAN_SCORE) {
+						for(Player disarmer : bomb.getResponsibleArmers()) {
+							// Check isDead as someone may have died immediately before, and may remain in the
+							// bomb as a "clicker" for a short time.
+							if(!isDead(disarmer)) {
+								administerInstantFuse(disarmer, false);
+							}
+						}
+					}
 				}
 				else if(armedTime == Bomb.JUST_EXPLODED) {
 					announceBombEvent(bomb, BombEvent.EXPLODED);
@@ -245,7 +269,6 @@ public class SearchAndDestroy extends TeamArena
 				int ticksPassed = currentTick - soonestExplodingBomb;
 				ticksPassed = Bomb.BOMB_DETONATION_TIME - ticksPassed;
 				float progressLeft = (float) ticksPassed / (float) Bomb.BOMB_DETONATION_TIME;
-				//Bukkit.broadcastMessage("bossbar progress: " + progressLeft);
 				progressLeft = MathUtils.clamp(0f, progressLeft, 1f);
 				team.bossBar.progress(progressLeft);
 			}
@@ -277,15 +300,16 @@ public class SearchAndDestroy extends TeamArena
 			if(team.score == TEAM_DEAD_SCORE)
 				continue;
 
-			boolean anyAlive = false;
+			int aliveTeamMemberCount = 0;
+			Player lastMan = null; // if only 1 player left this should be that one player
 			for(Player teamMember : team.getPlayerMembers()) {
 				if(!isSpectator(teamMember)) {
-					anyAlive = true;
-					break;
+					aliveTeamMemberCount++;
+					lastMan = teamMember;
 				}
 			}
 
-			if(!anyAlive) {
+			if(aliveTeamMemberCount == 0) {
 				for (Bomb teamBomb : teamBombs.get(team)) {
 					teamBomb.setGrave();
 				}
@@ -299,6 +323,12 @@ public class SearchAndDestroy extends TeamArena
 			else {
 				aliveTeamCount++;
 				winnerTeam = team;
+				// announce the last man standing.
+				if(aliveTeamMemberCount == 1 && team.score != TEAM_LASTMAN_SCORE) {
+					team.score = TEAM_LASTMAN_SCORE; // Use this to ensure this code block only runs once
+					announceLastManStanding(lastMan, team);
+					administerInstantFuse(lastMan, true);
+				}
 			}
 		}
 
@@ -306,6 +336,34 @@ public class SearchAndDestroy extends TeamArena
 			//this method may be called during a damage tick, so signal to end game later instead by assigning
 			// winningTeam
 			this.winningTeam = winnerTeam;
+		}
+	}
+
+	private void announceLastManStanding(final Player lastMan, final TeamArenaTeam team) {
+		final Component lastStanding = Component.text(" is last standing!", team.getRGBTextColor());
+		final Component message = lastMan.playerListName().append(lastStanding);
+
+		Bukkit.broadcast(message);
+		PlayerUtils.sendOptionalTitle(Component.empty(), message, 10, 10, 10);
+
+		lastMan.getWorld().playSound(this.spawnPos, Sound.ENTITY_ENDER_DRAGON_HURT, 99999f, 1f);
+	}
+
+	private void administerInstantFuse(final Player player, boolean give) {
+		List<ItemStack> playersFuses = ItemUtils.getItemsInInventory(BASE_FUSE.getType(), player.getInventory());
+
+		// TODO give the fuses with setFuseEnchantLevel and test that method thoroughly
+		final int kitFuseLevel = Main.getPlayerInfo(player).activeKit.getFuseEnchantmentLevel();
+		if(give) {
+			playersFuses.forEach(fuse -> setFuseEnchantmentLevel(fuse, 10));
+			player.sendMessage(Component.text()
+					.append(Component.text("You get a ", NamedTextColor.GOLD))
+					.append(Component.text("one time use", NamedTextColor.GOLD, TextDecoration.UNDERLINED))
+					.append(Component.text(" Bomb Technician X ", NamedTextColor.RED, TextDecoration.BOLD))
+					.append(Component.text("fuse!", NamedTextColor.GOLD)));
+		}
+		else {
+			playersFuses.forEach(fuse -> setFuseEnchantmentLevel(fuse, kitFuseLevel));
 		}
 	}
 
@@ -497,13 +555,86 @@ public class SearchAndDestroy extends TeamArena
 		if(clear)
 			player.getInventory().clear();
 
-		player.getInventory().addItem(getFuse(pinfo.kit.getFuseEnchantmentLevel()));
+		player.getInventory().addItem(createFuse(pinfo.kit.getFuseEnchantmentLevel()));
 		super.givePlayerItems(player, pinfo, false);
 	}
 
-	private ItemStack getFuse(int levels) {
+	private ItemStack createFuse(int levels) {
 		if(levels <= 0)
 			return BASE_FUSE;
+
+		ItemStack fuse = BASE_FUSE.clone();
+		ItemMeta fuseMeta = fuse.getItemMeta();
+
+		//we are storing the actual level in the unbreaking enchantment which should be hidden
+		fuseMeta.addEnchant(Enchantment.DURABILITY, levels, true);
+
+		List<Component> lore = fuseMeta.lore();
+		Component enchantLore = getFuseEnchantLore(levels);
+		if(enchantLore != null)
+			lore.add(0, getFuseEnchantLore(levels));
+		fuseMeta.lore(lore);
+
+		fuse.setItemMeta(fuseMeta);
+		//hide enchantments so we can add the unbreaking enchantment to give it the glint, without it
+		// appearing in the item lore.
+		fuse.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+
+		return fuse;
+	}
+
+	public int getFuseEnchantmentLevel(ItemStack fuse) {
+		if(fuse.getType() == BASE_FUSE.getType())
+			return fuse.getEnchantmentLevel(Enchantment.DURABILITY);
+		else
+			return 0;
+	}
+
+	public void setFuseEnchantmentLevel(ItemStack fuse, int level) {
+		if(fuse.getType() != BASE_FUSE.getType()) {
+			Main.logger().warning("SearchAndDestroy setFuseEnchantment called with non type-matching fuse");
+			Thread.dumpStack();
+			return;
+		}
+
+		ItemMeta fuseMeta = fuse.getItemMeta();
+
+		// Update the lore
+		if(!fuseMeta.hasLore()) {
+			Main.logger().warning("setFuseEnchantment called with lore-less fuse");
+			Thread.dumpStack();
+			return;
+		}
+
+		List<Component> lore = fuseMeta.lore();
+		if(fuseMeta.hasEnchant(Enchantment.DURABILITY)) { //had bomb tech enchantment
+			if(level == 0) {
+				lore.remove(0);
+			}
+			else {
+				lore.set(0, getFuseEnchantLore(level));
+			}
+		}
+		else if (level > 0) {
+			lore.add(0, getFuseEnchantLore(level));
+		}
+
+		// Add the enchantment.
+		if(level == 0) {
+			fuseMeta.removeEnchant(Enchantment.DURABILITY);
+		}
+		else if (level > 0) {
+			fuseMeta.addEnchant(Enchantment.DURABILITY, level, true);
+		}
+
+		fuseMeta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+		fuseMeta.lore(lore);
+		fuse.setItemMeta(fuseMeta);
+	}
+
+	private @Nullable Component getFuseEnchantLore(int levels) {
+		if(levels == 0)
+			return null;
 
 		//need roman numerals 1-10
 		String roman;
@@ -521,22 +652,7 @@ public class SearchAndDestroy extends TeamArena
 			default -> roman = "" + levels;
 		}
 
-		ItemStack fuse = BASE_FUSE.clone();
-		ItemMeta fuseMeta = fuse.getItemMeta();
-
-		//we are storing the actual level in the unbreaking enchantment which should be hidden
-		fuseMeta.addEnchant(Enchantment.DURABILITY, levels, true);
-
-		List<Component> lore = fuseMeta.lore();
-		lore.add(0, Component.text("Bomb Technician " + roman, NamedTextColor.AQUA).decoration(TextDecoration.ITALIC, false));
-		fuseMeta.lore(lore);
-
-		fuse.setItemMeta(fuseMeta);
-		//hide enchantments so we can add the unbreaking enchantment to give it the glint, without it
-		// appearing in the item lore.
-		fuse.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-
-		return fuse;
+		return Component.text(FUSE_ENCHANT_NAME + " " + roman, NamedTextColor.AQUA).decoration(TextDecoration.ITALIC, false);
 	}
 
 	/**
@@ -551,7 +667,8 @@ public class SearchAndDestroy extends TeamArena
 			return 0;
 		}
 
-		float level = (float) fuse.getEnchantmentLevel(Enchantment.DURABILITY);
+		float level = (float) this.getFuseEnchantmentLevel(fuse);
+		//Bukkit.broadcastMessage("" + level);
 		level = MathUtils.clamp(0f, 1f, (1f + level) / 10f / 20f);
 		return level;
 	}

@@ -16,6 +16,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Predicate;
 
 public class ItemUtils {
     public static int _uniqueName = 0;
@@ -50,20 +51,35 @@ public class ItemUtils {
 	}
 
 	/**
-	 * Get the instances of this item that is in the inventory
+	 * Get the instances of an item in an inventory that matches the originalItem argument.
+	 * Matches are decided by the return value of ItemStack#isSimilar(ItemStack)
+	 *
 	 */
 	public static @NotNull List<ItemStack> getItemsInInventory(@NotNull ItemStack originalItem, Inventory inventory) {
+		return getItemsInInventory(originalItem::isSimilar, inventory);
+	}
+
+	public static @NotNull List<ItemStack> getItemsInInventory(@NotNull Material itemType, Inventory inventory) {
+		return getItemsInInventory(itemStack -> itemStack.getType() == itemType, inventory);
+	}
+
+	/**
+	 * Get the instances of an item in an inventory by a user-supplied predicate.
+	 * @param predicate The rule to match ItemStacks in the inventory by. If null,
+	 * @return List of all ItemStack instances in the inventory
+	 */
+	public static @NotNull List<ItemStack> getItemsInInventory(@NotNull Predicate<ItemStack> predicate, Inventory inventory) {
 		List<ItemStack> itemsFound = new ArrayList<>();
 
 		for(ItemStack item : inventory) {
-			if (originalItem.isSimilar(item))
+			if (item != null && predicate.test(item))
 				itemsFound.add(item);
 		}
 
 		//they may be holding it on their mouse in their inventory (if a player)
 		if(inventory.getHolder() instanceof Player p) {
 			ItemStack cursor = p.getItemOnCursor();
-			if(originalItem.isSimilar(cursor))
+			if(cursor != null && predicate.test(cursor))
 				itemsFound.add(cursor);
 		}
 

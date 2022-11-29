@@ -7,7 +7,6 @@ import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -27,13 +26,12 @@ import org.bukkit.util.Vector;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.Stack;
 
 public class TeamArenaTeam
 {
-	public static final Component SHOW_ALL_TEAMMATES = ItemUtils.noItalics(Component.text("Point at something and Left Click to ping", TextUtils.LEFT_CLICK_TO));
-	public static final Component PING = ItemUtils.noItalics(Component.text("Right click to see all your teammates", TextUtils.RIGHT_CLICK_TO));
-	public static final List<Component> HOTBAR_ITEM_LORE = List.of(SHOW_ALL_TEAMMATES, PING);
+	public static final Component PING1 = ItemUtils.noItalics(Component.text("Point at something and Left Click to ping", TextUtils.LEFT_CLICK_TO));
+	public static final Component SHOW_ALL_TEAMMATES = ItemUtils.noItalics(Component.text("Right click to see all your teammates", TextUtils.RIGHT_CLICK_TO));
+	public static final List<Component> HOTBAR_ITEM_LORE = List.of(SHOW_ALL_TEAMMATES); //PING1);
 
 	private final String name;
 	private final String simpleName;
