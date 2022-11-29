@@ -5,13 +5,13 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
-import org.bukkit.entity.Entity;
-import org.jetbrains.annotations.Nullable;
+import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
 
 public class PushMineExplosion extends TeamArenaExplosion
 {
-	public PushMineExplosion(Location centre, double explosionRadius, double guaranteeHitRadius, double maxDamage, double minDamage, double knockbackStrength, DamageType damageType, @Nullable Entity entity) {
-		super(centre, explosionRadius, guaranteeHitRadius, maxDamage, minDamage, knockbackStrength, damageType, entity);
+	public PushMineExplosion(Location centre, double explosionRadius, double guaranteeHitRadius, double maxDamage, double minDamage, double knockbackStrength, DamageType damageType, @NotNull Player owner) {
+		super(centre, explosionRadius, guaranteeHitRadius, maxDamage, minDamage, knockbackStrength, damageType, owner);
 	}
 
 	@Override

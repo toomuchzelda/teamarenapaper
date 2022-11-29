@@ -5,6 +5,7 @@ import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
@@ -299,6 +300,19 @@ public class KitDemolitions extends Kit
 					}
 				}
 			}
+			// If the victim is the demo, then allow it for the sake of push mine-jumping.
+			// However, don't allow it if the demo is carrying the flag in CTF
+			else if(event.getDamageType().is(DamageType.DEMO_PUSHMINE) && event.getFinalAttacker() == event.getVictim()) {
+				event.setCancelled(false);
+				if(Main.getGame() instanceof CaptureTheFlag ctf && ctf.isFlagCarrier(event.getPlayerVictim())) {
+					event.setCancelled(true);
+					// Send them a message if they're probably mine jumping
+					if(event.hasKnockback() && event.getKnockback().length() >= 1d) {
+						event.getPlayerVictim().sendMessage(Component.text(
+								"The flag is too heavy for you to mine-jump with!", TextColors.ERROR_RED));
+					}
+				}
+			}
 		}
 
 		@Override
@@ -375,85 +389,90 @@ public class KitDemolitions extends Kit
 
 		@Override
 		public void onTick() {
-			int gameTick = TeamArena.getGameTick();
+			final int gameTick = TeamArena.getGameTick();
 
-			//add mines to be removed to this list and remove afterwards to prevent concurrent modification
-			List<DemoMine> toRemove = new LinkedList<>();
-			var axIter = AXOLOTL_TO_DEMO_MINE.entrySet().iterator();
-			while(axIter.hasNext()) {
-				Map.Entry<PacketMineHitbox, DemoMine> entry = axIter.next();
-				DemoMine mine = entry.getValue();
+			{
+				//add mines to be removed to this list and remove afterwards to prevent concurrent modification
+				List<DemoMine> toRemove = new LinkedList<>();
+				for (Map.Entry<PacketMineHitbox, DemoMine> entry : AXOLOTL_TO_DEMO_MINE.entrySet()) {
+					DemoMine mine = entry.getValue();
 
-				mine.tick();
+					mine.tick();
 
-				if(mine.removeNextTick) {
-					toRemove.add(mine);
-					addRegeneratingMine(mine.owner, mine.type, gameTick);
-				}
-				//determine if needs to be removed (next tick)
-				else if(mine.isDone()) {
-					mine.removeNextTick = true;
-				}
-				//if it hasn't been armed yet
-				else if(!mine.isArmed()) {
-					//indicate its armed
-					if(gameTick == mine.creationTime + DemoMine.TIME_TO_ARM) {
-						World world = mine.hitboxEntity.getWorld();
-						world.playSound(mine.hitboxEntity.getLocation(), Sound.BLOCK_STONE_BUTTON_CLICK_OFF, 1f, 1f);
-						world.spawnParticle(Particle.CRIT, mine.hitboxEntity.getLocation().add(0, 0.4, 0), 2, 0, 0, 0,0);
-
-						Component message = Component.text("Your " + mine.type.name + " is now armed").color(NamedTextColor.GREEN);
-						PlayerUtils.sendKitMessage(mine.owner, message, message);
+					if (mine.removeNextTick) {
+						toRemove.add(mine);
+						addRegeneratingMine(mine.owner, mine.type, gameTick);
 					}
-					// else do nothing and don't enter the control statement below that checks for collision
-				}
-				//if it hasn't been stepped on already check if anyone's standing on it
-				else if(!mine.isTriggered()) {
-					for (Player stepper : Main.getGame().getPlayers()) {
-						if (mine.team.getPlayerMembers().contains(stepper))
-							continue;
+					//determine if needs to be removed (next tick)
+					else if (mine.isDone()) {
+						mine.removeNextTick = true;
+					}
+					//if it hasn't been armed yet
+					else if (!mine.isArmed()) {
+						//indicate its armed
+						if (gameTick == mine.creationTime + DemoMine.TIME_TO_ARM) {
+							World world = mine.hitboxEntity.getWorld();
+							world.playSound(mine.hitboxEntity.getLocation(), Sound.BLOCK_STONE_BUTTON_CLICK_OFF, 1f, 1f);
+							world.spawnParticle(Particle.CRIT, mine.hitboxEntity.getLocation()
+									.add(0, 0.4, 0), 2, 0, 0, 0, 0);
 
-						PacketMineHitbox axolotl = entry.getKey();
-						if (stepper.getBoundingBox().overlaps(axolotl.getBoundingBox())) {
-							//they stepped on mine, trigger explosion
-							mine.trigger(stepper);
+							Component message = Component.text("Your " + mine.type.name + " is now armed")
+									.color(NamedTextColor.GREEN);
+							PlayerUtils.sendKitMessage(mine.owner, message, message);
+						}
+						// else do nothing and don't enter the control statement below that checks for collision
+					}
+					//if it hasn't been stepped on already check if anyone's standing on it
+					else if (!mine.isTriggered()) {
+						for (Player stepper : Main.getGame().getPlayers()) {
+							if (mine.team.getPlayerMembers().contains(stepper))
+								continue;
+
+							PacketMineHitbox axolotl = entry.getKey();
+							if (stepper.getBoundingBox().overlaps(axolotl.getBoundingBox())) {
+								//they stepped on mine, trigger explosion
+								mine.trigger(stepper);
+							}
 						}
 					}
 				}
-			}
 
-			for(DemoMine remove : toRemove) {
-				removeMine(remove);
+				for (DemoMine remove : toRemove) {
+					removeMine(remove);
+				}
 			}
 
 			//tick regenerating mines
-			var regPlayersIter = REGENERATING_MINES.entrySet().iterator();
-			while(regPlayersIter.hasNext()) {
-				var entry = regPlayersIter.next();
+			{
+				var regPlayersIter = REGENERATING_MINES.entrySet().iterator();
+				while (regPlayersIter.hasNext()) {
+					var entry = regPlayersIter.next();
 
-				var regMinesIter = entry.getValue().iterator();
-				while(regMinesIter.hasNext()) {
-					RegeneratingMine regMine = regMinesIter.next();
+					var regMinesIter = entry.getValue().iterator();
+					while (regMinesIter.hasNext()) {
+						RegeneratingMine regMine = regMinesIter.next();
 
-					//check if time up and give back one mine here
-					if(gameTick - regMine.removedTime() >= regMine.type().timeToRegen) {
-						Player owner = entry.getKey();
-						ItemStack mineItem;
-						if(regMine.type() == MineType.TNTMINE) {
-							mineItem = TNT_MINE_ITEM;
+						//check if time up and give back one mine here
+						if (gameTick - regMine.removedTime() >= regMine.type().timeToRegen) {
+							Bukkit.broadcastMessage("run");
+							Player owner = entry.getKey();
+							ItemStack mineItem;
+							if (regMine.type() == MineType.TNTMINE) {
+								mineItem = TNT_MINE_ITEM;
+							}
+							else {
+								mineItem = PUSH_MINE_ITEM;
+							}
+
+							owner.getInventory().addItem(mineItem.asOne());
+
+							regMinesIter.remove();
 						}
-						else {
-							mineItem = PUSH_MINE_ITEM;
-						}
-
-						owner.getInventory().addItem(mineItem);
-
-						regMinesIter.remove();
 					}
-				}
 
-				if(entry.getValue().size() == 0)
-					regPlayersIter.remove();
+					if (entry.getValue().size() == 0)
+						regPlayersIter.remove();
+				}
 			}
 		}
 
@@ -486,8 +505,8 @@ public class KitDemolitions extends Kit
 
 			regenningMines.add(new RegeneratingMine(type, startTime));
 
-			final Component message = Component.text("You'll get " + type.name +
-							" back in " + (type.timeToRegen / 20) + " seconds",
+			final Component message = Component.text("Your " + type.name + " exploded. You'll get it back in "
+							+ (type.timeToRegen / 20) + " seconds",
 					NamedTextColor.AQUA);
 
 			PlayerUtils.sendKitMessage(player, message, message);

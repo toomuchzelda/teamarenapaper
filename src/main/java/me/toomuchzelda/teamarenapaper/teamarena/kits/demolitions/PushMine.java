@@ -83,7 +83,6 @@ public class PushMine extends DemoMine
 	void tick() {
 		if(isTriggered()) {
 			if(TeamArena.getGameTick() - triggerTime == this.timeToDetonate) {
-				World world = baseLoc.getWorld();
 				Location explodeLoc = baseLoc.clone().add(0, 0.1, 0);
 
 				//custom damageType, should not do direct damage but attribute the resulting fall to this mine owner

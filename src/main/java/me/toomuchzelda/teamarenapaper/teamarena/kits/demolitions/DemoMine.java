@@ -97,7 +97,6 @@ public abstract class DemoMine
 		this.blockVector = blockLoc.toVector().toBlockVector();
 		this.color = BlockUtils.getBlockBukkitColor(block);
 
-		World world = block.getWorld();
 		double topOfBlock = BlockUtils.getBlockHeight(block);
 		this.baseLoc = blockLoc.add(0.5d, topOfBlock, 0.5d);
 		this.targetLoc = baseLoc.toVector().add(new Vector(0d, 0.1d, 0d));
