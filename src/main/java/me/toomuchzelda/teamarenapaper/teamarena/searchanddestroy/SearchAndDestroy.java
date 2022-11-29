@@ -344,7 +344,7 @@ public class SearchAndDestroy extends TeamArena
 		final Component message = lastMan.playerListName().append(lastStanding);
 
 		Bukkit.broadcast(message);
-		PlayerUtils.sendOptionalTitle(Component.empty(), message, 10, 10, 10);
+		PlayerUtils.sendOptionalTitle(Component.empty(), message, 10, 20, 10);
 
 		lastMan.getWorld().playSound(this.spawnPos, Sound.ENTITY_ENDER_DRAGON_HURT, 99999f, 1f);
 	}
@@ -555,8 +555,8 @@ public class SearchAndDestroy extends TeamArena
 		if(clear)
 			player.getInventory().clear();
 
-		player.getInventory().addItem(createFuse(pinfo.kit.getFuseEnchantmentLevel()));
 		super.givePlayerItems(player, pinfo, false);
+		player.getInventory().addItem(createFuse(pinfo.kit.getFuseEnchantmentLevel()));
 	}
 
 	private ItemStack createFuse(int levels) {
