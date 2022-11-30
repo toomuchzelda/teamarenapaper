@@ -12,14 +12,10 @@ import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.function.Predicate;
 
-//class for holograms made with marker armor stands
-// originally made for player nametags using Components
-// not using those anymore so adapted to be an independent packet hologram thing
-
 /**
  * class for holograms made with marker armor stands
  * originally made for player nametags using Components
- * not using those anymore so adapted to be an independent packet hologram thing
+ * not using those anymore so adapted to be an independent packet hologram
  *
  * @author toomuchzelda
  */
@@ -47,16 +43,5 @@ public class PacketHologram extends PacketEntity
 		this.updateMetadataPacket();
 
 		this.respawn();
-	}
-
-	public void setText(Component component, boolean sendPacket) {
-		Optional<?> nameComponent = Optional.of(AdventureComponentConverter.fromComponent(
-				component).getHandle());
-
-		this.data.setObject(MetaIndex.CUSTOM_NAME_OBJ, nameComponent);
-
-		if(sendPacket) {
-			this.refreshViewerMetadata();
-		}
 	}
 }

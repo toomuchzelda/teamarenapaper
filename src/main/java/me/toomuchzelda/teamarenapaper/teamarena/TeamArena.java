@@ -495,6 +495,8 @@ public abstract class TeamArena
 	}
 
 	public void respawnerTick() {
+		RespawnViewLimiter.tick();
+
 		Iterator<Map.Entry<Player, RespawnInfo>> respawnIter = respawnTimers.entrySet().iterator();
 		while (respawnIter.hasNext()) {
 			Map.Entry<Player, RespawnInfo> entry = respawnIter.next();
@@ -974,8 +976,9 @@ public abstract class TeamArena
 			pinfo.kit = null;
 			//unglow before setting pinfo.team to null as it needs that.
 			setViewingGlowingTeammates(pinfo, false, false);
-			//pinfo.team = null;
-			//pinfo.spawnPoint = null;
+
+			// Remove any corpse angels if they have one
+			RespawnViewLimiter.releaseView(p);
 		}
 
 		for(Kit kit : kits.values()) {
@@ -1231,6 +1234,11 @@ public abstract class TeamArena
 
 	public void respawnPlayer(Player player) {
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
+
+		if(this.isRespawningGame()) {
+			RespawnViewLimiter.releaseView(player);
+		}
+
 		player.teleport(pinfo.team.getNextSpawnpoint());
 
 		players.add(player);
@@ -1302,15 +1310,21 @@ public abstract class TeamArena
 			pinfo.clearDamageReceivedLog();
 
 			//if they died in the void teleport them back to map
-			if(playerVictim.getLocation().getY() <= border.getMinY()) {
-				Location toTele;
-				if(killer != null) {
-					toTele = killer.getLocation();
+			// only for non-respawning games
+			if(!this.isRespawningGame()) {
+				if(playerVictim.getLocation().getY() <= border.getMinY()) {
+					Location toTele;
+					if (killer != null) {
+						toTele = killer.getLocation();
+					}
+					else {
+						toTele = spawnPos;
+					}
+					playerVictim.teleport(toTele);
 				}
-				else {
-					toTele = spawnPos;
-				}
-				playerVictim.teleport(toTele);
+			}
+			else {
+				RespawnViewLimiter.limitView(playerVictim);
 			}
 
 			//clear attack givers so they don't get falsely attributed on this next player's death
@@ -1503,6 +1517,7 @@ public abstract class TeamArena
 		}
 		players.remove(player);
 		spectators.remove(player);
+		RespawnViewLimiter.releaseView(player);
 		balancePlayerLeave();
 		PlayerListScoreManager.removeScore(player);
 	}

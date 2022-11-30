@@ -3,11 +3,14 @@ package me.toomuchzelda.teamarenapaper.utils.packetentities;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
+import com.comphenix.protocol.wrappers.AdventureComponentConverter;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
+import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
@@ -164,6 +167,18 @@ public class PacketEntity
 		this.data.setObject(index, object);
 	}
 
+	public void setText(Component component, boolean sendPacket) {
+		Optional<?> nameComponent = Optional.of(AdventureComponentConverter.fromComponent(
+				component).getHandle());
+
+		//this.data.setObject(MetaIndex.CUSTOM_NAME_OBJ, nameComponent);
+		this.setMetadata(MetaIndex.CUSTOM_NAME_OBJ, nameComponent);
+
+		if(sendPacket) {
+			this.refreshViewerMetadata();
+		}
+	}
+
 	private void createRotateHead() {
 		this.rotateHeadPacket = new PacketContainer(PacketType.Play.Server.ENTITY_HEAD_ROTATION);
 
@@ -258,7 +273,11 @@ public class PacketEntity
 	 * does not support moving between worlds
 	 */
 	public void move(Location newLocation) {
-		if(this.location.equals(newLocation))
+		this.move(newLocation, false);
+	}
+
+	private void move(Location newLocation, boolean force) {
+		if(this.location.equals(newLocation) && !force)
 			return;
 
 		newLocation = newLocation.clone();
@@ -287,7 +306,7 @@ public class PacketEntity
 		location = newLocation;
 	}
 
-	private void spawn(Player player) {
+	protected void spawn(Player player) {
 		PlayerUtils.sendPacket(player, spawnPacket, metadataPacket);
 	}
 
@@ -308,6 +327,7 @@ public class PacketEntity
 				spawn(p);
 			}
 			this.isAlive = true;
+			this.move(this.getLocation(), true);
 		}
 	}
 

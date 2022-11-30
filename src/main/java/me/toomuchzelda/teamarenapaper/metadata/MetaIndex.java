@@ -36,6 +36,8 @@ public class MetaIndex
 	public static final int CREEPER_CHARGED_IDX = 17;
 	public static final int CREEPER_IGNITED_IDX = 18;
 
+	public static final int ALLAY_DANCING_IDX = 16;
+
 	public static final MetadataBitfieldValue GLOWING_METADATA_VALUE = MetadataBitfieldValue.create(Collections.singletonMap(BASE_BITFIELD_GLOWING_IDX, true));
 
 	public static final WrappedDataWatcher.WrappedDataWatcherObject BASE_BITFIELD_OBJ;
@@ -52,6 +54,8 @@ public class MetaIndex
 	public static final WrappedDataWatcher.WrappedDataWatcherObject CREEPER_CHARGED_OBJ;
 	public static final WrappedDataWatcher.WrappedDataWatcherObject CREEPER_IGNITED_OBJ;
 
+	public static final WrappedDataWatcher.WrappedDataWatcherObject ALLAY_DANCING_OBJ;
+
 	static {
 		BASE_BITFIELD_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(BASE_BITFIELD_IDX, WrappedDataWatcher.Registry.get(Byte.class));
 		CUSTOM_NAME_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(CUSTOM_NAME_IDX, WrappedDataWatcher.Registry.getChatComponentSerializer(true));
@@ -66,5 +70,7 @@ public class MetaIndex
 		CREEPER_STATE_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(CREEPER_STATE_IDX, WrappedDataWatcher.Registry.get(Integer.class));
 		CREEPER_CHARGED_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(CREEPER_CHARGED_IDX, WrappedDataWatcher.Registry.get(Boolean.class));
 		CREEPER_IGNITED_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(CREEPER_IGNITED_IDX, WrappedDataWatcher.Registry.get(Boolean.class));
+
+		ALLAY_DANCING_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(ALLAY_DANCING_IDX, WrappedDataWatcher.Registry.get(Boolean.class));
 	}
 }
