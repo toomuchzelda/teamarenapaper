@@ -272,17 +272,18 @@ public class CaptureTheFlag extends TeamArena
 		for (var flag : flags) {
 			var builder = Component.text();
 			builder.append(flag.team.getComponentSimpleName(), Component.text(": "));
-			if (flag.isAtBase) {
-				builder.append(Component.text("⚑ " + flag.team.getTotalScore(), NamedTextColor.GREEN));
-			} else if (flag.holdingTeam != null) {
+			builder.append(Component.text("⚑ " + flag.team.getTotalScore(), NamedTextColor.GREEN));
+			if (flag.holdingTeam != null) {
 				builder.append(
+						Component.space(),
 						TextUtils.getProgressBar(NamedTextColor.GRAY, flag.holdingTeam.getRGBTextColor(),
 								1, (double) flag.ticksUntilReturn / TAKEN_FLAG_RETURN_TIME).decorate(TextDecoration.BOLD),
 						flag.holdingTeam.colourWord(" Held").decorate(TextDecoration.BOLD)
 				);
-			} else {
-				builder.append(TextUtils.getProgressText("↓ Dropped",
-						NamedTextColor.GRAY, flag.team.getRGBTextColor(), NamedTextColor.GREEN,
+			} else if(!flag.isAtBase) {
+				builder.append(
+						Component.space(),
+						TextUtils.getProgressText("↓ Dropped", NamedTextColor.GRAY, flag.team.getRGBTextColor(), NamedTextColor.GREEN,
 						1 - (double) flag.ticksUntilReturn / TAKEN_FLAG_RETURN_TIME));
 			}
 			sidebarCache.put(flag, builder.build());
