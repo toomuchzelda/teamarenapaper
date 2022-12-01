@@ -442,7 +442,7 @@ public class EventListeners implements Listener
 						worldBorder.setCenter(centerX, centerZ);
 						worldBorder.setSize(768);
 						worldBorder.setSize(512, 1);
-						worldBorder.setWarningDistance(3);
+						worldBorder.setWarningDistance(0);
 						worldBorder.setWarningTime(0);
 						player.setWorldBorder(worldBorder);
 					} else {
@@ -1010,7 +1010,7 @@ public class EventListeners implements Listener
 			Component.text("|", NamedTextColor.DARK_RED, TextDecoration.BOLD), Component.space());
 	static final Component MOTD = Component.textOfChildren(
 			Component.text("               "),
-			TextUtils.getUselessRGBText("Blue Warfare", TextColor.color(0x060894), TextColor.color(0x1ad3f0)),
+			TextUtils.getUselessRGBText("Team Arena", TextColor.color(0x060894), TextColor.color(0x1ad3f0)),
 			Component.space(),
 			TextUtils.getUselessRainbowText("[1.19.2]"),
 			Component.newline(),

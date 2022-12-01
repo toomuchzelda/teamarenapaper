@@ -4,6 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
@@ -68,8 +69,6 @@ public class KingOfTheHill extends TeamArena
 		super.preGameTick();
 
 		for(Hill hill : hills) {
-			//hill.playParticles(Color.WHITE);
-
 			hill.playParticles(MathUtils.randomColor());
 		}
 	}
@@ -86,10 +85,14 @@ public class KingOfTheHill extends TeamArena
 
 				if(activeHill.getBorder().contains(e.getBoundingBox())) {
 					numOwningPlayers++;
-					e.setGlowing(true);
+					// Make players on the hill glow.
+					//e.setGlowing(true);
+					hillGlow(e, true);
 				}
-				else
-					e.setGlowing(false);
+				else {
+					//e.setGlowing(false);
+					hillGlow(e, false);
+				}
 			}
 
 			float max = (float) (owningTeam.getPlayerMembers().size() * 0.7);
@@ -119,11 +122,13 @@ public class KingOfTheHill extends TeamArena
 
 					if (activeHill.getBorder().contains(member.getBoundingBox())) {
 						numPlayers++;
-						member.setGlowing(true);
+						//member.setGlowing(true);
+						hillGlow(member, true);
 					}
-					else
-						member.setGlowing(false);
-
+					else {
+						//member.setGlowing(false);
+						hillGlow(member, false);
+					}
 				}
 
 				float toEarn;
@@ -504,6 +509,19 @@ public class KingOfTheHill extends TeamArena
 						MiniMapManager.GameRenderer.TRANSPARENT, MiniMapManager.GameRenderer.TRANSPARENT);
 			}
 		});
+	}
+
+	private void hillGlow(Entity entity, boolean glowing) {
+		entity.setGlowing(glowing);
+
+		if(entity instanceof Player player && Kit.getActiveKit(player).isInvisKit()) {
+			if(glowing) {
+				PlayerUtils.sendMaxWarningPacket(player);
+			}
+			else {
+				PlayerUtils.resetWarningDistance(player);
+			}
+		}
 	}
 
 	@Override

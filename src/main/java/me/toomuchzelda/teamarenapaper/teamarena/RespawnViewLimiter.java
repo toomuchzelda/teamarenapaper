@@ -40,8 +40,6 @@ public class RespawnViewLimiter
 
 			// Spawn indicator allay
 			PacketAngel angel = new PacketAngel(loc, spectator);
-			//TODO chance of dancing
-			//TODO hold the dead player's head
 			angel.respawn();
 
 			// Make the player ride the allay to prevent them from moving anywhere else
@@ -52,7 +50,7 @@ public class RespawnViewLimiter
 
 			// Put a block above the spectator to prevent them from using third person mode to gain more view
 			// The block is clientside only, it does not exist to any other players
-			spectator.sendBlockChange(loc.clone().add(0, 2, 0), Material.BARRIER.createBlockData());
+			spectator.sendBlockChange(loc.clone().add(0, 1, 0), Material.BARRIER.createBlockData());
 		}
 	}
 
@@ -63,13 +61,13 @@ public class RespawnViewLimiter
 			rinfo.angel().remove();
 
 			// Remove the clientside block with whatever the original block was.
-			final Location blockLoc = rinfo.baseLoc().clone().add(0, 2, 0);
+			final Location blockLoc = rinfo.baseLoc().clone().add(0, 1, 0);
 			respawnedPlayer.sendBlockChange(blockLoc, blockLoc.getBlock().getBlockData());
 		}
 	}
 
 	/**
-	 * Spam restricted players with "Look At" packets so they always looks towards the ground.
+	 * Make the allay look wherever the player is looking.
 	 */
 	public static void tick() {
 		for(var entry : RESTRICTED_PLAYERS.entrySet()) {
@@ -81,7 +79,7 @@ public class RespawnViewLimiter
 		}
 	}
 
-	static boolean isRestricted(Player player) {
+	public static boolean isRestricted(Player player) {
 		return RESTRICTED_PLAYERS.containsKey(player);
 	}
 

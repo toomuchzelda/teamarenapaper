@@ -21,21 +21,15 @@ import java.util.function.Predicate;
  */
 public class PacketHologram extends PacketEntity
 {
-	private Component text;
 
 	public PacketHologram(Location location, @Nullable LinkedHashSet<Player> viewers, @Nullable Predicate<Player> rule,
 						  Component text) {
 		super(PacketEntity.NEW_ID, EntityType.ARMOR_STAND, location, viewers, rule);
 
-		this.text = text;
-
 		//setup the metadata
 		this.data.setObject(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK);
 
-		Optional<?> nameComponent = Optional.of(AdventureComponentConverter.fromComponent(
-				this.text).getHandle());
-
-		this.data.setObject(MetaIndex.CUSTOM_NAME_OBJ, nameComponent);
+		this.setText(text, false);
 		this.data.setObject(MetaIndex.CUSTOM_NAME_VISIBLE_OBJ, Boolean.TRUE);
 
 		this.data.setObject(MetaIndex.ARMOR_STAND_BITFIELD_OBJ, MetaIndex.ARMOR_STAND_MARKER_MASK);

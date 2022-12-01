@@ -6,8 +6,10 @@ import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.reflect.StructureModifier;
+import com.comphenix.protocol.wrappers.BlockPosition;
 import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.comphenix.protocol.wrappers.PlayerInfoData;
+import com.comphenix.protocol.wrappers.WrappedBlockData;
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Pair;
 import io.papermc.paper.adventure.PaperAdventure;
@@ -17,6 +19,7 @@ import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxViewer;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.DisguiseManager;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
+import me.toomuchzelda.teamarenapaper.teamarena.RespawnViewLimiter;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
@@ -216,6 +219,31 @@ public class PacketListeners
 				Player fakeHitboxPlayer = FakeHitboxManager.getByFakeId(interactedId);
 				if(fakeHitboxPlayer != null) {
 					ints.write(0, fakeHitboxPlayer.getEntityId());
+				}
+			}
+		});
+
+		/**
+		 * Prevent the barrier block used in view limiting being removed client-side when right
+		 * clicking on it
+		 */
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
+				PacketType.Play.Server.BLOCK_CHANGE) {
+			@Override
+			public void onPacketSending(PacketEvent event) {
+				if(RespawnViewLimiter.isRestricted(event.getPlayer())) {
+					PacketContainer packet = event.getPacket();
+					WrappedBlockData wrappedBlockState = packet.getBlockData().read(0);
+					if(wrappedBlockState.getType().isAir()) { // If client is being told a block is being removed
+						BlockPosition pos = packet.getBlockPositionModifier().read(0);
+						Location loc = event.getPlayer().getLocation().add(0, 1, 0);
+						final int blockX = loc.getBlockX();
+						final int blockY = loc.getBlockY();
+						final int blockZ = loc.getBlockZ();
+						if (blockX == pos.getX() && blockY == pos.getY() && blockZ == pos.getZ()) {
+							event.setCancelled(true);
+						}
+					}
 				}
 			}
 		});

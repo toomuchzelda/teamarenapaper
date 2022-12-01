@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.utils;
 
+import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
 import me.toomuchzelda.teamarenapaper.Main;
@@ -10,6 +11,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSpy;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientboundSetBorderWarningDistancePacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.network.protocol.game.ClientboundSetHealthPacket;
 import net.minecraft.server.level.ServerPlayer;
@@ -18,6 +20,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.craftbukkit.v1_19_R1.CraftWorldBorder;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_19_R1.util.CraftVector;
 import org.bukkit.entity.Player;
@@ -28,8 +31,6 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.HashSet;
-import java.lang.reflect.InvocationTargetException;
 import java.util.LinkedHashSet;
 import java.util.Map;
 
@@ -236,5 +237,25 @@ public class PlayerUtils {
 		else{
 			return false;
 		}
+	}
+
+	private static final PacketContainer MAX_DISTANCE_WARNING_PACKET;
+
+	static {
+		MAX_DISTANCE_WARNING_PACKET = new PacketContainer(PacketType.Play.Server.SET_BORDER_WARNING_DISTANCE);
+		MAX_DISTANCE_WARNING_PACKET.getIntegers().write(0, Integer.MAX_VALUE);
+	}
+
+	public static void sendMaxWarningPacket(Player player) {
+		PlayerUtils.sendPacket(player, MAX_DISTANCE_WARNING_PACKET);
+	}
+
+	public static void resetWarningDistance(Player player) {
+		CraftWorldBorder craftBorder = (CraftWorldBorder) player.getWorldBorder();
+		if(craftBorder == null)
+			craftBorder = (CraftWorldBorder) player.getWorld().getWorldBorder();
+
+		ClientboundSetBorderWarningDistancePacket packet = new ClientboundSetBorderWarningDistancePacket(craftBorder.getHandle());
+		PlayerUtils.sendPacket(player, packet);
 	}
 }
