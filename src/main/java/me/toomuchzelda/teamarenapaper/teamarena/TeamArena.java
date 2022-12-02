@@ -447,6 +447,7 @@ public abstract class TeamArena
 
 		//checking team states (win/lose) done in liveTick() per-game
 
+		SpectatorAngelManager.tick();
 		//process players waiting to respawn if a respawning game
 		if(isRespawningGame()) {
 			respawnerTick();
@@ -495,8 +496,6 @@ public abstract class TeamArena
 	}
 
 	public void respawnerTick() {
-		RespawnViewLimiter.tick();
-
 		Iterator<Map.Entry<Player, RespawnInfo>> respawnIter = respawnTimers.entrySet().iterator();
 		while (respawnIter.hasNext()) {
 			Map.Entry<Player, RespawnInfo> entry = respawnIter.next();
@@ -978,7 +977,7 @@ public abstract class TeamArena
 			setViewingGlowingTeammates(pinfo, false, false);
 
 			// Remove any corpse angels if they have one
-			RespawnViewLimiter.releaseView(p);
+			SpectatorAngelManager.removeAngel(p);
 		}
 
 		for(Kit kit : kits.values()) {
@@ -1236,7 +1235,7 @@ public abstract class TeamArena
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
 
 		if(this.isRespawningGame()) {
-			RespawnViewLimiter.releaseView(player);
+			SpectatorAngelManager.removeAngel(player);
 		}
 
 		player.teleport(pinfo.team.getNextSpawnpoint());
@@ -1322,9 +1321,10 @@ public abstract class TeamArena
 					}
 					playerVictim.teleport(toTele);
 				}
+				SpectatorAngelManager.spawnAngel(playerVictim, false);
 			}
 			else {
-				RespawnViewLimiter.limitView(playerVictim);
+				SpectatorAngelManager.spawnAngel(playerVictim, true);
 			}
 
 			//clear attack givers so they don't get falsely attributed on this next player's death
@@ -1517,7 +1517,7 @@ public abstract class TeamArena
 		}
 		players.remove(player);
 		spectators.remove(player);
-		RespawnViewLimiter.releaseView(player);
+		SpectatorAngelManager.removeAngel(player);
 		balancePlayerLeave();
 		PlayerListScoreManager.removeScore(player);
 	}

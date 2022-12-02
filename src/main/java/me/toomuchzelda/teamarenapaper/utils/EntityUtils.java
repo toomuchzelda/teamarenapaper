@@ -104,6 +104,9 @@ public class EntityUtils {
 		playEffect(entity, ClientboundAnimatePacket.MAGIC_CRITICAL_HIT);
 	}
 
+	/**
+	 * @param effect A ClientboundAnimatePacket effect.
+	 */
 	public static void playEffect(Entity entity, int effect) {
 		net.minecraft.world.entity.Entity nmsEntity = ((CraftEntity) entity).getHandle();
 		ClientboundAnimatePacket packet = new ClientboundAnimatePacket(nmsEntity, effect);
@@ -119,6 +122,9 @@ public class EntityUtils {
 		}
 	}
 
+	/**
+	 * @param effect A ClientboundAnimatePacket effect.
+	 */
 	public static void playEffect(PacketEntity packetEntity, int effect) {
 		PacketContainer packet = new PacketContainer(PacketType.Play.Server.ANIMATION);
 

@@ -19,7 +19,7 @@ import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxViewer;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.DisguiseManager;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
-import me.toomuchzelda.teamarenapaper.teamarena.RespawnViewLimiter;
+import me.toomuchzelda.teamarenapaper.teamarena.SpectatorAngelManager;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
@@ -231,7 +231,7 @@ public class PacketListeners
 				PacketType.Play.Server.BLOCK_CHANGE) {
 			@Override
 			public void onPacketSending(PacketEvent event) {
-				if(RespawnViewLimiter.isRestricted(event.getPlayer())) {
+				if(SpectatorAngelManager.isRestricted(event.getPlayer())) {
 					PacketContainer packet = event.getPacket();
 					WrappedBlockData wrappedBlockState = packet.getBlockData().read(0);
 					if(wrappedBlockState.getType().isAir()) { // If client is being told a block is being removed
