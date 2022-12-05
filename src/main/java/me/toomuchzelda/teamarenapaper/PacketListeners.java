@@ -226,8 +226,10 @@ public class PacketListeners
 		/**
 		 * Prevent the barrier block used in view limiting being removed client-side when right
 		 * clicking on it
+		 *
+		 * Temporarily disabled
 		 */
-		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
+		/*ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.BLOCK_CHANGE) {
 			@Override
 			public void onPacketSending(PacketEvent event) {
@@ -246,7 +248,7 @@ public class PacketListeners
 					}
 				}
 			}
-		});
+		});*/
 
 		//intercept player info packets and replace with disguise if needed
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin, PacketType.Play.Server.PLAYER_INFO) {

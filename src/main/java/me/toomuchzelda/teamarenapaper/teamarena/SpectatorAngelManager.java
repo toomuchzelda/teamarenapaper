@@ -44,7 +44,8 @@ public class SpectatorAngelManager
 	/**
 	 * Spawn the angel at the player's position
 	 * @param spectator The player.
-	 * @param lock true if the player should be locked to the angel's position.
+	 * @param lock true if the player should be locked to the angel's position. false will have the angel follow
+	 *             the player's position.
 	 */
 	static void spawnAngel(Player spectator, boolean lock) {
 		if(!RESTRICTED_PLAYERS.containsKey(spectator)) {
@@ -60,7 +61,8 @@ public class SpectatorAngelManager
 
 				// Put a block above the spectator to prevent them from using third person mode to gain more view
 				// The block is clientside only, it does not exist to any other players
-				spectator.sendBlockChange(loc.clone().add(0, 1, 0), Material.BARRIER.createBlockData());
+				// Edit: Not do the block change anymore
+				//spectator.sendBlockChange(loc.clone().add(0, 1, 0), Material.BARRIER.createBlockData());
 			}
 			else {
 				loc = null; // Set to null, so we pass null into the RestrictInfo ctor.
@@ -77,8 +79,9 @@ public class SpectatorAngelManager
 			if(rinfo.baseLoc() != null) {
 				rinfo.angel().mountOwner(false);
 				// Remove the clientside block with whatever the original block was.
-				final Location blockLoc = rinfo.baseLoc().clone().add(0, 1, 0);
-				respawnedPlayer.sendBlockChange(blockLoc, blockLoc.getBlock().getBlockData());
+				// Edit: Not do the block change anymore
+				//final Location blockLoc = rinfo.baseLoc().clone().add(0, 1, 0);
+				//respawnedPlayer.sendBlockChange(blockLoc, blockLoc.getBlock().getBlockData());
 			}
 
 			rinfo.angel().remove();

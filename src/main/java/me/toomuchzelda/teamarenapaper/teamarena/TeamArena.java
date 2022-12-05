@@ -57,8 +57,6 @@ import java.util.*;
 public abstract class TeamArena
 {
 	public static GameType nextGameType = GameType.CTF;
-	@Nullable
-	public static String nextMapName = null;
 
 	private final File tempWorldFile;
 	public World gameWorld;
@@ -96,8 +94,8 @@ public abstract class TeamArena
 
 	protected TeamArenaTeam spectatorTeam;
 	//use Bukkit.getOnlinePlayers() for all players
-	protected Set<Player> players;
-	protected Set<Player> spectators;
+	protected Set<Player> players; // Players alive and in the game
+	protected Set<Player> spectators; // Spectators including dead players
 	/**
 	 * for mid-game joiners with whatever amount of time to decide if they wanna join and dead players
 	 * -1 value means ready to respawn when next liveTick runs (magic number moment)
@@ -122,8 +120,6 @@ public abstract class TeamArena
 	public static final Component OWN_TEAM_PREFIX_DANGER = OWN_TEAM_PREFIX.color(NamedTextColor.RED);
 
 	protected Queue<DamageEvent> damageQueue;
-
-	private final List<DamageIndicatorHologram> activeDamageIndicators = new LinkedList<>();
 
 	public final MiniMapManager miniMap;
 	public final GraffitiManager graffiti;
@@ -710,7 +706,7 @@ public abstract class TeamArena
 				event.setUseItemInHand(Event.Result.DENY);
 				event.setUseInteractedBlock(Event.Result.DENY);
 				// TODO fix respawning players being able to see other teams
-				var teamFilter = isSpectator(clicker) ? null : team;
+				TeamArenaTeam teamFilter = isSpectator(clicker) ? null : team;
 				Inventories.openInventory(clicker, new SpectateInventory(teamFilter));
 				return;
 			}
@@ -905,6 +901,11 @@ public abstract class TeamArena
 	public void prepLive() {
 		setGameState(GameState.LIVE);
 		gameLiveTime = gameTick;
+
+		if(damageQueue.size() > 0) {
+			Main.logger().warning("damage queue had events in it during prepLive()!");
+			damageQueue.clear();
+		}
 
 		Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
 		while(iter.hasNext()) {
@@ -1408,7 +1409,6 @@ public abstract class TeamArena
 	}
 
 	public void interruptRespawn(Player player) {
-		//todo: make async
 		if(gameState != GameState.LIVE)
 			return;
 
@@ -1760,7 +1760,7 @@ public abstract class TeamArena
 	}
 
 	public void queueDamage(DamageEvent event) {
-		if(!isDead(event.getVictim()))
+		if(this.gameState == GameState.LIVE && !isDead(event.getVictim()))
 			damageQueue.add(event);
 	}
 

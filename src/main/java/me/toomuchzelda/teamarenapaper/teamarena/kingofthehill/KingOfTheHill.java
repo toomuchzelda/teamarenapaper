@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.kingofthehill;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
@@ -22,6 +23,7 @@ import org.bukkit.map.MapPalette;
 import org.bukkit.util.BoundingBox;
 
 import java.io.File;
+import java.lang.ref.WeakReference;
 import java.util.*;
 
 public class KingOfTheHill extends TeamArena
@@ -380,6 +382,13 @@ public class KingOfTheHill extends TeamArena
 		}
 	}
 
+	@Override
+	public void handleDeath(DamageEvent event) {
+		super.handleDeath(event);
+
+		this.hillGlow(event.getVictim(), false);
+	}
+
 	public void nextHill() {
 		hillIndex++;
 		//if all the hills have been played once and it's random hill order, shuffle the hills again
@@ -511,15 +520,19 @@ public class KingOfTheHill extends TeamArena
 		});
 	}
 
+	// Record hill glowing players here to avoid spamming packets unnecessarily.
+	private final Set<Player> hillGlowingPlayers = Collections.newSetFromMap(new WeakHashMap<>());
 	private void hillGlow(Entity entity, boolean glowing) {
 		entity.setGlowing(glowing);
 
-		if(entity instanceof Player player && Kit.getActiveKit(player).isInvisKit()) {
+		if(entity instanceof Player player && (!glowing || Kit.getActiveKit(player).isInvisKit())) {
 			if(glowing) {
-				PlayerUtils.sendMaxWarningPacket(player);
+				if(hillGlowingPlayers.add(player))
+					PlayerUtils.sendMaxWarningPacket(player);
 			}
 			else {
-				PlayerUtils.resetWarningDistance(player);
+				if(hillGlowingPlayers.remove(player))
+					PlayerUtils.resetWarningDistance(player);
 			}
 		}
 	}

@@ -48,6 +48,12 @@ public class KitTrooper extends Kit {
 		private static final int GAPPLE_COOLDOWN_TIME = 15 * 20; //15 secs
 		private static final String COOLDOWN_MSG_KEY = "troopercd";
 
+		@Override
+		public void removeAbility(Player trooper) {
+			// Remove gapple cooldown so it doesn't persist after death.
+			trooper.setCooldown(Material.GOLDEN_APPLE, 0);
+		}
+
 		/**
 		 * Set a cooldown on eating golden apples
 		 */
