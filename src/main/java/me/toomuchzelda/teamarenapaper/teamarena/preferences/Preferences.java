@@ -73,7 +73,7 @@ public class Preferences {
 					NONE = Do not list damage received.
 					COMPACT = List total damage received, grouped by type.
 					FULL = List all damage received.
-					""", DamageLogEntry.Style.class, DamageLogEntry.Style.COMPACT)
+					""", DamageLogEntry.Style.class, DamageLogEntry.Style.NONE)
 		.setIcon(Material.BOOK);
 
 	public static final Preference<SidebarManager.Style> SIDEBAR_STYLE = SimplePreference.of("sidebar_style",
