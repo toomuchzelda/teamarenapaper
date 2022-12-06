@@ -272,12 +272,12 @@ public class KitValkyrie extends Kit {
 
 			//Throwing Gravity Bombs
 			if(mat == Material.HEART_OF_THE_SEA) {
+				//inv.setItem(inv.getHeldItemSlot(), inv.getItem(inv.getHeldItemSlot()).subtract());
+				player.getEquipment().setItem(event.getHand(), event.getItem().subtract());
 				if(action.isLeftClick()){
-					inv.setItem(inv.getHeldItemSlot(), inv.getItem(inv.getHeldItemSlot()).subtract());
 					throwGrenade(player, 1.5d);
 				}
-				if(action.isRightClick()) {
-					inv.setItem(inv.getHeldItemSlot(), inv.getItem(inv.getHeldItemSlot()).subtract());
+				else if(action.isRightClick()) {
 					throwGrenade(player, 0.8d);
 				}
 			}
