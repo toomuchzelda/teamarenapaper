@@ -80,12 +80,14 @@ public class DamageEvent {
 		if(Main.getGame().getGameState() != LIVE)
 			return null;
 
+		final EntityDamageEvent.DamageCause damageCause = event.getCause();
+
 		//Handle entity fire ourselves
-		if(event.getCause() == EntityDamageEvent.DamageCause.FIRE_TICK)
+		if(damageCause == EntityDamageEvent.DamageCause.FIRE_TICK)
 			return null;
 
 		//handle poison ourselves
-		if(event.getCause() == EntityDamageEvent.DamageCause.POISON)
+		if(damageCause == EntityDamageEvent.DamageCause.POISON)
 			return null;
 
 		//marker armorstands must never be damaged/killed
@@ -104,7 +106,7 @@ public class DamageEvent {
 		if(event instanceof EntityDamageByEntityEvent dEvent) {
 			if(dEvent.getDamager() instanceof Player p && Main.getGame().isSpectator(p))
 				return null;
-			else if (dEvent.getCause() == EntityDamageEvent.DamageCause.PROJECTILE && dEvent.getDamager() instanceof AbstractArrow aa) {
+			else if (damageCause == EntityDamageEvent.DamageCause.PROJECTILE && dEvent.getDamager() instanceof AbstractArrow aa) {
 				//fix arrow damage - no random crits
 				//  arrow damage is the vanilla formula without the random crit part
 				double damage = DamageNumbers.calcArrowDamage(aa.getDamage(), aa.getVelocity().length());
@@ -122,6 +124,9 @@ public class DamageEvent {
 						ArrowPierceManager.fixArrowMovement(aa);
 				}, 0L);
 			}
+			// Stop ender-pearls from doing fall damage
+			else if (damageCause == EntityDamageEvent.DamageCause.FALL && dEvent.getDamager() instanceof EnderPearl)
+				return null;
 		}
 
 		//Bukkit.broadcastMessage("EDEvent raw damage: " + event.getDamage());

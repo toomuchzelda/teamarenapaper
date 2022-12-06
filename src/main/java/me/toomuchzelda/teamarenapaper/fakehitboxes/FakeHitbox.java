@@ -24,7 +24,6 @@ import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityPoseChangeEvent;
-import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
 import javax.annotation.Nullable;
@@ -37,6 +36,7 @@ public class FakeHitbox
 	//metadata to make them invisible
 	private static final List<WrappedWatchableObject> METADATA;
 	public static final String USERNAME = "zzzzzz";
+	public static final Component DONT_MIND_ME = Component.text("don't mind me");
 	public static final double VIEWING_RADIUS = 17d;
 	public static final double VIEWING_RADIUS_SQR = VIEWING_RADIUS * VIEWING_RADIUS;
 
@@ -92,14 +92,7 @@ public class FakeHitbox
 
 			GameProfile authLibProfile = new GameProfile(fPlayer.uuid, USERNAME);
 
-			//net.minecraft.network.chat.Component nmsComponent = PaperAdventure.asVanilla(Component.text(" "));
-			Component displayNameComp;
-			if(MathUtils.randomMax(10) == 10) {
-				displayNameComp = Component.text("TEAM ARENA", MathUtils.randomTextColor(), TextDecoration.BOLD);
-			}
-			else {
-				displayNameComp = Component.text(" ");
-			}
+			Component displayNameComp = getDisplayNameComponent();
 
 			net.minecraft.network.chat.Component nmsComponent = PaperAdventure.asVanilla(displayNameComp);
 			ClientboundPlayerInfoPacket.PlayerUpdate update = new ClientboundPlayerInfoPacket.PlayerUpdate(authLibProfile, 1,
@@ -397,6 +390,19 @@ public class FakeHitbox
 
 	public int[] getFakePlayerIds() {
 		return this.fakePlayerIds;
+	}
+
+	private static Component getDisplayNameComponent() {
+		final int rand = MathUtils.randomMax(100);
+		if (rand <= 10) {
+			return Component.text("TEAM ARENA", MathUtils.randomTextColor(), TextDecoration.BOLD);
+		}
+		else if(rand == 100) {
+			return DONT_MIND_ME;
+		}
+		else {
+			return Component.space();
+		}
 	}
 
 	private static class FakePlayer {
