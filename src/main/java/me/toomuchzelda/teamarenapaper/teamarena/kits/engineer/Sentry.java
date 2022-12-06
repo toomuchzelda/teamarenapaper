@@ -55,7 +55,8 @@ public class Sentry extends Building {
 
 		var playerTeam = Main.getPlayerInfo(player).team;
 		Color teamColor = playerTeam.getColour();
-		this.setText(playerTeam.colourWord(player.getName() + "'s Sentry"));
+		// Set the skeleton's custom name instead.
+		//this.setText(playerTeam.colourWord(player.getName() + "'s Sentry"));
 
 		//Changing properties from Projection state to Active state
 
@@ -67,6 +68,7 @@ public class Sentry extends Building {
 		sentry.setInvisible(false);
 		sentry.setCollidable(true);
 		sentry.setSilent(false);
+		sentry.customName(player.playerListName().append(Component.text("'s Sentry", player.playerListName().style())));
 		this.armor = new ItemStack[4];
 		armor[3] = new ItemStack(Material.LEATHER_HELMET);
 		armor[2] = new ItemStack(Material.LEATHER_CHESTPLATE);

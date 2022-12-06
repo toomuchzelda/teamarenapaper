@@ -192,9 +192,8 @@ public class KitEngineer extends Kit {
 		@Override
 		public void onAttemptedAttack(DamageEvent event) {
 			if(event.getDamageType().is(DamageType.PROJECTILE) &&
-					event.getAttacker() instanceof Arrow &&
-					event.getKnockback() != null) {
-				event.setNoKnockback();
+					event.getAttacker() instanceof Arrow) {
+				event.setDamageType(DamageType.ENGINEER_SENTRY);
 			}
 		}
 
