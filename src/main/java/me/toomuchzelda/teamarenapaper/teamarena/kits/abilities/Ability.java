@@ -139,5 +139,7 @@ public abstract class Ability {
 
 	public void onInventoryDrag(InventoryDragEvent event) {}
 
+	public void onFish(PlayerFishEvent event) {}
+
 	public void onTeamSwitch(Player player, @Nullable TeamArenaTeam oldTeam, @Nullable TeamArenaTeam newTeam) {}
 }

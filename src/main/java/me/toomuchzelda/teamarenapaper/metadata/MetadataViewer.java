@@ -199,7 +199,7 @@ public class MetadataViewer
 
 	/**
 	 * For use in packet listeners.
-	 * Does not modify original. Returns a new packet if any modifications occured, else returns original.
+	 * Does not modify original. Returns a new packet if any modifications occurred, else returns original.
 	 * @param metadataPacket A vanilla generated metadata packet.
 	 */
 	public PacketContainer adjustMetadataPacket(@NotNull PacketContainer metadataPacket) {

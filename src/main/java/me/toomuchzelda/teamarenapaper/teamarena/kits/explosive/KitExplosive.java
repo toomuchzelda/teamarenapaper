@@ -185,7 +185,7 @@ public class KitExplosive extends Kit
 					//Explode grenade if fuse time passes
 					if (TeamArena.getGameTick() - grenadeInfo.spawnTime >= GRENADE_FUSE_TIME) {
 						//real thrower info is passed on through grenade's thrower field
-						TeamArenaExplosion explosion = new TeamArenaExplosion(null, 2, 0.5, 10, 3.5, 0.35, DamageType.EXPLOSIVE_GRENADE, grenade);
+						TeamArenaExplosion explosion = new TeamArenaExplosion(null, 3, 0.5, 10, 3.5, 0.35, DamageType.EXPLOSIVE_GRENADE, grenade);
 						explosion.explode();
 
 						grenade.remove();

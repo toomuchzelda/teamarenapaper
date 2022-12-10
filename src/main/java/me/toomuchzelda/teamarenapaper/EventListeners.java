@@ -990,6 +990,13 @@ public class EventListeners implements Listener
 		}
 	}
 
+	@EventHandler
+	public void playerFish(PlayerFishEvent event) {
+		for(Ability a : Kit.getAbilities(event.getPlayer())) {
+			a.onFish(event);
+		}
+	}
+
 	/**
 	 * Clean up despawning arrows from ArrowPierceManager
 	 */

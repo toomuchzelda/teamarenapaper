@@ -263,7 +263,7 @@ public class KitBurst extends Kit
 				fireworkEntity.detonate();
 
 				//play firework launch sound
-				shooter.getWorld().playSound(shooter, Sound.ENTITY_FIREWORK_ROCKET_SHOOT, SoundCategory.PLAYERS, 2f, 0.5f);
+				shooter.getWorld().playSound(shooter, Sound.ENTITY_FIREWORK_ROCKET_SHOOT, SoundCategory.PLAYERS, 2f, 1.1f);
 			}
 
 			//shoot a bunch of arrows to act like the firework sparks and do damage

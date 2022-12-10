@@ -31,6 +31,7 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
+import javax.annotation.Nullable;
 import java.util.LinkedHashSet;
 import java.util.Map;
 
@@ -196,15 +197,16 @@ public class PlayerUtils {
 		}
 	}
 
-	public static void sendKitMessage(Player player, Component chat, Component actionBar) {
+	public static void sendKitMessage(Player player, @Nullable Component chat, @Nullable Component actionBar) {
 		sendKitMessage(player, chat, actionBar, Main.getPlayerInfo(player));
 	}
 
-	public static void sendKitMessage(Player player, Component chat, Component actionBar, PlayerInfo pinfo) {
-		if (pinfo.getPreference(Preferences.KIT_CHAT_MESSAGES)) {
+	public static void sendKitMessage(Player player, @Nullable Component chat, @Nullable Component actionBar,
+									  PlayerInfo pinfo) {
+		if (chat != null && pinfo.getPreference(Preferences.KIT_CHAT_MESSAGES)) {
 			player.sendMessage(chat);
 		}
-		if (pinfo.getPreference(Preferences.KIT_ACTION_BAR)) {
+		if (actionBar != null && pinfo.getPreference(Preferences.KIT_ACTION_BAR)) {
 			player.sendActionBar(actionBar);
 		}
 	}
