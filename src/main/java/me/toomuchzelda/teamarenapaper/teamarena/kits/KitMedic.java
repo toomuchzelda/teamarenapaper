@@ -28,6 +28,7 @@ import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -88,6 +89,7 @@ public class KitMedic extends Kit
 
 		private static final Component HOLD_IN_MAIN_HAND = Component.text(
 				"You're not ambidextrous! Use the fishing rod in your main hand", TextColors.ERROR_RED);
+		private static final Component STOPPED_HEALING = Component.text("Stopped healing", NamedTextColor.GOLD);
 		private static final double HEAL_PER_TICK = 1.5d / 20d; // 0.75 hearts per second
 
 		private record HealInfo(LivingEntity healed, int startTime) {}
@@ -165,23 +167,39 @@ public class KitMedic extends Kit
 			// Set the healed to glow for the medic only.
 			MetadataViewer viewer = pinfo.getMetadataViewer();
 			viewer.setViewedValue(MetaIndex.BASE_BITFIELD_IDX, MetaIndex.GLOWING_METADATA_VALUE, healed);
+			viewer.refreshViewer(healed);
 		}
 
 		private void stopGlowing(Player medic, HealInfo hinfo) {
 			// Remove the medic-only glowing effect.
 			MetadataViewer viewer = Main.getPlayerInfo(medic).getMetadataViewer();
 			viewer.removeBitfieldValue(hinfo.healed(), MetaIndex.BASE_BITFIELD_IDX, MetaIndex.BASE_BITFIELD_GLOWING_IDX);
+			viewer.refreshViewer(hinfo.healed());
 		}
 
 		/** Process all the current healings */
 		@Override
 		public void onTick() {
-			for (Map.Entry<Player, HealInfo> entry : currentHeals.entrySet()) {
+			for (Iterator<Map.Entry<Player, HealInfo>> iter = currentHeals.entrySet().iterator();
+				 iter.hasNext(); ) {
+
+				Map.Entry<Player, HealInfo> entry = iter.next();
 				final Player medic = entry.getKey();
 				final HealInfo hinfo = entry.getValue();
+
+				// The PlayerFishEvent is not called when the player stops holding the rod by switching items
+				// or something. So check the item every tick here and stop healing apporpriately
+				if (!medic.getEquipment().getItemInMainHand().isSimilar(WAND)) {
+					iter.remove();
+					stopGlowing(medic, hinfo);
+					Bukkit.broadcastMessage("REMOVED !!!!");
+					PlayerUtils.sendKitMessage(medic, null, STOPPED_HEALING);
+					continue;
+				}
+
 				final LivingEntity healed = hinfo.healed();
 
-				if(healed instanceof Player healedPlayer) {
+				if (healed instanceof Player healedPlayer) {
 					PlayerUtils.heal(healedPlayer, HEAL_PER_TICK, EntityRegainHealthEvent.RegainReason.MAGIC_REGEN);
 				}
 				else {
@@ -189,27 +207,35 @@ public class KitMedic extends Kit
 					healed.setHealth(Math.min(healed.getHealth() + HEAL_PER_TICK, maxHealth));
 				}
 
-				// Play particles every 20 ticks.
 				final int mod = (TeamArena.getGameTick() - hinfo.startTime()) % 20;
 				final Location healedLoc = healed.getLocation();
-				if(mod == 0) {
-					healed.getWorld().spawnParticle(Particle.HEART, healedLoc.clone().add(0, healed.getHeight(), 0), 1);
+				if (mod == 0 || mod == 10) {
 					PlayerUtils.sendKitMessage(medic, null, getHealingMessage(healed));
-				}
-				else if(mod == 10) {
-					// TODO: particle effects
+
+					if(mod == 0)
+						healed.getWorld().spawnParticle(Particle.HEART, healedLoc.clone().add(0, healed.getHeight(), 0), 1);
 				}
 
-				//TODO: check if not holding the fishing rod anymore and stop healing.
+				if (mod == 10) {
+					// TODO: healing line particles?
+				}
 			}
 		}
 
+		private static final Component HEART = Component.text("❤", TextColor.color(247, 18, 18));
 		private static Component getHealingMessage(LivingEntity healed) {
-			return Component.text()
+			double healthPercent =
+					(healed.getHealth() / healed.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue()) * 100d;
+			healthPercent = MathUtils.round(healthPercent, 2);
+
+			Component healingName = Component.text()
 					.append(Component.text("Healing "))
 					.append(EntityUtils.getComponent(healed))
 					.color(NamedTextColor.LIGHT_PURPLE)
+					.append(Component.text().append(Component.text(" " + healthPercent + "%")).append(HEART).build())
 					.build();
+
+			return healingName;
 		}
 	}
 }
