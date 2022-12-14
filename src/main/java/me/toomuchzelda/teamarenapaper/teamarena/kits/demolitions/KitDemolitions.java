@@ -454,7 +454,6 @@ public class KitDemolitions extends Kit
 
 						//check if time up and give back one mine here
 						if (gameTick - regMine.removedTime() >= regMine.type().timeToRegen) {
-							Bukkit.broadcastMessage("run");
 							Player owner = entry.getKey();
 							ItemStack mineItem;
 							if (regMine.type() == MineType.TNTMINE) {

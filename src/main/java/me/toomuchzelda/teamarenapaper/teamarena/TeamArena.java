@@ -19,6 +19,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.KitDemolitions;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.engineer.KitEngineer;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.explosive.KitExplosive;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.medic.KitMedic;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.trigger.KitTrigger;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
@@ -56,8 +57,6 @@ import java.util.*;
  */
 public abstract class TeamArena
 {
-	public static GameType nextGameType = GameType.CTF;
-
 	private final File tempWorldFile;
 	public World gameWorld;
 	private final TeamArenaMap gameMap;
@@ -557,6 +556,8 @@ public abstract class TeamArena
 		team.addMembers(player);
 
 		informOfTeam(player);
+
+		Bukkit.broadcast(player.playerListName().append(Component.text(" joined ", NamedTextColor.YELLOW)).append(team.getComponentName()));
 	}
 
 	public void damageTick() {
@@ -879,15 +880,11 @@ public abstract class TeamArena
 	public void prepGameStarting() {
 		//teleport players to team spawns
 		for(TeamArenaTeam team : teams) {
-			int i = 0;
-			Location[] spawns = team.getSpawns();
 			for(Entity e : team.getPlayerMembers()) {
 				if(e instanceof Player p)
 					p.setAllowFlight(false);
 
-				e.teleport(spawns[i % spawns.length]);
-				team.spawnsIndex++;
-				i++;
+				e.teleport(team.getNextSpawnpoint());
 			}
 		}
 
@@ -1191,13 +1188,7 @@ public abstract class TeamArena
 				}
 
 				if(shame) {
-					Component text;
-					if(MathUtils.randomMax(128) == 128) {
-						text = player.displayName().append(Component.text(" baby raged off the game").color(NamedTextColor.GRAY));
-					}
-					else {
-						text = player.displayName().append(Component.text(" has joined the spectators").color(NamedTextColor.GRAY));
-					}
+					Component text = player.displayName().append(Component.text(" has joined the spectators", NamedTextColor.GRAY));
 					Bukkit.broadcast(text);
 				}
 			}
@@ -1461,7 +1452,8 @@ public abstract class TeamArena
 			players.add(player);
 		}
 		else {// if (gameState == GameState.LIVE){
-			playerInfo.team = spectatorTeam;
+			playerInfo.team = spectatorTeam; // necessary to initialize first so TeamArenaTeam#addMembers doesn't NPE.
+			setSpectator(player, true, false);
 		}
 
 		if (playerInfo.kit == null) {
@@ -1469,6 +1461,8 @@ public abstract class TeamArena
 			//default kit somehow invalid; maybe a kit was removed
 			if (playerInfo.kit == null) {
 				playerInfo.kit = CommandDebug.filterKit(kits.values().iterator().next());
+				Main.logger().severe("PlayerInfo default kit somehow invalid in TeamArena#loggingInPlayer. Should" +
+						" have been handled in EventListeners playerLogin.");
 			}
 		}
 
@@ -1495,12 +1489,11 @@ public abstract class TeamArena
 			if (this.isRespawningGame() && Main.getPlayerInfo(player).team == spectatorTeam) {
 				handlePlayerJoinMidGame(player);
 				respawnTimers.put(player, new RespawnInfo(gameTick));
+				giveLobbyItems(player);
 			}
 
-			//make sure to hide them as they are still a spectator
-			for(Player p : Bukkit.getOnlinePlayers()) {
-				p.hidePlayer(Main.getPlugin(), player);
-			}
+			// Apply the spectator effects
+			makeSpectator(player);
 
 			/*for (TeamArenaTeam team : teams) {
 				if (team.isAlive())
@@ -1512,14 +1505,20 @@ public abstract class TeamArena
 	public void leavingPlayer(Player player) {
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
 		pinfo.team.removeMembers(player);
+		// If they were a player and left during game then broadcast their quit.
 		if(pinfo.activeKit != null) {
 			pinfo.activeKit.removeKit(player, pinfo);
 		}
+
 		players.remove(player);
 		spectators.remove(player);
 		SpectatorAngelManager.removeAngel(player);
 		balancePlayerLeave();
 		PlayerListScoreManager.removeScore(player);
+
+		if(this.gameState == GameState.LIVE) {
+			Bukkit.broadcast(player.playerListName().append(Component.text(" left the game", NamedTextColor.YELLOW)));
+		}
 	}
 
 	public void informOfTeam(Player p) {

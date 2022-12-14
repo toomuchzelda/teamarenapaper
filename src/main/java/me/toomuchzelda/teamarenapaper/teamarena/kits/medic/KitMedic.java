@@ -1,20 +1,22 @@
-package me.toomuchzelda.teamarenapaper.teamarena.kits;
+package me.toomuchzelda.teamarenapaper.teamarena.kits.medic;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.FishHook;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
@@ -27,6 +29,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.util.Vector;
 
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -110,22 +113,27 @@ public class KitMedic extends Kit
 		@Override
 		public void onFish(PlayerFishEvent event) {
 			final Player medic = event.getPlayer();
-			Bukkit.broadcastMessage(event.getState().toString());
 			if(event.getState() == PlayerFishEvent.State.FISHING &&
 					medic.getEquipment().getItem(event.getHand()).isSimilar(WAND)) {
 
 				if(event.getHand() == EquipmentSlot.HAND) {
+					// Speed up the fishing hook to make aiming easier
+					final Vector vel = event.getHook().getVelocity().multiply(2d);
+					event.getHook().setVelocity(vel);
+
 					HealInfo hinfo = currentHeals.get(medic);
-					if(hinfo != null) {
+					if(hinfo != null) { // If a heal target was right-clicked directly in the PlayerInteractEntityEvent
 						event.getHook().setHookedEntity(hinfo.healed());
 					}
 				}
 				else {
 					event.setCancelled(true);
+					if(Main.getPlayerInfo(medic).messageHasCooldowned("medicMH", 3 * 20)) {
+						medic.sendMessage(HOLD_IN_MAIN_HAND);
+					}
 				}
 			}
 			else if(event.getState() != PlayerFishEvent.State.FISHING && currentHeals.containsKey(medic)) {
-				Bukkit.broadcastMessage(event.getState().toString());
 				HealInfo hinfo = currentHeals.remove(medic);
 				if(hinfo != null)
 					stopGlowing(medic, hinfo);
@@ -142,11 +150,6 @@ public class KitMedic extends Kit
 				if(event.getHand() == EquipmentSlot.HAND &&
 						event.getRightClicked() instanceof LivingEntity healed) {
 					startHealing(medic, healed);
-				}
-				else if(event.getHand() == EquipmentSlot.OFF_HAND) {
-					if(Main.getPlayerInfo(medic).messageHasCooldowned("medicMH", 3 * 20)) {
-						medic.sendMessage(HOLD_IN_MAIN_HAND);
-					}
 				}
 			}
 		}
@@ -171,10 +174,35 @@ public class KitMedic extends Kit
 		}
 
 		private void stopGlowing(Player medic, HealInfo hinfo) {
+			PlayerUtils.sendKitMessage(medic, null, STOPPED_HEALING);
 			// Remove the medic-only glowing effect.
 			MetadataViewer viewer = Main.getPlayerInfo(medic).getMetadataViewer();
 			viewer.removeBitfieldValue(hinfo.healed(), MetaIndex.BASE_BITFIELD_IDX, MetaIndex.BASE_BITFIELD_GLOWING_IDX);
 			viewer.refreshViewer(hinfo.healed());
+		}
+
+		/** Process players that have cast their fishing rod (not healing) */
+		@Override
+		public void onPlayerTick(final Player medic) {
+			final FishHook fishHook = medic.getFishHook();
+			if(fishHook == null) // Fishing rod not cast
+				return;
+
+			final Entity hookedEntity = fishHook.getHookedEntity();
+			if(!(hookedEntity instanceof LivingEntity hookedLiving)) // Hooked onto a non-living entity
+				return;
+
+			// If they aren't already healing this living entity, and they can heal this living entity,
+			// then start healing them.
+
+			HealInfo healInfo = currentHeals.get(medic);
+			if(healInfo != null && healInfo.healed() == hookedLiving)
+				return;
+
+			if(!(hookedLiving instanceof Player hookedPlayer) ||
+					Main.getPlayerInfo(medic).team.getPlayerMembers().contains(hookedPlayer)) {
+				startHealing(medic, hookedLiving);
+			}
 		}
 
 		/** Process all the current healings */
@@ -192,8 +220,6 @@ public class KitMedic extends Kit
 				if (!medic.getEquipment().getItemInMainHand().isSimilar(WAND)) {
 					iter.remove();
 					stopGlowing(medic, hinfo);
-					Bukkit.broadcastMessage("REMOVED !!!!");
-					PlayerUtils.sendKitMessage(medic, null, STOPPED_HEALING);
 					continue;
 				}
 

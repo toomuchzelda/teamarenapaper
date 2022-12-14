@@ -29,7 +29,6 @@ import java.util.Set;
 
 public class TeamArenaTeam
 {
-	public static final Component PING1 = ItemUtils.noItalics(Component.text("Point at something and Left Click to ping", TextUtils.LEFT_CLICK_TO));
 	public static final Component SHOW_ALL_TEAMMATES = ItemUtils.noItalics(Component.text("Right click to see all your teammates", TextUtils.RIGHT_CLICK_TO));
 	public static final List<Component> HOTBAR_ITEM_LORE = List.of(SHOW_ALL_TEAMMATES); //PING1);
 
@@ -64,7 +63,7 @@ public class TeamArenaTeam
 	private final LinkedHashSet<Player> playerMembers = new LinkedHashSet<>();
 
 	//next spawn position to use
-	public int spawnsIndex;
+	private int spawnsIndex;
 
 	//abstract score values, game-specific
 	public int score;
@@ -325,7 +324,7 @@ public class TeamArenaTeam
 
 		//don't change name if it's not different
 		// avoid sending packets and trouble
-		if (!player.playerListName().contains(component)) {
+		if (!player.playerListName().equals(component)) {
 			//Bukkit.broadcastMessage("Did not contain component");
 			player.playerListName(component);
 			//Main.getPlayerInfo(player).nametag.setText(component, true);
@@ -346,27 +345,6 @@ public class TeamArenaTeam
 		Component component;
 		if(secondColour != null) {
 			component = TextUtils.getUselessRGBText(str, getRGBTextColor(), getRGBSecondTextColor());
-			/*TextComponent.Builder builder = Component.text();
-			for (float i = 0; i < str.length(); i++) {
-				//percentage of second colour to use, leftover is percentage of first colour
-				// from 0 to 1
-				float percentage = (i / (float) str.length());
-
-				Vector colour1 = new Vector(colour.getRed(), colour.getGreen(), colour.getBlue());
-				Vector colour2 = new Vector(secondColour.getRed(), secondColour.getGreen(), secondColour.getBlue());
-
-				colour1.multiply(1 - percentage);
-				colour2.multiply(percentage);
-
-				TextColor result = TextColor.color((int) (colour1.getX() + colour2.getX()),
-						(int) (colour1.getY() + colour2.getY()),
-						(int) (colour1.getZ() + colour2.getZ()));
-
-
-				builder.append(Component.text(str.charAt((int) i)).color(result));
-			}
-
-			component = builder.build();*/
 		}
 		else {
 			component = Component.text(str, getRGBTextColor());
