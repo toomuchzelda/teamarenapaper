@@ -58,13 +58,16 @@ public class PacketEntity
 
 	private boolean isAlive;
 	private boolean remove;
-	private int dirtyRelativePacketTime;
+	protected int dirtyRelativePacketTime;
 	protected Location location;
 	protected Set<Player> viewers;
 	//the players currently seeing the packet entity, and receiving packets for it.
 	// a viewer may not be a 'real viewer' if they are not within tracking range of this packet entity.
 	protected Set<Player> realViewers;
 	protected Predicate<Player> viewerRule;
+
+	protected Set<Player> unmodifiableViewers;
+	protected Set<Player> unmodifiableRealViewers;
 
 	/**
 	 * Create a new PacketEntity. If viewers is specified in constructor, viewerRule will not be considered in initial
@@ -122,6 +125,9 @@ public class PacketEntity
 
 		this.realViewers = new LinkedHashSet<>(this.viewers);
 
+		this.unmodifiableViewers = Collections.unmodifiableSet(this.viewers);
+		this.unmodifiableRealViewers = Collections.unmodifiableSet(this.realViewers);
+
 		this.isAlive = false;
 		this.remove = false;
 		this.dirtyRelativePacketTime = HASNT_MOVED;
@@ -165,6 +171,10 @@ public class PacketEntity
 
 	public void setMetadata(WrappedDataWatcher.WrappedDataWatcherObject index, Object object) {
 		this.data.setObject(index, object);
+	}
+
+	public Object getMetadata(WrappedDataWatcher.WrappedDataWatcherObject index) {
+		return this.data.getObject(index);
 	}
 
 	public void setText(Component component, boolean sendPacket) {
@@ -510,11 +520,13 @@ public class PacketEntity
 	 * @return Immutable viewers Set
 	 */
 	public Set<Player> getLogicalViewers() {
-		return Collections.unmodifiableSet(viewers);
+		//return Collections.unmodifiableSet(viewers);
+		return this.unmodifiableViewers;
 	}
 
 	public Set<Player> getRealViewers() {
-		return Collections.unmodifiableSet(realViewers);
+		//return Collections.unmodifiableSet(realViewers);
+		return this.unmodifiableRealViewers;
 	}
 
 	public PacketContainer getSpawnPacket() {

@@ -6,10 +6,8 @@ import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.reflect.StructureModifier;
-import com.comphenix.protocol.wrappers.BlockPosition;
 import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.comphenix.protocol.wrappers.PlayerInfoData;
-import com.comphenix.protocol.wrappers.WrappedBlockData;
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Pair;
 import io.papermc.paper.adventure.PaperAdventure;
@@ -19,16 +17,15 @@ import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxViewer;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.DisguiseManager;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
-import me.toomuchzelda.teamarenapaper.teamarena.SpectatorAngelManager;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitGhost;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSpy;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.trigger.KitTrigger;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.trigger.TriggerCreeper;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.AttachedPacketEntity;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -119,12 +116,12 @@ public class PacketListeners
 		{
 			@Override
 			public void onPacketSending(PacketEvent event) {
-				if(FakeHitboxManager.ACTIVE) {
-					PacketContainer packet = event.getPacket();
-					int id = packet.getIntegers().read(0);
-					Player mover = Main.playerIdLookup.get(id);
+				PacketContainer packet = event.getPacket();
+				int id = packet.getIntegers().read(0);
+				Player mover = Main.playerIdLookup.get(id);
 
-					if (mover != null) {
+				if (mover != null) {
+					if(FakeHitboxManager.ACTIVE) {
 						final Player viewer = event.getPlayer();
 						FakeHitbox hitbox = FakeHitboxManager.getFakeHitbox(mover);
 						//don't send move packets for fake hitboxes unless the receiver is actually seeing them
@@ -159,26 +156,32 @@ public class PacketListeners
 			public void onPacketSending(PacketEvent event) {
 				//if player is trigger, sync up their trigger creeper's movement and position
 				PacketContainer packet = event.getPacket();
-				final Player mover = Main.playerIdLookup.get(packet.getIntegers().read(0));
+				final int id = packet.getIntegers().read(0);
 
-				KitTrigger.TriggerAbility.TriggerInfo triggerInfo = KitTrigger.TriggerAbility.getTriggerInfo(mover);
-				if(triggerInfo != null) {
+				Set<AttachedPacketEntity> attachedEntities = PacketEntityManager.lookupAttachedEntities(id);
+				if(attachedEntities == null)
+					return;
+
+				for(AttachedPacketEntity attachedE : attachedEntities) {
 					final Player viewer = event.getPlayer();
+					if(attachedE.getRealViewers().contains(viewer)) {
+						if (!attachedE.sendHeadRotPackets && packet.getType() == PacketType.Play.Server.ENTITY_HEAD_ROTATION) {
+							continue;
+						}
 
-					TriggerCreeper viewedCreeper = triggerInfo.getViewedCreeper(viewer);
-					//create a copy of this packet and change the ID to that of the creeper
-					PacketContainer triggerPacket = packet.shallowClone();
-					triggerPacket.getIntegers().write(0, viewedCreeper.getId());
+						PacketContainer entityPacket = packet.shallowClone();
+						entityPacket.getIntegers().write(0, attachedE.getId());
 
-					if(event.getPacketType() == PacketType.Play.Server.ENTITY_TELEPORT) {
-						//adjust the creeper's Y position
-						double y = packet.getDoubles().read(1);
-						y = viewedCreeper.getYCoordinate(y);
-						triggerPacket.getDoubles().write(1, y);
+						if(event.getPacketType() == PacketType.Play.Server.ENTITY_TELEPORT) {
+							//adjust the entity's Y position
+							double y = packet.getDoubles().read(1);
+							y += attachedE.getYOffset();
+							entityPacket.getDoubles().write(1, y);
+						}
+
+						//send the packet immediately
+						PlayerUtils.sendPacket(viewer, entityPacket);
 					}
-
-					//send the packet immediately
-					PlayerUtils.sendPacket(viewer, triggerPacket);
 				}
 			}
 		});

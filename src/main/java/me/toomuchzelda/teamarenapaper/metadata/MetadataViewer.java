@@ -140,6 +140,9 @@ public class MetadataViewer
 		MetadataValueStatus status = viewedValues.indexedValues().computeIfAbsent(index,
 				integer -> new MetadataValueStatus(MetadataBitfieldValue.create(new HashMap<>(1))));
 
+		if(status.value == null) {
+			status.value = MetadataBitfieldValue.create(new HashMap<>(1));
+		}
 		((MetadataBitfieldValue) status.value).setBit(bitIndex, bit);
 		status.dirty = true;
 	}

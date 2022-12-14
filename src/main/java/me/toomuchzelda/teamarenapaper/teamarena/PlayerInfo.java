@@ -11,6 +11,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.KillAssistTracker;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.AttachedPacketEntity;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
@@ -29,7 +30,7 @@ public class PlayerInfo
 	public CustomCommand.PermissionLevel permissionLevel;
 	public TeamArenaTeam team;
 	public Location spawnPoint;
-	public PacketHologram nametag;
+	public AttachedPacketEntity statusIndicator;
 	public Kit kit;
 	public Kit activeKit; // kit they've selected vs the kit they're currently using
 	//todo: read from DB or other persistent storage
@@ -60,7 +61,7 @@ public class PlayerInfo
 	public PlayerInfo(CustomCommand.PermissionLevel permissionLevel, Player player) {
 		team = null;
 		spawnPoint = null;
-		nametag = null;
+		statusIndicator = null;
 		kit = null;
 		activeKit = null;
 		//should now be initialised in EventListeners

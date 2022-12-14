@@ -35,8 +35,8 @@ public class TeamArenaTeam
 	private final String name;
 	private final String simpleName;
 
-	private Component componentName;
-	private Component componentSimpleName;
+	private final Component componentName;
+	private final Component componentSimpleName;
 
 	private final Color colour;
 	//null if single flat colour
@@ -57,7 +57,7 @@ public class TeamArenaTeam
 	private final ItemStack hotbarItem;
 
 	//paper good spigot bad
-	private Team paperTeam;
+	private final Team paperTeam;
 
 	private Location[] spawns;
 	private final LinkedHashSet<Player> playerMembers = new LinkedHashSet<>();

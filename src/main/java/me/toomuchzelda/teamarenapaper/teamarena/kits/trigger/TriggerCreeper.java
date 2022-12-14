@@ -7,6 +7,7 @@ import io.netty.buffer.Unpooled;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.AttachedPacketEntity;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
@@ -20,50 +21,16 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Predicate;
 
-public class TriggerCreeper extends PacketEntity
+public class TriggerCreeper extends AttachedPacketEntity
 {
 	private final Player trigger;
 	private boolean wasSneaking;
 
 	public TriggerCreeper(Player trigger, @Nullable Predicate<Player> viewerRule) {
-		super(PacketEntity.NEW_ID, EntityType.CREEPER, trigger.getLocation().add(0d, 0.25d, 0d), null, viewerRule);
+		super(PacketEntity.NEW_ID, EntityType.CREEPER, trigger, null, viewerRule, true);
 
 		this.trigger = trigger;
 		this.wasSneaking = false;
-	}
-
-	@Override
-	public void tick() {
-		//need to update sneaking metadata to hide the name tag behind blocks
-		boolean playerSneaking = trigger.isSneaking();
-
-		Location loc = trigger.getLocation();
-		if(!playerSneaking) {
-			loc.add(0d, 0.25d, 0d);
-		}
-		else {
-			loc.subtract(0d, 0.15d, 0d);
-		}
-		this.move(loc);
-
-		if(playerSneaking != wasSneaking) {
-			if (this.data.hasIndex(MetaIndex.CUSTOM_NAME_IDX)) {
-				byte newMask;
-				if (playerSneaking)
-					newMask = MetaIndex.BASE_BITFIELD_SNEAKING_MASK;
-				else
-					newMask = 0;
-				this.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, newMask);
-				this.refreshViewerMetadata();
-				this.wasSneaking = playerSneaking;
-			}
-
-			//if sneaking status changed, re-send precise loc packet to move the creeper up/down
-			this.updateTeleportPacket(loc);
-			for(Player viewer : this.getRealViewers()) {
-				PlayerUtils.sendPacket(viewer, this.getTeleportPacket());
-			}
-		}
 	}
 
 	/**
@@ -81,18 +48,14 @@ public class TriggerCreeper extends PacketEntity
 		this.location = newLocation;
 	}
 
-	public double getYCoordinate(double playerY) {
-		//need to update sneaking metadata to hide the name tag behind blocks
-		boolean playerSneaking = trigger.isSneaking();
-
-		if(!playerSneaking) {
-			playerY += 0.25d;
+	@Override
+	public double getYOffset() {
+		if(this.player.isSneaking()) {
+			return -0.15d;
 		}
 		else {
-			playerY -= 0.15d;
+			return 0.25d;
 		}
-
-		return playerY;
 	}
 
 	@Override

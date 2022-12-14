@@ -1510,6 +1510,10 @@ public abstract class TeamArena
 			pinfo.activeKit.removeKit(player, pinfo);
 		}
 
+		if(pinfo.statusIndicator != null) {
+			pinfo.statusIndicator.remove();
+		}
+
 		players.remove(player);
 		spectators.remove(player);
 		SpectatorAngelManager.removeAngel(player);
@@ -1599,7 +1603,7 @@ public abstract class TeamArena
 	public void sendCountdown(boolean force) {
 		if((gameTick - waitingSince) % 20 == 0 || force)
 		{
-			long timeLeft;
+			int timeLeft;
 			//how long until teams are chosen
 			if(gameState == GameState.PREGAME) {
 				timeLeft = (waitingSince + PRE_TEAMS_TIME) - gameTick;
