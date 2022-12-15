@@ -215,6 +215,8 @@ public abstract class TeamArena
 
 		DamageTimes.clear();
 
+		StatusBarManager.StatusBarHologram.updatePregameText();
+
 		//init all the players online at time of construction
 		Kit fallbackKit = CommandDebug.filterKit(kits.values().iterator().next());
 		for (var entry : Main.getPlayerInfoMap().entrySet()) {
@@ -435,6 +437,8 @@ public abstract class TeamArena
 			}
 			//setGameState(GameState.PREGAME);
 		}
+
+		StatusBarManager.StatusBarHologram.updatePregameText();
 	}
 
 	public void liveTick() {
@@ -907,7 +911,7 @@ public abstract class TeamArena
 		Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
 		while(iter.hasNext()) {
 			Map.Entry<Player, PlayerInfo> entry = iter.next();
-			Player player = entry.getKey();
+			final Player player = entry.getKey();
 
 			PlayerUtils.resetState(player);
 			player.setSaturatedRegenRate(0);
@@ -915,14 +919,14 @@ public abstract class TeamArena
 
 			givePlayerItems(player, entry.getValue(), true);
 
-			for(TeamArenaTeam team : teams) {
-				//if(team.isAlive())
-				//	player.showBossBar(team.bossBar);
-
-				team.bossBar.progress(0); //init to 0, normally is 1
-			}
-
 			player.playSound(player.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.AMBIENT, 2, 1);
+		}
+
+		for(TeamArenaTeam team : teams) {
+			//if(team.isAlive())
+			//	player.showBossBar(team.bossBar);
+
+			team.bossBar.progress(0); //init to 0, normally is 1
 		}
 	}
 
@@ -998,11 +1002,12 @@ public abstract class TeamArena
 
 
 	public void prepDead() {
-		for(Player p : Bukkit.getOnlinePlayers()) {
+		for(var entry : Main.getPlayerInfoMap().entrySet()) {
+			final Player p = entry.getKey();
 			PlayerUtils.resetState(p);
-			/*for(TeamArenaTeam team : teams) {
-				p.hideBossBar(team.bossBar);
-			}*/
+
+			final PlayerInfo pinfo = entry.getValue();
+			StatusBarManager.hideStatusBar(p, pinfo);
 		}
 
 		for (TeamArenaTeam team : teams) {
@@ -1177,15 +1182,14 @@ public abstract class TeamArena
 				//player.showTitle(Title.title(Component.empty(), text));
 				player.sendMessage(text);
 			} else {
-				//todo: kill the player here (remove from game)
 				//EntityDamageEvent event = new EntityDamageEvent(player, EntityDamageEvent.DamageCause.VOID, 9999d);
 				//DamageEvent dEvent = DamageEvent.createFromBukkitEvent(event, DamageType.SUICIDE);
 				queueDamage(DamageEvent.newDamageEvent(player, 99999d, DamageType.SUICIDE, null, false));
 
 				if(isRespawningGame()) {
 					respawnTimers.remove(player); //if respawning game remove them from respawn queue
-					makeSpectator(player);
 				}
+				makeSpectator(player);
 
 				if(shame) {
 					Component text = player.displayName().append(Component.text(" has joined the spectators", NamedTextColor.GRAY));
@@ -1223,7 +1227,7 @@ public abstract class TeamArena
 		}
 	}
 
-	public void respawnPlayer(Player player) {
+	public void respawnPlayer(final Player player) {
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
 
 		if(this.isRespawningGame()) {
@@ -1241,6 +1245,8 @@ public abstract class TeamArena
 		givePlayerItems(player, pinfo, true);
 		pinfo.kills = 0;
 		PlayerListScoreManager.setKills(player, 0);
+
+		StatusBarManager.showStatusBar(player, pinfo);
 
 		//do this one (two?) tick later
 		// when revealing first then teleporting, the clients interpolate the super fast teleport movement, so players
@@ -1275,7 +1281,7 @@ public abstract class TeamArena
 					killer = dTime.getGiver();
 			}
 
-			PlayerInfo pinfo = Main.getPlayerInfo(playerVictim);
+			final PlayerInfo pinfo = Main.getPlayerInfo(playerVictim);
 			//if not null and player
 			if(killer instanceof Player playerKiller) {
 				//killer's onKill ability
@@ -1296,6 +1302,8 @@ public abstract class TeamArena
 			spectators.add(playerVictim);
 
 			makeSpectator(playerVictim);
+
+			StatusBarManager.hideStatusBar(playerVictim, pinfo);
 
 			DamageLogEntry.sendDamageLog(playerVictim);
 			pinfo.clearDamageReceivedLog();
@@ -1476,8 +1484,10 @@ public abstract class TeamArena
 		this.sendGameAndMapInfo(player);
 		if (gameState.isPreGame()) {
 			//decided from loggingInPlayer(Player)
-			Main.getPlayerInfo(player).team.addMembers(player);
+			final PlayerInfo pinfo = Main.getPlayerInfo(player);
+			pinfo.team.addMembers(player);
 			giveLobbyItems(player);
+			StatusBarManager.showStatusBar(player, pinfo);
 			if (gameState == GameState.TEAMS_CHOSEN || gameState == GameState.GAME_STARTING) {
 				informOfTeam(player);
 			}
@@ -1510,9 +1520,7 @@ public abstract class TeamArena
 			pinfo.activeKit.removeKit(player, pinfo);
 		}
 
-		if(pinfo.statusIndicator != null) {
-			pinfo.statusIndicator.remove();
-		}
+		StatusBarManager.hideStatusBar(player, pinfo);
 
 		players.remove(player);
 		spectators.remove(player);
@@ -1747,6 +1755,11 @@ public abstract class TeamArena
 			return false;
 		}
 		return true;
+	}
+
+	public boolean canSeeStatusBar(Player player, Player viewer) {
+		TeamArenaTeam viewersTeam = Main.getPlayerInfo(viewer).team;
+		return viewersTeam == Main.getGame().spectatorTeam || viewersTeam.getPlayerMembers().contains(player);
 	}
 
 	public boolean isTeamHotbarItem(ItemStack item) {

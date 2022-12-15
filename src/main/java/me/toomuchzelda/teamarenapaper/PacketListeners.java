@@ -145,7 +145,7 @@ public class PacketListeners
 			}
 		});
 
-		 //This packet listener is similar to the above but not the same because the trigger also needs the
+		 //This packet listener is similar to the above but not the same because the packent also needs the
 		 // ENTITY_HEAD_ROTATION packet
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(Main.getPlugin(),
 				PacketType.Play.Server.ENTITY_LOOK, PacketType.Play.Server.REL_ENTITY_MOVE,

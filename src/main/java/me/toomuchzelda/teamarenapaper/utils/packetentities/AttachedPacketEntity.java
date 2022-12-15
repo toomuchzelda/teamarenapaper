@@ -50,7 +50,7 @@ public class AttachedPacketEntity extends PacketEntity
 	 * Do it in the packet listener so that the packetentity and player movement won't be weirdly de-synced to viewers
 	 */
 	@Override
-	public void move(Location newLocation) {
+	protected void move(Location newLocation, boolean force) {
 		if(this.location.equals(newLocation))
 			return;
 
@@ -78,9 +78,9 @@ public class AttachedPacketEntity extends PacketEntity
 					bitfield = byteObj;
 
 				if (playersPose == Pose.SNEAKING) // If the player is sneaking then make the entity sneak too to hide the nametag
-					bitfield |= MetaIndex.BASE_BITFIELD_INVIS_MASK;
+					bitfield |= MetaIndex.BASE_BITFIELD_SNEAKING_MASK;
 				else
-					bitfield &= ~(MetaIndex.BASE_BITFIELD_INVIS_MASK);
+					bitfield &= ~(MetaIndex.BASE_BITFIELD_SNEAKING_MASK);
 				this.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, bitfield);
 				this.refreshViewerMetadata();
 			}

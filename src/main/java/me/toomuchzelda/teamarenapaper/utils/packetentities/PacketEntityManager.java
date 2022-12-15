@@ -11,7 +11,10 @@ public class PacketEntityManager
 	static final Map<Integer, Set<AttachedPacketEntity>> ATTACHED_PACKET_ENTITIES_LOOKUP = new LinkedHashMap<>();
 
 	static void addPacketEntity(PacketEntity packetEntity) {
-		ALL_PACKET_ENTITIES.put(packetEntity.getId(), packetEntity);
+		if(ALL_PACKET_ENTITIES.put(packetEntity.getId(), packetEntity) != null) {
+			Main.logger().warning("PacketEntity with duplicate id added");
+			Thread.dumpStack();
+		}
 	}
 
 	static void addAttachedEntity(AttachedPacketEntity entity) {

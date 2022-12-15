@@ -248,7 +248,7 @@ public class KitMedic extends Kit
 			}
 		}
 
-		private static final Component HEART = Component.text("❤", TextColor.color(247, 18, 18));
+
 		private static Component getHealingMessage(LivingEntity healed) {
 			double healthPercent =
 					(healed.getHealth() / healed.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue()) * 100d;
@@ -258,7 +258,7 @@ public class KitMedic extends Kit
 					.append(Component.text("Healing "))
 					.append(EntityUtils.getComponent(healed))
 					.color(NamedTextColor.LIGHT_PURPLE)
-					.append(Component.text().append(Component.text(" " + healthPercent + "%")).append(HEART).build())
+					.append(Component.text().append(Component.text(" " + healthPercent + "%")).append(TextColors.HEART).build())
 					.build();
 
 			return healingName;

@@ -286,7 +286,7 @@ public class PacketEntity
 		this.move(newLocation, false);
 	}
 
-	private void move(Location newLocation, boolean force) {
+	protected void move(Location newLocation, boolean force) {
 		if(this.location.equals(newLocation) && !force)
 			return;
 

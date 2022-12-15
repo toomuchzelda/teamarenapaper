@@ -11,9 +11,8 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.KillAssistTracker;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
-import me.toomuchzelda.teamarenapaper.utils.packetentities.AttachedPacketEntity;
-import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
 import net.kyori.adventure.text.Component;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Damageable;
@@ -30,7 +29,8 @@ public class PlayerInfo
 	public CustomCommand.PermissionLevel permissionLevel;
 	public TeamArenaTeam team;
 	public Location spawnPoint;
-	public AttachedPacketEntity statusIndicator;
+	public final int statusIndicatorId; // Only one of these per-player, so can reserve and re-use an entity ID for them.
+	public StatusBarManager.StatusBarHologram statusBar;
 	public Kit kit;
 	public Kit activeKit; // kit they've selected vs the kit they're currently using
 	//todo: read from DB or other persistent storage
@@ -61,7 +61,8 @@ public class PlayerInfo
 	public PlayerInfo(CustomCommand.PermissionLevel permissionLevel, Player player) {
 		team = null;
 		spawnPoint = null;
-		statusIndicator = null;
+		statusIndicatorId = Bukkit.getUnsafe().nextEntityId();
+		statusBar = null;
 		kit = null;
 		activeKit = null;
 		//should now be initialised in EventListeners
