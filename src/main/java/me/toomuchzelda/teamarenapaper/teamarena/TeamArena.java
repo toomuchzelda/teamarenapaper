@@ -865,9 +865,11 @@ public abstract class TeamArena
 		setupTeams();
 		setGameState(GameState.TEAMS_CHOSEN);
 
-		Bukkit.broadcast(Component.text("Teams have been decided!").color(NamedTextColor.RED));
+		Bukkit.broadcast(Component.text("Teams have been decided!", NamedTextColor.RED));
 		for (Player p : players) {
 			informOfTeam(p);
+			PlayerInfo pinfo = Main.getPlayerInfo(p);
+			StatusBarManager.setBarText(pinfo, pinfo.kit.getDisplayName());
 		}
 		Main.logger().info("Decided Teams");
 
@@ -1117,9 +1119,15 @@ public abstract class TeamArena
 			player.sendMessage(Component.text("You can't choose a kit right now").color(NamedTextColor.RED));
 			return;
 		}
-		Main.getPlayerInfo(player).kit = kit;
-		player.sendMessage(Component.text("Using kit " + kit.getName()).color(NamedTextColor.BLUE));
+		final PlayerInfo pinfo = Main.getPlayerInfo(player);
+		pinfo.kit = kit;
+		player.sendMessage(Component.text("Using kit " + kit.getName(), NamedTextColor.BLUE));
 		player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.PLAYERS, 1f, 2f);
+
+		// if TEAMS_DECIDED or GAME_STARTING gamestate update their status bar to teammates
+		if(this.gameState.teamsChosen()) {
+			StatusBarManager.setBarText(pinfo, kit.getDisplayName());
+		}
 	}
 
 	@Nullable

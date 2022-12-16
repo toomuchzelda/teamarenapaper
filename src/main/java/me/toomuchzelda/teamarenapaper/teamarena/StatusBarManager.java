@@ -40,6 +40,12 @@ public class StatusBarManager
 		}
 	}
 
+	static void setBarText(PlayerInfo pinfo, Component text) {
+		if(pinfo.statusBar != null) {
+			pinfo.statusBar.setText(text, true);
+		}
+	}
+
 	static class StatusBarHologram extends AttachedPacketHologram
 	{
 		private static final Component PREGAME_TEXT = Component.text("I love Team Arena!");
@@ -71,13 +77,22 @@ public class StatusBarManager
 			// Show health and other during the game
 			else if(gameState == GameState.LIVE) {
 				if(gameTick % 5 == 0) {
-					// TODO Show absorption hearts and use a yellow heart colour for them
-					final double hearts = MathUtils.round(this.player.getHealth() / 2d, 2);
-					Component health = Component.text(hearts + " ").append(TextColors.HEART);
+					final Component heartChar;
+					final double absorp = this.player.getAbsorptionAmount();
+					if(absorp > 0) {
+						heartChar = TextColors.YELLOW_HEART;
+					}
+					else {
+						heartChar = TextColors.HEART; // red heart
+					}
+
+					final double hearts = MathUtils.round((this.player.getHealth() + absorp) / 2d, 2);
+					Component health = Component.text(hearts + " ").append(heartChar);
 					this.setText(health, true);
 				}
 			}
-			// TODO Selected kit during TEAMS_DECIDED is done in TeamArena#selectKit()
+			// Selected kit during TEAMS_DECIDED and GAME_STARTING is done in TeamArena#selectKit()
+			// and prepTeamsDecided()
 
 			super.tick();
 		}
