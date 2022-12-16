@@ -87,7 +87,7 @@ public class KitBurst extends Kit
 		//used for identifying the entity in events
 		private static final Component SHOTUGUN_FIREWORK_NAME = Component.text("burstfw");
 		private static final double SHOTGUN_SELF_DAMAGE = 7d;
-		private static final double SHOTGUN_MAX_DAMAGE = 17d;
+		private static final double SHOTGUN_MAX_DAMAGE = 18d;
 		private static final int SHOTGUN_ARROW_LIVE_TICKS = 17;
 		public static boolean HIDE_SHOTGUN_ARROWS = true;
 
@@ -249,7 +249,7 @@ public class KitBurst extends Kit
 				FireworkMeta meta = fireworkEntity.getFireworkMeta();
 				meta.clearEffects();
 				FireworkEffect effect = FireworkEffect.builder().with(FireworkEffect.Type.BURST).flicker(false)
-						.trail(false).withColor(Main.getPlayerInfo(shooter).team.getColour()).withFade(Color.BLACK)
+						.trail(false).withColor(Color.ORANGE).withFade(Color.BLACK)
 						.build();
 
 				meta.addEffect(effect);
@@ -280,7 +280,7 @@ public class KitBurst extends Kit
 					arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
 					arrow.setGravity(false);
 					arrow.setPierceLevel(5);
-					arrow.setDamage(2d);
+					// arrow.setDamage(2.5d); // damage handled in onAttemptedAttack
 					arrow.setSilent(true);
 
 					arrow.customName(arrowShotId);
