@@ -38,6 +38,8 @@ public class TextUtils {
 	public static final TextColor LEFT_CLICK_TO = TextColor.color(66, 135, 245);
 	public static final TextColor RIGHT_CLICK_TO = TextColor.color(84, 255, 124);
 
+	public static final int DEFAULT_WIDTH = 150;
+
 	public static TextComponent formatDuration(@NotNull Duration duration) {
 		long days = duration.toDaysPart();
 		int hours = duration.toHoursPart();
@@ -293,7 +295,6 @@ public class TextUtils {
 	}
 
 	private static final Pattern SAFE_TO_WRAP = Pattern.compile("\\s|\\n");
-	public static final int DEFAULT_WIDTH = 150;
 
 	public static List<Component> wrapString(String string, Style style) {
 		return wrapString(string, style, DEFAULT_WIDTH);

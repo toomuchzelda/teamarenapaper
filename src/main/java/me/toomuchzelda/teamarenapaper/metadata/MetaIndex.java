@@ -30,13 +30,16 @@ public class MetaIndex
 	public static final int ARMOR_STAND_MARKER_IDX = 3;
 	public static final byte ARMOR_STAND_MARKER_MASK = 0x10;
 
-	public static final int AXOLOTL_COLOR_IDX = 17;
-
 	public static final int CREEPER_STATE_IDX = 16;
 	public static final int CREEPER_CHARGED_IDX = 17;
 	public static final int CREEPER_IGNITED_IDX = 18;
 
 	public static final int ALLAY_DANCING_IDX = 16;
+
+	public static final int AXOLOTL_COLOR_IDX = 17;
+
+	public static final int GUARDIAN_TARGET_IDX = 17;
+
 
 	public static final MetadataBitfieldValue GLOWING_METADATA_VALUE = MetadataBitfieldValue.create(Collections.singletonMap(BASE_BITFIELD_GLOWING_IDX, true));
 
@@ -48,13 +51,15 @@ public class MetaIndex
 
 	public static final WrappedDataWatcher.WrappedDataWatcherObject ARMOR_STAND_BITFIELD_OBJ;
 
-	public static final WrappedDataWatcher.WrappedDataWatcherObject AXOLOTL_COLOR_OBJ;
-
 	public static final WrappedDataWatcher.WrappedDataWatcherObject CREEPER_STATE_OBJ;
 	public static final WrappedDataWatcher.WrappedDataWatcherObject CREEPER_CHARGED_OBJ;
 	public static final WrappedDataWatcher.WrappedDataWatcherObject CREEPER_IGNITED_OBJ;
 
 	public static final WrappedDataWatcher.WrappedDataWatcherObject ALLAY_DANCING_OBJ;
+
+	public static final WrappedDataWatcher.WrappedDataWatcherObject AXOLOTL_COLOR_OBJ;
+
+	public static final WrappedDataWatcher.WrappedDataWatcherObject GUARDIAN_TARGET_OBJ;
 
 	static {
 		BASE_BITFIELD_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(BASE_BITFIELD_IDX, WrappedDataWatcher.Registry.get(Byte.class));
@@ -65,12 +70,14 @@ public class MetaIndex
 
 		ARMOR_STAND_BITFIELD_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(ARMOR_STAND_BITFIELD_IDX, WrappedDataWatcher.Registry.get(Byte.class));
 
-		AXOLOTL_COLOR_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(AXOLOTL_COLOR_IDX, WrappedDataWatcher.Registry.get(Integer.class));
-
 		CREEPER_STATE_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(CREEPER_STATE_IDX, WrappedDataWatcher.Registry.get(Integer.class));
 		CREEPER_CHARGED_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(CREEPER_CHARGED_IDX, WrappedDataWatcher.Registry.get(Boolean.class));
 		CREEPER_IGNITED_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(CREEPER_IGNITED_IDX, WrappedDataWatcher.Registry.get(Boolean.class));
 
 		ALLAY_DANCING_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(ALLAY_DANCING_IDX, WrappedDataWatcher.Registry.get(Boolean.class));
+
+		AXOLOTL_COLOR_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(AXOLOTL_COLOR_IDX, WrappedDataWatcher.Registry.get(Integer.class));
+
+		GUARDIAN_TARGET_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(GUARDIAN_TARGET_IDX, WrappedDataWatcher.Registry.get(Integer.class));
 	}
 }

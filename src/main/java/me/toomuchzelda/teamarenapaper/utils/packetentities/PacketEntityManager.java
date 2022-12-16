@@ -18,7 +18,7 @@ public class PacketEntityManager
 	}
 
 	static void addAttachedEntity(AttachedPacketEntity entity) {
-		Set<AttachedPacketEntity> set = ATTACHED_PACKET_ENTITIES_LOOKUP.computeIfAbsent(entity.player.getEntityId(), id -> new LinkedHashSet<>());
+		Set<AttachedPacketEntity> set = ATTACHED_PACKET_ENTITIES_LOOKUP.computeIfAbsent(entity.entity.getEntityId(), id -> new LinkedHashSet<>());
 		set.add(entity);
 	}
 
@@ -34,7 +34,7 @@ public class PacketEntityManager
 			if(pEntity.isRemoved()) {
 				iter.remove();
 				if(pEntity instanceof AttachedPacketEntity attachedE) {
-					final int id = attachedE.player.getEntityId();
+					final int id = attachedE.entity.getEntityId();
 					Set<AttachedPacketEntity> set = ATTACHED_PACKET_ENTITIES_LOOKUP.get(id);
 					if(set.size() == 1) {
 						ATTACHED_PACKET_ENTITIES_LOOKUP.remove(id);

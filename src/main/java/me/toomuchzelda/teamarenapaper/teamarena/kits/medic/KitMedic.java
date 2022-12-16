@@ -10,10 +10,10 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Particle;
+import net.kyori.adventure.text.format.TextDecoration;
+import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.FishHook;
@@ -29,6 +29,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
 import java.util.Iterator;
@@ -45,14 +46,16 @@ public class KitMedic extends Kit
 {
 	private static final ItemStack WAND;
 	private static final ItemStack POTION;
+	private static final TextColor ITEM_NAME_COLOUR = TextColor.color(245, 66, 149);
 
 	static {
 		{ // Init wand
 			WAND = new ItemStack(Material.FISHING_ROD);
 			ItemMeta wandMeta = WAND.getItemMeta();;
-			wandMeta.displayName(ItemUtils.noItalics(Component.text("Magical healing fishing rod", TextColor.color(245, 66, 149))));
-			Component right = Component.text("Right Click: Bind to a teammate and heal them. Click again or hold different item to release", TextUtils.RIGHT_CLICK_TO);
-			wandMeta.lore(List.of(right));
+			wandMeta.displayName(ItemUtils.noItalics(Component.text("Magical healing fishing rod", ITEM_NAME_COLOUR)));
+
+			Style style = Style.style(TextUtils.RIGHT_CLICK_TO).decoration(TextDecoration.ITALIC, false);
+			wandMeta.lore(TextUtils.wrapString("Right Click: Hook a teammate and heal them. Unhook or hold different item to release", style));
 			WAND.setItemMeta(wandMeta);
 		}
 
@@ -62,6 +65,8 @@ public class KitMedic extends Kit
 
 			POTION = new ItemStack(Material.POTION);
 			PotionMeta meta = (PotionMeta) POTION.getItemMeta();
+			meta.displayName(ItemUtils.noItalics(Component.text("Magical unlimited healing potion", ITEM_NAME_COLOUR)));
+			meta.lore(List.of(ItemUtils.noItalics(Component.text("Right Click: Drink Me", TextUtils.RIGHT_CLICK_TO))));
 			meta.clearCustomEffects();
 			meta.addCustomEffect(effect, true); // add our regen effect
 			POTION.setItemMeta(meta);
@@ -93,10 +98,33 @@ public class KitMedic extends Kit
 		private static final Component HOLD_IN_MAIN_HAND = Component.text(
 				"You're not ambidextrous! Use the fishing rod in your main hand", TextColors.ERROR_RED);
 		private static final Component STOPPED_HEALING = Component.text("Stopped healing", NamedTextColor.GOLD);
+		private static final Component NEED_LINE_OF_SIGHT = Component.text("You need a direct line of sight " +
+				"to the healing target", TextColors.ERROR_RED);
+		private static final Component NEED_LINE_OF_SIGHT_ACTIONBAR = Component.text("Can't see the target",
+				TextColors.ERROR_RED);
+
 		private static final double HEAL_PER_TICK = 1.5d / 20d; // 0.75 hearts per second
 
-		private record HealInfo(LivingEntity healed, int startTime) {}
+		private record HealInfo(LivingEntity healed, int startTime, AttachedMedicGuardian guardian, AttachedMedicGuardian selfGuardian) {}
 		private final Map<Player, HealInfo> currentHeals = new LinkedHashMap<>();
+
+		@Override
+		public void removeAbility(Player medic) {
+			HealInfo hinfo = currentHeals.remove(medic);
+			if(hinfo != null) {
+				stopGlowing(medic, hinfo);
+			}
+		}
+
+		@Override
+		public void unregisterAbility() {
+			var iter = currentHeals.entrySet().iterator();
+			while(iter.hasNext()) {
+				var entry = iter.next();
+				stopGlowing(entry.getKey(), entry.getValue());
+				iter.remove();
+			}
+		}
 
 		/** Prevent losing the potion when drinking it */
 		@Override
@@ -107,8 +135,8 @@ public class KitMedic extends Kit
 		}
 
 		/** Prevent casting the fishing rod
-		 *  If the medic is healing someone then cast the fishing rod and attach it to the healed entity
-		 *  for visual effect.
+		 *  If the medic is healing someone (directly right clicked on in onInteractEntity), then cast the
+		 *  fishing rod and attach it to the healed entity for visual effect.
 		 */
 		@Override
 		public void onFish(PlayerFishEvent event) {
@@ -160,7 +188,16 @@ public class KitMedic extends Kit
 			if(healed instanceof Player healedP && !pinfo.team.getPlayerMembers().contains(healedP))
 				return;
 
-			HealInfo hinfo = currentHeals.put(medic, new HealInfo(healed, TeamArena.getGameTick()));
+			// Spawn an invisible guardian to use its beam.
+			// One guardian that follows the medic and targets the healed. Everyone except the medic sees this.
+			// One guardian that follows the healed and targets the medic. Only the medic sees this.
+			// The reason for these two guardians is that having one that the medics sees at its feet blocks the
+			// medic from interacting with anything directly below it. So spawn one at the healed loc instead, and
+			// reverse the aim to the medic. Unfortunately the direction of the beam animation will be reversed for
+			// the medic but hopefully no-one will notice.
+			AttachedMedicGuardian guardian = new AttachedMedicGuardian(medic, viewer -> viewer != medic);
+			AttachedMedicGuardian selfGuardian = new AttachedMedicGuardian(healed, viewer -> viewer == medic);
+			HealInfo hinfo = currentHeals.put(medic, new HealInfo(healed, TeamArena.getGameTick(), guardian, selfGuardian));
 			if(hinfo != null) { // Stop healing the previous if there was any.
 				stopGlowing(medic, hinfo);
 			}
@@ -171,6 +208,22 @@ public class KitMedic extends Kit
 			MetadataViewer viewer = pinfo.getMetadataViewer();
 			viewer.setViewedValue(MetaIndex.BASE_BITFIELD_IDX, MetaIndex.GLOWING_METADATA_VALUE, healed);
 			viewer.refreshViewer(healed);
+
+			guardian.setTarget(healed.getEntityId());
+			guardian.respawn();
+
+			selfGuardian.setTarget(medic.getEntityId());
+			selfGuardian.respawn();
+
+			// Hide the fishing hook from the hooked player as it gets in their vision and covers their view.
+			if(healed instanceof Player hookedPlayer) {
+				// Must be done after the fishing hook has spawned.
+				Bukkit.getScheduler().runTask(Main.getPlugin(), bukkitTask -> {
+					FishHook hook = medic.getFishHook();
+					if(hook != null) // Need to null check as medic.getFishHook may be null 1 tick later.
+						PlayerUtils.sendPacket(hookedPlayer, EntityUtils.getRemoveEntitiesPacket(hook));
+				});
+			}
 		}
 
 		private void stopGlowing(Player medic, HealInfo hinfo) {
@@ -179,6 +232,9 @@ public class KitMedic extends Kit
 			MetadataViewer viewer = Main.getPlayerInfo(medic).getMetadataViewer();
 			viewer.removeBitfieldValue(hinfo.healed(), MetaIndex.BASE_BITFIELD_IDX, MetaIndex.BASE_BITFIELD_GLOWING_IDX);
 			viewer.refreshViewer(hinfo.healed());
+
+			hinfo.guardian().remove();
+			hinfo.selfGuardian().remove();
 		}
 
 		/** Process players that have cast their fishing rod (not healing) */
@@ -194,14 +250,26 @@ public class KitMedic extends Kit
 
 			// If they aren't already healing this living entity, and they can heal this living entity,
 			// then start healing them.
-
 			HealInfo healInfo = currentHeals.get(medic);
-			if(healInfo != null && healInfo.healed() == hookedLiving)
+			if(healInfo != null && healInfo.healed() == hookedLiving) // They are already healing this target, return
 				return;
 
 			if(!(hookedLiving instanceof Player hookedPlayer) ||
 					Main.getPlayerInfo(medic).team.getPlayerMembers().contains(hookedPlayer)) {
-				startHealing(medic, hookedLiving);
+				if(lineOfSightCheck(medic, hookedLiving)) {
+					startHealing(medic, hookedLiving);
+				}
+				else {
+					// They have hooked a teammate but don't have a direct line of sight - tell them it's interrupted
+					// Keep the hook there, though.
+					PlayerInfo pinfo = Main.getPlayerInfo(medic);
+					if(pinfo.messageHasCooldowned("mdLOS", 5 * 20 * 60)) {
+						PlayerUtils.sendKitMessage(medic, NEED_LINE_OF_SIGHT, null, pinfo);
+					}
+					if(pinfo.messageHasCooldowned("mdLOSAB", 10)) {
+						PlayerUtils.sendKitMessage(medic, null, NEED_LINE_OF_SIGHT_ACTIONBAR, pinfo);
+					}
+				}
 			}
 		}
 
@@ -214,16 +282,20 @@ public class KitMedic extends Kit
 				Map.Entry<Player, HealInfo> entry = iter.next();
 				final Player medic = entry.getKey();
 				final HealInfo hinfo = entry.getValue();
+				final LivingEntity healed = hinfo.healed();
 
 				// The PlayerFishEvent is not called when the player stops holding the rod by switching items
 				// or something. So check the item every tick here and stop healing apporpriately
-				if (!medic.getEquipment().getItemInMainHand().isSimilar(WAND)) {
+				// The PlayerFishEvent is also not called when the hook is released by moving our of range,
+				// so check for that here too
+				final boolean stopHealing = !medic.getEquipment().getItemInMainHand().isSimilar(WAND) ||
+						medic.getFishHook() == null || medic.getFishHook().getHookedEntity() != hinfo.healed() ||
+						!lineOfSightCheck(medic, healed);
+				if (stopHealing) {
 					iter.remove();
 					stopGlowing(medic, hinfo);
 					continue;
 				}
-
-				final LivingEntity healed = hinfo.healed();
 
 				if (healed instanceof Player healedPlayer) {
 					PlayerUtils.heal(healedPlayer, HEAL_PER_TICK, EntityRegainHealthEvent.RegainReason.MAGIC_REGEN);
@@ -234,20 +306,34 @@ public class KitMedic extends Kit
 				}
 
 				final int mod = (TeamArena.getGameTick() - hinfo.startTime()) % 20;
-				final Location healedLoc = healed.getLocation();
 				if (mod == 0 || mod == 10) {
 					PlayerUtils.sendKitMessage(medic, null, getHealingMessage(healed));
 
-					if(mod == 0)
-						healed.getWorld().spawnParticle(Particle.HEART, healedLoc.clone().add(0, healed.getHeight(), 0), 1);
-				}
-
-				if (mod == 10) {
-					// TODO: healing line particles?
+					if(mod == 0) {
+						final Location healedLoc = healed.getLocation();
+						healed.getWorld().spawnParticle(Particle.HEART, healedLoc.add(0, healed.getHeight(), 0), 1);
+					}
 				}
 			}
 		}
 
+		/**
+		 * Do the line of sight check. A medic and target must have a direct line between each other to heal
+		 * @return true if can heal, false if not.
+		 */
+		private boolean lineOfSightCheck(Player medic, LivingEntity healed) {
+			// Start from medic loc + half guardian height as that's where the laser is coming from (likely)
+			//final double guardianHeight = 0.85;
+			// Actually, use their eye loc for more intuitive gameplay (I can see the target == I can heal them)
+			final Location medicLoc = medic.getEyeLocation();
+			final Vector healedMidLoc = MathUtils.add(healed.getLocation().toVector(), 0, healed.getHeight() / 2, 0);
+			healedMidLoc.subtract(medicLoc.toVector());
+
+			RayTraceResult result = medic.getWorld().rayTraceBlocks(medicLoc, healedMidLoc, healedMidLoc.length(),
+					FluidCollisionMode.NEVER, true);
+
+			return result == null || result.getHitBlock().getType().isAir(); // No block is in between the positions.
+		}
 
 		private static Component getHealingMessage(LivingEntity healed) {
 			double healthPercent =

@@ -60,8 +60,7 @@ public class StatusBarManager
 
 
 		public StatusBarHologram(Player player) {
-			super(player, null, viewer -> Main.getGame().canSeeStatusBar(player, viewer),
-					PREGAME_TEXT);
+			super(player, null, viewer -> Main.getGame().canSeeStatusBar(player, viewer), PREGAME_TEXT, false);
 
 			this.currentText = PREGAME_TEXT;
 		}
@@ -77,8 +76,9 @@ public class StatusBarManager
 			// Show health and other during the game
 			else if(gameState == GameState.LIVE) {
 				if(gameTick % 5 == 0) {
+					final Player player = (Player) this.entity;
 					final Component heartChar;
-					final double absorp = this.player.getAbsorptionAmount();
+					final double absorp = player.getAbsorptionAmount();
 					if(absorp > 0) {
 						heartChar = TextColors.YELLOW_HEART;
 					}
@@ -86,7 +86,7 @@ public class StatusBarManager
 						heartChar = TextColors.HEART; // red heart
 					}
 
-					final double hearts = MathUtils.round((this.player.getHealth() + absorp) / 2d, 2);
+					final double hearts = MathUtils.round((player.getHealth() + absorp) / 2d, 2);
 					Component health = Component.text(hearts + " ").append(heartChar);
 					this.setText(health, true);
 				}

@@ -27,7 +27,7 @@ public class TriggerCreeper extends AttachedPacketEntity
 	private boolean wasSneaking;
 
 	public TriggerCreeper(Player trigger, @Nullable Predicate<Player> viewerRule) {
-		super(PacketEntity.NEW_ID, EntityType.CREEPER, trigger, null, viewerRule, true);
+		super(PacketEntity.NEW_ID, EntityType.CREEPER, trigger, null, viewerRule, false, true);
 
 		this.trigger = trigger;
 		this.wasSneaking = false;
@@ -50,7 +50,7 @@ public class TriggerCreeper extends AttachedPacketEntity
 
 	@Override
 	public double getYOffset() {
-		if(this.player.isSneaking()) {
+		if(((Player) this.entity).isSneaking()) {
 			return -0.15d;
 		}
 		else {

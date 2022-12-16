@@ -13,8 +13,8 @@ import java.util.function.Predicate;
 
 public class AttachedPacketHologram extends AttachedPacketEntity
 {
-	public AttachedPacketHologram(Player player, @Nullable Collection<? extends Player> viewers, @Nullable Predicate<Player> viewerRule, Component text) {
-		super(Main.getPlayerInfo(player).statusIndicatorId, EntityType.ARMOR_STAND, player, viewers, viewerRule, false);
+	public AttachedPacketHologram(Player player, @Nullable Collection<? extends Player> viewers, @Nullable Predicate<Player> viewerRule, Component text, boolean selfSee) {
+		super(Main.getPlayerInfo(player).statusIndicatorId, EntityType.ARMOR_STAND, player, viewers, viewerRule, selfSee, false);
 
 		//setup the metadata
 		this.data.setObject(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK);
@@ -29,8 +29,14 @@ public class AttachedPacketHologram extends AttachedPacketEntity
 
 	@Override
 	public double getYOffset() {
-		if(this.player.getPose() == Pose.SNEAKING)
-			return this.player.getHeight();
+		boolean sneaking;
+		if(this.entity instanceof Player p)
+			sneaking = p.isSneaking();
+		else
+			sneaking = this.entity.getPose() == Pose.SNEAKING;
+
+		if(sneaking)
+			return this.entity.getHeight();
 		else
 			return super.getYOffset();
 	}

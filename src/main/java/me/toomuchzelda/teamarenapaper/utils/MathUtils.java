@@ -106,4 +106,12 @@ public class MathUtils
 		dest.setY(src.getY());
 		dest.setZ(src.getZ());
 	}
+
+	public static Vector add(Vector vec, double x, double y, double z) {
+		vec.setX(vec.getX() + x);
+		vec.setY(vec.getY() + y);
+		vec.setZ(vec.getZ() + z);
+
+		return vec;
+	}
 }

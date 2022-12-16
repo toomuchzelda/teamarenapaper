@@ -34,7 +34,7 @@ public class PacketEntity
 {
 	//specify in constructor if a new entity ID is wanted
 	public static final int NEW_ID = -1;
-	private static final int HASNT_MOVED = -1;
+	protected static final int HASNT_MOVED = -1;
 	public static final int TICKS_PER_TELEPORT_UPDATE = 4 * 20;
 
 	public static final Predicate<Player> VISIBLE_TO_ALL = player -> true;
@@ -208,7 +208,7 @@ public class PacketEntity
 		this.updateTeleportPacket(this.location);
 	}
 
-	private ClientboundMoveEntityPacket getRelativePosPacket(Location oldLoc, Location newLoc) {
+	protected ClientboundMoveEntityPacket getRelativePosPacket(Location oldLoc, Location newLoc) {
 		//cannot move more than 8 blocks, use teleport for that one
 		final double distSqr = oldLoc.distanceSquared(newLoc);
 		if(distSqr > 64d)
@@ -250,7 +250,7 @@ public class PacketEntity
 		return (byte) (Math.floor(angle) * 0.7111111111111111111111111111d);
 	}
 
-	private void updateRotateHeadPacket(float yaw) {
+	protected void updateRotateHeadPacket(float yaw) {
 		this.headPacketBytes.write(0, angleToByte(yaw));
 	}
 
@@ -535,6 +535,10 @@ public class PacketEntity
 
 	protected PacketContainer getTeleportPacket() {
 		return this.teleportPacket;
+	}
+
+	protected PacketContainer getRotateHeadPacket() {
+		return this.rotateHeadPacket;
 	}
 
 	public Location getLocation() {

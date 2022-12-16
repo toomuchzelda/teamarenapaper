@@ -10,6 +10,7 @@ import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
+import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
@@ -135,7 +136,18 @@ public class EntityUtils {
 		packetEntity.getRealViewers().forEach(player -> PlayerUtils.sendPacket(player, packet));
 	}
 
-    //set velocity fields and send the packet immediately instead of waiting for next tick if it's a player
+	public static ClientboundRemoveEntitiesPacket getRemoveEntitiesPacket(Entity... entities) {
+		int[] ints = new int[entities.length];
+		for (int i = 0; i < entities.length; i++) {
+			ints[i] = entities[i].getEntityId();
+		}
+
+		return new ClientboundRemoveEntitiesPacket(ints);
+	}
+
+	/**
+	 * set velocity fields and send the packet immediately instead of waiting for next tick if it's a player
+	 */
     public static void setVelocity(Entity entity, Vector velocity) {
         entity.setVelocity(velocity);
 
