@@ -18,6 +18,7 @@ import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.Action;
@@ -860,6 +861,14 @@ public class CaptureTheFlag extends TeamArena
 	@Override
 	public boolean canTeamChatNow(Player player) {
 		return gameState != GameState.PREGAME && gameState != GameState.DEAD;
+	}
+
+	@Override
+	public boolean canHeal(Player medic, LivingEntity target) {
+		if(flagStands.containsKey(target))
+			return false;
+
+		return super.canHeal(medic, target);
 	}
 
 	@Override

@@ -1765,6 +1765,14 @@ public abstract class TeamArena
 		return true;
 	}
 
+	public boolean canHeal(Player medic, LivingEntity target) {
+		if (target instanceof Player pTarget && !Main.getPlayerInfo(pTarget).team.getPlayerMembers().contains(medic)) {
+			return false;
+		}
+
+		return true;
+	}
+
 	public boolean canSeeStatusBar(Player player, Player viewer) {
 		TeamArenaTeam viewersTeam = Main.getPlayerInfo(viewer).team;
 		return viewersTeam == Main.getGame().spectatorTeam || viewersTeam.getPlayerMembers().contains(player);

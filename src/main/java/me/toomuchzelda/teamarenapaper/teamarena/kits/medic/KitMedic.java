@@ -185,7 +185,7 @@ public class KitMedic extends Kit
 		private void startHealing(Player medic, LivingEntity healed) {
 			final PlayerInfo pinfo = Main.getPlayerInfo(medic);
 			// If healed is a player, don't heal them if they're not on the medic's team
-			if(healed instanceof Player healedP && !pinfo.team.getPlayerMembers().contains(healedP))
+			if(!Main.getGame().canHeal(medic, healed))
 				return;
 
 			// Spawn an invisible guardian to use its beam.
@@ -237,9 +237,14 @@ public class KitMedic extends Kit
 			hinfo.selfGuardian().remove();
 		}
 
-		/** Process players that have cast their fishing rod (not healing) */
+		/** Process players that have cast their fishing rod (not healing)
+		 *  If they have hooked a valid entity, start healing them.
+		 */
 		@Override
 		public void onPlayerTick(final Player medic) {
+			if(!medic.getEquipment().getItemInMainHand().isSimilar(WAND)) // Must hold in main hand.
+				return;
+
 			final FishHook fishHook = medic.getFishHook();
 			if(fishHook == null) // Fishing rod not cast
 				return;
@@ -254,8 +259,7 @@ public class KitMedic extends Kit
 			if(healInfo != null && healInfo.healed() == hookedLiving) // They are already healing this target, return
 				return;
 
-			if(!(hookedLiving instanceof Player hookedPlayer) ||
-					Main.getPlayerInfo(medic).team.getPlayerMembers().contains(hookedPlayer)) {
+			if(Main.getGame().canHeal(medic, hookedLiving)) {
 				if(lineOfSightCheck(medic, hookedLiving)) {
 					startHealing(medic, hookedLiving);
 				}
