@@ -3,6 +3,8 @@ package me.toomuchzelda.teamarenapaper.utils;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
@@ -10,22 +12,23 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSpy;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.kyori.adventure.text.Component;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundSetBorderWarningDistancePacket;
-import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.network.protocol.game.ClientboundSetHealthPacket;
+import net.minecraft.network.protocol.game.ServerboundInteractPacket;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.InteractionHand;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.craftbukkit.v1_19_R1.CraftWorldBorder;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_19_R1.util.CraftVector;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.inventory.EntityEquipment;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.util.Vector;
@@ -61,20 +64,23 @@ public class PlayerUtils {
 		return vector;
 	}
 
-	//set velocity fields and send the packet immediately instead of waiting for next tick
-	// otherwise use entity.setVelocity(Vector) for spigot to do it's stuff first
-	public static void sendVelocity(Player player, Vector velocity) {
-		player.setVelocity(velocity);
+	public static PacketContainer createUseEntityPacket(Player user, int usedEntityId, EquipmentSlot hand, boolean attack) {
+		ByteBuf buf = Unpooled.directBuffer();
+		FriendlyByteBuf friendly = new FriendlyByteBuf(buf);
+		friendly.writeVarInt(usedEntityId);
 
-		ServerPlayer nmsPlayer = ((CraftPlayer) player).getHandle();
-		//do not do stuff next tick
-		nmsPlayer.hurtMarked = false;
+		if(attack) {
+			friendly.writeEnum(ServerboundInteractPacket.ActionType.ATTACK);
+		}
+		else {
+			friendly.writeEnum(ServerboundInteractPacket.ActionType.INTERACT);
+			InteractionHand nmshand = hand == EquipmentSlot.HAND ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
+			friendly.writeEnum(nmshand);
+		}
 
-		//send a packet NOW
-		// can avoid protocollib since the nms constructor is public and modular
-		Vec3 vec = CraftVector.toNMS(velocity);
-		ClientboundSetEntityMotionPacket packet = new ClientboundSetEntityMotionPacket(player.getEntityId(), vec);
-		nmsPlayer.connection.send(packet);
+		friendly.writeBoolean(user.isSneaking());
+		ServerboundInteractPacket nmsPacket = new ServerboundInteractPacket(friendly);
+		return PacketContainer.fromPacket(nmsPacket);
 	}
 
 	public static LinkedHashSet<Player> getDamageIndicatorViewers(Player takingDamage, Player attacker) {

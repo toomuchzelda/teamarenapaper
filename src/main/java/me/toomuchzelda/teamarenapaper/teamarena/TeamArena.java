@@ -247,6 +247,8 @@ public abstract class TeamArena
 			giveLobbyItems(p);
 
 			this.sendGameAndMapInfo(p);
+
+			StatusBarManager.showStatusBar(p, pinfo);
 		}
 	}
 

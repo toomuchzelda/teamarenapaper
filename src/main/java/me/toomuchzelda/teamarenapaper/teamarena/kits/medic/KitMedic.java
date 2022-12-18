@@ -103,7 +103,12 @@ public class KitMedic extends Kit
 		private static final Component NEED_LINE_OF_SIGHT_ACTIONBAR = Component.text("Can't see the target",
 				TextColors.ERROR_RED);
 
+		private static final Component TOO_FAR = Component.text("You need to be close to the healing target", TextColors.ERROR_RED);
+		private static final Component TOO_FAR_ACTION_BAR = Component.text("Too far from the target", TextColors.ERROR_RED);
+
 		private static final double HEAL_PER_TICK = 1.5d / 20d; // 0.75 hearts per second
+		private static final double MAX_HEALING_DISTANCE = 15d;
+		private static final double MAX_HEALING_DISTANCE_SQR = MAX_HEALING_DISTANCE * MAX_HEALING_DISTANCE;
 
 		private record HealInfo(LivingEntity healed, int startTime, AttachedMedicGuardian guardian, AttachedMedicGuardian selfGuardian) {}
 		private final Map<Player, HealInfo> currentHeals = new LinkedHashMap<>();
@@ -260,18 +265,27 @@ public class KitMedic extends Kit
 				return;
 
 			if(Main.getGame().canHeal(medic, hookedLiving)) {
-				if(lineOfSightCheck(medic, hookedLiving)) {
+				final LineOfSight returnVal = lineOfSightCheck(medic, hookedLiving);
+				if(returnVal == LineOfSight.CAN_HEAL) {
 					startHealing(medic, hookedLiving);
 				}
-				else {
-					// They have hooked a teammate but don't have a direct line of sight - tell them it's interrupted
-					// Keep the hook there, though.
+				else { // Can't hook for no line of sight or they're too far - tell them why but keep the hook there.
 					PlayerInfo pinfo = Main.getPlayerInfo(medic);
-					if(pinfo.messageHasCooldowned("mdLOS", 5 * 20 * 60)) {
-						PlayerUtils.sendKitMessage(medic, NEED_LINE_OF_SIGHT, null, pinfo);
+					if (returnVal == LineOfSight.NO_LINE_OF_SIGHT) {
+						if (pinfo.messageHasCooldowned("mdLOS", 5 * 20 * 60)) {
+							PlayerUtils.sendKitMessage(medic, NEED_LINE_OF_SIGHT, null, pinfo);
+						}
+						if (pinfo.messageHasCooldowned("mdLOSAB", 10)) {
+							PlayerUtils.sendKitMessage(medic, null, NEED_LINE_OF_SIGHT_ACTIONBAR, pinfo);
+						}
 					}
-					if(pinfo.messageHasCooldowned("mdLOSAB", 10)) {
-						PlayerUtils.sendKitMessage(medic, null, NEED_LINE_OF_SIGHT_ACTIONBAR, pinfo);
+					else { // TOO_FAR
+						if (pinfo.messageHasCooldowned("mdLOSDist", 5 * 20 * 60)) {
+							PlayerUtils.sendKitMessage(medic, TOO_FAR, null, pinfo);
+						}
+						if (pinfo.messageHasCooldowned("mdLOSDistAB", 10)) {
+							PlayerUtils.sendKitMessage(medic, null, TOO_FAR_ACTION_BAR, pinfo);
+						}
 					}
 				}
 			}
@@ -294,7 +308,7 @@ public class KitMedic extends Kit
 				// so check for that here too
 				final boolean stopHealing = !medic.getEquipment().getItemInMainHand().isSimilar(WAND) ||
 						medic.getFishHook() == null || medic.getFishHook().getHookedEntity() != hinfo.healed() ||
-						!lineOfSightCheck(medic, healed);
+						lineOfSightCheck(medic, healed) != LineOfSight.CAN_HEAL;
 				if (stopHealing) {
 					iter.remove();
 					stopGlowing(medic, hinfo);
@@ -323,20 +337,43 @@ public class KitMedic extends Kit
 
 		/**
 		 * Do the line of sight check. A medic and target must have a direct line between each other to heal
+		 * and be within MAX_HEALING_DISTANCE length.
 		 * @return true if can heal, false if not.
 		 */
-		private boolean lineOfSightCheck(Player medic, LivingEntity healed) {
+		private LineOfSight lineOfSightCheck(Player medic, LivingEntity healed) {
 			// Start from medic loc + half guardian height as that's where the laser is coming from (likely)
 			//final double guardianHeight = 0.85;
 			// Actually, use their eye loc for more intuitive gameplay (I can see the target == I can heal them)
 			final Location medicLoc = medic.getEyeLocation();
-			final Vector healedMidLoc = MathUtils.add(healed.getLocation().toVector(), 0, healed.getHeight() / 2, 0);
-			healedMidLoc.subtract(medicLoc.toVector());
+			final Vector medicLocVec = medicLoc.toVector();
+			final Vector healedLoc = healed.getLocation().toVector();
 
-			RayTraceResult result = medic.getWorld().rayTraceBlocks(medicLoc, healedMidLoc, healedMidLoc.length(),
-					FluidCollisionMode.NEVER, true);
+			// From medic's eyes to target's eyes
+			Vector targetEyes = MathUtils.add(healedLoc.clone(), 0, healed.getEyeHeight(), 0).subtract(medicLocVec);
 
-			return result == null || result.getHitBlock().getType().isAir(); // No block is in between the positions.
+			if(targetEyes.lengthSquared() > MAX_HEALING_DISTANCE_SQR)
+				return LineOfSight.TOO_FAR;
+
+			final Vector[] directions = new Vector[]{
+					// From medic's eyes to target's middle
+					MathUtils.add(healedLoc, 0, healed.getHeight() / 2, 0).subtract(medicLocVec),
+					targetEyes
+			};
+
+			for(Vector direction : directions) {
+				RayTraceResult result = medic.getWorld().rayTraceBlocks(medicLoc, direction,
+						direction.length(), FluidCollisionMode.NEVER, true);
+
+				// A ray didn't hit any blocks, meaning there is a LOS to the target
+				if(result == null || result.getHitBlock().getType().isAir())
+					return LineOfSight.CAN_HEAL;
+			}
+
+			return LineOfSight.NO_LINE_OF_SIGHT;
+		}
+
+		private enum LineOfSight {
+			TOO_FAR, NO_LINE_OF_SIGHT, CAN_HEAL
 		}
 
 		private static Component getHealingMessage(LivingEntity healed) {

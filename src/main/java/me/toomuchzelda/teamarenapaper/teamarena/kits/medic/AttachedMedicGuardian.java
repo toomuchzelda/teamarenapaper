@@ -1,13 +1,11 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.medic;
 
-import me.toomuchzelda.teamarenapaper.Main;
+import com.comphenix.protocol.ProtocolLibrary;
+import com.comphenix.protocol.events.PacketContainer;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
-import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.AttachedPacketEntity;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.TextColor;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -45,7 +43,8 @@ public class AttachedMedicGuardian extends AttachedPacketEntity
 
 	@Override
 	public void onInteract(Player player, EquipmentSlot hand, boolean attack) {
-		// trolled!
-		Bukkit.broadcastMessage("guardian " + this.getId() + " got punched. " + player.getName() + " is probably a hacker");
+		// Just redirect the interaction to the entity it's attached to
+		PacketContainer packet = PlayerUtils.createUseEntityPacket(player, this.entity.getEntityId(), hand, attack);
+		ProtocolLibrary.getProtocolManager().receiveClientPacket(player, packet, false);
 	}
 }

@@ -60,23 +60,8 @@ public class TriggerCreeper extends AttachedPacketEntity
 
 	@Override
 	public void onInteract(Player player, EquipmentSlot hand, boolean attack) {
-		ByteBuf buf = Unpooled.directBuffer();
-		FriendlyByteBuf friendly = new FriendlyByteBuf(buf);
-		friendly.writeVarInt(trigger.getEntityId());
-
-		if(attack) {
-			friendly.writeEnum(ServerboundInteractPacket.ActionType.ATTACK);
-		}
-		else {
-			friendly.writeEnum(ServerboundInteractPacket.ActionType.INTERACT);
-			InteractionHand nmshand = hand == EquipmentSlot.HAND ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
-			friendly.writeEnum(nmshand);
-		}
-
-		friendly.writeBoolean(player.isSneaking());
-		ServerboundInteractPacket nmsPacket = new ServerboundInteractPacket(friendly);
-		PacketContainer packet = PacketContainer.fromPacket(nmsPacket);
-
+		// Just redirect the interaction to this creeper's player
+		PacketContainer packet = PlayerUtils.createUseEntityPacket(player, this.trigger.getEntityId(), hand, attack);
 		ProtocolLibrary.getProtocolManager().receiveClientPacket(player, packet, false);
 	}
 }
