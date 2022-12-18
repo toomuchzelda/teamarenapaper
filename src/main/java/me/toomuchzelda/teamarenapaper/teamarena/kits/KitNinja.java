@@ -101,15 +101,15 @@ public class KitNinja extends Kit
 		@Override
 		public void onAttemptedAttack(DamageEvent event) {
 			if(event.getDamageType().isMelee() && event.getVictim() instanceof LivingEntity living) {
-				DamageTimes.DamageTime dTimes = DamageTimes.getDamageTime(living, DamageTimes.TrackedDamageTypes.ATTACK);
+				if(event.hasKnockback())
+					event.getKnockback().multiply(0.65);
 
+				event.setFinalDamage(event.getFinalDamage() / 2);
+
+				DamageTimes.DamageTime dTimes = DamageTimes.getDamageTime(living, DamageTimes.TrackedDamageTypes.ATTACK);
 				int ndt = TeamArena.getGameTick() - dTimes.getLastTimeDamaged();
 				if(ndt >= living.getMaximumNoDamageTicks() / 4) {
 					event.setIgnoreInvulnerability(true);
-					if(event.hasKnockback())
-						event.getKnockback().multiply(0.65);
-
-					event.setFinalDamage(event.getFinalDamage() / 2);
 				}
 			}
 		}
