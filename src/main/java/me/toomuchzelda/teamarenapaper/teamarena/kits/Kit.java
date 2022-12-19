@@ -99,7 +99,7 @@ public abstract class Kit {
         }
 
         for(Ability ability : abilities) {
-            ability.giveAbility(player);
+			Ability.giveAbility(player, ability, pinfo);
         }
 
         pinfo.activeKit = this;
@@ -117,7 +117,7 @@ public abstract class Kit {
         activeUsers.remove(player);
 
         for(Ability a : abilities) {
-            a.removeAbility(player);
+			Ability.removeAbility(player, a, pinfo);
         }
 
         pinfo.activeKit = null;
@@ -166,7 +166,6 @@ public abstract class Kit {
 
     /**
      * for spy
-     * @return
      */
     public static Kit getActiveKitHideInvis(Player player) {
         Kit kit = getActiveKit(player);
@@ -214,16 +213,18 @@ public abstract class Kit {
 	}
 
     /**
-     * get abilities of the kit the player is actively using
+     * Get all the abilities the player currently has.
+	 * This method shouldn't really be in this class, but it is because tech debt.
      */
-    public static Ability[] getAbilities(Player player) {
+    public static Set<Ability> getAbilities(Player player) {
         PlayerInfo pinfo = Main.getPlayerInfo(player);
-        if(pinfo.activeKit != null) {
+		return pinfo.abilities;
+        /*if(pinfo.activeKit != null) {
             return pinfo.activeKit.getAbilities();
         }
         else {
             return EMPTY_ABILITIES;
-        }
+        }*/
     }
 
     public static boolean hasAbility(Player player, Class<? extends Ability> ability) {

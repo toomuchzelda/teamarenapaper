@@ -4,6 +4,7 @@ import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import org.bukkit.entity.Player;
@@ -18,8 +19,17 @@ import javax.annotation.Nullable;
 
 //methods aren't abstract as kit abilities may not need to override them
 public abstract class Ability {
-
 	protected Ability() {}
+
+	public static void giveAbility(Player player, Ability ability, PlayerInfo pinfo) {
+		ability.giveAbility(player);
+		pinfo.abilities.add(ability);
+	}
+
+	public static void removeAbility(Player player, Ability ability, PlayerInfo pinfo) {
+		ability.removeAbility(player);
+		pinfo.abilities.remove(ability);
+	}
 
 	//register all one-time-registered things for this ability
 	public void registerAbility() {}
@@ -28,9 +38,9 @@ public abstract class Ability {
 
 	//'give' this ability to one player
 	// whatever that means for a specific ability
-	public void giveAbility(Player player) {}
+	protected void giveAbility(Player player) {}
 
-	public void removeAbility(Player player) {}
+	protected void removeAbility(Player player) {}
 
 	/**
 	 * when an attack is *attempted* on the ability user

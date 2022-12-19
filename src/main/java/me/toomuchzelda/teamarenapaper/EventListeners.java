@@ -533,8 +533,7 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void inventoryCreative(InventoryCreativeEvent event) {
 		if(Main.getGame() != null && event.getWhoClicked() instanceof Player p) {
-			Ability[] abilities = Kit.getAbilities(p);
-			for(Ability a : abilities) {
+			for(Ability a : Kit.getAbilities(p)) {
 				if(a instanceof KitReach.ReachAbility) {
 					event.setCancelled(true);
 					return;
@@ -587,8 +586,7 @@ public class EventListeners implements Listener
 				aa.setPickupStatus(AbstractArrow.PickupStatus.CREATIVE_ONLY);
 
 			if (event.getEntity() instanceof Player p) {
-				Ability[] abilities = Kit.getAbilities(p);
-				for (Ability a : abilities) {
+				for (Ability a : Kit.getAbilities(p)) {
 					a.onShootBow(event);
 				}
 			}
@@ -599,8 +597,7 @@ public class EventListeners implements Listener
 	public void entityLoadCrossbow(EntityLoadCrossbowEvent event) {
 		if(Main.getGame().getGameState() == LIVE) {
 			if (event.getEntity() instanceof Player p) {
-				Ability[] abilities = Kit.getAbilities(p);
-				for (Ability a : abilities) {
+				for (Ability a : Kit.getAbilities(p)) {
 					a.onLoadCrossbow(event);
 				}
 			}
@@ -632,8 +629,7 @@ public class EventListeners implements Listener
 				}
 
 				if(!event.isCancelled()) {
-					Ability[] abilites = Kit.getAbilities(p);
-					for (Ability a : abilites) {
+					for (Ability a : Kit.getAbilities(p)) {
 						a.onLaunchProjectile(event);
 					}
 				}
@@ -716,8 +712,7 @@ public class EventListeners implements Listener
 	public void projectileHit(ProjectileHitEvent event) {
 		if(Main.getGame() != null) {
 			if(event.getEntity().getShooter() instanceof Player p) {
-				Ability[] abilities = Kit.getAbilities(p);
-				for(Ability a : abilities) {
+				for(Ability a : Kit.getAbilities(p)) {
 					a.onProjectileHit(event);
 				}
 			}
@@ -756,9 +751,8 @@ public class EventListeners implements Listener
 		//not worth adding a new method to Ability.java for this one
 		if(Main.getGame() != null && Main.getGame().getGameState() == LIVE) {
 			if (event.getEntity() instanceof Player p) {
-				Ability[] abilities = Kit.getAbilities(p);
-				for(int i = 0; i < abilities.length; i++) {
-					if(abilities[i] instanceof KitGhost.GhostAbility ghosta) {
+				for(Ability a : Kit.getAbilities(p)) {
+					if(a instanceof KitGhost.GhostAbility ghosta) {
 						ghosta.arrowCountDecrease(event);
 						return;
 					}
@@ -770,8 +764,7 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void playerItemCooldown(PlayerItemCooldownEvent event) {
 		if(Main.getGame() != null && Main.getGame().getGameState() == LIVE) {
-			Ability[] abilities = Kit.getAbilities(event.getPlayer());
-			for(Ability a : abilities) {
+			for(Ability a : Kit.getAbilities(event.getPlayer())) {
 				a.onItemCooldown(event);
 			}
 		}
@@ -888,8 +881,7 @@ public class EventListeners implements Listener
 			Main.getGame().onInteract(event);
 
 			if(Main.getGame().getGameState() == LIVE) {
-				Ability[] abilities = Kit.getAbilities(event.getPlayer());
-				for (Ability a : abilities) {
+				for (Ability a : Kit.getAbilities(event.getPlayer())) {
 					a.onInteract(event);
 				}
 			}
@@ -902,8 +894,7 @@ public class EventListeners implements Listener
 			Main.getGame().onInteractEntity(event);
 
 			if(Main.getGame().getGameState() == LIVE) {
-				Ability[] abilities = Kit.getAbilities(event.getPlayer());
-				for (Ability a : abilities) {
+				for (Ability a : Kit.getAbilities(event.getPlayer())) {
 					a.onInteractEntity(event);
 				}
 			}

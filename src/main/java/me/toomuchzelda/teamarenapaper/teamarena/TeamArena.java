@@ -584,14 +584,12 @@ public abstract class TeamArena
 
 			//ability pre-attack events
 			if(event.getFinalAttacker() instanceof Player p) {
-				Ability[] abilities = Kit.getAbilities(p);
-				for(Ability ability : abilities) {
+				for(Ability ability : Kit.getAbilities(p)) {
 					ability.onAttemptedAttack(event);
 				}
 			}
 			if(event.getVictim() instanceof Player p) {
-				Ability[] abilities = Kit.getAbilities(p);
-				for(Ability ability : abilities) {
+				for(Ability ability : Kit.getAbilities(p)) {
 					ability.onAttemptedDamage(event);
 				}
 			}
@@ -616,16 +614,14 @@ public abstract class TeamArena
 
 		Player playerCause = null; //for hologram
 		if(event.getFinalAttacker() instanceof Player p) {
-			Ability[] abilities = Kit.getAbilities(p);
-			for(Ability ability : abilities) {
+			for(Ability ability : Kit.getAbilities(p)) {
 				ability.onDealtAttack(event);
 			}
 			playerCause = p;
 		}
 		if(!event.isCancelled()) {
 			if (event.getVictim() instanceof final Player p) {
-				Ability[] abilities = Kit.getAbilities(p);
-				for (Ability ability : abilities) {
+				for (Ability ability : Kit.getAbilities(p)) {
 					ability.onReceiveDamage(event);
 				}
 
@@ -1301,7 +1297,7 @@ public abstract class TeamArena
 				attributeKillAndAssists(playerVictim, pinfo, playerKiller);
 			}
 
-			for(Ability a : pinfo.activeKit.getAbilities()) {
+			for(Ability a : Kit.getAbilities(playerVictim)) {
 				a.onDeath(event);
 			}
 			pinfo.activeKit.removeKit(playerVictim, pinfo);
@@ -1376,8 +1372,8 @@ public abstract class TeamArena
 	 */
 	protected void addKillAmount(Player player, double amount, Player victim) {
 
-		if(amount != 1)
-			player.sendMessage(Component.text("Scored a kill assist of " + MathUtils.round(amount, 2) + "!").color(NamedTextColor.RED));
+		if(amount < 1)
+			player.sendMessage(Component.text("Scored a kill assist of " + MathUtils.round(amount, 2) + "!", NamedTextColor.RED));
 
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
 		int killsBefore = (int) pinfo.kills;
@@ -1387,8 +1383,7 @@ public abstract class TeamArena
 		PlayerListScoreManager.setKills(player, killsAfter);
 
 		//player kill Assist abilities
-		Ability[] abilities = Kit.getAbilities(player);
-		for(Ability a : abilities) {
+		for(Ability a : Kit.getAbilities(player)) {
 			a.onAssist(player, amount, victim);
 		}
 

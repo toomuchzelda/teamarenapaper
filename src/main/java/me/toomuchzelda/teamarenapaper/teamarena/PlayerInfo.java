@@ -9,6 +9,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.KillAssistTracker;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import net.kyori.adventure.text.Component;
@@ -33,8 +34,8 @@ public class PlayerInfo
 	public StatusBarManager.StatusBarHologram statusBar;
 	public Kit kit;
 	public Kit activeKit; // kit they've selected vs the kit they're currently using
-	//todo: read from DB or other persistent storage
-	//todo: prob make a preference
+	public final Set<Ability> abilities;
+
 	public String defaultKit;
 
 	private Map<Preference<?>, Object> preferences = new HashMap<>();
@@ -65,6 +66,7 @@ public class PlayerInfo
 		statusBar = null;
 		kit = null;
 		activeKit = null;
+		abilities = new HashSet<>();
 		//should now be initialised in EventListeners
 		//defaultKit = "Trooper";
 
