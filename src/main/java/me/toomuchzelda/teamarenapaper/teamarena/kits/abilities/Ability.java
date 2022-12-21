@@ -17,7 +17,7 @@ import org.bukkit.event.player.*;
 
 import javax.annotation.Nullable;
 
-//methods aren't abstract as kit abilities may not need to override them
+//methods aren't abstract as abilities may not need to override them
 public abstract class Ability {
 	protected Ability() {}
 

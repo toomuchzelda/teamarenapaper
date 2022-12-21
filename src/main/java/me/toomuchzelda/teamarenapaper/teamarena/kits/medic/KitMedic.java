@@ -6,6 +6,7 @@ import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
@@ -74,8 +75,7 @@ public class KitMedic extends Kit
 	}
 
 	public KitMedic() {
-		super("Medic", "Heal your teammates with wand. Heal 1 teammate at a time. All your base are belong to us." +
-						" Can see the health of teammates and enemies!"
+		super("Medic", "Heal your teammates with wand. Heal 1 teammate at a time. All your base are belong to us."
 				, POTION);
 
 		this.setArmor(new ItemStack(Material.GOLDEN_HELMET),
@@ -86,6 +86,8 @@ public class KitMedic extends Kit
 		this.setItems(new ItemStack(Material.IRON_SWORD), WAND, POTION);
 
 		this.setAbilities(new MedicAbility());
+
+		this.setCategory(KitCategory.SUPPORT);
 	}
 
 	/**

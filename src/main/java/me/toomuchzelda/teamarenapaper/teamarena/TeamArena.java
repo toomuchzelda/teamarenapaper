@@ -14,6 +14,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.KitInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
+import me.toomuchzelda.teamarenapaper.teamarena.killstreak.KillStreakManager;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.KitDemolitions;
@@ -122,6 +123,7 @@ public abstract class TeamArena
 
 	public final MiniMapManager miniMap;
 	public final GraffitiManager graffiti;
+	private final KillStreakManager killStreakManager;
 
 	public TeamArena(TeamArenaMap map) {
 		File worldFile = map.getFile();
@@ -212,6 +214,7 @@ public abstract class TeamArena
 
 		miniMap = new MiniMapManager(this);
 		graffiti = new GraffitiManager(this);
+		killStreakManager = new KillStreakManager();
 
 		DamageTimes.clear();
 
@@ -459,11 +462,15 @@ public abstract class TeamArena
 			for (Ability ability : kit.getAbilities()) {
 				ability.onTick();
 			}
+		}
 
-			for (Player p : kit.getActiveUsers()) {
-				for (Ability a : kit.getAbilities()) {
-					a.onPlayerTick(p);
-				}
+		// Killstreak tick events
+		this.killStreakManager.tick();
+
+		// Kit and killstreak player tick events
+		for (var entry : Main.getPlayerInfoMap().entrySet()) {
+			for(Ability a : entry.getValue().abilities) {
+				a.onPlayerTick(entry.getKey());
 			}
 		}
 
@@ -1021,6 +1028,8 @@ public abstract class TeamArena
 		// remove map
 		miniMap.removeMapView();
 
+		this.killStreakManager.unregister();
+
 		BuildingManager.cleanUp();
 
 		setGameState(GameState.DEAD);
@@ -1302,6 +1311,8 @@ public abstract class TeamArena
 			}
 			pinfo.activeKit.removeKit(playerVictim, pinfo);
 
+			this.killStreakManager.removeKillStreaks(playerVictim, pinfo);
+
 			PlayerUtils.resetState(playerVictim);
 
 			players.remove(playerVictim);
@@ -1388,12 +1399,7 @@ public abstract class TeamArena
 		}
 
 		if(killsAfter != killsBefore) { //if their number of kills increased to the next whole number
-			//todo: check for and give killstreaks here
-			final double someKillStreakAmount = 5;
-			if(killsAfter == someKillStreakAmount) {
-				player.sendMessage("5 killstreak");
-				//give them killstreak item(s)
-			}
+			this.killStreakManager.handleKill(player, killsAfter, pinfo);
 		}
 	}
 
