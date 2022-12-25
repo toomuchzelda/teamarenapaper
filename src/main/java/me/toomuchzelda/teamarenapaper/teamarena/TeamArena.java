@@ -106,10 +106,7 @@ public abstract class TeamArena
 			.build();
 	public static final int RESPAWN_SECONDS = 5;
 
-	protected final List<Kit> defaultKits = List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
-			new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(),
-			new KitNone(), new KitVenom(), new KitRewind(), new KitValkyrie(), new KitEngineer(), new KitExplosive(),
-			new KitTrigger(), new KitMedic());
+	protected final List<Kit> defaultKits;
 
 	protected Map<String, Kit> kits = new LinkedHashMap<>();
 	protected static ItemStack kitMenuItem = ItemBuilder.of(Material.FEATHER)
@@ -197,8 +194,6 @@ public abstract class TeamArena
 		winningTeam = null;
 		lastHadLeft = null;
 
-		registerKits();
-
 		//List of team names
 		tabTeamsList = new ArrayList<>(teams.length);
 		for(TeamArenaTeam team : teams) {
@@ -215,6 +210,13 @@ public abstract class TeamArena
 		miniMap = new MiniMapManager(this);
 		graffiti = new GraffitiManager(this);
 		killStreakManager = new KillStreakManager();
+
+		this.defaultKits = List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
+				new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(),
+				new KitNone(), new KitVenom(), new KitRewind(), new KitValkyrie(), new KitEngineer(), new KitExplosive(),
+				new KitTrigger(), new KitMedic(this.killStreakManager));
+
+		registerKits();
 
 		DamageTimes.clear();
 
@@ -1398,7 +1400,9 @@ public abstract class TeamArena
 			a.onAssist(player, amount, victim);
 		}
 
-		if(killsAfter != killsBefore) { //if their number of kills increased to the next whole number
+		//if their number of kills increased to the next whole number
+		// and if their kit gets killstreak bonuses by getting kills
+		if(!pinfo.activeKit.handlesStreaksManually() && killsAfter != killsBefore) {
 			this.killStreakManager.handleKill(player, killsAfter, pinfo);
 		}
 	}
@@ -1769,6 +1773,9 @@ public abstract class TeamArena
 	}
 
 	public boolean canHeal(Player medic, LivingEntity target) {
+		if(medic == target)
+			return false;
+
 		if (target instanceof Player pTarget && !Main.getPlayerInfo(pTarget).team.getPlayerMembers().contains(medic)) {
 			return false;
 		}

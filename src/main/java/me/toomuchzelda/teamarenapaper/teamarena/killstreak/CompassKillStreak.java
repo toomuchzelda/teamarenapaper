@@ -18,6 +18,7 @@ import org.bukkit.event.Event;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,6 +26,8 @@ public class CompassKillStreak extends KillStreak
 {
 	private static final ItemStack COMPASS;
 	private static final TextColor COLOUR = TextColor.color(207, 255, 253);
+
+	private static final Component NO_ENEMIES = Component.text("No enemies on the map.", NamedTextColor.RED);
 
 	static {
 		COMPASS = new ItemStack(Material.COMPASS);
@@ -74,13 +77,17 @@ public class CompassKillStreak extends KillStreak
 					}
 
 					// Notify the chosen candidate they have been tracked, but only on the first "tracking event"
-					if(closestEnemy != null)
-						notifyPlayer(event.getPlayer(), closestEnemy, Math.sqrt(distSqr));
+					notifyPlayer(event.getPlayer(), closestEnemy, Math.sqrt(distSqr));
 				}
 			}
 		}
 
-		private void notifyPlayer(final Player user, final Player target, double distance) {
+		private void notifyPlayer(final Player user, @Nullable final Player target, double distance) {
+			if(target == null) {
+				user.sendMessage(NO_ENEMIES);
+				return;
+			}
+
 			final Player lastTarget = COMPASS_USES.put(user, target);
 			if(lastTarget != target) {
 				target.sendMessage(
@@ -95,7 +102,7 @@ public class CompassKillStreak extends KillStreak
 
 			final boolean targetInvis = Kit.getActiveKit(target).isInvisKit();
 			if(targetInvis)
-				distance = distance + MathUtils.randomRange(-4, 4);
+				distance = distance + MathUtils.randomRange(-5d, 5d);
 
 			final int intDist = (int) (distance + 0.5d); // Round to the nearest whole.
 

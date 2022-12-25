@@ -5,6 +5,7 @@ import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.killstreak.KillStreakManager;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
@@ -33,13 +34,13 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import javax.annotation.Nullable;
+import java.util.*;
 
 /**
  * Kit medic Kit and Ability class
+ *
+ * Medic manages its own killstreaks, it doesn't get them by kills like normal.
  *
  * @author toomuchzelda
  */
@@ -74,7 +75,9 @@ public class KitMedic extends Kit
 		}
 	}
 
-	public KitMedic() {
+	private final KillStreakManager killStreakManager;
+
+	public KitMedic(KillStreakManager killStreakManager) {
 		super("Medic", "Heal your teammates with wand. Heal 1 teammate at a time. All your base are belong to us."
 				, POTION);
 
@@ -88,6 +91,13 @@ public class KitMedic extends Kit
 		this.setAbilities(new MedicAbility());
 
 		this.setCategory(KitCategory.SUPPORT);
+
+		this.killStreakManager = killStreakManager;
+	}
+
+	@Override
+	public boolean handlesStreaksManually() {
+		return true;
 	}
 
 	/**
@@ -95,7 +105,7 @@ public class KitMedic extends Kit
 	 * Wand binding and healing
 	 * See other player's health.
 	 */
-	private static class MedicAbility extends Ability {
+	private class MedicAbility extends Ability {
 
 		private static final Component HOLD_IN_MAIN_HAND = Component.text(
 				"You're not ambidextrous! Use the fishing rod in your main hand", TextColors.ERROR_RED);
@@ -112,8 +122,11 @@ public class KitMedic extends Kit
 		private static final double MAX_HEALING_DISTANCE = 15d;
 		private static final double MAX_HEALING_DISTANCE_SQR = MAX_HEALING_DISTANCE * MAX_HEALING_DISTANCE;
 
+		private static final double KILLSTREAK_MULT = 0.067d;
+
 		private record HealInfo(LivingEntity healed, int startTime, AttachedMedicGuardian guardian, AttachedMedicGuardian selfGuardian) {}
 		private final Map<Player, HealInfo> currentHeals = new LinkedHashMap<>();
+		private final Map<Player, Double> playerTotalHeals = new HashMap<>();
 
 		@Override
 		public void removeAbility(Player medic) {
@@ -121,6 +134,8 @@ public class KitMedic extends Kit
 			if(hinfo != null) {
 				stopGlowing(medic, hinfo);
 			}
+
+			medic.sendMessage(getTotalHealedMessage(playerTotalHeals.remove(medic)));
 		}
 
 		@Override
@@ -137,7 +152,7 @@ public class KitMedic extends Kit
 		@Override
 		public void onConsumeItem(PlayerItemConsumeEvent event) {
 			if(event.getItem().isSimilar(POTION)) {
-				event.setReplacement(POTION); // Setting the replacement should effectively prevent losing the item
+				event.setReplacement(POTION); // Setting the replacement effectively prevents losing the item
 			}
 		}
 
@@ -305,8 +320,8 @@ public class KitMedic extends Kit
 				final LivingEntity healed = hinfo.healed();
 
 				// The PlayerFishEvent is not called when the player stops holding the rod by switching items
-				// or something. So check the item every tick here and stop healing apporpriately
-				// The PlayerFishEvent is also not called when the hook is released by moving our of range,
+				// or something. So check the item every tick here and stop healing appropriately
+				// The PlayerFishEvent is also not called when the hook is released by moving out of range,
 				// so check for that here too
 				final boolean stopHealing = !medic.getEquipment().getItemInMainHand().isSimilar(WAND) ||
 						medic.getFishHook() == null || medic.getFishHook().getHookedEntity() != hinfo.healed() ||
@@ -317,12 +332,26 @@ public class KitMedic extends Kit
 					continue;
 				}
 
+				final double prevHealth = healed.getHealth();
 				if (healed instanceof Player healedPlayer) {
 					PlayerUtils.heal(healedPlayer, HEAL_PER_TICK, EntityRegainHealthEvent.RegainReason.MAGIC_REGEN);
 				}
 				else {
 					final double maxHealth = healed.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
 					healed.setHealth(Math.min(healed.getHealth() + HEAL_PER_TICK, maxHealth));
+				}
+
+				// Attribute heal amount and check killstreak increment
+				// Only if the target was actually healed
+				if(healed.getHealth() > prevHealth) {
+					final double prevStreak = playerTotalHeals.computeIfAbsent(medic, player -> 0d) * KILLSTREAK_MULT;
+					final double totalHeals = playerTotalHeals.merge(medic, HEAL_PER_TICK, Double::sum) * KILLSTREAK_MULT;
+
+					// If the amount they healed reached the next whole number
+					if ((int) prevStreak != (int) totalHeals) {
+						medic.sendMessage("got " + (int) totalHeals + " healstreak");
+						killStreakManager.handleKill(medic, (int) totalHeals, Main.getPlayerInfo(medic));
+					}
 				}
 
 				final int mod = (TeamArena.getGameTick() - hinfo.startTime()) % 20;
@@ -340,7 +369,7 @@ public class KitMedic extends Kit
 		/**
 		 * Do the line of sight check. A medic and target must have a direct line between each other to heal
 		 * and be within MAX_HEALING_DISTANCE length.
-		 * @return true if can heal, false if not.
+		 * @return LineOfSight enum describing the result.
 		 */
 		private LineOfSight lineOfSightCheck(Player medic, LivingEntity healed) {
 			// Start from medic loc + half guardian height as that's where the laser is coming from (likely)
@@ -391,6 +420,14 @@ public class KitMedic extends Kit
 					.build();
 
 			return healingName;
+		}
+
+		private static Component getTotalHealedMessage(@Nullable Double amountHealed) {
+			if (amountHealed == null || amountHealed == 0d) {
+				return Component.text("You didn't heal anything this life. What a noob!", ITEM_NAME_COLOUR);
+			}
+
+			return Component.text("You healed " + MathUtils.round(amountHealed / 2, 2) + " hearts this life.", ITEM_NAME_COLOUR);
 		}
 	}
 }

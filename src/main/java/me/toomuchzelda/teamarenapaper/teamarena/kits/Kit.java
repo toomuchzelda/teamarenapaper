@@ -212,6 +212,13 @@ public abstract class Kit {
 		return this.fuseEnchantLevel;
 	}
 
+	/**
+	 * For killstreaks, if a kit will handle it's own killstreaks or if it should be handled the default way by TeamArena
+	 */
+	public boolean handlesStreaksManually() {
+		return false;
+	}
+
     /**
      * Get all the abilities the player currently has.
 	 * This method shouldn't really be in this class, but it is because tech debt.
