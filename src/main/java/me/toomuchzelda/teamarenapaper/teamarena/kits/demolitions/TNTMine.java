@@ -86,12 +86,13 @@ public class TNTMine extends DemoMine
 
 		removeEntities(); //won't remove the tnt as it's still null as of now
 
-		TNTPrimed tnt = (TNTPrimed) baseLoc.getWorld().spawnEntity(hitboxEntity.getLocation(), EntityType.PRIMED_TNT);
+		TNTPrimed tnt = (TNTPrimed) baseLoc.getWorld().spawnEntity(hitboxEntity.getLocation().subtract(0d, 0.35d, 0d),
+				EntityType.PRIMED_TNT);
 		tnt.setFuseTicks(this.timeToDetonate);
 		tnt.setSource(this.owner);
 		tnt.setVelocity(new Vector(0, 0.45d, 0));
 
-		TeamArenaExplosion explosion = new TeamArenaExplosion(null, 8d, 0.3d, 35d, 3d, 0.1d, DamageType.DEMO_TNTMINE, tnt);
+		TeamArenaExplosion explosion = new TeamArenaExplosion(null, 7d, 0.5d, 35d, 3d, 0.1d, DamageType.DEMO_TNTMINE, tnt);
 		CustomExplosionInfo cinfo = new CustomExplosionInfo(explosion, true);
 		ExplosionManager.setEntityInfo(tnt, cinfo);
 

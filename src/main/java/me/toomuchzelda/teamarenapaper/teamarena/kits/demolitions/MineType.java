@@ -2,8 +2,8 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions;
 
 public enum MineType
 {
-	TNTMINE("TNT Mine", 3, 20, 25, 30 * 20),
-	PUSHMINE("Push Mine", 3, 20, 25, 30 * 20);
+	TNTMINE("TNT Mine", 3, 12, 25, 30 * 20),
+	PUSHMINE("Push Mine", 3, 12, 25, 30 * 20);
 
 	final String name;
 	final int damageToKill;

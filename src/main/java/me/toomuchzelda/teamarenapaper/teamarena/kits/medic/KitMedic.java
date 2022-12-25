@@ -349,7 +349,7 @@ public class KitMedic extends Kit
 
 					// If the amount they healed reached the next whole number
 					if ((int) prevStreak != (int) totalHeals) {
-						medic.sendMessage("got " + (int) totalHeals + " healstreak");
+						//medic.sendMessage("got " + (int) totalHeals + " healstreak");
 						killStreakManager.handleKill(medic, (int) totalHeals, Main.getPlayerInfo(medic));
 					}
 				}
