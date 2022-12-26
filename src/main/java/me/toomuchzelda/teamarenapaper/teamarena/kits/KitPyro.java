@@ -243,8 +243,7 @@ public class KitPyro extends Kit
 					location.clone().set(location.getBlockX() + 0.5, location.getY() - 0.00001, location.getBlockZ()),
 					List.of(player), null);
 
-			int id = net.minecraft.world.level.block.Block.getId(((CraftBlockData) blockData).getState());
-			packetEntity.getSpawnPacket().getIntegers().write(4, id);
+			packetEntity.setBlockType(blockData);
 
 			// glowing
 			packetEntity.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_GLOWING_MASK);

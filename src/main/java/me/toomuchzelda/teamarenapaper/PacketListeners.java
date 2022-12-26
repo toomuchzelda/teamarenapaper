@@ -340,8 +340,8 @@ public class PacketListeners
 		});
 
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
-				PacketType.Play.Server.NAMED_SOUND_EFFECT, PacketType.Play.Server.ENTITY_SOUND,
-				PacketType.Play.Server.CUSTOM_SOUND_EFFECT)
+				PacketType.Play.Server.NAMED_SOUND_EFFECT, PacketType.Play.Server.ENTITY_SOUND)
+				//PacketType.Play.Server.CUSTOM_SOUND_EFFECT)
 		{
 			@Override
 			public void onPacketSending(PacketEvent event) {

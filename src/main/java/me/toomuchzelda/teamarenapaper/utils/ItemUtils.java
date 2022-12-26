@@ -5,6 +5,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
@@ -173,6 +174,13 @@ public class ItemUtils {
 
         return string.toString();
     }
+
+	public static boolean isHoldingItem(LivingEntity e) {
+		EntityEquipment equipment = e.getEquipment();
+		if(equipment == null) return true;
+
+		return !equipment.getItemInMainHand().getType().isAir() || !equipment.getItemInOffHand().getType().isAir();
+	}
 
 	public static ItemStack createPlayerHead(String textureUrl) {
 		URL url;

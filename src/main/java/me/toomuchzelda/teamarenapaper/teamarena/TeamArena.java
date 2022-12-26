@@ -730,6 +730,10 @@ public abstract class TeamArena
 					setViewingGlowingTeammates(pinfo, !pinfo.viewingGlowingTeammates, true);
 				}
 			}
+			// Killstreak crate items
+			else {
+				this.killStreakManager.handleCrateItemUse(event);
+			}
 		}
 	}
 

@@ -84,7 +84,7 @@ public class KitTrigger extends Kit
 		public static final double CHANCE_TO_STALL = 0.02d;
 		public static final int MAX_STALL_TIME = 2 * 20;
 		public static final int BOOM_TIME = 1 * 20;
-		public static final int COUNTDOWN_TIME = 5 * 20;
+		public static final int COUNTDOWN_TIME = 7 * 20;
 		public static final float LOWER_BEEPING_BOUND = 0.15f;
 		public static final float UPPER_BEEPING_BOUND = 0.85f;
 

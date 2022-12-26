@@ -12,10 +12,9 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
-import org.bukkit.Bukkit;
-import org.bukkit.Chunk;
-import org.bukkit.Location;
-import org.bukkit.World;
+import org.bukkit.*;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.craftbukkit.v1_19_R1.block.data.CraftBlockData;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
@@ -270,6 +269,12 @@ public class PacketEntity
 		doubles.write(0, newLocation.getX());
 		doubles.write(1, newLocation.getY());
 		doubles.write(2, newLocation.getZ());
+	}
+
+
+	public void setBlockType(BlockData data) {
+		int id = net.minecraft.world.level.block.Block.getId(((CraftBlockData) data).getState());
+		this.getSpawnPacket().getIntegers().write(4, id);
 	}
 
 	/**
