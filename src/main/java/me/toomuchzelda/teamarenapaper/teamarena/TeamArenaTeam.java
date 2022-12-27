@@ -297,13 +297,12 @@ public class TeamArenaTeam
 		return playerMembers.size() > 0;
 	}
 
-	/**
-	 * if a non-player entity is on this team
-	 * @param entity
-	 * @return
-	 */
-	public boolean hasEntityMember(Entity entity) {
-		return paperTeam.hasEntity(entity);
+	public boolean hasMember(Entity entity) {
+		if(entity instanceof Player p) {
+			return this.playerMembers.contains(p);
+		}
+
+		return this.paperTeam.hasEntity(entity);
 	}
 
 	public void updateNametags() {

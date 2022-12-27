@@ -292,6 +292,13 @@ public class DamageEvent {
 					if(damageEvent.wasSprinting)
 						knockbackLevels += 1;
 				}
+				else if(living instanceof Tameable tameable && damageType.isMelee()) {
+					UUID ownerUuid = tameable.getOwnerUniqueId();
+					if(ownerUuid != null) {
+						// Hopefully this method doesn't return OfflinePlayers
+						realAttacker = Bukkit.getPlayer(ownerUuid);
+					}
+				}
 			}
 		}
 
@@ -509,10 +516,18 @@ public class DamageEvent {
 		nmsEntity.hasImpulse = true;
 
 		//damager stuff
-		if(getFinalAttacker() instanceof LivingEntity livingDamager) {
+		// If melee, always use the direct attacker, else use direct or real attacker
+		LivingEntity livingDamager = null;
+		if(damageType.isMelee() && this.attacker instanceof LivingEntity)
+			livingDamager = (LivingEntity) attacker;
+		else {
+			Entity finalE = this.getFinalAttacker();
+			if(finalE instanceof LivingEntity living)
+				livingDamager = living;
+		}
 
+		if(livingDamager != null) {
 			if(livingDamager.getEquipment() != null) {
-
 				int fireTicks = 0;
 				DamageType type = DamageType.FIRE_TICK;
 				if(damageType.isMelee()) {

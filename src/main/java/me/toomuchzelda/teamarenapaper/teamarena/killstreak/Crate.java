@@ -113,6 +113,8 @@ public class Crate
 		this.firework.addPassenger(parrot);
 
 		done = false;
+
+		Main.getGame().getKillStreakManager().crateFireworks.add(this.firework);
 	}
 
 	void tick() {
@@ -129,8 +131,6 @@ public class Crate
 
 				Location spawnLoc = this.destination.clone().add(0, 200, 0);
 
-				//this.fallingBlock = new PacketEntity(PacketEntity.NEW_ID, EntityType.FALLING_BLOCK, spawnLoc, null,
-				//		PacketEntity.VISIBLE_TO_ALL);
 				this.fallingBlock = new PacketFallingCrate(spawnLoc);
 				this.fallingBlock.setBlockType(this.blockType.createBlockData());
 

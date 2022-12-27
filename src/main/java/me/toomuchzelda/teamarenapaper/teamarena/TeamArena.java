@@ -15,6 +15,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.KitInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.KillStreakManager;
+import me.toomuchzelda.teamarenapaper.teamarena.killstreak.WolvesKillStreak;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.KitDemolitions;
@@ -667,6 +668,11 @@ public abstract class TeamArena
 			return;
 		}
 
+		if(this.killStreakManager.isCrateFirework(event.getFinalAttacker())) {
+			event.setCancelled(true);
+			return;
+		}
+
 		if(event.hasKnockback()) {
 			//reduce knockback done by axes
 			if (event.getDamageType().isMelee() && event.getFinalAttacker() instanceof LivingEntity living) {
@@ -688,6 +694,9 @@ public abstract class TeamArena
 
 		if(event.getVictim() instanceof Skeleton) {
 			KitEngineer.EngineerAbility.handleSentryAttemptDamage(event);
+		}
+		else if(event.getVictim() instanceof Wolf) {
+			WolvesKillStreak.WolvesAbility.handleWolfAttemptDamage(event);
 		}
 	}
 
@@ -1119,6 +1128,10 @@ public abstract class TeamArena
 
 	public Set<Player> getSpectators() {
 		return spectators;
+	}
+
+	public KillStreakManager getKillStreakManager() {
+		return this.killStreakManager;
 	}
 
 	public abstract boolean canSelectKitNow();

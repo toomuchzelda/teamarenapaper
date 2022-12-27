@@ -222,10 +222,17 @@ public class DamageType {
 	 * 									GAMEMODE DAMAGETYPES
 	 ******************************************************************************************/
 
-	public static final DamageType BOMB_EXPLODED = new DamageType("Team Bomb" ).setInstantDeath().setIgnoreRate();
+	public static final DamageType BOMB_EXPLODED = new DamageType("Team Bomb").setInstantDeath().setIgnoreRate();
 
 	public static final DamageType END_GAME_LIGHTNING = new DamageType("Herobrine", "%Killed% was killed by Herobrine")
 			.setIgnoreArmor().setIgnoreArmorEnchants().setNoKnockback().setIgnoreRate().setDamageSource(DamageSource.LIGHTNING_BOLT);
+
+	/*******************************************************************************************
+	 * 									KILLSTREAK DAMAGETYPES
+	 ******************************************************************************************/
+	public static final DamageType WOLF_KILL = new DamageType("Attack Wolves", "%Killed% was mauled by %Killer%'s wolf %Cause%")
+			.setMelee();
+
 
 	private static int idCounter = 0;
 
@@ -531,6 +538,13 @@ public class DamageType {
     public boolean is(DamageType damageType) {
         return this.id == damageType.id;
     }
+
+	/**
+	 * When need to use a DamageType and copy the DamageSource from another.
+	 */
+	public DamageType withDamageSource(DamageType other) {
+		return new DamageType(this).setDamageSource(other.nmsDamageSource);
+	}
 
     public DamageType setBurn() {
         _burn = true;

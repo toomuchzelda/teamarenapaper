@@ -5,17 +5,25 @@ import com.destroystokyo.paper.entity.ai.GoalKey;
 import com.destroystokyo.paper.entity.ai.GoalType;
 import com.destroystokyo.paper.entity.ai.MobGoals;
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.trigger.KitTrigger;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Wolf;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 
 import java.util.*;
@@ -23,6 +31,14 @@ import java.util.*;
 public class WolvesKillStreak extends KillStreak
 {
 	private static final TextColor color = TextColor.color(216, 212, 213);
+	private static final int WOLF_COUNT = 3;
+
+	private static final List<String> WOLF_NAMES = List.of(
+			"Dorothy", "Santa", "Quote", "Curly", "Toroko", "Totoro", "Elitemaster5", "I love my owner", "I hate my owner",
+			"Yato", "Yukine", "Hiyori", "Eren", "Mikasa", "Armin", "Wolverine's final form", "Doggy", "Cutie pie",
+			"Milo", "Lilipup", "Olivia", "Noah", "Oliver", "Harper", "Archer", "Obama", "Ugly unrecognisable thing",
+			"<3", "</3", "Naruto", "Ichigo", "Kruger", "Loid", "Anya", "Weather Forecast", "Pucci", "DIO", "Jojo"
+	);
 
 	WolvesKillStreak() {
 		super("Attack wolves", "A pack of wolves will follow or sit at your command and chew up enemies", color, null,
@@ -46,28 +62,102 @@ public class WolvesKillStreak extends KillStreak
 		this.giveStreak(player, Main.getPlayerInfo(player));
 	}
 
-	private static class WolvesAbility extends Ability {
+	public static class WolvesAbility extends Ability {
 
-		private record WolfInfo(Set<Wolf> wolves) {}
-		private static final Map<Player, WolfInfo> WOLF_MASTERS = new HashMap<>();
+		private static final Map<Player, Set<Wolf>> WOLF_MASTERS = new HashMap<>();
 		private static final Map<Wolf, Player> WOLF_LOOKUP = new HashMap<>();
 
 		@Override
 		public void giveAbility(Player player) {
 			Location crateLoc = crateLocs.remove(player);
-			DyeColor dyeColor = Main.getPlayerInfo(player).team.getDyeColour();
-			Wolf wolf = player.getWorld().spawn(crateLoc, Wolf.class, wolf1 -> {
-				wolf1.setOwner(player);
-				wolf1.setAgeLock(true);
-				wolf1.setSitting(false);
-				wolf1.setCollarColor(dyeColor);
-			});
+			if(crateLoc == null)
+				crateLoc = player.getLocation();
 
-			MobGoals manager = Bukkit.getMobGoals();
-			manager.removeAllGoals(wolf, GoalType.TARGET); // Remove pre-existing target goals and add our own.
-			manager.addGoal(wolf, 2, new TargetEnemiesGoal(Main.getPlugin(), player, wolf));
+			TeamArenaTeam team = Main.getPlayerInfo(player).team;
+			DyeColor dyeColor = team.getDyeColour();
 
+			Set<Wolf> set = new HashSet<>();
+			for(int i = 0; i < WOLF_COUNT; i++) {
+				Wolf wolf = player.getWorld().spawn(crateLoc, Wolf.class, wolf1 -> {
+					wolf1.setOwner(player);
+					wolf1.setAgeLock(true);
+					wolf1.setSitting(false);
+					wolf1.setCollarColor(dyeColor);
 
+					String name = WOLF_NAMES.get(MathUtils.randomMax(WOLF_NAMES.size() - 1));
+					wolf1.customName(Component.text(name, team.getRGBTextColor()));
+					wolf1.setCustomNameVisible(true);
+				});
+
+				MobGoals manager = Bukkit.getMobGoals();
+				manager.removeAllGoals(wolf, GoalType.TARGET); // Remove pre-existing target goals and add our own.
+				manager.addGoal(wolf, 2, new TargetEnemiesGoal(Main.getPlugin(), player, wolf));
+
+				team.addMembers(wolf);
+				set.add(wolf);
+				WOLF_LOOKUP.put(wolf, player);
+			}
+
+			WOLF_MASTERS.put(player, set);
+		}
+
+		@Override
+		public void removeAbility(Player player) {
+			Set<Wolf> wolves = WOLF_MASTERS.remove(player);
+			if(wolves == null) throw new IllegalStateException("WolvesAbility#removeAbility()");
+
+			for(Wolf wolf : wolves) {
+				wolf.remove();
+				WOLF_LOOKUP.remove(wolf);
+			}
+			wolves.clear();
+		}
+
+		@Override
+		public void unregisterAbility() {
+			for(Set<Wolf> wolves : WOLF_MASTERS.values()) {
+				for (Wolf wolf : wolves) {
+					wolf.remove();
+					WOLF_LOOKUP.remove(wolf);
+				}
+				wolves.clear();
+			}
+			WOLF_MASTERS.clear();
+		}
+
+		/**
+		 * Cancel damage done to wolf by same team
+		 */
+		public static void handleWolfAttemptDamage(DamageEvent event) {
+			Player master = WOLF_LOOKUP.get(event.getVictim());
+			if(master == null) return;
+			if(Main.getPlayerInfo(master).team.hasMember(event.getFinalAttacker())) {
+				event.setCancelled(true);
+			}
+		}
+
+		@Override
+		public void onAttemptedAttack(DamageEvent event) {
+			// The wolf attacked someone
+			if(event.getDamageType().isMelee() && event.getAttacker() instanceof Wolf wolf) {
+				event.setDamageType(DamageType.WOLF_KILL.withDamageSource(event.getDamageType()));
+				event.setDamageTypeCause(wolf);
+			}
+		}
+
+		private static final TextColor color = TextColor.color(99, 125, 5);
+		private static final List<Component> fleshLore = List.of(ItemUtils.noItalics(Component.text("Feed it to your wolves!", color)));
+		@Override
+		public void onKill(DamageEvent event) {
+			// If a dog got the kill, give the owner rotten flesh
+			if(event.getDamageType().is(DamageType.WOLF_KILL)) {
+				ItemStack flesh = ItemBuilder.of(Material.ROTTEN_FLESH)
+						.displayName(EntityUtils.getComponent(event.getVictim()).append(Component.text("'s chewed up corpse", color)))
+						.lore(fleshLore)
+						.build();
+
+				((Player) event.getFinalAttacker()).getInventory().addItem(flesh);
+			}
 		}
 	}
 

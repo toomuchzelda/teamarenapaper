@@ -5,6 +5,8 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.block.BlockFace;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.Action;
@@ -24,6 +26,9 @@ public class KillStreakManager
 	private final Map<Integer, List<KillStreak>> killstreaksByKills;
 
 	private final List<Crate> allCrates;
+
+	// Crate calling fireworks here so can cancel the damage from their explosions.
+	final Set<Firework> crateFireworks = Collections.newSetFromMap(new WeakHashMap<>());
 
 	public KillStreakManager() {
 		this.allKillstreaks = new LinkedHashMap<>();
@@ -128,5 +133,9 @@ public class KillStreakManager
 
 		allKillstreaks.clear();
 		killstreaksByKills.clear();
+	}
+
+	public boolean isCrateFirework(Entity entity) {
+		return entity instanceof Firework firework && this.crateFireworks.contains(firework);
 	}
 }
