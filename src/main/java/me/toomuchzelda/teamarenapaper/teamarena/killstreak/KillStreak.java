@@ -49,7 +49,7 @@ public abstract class KillStreak
 		this.abilities = List.of(abilities);
 	}
 
-	void giveStreak(Player player, PlayerInfo pinfo) {
+	public void giveStreak(Player player, PlayerInfo pinfo) {
 		if(this.getItem() != null)
 			player.getInventory().addItem(this.getItem());
 

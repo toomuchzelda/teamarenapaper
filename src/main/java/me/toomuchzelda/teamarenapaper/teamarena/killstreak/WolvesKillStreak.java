@@ -84,7 +84,7 @@ public class WolvesKillStreak extends KillStreak
 					wolf1.setSitting(false);
 					wolf1.setCollarColor(dyeColor);
 
-					String name = WOLF_NAMES.get(MathUtils.randomMax(WOLF_NAMES.size() - 1));
+					String name = "(Wolf) " + WOLF_NAMES.get(MathUtils.randomMax(WOLF_NAMES.size() - 1));
 					wolf1.customName(Component.text(name, team.getRGBTextColor()));
 					wolf1.setCustomNameVisible(true);
 				});
@@ -146,7 +146,8 @@ public class WolvesKillStreak extends KillStreak
 		}
 
 		private static final TextColor color = TextColor.color(99, 125, 5);
-		private static final List<Component> fleshLore = List.of(ItemUtils.noItalics(Component.text("Feed it to your wolves!", color)));
+		private static final List<Component> fleshLore = List.of(ItemUtils.noItalics(
+				Component.text("Your wolves fetched this for you. Feed it to them!", color)));
 		@Override
 		public void onKill(DamageEvent event) {
 			// If a dog got the kill, give the owner rotten flesh

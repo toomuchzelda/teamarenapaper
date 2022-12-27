@@ -35,14 +35,19 @@ public class KillStreakManager
 		this.killstreaksByKills = new HashMap<>();
 
 		// TODO construst and put the killstreaks here
+		// KillStreak map keys must not have spaces in them
 		addKillStreak("Compass", 2, new CompassKillStreak());
-		addKillStreak("Wolves", 1, new WolvesKillStreak());
+		addKillStreak("Wolves", 4, new WolvesKillStreak());
 
 		// Register all killstreaks
 		this.allKillstreaks.values().forEach(killStreak ->
 				killStreak.getAbilities().forEach(Ability::registerAbility));
 
 		this.allCrates = new LinkedList<>();
+	}
+
+	public KillStreak getKillStreak(String name) {
+		return allKillstreaks.get(name);
 	}
 
 	private void addKillStreak(String name, int killCount, KillStreak killStreak) {
@@ -137,5 +142,9 @@ public class KillStreakManager
 
 	public boolean isCrateFirework(Entity entity) {
 		return entity instanceof Firework firework && this.crateFireworks.contains(firework);
+	}
+
+	public Collection<String> getKillStreakNames() {
+		return this.allKillstreaks.keySet();
 	}
 }

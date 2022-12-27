@@ -298,6 +298,7 @@ public class TeamArenaTeam
 	}
 
 	public boolean hasMember(Entity entity) {
+		if(entity == null) return false;
 		if(entity instanceof Player p) {
 			return this.playerMembers.contains(p);
 		}
