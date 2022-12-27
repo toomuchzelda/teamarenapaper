@@ -1002,6 +1002,8 @@ public abstract class TeamArena
 
 			// Remove any corpse angels if they have one
 			SpectatorAngelManager.removeAngel(p);
+
+			this.killStreakManager.removeKillStreaks(p, pinfo);
 		}
 
 		for(Kit kit : kits.values()) {

@@ -20,7 +20,6 @@ import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Wolf;
 import org.bukkit.inventory.ItemStack;
@@ -76,13 +75,14 @@ public class WolvesKillStreak extends KillStreak
 			TeamArenaTeam team = Main.getPlayerInfo(player).team;
 			DyeColor dyeColor = team.getDyeColour();
 
-			Set<Wolf> set = new HashSet<>();
+			Set<Wolf> set = WOLF_MASTERS.computeIfAbsent(player, player1 -> new HashSet<>());
 			for(int i = 0; i < WOLF_COUNT; i++) {
 				Wolf wolf = player.getWorld().spawn(crateLoc, Wolf.class, wolf1 -> {
 					wolf1.setOwner(player);
 					wolf1.setAgeLock(true);
 					wolf1.setSitting(false);
 					wolf1.setCollarColor(dyeColor);
+					wolf1.setBreed(false);
 
 					String name = "(Wolf) " + WOLF_NAMES.get(MathUtils.randomMax(WOLF_NAMES.size() - 1));
 					wolf1.customName(Component.text(name, team.getRGBTextColor()));
@@ -97,8 +97,6 @@ public class WolvesKillStreak extends KillStreak
 				set.add(wolf);
 				WOLF_LOOKUP.put(wolf, player);
 			}
-
-			WOLF_MASTERS.put(player, set);
 		}
 
 		@Override
@@ -234,8 +232,12 @@ public class WolvesKillStreak extends KillStreak
 
 		private Player getClosestPlayer() {
 			final double radius = 14d;
-
 			double closestDistanceSqr = radius * radius;
+
+			// Only find a player if dog is in range of owner
+			if(this.wolf.getLocation().distanceSquared(this.owner.getLocation()) >= (20d * 20d))
+				return null;
+
 			Player closestPlayer = null;
 			Location wolfLoc = this.wolf.getLocation();
 			for(Player candidate : Main.getGame().getPlayers()) {
