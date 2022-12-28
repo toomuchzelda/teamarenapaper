@@ -80,26 +80,28 @@ public class KillStreakManager
 	 * When a player uses their crate call item, handle it and create the Crate instance that will fall to them.
 	 */
 	public void handleCrateItemUse(PlayerInteractEvent event) {
+		KillStreak streak = Crate.crateItems.get(event.getItem());
+		if(streak == null) return;
+
+		event.setUseItemInHand(Event.Result.DENY);
+		event.setUseInteractedBlock(Event.Result.DENY);
+
 		// First validate it's a good position to drop a crate.
 		if(event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
 		if(event.getBlockFace() != BlockFace.UP) return;
 		if(!event.getClickedBlock().getRelative(BlockFace.UP).getType().isAir()) return;
 
-		KillStreak streak = Crate.crateItems.remove(event.getItem());
-		if(streak == null) return;
-
-		Crate crate = new Crate(event.getPlayer(), streak.getCrateBlockType(),
-				event.getClickedBlock().getLocation().add(0.5d, 1d, 0.5d), streak);
-
-		allCrates.add(crate);
+		Crate.crateItems.remove(event.getItem());
 
 		// Decrement stack size by one
 		Inventory inventory = event.getPlayer().getInventory();
 		int index = inventory.first(event.getItem());
 		inventory.getItem(index).subtract();
 
-		event.setUseItemInHand(Event.Result.DENY);
-		event.setUseInteractedBlock(Event.Result.DENY);
+		Crate crate = new Crate(event.getPlayer(), streak.getCrateBlockType(),
+				event.getClickedBlock().getLocation().add(0.5d, 1d, 0.5d), streak);
+
+		allCrates.add(crate);
 	}
 
 	public void removeKillStreaks(Player player, PlayerInfo pinfo) {

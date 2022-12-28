@@ -21,6 +21,7 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.entity.IronGolem;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
@@ -219,12 +220,12 @@ public class IronGolemKillStreak extends KillStreak
 		}
 
 		@Override
-		public GoalKey<IronGolem> getKey() {
+		public @NotNull GoalKey<IronGolem> getKey() {
 			return key;
 		}
 
 		@Override
-		public EnumSet<GoalType> getTypes() {
+		public @NotNull EnumSet<GoalType> getTypes() {
 			return EnumSet.of(GoalType.TARGET, GoalType.MOVE);
 		}
 

@@ -35,7 +35,7 @@ import java.util.*;
 public class Crate
 {
 	// Amount of time after spawning the firework the crate block entity spawns and starts falling
-	private static final int CRATE_DELAY_TIME = 3 * 20;
+	private static final int CRATE_DELAY_TIME = 50;
 	private static final double FALL_DELTA = -2d;
 	private static final List<Component> USE_MSG = List.of(
 			ItemUtils.noItalics(Component.text("Right Click on the ground to call your", TextUtils.RIGHT_CLICK_TO)),

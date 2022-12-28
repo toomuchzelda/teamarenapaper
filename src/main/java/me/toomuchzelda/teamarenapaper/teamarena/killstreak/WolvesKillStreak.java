@@ -24,6 +24,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Wolf;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
@@ -221,12 +222,12 @@ public class WolvesKillStreak extends KillStreak
 		}
 
 		@Override
-		public GoalKey<Wolf> getKey() {
+		public @NotNull GoalKey<Wolf> getKey() {
 			return key;
 		}
 
 		@Override
-		public EnumSet<GoalType> getTypes() {
+		public @NotNull EnumSet<GoalType> getTypes() {
 			return EnumSet.of(GoalType.TARGET);
 		}
 

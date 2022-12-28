@@ -707,6 +707,11 @@ public abstract class TeamArena
 		}
 
 		if(event.getFinalAttacker() instanceof IronGolem) {
+			// Replicate the vertical knockback iron golems do.
+			if(event.getDamageType().is(DamageType.MELEE) && event.getAttacker() instanceof IronGolem && event.hasKnockback()) {
+				double y = event.getKnockback().getY();
+				event.setKnockback(event.getKnockback().setY(y + 0.2d));
+			}
 			IronGolemKillStreak.GolemAbility.handleIronGolemAttemptAttack(event);
 		}
 	}
