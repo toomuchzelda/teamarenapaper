@@ -230,7 +230,10 @@ public class DamageType {
 	/*******************************************************************************************
 	 * 									KILLSTREAK DAMAGETYPES
 	 ******************************************************************************************/
-	public static final DamageType WOLF_KILL = new DamageType("Attack Wolves", "%Killed% was mauled by %Killer%'s wolf %Cause%")
+	public static final DamageType WOLF_KILL = new DamageType("Attack Wolves", "%Killed% was mauled by %Killer%'s %Cause%")
+			.setMelee();
+
+	public static final DamageType IRON_GOLEM_KILL = new DamageType("Iron Golem", "%Killed% was hydraulically pressed by %Killer%'s %Cause%")
 			.setMelee();
 
 

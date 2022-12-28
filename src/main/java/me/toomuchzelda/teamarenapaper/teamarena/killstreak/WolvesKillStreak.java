@@ -40,7 +40,7 @@ public class WolvesKillStreak extends KillStreak
 	);
 
 	WolvesKillStreak() {
-		super("Attack wolves", "A pack of wolves will follow or sit at your command and chew up enemies", color, null,
+		super("Attack wolves", "A pack of wolves that will follow at your command and chew up enemies", color, null,
 				new WolvesAbility());
 
 		this.crateItemType = Material.WOLF_SPAWN_EGG;

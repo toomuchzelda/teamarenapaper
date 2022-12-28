@@ -38,6 +38,7 @@ public class KillStreakManager
 		// KillStreak map keys must not have spaces in them
 		addKillStreak("Compass", 2, new CompassKillStreak());
 		addKillStreak("Wolves", 4, new WolvesKillStreak());
+		addKillStreak("IronGolem", 7, new IronGolemKillStreak());
 
 		// Register all killstreaks
 		this.allKillstreaks.values().forEach(killStreak ->
@@ -138,6 +139,8 @@ public class KillStreakManager
 
 		allKillstreaks.clear();
 		killstreaksByKills.clear();
+
+		Crate.crateItems.clear();
 	}
 
 	public boolean isCrateFirework(Entity entity) {

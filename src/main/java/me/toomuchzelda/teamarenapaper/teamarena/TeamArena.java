@@ -14,6 +14,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.KitInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
+import me.toomuchzelda.teamarenapaper.teamarena.killstreak.IronGolemKillStreak;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.KillStreakManager;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.WolvesKillStreak;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
@@ -697,6 +698,16 @@ public abstract class TeamArena
 		}
 		else if(event.getVictim() instanceof Wolf) {
 			WolvesKillStreak.WolvesAbility.handleWolfAttemptDamage(event);
+		}
+		else if(event.getVictim() instanceof IronGolem golem) {
+			if(event.hasKnockback()) {
+				event.setKnockback(event.getKnockback().multiply(0.3d));
+			}
+			IronGolemKillStreak.GolemAbility.handleIronGolemAttemptDamage(event);
+		}
+
+		if(event.getFinalAttacker() instanceof IronGolem) {
+			IronGolemKillStreak.GolemAbility.handleIronGolemAttemptAttack(event);
 		}
 	}
 

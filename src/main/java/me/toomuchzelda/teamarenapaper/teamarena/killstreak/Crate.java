@@ -14,10 +14,10 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.Parrot;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -37,8 +37,10 @@ public class Crate
 	// Amount of time after spawning the firework the crate block entity spawns and starts falling
 	private static final int CRATE_DELAY_TIME = 3 * 20;
 	private static final double FALL_DELTA = -2d;
-	private static final Component USE_MSG = ItemUtils.noItalics(Component.text("Right Click on the ground to call your " +
-			"crate to that location", TextUtils.RIGHT_CLICK_TO));
+	private static final List<Component> USE_MSG = List.of(
+			ItemUtils.noItalics(Component.text("Right Click on the ground to call your", TextUtils.RIGHT_CLICK_TO)),
+			ItemUtils.noItalics(Component.text("crate to that location", TextUtils.RIGHT_CLICK_TO))
+	);
 
 	static final Map<ItemStack, KillStreak> crateItems = new HashMap<>();
 
@@ -54,14 +56,17 @@ public class Crate
 						.append(Component.text(" crate", NamedTextColor.LIGHT_PURPLE))
 						.build()
 		));
-		List<Component> lore = new ArrayList<>(3);
-		lore.add(USE_MSG);
+		List<Component> lore = new ArrayList<>(5);
 		lore.add(ItemUtils.noItalics(killStreak.getComponentName()));
+		lore.addAll(TextUtils.wrapString(killStreak.getDescription(), TextUtils.PLAIN_STYLE, TextUtils.DEFAULT_WIDTH));
+		lore.addAll(USE_MSG);
 
 		lore.add(Component.text(ItemUtils.getUniqueId())); // Add unique string to be able to track this in HashMap.
 
 		meta.lore(lore);
 		meta.addEnchant(Enchantment.DURABILITY, 1, true);
+
+		meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
 
 		item.setItemMeta(meta);
 
