@@ -101,6 +101,37 @@ public class MathUtils
 		}
 	}
 
+	/**
+	 * Gets a quasi-random Vector2 between (0f,0f) inclusive and (1f,1f) exclusive, assigning into {@code into} the
+	 * {@code index}-th point in the (2, 3) Halton sequence. If index is unique, the Vector2 should be as well for all
+	 * but the largest values of index. You might find an advantage in using values for index that start higher than
+	 * 20 or so, but you can pass sequential values for index and generally get Vector2s that won't be near each other;
+	 * this is not true for all parameters to Halton sequences, but it is true for this one.
+	 * @param index an int that, if unique, positive, and not too large, will usually result in unique Vector2 values
+	 * @return new 2d vector; usually will have a comfortable distance from Vector2s produced with close index values
+	 *
+	 * @author Tommy Ettinger
+	 *         on 26/11/2016
+	 *
+	 *         https://gist.github.com/tommyettinger/878348cff32e04cf7b9bffa643a58994
+	 */
+	public static double[] haltonSequence2d(int index) {
+		int s = (index+1 & 0x7fffffff),
+				numX = s % 2, numY = s % 3, denX = 2, denY = 3;
+		while (denX <= s) {
+			numX *= 2;
+			numX += (s % (denX * 2)) / denX;
+			denX *= 2;
+		}
+		while (denY <= s) {
+			numY *= 3;
+			numY += (s % (denY * 3)) / denY;
+			denY *= 3;
+		}
+
+		return new double[] {(double) numX / (double) denX, (double) numY / (double) denY};
+	}
+
 	public static void copyVector(Vector dest, Vector src) {
 		dest.setX(src.getX());
 		dest.setY(src.getY());

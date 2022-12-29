@@ -8,6 +8,7 @@ import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
 import org.bukkit.util.BlockVector;
@@ -44,11 +45,14 @@ public class HarbingerKillStreak extends KillStreak
 
 		private static final int BLUE_PARTICLE_FLY_TIME = 20;
 		private static final int STRIKE_AMOUNT = 10;
-		private static final int STRIKE_HEIGHT = 14;
+		private static final int STRIKE_HEIGHT = 36;
 		private static final int STRIKE_WIDTH = 20;
-		private static final int STRIKE_DURATION = 5;
+		private static final int STRIKE_DURATION = 10;
+		private static final int LEAVE_AFTERMATH_DURATION = 40;
+		private static final Material STRIKE_INNER_MATERIAL = Material.LAVA;
+		private static final Material STRIKE_OUTER_MATERIAL = Material.YELLOW_STAINED_GLASS;
 
-		private static final Vector ANGLE = new Vector(0.15d, 1d, 0d).multiply(STRIKE_HEIGHT);
+		private static final Vector ANGLE = new Vector(0.2d, 1d, 0.2d).multiply(STRIKE_HEIGHT);
 
 		// Class to represent one Harbinger "strike"
 		private static class HarbingerStrike {
@@ -57,7 +61,7 @@ public class HarbingerKillStreak extends KillStreak
 			int strikeTime;
 			Vector startPos;
 			Vector destination;
-			Map<BlockVector, BlockData> changedBlocks; // Record changed blocks so can change them back
+			LinkedHashMap<BlockVector, BlockData> changedBlocks; // Record changed blocks so can change them back
 
 			public HarbingerStrike(Vector originPoint, int startTime, Vector startPos, Vector destination) {
 				this.originPoint = originPoint;
@@ -72,8 +76,12 @@ public class HarbingerKillStreak extends KillStreak
 				return this.startTime + this.strikeTime;
 			}
 
-			public int getFinishedTime() {
+			public int getStrikeFinishedTime() {
 				return this.startTime + this.strikeTime + STRIKE_DURATION;
+			}
+
+			public int getFinishedTime() {
+				return this.getStrikeFinishedTime() + LEAVE_AFTERMATH_DURATION;
 			}
 		}
 
@@ -89,17 +97,19 @@ public class HarbingerKillStreak extends KillStreak
 			final int currentTick = TeamArena.getGameTick();
 			Set<HarbingerStrike> strikes = CURRENT_STRIKES.computeIfAbsent(player, player1 -> new LinkedHashSet<>());
 			// Decide on the harbinger locations
+			int index = MathUtils.random.nextInt(100) + 1;
 			for(int i = 0; i < STRIKE_AMOUNT; i++) {
-				final int heightRad = STRIKE_HEIGHT / 2;
-				final int widthRad = STRIKE_WIDTH / 2;
+				final double heightRad = (double) STRIKE_HEIGHT / 2d;
 
+				double[] sequence = MathUtils.haltonSequence2d(index++);
 				Location destination = loc.clone().add(
-						MathUtils.randomRange((double) -widthRad, (double) widthRad),
+						(sequence[0] - 0.5d) * (double) STRIKE_WIDTH,
 						-heightRad,
-						MathUtils.randomRange((double) -widthRad, (double) widthRad)
+						(sequence[1] - 0.5d) * (double) STRIKE_WIDTH
 				);
 
-				Vector startPos = destination.toVector().add(ANGLE);
+				Vector startPos = destination.toVector().add(new Vector(0, STRIKE_HEIGHT, 0));
+				//Vector startPos = destination.toVector().add(ANGLE);
 
 				HarbingerStrike strike = new HarbingerStrike(origin, currentTick, startPos, destination.toVector());
 				strikes.add(strike);
@@ -130,14 +140,19 @@ public class HarbingerKillStreak extends KillStreak
 				final World world = player.getWorld();
 				for(HarbingerStrike strike : entry.getValue()) {
 					final int diff = currentTick - strike.startTime;
-					if(diff <= BLUE_PARTICLE_FLY_TIME) { // Still in particle fly stage
+					if(diff < BLUE_PARTICLE_FLY_TIME) { // Still in particle fly stage
 						blueParticle(diff, strike, world);
 					}
 					// During strike time
-					else if(currentTick >= strike.getStrikeTime() && currentTick < strike.getFinishedTime()) {
+					else if(currentTick >= strike.getStrikeTime() && currentTick < strike.getStrikeFinishedTime()) {
 						// Get the diff between now and the strike time starting, not the time the crate landed
 						int strikeDiff = currentTick - strike.getStrikeTime();
 						strike(strikeDiff, strike, world);
+					}
+					// == to run only once
+					else if(currentTick == strike.getFinishedTime()) {
+						Bukkit.broadcastMessage("run once");
+						disappear(strike, world);
 					}
 					else {
 						finished.add(player);
@@ -162,17 +177,22 @@ public class HarbingerKillStreak extends KillStreak
 			ParticleUtils.colouredRedstone(particlePos.toLocation(world), Color.BLUE, 3f, 3f);
 		}
 
+		private static final BlockFace[] FACES_TO_CHANGE = new BlockFace[] {
+				BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST,
+				BlockFace.SOUTH_EAST, BlockFace.SOUTH_WEST,
+				BlockFace.NORTH_EAST, BlockFace.NORTH_WEST
+		};
 		private static void strike(final int diff, HarbingerStrike strike, World world) {
 			float start = (float) diff / (float) STRIKE_DURATION;
 			if(start < 0f || start > 1f) {
-				Bukkit.broadcastMessage("start " + start);
+				Thread.dumpStack();
 			}
 			float end = (float) (diff + 1) / (float) STRIKE_DURATION;
 			if(end < 0f || end > 1f) {
-				Bukkit.broadcastMessage("end " + end);
+				Thread.dumpStack();
 			}
 
-			float amount = (end - start) * ((float) STRIKE_DURATION);
+			final float amount = (end - start) * ((float) STRIKE_HEIGHT);
 
 			Vector posDiff = strike.destination.clone().subtract(strike.startPos);
 			Vector lineToCover = posDiff.clone().multiply(amount);
@@ -185,15 +205,41 @@ public class HarbingerKillStreak extends KillStreak
 
 			// Loop over the line one block at a time and set blocks
 			//Bukkit.broadcastMessage("amount " + amount);
-			for(float i = 0; i < amount; i += 0.4f) {
+			for(float i = 0; i < amount; i += 0.9f) {
 				BlockVector currentPoint = lineStart.clone().add(lineToCover.clone().normalize().multiply(i)).toBlockVector();
 				Block existingBlock = world.getBlockAt(currentPoint.getBlockX(), currentPoint.getBlockY(), currentPoint.getBlockZ());
-				//strike.changedBlocks.put(currentPoint, existingBlock.getBlockData());
 				// don't override previously put data
 				strike.changedBlocks.putIfAbsent(currentPoint, existingBlock.getBlockData());
-				existingBlock.setType(Material.YELLOW_STAINED_GLASS);
 
-				//ParticleUtils.colouredRedstone(currentPoint.toLocation(world), Color.GREEN, 3f, 3f);
+				// Place the blocks
+				//if(!existingBlock.getType().isAir()) { // Play block breaking particle effect
+				//	world.spawnParticle(Particle.BLOCK_DUST, currentPoint.toLocation(world), 1, existingBlock.getBlockData());
+				//}
+
+				existingBlock.setType(STRIKE_INNER_MATERIAL);
+				for(BlockFace face : FACES_TO_CHANGE) {
+					Block relativeBlock = existingBlock.getRelative(face);
+					BlockData relativeData = relativeBlock.getBlockData();
+					strike.changedBlocks.putIfAbsent(relativeBlock.getLocation().toVector().toBlockVector(), relativeData);
+					// Play block breaking particle effect
+					// Mod 2 to reduce laggy particle effects
+					if(!relativeData.getMaterial().isAir()) {
+						world.spawnParticle(Particle.BLOCK_DUST, relativeBlock.getLocation(), 20, relativeData);
+					}
+					relativeBlock.setType(STRIKE_OUTER_MATERIAL);
+				}
+
+				// Harm enemies standing nearby
+				// TODO
+			}
+		}
+
+		private static final BlockData AIR_DATA = Material.AIR.createBlockData();
+		private static void disappear(HarbingerStrike strike, World world) {
+			for(var entry : strike.changedBlocks.entrySet()) {
+				BlockVector vector = entry.getKey();
+				BlockData data = entry.getValue().getMaterial().isAir() ? entry.getValue() : AIR_DATA;
+				world.setBlockData(vector.getBlockX(), vector.getBlockY(), vector.getBlockZ(), data);
 			}
 		}
 	}
