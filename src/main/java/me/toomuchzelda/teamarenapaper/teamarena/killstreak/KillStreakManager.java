@@ -39,6 +39,7 @@ public class KillStreakManager
 		addKillStreak("Compass", 2, new CompassKillStreak());
 		addKillStreak("Wolves", 4, new WolvesKillStreak());
 		addKillStreak("IronGolem", 7, new IronGolemKillStreak());
+		addKillStreak("Harbinger", 1, new HarbingerKillStreak());
 
 		// Register all killstreaks
 		this.allKillstreaks.values().forEach(killStreak ->

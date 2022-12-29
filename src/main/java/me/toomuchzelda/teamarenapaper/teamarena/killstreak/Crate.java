@@ -131,31 +131,41 @@ public class Crate
 				this.parrot.setHealth(0);
 				this.firework.detonate();
 
+				this.killStreaks.forEach(killStreak -> killStreak.onFireworkFinish(this.owner, this.destination, this));
+
 				this.parrot = null;
 				this.firework = null;
 
-				Location spawnLoc = this.destination.clone().add(0, 200, 0);
+				if(!this.isDone()) { // May be marked done by the above event call
+					Location spawnLoc = this.destination.clone().add(0, 200, 0);
 
-				this.fallingBlock = new PacketFallingCrate(spawnLoc);
-				this.fallingBlock.setBlockType(this.blockType.createBlockData());
+					this.fallingBlock = new PacketFallingCrate(spawnLoc);
+					this.fallingBlock.setBlockType(this.blockType.createBlockData());
 
-				this.fallingBlock.respawn();
+					this.fallingBlock.respawn();
+				}
 			}
 
-			Location newLoc = this.fallingBlock.getLocation().add(0, FALL_DELTA, 0);
-			fallingBlock.move(newLoc);
+			if(!this.isDone()) {
+				Location newLoc = this.fallingBlock.getLocation().add(0, FALL_DELTA, 0);
+				fallingBlock.move(newLoc);
 
-			if(newLoc.getY() <= this.destination.getY() && this.fallingBlock.isAlive()) {
-				fallingBlock.remove();
-				fallingBlock = null;
+				if (newLoc.getY() <= this.destination.getY() && this.fallingBlock.isAlive()) {
+					fallingBlock.remove();
+					fallingBlock = null;
 
-				this.killStreaks.forEach(killStreak -> killStreak.onCrateLand(this.owner, this.destination));
+					this.killStreaks.forEach(killStreak -> killStreak.onCrateLand(this.owner, this.destination));
 
-				newLoc.getWorld().playSound(newLoc, Sound.ENTITY_GENERIC_EXPLODE, 2f, 2f);
+					newLoc.getWorld().playSound(newLoc, Sound.ENTITY_GENERIC_EXPLODE, 2f, 2f);
 
-				done = true;
+					done = true;
+				}
 			}
 		}
+	}
+
+	void setDone() {
+		this.done = true;
 	}
 
 	boolean isDone() {

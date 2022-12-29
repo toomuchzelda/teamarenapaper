@@ -66,9 +66,9 @@ public abstract class KillStreak
 		return crateBlockType;
 	}
 
-	public void onCrateLand(Player player, Location destination) {}
+	public void onFireworkFinish(Player player, Location destination, Crate crate) {}
 
-	public void onCrateUse() {}
+	public void onCrateLand(Player player, Location destination) {}
 
 	boolean isDeliveredByCrate() {
 		return false;
