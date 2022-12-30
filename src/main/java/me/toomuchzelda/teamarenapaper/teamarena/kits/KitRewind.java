@@ -62,14 +62,17 @@ public class KitRewind extends Kit {
 			.displayName(Component.text("Time Machine"))
 			.lore(TextUtils.toLoreList("""
 							Teleport to your location 15 seconds ago!
-							You receive a buff based on your current State
-							The 3 states are divided evenly in a 15 second cycle
-							<regeneration>: Receive Regen II for 3.5 Seconds
-							<time_dilation>: Gives Slowness III + Prevents Jumping
-							    from enemies within a 4 Block radius for 3 Seconds
+							You get a buff based on your current State
+							The State changes every 5 seconds
+							<regeneration>: Regen II for 3.5 Seconds
+							<time_dilation>: Slowness III + Prevents
+								Jumping from enemies within 4 Blocks
+								for 3 Seconds
 							<knockback>: Blasts nearby enemies away
 							Note: <time_dilation> and <knockback>
-							    are applied at departure and arrival location""", TextColors.LIGHT_YELLOW,
+							    are applied at departure and arrival
+							    location""",
+					TextColors.LIGHT_YELLOW,
 					Placeholder.component("regeneration", Component.text("Regeneration", REGEN_COLOR)),
 					Placeholder.component("time_dilation", Component.text("Time Dilation", DILATE_COLOR)),
 					Placeholder.component("knockback", Component.text("Knockback", KB_COLOR))
@@ -79,7 +82,8 @@ public class KitRewind extends Kit {
 	public static final ItemStack TIME_STASIS = ItemBuilder.of(Material.SHULKER_SHELL)
 			.displayName(Component.text("Time Stasis"))
 			.lore(Component.text("Duration: 0.7 seconds", KB_COLOR),
-					Component.text("Briefly become invulnerable but unable to attack", TextColors.LIGHT_YELLOW))
+					Component.text("Briefly become invulnerable but", TextColors.LIGHT_YELLOW),
+					Component.text("unable to attack", TextColors.LIGHT_YELLOW))
 			.build();
 
 	public KitRewind() {

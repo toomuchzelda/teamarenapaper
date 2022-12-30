@@ -19,7 +19,8 @@ public class KitTrooper extends Kit {
 
     public KitTrooper() {
         super("Trooper", "Your standard issue melee fighter, it can handle most 1-on-1 sword fights " +
-                "and can do a little self-healing", Material.IRON_SWORD);
+                "and can heal itself with Golden Apples. It has a small appetite though, so it can't eat them too often."
+				, Material.IRON_SWORD);
 
         ItemStack[] armour = new ItemStack[4];
         armour[3] = new ItemStack(Material.IRON_HELMET);

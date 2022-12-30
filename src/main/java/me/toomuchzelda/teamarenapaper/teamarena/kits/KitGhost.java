@@ -40,8 +40,10 @@ public class KitGhost extends Kit
 	public static final String GHOST_NAME = "Ghost";
 
 	public KitGhost() {
-		super(GHOST_NAME, "Invisible, sneaky, has ender pearls, and sus O_O! Although it's not very strong, and can't" +
-				" push enemies very far", Material.GHAST_TEAR);
+		super(GHOST_NAME, "A kit that grants invisibility with ender pearls and a golden sword\n\nAlthough it's not very " +
+						"strong, and can't push people very far, its invisibility makes it good for poking enemies " +
+						"and sticking your nose everywhere it doesn't belong."
+				, Material.GHAST_TEAR);
 
 		//armor is already set to AIR in Kit.java
 

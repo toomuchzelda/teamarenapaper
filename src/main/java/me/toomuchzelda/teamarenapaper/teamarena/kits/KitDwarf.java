@@ -1,15 +1,18 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
-import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
+import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
-import org.bukkit.*;
+import org.bukkit.Color;
+import org.bukkit.Material;
+import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.enchantments.Enchantment;
@@ -24,7 +27,7 @@ public class KitDwarf extends Kit
 {
 	public static final int MAX_LEVELS = 20;
 	public static final int LEVELS_PER_ENCHANT = 3;
-	public static final int MAX_PROTECTION = 4;
+	public static final int MAX_PROTECTION = 5;
 
 	private static final AttributeModifier[] LEVELS_TO_MODIFIER = new AttributeModifier[MAX_LEVELS + 1];
 
@@ -47,7 +50,8 @@ public class KitDwarf extends Kit
 
 	public KitDwarf() {
 		super("Dwarf", "Starting off very weak, It slowly gains power by sneaking, eventually reaching God-like levels." +
-						" The stronger it gets though, the slower it becomes.",
+						" The stronger it gets though, the slower it becomes.\n\n" +
+						"While sneaking, it takes less knockback, becoming harder to push around.",
 				Material.EXPERIENCE_BOTTLE);
 
 		ItemStack[] armour = new ItemStack[4];
@@ -84,6 +88,13 @@ public class KitDwarf extends Kit
 				}
 			}
 			player.setExp(0);
+		}
+
+		@Override // Reduce knockback taken if shifting
+		public void onAttemptedDamage(DamageEvent event) {
+			if(event.hasKnockback() && event.getPlayerVictim().isSneaking()) {
+				event.setKnockback(event.getKnockback().multiply(0.6d));
+			}
 		}
 
 		@Override

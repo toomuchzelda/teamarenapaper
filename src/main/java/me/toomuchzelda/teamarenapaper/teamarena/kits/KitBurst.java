@@ -13,6 +13,8 @@ import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.Style;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
@@ -33,7 +35,9 @@ import static me.toomuchzelda.teamarenapaper.teamarena.kits.KitBurst.BurstAbilit
 public class KitBurst extends Kit
 {
 	public KitBurst() {
-		super("Burst", "firework shooty shooty and rocket launcher boom", Material.FIREWORK_ROCKET);
+		super("Burst", "Do you love fireworks? Kit Burst does! So much so, they often shoot them a bit too close and blow themselves up!\n\n" +
+				"This kit launches fireworks around with a crossbow. It's very effective against groups of enemies! " +
+				"Just be careful not to get caught in your own fireworks.", Material.FIREWORK_ROCKET);
 
 		ItemStack[] armour = new ItemStack[4];
 		armour[3] = new ItemStack(Material.CHAINMAIL_HELMET);
@@ -46,10 +50,9 @@ public class KitBurst extends Kit
 
 		ItemStack crossbow = new ItemStack(Material.CROSSBOW);
 		ItemMeta bowMeta = crossbow.getItemMeta();
-		List<Component> crossbowLore = List.of(
-				Component.text("Right click to load and launch a firework rocket", TextUtils.RIGHT_CLICK_TO),
-				Component.text("Left click while loaded to burst the firework right in front of you. Use it like a shotgun!", TextUtils.LEFT_CLICK_TO)
-		);
+		List<Component> crossbowLore = new ArrayList<>();
+		crossbowLore.addAll(TextUtils.wrapString("Right click to load and launch a firework rocket", Style.style(TextUtils.RIGHT_CLICK_TO).decoration(TextDecoration.ITALIC, false)));
+		crossbowLore.addAll(TextUtils.wrapString("Left click while loaded to burst the firework right in front of you. Use it like a shotgun!", Style.style(TextUtils.LEFT_CLICK_TO).decoration(TextDecoration.ITALIC, false)));
 		bowMeta.lore(crossbowLore);
 		//bowMeta.addEnchant(Enchantment.QUICK_CHARGE, 1, true);
 		crossbow.setItemMeta(bowMeta);

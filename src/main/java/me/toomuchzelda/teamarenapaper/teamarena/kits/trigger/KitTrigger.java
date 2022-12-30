@@ -42,9 +42,10 @@ public class KitTrigger extends Kit
 
 	static {
 		List<Component> lore = List.of(
-				Component.text("Hold this and click to blow up!", TextUtils.RIGHT_CLICK_TO),
-				Component.text("While detonating your stability does not affect you!", NamedTextColor.GREEN)
-				);
+				ItemUtils.noItalics(Component.text("Hold this and click to blow up!", TextUtils.RIGHT_CLICK_TO)),
+				ItemUtils.noItalics(Component.text("While detonating, your stability", NamedTextColor.GREEN)),
+				ItemUtils.noItalics(Component.text("does not affect you!", NamedTextColor.GREEN))
+		);
 		DETONATOR_ITEM = new ItemStack(DETONATOR_MAT);
 		ItemMeta meta = DETONATOR_ITEM.getItemMeta();
 		meta.displayName(DETONATOR_NAME);
@@ -54,9 +55,9 @@ public class KitTrigger extends Kit
 
 	public KitTrigger() {
 		super("Trigger", "There was once a Creeper who was very emotionally unstable. They would swing from extremely " +
-						"depressed, to blood-boiling angry over a push. To let off steam, they would find houses " +
+						"depressed, to blood-boiling angry over a push.\n\nTo let off steam, they would find houses " +
 						"of noobs, blow them to smithereens, and then watch the noob tears flow. " +
-						"Eventually, the cries and rage-quits did not satisfy them anymore. Wanting more " +
+						"Eventually, the cries and rage-quits did not satisfy them anymore.\n\nWanting more " +
 						"thrill and action, they picked up a sword (don't ask how), strapped on an explosive vest " +
 						"that was as unstable as their feelings and joined Team Arena!"
 				, Material.CREEPER_HEAD);

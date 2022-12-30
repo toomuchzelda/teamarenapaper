@@ -9,7 +9,9 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -60,7 +62,8 @@ public class KitVenom extends Kit {
 			.build();
 
 	public KitVenom() {
-		super("Venom", "Poison dmg on hit, poisoned people cannot be healed. It can also quickly jump in, afflicting all enemies it hits with poison and decreasing its cooldown with each enemy hit!",
+		super("Venom", "Poison damage on hit, poisoned people cannot be healed. It can also quickly jump in, afflicting" +
+						" all enemies it hits with poison and decreasing its cooldown with each enemy hit!",
 				POTION_OF_POISON);
 		setArmor(new ItemStack(Material.CHAINMAIL_HELMET), new ItemStack(Material.GOLDEN_CHESTPLATE),
 				new ItemStack(Material.IRON_LEGGINGS), new ItemStack(Material.IRON_BOOTS));
@@ -73,6 +76,8 @@ public class KitVenom extends Kit {
 
 		ItemStack leap = ItemBuilder.of(Material.CHICKEN)
 				.displayName(Component.text("Toxic Leap", TextColor.color(145, 86, 204)))
+				.lore(TextUtils.wrapString("Right click to leap forward, infecting everyone you touch!\n" +
+						"Cooldown decreases with each player hit", Style.style(TextUtils.RIGHT_CLICK_TO)))
 				.build();
 
 		setItems(sword, leap);
@@ -88,6 +93,11 @@ public class KitVenom extends Kit {
 		//clean up
 		public void unregisterAbility() {
 			POISONED_ENTITIES.clear();
+		}
+
+		@Override
+		public void removeAbility(Player player) {
+			player.setCooldown(Material.CHICKEN, 0);
 		}
 
 		//When Poison is applied

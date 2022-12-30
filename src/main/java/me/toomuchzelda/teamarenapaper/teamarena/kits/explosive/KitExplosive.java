@@ -10,13 +10,11 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
-import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
-import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
+import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
@@ -62,12 +60,21 @@ public class KitExplosive extends Kit
 	private static final TextColor ITEM_YELLOW = TextColor.color(255, 241, 120);
 
 	public static final ItemStack GRENADE = ItemBuilder.of(Material.FIREWORK_STAR)
-			.displayName(Component.text("Grenade", ITEM_YELLOW)).build();
+			.displayName(Component.text("Grenade", ITEM_YELLOW))
+			.lore(TextUtils.wrapString("Right click to throw one. You can only have "
+					+ ExplosiveAbility.GRENADE_MAX_ACTIVE + " out at a time", Style.style(TextUtils.RIGHT_CLICK_TO)))
+			.build();
+
 	public static final ItemStack RPG = ItemBuilder.of(Material.EGG)
-			.displayName(Component.text("RPG", ITEM_YELLOW)).build();
+			.displayName(Component.text("RPG", ITEM_YELLOW))
+			.lore(TextUtils.wrapString("Right click to charge one up. Once charged, it'll fire itself forward!", Style.style(TextUtils.RIGHT_CLICK_TO)))
+			.build();
 
 	public KitExplosive() {
-		super("Explosive", "Destroy waves of enemies with the power of explosives!", Material.FIREWORK_STAR);
+		super("Explosive", "Destroy waves of enemies with the power of explosives!\n\n" +
+				"Deal massive boom damage from a range with the RPG (actually a very explosive egg)!\n" +
+				"Make enemies run for their lives by throwing out grenades!\n\n" +
+				"You'll never have enough explosives with Kit Explosive!", Material.FIREWORK_STAR);
 
 		ItemStack sword = new ItemStack(Material.STONE_SWORD);
 		ItemMeta swordMeta = sword.getItemMeta();

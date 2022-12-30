@@ -9,7 +9,9 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 public class KitJuggernaut extends Kit {
     public KitJuggernaut() {
-        super("Juggernaut", "The most beloved kit", Material.DIAMOND_CHESTPLATE);
+        super("Juggernaut", "Have you ever just wanted full netherite armour? Well, now you get it. But it's really heavy. " +
+				"So heavy in fact you can't sprint with it. Still worth it...!\n\n" +
+				"At least the sword has Sweeping Edge III.", Material.NETHERITE_CHESTPLATE);
         setArmor(new ItemStack(Material.NETHERITE_HELMET),
                 new ItemStack(Material.NETHERITE_CHESTPLATE),
                 new ItemStack(Material.NETHERITE_LEGGINGS),

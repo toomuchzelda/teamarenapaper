@@ -75,7 +75,8 @@ public class KitDemolitions extends Kit
 		meta.displayName(ItemUtils.noItalics(Component.text("TNT Mine", TNT_COLOR)));
 
 		List<Component> lore = new ArrayList<>();
-		lore.addAll(TextUtils.wrapString("A TNT landmine trap that blows enemies to smithereens", Style.style(TNT_COLOR), 200));
+		lore.addAll(TextUtils.wrapString("A TNT landmine trap that blows enemies to smithereens",
+				Style.style(TNT_COLOR).decoration(TextDecoration.ITALIC, false), 200));
 		lore.addAll(usage);
 		meta.lore(lore);
 		TNT_MINE_ITEM.setItemMeta(meta);
@@ -84,7 +85,8 @@ public class KitDemolitions extends Kit
 		meta = PUSH_MINE_ITEM.getItemMeta();
 		meta.displayName(ItemUtils.noItalics(Component.text("Push Mine")));
 		lore = new ArrayList<>();
-		lore.addAll(TextUtils.wrapString("A trap that creates an explosive gust of air, pushing away all enemies near it", Style.empty(), 200));
+		lore.addAll(TextUtils.wrapString("A trap that creates an explosive gust of air, pushing away all enemies near it"
+				, Style.empty().decoration(TextDecoration.ITALIC, false), 200));
 		lore.addAll(usage);
 		meta.lore(lore);
 		PUSH_MINE_ITEM.setItemMeta(meta);
@@ -92,7 +94,7 @@ public class KitDemolitions extends Kit
 		REMOTE_DETONATOR_ITEM = new ItemStack(Material.FLINT_AND_STEEL);
 		meta = REMOTE_DETONATOR_ITEM.getItemMeta();
 		meta.displayName(ItemUtils.noItalics(Component.text("Remote Trigger", NamedTextColor.BLUE)));
-		lore = new ArrayList<>(TextUtils.wrapString("Point at any of your mines from any distance to select one. Right click and boom!", style, 200));
+		lore = new ArrayList<>(TextUtils.wrapString("Point at any of your mines from any distance to select one. Once selected, it will turn blue. Right click and boom!", style, 200));
 		meta.lore(lore);
 		REMOTE_DETONATOR_ITEM.setItemMeta(meta);
 	}
@@ -102,7 +104,13 @@ public class KitDemolitions extends Kit
 	}
 
 	public KitDemolitions() {
-		super("Demolitions", "mines", Material.STONE_PRESSURE_PLATE);
+		super("Demolitions", "This kit comes with traps! Specifically, those that explode when people step on them. " +
+				"They also blend in with the ground no matter the color!\n\n" +
+				"It comes with a TNT trap that does lots of damage " +
+				"and a Push Mine trap that sends enemies flying!\n\n" +
+				"After placing them down, enemies can step on them to trigger them or they can be triggered remotely " +
+				"by the kit user.",
+				Material.STONE_PRESSURE_PLATE);
 
 		ItemStack sword = new ItemStack(Material.IRON_SWORD);
 		sword.addEnchantment(Enchantment.FIRE_ASPECT, 1);
@@ -504,7 +512,7 @@ public class KitDemolitions extends Kit
 
 			regenningMines.add(new RegeneratingMine(type, startTime));
 
-			final Component message = Component.text("Your " + type.name + " exploded. You'll get it back in "
+			final Component message = Component.text("Your " + type.name + " exploded or was destroyed. You'll get it back in "
 							+ (type.timeToRegen / 20) + " seconds",
 					NamedTextColor.AQUA);
 

@@ -1,6 +1,5 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
-import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
@@ -17,7 +16,6 @@ import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.craftbukkit.v1_19_R1.block.data.CraftBlockData;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityShootBowEvent;
@@ -46,14 +44,18 @@ public class KitPyro extends Kit
 
 		Style style = Style.style(TextUtils.RIGHT_CLICK_TO).decoration(TextDecoration.ITALIC, false);
 		List<Component> lore = TextUtils.wrapString(
-				"Shoot a flaming arrow that lights the floor on fire and sears any enemies that stand in it!\n" +
+				"Shoot a flaming arrow that lights the floor on fire and burns enemies that stand in it!\n" +
 						"The arrow will bounce off walls and ceilings so you can land some epic trick shots.", style, 200);
 		meta.lore(lore);
 		MOLOTOV_BOW.setItemMeta(meta);
 	}
 
 	public KitPyro() {
-		super("Pyro", "fire burn burn fire!", Material.FLINT_AND_STEEL);
+		super("Pyro", "I fear no man...\n\nThis kit is equipped to burn everything that's not on its team.\n\n" +
+				"With a flaming sword, it can burn up close. " +
+				"With a flaming bow, it can burn from afar.\n\n" +
+				"And with an incendiary launcher, it can sear victims nicely, while they're still fresh (alive)."
+				, Material.FLINT_AND_STEEL);
 
 		ItemStack boots = new ItemStack(Material.CHAINMAIL_BOOTS);
 		boots.addEnchantment(Enchantment.PROTECTION_FIRE, 4);

@@ -27,7 +27,9 @@ public class KitNinja extends Kit
 	public static final Component NO_SPEED_WITH_FLAG = Component.text( "The weight of the flag bears down on you. You're no longer fast!", NamedTextColor.LIGHT_PURPLE);
 
 	public KitNinja() {
-		super("Ninja", "run fast, enderpearl", Material.ENDER_PEARL);
+		super("Ninja", "A kit that's a fast runner and a faster swinger. Every sword strike it does is weak, but " +
+				"it can hit enemies twice as fast, allowing for some brain melting combos.\n\nIt also has ender pearls."
+				, Material.ENDER_PEARL);
 
 		ItemStack boots = new ItemStack(Material.CHAINMAIL_BOOTS);
 		ItemMeta bootsMeta = boots.getItemMeta();

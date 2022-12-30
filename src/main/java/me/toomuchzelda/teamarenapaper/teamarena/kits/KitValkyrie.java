@@ -9,6 +9,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.sound.SoundStop;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
@@ -65,10 +66,10 @@ public class KitValkyrie extends Kit {
 	public static final int SWEET_SPOT_BONUS = 3;
 	public static final ItemStack VALK_AXE = ItemBuilder.of(VALK_AXE_MAT)
 			.displayName(Component.text("Battle Axe"))
-			.lore(Component.text("Right click to activate your Cleave ability!", TextColors.LIGHT_YELLOW),
+			.lore(Component.text("Right click to activate your Cleave ability!", TextUtils.RIGHT_CLICK_TO),
 					Component.text("After a short windup (exp bar), Battle Axe hits all nearby enemies, ", TextColors.LIGHT_YELLOW),
 					Component.text("and deals more damage the further they are from you!", TextColors.LIGHT_YELLOW),
-					Component.text("(Battle Axe Must be kept in hand during wind-up)", TextColors.LIGHT_BROWN),
+					//Component.text("(Battle Axe Must be kept in hand during wind-up)", TextColors.LIGHT_BROWN),
 					Component.text("Cooldown: " + AXE_CD/20 + " seconds", TextColors.LIGHT_BROWN),
 					Component.text("Direct Attacks are disabled while ability is active.", TextColors.ERROR_RED))
 			//.enchant(Enchantment.DAMAGE_ALL, AXE_SHARP)

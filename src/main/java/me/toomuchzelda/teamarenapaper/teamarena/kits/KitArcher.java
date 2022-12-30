@@ -7,7 +7,10 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 public class KitArcher extends Kit {
 	public KitArcher() {
-		super("Archer", "shoot bow arrows", Material.ARROW);
+		super("Archer", "A very simple kit, wielding a strong Bow enchanted with Power II. If you're good with a bow and arrow, " +
+						"you'll do well with kit Archer\n\nArcher's favourite quote: " +
+						"\"The art of art, the glory of expression, and the sunshine of the light of letters, is simplicity.\""
+				, Material.ARROW);
 
 		ItemStack[] armour = new ItemStack[4];
 		armour[3] = new ItemStack(Material.LEATHER_HELMET);

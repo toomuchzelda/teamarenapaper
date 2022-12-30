@@ -38,7 +38,7 @@ public class KitSpy extends Kit
 	public static final float DISGUISE_MENU_COOLDOWN = 12; //in seconds
 
 	public static final Material DISGUISE_MENU_MATERIAL = Material.CARVED_PUMPKIN;
-	public static final Component DISGUISE_MENU_NAME = ItemUtils.noItalics(Component.text("sussy mask")
+	public static final Component DISGUISE_MENU_NAME = ItemUtils.noItalics(Component.text("Sussy Mask")
 			.color(TextColors.ERROR_RED));
 	public static final Component DISGUISE_MENU_DESC = ItemUtils.noItalics(Component.text("Click to disguise!"));
 	public static final Component DISGUISE_MENU_DESC2 = ItemUtils.noItalics(Component.text(DISGUISE_MENU_COOLDOWN + "sec recharge. "
@@ -60,14 +60,16 @@ public class KitSpy extends Kit
 	public final HashMap<ItemStack, Kit> skullItemDisguises = new HashMap<>();
 
 	static {
-		ArrayList<Component> lore = new ArrayList<>(2);
-		lore.add(DISGUISE_MENU_DESC);
-		lore.add(DISGUISE_MENU_DESC2);
-		DISGUISE_MENU_LORE_LIST = Collections.unmodifiableList(lore);
+		DISGUISE_MENU_LORE_LIST = List.of(DISGUISE_MENU_DESC, DISGUISE_MENU_DESC2);
 	}
 
 	public KitSpy() {
-		super("Spy", "sus", Material.CARVED_PUMPKIN);
+		super("Spy", "A master of disguise, this kit can choose to copy the appearance of any player in " +
+				"the game. Most of the time, it copies their kit correctly too... just as long as they're not an invisible one." +
+				"\n\nAfter killing someone, it gets a Quick Swap disguise of their victim which it can wear instantly, " +
+				"making it easy to hide its tracks.\n\n" +
+				"It's a kind of kit that makes enemies say: \"There's an impostor among us!\""
+				, Material.CARVED_PUMPKIN);
 
 		ItemStack boots = new ItemStack(Material.LEATHER_BOOTS);
 		LeatherArmorMeta meta = (LeatherArmorMeta) boots.getItemMeta();
@@ -113,7 +115,7 @@ public class KitSpy extends Kit
 		public void giveAbility(Player player) {
 			//use exp for skin cooldowns
 			player.setLevel(0);
-			player.setExp(0.9f); //start with a menu disguise ready
+			player.setExp(0.95f); //start with a menu disguise ready
 		}
 
 		@Override
@@ -384,7 +386,7 @@ public class KitSpy extends Kit
 
 		public SpyDisguiseInfo(List<DisguiseManager.Disguise> disguises, Kit kit, Player player, int timeToApply) {
 			this(disguises, kit, player, timeToApply, Component.textOfChildren(
-				Component.text("Disguising as ", NamedTextColor.LIGHT_PURPLE),
+				Component.text("Disguised as ", NamedTextColor.LIGHT_PURPLE),
 				player.playerListName(),
 				Component.text("    Kit: ", NamedTextColor.LIGHT_PURPLE),
 				Component.text(kit.getName(), kit.getCategory().textColor())

@@ -7,8 +7,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.KitDemolitions;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
@@ -28,7 +26,10 @@ import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 
 public class KitInventory implements InventoryProvider {
 
@@ -67,7 +68,7 @@ public class KitInventory implements InventoryProvider {
 
 		String desc = kit.getDescription();
 		// word wrapping
-		List<Component> loreLines = new ArrayList<>(TextUtils.wrapString(desc, LORE_STYLE));
+		List<Component> loreLines = new ArrayList<>(TextUtils.wrapString(desc, LORE_STYLE, TextUtils.DEFAULT_WIDTH, true));
 
 		if (selected) {
 			loreLines.add(Component.empty());

@@ -11,6 +11,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
@@ -37,8 +38,8 @@ import java.util.*;
 public class KitSniper extends Kit {
 
 	// shared between all kits with grenades
-	public static final Component BOMB_LORE = Component.text("Left Click to throw with high velocity", TextColors.LIGHT_BROWN);
-	public static final Component BOMB_LORE2 = Component.text("Right Click to toss with low velocity", TextColors.LIGHT_BROWN);
+	public static final Component BOMB_LORE = Component.text("Left Click to throw with high velocity", TextUtils.LEFT_CLICK_TO);
+	public static final Component BOMB_LORE2 = Component.text("Right Click to toss with low velocity", TextUtils.RIGHT_CLICK_TO);
 
 	public static final ItemStack GRENADE = ItemBuilder.of(Material.TURTLE_HELMET)
 			.displayName(Component.text("Frag Grenade"))

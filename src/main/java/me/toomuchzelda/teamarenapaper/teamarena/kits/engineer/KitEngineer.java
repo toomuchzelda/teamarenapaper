@@ -3,8 +3,6 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.engineer;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
-import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
-import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
@@ -18,16 +16,16 @@ import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.minimessage.tag.Tag;
-import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
-import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
-import org.bukkit.Color;
+import net.kyori.adventure.text.format.Style;
 import org.bukkit.FluidCollisionMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.entity.*;
+import org.bukkit.entity.Arrow;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
+import org.bukkit.entity.Skeleton;
 import org.bukkit.event.Event;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -35,11 +33,11 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.RayTraceResult;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static me.toomuchzelda.teamarenapaper.teamarena.kits.KitValkyrie.VALK_AXE_MAT;
 import static me.toomuchzelda.teamarenapaper.teamarena.kits.engineer.KitEngineer.EngineerAbility.SENTRY_CD;
 
 //Kit Description:
@@ -86,11 +84,11 @@ public class KitEngineer extends Kit {
 
 	public static final ItemStack WRENCH = ItemBuilder.of(Material.IRON_SHOVEL)
 			.displayName(Component.text("Wrench"))
-			.lore(Component.text("Right click to manually fire while mounted on your sentry!", TextColors.LIGHT_YELLOW),
-					Component.text("(with slightly faster fire rate than Automatic fire)", TextColors.LIGHT_BROWN))
+			.lore(TextUtils.wrapString("Right click to manually fire while mounted on your sentry! " +
+					"(with slightly faster fire rate than Automatic fire)", Style.style(TextUtils.RIGHT_CLICK_TO)))
 			.build();
 
-	public static final ItemStack SENTRY = ItemBuilder.of(Material.CHEST_MINECART)
+	/*public static final ItemStack SENTRY = ItemBuilder.of(Material.CHEST_MINECART)
 			.displayName(Component.text("Sentry Kit"))
 			.lore(TextUtils.toLoreList("""
 							When your Sentry Projection is Green,
@@ -104,11 +102,29 @@ public class KitEngineer extends Kit {
 					Placeholder.unparsed("cd", String.valueOf(SENTRY_CD / 20)),
 					TagResolver.resolver("brown", Tag.styling(TextColors.LIGHT_BROWN))
 			))
-			.build();
+			.build();*/
+
+	public static final ItemStack SENTRY;
+	static {
+		List<Component> sentryLore = new ArrayList<>();
+		sentryLore.addAll(TextUtils.wrapString("When your Sentry Projection is Green, Right click to initialize the building process!"
+				, Style.style(TextUtils.RIGHT_CLICK_TO), 200));
+
+		sentryLore.addAll(TextUtils.wrapString("After Construction, your Sentry will Automatically fire at enemies within a "
+				+ Sentry.SENTRY_PITCH_VIEW + " degree cone of view and " + Sentry.SENTRY_SIGHT_RANGE + " block radius." +
+				" It can also be mounted and fired manually using your wrench", Style.style(TextColors.LIGHT_YELLOW), 200));
+
+		sentryLore.addAll(TextUtils.wrapString("Active Time / Cooldown: " + (SENTRY_CD / 20) + " seconds", Style.style(TextColors.LIGHT_BROWN), 200));
+
+		SENTRY = ItemBuilder.of(Material.CHEST_MINECART)
+				.displayName(Component.text("Sentry Kit"))
+				.lore(sentryLore)
+				.build();
+	}
 
 	public static final ItemStack TP_CREATOR = ItemBuilder.of(Material.QUARTZ)
 			.displayName(Component.text("Create Teleporter"))
-			.lore(Component.text("Right click the top of a block to create/destroy your teleporter!", TextColors.LIGHT_YELLOW))
+			.lore(TextUtils.wrapString("Right click the top of a block to create/destroy your teleporter!", Style.style(TextColors.LIGHT_YELLOW)))
 			.build();
 
 	public static final ItemStack DESTRUCTION_PDA = ItemBuilder.of(Material.BOOK)

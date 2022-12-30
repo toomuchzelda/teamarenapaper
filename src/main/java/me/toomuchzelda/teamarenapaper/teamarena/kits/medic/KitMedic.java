@@ -78,7 +78,12 @@ public class KitMedic extends Kit
 	private final KillStreakManager killStreakManager;
 
 	public KitMedic(KillStreakManager killStreakManager) {
-		super("Medic", "Heal your teammates with wand. Heal 1 teammate at a time. All your base are belong to us."
+		super("Medic", "You've tried every kit but nothing is working! Stabbing enemies with swords, impaling them with arrows, " +
+						"blowing them up, burning them alive!!! But you still keep on losing! What now??????\n\n" +
+						"Kit Medic will give your team the edge they (probably) need! With the ability to heal teammates " +
+						"up, it's the support kit that often makes one team better than " +
+						"the other. Your teammates will thank you for it!\n\n" +
+						"Medic's favourite song is Stayin' Alive by Bee Gees"
 				, POTION);
 
 		this.setArmor(new ItemStack(Material.GOLDEN_HELMET),
