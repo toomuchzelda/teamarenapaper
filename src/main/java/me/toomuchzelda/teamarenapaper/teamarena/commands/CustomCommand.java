@@ -21,6 +21,7 @@ public abstract class CustomCommand extends Command {
     }
 
     private static final HashMap<String, CustomCommand> PLUGIN_COMMANDS = new HashMap<>();
+	protected static final List<String> BOOLEAN_SUGGESTIONS = List.of("true", "false");
 
 	protected CustomCommand(@NotNull String name, @NotNull String description, @NotNull String usage,
 							PermissionLevel permissionLevel, String... aliases) {

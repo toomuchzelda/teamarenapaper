@@ -236,6 +236,9 @@ public class DamageType {
 	public static final DamageType IRON_GOLEM_KILL = new DamageType("Iron Golem", "%Killed% was hydraulically pressed by %Killer%'s %Cause%")
 			.setMelee();
 
+	public static final DamageType HARBINGER = new DamageType("Harbinger", "%Killed% was obliterated by %Killer%'s Harbinger")
+			.setIgnoreArmor().setIgnoreRate();
+
 
 	private static int idCounter = 0;
 

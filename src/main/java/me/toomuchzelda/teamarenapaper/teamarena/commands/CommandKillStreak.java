@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.killstreak.Crate;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.KillStreak;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -20,7 +21,7 @@ import java.util.List;
 public class CommandKillStreak extends CustomCommand
 {
 	public CommandKillStreak() {
-		super("killstreak", "Give killstreaks to player", "/killstreak [streak] [player]", PermissionLevel.MOD);
+		super("killstreak", "Give killstreaks to player", "/killstreak [streak] [player] [giveCrateItem]", PermissionLevel.MOD);
 	}
 
 	@Override
@@ -32,7 +33,7 @@ public class CommandKillStreak extends CustomCommand
 		String ksArg = args[0];
 		KillStreak streak = Main.getGame().getKillStreakManager().getKillStreak(ksArg);
 		if(streak == null) {
-			throw throwUsage("Unkown killstreak " + ksArg);
+			throw throwUsage("Unknown killstreak " + ksArg);
 		}
 
 		String playerName = args[1];
@@ -41,8 +42,18 @@ public class CommandKillStreak extends CustomCommand
 			throw throwUsage("Unknown player " + playerName);
 		}
 
-		streak.giveStreak(player, Main.getPlayerInfo(player));
 		sender.sendMessage(Component.text("Gave " + player.getName() + " " + streak.getName(), NamedTextColor.BLUE));
+		if(args.length >= 3) {
+			if(Boolean.parseBoolean(args[2]) && streak.isDeliveredByCrate()) {
+				player.getInventory().addItem(Crate.createCrateItem(streak));
+				return;
+			}
+			else {
+				throw throwUsage();
+			}
+		}
+
+		streak.giveStreak(player, Main.getPlayerInfo(player));
 	}
 
 	@Override
@@ -55,6 +66,12 @@ public class CommandKillStreak extends CustomCommand
 			List<String> playerList = new ArrayList<>(players.size());
 			players.forEach(player -> playerList.add(player.getName()));
 			return playerList;
+		}
+		else if(args.length == 3) {
+			KillStreak streak = Main.getGame().getKillStreakManager().getKillStreak(args[1]);
+			if(streak != null && streak.isDeliveredByCrate()) {
+				return CustomCommand.BOOLEAN_SUGGESTIONS;
+			}
 		}
 
 		return Collections.emptyList();

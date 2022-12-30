@@ -2,7 +2,10 @@ package me.toomuchzelda.teamarenapaper.teamarena.killstreak;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaExplosion;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
 import net.kyori.adventure.text.format.TextColor;
@@ -11,7 +14,6 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
-import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
 
 import java.util.*;
@@ -22,14 +24,14 @@ public class HarbingerKillStreak extends KillStreak
 	private static final TextColor color = TextColor.color(232, 210, 7);
 
 	HarbingerKillStreak() {
-		super("Harbinger", "Rain hell on your enemies", color, null, new HarbingerAbility());
+		super("Harbinger", "Rain hellish destruction on your enemies", color, null, new HarbingerAbility());
 
 		this.crateItemType = Material.TNT;
 		this.crateBlockType = Material.TNT;
 	}
 
 	@Override
-	boolean isDeliveredByCrate() {
+	public boolean isDeliveredByCrate() {
 		return true;
 	}
 
@@ -49,6 +51,8 @@ public class HarbingerKillStreak extends KillStreak
 		private static final int STRIKE_WIDTH = 20;
 		private static final int STRIKE_DURATION = 10;
 		private static final int LEAVE_AFTERMATH_DURATION = 40;
+		private static final double STRIKE_MAX_DAMAGE = 10d;
+		private static final double STRIKE_MIN_DAMAGE = 6d;
 		private static final Material STRIKE_INNER_MATERIAL = Material.LAVA;
 		private static final Material STRIKE_OUTER_MATERIAL = Material.YELLOW_STAINED_GLASS;
 
@@ -61,7 +65,7 @@ public class HarbingerKillStreak extends KillStreak
 			int strikeTime;
 			Vector startPos;
 			Vector destination;
-			LinkedHashMap<BlockVector, BlockData> changedBlocks; // Record changed blocks so can change them back
+			LinkedHashMap<BlockCoords, BlockData> changedBlocks; // Record changed blocks so can change them back
 
 			public HarbingerStrike(Vector originPoint, int startTime, Vector startPos, Vector destination) {
 				this.originPoint = originPoint;
@@ -108,8 +112,8 @@ public class HarbingerKillStreak extends KillStreak
 						(sequence[1] - 0.5d) * (double) STRIKE_WIDTH
 				);
 
-				Vector startPos = destination.toVector().add(new Vector(0, STRIKE_HEIGHT, 0));
-				//Vector startPos = destination.toVector().add(ANGLE);
+				//Vector startPos = destination.toVector().add(new Vector(0, STRIKE_HEIGHT, 0));
+				Vector startPos = destination.toVector().add(ANGLE);
 
 				HarbingerStrike strike = new HarbingerStrike(origin, currentTick, startPos, destination.toVector());
 				strikes.add(strike);
@@ -118,15 +122,18 @@ public class HarbingerKillStreak extends KillStreak
 
 		@Override
 		public void removeAbility(Player player) {
-			Set<HarbingerStrike> strikes = CURRENT_STRIKES.remove(player);
+			// Don't remove the strikes here, let the whole thing play out.
+			// Cleaning up is handled in this.onTick()
+
+			/*Set<HarbingerStrike> strikes = CURRENT_STRIKES.remove(player);
 			World world = player.getWorld();
 			// Reset all the blocks in the strikes
 			for(HarbingerStrike strike : strikes) {
 				for(var entry : strike.changedBlocks.entrySet()) {
-					BlockVector vec = entry.getKey();
-					world.setBlockData(vec.getBlockX(), vec.getBlockY(), vec.getBlockZ(), entry.getValue());
+					BlockCoords vec = entry.getKey();
+					world.setBlockData(vec.x(), vec.y(), vec.z(), entry.getValue());
 				}
-			}
+			}*/
 		}
 
 		@Override
@@ -138,29 +145,36 @@ public class HarbingerKillStreak extends KillStreak
 				var entry = iter.next();
 				final Player player = entry.getKey();
 				final World world = player.getWorld();
-				for(HarbingerStrike strike : entry.getValue()) {
+				for (Iterator<HarbingerStrike> strikeIter = entry.getValue().iterator(); strikeIter.hasNext(); ) {
+					HarbingerStrike strike = strikeIter.next();
 					final int diff = currentTick - strike.startTime;
-					if(diff < BLUE_PARTICLE_FLY_TIME) { // Still in particle fly stage
+					if (diff < BLUE_PARTICLE_FLY_TIME) { // Still in particle fly stage
 						blueParticle(diff, strike, world);
 					}
 					// During strike time
-					else if(currentTick >= strike.getStrikeTime() && currentTick < strike.getStrikeFinishedTime()) {
+					else if (currentTick >= strike.getStrikeTime() && currentTick < strike.getStrikeFinishedTime()) {
 						// Get the diff between now and the strike time starting, not the time the crate landed
 						int strikeDiff = currentTick - strike.getStrikeTime();
-						strike(strikeDiff, strike, world);
+						strike(strikeDiff, strike, world, player);
 					}
 					// == to run only once
-					else if(currentTick == strike.getFinishedTime()) {
-						Bukkit.broadcastMessage("run once");
-						disappear(strike, world);
+					else if (currentTick == strike.getFinishedTime()) {
+						disappearAndRestore(strike, world);
+						strikeIter.remove();
 					}
-					else {
-						finished.add(player);
-					}
+				}
+				if(entry.getValue().size() == 0) { // All harbinger strikes have finished, remove
+					iter.remove();
+					finished.add(player);
 				}
 			}
 
-			//finished.forEach(this::removeAbility);
+			finished.forEach(player -> {
+				Ability.removeAbility(player, this, Main.getPlayerInfo(player));
+				//Main.logger().info(Main.getPlayerInfo(player).abilities.toString());
+			});
+
+			//Main.logger().info(CURRENT_STRIKES.toString());
 		}
 
 		private static void blueParticle(int diff, HarbingerStrike strike, World world) {
@@ -174,7 +188,9 @@ public class HarbingerKillStreak extends KillStreak
 			Vector particlePos = strike.startPos.clone().subtract(strike.originPoint).multiply(progress);
 			particlePos.add(strike.originPoint);
 
-			ParticleUtils.colouredRedstone(particlePos.toLocation(world), Color.BLUE, 3f, 3f);
+			Location loc = particlePos.toLocation(world);
+			ParticleUtils.colouredRedstone(loc, Color.BLUE, 3f, 3f);
+			world.playSound(loc, Sound.BLOCK_NOTE_BLOCK_BIT, 0.5f, 0.5f);
 		}
 
 		private static final BlockFace[] FACES_TO_CHANGE = new BlockFace[] {
@@ -182,7 +198,7 @@ public class HarbingerKillStreak extends KillStreak
 				BlockFace.SOUTH_EAST, BlockFace.SOUTH_WEST,
 				BlockFace.NORTH_EAST, BlockFace.NORTH_WEST
 		};
-		private static void strike(final int diff, HarbingerStrike strike, World world) {
+		private static void strike(final int diff, final HarbingerStrike strike, final World world, final Player user) {
 			float start = (float) diff / (float) STRIKE_DURATION;
 			if(start < 0f || start > 1f) {
 				Thread.dumpStack();
@@ -205,41 +221,86 @@ public class HarbingerKillStreak extends KillStreak
 
 			// Loop over the line one block at a time and set blocks
 			//Bukkit.broadcastMessage("amount " + amount);
+			List<TeamArenaExplosion> explosions = new ArrayList<>(((int) amount) + 1);
 			for(float i = 0; i < amount; i += 0.9f) {
-				BlockVector currentPoint = lineStart.clone().add(lineToCover.clone().normalize().multiply(i)).toBlockVector();
-				Block existingBlock = world.getBlockAt(currentPoint.getBlockX(), currentPoint.getBlockY(), currentPoint.getBlockZ());
+				Vector currentPointVec = lineStart.clone().add(lineToCover.clone().normalize().multiply(i));
+				BlockCoords currentPoint = new BlockCoords(currentPointVec);
+				Block existingBlock = world.getBlockAt(currentPoint.x(), currentPoint.y(), currentPoint.z());
+
+				// Place the blocks and play effects
+				// Don't play block break particles for the one in the middle - noone can see it anyway
 				// don't override previously put data
-				strike.changedBlocks.putIfAbsent(currentPoint, existingBlock.getBlockData());
+				// Don't do placements over other neighbouring strike blocks
+				Material middleMat = existingBlock.getType();
+				if(middleMat != STRIKE_INNER_MATERIAL && middleMat != STRIKE_OUTER_MATERIAL) {
+					if (strike.changedBlocks.putIfAbsent(new BlockCoords(existingBlock), existingBlock.getBlockData()) == null) {
+						existingBlock.setType(STRIKE_INNER_MATERIAL);
+					}
+				}
 
-				// Place the blocks
-				//if(!existingBlock.getType().isAir()) { // Play block breaking particle effect
-				//	world.spawnParticle(Particle.BLOCK_DUST, currentPoint.toLocation(world), 1, existingBlock.getBlockData());
-				//}
-
-				existingBlock.setType(STRIKE_INNER_MATERIAL);
 				for(BlockFace face : FACES_TO_CHANGE) {
 					Block relativeBlock = existingBlock.getRelative(face);
 					BlockData relativeData = relativeBlock.getBlockData();
-					strike.changedBlocks.putIfAbsent(relativeBlock.getLocation().toVector().toBlockVector(), relativeData);
-					// Play block breaking particle effect
-					// Mod 2 to reduce laggy particle effects
-					if(!relativeData.getMaterial().isAir()) {
-						world.spawnParticle(Particle.BLOCK_DUST, relativeBlock.getLocation(), 20, relativeData);
+					Location relativeBlockLoc = relativeBlock.getLocation();
+					BlockCoords coords = new BlockCoords(relativeBlock);
+					// Play block breaking particle effect and sound
+					// Do it only if it's the first time this block is being overriden (blocks get overwritten multiple
+					// times by the glass effect
+					Material relMat = relativeData.getMaterial();
+					if(relMat != STRIKE_INNER_MATERIAL && relMat != STRIKE_OUTER_MATERIAL) {
+						if (strike.changedBlocks.putIfAbsent(coords, relativeData) == null) {
+							if (!relativeData.getMaterial().isAir()) {
+								world.spawnParticle(Particle.BLOCK_DUST, relativeBlock.getLocation(), 20, relativeData);
+								world.playSound(relativeBlockLoc, relativeData.getSoundGroup().getBreakSound(), SoundCategory.BLOCKS, 2f, 1f);
+							}
+
+							world.playSound(relativeBlockLoc, Sound.ENTITY_WARDEN_SONIC_BOOM, 0.5f, 2f);
+							relativeBlock.setType(STRIKE_OUTER_MATERIAL);
+						}
 					}
-					relativeBlock.setType(STRIKE_OUTER_MATERIAL);
 				}
 
 				// Harm enemies standing nearby
 				// TODO
+				Location centreLoc = currentPointVec.toLocation(world);
+				TeamArenaExplosion explosion = new TeamArenaExplosion(centreLoc, 7d, 4.5d, STRIKE_MAX_DAMAGE,
+						STRIKE_MIN_DAMAGE, 2.5d, DamageType.HARBINGER, user) {
+					@Override
+					public void playExplosionSound() {}
+
+					@Override
+					public void playExplosionEffect() {}
+				};
+
+				explosions.add(explosion);
+			}
+
+			for(TeamArenaExplosion explosion : explosions) {
+				explosion.explode();
 			}
 		}
 
 		private static final BlockData AIR_DATA = Material.AIR.createBlockData();
-		private static void disappear(HarbingerStrike strike, World world) {
-			for(var entry : strike.changedBlocks.entrySet()) {
-				BlockVector vector = entry.getKey();
-				BlockData data = entry.getValue().getMaterial().isAir() ? entry.getValue() : AIR_DATA;
-				world.setBlockData(vector.getBlockX(), vector.getBlockY(), vector.getBlockZ(), data);
+		private static void disappearAndRestore(HarbingerStrike strike, World world) {
+			for (Iterator<Map.Entry<BlockCoords, BlockData>> iter = strike.changedBlocks.entrySet()
+					.iterator(); iter.hasNext(); ) {
+				Map.Entry<BlockCoords, BlockData> entry = iter.next();
+				BlockCoords vector = entry.getKey();
+				//BlockData data = entry.getValue().getMaterial().isAir() ? entry.getValue() : AIR_DATA;
+				//world.setBlockData(vector.x(), vector.y(), vector.z(), data);
+
+				BlockData data = entry.getValue();
+				world.setBlockData(vector.x(), vector.y(), vector.z(), data);
+
+				iter.remove();
+
+				Location loc = new Location(world, vector.x(), vector.y(), vector.z());
+				if (MathUtils.random.nextBoolean()) { // poofy smokey particle effect
+					loc.getWorld().spawnParticle(Particle.EXPLOSION_NORMAL, loc, 14);
+				}
+				else {
+					loc.getWorld().spawnParticle(Particle.SMOKE_LARGE, loc, 3);
+				}
 			}
 		}
 	}

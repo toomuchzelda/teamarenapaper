@@ -64,4 +64,13 @@ public record BlockCoords(int x, int y, int z) {
 	public int hashCode() {
 		return (Integer.hashCode(x) >> 13) ^ (Integer.hashCode(y) >> 7) ^ Integer.hashCode(z);
 	}
+
+	@Override
+	public boolean equals(Object other) {
+		if(other instanceof BlockCoords coords) {
+			return this.x == coords.x && this.y == coords.y && this.z == coords.z;
+		}
+
+		return false;
+	}
 }

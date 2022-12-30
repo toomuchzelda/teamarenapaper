@@ -38,14 +38,14 @@ public class Crate
 	private static final int CRATE_DELAY_TIME = 50;
 	private static final double FALL_DELTA = -2d;
 	private static final List<Component> USE_MSG = List.of(
-			ItemUtils.noItalics(Component.text("Right Click on the ground to call your", TextUtils.RIGHT_CLICK_TO)),
-			ItemUtils.noItalics(Component.text("crate to that location", TextUtils.RIGHT_CLICK_TO))
+			ItemUtils.noItalics(Component.text("Right Click on the ground to summon", TextUtils.RIGHT_CLICK_TO)),
+			ItemUtils.noItalics(Component.text("this Killstreak to that location", TextUtils.RIGHT_CLICK_TO))
 	);
 
 	static final Map<ItemStack, KillStreak> crateItems = new HashMap<>();
 
 	// Should not be called for KillStreaks that are not crate-delivered.
-	static ItemStack createCrateItem(KillStreak killStreak) {
+	public static ItemStack createCrateItem(KillStreak killStreak) {
 		ItemStack item = new ItemStack(killStreak.getCrateItemType());
 		ItemMeta meta = item.getItemMeta();
 
@@ -53,7 +53,7 @@ public class Crate
 				Component.text()
 						.append(Component.text("Summon ", NamedTextColor.LIGHT_PURPLE))
 						.append(killStreak.getComponentName())
-						.append(Component.text(" crate", NamedTextColor.LIGHT_PURPLE))
+						//.append(Component.text(" crate", NamedTextColor.LIGHT_PURPLE))
 						.build()
 		));
 		List<Component> lore = new ArrayList<>(5);

@@ -49,7 +49,7 @@ public class WolvesKillStreak extends KillStreak
 	}
 
 	@Override
-	boolean isDeliveredByCrate() {
+	public boolean isDeliveredByCrate() {
 		return true;
 	}
 

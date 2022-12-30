@@ -70,7 +70,7 @@ public abstract class KillStreak
 
 	public void onCrateLand(Player player, Location destination) {}
 
-	boolean isDeliveredByCrate() {
+	 public boolean isDeliveredByCrate() {
 		return false;
 	}
 
