@@ -137,6 +137,11 @@ public class HarbingerKillStreak extends KillStreak
 		}
 
 		@Override
+		public void unregisterAbility() {
+			CURRENT_STRIKES.clear();
+		}
+
+		@Override
 		public void onTick() {
 			List<Player> finished = new LinkedList<>();
 			final int currentTick = TeamArena.getGameTick();
@@ -280,7 +285,7 @@ public class HarbingerKillStreak extends KillStreak
 			}
 		}
 
-		private static final BlockData AIR_DATA = Material.AIR.createBlockData();
+		//private static final BlockData AIR_DATA = Material.AIR.createBlockData();
 		private static void disappearAndRestore(HarbingerStrike strike, World world) {
 			for (Iterator<Map.Entry<BlockCoords, BlockData>> iter = strike.changedBlocks.entrySet()
 					.iterator(); iter.hasNext(); ) {

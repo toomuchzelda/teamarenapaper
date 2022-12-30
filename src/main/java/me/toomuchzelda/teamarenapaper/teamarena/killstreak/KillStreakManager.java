@@ -36,10 +36,10 @@ public class KillStreakManager
 
 		// TODO construst and put the killstreaks here
 		// KillStreak map keys must not have spaces in them
-		addKillStreak("Compass", 2, new CompassKillStreak());
-		addKillStreak("Wolves", 4, new WolvesKillStreak());
-		addKillStreak("IronGolem", 7, new IronGolemKillStreak());
-		addKillStreak("Harbinger", 1, new HarbingerKillStreak());
+		addKillStreak(2, new CompassKillStreak());
+		addKillStreak(4, new WolvesKillStreak());
+		addKillStreak(7, new IronGolemKillStreak());
+		addKillStreak(11, new HarbingerKillStreak());
 
 		// Register all killstreaks
 		this.allKillstreaks.values().forEach(killStreak ->
@@ -52,8 +52,8 @@ public class KillStreakManager
 		return allKillstreaks.get(name);
 	}
 
-	private void addKillStreak(String name, int killCount, KillStreak killStreak) {
-		allKillstreaks.put(name, killStreak);
+	private void addKillStreak(int killCount, KillStreak killStreak) {
+		allKillstreaks.put(killStreak.getName().replaceAll(" ", ""), killStreak);
 		List<KillStreak> list = killstreaksByKills.computeIfAbsent(killCount, integer -> new ArrayList<>(1));
 		list.add(killStreak);
 	}

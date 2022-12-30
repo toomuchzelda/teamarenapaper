@@ -8,6 +8,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaExplosion;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
@@ -77,6 +78,8 @@ public class KitExplosive extends Kit
 		setArmor(new ItemStack(Material.DIAMOND_HELMET), new ItemStack(Material.GOLDEN_CHESTPLATE),
 				new ItemStack(Material.GOLDEN_LEGGINGS), new ItemStack(Material.DIAMOND_BOOTS));
 		setAbilities(new ExplosiveAbility());
+
+		this.setCategory(KitCategory.UTILITY);
 	}
 
 	public static class ExplosiveAbility extends Ability {
