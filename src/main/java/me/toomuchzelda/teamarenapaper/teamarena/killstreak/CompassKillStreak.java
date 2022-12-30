@@ -12,6 +12,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
@@ -34,7 +35,7 @@ public class CompassKillStreak extends KillStreak
 		COMPASS.editMeta(itemMeta -> {
 			itemMeta.displayName(ItemUtils.noItalics(Component.text("Tracker Compass", COLOUR)));
 			itemMeta.lore(TextUtils.wrapString("Right click: Receive intel on the nearest enemy",
-					Style.style(TextUtils.RIGHT_CLICK_TO), TextUtils.DEFAULT_WIDTH));
+					Style.style(TextUtils.RIGHT_CLICK_TO).decoration(TextDecoration.ITALIC, false), TextUtils.DEFAULT_WIDTH));
 		});
 	}
 
