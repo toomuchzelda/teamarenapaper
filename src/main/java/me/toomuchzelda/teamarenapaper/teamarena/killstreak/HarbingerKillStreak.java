@@ -3,11 +3,11 @@ package me.toomuchzelda.teamarenapaper.teamarena.killstreak;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaExplosion;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
-import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
+import me.toomuchzelda.teamarenapaper.utils.*;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -22,6 +22,11 @@ import java.util.*;
 public class HarbingerKillStreak extends KillStreak
 {
 	private static final TextColor color = TextColor.color(232, 210, 7);
+
+	private static final Component SELF_WARNING = Component.text("You're not safe near your own Harbinger! Move away!", TextColors.ERROR_RED);
+	private static final Component TEAM_WARNING = Component.text(" has called a Harbinger strike! It's not safe for you to be here. Move away!");
+	private static final Component ENEMY_WARNING = Component.text(" has called a Harbinger strike! You might want to run.", TextColors.ERROR_RED);
+	private static final double WARNING_DIST_SQR = 22d * 22d;
 
 	HarbingerKillStreak() {
 		super("Harbinger", "Rain hellish destruction on your enemies", color, null, new HarbingerAbility());
@@ -43,14 +48,43 @@ public class HarbingerKillStreak extends KillStreak
 		this.giveStreak(player, Main.getPlayerInfo(player));
 	}
 
+	@Override
+	public void onFireworkFinish(Player player, Location destination, Crate crate) {
+		TeamArenaTeam team = Main.getPlayerInfo(player).team;
+		Component component = player.playerListName().append(ENEMY_WARNING);
+		for(Player p : Main.getGame().getPlayers()) {
+			if(team.getPlayerMembers().contains(p)) continue;
+
+			if(p.getLocation().distanceSquared(destination) <= WARNING_DIST_SQR) {
+				p.sendMessage(component);
+			}
+		}
+	}
+
+	@Override
+	public void onCratePlace(Player player, Location destination) {
+		TeamArenaTeam team = Main.getPlayerInfo(player).team;
+		Component component = player.playerListName().append(TEAM_WARNING);
+		for(Player p : Main.getGame().getPlayers()) {
+			if(p == player) continue;
+			if(!team.getPlayerMembers().contains(p)) continue;
+
+			if(p.getLocation().distanceSquared(destination) <= WARNING_DIST_SQR) {
+				p.sendMessage(component);
+			}
+		}
+		player.sendMessage(SELF_WARNING);
+	}
+
 	private static class HarbingerAbility extends Ability {
 
 		private static final int BLUE_PARTICLE_FLY_TIME = 20;
-		private static final int STRIKE_AMOUNT = 10;
-		private static final int STRIKE_HEIGHT = 36;
+		private static final int STRIKE_AMOUNT = 11;
+		private static final int STRIKE_HEIGHT = 46;
 		private static final int STRIKE_WIDTH = 20;
-		private static final int STRIKE_DURATION = 10;
-		private static final int LEAVE_AFTERMATH_DURATION = 40;
+		private static final int STRIKE_DURATION = 12;
+		private static final int LEAVE_STRIKE_DURATION = 40;
+		private static final int LEAVE_HOLES_DURATION = 10 * 20;
 		private static final double STRIKE_MAX_DAMAGE = 10d;
 		private static final double STRIKE_MIN_DAMAGE = 6d;
 		private static final Material STRIKE_INNER_MATERIAL = Material.LAVA;
@@ -65,7 +99,7 @@ public class HarbingerKillStreak extends KillStreak
 			int strikeTime;
 			Vector startPos;
 			Vector destination;
-			LinkedHashMap<BlockCoords, BlockData> changedBlocks; // Record changed blocks so can change them back
+			Set<BlockCoords> changedBlocks; // Record changed blocks so can change them back
 
 			public HarbingerStrike(Vector originPoint, int startTime, Vector startPos, Vector destination) {
 				this.originPoint = originPoint;
@@ -73,7 +107,7 @@ public class HarbingerKillStreak extends KillStreak
 				this.strikeTime = MathUtils.randomMax(20) + BLUE_PARTICLE_FLY_TIME;
 				this.startPos = startPos;
 				this.destination = destination;
-				this.changedBlocks = new LinkedHashMap<>();
+				this.changedBlocks = new LinkedHashSet<>();
 			}
 
 			public int getStrikeTime() {
@@ -85,11 +119,16 @@ public class HarbingerKillStreak extends KillStreak
 			}
 
 			public int getFinishedTime() {
-				return this.getStrikeFinishedTime() + LEAVE_AFTERMATH_DURATION;
+				return this.getStrikeFinishedTime() + LEAVE_STRIKE_DURATION;
+			}
+
+			public int getFillHolesTime() {
+				return this.getFinishedTime() + LEAVE_HOLES_DURATION;
 			}
 		}
 
 		private static final Map<Player, Set<HarbingerStrike>> CURRENT_STRIKES = new LinkedHashMap<>();
+		private static final Map<BlockCoords, BlockData> CHANGED_BLOCKS = new HashMap<>();
 
 		@Override
 		public void giveAbility(Player player) {
@@ -112,8 +151,8 @@ public class HarbingerKillStreak extends KillStreak
 						(sequence[1] - 0.5d) * (double) STRIKE_WIDTH
 				);
 
-				//Vector startPos = destination.toVector().add(new Vector(0, STRIKE_HEIGHT, 0));
-				Vector startPos = destination.toVector().add(ANGLE);
+				Vector startPos = destination.toVector().add(new Vector(0, STRIKE_HEIGHT, 0));
+				//Vector startPos = destination.toVector().add(ANGLE);
 
 				HarbingerStrike strike = new HarbingerStrike(origin, currentTick, startPos, destination.toVector());
 				strikes.add(strike);
@@ -164,7 +203,10 @@ public class HarbingerKillStreak extends KillStreak
 					}
 					// == to run only once
 					else if (currentTick == strike.getFinishedTime()) {
-						disappearAndRestore(strike, world);
+						disappear(strike, world);
+					}
+					else if (currentTick >= strike.getFillHolesTime()) {
+						restoreBlocks(strike, world);
 						strikeIter.remove();
 					}
 				}
@@ -179,7 +221,8 @@ public class HarbingerKillStreak extends KillStreak
 				//Main.logger().info(Main.getPlayerInfo(player).abilities.toString());
 			});
 
-			//Main.logger().info(CURRENT_STRIKES.toString());
+			//Main.logger().info("CURRENT_STRIKES: " + CURRENT_STRIKES.size());
+			//Main.logger().info("CHANGED_BLOCKS: " + CHANGED_BLOCKS.size());
 		}
 
 		private static void blueParticle(int diff, HarbingerStrike strike, World world) {
@@ -235,10 +278,10 @@ public class HarbingerKillStreak extends KillStreak
 				// Place the blocks and play effects
 				// Don't play block break particles for the one in the middle - noone can see it anyway
 				// don't override previously put data
-				// Don't do placements over other neighbouring strike blocks
-				Material middleMat = existingBlock.getType();
-				if(middleMat != STRIKE_INNER_MATERIAL && middleMat != STRIKE_OUTER_MATERIAL) {
-					if (strike.changedBlocks.putIfAbsent(new BlockCoords(existingBlock), existingBlock.getBlockData()) == null) {
+				{
+					BlockCoords coords = new BlockCoords(existingBlock);
+					if (CHANGED_BLOCKS.putIfAbsent(coords, existingBlock.getBlockData()) == null) {
+						strike.changedBlocks.add(coords);
 						existingBlock.setType(STRIKE_INNER_MATERIAL);
 					}
 				}
@@ -250,10 +293,10 @@ public class HarbingerKillStreak extends KillStreak
 					BlockCoords coords = new BlockCoords(relativeBlock);
 					// Play block breaking particle effect and sound
 					// Do it only if it's the first time this block is being overriden (blocks get overwritten multiple
-					// times by the glass effect
-					Material relMat = relativeData.getMaterial();
-					if(relMat != STRIKE_INNER_MATERIAL && relMat != STRIKE_OUTER_MATERIAL) {
-						if (strike.changedBlocks.putIfAbsent(coords, relativeData) == null) {
+					// times by the glass effect otherwise)
+					{
+						if (CHANGED_BLOCKS.putIfAbsent(coords, relativeData) == null) {
+							strike.changedBlocks.add(coords);
 							if (!relativeData.getMaterial().isAir()) {
 								world.spawnParticle(Particle.BLOCK_DUST, relativeBlock.getLocation(), 20, relativeData);
 								world.playSound(relativeBlockLoc, relativeData.getSoundGroup().getBreakSound(), SoundCategory.BLOCKS, 2f, 1f);
@@ -265,8 +308,6 @@ public class HarbingerKillStreak extends KillStreak
 					}
 				}
 
-				// Harm enemies standing nearby
-				// TODO
 				Location centreLoc = currentPointVec.toLocation(world);
 				TeamArenaExplosion explosion = new TeamArenaExplosion(centreLoc, 7d, 4.5d, STRIKE_MAX_DAMAGE,
 						STRIKE_MIN_DAMAGE, 2.5d, DamageType.HARBINGER, user) {
@@ -285,19 +326,23 @@ public class HarbingerKillStreak extends KillStreak
 			}
 		}
 
-		//private static final BlockData AIR_DATA = Material.AIR.createBlockData();
-		private static void disappearAndRestore(HarbingerStrike strike, World world) {
-			for (Iterator<Map.Entry<BlockCoords, BlockData>> iter = strike.changedBlocks.entrySet()
-					.iterator(); iter.hasNext(); ) {
-				Map.Entry<BlockCoords, BlockData> entry = iter.next();
-				BlockCoords vector = entry.getKey();
-				//BlockData data = entry.getValue().getMaterial().isAir() ? entry.getValue() : AIR_DATA;
-				//world.setBlockData(vector.x(), vector.y(), vector.z(), data);
+		private static final BlockData AIR_DATA = Material.AIR.createBlockData();
+		private static void disappear(HarbingerStrike strike, World world) {
+			for (Iterator<BlockCoords> iter = strike.changedBlocks.iterator();
+				 iter.hasNext(); ) {
+				BlockCoords vector = iter.next();
+				BlockData data = CHANGED_BLOCKS.get(vector);
+				if(data == null || !data.getMaterial().isAir()) {
+					if(data == null)
+						Thread.dumpStack();
+					data = AIR_DATA;
+				}
 
-				BlockData data = entry.getValue();
 				world.setBlockData(vector.x(), vector.y(), vector.z(), data);
 
-				iter.remove();
+				//BlockData data = entry.getValue();
+				//world.setBlockData(vector.x(), vector.y(), vector.z(), data);
+				//iter.remove();
 
 				Location loc = new Location(world, vector.x(), vector.y(), vector.z());
 				if (MathUtils.random.nextBoolean()) { // poofy smokey particle effect
@@ -306,6 +351,24 @@ public class HarbingerKillStreak extends KillStreak
 				else {
 					loc.getWorld().spawnParticle(Particle.SMOKE_LARGE, loc, 3);
 				}
+			}
+		}
+
+		private static void restoreBlocks(HarbingerStrike strike, World world) {
+			for (Iterator<BlockCoords> iter = strike.changedBlocks.iterator();
+				 iter.hasNext(); ) {
+
+				BlockCoords coords = iter.next();
+				BlockData data = CHANGED_BLOCKS.remove(coords);
+				if(data == null) {
+					Main.logger().severe("data in restoreBlocks is null");
+					Thread.dumpStack();
+					return;
+				}
+
+				world.setBlockData(coords.x(), coords.y(), coords.z(), data);
+
+				iter.remove();
 			}
 		}
 	}

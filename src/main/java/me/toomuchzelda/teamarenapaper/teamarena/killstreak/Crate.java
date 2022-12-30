@@ -120,6 +120,8 @@ public class Crate
 		done = false;
 
 		Main.getGame().getKillStreakManager().crateFireworks.add(this.firework);
+
+		this.killStreaks.forEach(killStreak -> killStreak.onCratePlace(this.owner, this.destination));
 	}
 
 	void tick() {
@@ -137,7 +139,7 @@ public class Crate
 				this.firework = null;
 
 				if(!this.isDone()) { // May be marked done by the above event call
-					Location spawnLoc = this.destination.clone().add(0, 200, 0);
+					Location spawnLoc = this.destination.clone().add(0, 150, 0);
 
 					this.fallingBlock = new PacketFallingCrate(spawnLoc);
 					this.fallingBlock.setBlockType(this.blockType.createBlockData());
