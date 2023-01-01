@@ -6,6 +6,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaExplosion;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
@@ -346,10 +347,18 @@ public class HarbingerKillStreak extends KillStreak
 
 				Location loc = new Location(world, vector.x(), vector.y(), vector.z());
 				if (MathUtils.random.nextBoolean()) { // poofy smokey particle effect
-					loc.getWorld().spawnParticle(Particle.EXPLOSION_NORMAL, loc, 14);
+					for(var entry : Main.getPlayerInfoMap().entrySet()) {
+						if(entry.getValue().getPreference(Preferences.VIEW_HARBINGER_PARTICLES)) {
+							entry.getKey().spawnParticle(Particle.EXPLOSION_NORMAL, loc, 14);
+						}
+					}
 				}
 				else {
-					loc.getWorld().spawnParticle(Particle.SMOKE_LARGE, loc, 3);
+					for(var entry : Main.getPlayerInfoMap().entrySet()) {
+						if(entry.getValue().getPreference(Preferences.VIEW_HARBINGER_PARTICLES)) {
+							entry.getKey().spawnParticle(Particle.SMOKE_LARGE, loc, 3);
+						}
+					}
 				}
 			}
 		}

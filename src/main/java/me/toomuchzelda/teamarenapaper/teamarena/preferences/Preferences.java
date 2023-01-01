@@ -98,4 +98,7 @@ public class Preferences {
 	public static final Preference<Boolean> DEFAULT_TEAM_CHAT = SimplePreference.of("default_team_chat",
 			"Whether your chat messages should go to team chat instead of all chat by default. (Use /t to talk in the opposite chat)",
 			false).setIcon(Material.GOAT_HORN);
+
+	public static final Preference<Boolean> VIEW_HARBINGER_PARTICLES = SimplePreference.of("harbinger_view_particles", "See the laggy smoke particles of the Harbinger or not", true)
+			.setIcon(Material.NETHERRACK);
 }
