@@ -18,7 +18,7 @@ public class CommandCredits extends CustomCommand
 	static {
 		Component toomuchzelda = Component.text("toomuchzelda", TextColor.color(34, 177, 76));
 		Component jacky8399 = Component.text("jacky8399", TextColor.color(3, 94, 252));
-		Component onnet = TextUtils.getRGBManiacComponent(Component.text("Onett_"), Style.empty(), 0);
+		Component onnet = Component.text("Onett_", TextColor.color(154, 230, 212));
 		Component T_0_E_D = TextUtils.getRGBManiacComponent(Component.text("T_0_E_D"), Style.empty(), 0.5d);
 		Component theRest = Component.text("Xtikman, Elitemaster5, jojosue, Kullanari, SevereMyopia, 22balletgirls, Woaxa", NamedTextColor.AQUA);
 
