@@ -6,11 +6,9 @@ import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.reflect.StructureModifier;
-import com.comphenix.protocol.wrappers.EnumWrappers;
-import com.comphenix.protocol.wrappers.PlayerInfoData;
+import com.comphenix.protocol.wrappers.*;
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Pair;
-import io.papermc.paper.adventure.PaperAdventure;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitbox;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxViewer;
@@ -18,7 +16,6 @@ import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.DisguiseManager;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitGhost;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSpy;
@@ -26,15 +23,18 @@ import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.AttachedPacketEntity;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
-import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.minecraft.network.protocol.game.*;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
+import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
+import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.GameType;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Sound;
-import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_19_R1.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.v1_19_R2.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_19_R2.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -254,7 +254,119 @@ public class PacketListeners
 		});*/
 
 		//intercept player info packets and replace with disguise if needed
-		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin, PacketType.Play.Server.PLAYER_INFO) {
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
+				PacketType.Play.Server.PLAYER_INFO) {
+
+			@Override
+			public void onPacketSending(PacketEvent event) {
+				ClientboundPlayerInfoUpdatePacket nmsPacket = (ClientboundPlayerInfoUpdatePacket) event.getPacket().getHandle();
+
+				Set<ClientboundPlayerInfoUpdatePacket.Action> actions = nmsPacket.actions();
+
+				final boolean stripChat = actions.contains(ClientboundPlayerInfoUpdatePacket.Action.INITIALIZE_CHAT);
+				final boolean addPlayer = actions.contains(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER);
+
+				List<ClientboundPlayerInfoUpdatePacket.Entry> list = nmsPacket.entries();
+				final int size = FakeHitboxManager.ACTIVE ? list.size() * 5 : list.size();
+				List<PlayerInfoData> newList = new ArrayList<>(size);
+
+				for(ClientboundPlayerInfoUpdatePacket.Entry entry : list) {
+					PlayerInfoData wrappedEntryCopy = copyPlayerInfoEntry(entry, stripChat);
+					final int originalIndex = newList.size(); // Keep track of this entry's position in the newList
+					newList.add(wrappedEntryCopy);
+
+					if(FakeHitboxManager.ACTIVE && addPlayer) {
+						// Ensure player doesn't see their own fake player entries
+						if(!entry.profileId().equals(event.getPlayer().getUniqueId())) {
+							FakeHitbox hitbox = FakeHitboxManager.getByPlayerUuid(entry.profileId());
+							if(hitbox != null) {
+								newList.addAll(hitbox.getPlayerInfoEntries());
+							}
+						}
+					}
+
+					Player updatedPlayer = Bukkit.getPlayer(entry.profileId());
+					if (updatedPlayer == null)
+						continue;
+
+					DisguiseManager.Disguise disguise = DisguiseManager.getDisguiseSeeing(updatedPlayer, event.getPlayer());
+					if (disguise != null) {
+						EnumWrappers.NativeGameMode nativeGameMode = getNativeGameMode(entry.gameMode());
+						WrappedChatComponent wrappedDisplayName = WrappedChatComponent.fromHandle(entry.displayName());
+						if(addPlayer) {
+							// The playerinfo data with the disguised player's UUID but
+							// the disguise target's skin
+							PlayerInfoData replacementData = new PlayerInfoData(
+									WrappedGameProfile.fromHandle(disguise.disguisedGameProfile),
+									entry.latency(), nativeGameMode, WrappedChatComponent.fromHandle(entry.displayName()), null);
+
+							newList.set(originalIndex, replacementData);
+
+							disguise.viewers.put(event.getPlayer(), TeamArena.getGameTick());
+						}
+
+						// The player profile of the tab list entry that looks like the
+						// original player, but has a different UUID to avoid conflict
+						// with the above replacementData profile
+						GameProfile tabListProfile = disguise.tabListGameProfile;
+						PlayerInfoData tabListData = new PlayerInfoData(tabListProfile.getId(), entry.latency(),
+								entry.listed(), nativeGameMode, WrappedGameProfile.fromHandle(tabListProfile),
+								wrappedDisplayName, null);
+
+						newList.add(tabListData);
+					}
+				}
+
+				// Modifications took place, so replace the packet
+				// The same packet instance is sent to many players, so we need to
+				// avoid mutating the original
+				if(newList.size() > 0) {
+					PacketContainer packet = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);
+					packet.getModifier().write(0, nmsPacket.actions());
+					packet.getPlayerInfoDataLists().write(0, newList);
+					event.setPacket(packet);
+				}
+			}
+		});
+
+		//TODO PLAYER_INFO_REMOVE listener
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
+				PacketType.Play.Server.PLAYER_INFO_REMOVE)
+		{
+			@Override
+			public void onPacketSending(PacketEvent event) {
+				ClientboundPlayerInfoRemovePacket nmsPacket = (ClientboundPlayerInfoRemovePacket) event.getPacket().getHandle();
+				List<UUID> copyList = null;
+				for (UUID uuid : nmsPacket.profileIds()) {
+					Player updatedPlayer = Bukkit.getPlayer(uuid);
+					if (updatedPlayer == null)
+						continue;
+
+					DisguiseManager.Disguise disguise = DisguiseManager.getDisguiseSeeing(updatedPlayer, event.getPlayer());
+					if (disguise != null) {
+						// The player profile of the tab list entry that looks like the
+						// original player, but has a different UUID to avoid conflict
+						// with the above replacementData profile
+						GameProfile tabListProfile = disguise.tabListGameProfile;
+
+						if (copyList == null) {
+							copyList = new ArrayList<>(nmsPacket.profileIds().size() + 1);
+							copyList.addAll(nmsPacket.profileIds());
+						}
+
+						copyList.add(tabListProfile.getId());
+					}
+				}
+
+				if (copyList != null) {
+					PacketContainer packet = event.getPacket().shallowClone();
+					event.getPacket().getModifier().write(0, copyList);
+				}
+			}
+		});
+
+		/*ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
+				PacketType.Play.Server.PLAYER_INFO) {
 			@Override
 			public void onPacketSending(PacketEvent event) {
 				ClientboundPlayerInfoPacket nmsPacket = (ClientboundPlayerInfoPacket) event.getPacket().getHandle();
@@ -337,7 +449,7 @@ public class PacketListeners
 					}
 				}
 			}
-		});
+		});*/
 
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.NAMED_SOUND_EFFECT, PacketType.Play.Server.ENTITY_SOUND)
@@ -471,7 +583,6 @@ public class PacketListeners
 	private static class NoChatKeys extends PacketAdapter {
 		NoChatKeys() {
 			super(Main.getPlugin(), PacketType.Play.Server.PLAYER_INFO,
-					PacketType.Play.Client.CHAT_PREVIEW,
 					PacketType.Play.Client.CHAT,
 					PacketType.Play.Client.CHAT_COMMAND);
 		}
@@ -514,18 +625,27 @@ public class PacketListeners
 					event.getPlayer().chat(originalMessage);
 				});
 			}
-			else if (packet.getType() == PacketType.Play.Client.CHAT_PREVIEW) {
-				if (Main.getPlayerInfo(player).permissionLevel.compareTo(CustomCommand.PermissionLevel.MOD) >= 0) {
-					var nmsPacket = (ServerboundChatPreviewPacket) packet.getHandle();
-					String message = nmsPacket.query();
-					var preview = MiniMessage.miniMessage().deserialize(message);
-
-					var response = new ClientboundChatPreviewPacket(nmsPacket.queryId(), PaperAdventure.asVanilla(preview));
-
-					PlayerUtils.sendPacket(event.getPlayer(), response);
-					event.setCancelled(true);
-				}
-			}
 		}
+	}
+
+	public static PlayerInfoData copyPlayerInfoEntry(ClientboundPlayerInfoUpdatePacket.Entry entry, boolean stripChat) {
+		EnumWrappers.NativeGameMode nativeGameMode = getNativeGameMode(entry.gameMode());
+		WrappedGameProfile wrappedGameProfile = WrappedGameProfile.fromHandle(entry.profile());
+		WrappedChatComponent wrappedComponent = WrappedChatComponent.fromHandle(entry.displayName());
+
+		return new PlayerInfoData(entry.profileId(), entry.latency(), entry.listed(),
+				nativeGameMode, wrappedGameProfile, wrappedComponent, stripChat ? null : new WrappedProfilePublicKey.WrappedProfileKeyData(entry.chatSession()));
+	}
+
+	public static EnumWrappers.NativeGameMode getNativeGameMode(GameType nmsType) {
+		EnumWrappers.NativeGameMode nativeGameMode = null;
+		switch (nmsType) {
+			case SURVIVAL -> nativeGameMode = EnumWrappers.NativeGameMode.SURVIVAL;
+			case CREATIVE -> nativeGameMode = EnumWrappers.NativeGameMode.CREATIVE;
+			case ADVENTURE -> nativeGameMode = EnumWrappers.NativeGameMode.ADVENTURE;
+			case SPECTATOR -> nativeGameMode = EnumWrappers.NativeGameMode.SPECTATOR;
+		}
+
+		return nativeGameMode;
 	}
 }

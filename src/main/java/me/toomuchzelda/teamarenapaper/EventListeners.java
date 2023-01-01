@@ -48,7 +48,7 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.block.BlockFace;
 import org.bukkit.command.Command;
-import org.bukkit.craftbukkit.v1_19_R1.CraftWorldBorder;
+import org.bukkit.craftbukkit.v1_19_R2.CraftWorldBorder;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -879,7 +879,7 @@ public class EventListeners implements Listener
 	public void playerInteract(PlayerInteractEvent event) {
 		if(Main.getGame() != null) {
 			Main.getGame().onInteract(event);
-
+			
 			if(Main.getGame().getGameState() == LIVE) {
 				for (Ability a : Kit.getAbilities(event.getPlayer())) {
 					a.onInteract(event);

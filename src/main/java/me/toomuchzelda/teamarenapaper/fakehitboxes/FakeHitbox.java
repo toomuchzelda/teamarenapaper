@@ -3,8 +3,7 @@ package me.toomuchzelda.teamarenapaper.fakehitboxes;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
-import com.comphenix.protocol.wrappers.WrappedDataWatcher;
-import com.comphenix.protocol.wrappers.WrappedWatchableObject;
+import com.comphenix.protocol.wrappers.*;
 import com.mojang.authlib.GameProfile;
 import io.papermc.paper.adventure.PaperAdventure;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
@@ -13,15 +12,13 @@ import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.minecraft.network.protocol.game.ClientboundPlayerInfoPacket;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.Pose;
-import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.AABB;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
-import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_19_R2.CraftWorld;
+import org.bukkit.craftbukkit.v1_19_R2.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityPoseChangeEvent;
 import org.bukkit.util.Vector;
@@ -55,7 +52,7 @@ public class FakeHitbox
 		METADATA = watcher.getWatchableObjects();
 	}
 
-	private final List<ClientboundPlayerInfoPacket.PlayerUpdate> playerInfoEntries;
+	private final List<PlayerInfoData> playerInfoEntries;
 	private final PacketContainer[] spawnPlayerPackets;
 	private final PacketContainer[] teleportPackets;
 	private final PacketContainer[] metadataPackets;
@@ -84,21 +81,23 @@ public class FakeHitbox
 		removeEntitiesPacket = new PacketContainer(PacketType.Play.Server.ENTITY_DESTROY);
 		fakePlayerIds = new int[4];
 
-		List<ClientboundPlayerInfoPacket.PlayerUpdate> playerUpdates = new ArrayList<>(4);
+		List<PlayerInfoData> playerUpdates = new ArrayList<>(4);
 
 		Location loc = owner.getLocation();
 		for(int i = 0; i < 4; i++) {
 			FakePlayer fPlayer = new FakePlayer();
 
 			GameProfile authLibProfile = new GameProfile(fPlayer.uuid, USERNAME);
-
 			Component displayNameComp = getDisplayNameComponent();
-
 			net.minecraft.network.chat.Component nmsComponent = PaperAdventure.asVanilla(displayNameComp);
-			ClientboundPlayerInfoPacket.PlayerUpdate update = new ClientboundPlayerInfoPacket.PlayerUpdate(authLibProfile, 1,
-					GameType.SURVIVAL, nmsComponent, null);
 
-			playerUpdates.add(update);
+			PlayerInfoData wrappedEntry = new PlayerInfoData(WrappedGameProfile.fromHandle(authLibProfile), 1,
+					EnumWrappers.NativeGameMode.SURVIVAL, WrappedChatComponent.fromHandle(nmsComponent));
+
+			//ClientboundPlayerInfoPacket.PlayerUpdate update = new ClientboundPlayerInfoPacket.PlayerUpdate(authLibProfile, 1,
+			//		GameType.SURVIVAL, nmsComponent, null);
+
+			playerUpdates.add(wrappedEntry);
 
 			PacketContainer spawnPlayerPacket = new PacketContainer(PacketType.Play.Server.NAMED_ENTITY_SPAWN);
 			spawnPlayerPacket.getIntegers().write(0, fPlayer.entityId);
@@ -302,7 +301,7 @@ public class FakeHitbox
 		return this.viewers.computeIfAbsent(viewer, player1 -> new FakeHitboxViewer());
 	}
 
-	public List<ClientboundPlayerInfoPacket.PlayerUpdate> getPlayerInfoEntries() {
+	public List<PlayerInfoData> getPlayerInfoEntries() {
 		return this.playerInfoEntries;
 	}
 

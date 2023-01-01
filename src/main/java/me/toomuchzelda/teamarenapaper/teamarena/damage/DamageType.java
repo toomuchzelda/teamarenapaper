@@ -11,12 +11,9 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.minecraft.world.damagesource.DamageSource;
 import org.bukkit.Material;
-import org.bukkit.craftbukkit.v1_19_R1.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_19_R2.entity.CraftEntity;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Pig;
-import org.bukkit.entity.Projectile;
+import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageByBlockEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
@@ -60,7 +57,7 @@ public class DamageType {
             .setNoKnockback().setDamageSource(DamageSource.DRY_OUT);
 
     public static final DamageType EXPLOSION = new DamageType("Explosion", "%Killed% was caught in an explosion")
-			.setExplosion().setDamageSource(DamageSource.explosion((net.minecraft.world.entity.LivingEntity) null));
+			.setExplosion().setDamageSource(DamageSource.explosion(null, null));
 
     public static final DamageType FALL = new DamageType("Fall", "%Killed% fell to their death").setFall().setNoKnockback()
             .setDamageSource(DamageSource.FALL);
@@ -72,10 +69,10 @@ public class DamageType {
             .setFall().setNoKnockback().setDamageSource(DamageSource.FALL);
 
     public static final DamageType FALLING_BLOCK = new DamageType("Falling Block", "%Killed% was crushed beneath a falling block")
-            .setNoKnockback().setDamageSource(DamageSource.FALLING_BLOCK);
+            .setNoKnockback();// DamageSource assigned in getAttack() //setDamageSource(DamageSource.fallingBlock(null));
 
     public static final DamageType FALLING_STALACTITE = new DamageType("Falling Stalactite", "%Killed% was impaled by a " +
-            "falling stalactite").setNoKnockback().setDamageSource(DamageSource.FALLING_STALACTITE);
+            "falling stalactite").setNoKnockback();// DamageSource in getAttack() //.setDamageSource(DamageSource.FALLING_STALACTITE);
 
     /**
      * Direct exposure to fire
@@ -144,7 +141,7 @@ public class DamageType {
             .setMelee();
 
     public static final DamageType THORNS = new DamageType("Thorns", "%Killed% found out how the thorns enchantment works")
-            .setNoKnockback();//TODO: construct with entity
+            .setNoKnockback();
 
     public static final DamageType UNKNOWN = new DamageType("Unknown", "%Killed% died from unknown causes").setNoKnockback();
 
@@ -168,14 +165,14 @@ public class DamageType {
             .setFire().setIgnoreArmor().setNoKnockback().setDamageSource(DamageSource.ON_FIRE);
 
 	public static final DamageType SNIPER_GRENADE_FAIL = new DamageType("Grenade Fail", "%Killed% forgot they pulled the pin.")
-			.setInstantDeath().setNoKnockback().setDamageSource(DamageSource.explosion((net.minecraft.world.entity.LivingEntity) null));
+			.setInstantDeath().setNoKnockback().setDamageSource(DamageSource.explosion(null, null));
 
 	public static final DamageType SNIPER_HEADSHOT = new DamageType("Headshot", "%Killed% was headshot by %Killer%")
 			.setProjectile();
 
     public static final DamageType DEMO_TNTMINE = new DamageType("Demolitions TNT Mine",
             "%Killed% stepped on %Killer%'s TNT Mine and blew up")
-            .setDamageSource(DamageSource.explosion((net.minecraft.world.entity.LivingEntity) null))
+            .setDamageSource(DamageSource.explosion(null, null))
             .setIgnoreRate().setExplosion();
 
 	public static final DamageType TOXIC_LEAP = new DamageType("Venom Leap", "%Killed% was killed by %Killer%'s Toxic Leap");
@@ -188,16 +185,16 @@ public class DamageType {
 			.setExplosion();
 
 	public static final DamageType BURST_FIREWORK = new DamageType("Burst Firework", "%Killed% was blown to shimmering, shining bits by %Killer%'s firework")
-			.setExplosion().setDamageSource(DamageSource.explosion((net.minecraft.world.entity.LivingEntity) null));
+			.setExplosion().setDamageSource(DamageSource.explosion(null, null));
 
 	public static final DamageType BURST_FIREWORK_SELF = new DamageType("Badly Aimed Firework", "%Killed% became a part of their firework show")
-			.setIgnoreRate().setExplosion().setDamageSource(DamageSource.explosion((net.minecraft.world.entity.LivingEntity) null));
+			.setIgnoreRate().setExplosion().setDamageSource(DamageSource.explosion(null, null));
 
 	public static final DamageType BURST_SHOTGUN = new DamageType("Burst Blast", "%Killed% was killed by %Killer%'s firework shrapnel")
 			.setIgnoreRate().setProjectile().setNoKnockback();
 
 	public static final DamageType BURST_SHOTGUN_SELF = new DamageType("Burst Blast Self Harm", "%Killed% went trigger happy and blew their fingers off")
-			.setIgnoreRate().setIgnoreArmor().setExplosion().setDamageSource(DamageSource.explosion((net.minecraft.world.entity.LivingEntity) null));
+			.setIgnoreRate().setIgnoreArmor().setExplosion().setDamageSource(DamageSource.explosion(null, null));
 
 	public static final DamageType EXPLOSIVE_RPG = new DamageType("Explosive RPG", "%Killed% was caught in %Killer%'s RPG")
 			.setExplosion();
@@ -361,9 +358,9 @@ public class DamageType {
             case WITHER:
                 return WITHER_POISON;
             case FALLING_BLOCK:
-                return FALLING_BLOCK;
+                return getFallingBlock(event);
             case THORNS:
-                return THORNS;
+                return getThorns(event);
             case DRAGON_BREATH:
                 return DRAGON_BREATH;
             case CUSTOM:
@@ -461,12 +458,26 @@ public class DamageType {
 	}
 
 	private static DamageType getExplosion(DamageType type, EntityDamageEvent event) {
-		if(event instanceof EntityDamageByEntityEvent dEvent && dEvent.getDamager() instanceof LivingEntity living) {
-			return new DamageType(type).setDamageSource(DamageSourceCreator.getExplosion(living));
+		if(event instanceof EntityDamageByEntityEvent dEvent) {
+			DamageSource source;
+			if(dEvent.getDamager() instanceof TNTPrimed tnt)
+				source = DamageSourceCreator.getExplosion(tnt, tnt.getSource());
+			else
+				source = DamageSourceCreator.getExplosion(dEvent.getDamager(), null);
+
+			return new DamageType(type).setDamageSource(source);
 		}
 		else {
 			return type;
 		}
+	}
+
+	private static DamageType getFallingBlock(EntityDamageEvent event) {
+		if (event instanceof EntityDamageByEntityEvent dEvent) {
+			return new DamageType(FALLING_BLOCK).setDamageSource(DamageSourceCreator.getFallingBlock(dEvent.getDamager()));
+		}
+
+		return FALLING_BLOCK;
 	}
 
     public static DamageType getProjectile(EntityDamageEvent event) {
@@ -482,6 +493,14 @@ public class DamageType {
 
         return PROJECTILE;
     }
+
+	private static DamageType getThorns(EntityDamageEvent event) {
+		if(event instanceof EntityDamageByEntityEvent dEvent) {
+			return new DamageType(THORNS).setDamageSource(DamageSource.thorns(((CraftEntity) dEvent.getDamager()).getHandle()));
+		}
+
+		return THORNS;
+	}
 
     public String getName() {
         return _name;
