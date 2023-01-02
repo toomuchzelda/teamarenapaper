@@ -227,7 +227,7 @@ public class DisguiseManager
 			//var removeUpdate = new ClientboundPlayerInfoPacket.PlayerUpdate(removeTabProfile, 1, null,
 			//		null, null);
 
-			modifier4.write(1, List.of(tabListPlayerUuid));
+			modifier4.write(0, List.of(tabListPlayerUuid));
 			//==================================
 
 			/*addRealPlayerInfoPacket = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);

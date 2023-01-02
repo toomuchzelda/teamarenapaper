@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.metadata;
 
 import com.comphenix.protocol.wrappers.EnumWrappers;
+import com.comphenix.protocol.wrappers.WrappedDataValue;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 
 import java.util.Collections;
@@ -79,5 +80,9 @@ public class MetaIndex
 		AXOLOTL_COLOR_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(AXOLOTL_COLOR_IDX, WrappedDataWatcher.Registry.get(Integer.class));
 
 		GUARDIAN_TARGET_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(GUARDIAN_TARGET_IDX, WrappedDataWatcher.Registry.get(Integer.class));
+	}
+
+	public static WrappedDataValue copyValue(WrappedDataValue original) {
+		return new WrappedDataValue(original.getIndex(), original.getSerializer(), original.getValue());
 	}
 }

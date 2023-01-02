@@ -284,9 +284,10 @@ public class MetadataViewer
 	 */
 	public PacketContainer adjustMetadataPacket(@NotNull PacketContainer metadataPacket) {
 		int id = metadataPacket.getIntegers().read(0);
+		return metadataPacket;
 
 		//don't construct a new datawatcher and packet if it's not needed
-		if(this.hasMetadataFor(id)) {
+		/*if(this.hasMetadataFor(id)) {
 
 			//MUST use a new packet. Without this modifications to the packet are seen by unintended viewers.
 			// I think protocollib is re-using the same Packet for many players. So create a new one anytime
@@ -325,7 +326,7 @@ public class MetadataViewer
 		}
 		else {
 			return metadataPacket;
-		}
+		}*/
 	}
 
 	public Player getViewer() {

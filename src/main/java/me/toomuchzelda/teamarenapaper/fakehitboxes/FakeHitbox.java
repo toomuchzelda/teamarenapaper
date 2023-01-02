@@ -88,7 +88,8 @@ public class FakeHitbox
 			FakePlayer fPlayer = new FakePlayer();
 
 			GameProfile authLibProfile = new GameProfile(fPlayer.uuid, USERNAME);
-			Component displayNameComp = getDisplayNameComponent();
+			//Component displayNameComp = getDisplayNameComponent();
+			Component displayNameComp = Component.text(fPlayer.uuid.toString());
 			net.minecraft.network.chat.Component nmsComponent = PaperAdventure.asVanilla(displayNameComp);
 
 			PlayerInfoData wrappedEntry = new PlayerInfoData(WrappedGameProfile.fromHandle(authLibProfile), 1,
@@ -356,31 +357,28 @@ public class FakeHitbox
 	}
 
 	public @Nullable PacketContainer[] createPoseMetadataPackets(PacketContainer packet) {
-		List<WrappedWatchableObject> objects = packet.getWatchableCollectionModifier().read(0);
+		//List<WrappedWatchableObject> objects = packet.getWatchableCollectionModifier().read(0);
+		// TODO
+		/*List<WrappedDataValue> objects = packet.getDataValueCollectionModifier().read(0);
 
 		PacketContainer[] newPackets = null;
-		for (WrappedWatchableObject obj : objects) {
-			if (obj.getIndex() == MetaIndex.POSE_IDX) { //if the metadata has pose
-				Pose pose = (Pose) obj.getValue();
-
+		for (WrappedDataValue dataValue : objects) {
+			if (dataValue.getIndex() == MetaIndex.POSE_IDX) { //if the metadata has pose
+				//Pose pose = (Pose) dataValue.getValue();
 				newPackets = new PacketContainer[4];
-
-				WrappedDataWatcher watcher = new WrappedDataWatcher();
-				watcher.setObject(MetaIndex.POSE_OBJ, pose);
-				List<WrappedWatchableObject> newObjects = watcher.getWatchableObjects();
-
+				List<WrappedDataValue> hitboxValueList = List.of(dataValue);
 				for(int i = 0; i < 4; i++) {
 					PacketContainer newPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
 					newPacket.getIntegers().write(0, this.fakePlayerIds[i]);
-					newPacket.getWatchableCollectionModifier().write(0, newObjects);
+					newPacket.getDataValueCollectionModifier().write(0, hitboxValueList);
 					newPackets[i] = newPacket;
 				}
 
 				break;
 			}
-		}
+		}*/
 
-		return newPackets;
+		return null; //newPackets;
 	}
 
 	public PacketContainer getRemoveEntitiesPacket() {

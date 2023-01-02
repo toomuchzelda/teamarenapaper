@@ -45,7 +45,8 @@ public class PlayerUtils {
 
 	public static void sendPacket(Player player, boolean triggerPacketListeners, PacketContainer... packets) {
 		for (PacketContainer packet : packets) {
-			ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet, triggerPacketListeners);
+			if(packet.getType() != PacketType.Play.Server.ENTITY_METADATA)
+				ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet, triggerPacketListeners);
 		}
     }
 
