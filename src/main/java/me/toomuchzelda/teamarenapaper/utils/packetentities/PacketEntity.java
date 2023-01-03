@@ -280,7 +280,7 @@ public class PacketEntity
 	/**
 	 * Call manually after updating this WrappedDataWatcher data
 	 */
-	protected void updateMetadataPacket() {
+	public void updateMetadataPacket() {
 		this.watchableCollectionModifier.write(0, this.data.getWatchableObjects());
 	}
 
