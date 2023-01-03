@@ -11,6 +11,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.killstreak.crate.CratePayload;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.trigger.KitTrigger;
@@ -20,6 +21,7 @@ import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Wolf;
 import org.bukkit.inventory.ItemStack;
@@ -28,7 +30,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
-public class WolvesKillStreak extends KillStreak
+public class WolvesKillStreak extends CratedKillStreak
 {
 	private static final TextColor color = TextColor.color(216, 212, 213);
 	private static final int WOLF_COUNT = 3;
@@ -43,14 +45,16 @@ public class WolvesKillStreak extends KillStreak
 	WolvesKillStreak() {
 		super("Attack wolves", "A pack of wolves that will follow at your command and chew up enemies", color, null,
 				new WolvesAbility());
-
-		this.crateItemType = Material.WOLF_SPAWN_EGG;
-		this.crateBlockType = Material.WHITE_WOOL;
 	}
 
 	@Override
-	public boolean isDeliveredByCrate() {
-		return true;
+	public @NotNull ItemStack createCrateItem(Player player) {
+		return createSimpleCrateItem(Material.WOLF_SPAWN_EGG);
+	}
+
+	@Override
+	public @NotNull CratePayload getPayload(Player player, Location destination) {
+		return new CratePayload.SimpleEntity(EntityType.WOLF);
 	}
 
 	// Band aid - pass the crate location to the WolvesAbility#giveAbility()
@@ -58,6 +62,7 @@ public class WolvesKillStreak extends KillStreak
 
 	@Override
 	public void onCrateLand(Player player, Location destination) {
+		super.onCrateLand(player, destination);
 		crateLocs.put(player, destination);
 		this.giveStreak(player, Main.getPlayerInfo(player));
 	}

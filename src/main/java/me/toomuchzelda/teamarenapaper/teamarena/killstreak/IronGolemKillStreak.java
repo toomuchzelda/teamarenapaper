@@ -7,6 +7,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.killstreak.crate.CratePayload;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.trigger.KitTrigger;
@@ -14,18 +15,17 @@ import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
+import org.bukkit.*;
 import org.bukkit.entity.IronGolem;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
-public class IronGolemKillStreak extends KillStreak
+public class IronGolemKillStreak extends CratedKillStreak
 {
 	private static final TextColor color = TextColor.color(206, 184, 167);
 	private static final List<String> GOLEM_NAMES = List.of(
@@ -40,14 +40,25 @@ public class IronGolemKillStreak extends KillStreak
 	IronGolemKillStreak() {
 		super("Iron Golem", "An Iron Golem that will stay at the position where you summoned it and defend it with its life"
 				, color, null, new GolemAbility());
+	}
 
-		this.crateItemType = Material.POPPY;
-		this.crateBlockType = Material.IRON_BLOCK;
+
+	private static final CratePayload GOLEM_PAYLOAD = new CratePayload.Group(new Vector(0, 3, 0),
+		Map.of(
+			new Vector(0, 2, 0), new CratePayload.SimpleBlock(Material.PUMPKIN.createBlockData()),
+			new Vector(0, 1, 0), new CratePayload.SimpleBlock(Material.IRON_BLOCK.createBlockData()),
+			new Vector(1, 1, 0), new CratePayload.SimpleBlock(Material.IRON_BLOCK.createBlockData()),
+			new Vector(-1, 1, 0), new CratePayload.SimpleBlock(Material.IRON_BLOCK.createBlockData()),
+			new Vector(0, 0, 0), new CratePayload.SimpleBlock(Material.IRON_BLOCK.createBlockData())
+		));
+	@Override
+	public @NotNull CratePayload getPayload(Player player, Location destination) {
+		return GOLEM_PAYLOAD;
 	}
 
 	@Override
-	public boolean isDeliveredByCrate() {
-		return true;
+	public @NotNull ItemStack createCrateItem(Player player) {
+		return createSimpleCrateItem(Material.POPPY);
 	}
 
 	// Band aid - pass the crate location to the WolvesAbility#giveAbility()
@@ -55,6 +66,8 @@ public class IronGolemKillStreak extends KillStreak
 
 	@Override
 	public void onCrateLand(Player player, Location destination) {
+		destination.getWorld().playSound(destination, Sound.BLOCK_ANVIL_LAND, 1f, 2f);
+
 		crateLocs.put(player, destination);
 		this.giveStreak(player, Main.getPlayerInfo(player));
 	}

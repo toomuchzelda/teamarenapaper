@@ -5,9 +5,13 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaExplosion;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.killstreak.crate.CratePayload;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.*;
+import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
@@ -15,12 +19,14 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
 
-public class HarbingerKillStreak extends KillStreak
+public class HarbingerKillStreak extends CratedKillStreak
 {
 	private static final TextColor color = TextColor.color(232, 210, 7);
 
@@ -31,20 +37,12 @@ public class HarbingerKillStreak extends KillStreak
 
 	HarbingerKillStreak() {
 		super("Harbinger", "Rain hellish destruction on your enemies", color, null, new HarbingerAbility());
-
-		this.crateItemType = Material.TNT;
-		this.crateBlockType = Material.TNT;
-	}
-
-	@Override
-	public boolean isDeliveredByCrate() {
-		return true;
 	}
 
 	private static final Map<Player, Location> crateLocs = new HashMap<>();
 	@Override
 	public void onCrateLand(Player player, Location destination) {
-		//crate.setDone();
+		super.onCrateLand(player, destination);
 		crateLocs.put(player, destination);
 		this.giveStreak(player, Main.getPlayerInfo(player));
 	}
@@ -60,6 +58,16 @@ public class HarbingerKillStreak extends KillStreak
 				p.sendMessage(component);
 			}
 		}
+	}
+
+	@Override
+	public @NotNull CratePayload getPayload(Player player, Location destination) {
+		return new CratePayload.SimpleBlock(Material.TNT.createBlockData());
+	}
+
+	@Override
+	public @NotNull ItemStack createCrateItem(Player player) {
+		return createSimpleCrateItem(Material.TNT);
 	}
 
 	@Override
@@ -347,11 +355,7 @@ public class HarbingerKillStreak extends KillStreak
 
 				Location loc = new Location(world, vector.x(), vector.y(), vector.z());
 				if (MathUtils.random.nextBoolean()) { // poofy smokey particle effect
-					for(var entry : Main.getPlayerInfoMap().entrySet()) {
-						if(entry.getValue().getPreference(Preferences.VIEW_HARBINGER_PARTICLES)) {
-							entry.getKey().spawnParticle(Particle.EXPLOSION_NORMAL, loc, 14);
-						}
-					}
+					loc.getWorld().spawnParticle(Particle.EXPLOSION_NORMAL, loc, 14);
 				}
 				else {
 					for(var entry : Main.getPlayerInfoMap().entrySet()) {

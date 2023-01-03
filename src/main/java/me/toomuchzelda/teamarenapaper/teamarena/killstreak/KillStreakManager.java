@@ -12,6 +12,8 @@ import org.bukkit.event.Event;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.util.*;
 
@@ -35,6 +37,7 @@ public class KillStreakManager
 		this.killstreaksByKills = new HashMap<>();
 
 		// KillStreak map keys must not have spaces in them
+		addKillStreak(-1, new PayloadTestKillstreak());
 		addKillStreak(2, new CompassKillStreak());
 		addKillStreak(4, new WolvesKillStreak());
 		addKillStreak(7, new IronGolemKillStreak());
@@ -61,10 +64,10 @@ public class KillStreakManager
 		List<KillStreak> streaks = killstreaksByKills.get(newKills);
 		if(streaks != null) {
 			for (KillStreak streak : streaks) {
-				if(!streak.isDeliveredByCrate())
+				if(!(streak instanceof CratedKillStreak cratedStreak))
 					streak.giveStreak(killer, pinfo);
 				else {
-					killer.getInventory().addItem(Crate.createCrateItem(streak));
+					killer.getInventory().addItem(Crate.createCrateItem(cratedStreak, killer));
 				}
 
 				killer.sendMessage(Component.text()
@@ -80,26 +83,38 @@ public class KillStreakManager
 	 * When a player uses their crate call item, handle it and create the Crate instance that will fall to them.
 	 */
 	public void handleCrateItemUse(PlayerInteractEvent event) {
-		KillStreak streak = Crate.crateItems.get(event.getItem());
-		if(streak == null) return;
-
-		event.setUseItemInHand(Event.Result.DENY);
-		event.setUseInteractedBlock(Event.Result.DENY);
-
 		// First validate it's a good position to drop a crate.
 		if(event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
 		if(event.getBlockFace() != BlockFace.UP) return;
 		if(!event.getClickedBlock().getRelative(BlockFace.UP).getType().isAir()) return;
 
-		Crate.crateItems.remove(event.getItem());
+		// Check for special ItemMeta
+		if (event.getItem() == null)
+			return;
+
+		ItemMeta meta = event.getItem().getItemMeta();
+		if (meta == null)
+			return;
+
+		String killstreakName = meta.getPersistentDataContainer().get(Crate.KILLSTREAK_KEY, PersistentDataType.STRING);
+		if (killstreakName == null)
+			return;
+
+		KillStreak streak = getKillStreak(killstreakName);
+		if (!(streak instanceof CratedKillStreak cratedStreak))
+			return;
+
+		event.setUseItemInHand(Event.Result.DENY);
+		event.setUseInteractedBlock(Event.Result.DENY);
+
 
 		// Decrement stack size by one
 		Inventory inventory = event.getPlayer().getInventory();
 		int index = inventory.first(event.getItem());
 		inventory.getItem(index).subtract();
 
-		Crate crate = new Crate(event.getPlayer(), streak.getCrateBlockType(),
-				event.getClickedBlock().getLocation().add(0.5d, 1d, 0.5d), streak);
+		Crate crate = new Crate(event.getPlayer(),
+				event.getClickedBlock().getLocation().add(0.5d, 1d, 0.5d), cratedStreak);
 
 		allCrates.add(crate);
 	}
@@ -141,8 +156,6 @@ public class KillStreakManager
 
 		allKillstreaks.clear();
 		killstreaksByKills.clear();
-
-		Crate.crateItems.clear();
 	}
 
 	public boolean isCrateFirework(Entity entity) {

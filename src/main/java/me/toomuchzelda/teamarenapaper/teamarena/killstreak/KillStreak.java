@@ -4,8 +4,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
-import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -33,9 +31,6 @@ public abstract class KillStreak
 	private final Component componentName;
 	private final ItemStack item;
 
-	protected Material crateItemType; // Item used to call the crate.
-	protected Material crateBlockType; // Type of block the falling crate should be.
-
 	private final List<Ability> abilities;
 
 	KillStreak(String name, String description, TextColor color, ItemStack item, Ability... abilities) {
@@ -57,25 +52,6 @@ public abstract class KillStreak
 			Ability.giveAbility(player, ability, pinfo);
 		});
 	}
-
-	Material getCrateItemType() {
-		return this.crateItemType;
-	}
-
-	public Material getCrateBlockType() {
-		return crateBlockType;
-	}
-
-	public void onCratePlace(Player player, Location destination) {}
-
-	public void onFireworkFinish(Player player, Location destination, Crate crate) {}
-
-	public void onCrateLand(Player player, Location destination) {}
-
-	 public boolean isDeliveredByCrate() {
-		return false;
-	}
-
 	public String getName() {
 		return name;
 	}
