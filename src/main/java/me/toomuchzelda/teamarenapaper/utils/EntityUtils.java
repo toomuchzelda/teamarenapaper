@@ -3,20 +3,22 @@ package me.toomuchzelda.teamarenapaper.utils;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
+import io.netty.buffer.Unpooled;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.HoverEvent;
-import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
-import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
-import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.*;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.phys.Vec3;
+import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.attribute.Attribute;
@@ -35,7 +37,6 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Iterator;
@@ -252,4 +253,49 @@ public class EntityUtils {
                 p.playSound(entity, sound, category, volume, pitch);
         }
     }
+
+	private static final double MAX_RELATIVE_DELTA = Short.MAX_VALUE / 4096d;
+	private static final double MIN_RELATIVE_DELTA = Short.MIN_VALUE / 4096d;
+
+	public static Packet<?> createMovePacket(int id, Location location, double xDelta, double yDelta, double zDelta,
+											 double yawDelta, double pitchDelta, boolean onGround) {
+		byte newYaw = (byte) ((location.getYaw() + yawDelta) * 256d / 360d);
+		byte newPitch = (byte) ((location.getPitch() + pitchDelta) * 256d / 360d);
+
+		if (xDelta >= MAX_RELATIVE_DELTA || yDelta >= MAX_RELATIVE_DELTA || zDelta >= MAX_RELATIVE_DELTA ||
+			xDelta <= MIN_RELATIVE_DELTA || yDelta <= MIN_RELATIVE_DELTA || zDelta <= MIN_RELATIVE_DELTA) {
+			var friendlyByteBuf = new FriendlyByteBuf(Unpooled.directBuffer());
+			friendlyByteBuf.writeVarInt(id);
+			friendlyByteBuf.writeDouble(location.getX() + xDelta);
+			friendlyByteBuf.writeDouble(location.getY() + yDelta);
+			friendlyByteBuf.writeDouble(location.getZ() + zDelta);
+			friendlyByteBuf.writeByte(newYaw);
+			friendlyByteBuf.writeByte(newPitch);
+			friendlyByteBuf.writeBoolean(onGround);
+
+			return new ClientboundTeleportEntityPacket(friendlyByteBuf);
+		} else {
+			short deltaX = (short) (xDelta * 4096d);
+			short deltaY = (short) (yDelta * 4096d);
+			short deltaZ = (short) (zDelta * 4096d);
+
+			if (yawDelta == 0 && pitchDelta == 0) {
+				return new ClientboundMoveEntityPacket.Pos(id, deltaX, deltaY, deltaZ, onGround);
+			} else if (deltaX == 0 && deltaY == 0 && deltaZ == 0) {
+				return new ClientboundMoveEntityPacket.Rot(id, newYaw, newPitch, onGround);
+			} else {
+				return new ClientboundMoveEntityPacket.PosRot(id, deltaX, deltaY, deltaZ, newYaw, newPitch, onGround);
+			}
+		}
+	}
+
+	public static Packet<?> createMovePacket(Entity entity, double xDelta, double yDelta, double zDelta,
+											 double yawDelta, double pitchDelta, boolean onGround) {
+		return createMovePacket(entity.getEntityId(), entity.getLocation(), xDelta, yDelta, zDelta, yawDelta, pitchDelta, onGround);
+	}
+
+	public static Packet<?> createMovePacket(PacketEntity entity, double xDelta, double yDelta, double zDelta,
+											 double yawDelta, double pitchDelta, boolean onGround) {
+		return createMovePacket(entity.getId(), entity.getLocation(), xDelta, yDelta, zDelta, yawDelta, pitchDelta, onGround);
+	}
 }

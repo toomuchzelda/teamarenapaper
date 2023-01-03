@@ -68,7 +68,7 @@ public class CommandKillStreak extends CustomCommand
 			return playerList;
 		}
 		else if(args.length == 3) {
-			KillStreak streak = Main.getGame().getKillStreakManager().getKillStreak(args[1]);
+			KillStreak streak = Main.getGame().getKillStreakManager().getKillStreak(args[0]);
 			if(streak != null && streak.isDeliveredByCrate()) {
 				return CustomCommand.BOOLEAN_SUGGESTIONS;
 			}

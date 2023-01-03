@@ -6,7 +6,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
-import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.FireworkEffect;
@@ -36,7 +35,7 @@ public class Crate
 {
 	// Amount of time after spawning the firework the crate block entity spawns and starts falling
 	private static final int CRATE_DELAY_TIME = 50;
-	private static final double FALL_DELTA = -2d;
+	private static final double FALL_DELTA = -1d;
 	private static final List<Component> USE_MSG = List.of(
 			ItemUtils.noItalics(Component.text("Right Click on the ground to summon", TextUtils.RIGHT_CLICK_TO)),
 			ItemUtils.noItalics(Component.text("this Killstreak to that location", TextUtils.RIGHT_CLICK_TO))
@@ -81,7 +80,7 @@ public class Crate
 
 	private Firework firework; // The firework used to summon this crate
 	private Parrot parrot; // Parrot riding the firework
-	private PacketEntity fallingBlock;
+	private FallingCrate fallingCrate;
 
 	private final int spawnTime;
 
@@ -129,7 +128,7 @@ public class Crate
 
 		final int diff = currentTick - this.spawnTime;
 		if(diff >= CRATE_DELAY_TIME) {
-			if(this.fallingBlock == null) {
+			if(this.fallingCrate == null) {
 				this.parrot.setHealth(0);
 				this.firework.detonate();
 
@@ -139,28 +138,35 @@ public class Crate
 				this.firework = null;
 
 				if(!this.isDone()) { // May be marked done by the above event call
-					Location spawnLoc = this.destination.clone().add(0, 150, 0);
 
-					this.fallingBlock = new PacketFallingCrate(spawnLoc);
-					this.fallingBlock.setBlockType(this.blockType.createBlockData());
+					this.fallingCrate = new FallingCrate(this.destination.clone().add(0, 64, 0),
+						Main.getPlayerInfo(owner).team.getDyeColour(),
+						blockType.createBlockData());
 
-					this.fallingBlock.respawn();
+					this.fallingCrate.spawn();
 				}
 			}
 
 			if(!this.isDone()) {
-				Location newLoc = this.fallingBlock.getLocation().add(0, FALL_DELTA, 0);
-				fallingBlock.move(newLoc);
-
-				if (newLoc.getY() <= this.destination.getY() && this.fallingBlock.isAlive()) {
-					fallingBlock.remove();
-					fallingBlock = null;
+				if (fallingCrate.getY() < destination.getY()) {
+					fallingCrate.despawn();
+					fallingCrate = null;
 
 					this.killStreaks.forEach(killStreak -> killStreak.onCrateLand(this.owner, this.destination));
 
-					newLoc.getWorld().playSound(newLoc, Sound.ENTITY_GENERIC_EXPLODE, 2f, 2f);
+					destination.getWorld().playSound(destination, Sound.ENTITY_GENERIC_EXPLODE, 1f, 2f);
 
 					done = true;
+				} else {
+					Vector velocity;
+					if (fallingCrate.getY() < destination.getY() + 16) {
+						velocity = new Vector(0, FALL_DELTA * 0.25, 0);
+						fallingCrate.spawnParachute();
+					} else {
+						velocity = new Vector(0, FALL_DELTA * 2, 0); // fall faster
+					}
+
+					fallingCrate.move(velocity, true);
 				}
 			}
 		}

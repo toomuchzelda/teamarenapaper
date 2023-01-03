@@ -37,6 +37,7 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
+import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -53,12 +54,19 @@ public class PlayerUtils {
 		}
     }
 
-    public static void sendPacket(Player player, Packet<?>... packets) {
-        ServerPlayer nmsPlayer = ((CraftPlayer) player).getHandle();
-        for (Packet<?> p : packets) {
-            nmsPlayer.connection.send(p);
-        }
-    }
+	public static void sendPacket(Player player, Packet<?>... packets) {
+		ServerPlayer nmsPlayer = ((CraftPlayer) player).getHandle();
+		for (Packet<?> p : packets) {
+			nmsPlayer.connection.send(p);
+		}
+	}
+
+	public static void sendPacket(Player player, Collection<? extends Packet<?>> packets) {
+		var connection = ((CraftPlayer) player).getHandle().connection;
+		for (Packet<?> p : packets) {
+			connection.send(p);
+		}
+	}
 
 	public static Vector noNonFinites(Vector vector) {
 		if(!Double.isFinite(vector.getX())) vector.setX(0d);
