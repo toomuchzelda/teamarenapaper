@@ -3,26 +3,18 @@ package me.toomuchzelda.teamarenapaper.teamarena.killstreak;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
-import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.teamarena.killstreak.crate.FallingCrate;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.TextUtils;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.FireworkEffect;
 import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Sound;
-import org.bukkit.enchantments.Enchantment;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.Parrot;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
-import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.Vector;
-
-import java.util.*;
 
 /**
  * Class to store data for a killstreak crate.
@@ -35,47 +27,26 @@ public class Crate
 {
 	// Amount of time after spawning the firework the crate block entity spawns and starts falling
 	private static final int CRATE_DELAY_TIME = 50;
-	private static final double FALL_DELTA = -1d;
-	private static final List<Component> USE_MSG = List.of(
-			ItemUtils.noItalics(Component.text("Right Click on the ground to summon", TextUtils.RIGHT_CLICK_TO)),
-			ItemUtils.noItalics(Component.text("this Killstreak to that location", TextUtils.RIGHT_CLICK_TO))
-	);
+	// Crates will fall for roughly 5 seconds
+	public static final int CRATE_TOTAL_FALL_TIME = 5 * 20;
+	private static final int CRATE_SPAWN_HEIGHT = 88;
+	private static final double SLOW_FALL_VELOCITY = -0.25;
+	private static final double FALL_VELOCITY = -2;
 
-	static final Map<ItemStack, KillStreak> crateItems = new HashMap<>();
+	public static final NamespacedKey KILLSTREAK_KEY = new NamespacedKey(Main.getPlugin(), "crate_killstreak");
 
 	// Should not be called for KillStreaks that are not crate-delivered.
-	public static ItemStack createCrateItem(KillStreak killStreak) {
-		ItemStack item = new ItemStack(killStreak.getCrateItemType());
-		ItemMeta meta = item.getItemMeta();
-
-		meta.displayName(ItemUtils.noItalics(
-				Component.text()
-						.append(Component.text("Summon ", NamedTextColor.LIGHT_PURPLE))
-						.append(killStreak.getComponentName())
-						//.append(Component.text(" crate", NamedTextColor.LIGHT_PURPLE))
-						.build()
-		));
-		List<Component> lore = new ArrayList<>(5);
-		lore.add(ItemUtils.noItalics(killStreak.getComponentName()));
-		lore.addAll(TextUtils.wrapString(killStreak.getDescription(), TextUtils.PLAIN_STYLE, TextUtils.DEFAULT_WIDTH));
-		lore.addAll(USE_MSG);
-
-		lore.add(Component.text(ItemUtils.getUniqueId())); // Add unique string to be able to track this in HashMap.
-
-		meta.lore(lore);
-		meta.addEnchant(Enchantment.DURABILITY, 1, true);
-
-		meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-
-		item.setItemMeta(meta);
-
-		crateItems.put(item, killStreak);
-		return item;
+	public static ItemStack createCrateItem(CratedKillStreak killStreak, Player player) {
+		ItemStack stack = killStreak.createCrateItem(player);
+		// thank you zelda, very cool
+		String codeName = killStreak.getName().replaceAll(" ", "");
+		// attach killstreak info
+		stack.editMeta(meta -> meta.getPersistentDataContainer().set(KILLSTREAK_KEY, PersistentDataType.STRING, codeName));
+		return stack;
 	}
 
 	private final Player owner;
-	private final Material blockType;
-	private final Set<KillStreak> killStreaks; // Killstreaks given to the player that opens it.
+	private final CratedKillStreak killStreak; // Killstreak given to the player that opens it.
 	private final Location destination; // Destination it needs to fall to.
 
 	private Firework firework; // The firework used to summon this crate
@@ -83,15 +54,15 @@ public class Crate
 	private FallingCrate fallingCrate;
 
 	private final int spawnTime;
+	private int crateFallTime;
 
 	private boolean done;
 
-	public Crate(Player owner, Material blockType, Location destination, KillStreak... killStreaks) {
+	public Crate(Player owner, Location destination, CratedKillStreak cratedKillStreak) {
 		this.owner = owner;
-		this.blockType = blockType;
 		this.destination = destination;
 
-		this.killStreaks = Set.of(killStreaks);
+		this.killStreak = cratedKillStreak;
 
 		this.spawnTime = TeamArena.getGameTick();
 
@@ -120,7 +91,7 @@ public class Crate
 
 		Main.getGame().getKillStreakManager().crateFireworks.add(this.firework);
 
-		this.killStreaks.forEach(killStreak -> killStreak.onCratePlace(this.owner, this.destination));
+		killStreak.onCratePlace(owner, destination);
 	}
 
 	void tick() {
@@ -132,41 +103,43 @@ public class Crate
 				this.parrot.setHealth(0);
 				this.firework.detonate();
 
-				this.killStreaks.forEach(killStreak -> killStreak.onFireworkFinish(this.owner, this.destination, this));
+				killStreak.onFireworkFinish(owner, destination, this);
 
 				this.parrot = null;
 				this.firework = null;
 
 				if(!this.isDone()) { // May be marked done by the above event call
 
-					this.fallingCrate = new FallingCrate(this.destination.clone().add(0, 64, 0),
-						Main.getPlayerInfo(owner).team.getDyeColour(),
-						blockType.createBlockData());
+					var payload = killStreak.getPayload(owner, destination);
+
+					this.fallingCrate = new FallingCrate(this.destination.clone().add(0, CRATE_SPAWN_HEIGHT, 0),
+						Main.getPlayerInfo(owner).team.getDyeColour(), payload);
 
 					this.fallingCrate.spawn();
+
+					crateFallTime = currentTick;
 				}
 			}
 
 			if(!this.isDone()) {
-				if (fallingCrate.getY() < destination.getY()) {
+				if (fallingCrate.getY() < destination.getY() - 0.5) {
 					fallingCrate.despawn();
 					fallingCrate = null;
 
-					this.killStreaks.forEach(killStreak -> killStreak.onCrateLand(this.owner, this.destination));
-
-					destination.getWorld().playSound(destination, Sound.ENTITY_GENERIC_EXPLODE, 1f, 2f);
+					killStreak.onCrateLand(owner, destination);
 
 					done = true;
 				} else {
 					Vector velocity;
 					if (fallingCrate.getY() < destination.getY() + 16) {
-						velocity = new Vector(0, FALL_DELTA * 0.25, 0);
+						velocity = new Vector(0, SLOW_FALL_VELOCITY, 0);
 						fallingCrate.spawnParachute();
 					} else {
-						velocity = new Vector(0, FALL_DELTA * 2, 0); // fall faster
+						velocity = new Vector(0, FALL_VELOCITY, 0); // fall faster
 					}
 
-					fallingCrate.move(velocity, true);
+					fallingCrate.move(velocity);
+					killStreak.onCrateTick(owner, destination, currentTick - crateFallTime);
 				}
 			}
 		}
