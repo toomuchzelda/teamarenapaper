@@ -66,6 +66,11 @@ public class HarbingerKillStreak extends CratedKillStreak
 	}
 
 	@Override
+	public boolean isPayloadFragile(Player player, Location destination) {
+		return false; // an explosive ordnance cannot be fragile, right?
+	}
+
+	@Override
 	public @NotNull ItemStack createCrateItem(Player player) {
 		return createSimpleCrateItem(Material.TNT);
 	}

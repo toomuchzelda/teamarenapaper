@@ -11,7 +11,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
@@ -83,11 +84,6 @@ public class KillStreakManager
 	 * When a player uses their crate call item, handle it and create the Crate instance that will fall to them.
 	 */
 	public void handleCrateItemUse(PlayerInteractEvent event) {
-		// First validate it's a good position to drop a crate.
-		if(event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
-		if(event.getBlockFace() != BlockFace.UP) return;
-		if(!event.getClickedBlock().getRelative(BlockFace.UP).getType().isAir()) return;
-
 		// Check for special ItemMeta
 		if (event.getItem() == null)
 			return;
@@ -100,19 +96,23 @@ public class KillStreakManager
 		if (killstreakName == null)
 			return;
 
+		event.setUseItemInHand(Event.Result.DENY);
+		event.setUseInteractedBlock(Event.Result.DENY);
+
+		// First validate it's a good position to drop a crate.
+		if(event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+		if(event.getBlockFace() != BlockFace.UP) return;
+		if(!event.getClickedBlock().getRelative(BlockFace.UP).getType().isAir()) return;
+
 		KillStreak streak = getKillStreak(killstreakName);
 		if (!(streak instanceof CratedKillStreak cratedStreak))
 			return;
 
-		event.setUseItemInHand(Event.Result.DENY);
-		event.setUseInteractedBlock(Event.Result.DENY);
-
 
 		// Decrement stack size by one
-		Inventory inventory = event.getPlayer().getInventory();
-		int index = inventory.first(event.getItem());
-		inventory.getItem(index).subtract();
-
+		PlayerInventory inventory = event.getPlayer().getInventory();
+		EquipmentSlot slot = Objects.requireNonNull(event.getHand());
+		inventory.setItem(slot, inventory.getItem(slot).subtract());
 		Crate crate = new Crate(event.getPlayer(),
 				event.getClickedBlock().getLocation().add(0.5d, 1d, 0.5d), cratedStreak);
 

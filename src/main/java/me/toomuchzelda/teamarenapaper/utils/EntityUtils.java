@@ -257,6 +257,23 @@ public class EntityUtils {
 	private static final double MAX_RELATIVE_DELTA = Short.MAX_VALUE / 4096d;
 	private static final double MIN_RELATIVE_DELTA = Short.MIN_VALUE / 4096d;
 
+	public static ClientboundTeleportEntityPacket createTeleportPacket(int id, double x, double y, double z,
+																	   double yaw, double pitch, boolean onGround) {
+
+		byte newYaw = (byte) (yaw * 256d / 360d);
+		byte newPitch = (byte) (pitch * 256d / 360d);
+		var friendlyByteBuf = new FriendlyByteBuf(Unpooled.directBuffer());
+		friendlyByteBuf.writeVarInt(id);
+		friendlyByteBuf.writeDouble(x);
+		friendlyByteBuf.writeDouble(y);
+		friendlyByteBuf.writeDouble(z);
+		friendlyByteBuf.writeByte(newYaw);
+		friendlyByteBuf.writeByte(newPitch);
+		friendlyByteBuf.writeBoolean(onGround);
+
+		return new ClientboundTeleportEntityPacket(friendlyByteBuf);
+	}
+
 	public static Packet<?> createMovePacket(int id, Location location, double xDelta, double yDelta, double zDelta,
 											 double yawDelta, double pitchDelta, boolean onGround) {
 		byte newYaw = (byte) ((location.getYaw() + yawDelta) * 256d / 360d);
@@ -264,6 +281,9 @@ public class EntityUtils {
 
 		if (xDelta >= MAX_RELATIVE_DELTA || yDelta >= MAX_RELATIVE_DELTA || zDelta >= MAX_RELATIVE_DELTA ||
 			xDelta <= MIN_RELATIVE_DELTA || yDelta <= MIN_RELATIVE_DELTA || zDelta <= MIN_RELATIVE_DELTA) {
+//			new Throwable("Teleporting EID %d because %.2f,%.2f,%.2f + %.2f,%.2f,%.2f exceeds 8 blocks".formatted(
+//				id, location.getX(), location.getY(), location.getZ(), xDelta, yDelta, zDelta
+//			)).printStackTrace();
 			var friendlyByteBuf = new FriendlyByteBuf(Unpooled.directBuffer());
 			friendlyByteBuf.writeVarInt(id);
 			friendlyByteBuf.writeDouble(location.getX() + xDelta);

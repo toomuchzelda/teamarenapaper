@@ -335,7 +335,7 @@ public class PacketEntity
 	/**
 	 * Spawn this if removed and mark as alive.
 	 */
-	public void respawn() {
+	public void respawn(boolean teleport) {
 		if(remove) {
 			throw new IllegalStateException("Cannot respawn PacketEntity that has been marked for removal");
 		}
@@ -345,8 +345,13 @@ public class PacketEntity
 				spawn(p);
 			}
 			this.isAlive = true;
-			this.move(this.getLocation(), true);
+			if (teleport)
+				this.move(this.getLocation(), true);
 		}
+	}
+
+	public void respawn() {
+		respawn(true);
 	}
 
 	/**

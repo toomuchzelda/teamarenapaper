@@ -27,8 +27,18 @@ public abstract class CratedKillStreak extends KillStreak {
 		super(name, description, color, item, abilities);
 	}
 
+	/**
+	 * Gets the payload of the crate.
+	 */
 	@NotNull
 	public abstract CratePayload getPayload(Player player, Location destination);
+
+	/**
+	 * Returns if the payload needs to be protected with a parachute.
+	 */
+	public boolean isPayloadFragile(Player player, Location destination) {
+		return true;
+	}
 
 	/**
 	 *

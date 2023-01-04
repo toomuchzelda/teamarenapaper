@@ -47,6 +47,7 @@ public class Crate
 
 	private final Player owner;
 	private final CratedKillStreak killStreak; // Killstreak given to the player that opens it.
+	private final boolean fragile;
 	private final Location destination; // Destination it needs to fall to.
 
 	private Firework firework; // The firework used to summon this crate
@@ -63,6 +64,7 @@ public class Crate
 		this.destination = destination;
 
 		this.killStreak = cratedKillStreak;
+		this.fragile = killStreak.isPayloadFragile(owner, destination);
 
 		this.spawnTime = TeamArena.getGameTick();
 
@@ -131,7 +133,7 @@ public class Crate
 					done = true;
 				} else {
 					Vector velocity;
-					if (fallingCrate.getY() < destination.getY() + 16) {
+					if (fragile && fallingCrate.getY() < destination.getY() + 16) {
 						velocity = new Vector(0, SLOW_FALL_VELOCITY, 0);
 						fallingCrate.spawnParachute();
 					} else {

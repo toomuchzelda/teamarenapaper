@@ -7,6 +7,7 @@ import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.DyeColor;
@@ -52,23 +53,29 @@ public class FallingCrate {
 		parachuteData = parachuteMaterial.createBlockData();
 	}
 
+	double delta = 2; // force sync on spawn
 	public void move(Vector offset) {
 		if (!spawned)
 			return;
 		double x = offset.getX();
 		double y = offset.getY();
 		double z = offset.getZ();
-		payload.sendMovePackets(new Location(null, 0, 0, 0),
-			crateLocation.getX() + x, crateLocation.getY() + y, crateLocation.getZ() + z);
+		boolean syncLocation = delta >= 2;
+		payload.sendMovePackets(crateLocation, x, y, z, syncLocation);
 		if (anchorOffset != null)
-			anchor.sendMovePackets(crateLocation, x, y, z);
+			anchor.sendMovePackets(crateLocation, x, y, z, syncLocation);
 		if (parachuteDeployed) {
 			for (var parachutePart : parachuteBlocks) {
-				parachutePart.sendMovePackets(crateLocation, x, y, z);
+				parachutePart.sendMovePackets(crateLocation, x, y, z, syncLocation);
 			}
 		}
 
 		crateLocation.add(offset);
+		if (delta >= 2) {
+			delta = offset.length();
+		} else {
+			delta += offset.length();
+		}
 	}
 
 	public void spawn() {
@@ -85,11 +92,13 @@ public class FallingCrate {
 			parachuteDeployed = true;
 
 			int baseLeashKnotId = anchor.entity.getId();
+			double yOffset = PARACHUTE_Y_OFFSET + (anchorOffset != null ? anchorOffset.getY() : 0);
 
 			// parachutes
 			for (int i = 0; i < 9; i++) {
 				boolean shouldShowRope = i != 4 && i % 2 == 0;
-				Vector offset = new Vector(i % 3 - 1, PARACHUTE_Y_OFFSET, i / 3 - 1);
+				//noinspection IntegerDivisionInFloatingPointContext
+				Vector offset = new Vector(i % 3 - 1, yOffset, i / 3 - 1);
 				// open at current location
 				PayloadBlock parachutePart = spawnBlock(crateLocation, offset, parachuteData, shouldShowRope, baseLeashKnotId);
 				parachuteBlocks.add(parachutePart);
@@ -197,7 +206,7 @@ public class FallingCrate {
 		Collection<? extends Player> viewers();
 		void spawn();
 		void despawn();
-		void sendMovePackets(Location location, double velocityX, double velocityY, double velocityZ);
+		void sendMovePackets(Location location, double velocityX, double velocityY, double velocityZ, boolean syncLocation);
 	}
 
 	static void broadcastPacket(Collection<? extends Player> viewers, PacketContainer packet) {
@@ -214,7 +223,7 @@ public class FallingCrate {
 
 		@Override
 		public void spawn() {
-			entity.respawn();
+			entity.respawn(false);
 		}
 
 		@Override
@@ -223,13 +232,20 @@ public class FallingCrate {
 		}
 
 		@Override
-		public void sendMovePackets(Location location, double velocityX, double velocityY, double velocityZ) {
-			var movePacket = EntityUtils.createMovePacket(entity.getId(), location.clone().add(offset),
-				velocityX, velocityY, velocityZ, 0, 0, false);
-			var velocityPacket = new ClientboundSetEntityMotionPacket(entity.getId(),
-				new Vec3(velocityX, velocityY, velocityZ));
+		public void sendMovePackets(Location location, double x, double y, double z, boolean syncLocation) {
+			List<Packet<?>> packets = new ArrayList<>();
+			if (syncLocation) {
+				Location actualLocation = location.clone().add(offset);
+				packets.add(EntityUtils.createTeleportPacket(entity.getId(),
+					actualLocation.getX() + x, actualLocation.getY() + y, actualLocation.getZ() + z, 0, 0, false));
+			} else {
+				packets.add(new ClientboundMoveEntityPacket.Pos(entity.getId(),
+					(short) (x * 4096), (short) (y * 4096), (short) (z * 4096), false));
+			}
+			packets.add(new ClientboundSetEntityMotionPacket(entity.getId(),
+				new Vec3(x, y, z)));
 			for (Player player : viewers()) {
-				PlayerUtils.sendPacket(player, movePacket, velocityPacket);
+				PlayerUtils.sendPacket(player, packets);
 			}
 		}
 	}
@@ -246,11 +262,11 @@ public class FallingCrate {
 
 		@Override
 		public void spawn() {
-			armorStand.respawn();
-			fallingBlock.respawn();
+			armorStand.respawn(false);
+			fallingBlock.respawn(false);
 			broadcastPacket(viewers(), mountPacket);
 			if (leashKnot != null) {
-				leashKnot.respawn();
+				leashKnot.respawn(false);
 				if (leashPacket != null) {
 					broadcastPacket(viewers(), leashPacket);
 				}
@@ -266,16 +282,29 @@ public class FallingCrate {
 		}
 
 		@Override
-		public void sendMovePackets(Location location, double velocityX, double velocityY, double velocityZ) {
+		public void sendMovePackets(Location location, double x, double y, double z, boolean syncLocation) {
 			Location actualLocation = location.clone().add(offset);
-			var vec3 = new Vec3(velocityX, velocityY, velocityZ);
+			var vec3 = new Vec3(x, y, z);
 			List<Packet<?>> packets = new ArrayList<>();
-			packets.add(EntityUtils.createMovePacket(armorStand.getId(), actualLocation,
-				velocityX, velocityY, velocityZ, 0, 0, false));
+			if (syncLocation) {
+				packets.add(EntityUtils.createTeleportPacket(armorStand.getId(),
+					actualLocation.getX() + x, actualLocation.getY() + y, actualLocation.getZ() + z,
+					0, 0, false));
+			} else {
+				packets.add(new ClientboundMoveEntityPacket.Pos(armorStand.getId(),
+					(short) (x * 4096), (short) (y * 4096), (short) (z * 4096), false));
+			}
 			packets.add(new ClientboundSetEntityMotionPacket(armorStand.getId(), vec3));
 			if (leashKnot != null) {
-				packets.add(EntityUtils.createMovePacket(leashKnot.getId(), actualLocation.add(0, LEASH_KNOT_Y_OFFSET, 0),
-					velocityX, velocityY, velocityZ, 0, 0, false));
+				if (syncLocation) {
+					actualLocation.add(0, LEASH_KNOT_Y_OFFSET, 0);
+					packets.add(EntityUtils.createTeleportPacket(leashKnot.getId(),
+						actualLocation.getX() + x, actualLocation.getY() + y, actualLocation.getZ() + z,
+						0, 0, false));
+				} else {
+					packets.add(new ClientboundMoveEntityPacket.Pos(leashKnot.getId(),
+						(short) (x * 4096), (short) (y * 4096), (short) (z * 4096), false));
+				}
 				packets.add(new ClientboundSetEntityMotionPacket(leashKnot.getId(), vec3));
 			}
 
@@ -307,8 +336,8 @@ public class FallingCrate {
 		}
 
 		@Override
-		public void sendMovePackets(Location location, double velocityX, double velocityY, double velocityZ) {
-			payload.forEach(payload -> payload.sendMovePackets(location, velocityX, velocityY, velocityZ));
+		public void sendMovePackets(Location location, double velocityX, double velocityY, double velocityZ, boolean syncLocation) {
+			payload.forEach(payload -> payload.sendMovePackets(location, velocityX, velocityY, velocityZ, syncLocation));
 		}
 	}
 
