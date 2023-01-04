@@ -672,10 +672,11 @@ public class PacketListeners
 		Component nmsComponent = entry.displayName();
 		WrappedChatComponent wrappedComponent = null;
 		if(nmsComponent != null)
-			WrappedChatComponent.fromHandle(nmsComponent);
+			wrappedComponent = WrappedChatComponent.fromHandle(nmsComponent);
 
 		return new PlayerInfoData(entry.profileId(), entry.latency(), entry.listed(),
-				nativeGameMode, wrappedGameProfile, wrappedComponent, stripChat ? null : new WrappedProfilePublicKey.WrappedProfileKeyData(entry.chatSession()));
+				nativeGameMode, wrappedGameProfile, wrappedComponent,
+				stripChat ? null : new WrappedProfilePublicKey.WrappedProfileKeyData(entry.chatSession()));
 	}
 
 	public static EnumWrappers.NativeGameMode getNativeGameMode(GameType nmsType) {
