@@ -31,7 +31,7 @@ public class FakeHitbox
 	//index is the fake player number 0-3
 	private static final Vector[] OFFSETS;
 	//metadata to make them invisible
-	private static final List<WrappedWatchableObject> METADATA;
+	private static final List<WrappedDataValue> METADATA;
 	public static final String USERNAME = "zzzzzz";
 	public static final Component DONT_MIND_ME = Component.text("don't mind me");
 	public static final double VIEWING_RADIUS = 17d;
@@ -47,9 +47,7 @@ public class FakeHitbox
 			}
 		}
 
-		WrappedDataWatcher watcher = new WrappedDataWatcher();
-		watcher.setObject(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK);
-		METADATA = watcher.getWatchableObjects();
+		METADATA = List.of(MetaIndex.newValue(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK));
 	}
 
 	private final List<PlayerInfoData> playerInfoEntries;
@@ -114,7 +112,8 @@ public class FakeHitbox
 
 			PacketContainer metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
 			metadataPacket.getIntegers().write(0, fPlayer.entityId);
-			metadataPacket.getWatchableCollectionModifier().write(0, METADATA);
+			//metadataPacket.getWatchableCollectionModifier().write(0, METADATA);
+			metadataPacket.getDataValueCollectionModifier().write(0, METADATA);
 			metadataPackets[i] = metadataPacket;
 			spawnAndMetaPackets[i + 4] = metadataPacket;
 

@@ -2,19 +2,21 @@ package me.toomuchzelda.teamarenapaper.metadata;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.reflect.StructureModifier;
+import com.comphenix.protocol.wrappers.WrappedDataValue;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Class that allows modifying the entity metadata of an entity as seen by the player (viewer).
@@ -273,7 +275,10 @@ public class MetadataViewer
 			modifiedData = originalData;
 		}
 
-		metadataPacket.getWatchableCollectionModifier().write(0, modifiedData.getWatchableObjects());
+		// TODO: band-aid fix
+		//metadataPacket.getWatchableCollectionModifier().write(0, modifiedData.getWatchableObjects());
+		metadataPacket.getDataValueCollectionModifier().write(0,
+				MetaIndex.getFromWatchableObjectsList(modifiedData.getWatchableObjects()));
 		PlayerUtils.sendPacket(this.player, metadataPacket);
 	}
 
@@ -284,49 +289,47 @@ public class MetadataViewer
 	 */
 	public PacketContainer adjustMetadataPacket(@NotNull PacketContainer metadataPacket) {
 		int id = metadataPacket.getIntegers().read(0);
-		return metadataPacket;
-
 		//don't construct a new datawatcher and packet if it's not needed
-		/*if(this.hasMetadataFor(id)) {
-
-			//MUST use a new packet. Without this modifications to the packet are seen by unintended viewers.
-			// I think protocollib is re-using the same Packet for many players. So create a new one anytime
+		if(this.hasMetadataFor(id)) {
+			//MUST use a new packet. Without this, modifications to the packet are seen by unintended viewers.
+			// I think protocollib is re-using the same Packet instance for many players. So create a new one anytime
 			// there are any modifications.
 			PacketContainer newPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
 			newPacket.getIntegers().write(0, id);
 
-			WrappedDataWatcher watcher = new WrappedDataWatcher();
-			WrappedWatchableObject obj;
-			MetadataValue value;
-			ListIterator<WrappedWatchableObject> iter = metadataPacket.getWatchableCollectionModifier().read(0).listIterator();
-			while (iter.hasNext()) {
-				obj = iter.next();
-
-				value = this.getViewedValue(id, obj.getIndex());
+			ArrayList<WrappedDataValue> dataValues = new ArrayList<>(metadataPacket.getDataValueCollectionModifier().read(0));
+			//ListIterator<WrappedWatchableObject> iter = metadataPacket.getWatchableCollectionModifier().read(0).listIterator();
+			for (int i = 0; i < dataValues.size(); i++) {
+			//while (iter.hasNext()) {
+				WrappedDataValue dataVal = dataValues.get(i);
+				MetadataValue value = this.getViewedValue(id, dataVal.getIndex());
 				if (value != null) {
 					//new watcher object to put into packet. Copy the properties of the old obj
 					Object newValue;
 					if (value instanceof MetadataBitfieldValue bitField) {
-						newValue = bitField.combine((Byte) obj.getValue());
+						newValue = bitField.combine((Byte) dataVal.getValue());
 					}
 					else {
 						newValue = value.getValue();
 					}
 
-					watcher.setObject(obj.getWatcherObject(), newValue);
+					dataVal.setValue(newValue);
+					//watcher.setObject(dataVal.getWatcherObject(), newValue);
+					//watcher.setObject(MetaIndex.);
 				}
-				else {
-					watcher.setObject(obj.getWatcherObject(), obj.getValue());
-				}
+				//else {
+				//	watcher.setObject(dataVal.getWatcherObject(), dataVal.getValue());
+				//}
 			}
 
-			newPacket.getWatchableCollectionModifier().write(0, watcher.getWatchableObjects());
+			//newPacket.getWatchableCollectionModifier().write(0, watcher.getWatchableObjects());
+			newPacket.getDataValueCollectionModifier().write(0, dataValues);
 
 			return newPacket;
 		}
 		else {
 			return metadataPacket;
-		}*/
+		}
 	}
 
 	public Player getViewer() {

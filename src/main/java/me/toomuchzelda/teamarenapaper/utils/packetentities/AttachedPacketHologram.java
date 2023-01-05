@@ -17,12 +17,15 @@ public class AttachedPacketHologram extends AttachedPacketEntity
 		super(Main.getPlayerInfo(player).statusIndicatorId, EntityType.ARMOR_STAND, player, viewers, viewerRule, selfSee, false);
 
 		//setup the metadata
-		this.data.setObject(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK);
+		//this.data.setObject(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK);
+		this.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK);
 
 		this.setText(text, false);
-		this.data.setObject(MetaIndex.CUSTOM_NAME_VISIBLE_OBJ, Boolean.TRUE);
+		//this.data.setObject(MetaIndex.CUSTOM_NAME_VISIBLE_OBJ, Boolean.TRUE);
+		this.setMetadata(MetaIndex.CUSTOM_NAME_VISIBLE_OBJ, Boolean.TRUE);
 
-		this.data.setObject(MetaIndex.ARMOR_STAND_BITFIELD_OBJ, MetaIndex.ARMOR_STAND_MARKER_MASK);
+		//this.data.setObject(MetaIndex.ARMOR_STAND_BITFIELD_OBJ, MetaIndex.ARMOR_STAND_MARKER_MASK);
+		this.setMetadata(MetaIndex.ARMOR_STAND_BITFIELD_OBJ, MetaIndex.ARMOR_STAND_MARKER_MASK);
 
 		this.updateMetadataPacket();
 	}

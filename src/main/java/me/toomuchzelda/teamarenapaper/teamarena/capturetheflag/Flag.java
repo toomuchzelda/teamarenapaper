@@ -29,6 +29,7 @@ import org.bukkit.util.BoundingBox;
 import org.bukkit.util.EulerAngle;
 
 import java.util.Comparator;
+import java.util.List;
 
 public class Flag
 {
@@ -166,11 +167,11 @@ public class Flag
 		//entity id
 		metadataPacket.getIntegers().write(0, stand.getEntityId());
 
-		WrappedDataWatcher data = WrappedDataWatcher.getEntityWatcher(stand).deepClone();
+		//WrappedDataWatcher data = WrappedDataWatcher.getEntityWatcher(stand).deepClone();
+		//data.setObject(MetaIndex.ARMOR_STAND_BITFIELD_OBJ, MetaIndex.ARMOR_STAND_MARKER_MASK);
+		//metadataPacket.getWatchableCollectionModifier().write(0, data.getWatchableObjects());
 
-		data.setObject(MetaIndex.ARMOR_STAND_BITFIELD_OBJ, MetaIndex.ARMOR_STAND_MARKER_MASK);
-
-		metadataPacket.getWatchableCollectionModifier().write(0, data.getWatchableObjects());
+		metadataPacket.getDataValueCollectionModifier().write(0, List.of(MetaIndex.newValue(MetaIndex.ARMOR_STAND_BITFIELD_OBJ, MetaIndex.ARMOR_STAND_MARKER_MASK)));
 
 		return metadataPacket;
 	}

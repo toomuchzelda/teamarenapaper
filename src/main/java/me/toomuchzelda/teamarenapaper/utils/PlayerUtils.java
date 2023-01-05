@@ -3,6 +3,8 @@ package me.toomuchzelda.teamarenapaper.utils;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
+import com.comphenix.protocol.wrappers.WrappedDataValue;
+import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import me.toomuchzelda.teamarenapaper.Main;
@@ -36,6 +38,7 @@ import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 
 public class PlayerUtils {
@@ -43,10 +46,45 @@ public class PlayerUtils {
 		sendPacket(player, false, packets);
 	}
 
+
+	// TODO figure out where this method is being called that is passing problematic metadata packets
 	public static void sendPacket(Player player, boolean triggerPacketListeners, PacketContainer... packets) {
 		for (PacketContainer packet : packets) {
-			if(packet.getType() != PacketType.Play.Server.ENTITY_METADATA)
-				ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet, triggerPacketListeners);
+			if(packet.getType() == PacketType.Play.Server.ENTITY_METADATA) {
+				StringBuilder s = new StringBuilder();
+				s.append("Metadata Packet for " + player.getName() + "\n\n");
+
+				List<WrappedWatchableObject> watchableObjects = null;
+				try {
+					watchableObjects = packet.getWatchableCollectionModifier().read(0);
+				}
+				catch(Exception ignored) {}
+
+				s.append("WatchableObjects: ");
+				if (watchableObjects != null) {
+					s.append(watchableObjects.toString());
+				}
+				else {
+					s.append("null");
+				}
+				s.append("\n\n");
+
+				List<WrappedDataValue> dataValues = packet.getDataValueCollectionModifier().read(0);
+				s.append("DataValues: ");
+				if (dataValues != null) {
+					s.append(dataValues.toString());
+				}
+				else {
+					s.append("null");
+				}
+				s.append("\n\n");
+
+				Main.logger().info(s.toString());
+
+				Thread.dumpStack();
+			}
+
+			ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet, triggerPacketListeners);
 		}
     }
 

@@ -647,7 +647,6 @@ public class PacketListeners
 		@Override
 		public void onPacketReceiving(PacketEvent event) {
 			var packet = event.getPacket();
-			var player = event.getPlayer();
 
 			if (packet.getType() == PacketType.Play.Client.CHAT ||
 					packet.getType() == PacketType.Play.Client.CHAT_COMMAND) {

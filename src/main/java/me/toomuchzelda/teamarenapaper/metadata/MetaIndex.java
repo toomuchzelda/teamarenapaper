@@ -3,8 +3,11 @@ package me.toomuchzelda.teamarenapaper.metadata;
 import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.comphenix.protocol.wrappers.WrappedDataValue;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
+import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 /**
  * Values used by Entity metadata. May change with each Minecraft version.
@@ -84,5 +87,22 @@ public class MetaIndex
 
 	public static WrappedDataValue copyValue(WrappedDataValue original) {
 		return new WrappedDataValue(original.getIndex(), original.getSerializer(), original.getValue());
+	}
+
+	public static WrappedDataValue newValue(WrappedDataWatcher.WrappedDataWatcherObject index, Object value) {
+		return new WrappedDataValue(index.getIndex(), index.getSerializer(), value);
+	}
+
+	public static WrappedDataValue fromWatchableObject(WrappedWatchableObject object) {
+		return new WrappedDataValue(object.getIndex(), object.getWatcherObject().getSerializer(), object.getValue());
+	}
+
+	public static List<WrappedDataValue> getFromWatchableObjectsList(List<WrappedWatchableObject> watchableObjects) {
+		List<WrappedDataValue> dataValues = new ArrayList<>(watchableObjects.size());
+		watchableObjects.forEach(wrappedWatchableObject -> {
+			dataValues.add(fromWatchableObject(wrappedWatchableObject));
+		});
+
+		return dataValues;
 	}
 }
