@@ -961,8 +961,11 @@ public class EventListeners implements Listener
 	/** Set all MetadataViewer values to dirty upon an entity leaving player's view */
 	@EventHandler
 	public void playerUntrackEntity(PlayerUntrackEntityEvent event) {
-		MetadataViewer metadataViewer = Main.getPlayerInfo(event.getPlayer()).getMetadataViewer();
-		metadataViewer.setAllDirty(event.getEntity());
+		PlayerInfo pinfo = Main.getPlayerInfo(event.getPlayer());
+		if(pinfo != null) { // pinfo will be null if the event was fired because the player quit
+			MetadataViewer metadataViewer = pinfo.getMetadataViewer();
+			metadataViewer.setAllDirty(event.getEntity());
+		}
 	}
 
 	@EventHandler

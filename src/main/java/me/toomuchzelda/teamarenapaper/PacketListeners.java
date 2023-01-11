@@ -305,16 +305,13 @@ public class PacketListeners
 						EnumWrappers.NativeGameMode nativeGameMode = getNativeGameMode(entry.gameMode());
 						WrappedChatComponent wrappedDisplayName = WrappedChatComponent.fromHandle(entry.displayName());
 						if(addPlayer) {
-							// The playerinfo data with the disguised player's UUID but
+							// The playerinfodata with the disguised player's UUID but
 							// the disguise target's skin
-							//PlayerInfoData replacementData = new PlayerInfoData(disguise.disguisedPlayer.getUniqueId(),
-							//		entry.latency(), false, nativeGameMode,
-							//		WrappedGameProfile.fromHandle(disguise.disguisedGameProfile),
-							//		WrappedChatComponent.fromHandle(entry.displayName()), null);
-
+							// not listed
 							PlayerInfoData replacementData = new PlayerInfoData(
-									WrappedGameProfile.fromHandle(disguise.disguisedGameProfile),
-									entry.latency(), nativeGameMode, WrappedChatComponent.fromHandle(entry.displayName()), null);
+								disguise.disguisedGameProfile.getId(), entry.latency(), false,
+								nativeGameMode, WrappedGameProfile.fromHandle(disguise.disguisedGameProfile),
+								WrappedChatComponent.fromHandle(entry.displayName()), null);
 
 							newList.set(originalIndex, replacementData);
 
