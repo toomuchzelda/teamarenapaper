@@ -352,7 +352,6 @@ public class SearchAndDestroy extends TeamArena
 	private void administerInstantFuse(final Player player, boolean give) {
 		List<ItemStack> playersFuses = ItemUtils.getItemsInInventory(BASE_FUSE.getType(), player.getInventory());
 
-		// TODO give the fuses with setFuseEnchantLevel and test that method thoroughly
 		final int kitFuseLevel = Main.getPlayerInfo(player).activeKit.getFuseEnchantmentLevel();
 		if(give) {
 			playersFuses.forEach(fuse -> setFuseEnchantmentLevel(fuse, 10));

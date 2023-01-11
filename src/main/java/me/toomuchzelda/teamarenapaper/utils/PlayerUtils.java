@@ -47,43 +47,8 @@ public class PlayerUtils {
 	}
 
 
-	// TODO figure out where this method is being called that is passing problematic metadata packets
 	public static void sendPacket(Player player, boolean triggerPacketListeners, PacketContainer... packets) {
 		for (PacketContainer packet : packets) {
-			if(packet.getType() == PacketType.Play.Server.ENTITY_METADATA) {
-				StringBuilder s = new StringBuilder();
-				s.append("Metadata Packet for " + player.getName() + "\n\n");
-
-				List<WrappedWatchableObject> watchableObjects = null;
-				try {
-					watchableObjects = packet.getWatchableCollectionModifier().read(0);
-				}
-				catch(Exception ignored) {}
-
-				s.append("WatchableObjects: ");
-				if (watchableObjects != null) {
-					s.append(watchableObjects.toString());
-				}
-				else {
-					s.append("null");
-				}
-				s.append("\n\n");
-
-				List<WrappedDataValue> dataValues = packet.getDataValueCollectionModifier().read(0);
-				s.append("DataValues: ");
-				if (dataValues != null) {
-					s.append(dataValues.toString());
-				}
-				else {
-					s.append("null");
-				}
-				s.append("\n\n");
-
-				Main.logger().info(s.toString());
-
-				Thread.dumpStack();
-			}
-
 			ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet, triggerPacketListeners);
 		}
     }

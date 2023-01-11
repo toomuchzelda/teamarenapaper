@@ -452,10 +452,6 @@ public class DamageEvent {
 				String errString = error.toString();
 				Main.logger().warning(errString);
 
-				//TODO: don't broadcast in production
-				//Component errorComp = Component.text(errString, NamedTextColor.YELLOW);
-				//Bukkit.broadcast(errorComp);
-
 				finalDamage = 0;
 			}
 

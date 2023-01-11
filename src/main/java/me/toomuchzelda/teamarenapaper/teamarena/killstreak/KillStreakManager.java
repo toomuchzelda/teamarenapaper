@@ -34,7 +34,6 @@ public class KillStreakManager
 		this.allKillstreaks = new LinkedHashMap<>();
 		this.killstreaksByKills = new HashMap<>();
 
-		// TODO construst and put the killstreaks here
 		// KillStreak map keys must not have spaces in them
 		addKillStreak(2, new CompassKillStreak());
 		addKillStreak(4, new WolvesKillStreak());
