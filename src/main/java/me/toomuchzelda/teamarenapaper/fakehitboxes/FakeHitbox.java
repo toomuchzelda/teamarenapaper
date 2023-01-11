@@ -87,14 +87,12 @@ public class FakeHitbox
 
 			GameProfile authLibProfile = new GameProfile(fPlayer.uuid, USERNAME);
 			//Component displayNameComp = getDisplayNameComponent();
-			Component displayNameComp = Component.text(fPlayer.uuid.toString());
+			Component displayNameComp = Component.text(owner.getName() + i);
 			net.minecraft.network.chat.Component nmsComponent = PaperAdventure.asVanilla(displayNameComp);
 
-			PlayerInfoData wrappedEntry = new PlayerInfoData(WrappedGameProfile.fromHandle(authLibProfile), 1,
-					EnumWrappers.NativeGameMode.SURVIVAL, WrappedChatComponent.fromHandle(nmsComponent));
-
-			//ClientboundPlayerInfoPacket.PlayerUpdate update = new ClientboundPlayerInfoPacket.PlayerUpdate(authLibProfile, 1,
-			//		GameType.SURVIVAL, nmsComponent, null);
+			// Unlisted playerinfo entry.
+			PlayerInfoData wrappedEntry = new PlayerInfoData(fPlayer.uuid, 1, false, EnumWrappers.NativeGameMode.SURVIVAL,
+				WrappedGameProfile.fromHandle(authLibProfile), WrappedChatComponent.fromHandle(nmsComponent), null);
 
 			playerUpdates.add(wrappedEntry);
 
@@ -356,12 +354,8 @@ public class FakeHitbox
 	}
 
 	public @Nullable PacketContainer[] createPoseMetadataPackets(PacketContainer packet) {
-		//List<WrappedWatchableObject> objects = packet.getWatchableCollectionModifier().read(0);
-		// TODO
-		/*List<WrappedDataValue> objects = packet.getDataValueCollectionModifier().read(0);
-
 		PacketContainer[] newPackets = null;
-		for (WrappedDataValue dataValue : objects) {
+		for (WrappedDataValue dataValue : packet.getDataValueCollectionModifier().read(0)) {
 			if (dataValue.getIndex() == MetaIndex.POSE_IDX) { //if the metadata has pose
 				//Pose pose = (Pose) dataValue.getValue();
 				newPackets = new PacketContainer[4];
@@ -375,9 +369,9 @@ public class FakeHitbox
 
 				break;
 			}
-		}*/
+		}
 
-		return null; //newPackets;
+		return newPackets;
 	}
 
 	public PacketContainer getRemoveEntitiesPacket() {
