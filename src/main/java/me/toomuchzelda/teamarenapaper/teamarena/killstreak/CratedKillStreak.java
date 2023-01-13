@@ -23,8 +23,19 @@ import java.util.List;
  * A {@link KillStreak} that is delivered by a crate.
  */
 public abstract class CratedKillStreak extends KillStreak {
-	CratedKillStreak(String name, String description, TextColor color, ItemStack item, Ability... abilities) {
+
+	private static final List<Component> USE_MSG = List.of(
+		Component.text("Right Click on the ground to summon", TextUtils.RIGHT_CLICK_TO),
+		Component.text("this Killstreak to that location", TextUtils.RIGHT_CLICK_TO)
+	);
+
+	private final ItemStack crateSummonItem;
+
+	CratedKillStreak(String name, String description, TextColor color, ItemStack item, Material crateSummonItemMaterial,
+					 Ability... abilities) {
+
 		super(name, description, color, item, abilities);
+		this.crateSummonItem = this.createCrateItem(crateSummonItemMaterial);
 	}
 
 	/**
@@ -40,21 +51,11 @@ public abstract class CratedKillStreak extends KillStreak {
 		return true;
 	}
 
-	/**
-	 *
-	 * @implNote Implementations are not required to make the {@link ItemStack} "unique".
-	 */
-	@NotNull
-	public ItemStack createCrateItem(Player player) {
-		return createSimpleCrateItem(Material.COMMAND_BLOCK); // placeholder
+	public ItemStack getCrateItem() {
+		return this.crateSummonItem.clone();
 	}
 
-
-	private static final List<Component> USE_MSG = List.of(
-		Component.text("Right Click on the ground to summon", TextUtils.RIGHT_CLICK_TO),
-		Component.text("this Killstreak to that location", TextUtils.RIGHT_CLICK_TO)
-	);
-	protected final ItemStack createSimpleCrateItem(Material material) {
+	private final ItemStack createCrateItem(Material material) {
 		List<Component> lore = new ArrayList<>(5);
 		lore.add(getComponentName());
 		lore.addAll(TextUtils.wrapString(getDescription(), TextUtils.PLAIN_STYLE, TextUtils.DEFAULT_WIDTH));

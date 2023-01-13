@@ -25,6 +25,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Wolf;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 
@@ -44,12 +45,7 @@ public class WolvesKillStreak extends CratedKillStreak
 
 	WolvesKillStreak() {
 		super("Attack wolves", "A pack of wolves that will follow at your command and chew up enemies", color, null,
-				new WolvesAbility());
-	}
-
-	@Override
-	public @NotNull ItemStack createCrateItem(Player player) {
-		return createSimpleCrateItem(Material.WOLF_SPAWN_EGG);
+				Material.WOLF_SPAWN_EGG, new WolvesAbility());
 	}
 
 	@Override
@@ -137,6 +133,29 @@ public class WolvesKillStreak extends CratedKillStreak
 			if(master == null) return;
 			if(Main.getPlayerInfo(master).team.hasMember(event.getFinalAttacker())) {
 				event.setCancelled(true);
+
+				// If a teammate punched it with rotten flesh then fake the eating effect: play hearts and decrement ItemStack
+				if(event.getFinalAttacker() instanceof Player feeder) {
+					if(feeder.getEquipment().getItemInMainHand().getType() == Material.ROTTEN_FLESH) {
+						World world = event.getVictim().getWorld();
+						final Location baseLoc = event.getVictim().getLocation();
+						for(int i = 0; i < 4; i++) {
+							Location heartLoc = baseLoc.clone().add(
+								MathUtils.randomRange(-1d, 1d),
+								MathUtils.randomRange(0.7d, 1d),
+								MathUtils.randomRange(-1d, 1d)
+							);
+
+							world.spawnParticle(Particle.HEART, heartLoc, 1);
+						}
+
+						world.playSound(event.getVictim(), Sound.ENTITY_WOLF_AMBIENT, 1f, 1f);
+
+						PlayerInventory inventory = feeder.getInventory();
+						int slot = inventory.first(Material.ROTTEN_FLESH);
+						inventory.setItem(slot, inventory.getItem(slot).subtract());
+					}
+				}
 			}
 		}
 

@@ -1,7 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.teamarena.killstreak.Crate;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.CratedKillStreak;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.KillStreak;
 import net.kyori.adventure.text.Component;
@@ -34,21 +33,24 @@ public class CommandKillStreak extends CustomCommand
 		String ksArg = args[0];
 		KillStreak streak = Main.getGame().getKillStreakManager().getKillStreak(ksArg);
 		if(streak == null) {
-			throw new IllegalArgumentException("Unknown killstreak " + ksArg);
+			throw new CommandException("Unknown killstreak " + ksArg);
 		}
 
 		String playerName = args[1];
 		Player player = Bukkit.getPlayer(playerName);
 		if(player == null) {
-			throw new IllegalArgumentException("Unknown player " + playerName);
+			throw new CommandException("Unknown player " + playerName);
 		}
 
 		if (args.length >= 3) {
-			if (Boolean.parseBoolean(args[2]) && streak instanceof CratedKillStreak cratedKillStreak) {
-				player.getInventory().addItem(Crate.createCrateItem(cratedKillStreak, player));
-				return;
-			} else {
-				throw new IllegalArgumentException(streak.getName() + " cannot be delivered in a crate");
+			if (Boolean.parseBoolean(args[2])) {
+				if (streak instanceof CratedKillStreak cratedKillStreak) {
+					player.getInventory().addItem(cratedKillStreak.getCrateItem());
+					return;
+				}
+				else {
+					throw new CommandException(streak.getName() + " cannot be delivered in a crate");
+				}
 			}
 		}
 

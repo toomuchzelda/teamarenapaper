@@ -18,7 +18,6 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
@@ -35,7 +34,7 @@ public class HarbingerKillStreak extends CratedKillStreak
 	private static final double WARNING_DIST_SQR = 22d * 22d;
 
 	HarbingerKillStreak() {
-		super("Harbinger", "Rain hellish destruction on your enemies", color, null, new HarbingerAbility());
+		super("Harbinger", "Rain hellish destruction on your enemies", color, null, Material.TNT, new HarbingerAbility());
 	}
 
 	private static final Map<Player, Location> crateLocs = new HashMap<>();
@@ -67,11 +66,6 @@ public class HarbingerKillStreak extends CratedKillStreak
 	@Override
 	public boolean isPayloadFragile(Player player, Location destination) {
 		return false; // an explosive ordnance cannot be fragile, right?
-	}
-
-	@Override
-	public @NotNull ItemStack createCrateItem(Player player) {
-		return createSimpleCrateItem(Material.TNT);
 	}
 
 	@Override

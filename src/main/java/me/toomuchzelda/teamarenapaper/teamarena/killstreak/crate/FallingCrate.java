@@ -3,13 +3,8 @@ package me.toomuchzelda.teamarenapaper.teamarena.killstreak.crate;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
-import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
-import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
-import net.minecraft.world.phys.Vec3;
 import org.bukkit.DyeColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -17,7 +12,6 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -27,10 +21,11 @@ import java.util.Objects;
 
 public class FallingCrate {
 	private static final double LEASH_KNOT_Y_OFFSET = -0.7 * 0.92; // chicken eye location
+	private static final int PARACHUTE_Y_OFFSET = 5;
 
-	private Location crateLocation;
+	private final Location crateLocation;
 	private final PayloadSpawner payload;
-	@NotNull
+
 	private PayloadEntity anchor;
 	// null indicates that the anchor will not be moved
 	@Nullable
@@ -53,29 +48,22 @@ public class FallingCrate {
 		parachuteData = parachuteMaterial.createBlockData();
 	}
 
-	double delta = 2; // force sync on spawn
 	public void move(Vector offset) {
 		if (!spawned)
 			return;
 		double x = offset.getX();
 		double y = offset.getY();
 		double z = offset.getZ();
-		boolean syncLocation = delta >= 2;
-		payload.sendMovePackets(crateLocation, x, y, z, syncLocation);
+		payload.move(crateLocation, x, y, z);
 		if (anchorOffset != null)
-			anchor.sendMovePackets(crateLocation, x, y, z, syncLocation);
+			anchor.move(crateLocation, x, y, z);
 		if (parachuteDeployed) {
-			for (var parachutePart : parachuteBlocks) {
-				parachutePart.sendMovePackets(crateLocation, x, y, z, syncLocation);
+			for (PayloadBlock parachutePart : parachuteBlocks) {
+				parachutePart.move(crateLocation, x, y, z);
 			}
 		}
 
 		crateLocation.add(offset);
-		if (delta >= 2) {
-			delta = offset.length();
-		} else {
-			delta += offset.length();
-		}
 	}
 
 	public void spawn() {
@@ -86,7 +74,6 @@ public class FallingCrate {
 		}
 	}
 
-	private static final int PARACHUTE_Y_OFFSET = 5;
 	public void spawnParachute() {
 		if (!parachuteDeployed) {
 			parachuteDeployed = true;
@@ -129,7 +116,7 @@ public class FallingCrate {
 
 	private PacketEntity spawnLeashKnot(Location location) {
 		// animal abuse is the only constant in team arena
-		var leashKnot = new PacketEntity(PacketEntity.NEW_ID, EntityType.CHICKEN,
+		PacketEntity leashKnot = new PacketEntity(PacketEntity.NEW_ID, EntityType.CHICKEN,
 			location.clone().add(0, LEASH_KNOT_Y_OFFSET, 0), null, PacketEntity.VISIBLE_TO_ALL);
 		leashKnot.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK);
 		leashKnot.updateMetadataPacket();
@@ -180,7 +167,7 @@ public class FallingCrate {
 			anchorOffset = new Vector(0, 1, 0);
 			return spawnBlock(crateLocation, new Vector(), simpleBlock.blockData(), false, 0);
 		} else if (cratePayload instanceof CratePayload.SimpleEntity simpleEntity) {
-			var entity = spawnEntity(crateLocation, new Vector(), simpleEntity.entityType());
+			PayloadEntity entity = spawnEntity(crateLocation, new Vector(), simpleEntity.entityType());
 			anchor = entity;
 			return entity;
 		} else if (cratePayload instanceof CratePayload.Group group) {
@@ -206,13 +193,8 @@ public class FallingCrate {
 		Collection<? extends Player> viewers();
 		void spawn();
 		void despawn();
-		void sendMovePackets(Location location, double velocityX, double velocityY, double velocityZ, boolean syncLocation);
-	}
 
-	static void broadcastPacket(Collection<? extends Player> viewers, PacketContainer packet) {
-		for (Player player : viewers) {
-			PlayerUtils.sendPacket(player, packet);
-		}
+		void move(Location location, double xOffset, double yOffset, double zOffset);
 	}
 
 	private record PayloadEntity(PacketEntity entity, Vector offset) implements PayloadSpawner {
@@ -223,7 +205,7 @@ public class FallingCrate {
 
 		@Override
 		public void spawn() {
-			entity.respawn(false);
+			entity.respawn();
 		}
 
 		@Override
@@ -232,21 +214,8 @@ public class FallingCrate {
 		}
 
 		@Override
-		public void sendMovePackets(Location location, double x, double y, double z, boolean syncLocation) {
-			List<Packet<?>> packets = new ArrayList<>();
-			if (syncLocation) {
-				Location actualLocation = location.clone().add(offset);
-				packets.add(EntityUtils.createTeleportPacket(entity.getId(),
-					actualLocation.getX() + x, actualLocation.getY() + y, actualLocation.getZ() + z, 0, 0, false));
-			} else {
-				packets.add(new ClientboundMoveEntityPacket.Pos(entity.getId(),
-					(short) (x * 4096), (short) (y * 4096), (short) (z * 4096), false));
-			}
-			packets.add(new ClientboundSetEntityMotionPacket(entity.getId(),
-				new Vec3(x, y, z)));
-			for (Player player : viewers()) {
-				PlayerUtils.sendPacket(player, packets);
-			}
+		public void move(Location location, double xOffset, double yOffset, double zOffset) {
+			entity.move(location.clone().add(xOffset, yOffset, zOffset));
 		}
 	}
 
@@ -262,13 +231,13 @@ public class FallingCrate {
 
 		@Override
 		public void spawn() {
-			armorStand.respawn(false);
-			fallingBlock.respawn(false);
-			broadcastPacket(viewers(), mountPacket);
+			armorStand.respawn();
+			fallingBlock.respawn();
+			PlayerUtils.sendPacket(viewers(), mountPacket);
 			if (leashKnot != null) {
-				leashKnot.respawn(false);
+				leashKnot.respawn();
 				if (leashPacket != null) {
-					broadcastPacket(viewers(), leashPacket);
+					PlayerUtils.sendPacket(viewers(), mountPacket);
 				}
 			}
 		}
@@ -282,34 +251,11 @@ public class FallingCrate {
 		}
 
 		@Override
-		public void sendMovePackets(Location location, double x, double y, double z, boolean syncLocation) {
+		public void move(Location location, double xOffset, double yOffset, double zOffset) {
 			Location actualLocation = location.clone().add(offset);
-			var vec3 = new Vec3(x, y, z);
-			List<Packet<?>> packets = new ArrayList<>();
-			if (syncLocation) {
-				packets.add(EntityUtils.createTeleportPacket(armorStand.getId(),
-					actualLocation.getX() + x, actualLocation.getY() + y, actualLocation.getZ() + z,
-					0, 0, false));
-			} else {
-				packets.add(new ClientboundMoveEntityPacket.Pos(armorStand.getId(),
-					(short) (x * 4096), (short) (y * 4096), (short) (z * 4096), false));
-			}
-			packets.add(new ClientboundSetEntityMotionPacket(armorStand.getId(), vec3));
+			armorStand.move(actualLocation.clone().add(xOffset, yOffset, zOffset));
 			if (leashKnot != null) {
-				if (syncLocation) {
-					actualLocation.add(0, LEASH_KNOT_Y_OFFSET, 0);
-					packets.add(EntityUtils.createTeleportPacket(leashKnot.getId(),
-						actualLocation.getX() + x, actualLocation.getY() + y, actualLocation.getZ() + z,
-						0, 0, false));
-				} else {
-					packets.add(new ClientboundMoveEntityPacket.Pos(leashKnot.getId(),
-						(short) (x * 4096), (short) (y * 4096), (short) (z * 4096), false));
-				}
-				packets.add(new ClientboundSetEntityMotionPacket(leashKnot.getId(), vec3));
-			}
-
-			for (Player viewer : armorStand.getRealViewers()) {
-				PlayerUtils.sendPacket(viewer, packets);
+				leashKnot.move(actualLocation.clone().add(xOffset, yOffset, zOffset));
 			}
 		}
 	}
@@ -336,10 +282,8 @@ public class FallingCrate {
 		}
 
 		@Override
-		public void sendMovePackets(Location location, double velocityX, double velocityY, double velocityZ, boolean syncLocation) {
-			payload.forEach(payload -> payload.sendMovePackets(location, velocityX, velocityY, velocityZ, syncLocation));
+		public void move(Location location, double velocityX, double velocityY, double velocityZ) {
+			payload.forEach(payload -> payload.move(location, velocityX, velocityY, velocityZ));
 		}
 	}
-
-
 }

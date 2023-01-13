@@ -18,7 +18,6 @@ import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
 import org.bukkit.entity.IronGolem;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
@@ -39,7 +38,7 @@ public class IronGolemKillStreak extends CratedKillStreak
 
 	IronGolemKillStreak() {
 		super("Iron Golem", "An Iron Golem that will stay at the position where you summoned it and defend it with its life"
-				, color, null, new GolemAbility());
+				, color, null, Material.IRON_BLOCK, new GolemAbility());
 	}
 
 
@@ -54,11 +53,6 @@ public class IronGolemKillStreak extends CratedKillStreak
 	@Override
 	public @NotNull CratePayload getPayload(Player player, Location destination) {
 		return GOLEM_PAYLOAD;
-	}
-
-	@Override
-	public @NotNull ItemStack createCrateItem(Player player) {
-		return createSimpleCrateItem(Material.POPPY);
 	}
 
 	// Band aid - pass the crate location to the WolvesAbility#giveAbility()
@@ -199,9 +193,8 @@ public class IronGolemKillStreak extends CratedKillStreak
 
 		@Override
 		public boolean shouldStayActive() {
-			boolean shouldContinue = shouldActivate();
 			//Bukkit.broadcastMessage("shouldStayActive: " + shouldContinue);
-			return shouldContinue;
+			return shouldActivate();
 		}
 
 		@Override
