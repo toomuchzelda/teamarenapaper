@@ -252,10 +252,10 @@ public class FallingCrate {
 
 		@Override
 		public void move(Location location, double xOffset, double yOffset, double zOffset) {
-			Location actualLocation = location.clone().add(offset);
-			armorStand.move(actualLocation.clone().add(xOffset, yOffset, zOffset));
+			Location actualLocation = location.clone().add(offset).add(xOffset, yOffset, zOffset);
+			armorStand.move(actualLocation);
 			if (leashKnot != null) {
-				leashKnot.move(actualLocation.clone().add(xOffset, yOffset, zOffset));
+				leashKnot.move(actualLocation.add(xOffset, yOffset, zOffset));
 			}
 		}
 	}

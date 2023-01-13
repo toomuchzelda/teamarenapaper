@@ -17,7 +17,6 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundSetBorderWarningDistancePacket;
 import net.minecraft.network.protocol.game.ClientboundSetHealthPacket;
 import net.minecraft.network.protocol.game.ServerboundInteractPacket;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.InteractionHand;
 import org.bukkit.Bukkit;
@@ -36,12 +35,18 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
 public class PlayerUtils {
+
+	public static void sendPacket(Player player, PacketContainer packet) {
+		ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet, false);
+	}
+
     public static void sendPacket(Player player, PacketContainer... packets) {
 		sendPacket(player, false, packets);
 	}
@@ -58,11 +63,12 @@ public class PlayerUtils {
 		}
     }
 
+	public static void sendPacket(Player player, Packet<?> packet) {
+		((CraftPlayer) player).getHandle().connection.send(packet);
+	}
+
 	public static void sendPacket(Player player, Packet<?>... packets) {
-		ServerPlayer nmsPlayer = ((CraftPlayer) player).getHandle();
-		for (Packet<?> p : packets) {
-			nmsPlayer.connection.send(p);
-		}
+		sendPacket(player, Arrays.asList(packets));
 	}
 
 	public static void sendPacket(Player player, Collection<? extends Packet<?>> packets) {
