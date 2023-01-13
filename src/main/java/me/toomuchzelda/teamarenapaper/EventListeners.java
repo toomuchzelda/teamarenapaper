@@ -12,14 +12,12 @@ import com.destroystokyo.paper.profile.CraftPlayerProfile;
 import com.destroystokyo.paper.profile.PlayerProfile;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
-import io.papermc.paper.event.player.AsyncChatEvent;
-import io.papermc.paper.event.player.PlayerArmSwingEvent;
-import io.papermc.paper.event.player.PlayerItemCooldownEvent;
-import io.papermc.paper.event.player.PlayerItemFrameChangeEvent;
+import io.papermc.paper.event.player.*;
 import me.toomuchzelda.teamarenapaper.explosions.EntityExplosionInfo;
 import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitbox;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
+import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.sql.*;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
@@ -48,7 +46,7 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.block.BlockFace;
 import org.bukkit.command.Command;
-import org.bukkit.craftbukkit.v1_19_R1.CraftWorldBorder;
+import org.bukkit.craftbukkit.v1_19_R2.CraftWorldBorder;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -933,14 +931,14 @@ public class EventListeners implements Listener
 	 * When arm swing packets are received by server, they don't want to fire PlayerInteractEvent if the
 	 * player interacted with a block or entity. So they use a poorly considered raytrace to see if there
 	 * are any blocks/entities aimed at by the player.
-	 *
+	 * <p>
 	 * This prevents legitimate PlayerInteractEvents for LEFT_CLICK_AIR from firing if they are looking towards
 	 * an entity with 4.5 blocks (survival mode reach for entities is 3 blocks) and server-side raytraces aren't
 	 * always accurate.
-	 *
+	 * <p>
 	 * Within the same packet handler method this event is called, so try to figure out if the event should
 	 * actually be called here and call it.
-	 *
+	 * <p>
 	 * I want LEFT_CLICK_AIR interacts to fire for clicking air OR entities, so I will re-do the check they did here
 	 * and if it hit an entity (and was therefore not fired in the ServerGameListenerImpl) I will fire it myself.
 	 */
@@ -957,6 +955,16 @@ public class EventListeners implements Listener
 			ItemStack usedItem = swinger.getEquipment().getItem(event.getHand());
 			PlayerInteractEvent interactEvent = new PlayerInteractEvent(swinger, Action.LEFT_CLICK_AIR, usedItem, null, BlockFace.SOUTH, event.getHand(), null);
 			interactEvent.callEvent();
+		}
+	}
+
+	/** Set all MetadataViewer values to dirty upon an entity leaving player's view */
+	@EventHandler
+	public void playerUntrackEntity(PlayerUntrackEntityEvent event) {
+		PlayerInfo pinfo = Main.getPlayerInfo(event.getPlayer());
+		if(pinfo != null) { // pinfo will be null if the event was fired because the player quit
+			MetadataViewer metadataViewer = pinfo.getMetadataViewer();
+			metadataViewer.setAllDirty(event.getEntity());
 		}
 	}
 

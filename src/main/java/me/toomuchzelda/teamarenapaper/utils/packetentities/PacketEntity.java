@@ -4,17 +4,20 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.AdventureComponentConverter;
+import com.comphenix.protocol.wrappers.WrappedDataValue;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
-import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
+import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.block.data.BlockData;
-import org.bukkit.craftbukkit.v1_19_R1.block.data.CraftBlockData;
+import org.bukkit.craftbukkit.v1_19_R2.block.data.CraftBlockData;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
@@ -45,7 +48,7 @@ public class PacketEntity
 	private StructureModifier<Double> spawnPacketDoubles; //keep spawn location modifier
 	private PacketContainer deletePacket;
 	protected PacketContainer metadataPacket;
-	private StructureModifier<List<WrappedWatchableObject>> watchableCollectionModifier;
+	private StructureModifier<List<WrappedDataValue>> dataValueCollectionModifier;
 	private PacketContainer teleportPacket;
 	private StructureModifier<Double> teleportPacketDoubles;
 	private StructureModifier<Byte> teleportPacketBytes;
@@ -53,7 +56,7 @@ public class PacketEntity
 	private StructureModifier<Byte> headPacketBytes;
 
 	//entity's WrappedDataWatcher
-	protected WrappedDataWatcher data;
+	private WrappedDataWatcher data;
 
 	private boolean isAlive;
 	private boolean remove;
@@ -164,8 +167,10 @@ public class PacketEntity
 
 		this.data = new WrappedDataWatcher();
 
-		this.watchableCollectionModifier = this.metadataPacket.getWatchableCollectionModifier();
-		this.watchableCollectionModifier.write(0, this.data.getWatchableObjects());
+		//this.dataValueCollectionModifier = this.metadataPacket.getWatchableCollectionModifier();
+		//this.dataValueCollectionModifier.write(0, this.data.getWatchableObjects());
+		this.dataValueCollectionModifier = this.metadataPacket.getDataValueCollectionModifier();
+		this.dataValueCollectionModifier.write(0, MetaIndex.getFromWatchableObjectsList(this.data.getWatchableObjects()));
 	}
 
 	public void setMetadata(WrappedDataWatcher.WrappedDataWatcherObject index, Object object) {
@@ -281,7 +286,8 @@ public class PacketEntity
 	 * Call manually after updating this WrappedDataWatcher data
 	 */
 	protected void updateMetadataPacket() {
-		this.watchableCollectionModifier.write(0, this.data.getWatchableObjects());
+		//this.dataValueCollectionModifier.write(0, this.data.getWatchableObjects());
+		this.dataValueCollectionModifier.write(0, MetaIndex.getFromWatchableObjectsList(this.data.getWatchableObjects()));
 	}
 
 	/**

@@ -1,8 +1,9 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
 import net.minecraft.world.damagesource.DamageSource;
-import org.bukkit.craftbukkit.v1_19_R1.entity.CraftEntity;
-import org.bukkit.craftbukkit.v1_19_R1.entity.CraftLivingEntity;
+import org.bukkit.Material;
+import org.bukkit.craftbukkit.v1_19_R2.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_19_R2.entity.CraftLivingEntity;
 import org.bukkit.entity.*;
 
 import javax.annotation.Nullable;
@@ -40,7 +41,28 @@ public class DamageSourceCreator {
         }
     }
 
-	public static DamageSource getExplosion(LivingEntity source) {
-		return DamageSource.explosion(((CraftLivingEntity) source).getHandle());
+	public static DamageSource getExplosion(Entity explodingEntity, Entity explosionSource) {
+		net.minecraft.world.entity.Entity nmsExploder = explodingEntity == null ? null : ((CraftEntity) explodingEntity).getHandle();
+		net.minecraft.world.entity.Entity nmsSource = explosionSource == null ? null : ((CraftEntity) explosionSource).getHandle();
+		return DamageSource.explosion(nmsExploder, nmsSource);
+	}
+
+	private static boolean isAnvil(Material material) {
+		return material == Material.ANVIL || material == Material.CHIPPED_ANVIL || material == Material.DAMAGED_ANVIL;
+	}
+
+	public static DamageSource getFallingBlock(Entity block) {
+		if (block instanceof FallingBlock blockEntity) {
+			Material mat = blockEntity.getBlockData().getMaterial();
+			if (mat == Material.POINTED_DRIPSTONE)
+				return DamageSource.fallingStalactite(((CraftEntity) blockEntity).getHandle());
+			else if (isAnvil(mat))
+				return DamageSource.anvil(((CraftEntity) blockEntity).getHandle());
+			else
+				return DamageSource.fallingBlock(((CraftEntity) block).getHandle());
+		}
+		else {
+			return DamageSource.fallingBlock(((CraftEntity) block).getHandle());
+		}
 	}
 }

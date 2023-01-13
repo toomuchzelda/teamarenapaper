@@ -2,13 +2,12 @@ package me.toomuchzelda.teamarenapaper.metadata;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.reflect.StructureModifier;
+import com.comphenix.protocol.wrappers.WrappedDataValue;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -44,7 +43,7 @@ public class MetadataViewer
 	/**@param entity Reference to the Entity object.
 	 * @param indexedValues Integer = metadata index, MetadataValue = the value.
 	 */
-	record EntityMetaValue(Entity entity, Map<Integer, MetadataValueStatus> indexedValues) {}
+	record EntityMetaValues(Entity entity, Map<Integer, MetadataValueStatus> indexedValues) {}
 
 	private final Player player;
 
@@ -52,7 +51,7 @@ public class MetadataViewer
 	 * The custom metadatas they are seeing
 	 * First Integer - entity ID
 	 */
-	private final Map<Integer, EntityMetaValue> entityValues;
+	private final Map<Integer, EntityMetaValues> entityValues;
 
 	public MetadataViewer(Player viewer) {
 		this.player = viewer;
@@ -75,8 +74,8 @@ public class MetadataViewer
 	 * @param value Value to put there
 	 */
 	public void setViewedValue(int index, MetadataValue value, int entityId, Entity viewedEntity) {
-		EntityMetaValue viewedValues = entityValues.computeIfAbsent(entityId,
-				integer -> new EntityMetaValue(viewedEntity, new HashMap<>(1)));
+		EntityMetaValues viewedValues = entityValues.computeIfAbsent(entityId,
+				integer -> new EntityMetaValues(viewedEntity, new HashMap<>(1)));
 
 		MetadataValueStatus origStatus = viewedValues.indexedValues().computeIfAbsent(index, integer -> new MetadataValueStatus(null));
 		MetadataValue origValue = origStatus.value;
@@ -110,7 +109,7 @@ public class MetadataViewer
 	}
 
 	public @Nullable MetadataValue getViewedValue(int entityId, int index) {
-		EntityMetaValue viewedValues = entityValues.get(entityId);
+		EntityMetaValues viewedValues = entityValues.get(entityId);
 		if(viewedValues != null) {
 			MetadataValueStatus status = viewedValues.indexedValues().get(index);
 			if(status != null)
@@ -120,22 +119,13 @@ public class MetadataViewer
 		return null;
 	}
 
-	private MetadataValue getViewedValueIfDirtyAndSetClean(int entityId, int index) {
-		EntityMetaValue viewedValues = entityValues.get(entityId);
-		if(viewedValues != null) {
-			MetadataValueStatus status = viewedValues.indexedValues().get(index);
-			if(status != null && status.dirty) {
-				status.dirty = false;
-				return status.value;
-			}
-		}
-
-		return null;
+	private Map<Integer, MetadataValueStatus> getViewedValues(int viewedEntityId) {
+		return entityValues.get(viewedEntityId).indexedValues();
 	}
 
 	public void updateBitfieldValue(Entity viewedEntity, int index, int bitIndex, boolean bit) {
-		EntityMetaValue viewedValues = entityValues.computeIfAbsent(viewedEntity.getEntityId(),
-				integer -> new EntityMetaValue(viewedEntity, new HashMap<>(1)));
+		EntityMetaValues viewedValues = entityValues.computeIfAbsent(viewedEntity.getEntityId(),
+				integer -> new EntityMetaValues(viewedEntity, new HashMap<>(1)));
 
 		MetadataValueStatus status = viewedValues.indexedValues().computeIfAbsent(index,
 				integer -> new MetadataValueStatus(MetadataBitfieldValue.create(new HashMap<>(1))));
@@ -148,7 +138,7 @@ public class MetadataViewer
 	}
 
 	public void removeBitfieldValue(Entity viewedEntity, int index, int bitIndex) {
-		EntityMetaValue viewedValues = entityValues.get(viewedEntity.getEntityId());
+		EntityMetaValues viewedValues = entityValues.get(viewedEntity.getEntityId());
 		if(viewedValues != null) {
 			MetadataValueStatus status = viewedValues.indexedValues().get(index);
 			if(status != null) {
@@ -186,6 +176,15 @@ public class MetadataViewer
 	public static void removeAllValues(Entity... viewedEntities) {
 		for(PlayerInfo p : Main.getPlayerInfos()) {
 			p.getMetadataViewer().removeViewedValues(viewedEntities);
+		}
+	}
+
+	public void setAllDirty(Entity viewedEntity) {
+		EntityMetaValues values = this.entityValues.get(viewedEntity.getEntityId());
+		if (values != null) {
+			values.indexedValues().forEach((integer, metadataValueStatus) -> {
+				metadataValueStatus.dirty = true;
+			});
 		}
 	}
 
@@ -242,7 +241,7 @@ public class MetadataViewer
 		WrappedDataWatcher originalData = WrappedDataWatcher.getEntityWatcher(viewedEntity);
 		WrappedDataWatcher modifiedData;
 
-		EntityMetaValue meta = entityValues.get(viewedEntity.getEntityId());
+		EntityMetaValues meta = entityValues.get(viewedEntity.getEntityId());
 		if(meta != null) {
 			modifiedData = new WrappedDataWatcher();
 
@@ -273,7 +272,10 @@ public class MetadataViewer
 			modifiedData = originalData;
 		}
 
-		metadataPacket.getWatchableCollectionModifier().write(0, modifiedData.getWatchableObjects());
+		// TODO: band-aid fix
+		//metadataPacket.getWatchableCollectionModifier().write(0, modifiedData.getWatchableObjects());
+		metadataPacket.getDataValueCollectionModifier().write(0,
+				MetaIndex.getFromWatchableObjectsList(modifiedData.getWatchableObjects()));
 		PlayerUtils.sendPacket(this.player, metadataPacket);
 	}
 
@@ -284,42 +286,56 @@ public class MetadataViewer
 	 */
 	public PacketContainer adjustMetadataPacket(@NotNull PacketContainer metadataPacket) {
 		int id = metadataPacket.getIntegers().read(0);
-
 		//don't construct a new datawatcher and packet if it's not needed
 		if(this.hasMetadataFor(id)) {
-
-			//MUST use a new packet. Without this modifications to the packet are seen by unintended viewers.
-			// I think protocollib is re-using the same Packet for many players. So create a new one anytime
+			//MUST use a new packet. Without this, modifications to the packet are seen by unintended viewers.
+			// I think protocollib is re-using the same Packet instance for many players. So create a new one anytime
 			// there are any modifications.
 			PacketContainer newPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
 			newPacket.getIntegers().write(0, id);
 
-			WrappedDataWatcher watcher = new WrappedDataWatcher();
-			WrappedWatchableObject obj;
-			MetadataValue value;
-			ListIterator<WrappedWatchableObject> iter = metadataPacket.getWatchableCollectionModifier().read(0).listIterator();
-			while (iter.hasNext()) {
-				obj = iter.next();
+			final List<WrappedDataValue> packetDataValues = metadataPacket.getDataValueCollectionModifier().read(0);
+			// Our resulting values to be seen by viewer
+			final Map<Integer, WrappedDataValue> valueMap = new HashMap<>((int) (packetDataValues.size() * 1.5));
 
-				value = this.getViewedValue(id, obj.getIndex());
+			// First copy over any values already included in the packet by Vanilla and replace with custom values
+			// as needed
+			for (WrappedDataValue dataVal : packetDataValues) {
+				MetadataValue value = this.getViewedValue(id, dataVal.getIndex());
 				if (value != null) {
 					//new watcher object to put into packet. Copy the properties of the old obj
 					Object newValue;
 					if (value instanceof MetadataBitfieldValue bitField) {
-						newValue = bitField.combine((Byte) obj.getValue());
+						newValue = bitField.combine((Byte) dataVal.getValue());
 					}
 					else {
 						newValue = value.getValue();
 					}
 
-					watcher.setObject(obj.getWatcherObject(), newValue);
+					valueMap.put(dataVal.getIndex(), MetaIndex.copyWithValue(dataVal, newValue));
 				}
 				else {
-					watcher.setObject(obj.getWatcherObject(), obj.getValue());
+					valueMap.put(dataVal.getIndex(), dataVal);
 				}
 			}
 
-			newPacket.getWatchableCollectionModifier().write(0, watcher.getWatchableObjects());
+			// Then copy over any custom values that are dirty but not included in the packet by Vanilla
+			Map<Integer, MetadataValueStatus> allValues = this.getViewedValues(id);
+			allValues.forEach((index, metadataValueStatus) -> {
+				if(metadataValueStatus.dirty && metadataValueStatus.value != null) {
+					if(!valueMap.containsKey(index)) {
+						metadataValueStatus.dirty = false;
+						Object val = metadataValueStatus.value instanceof MetadataBitfieldValue bitfieldValue ?
+							bitfieldValue.getByte() : metadataValueStatus.value.getValue();
+
+						valueMap.put(index, new WrappedDataValue(index,	MetaIndex.serializerByIndex(index, val), val));
+					}
+				}
+			});
+
+			// Put into list and put into packet
+			List<WrappedDataValue> newValues = new ArrayList<>(valueMap.values());
+			newPacket.getDataValueCollectionModifier().write(0, newValues);
 
 			return newPacket;
 		}

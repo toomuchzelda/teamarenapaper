@@ -7,8 +7,6 @@ import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.phys.Vec3;
@@ -16,10 +14,10 @@ import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.attribute.Attribute;
-import org.bukkit.craftbukkit.v1_19_R1.entity.CraftEntity;
-import org.bukkit.craftbukkit.v1_19_R1.entity.CraftLivingEntity;
-import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_19_R1.util.CraftVector;
+import org.bukkit.craftbukkit.v1_19_R2.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_19_R2.entity.CraftLivingEntity;
+import org.bukkit.craftbukkit.v1_19_R2.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_19_R2.util.CraftVector;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
@@ -54,7 +52,7 @@ public class DamageEvent {
 	// dont use 0,0,0 vector as that'll stop the player moving for a split moment
 	private Vector knockback;
 	private double knockbackLevels;
-	//from 0 to 1, 0 = no knockback received, 1 = all knockback received
+	//from 0 to 1, 0 = no knockback received on XZ, 1 = all knockback received on XZ
 	private double knockbackResistance;
 
 	private Entity attacker;
@@ -454,10 +452,6 @@ public class DamageEvent {
 				String errString = error.toString();
 				Main.logger().warning(errString);
 
-				//TODO: don't broadcast in production
-				Component errorComp = Component.text(errString, NamedTextColor.YELLOW);
-				Bukkit.broadcast(errorComp);
-
 				finalDamage = 0;
 			}
 
@@ -735,7 +729,7 @@ public class DamageEvent {
 		return rawDamage;
 	}
 
-	/** Set the 'raw' damage done, meaning damage before victim's armour calculations. This was cause the calculations
+	/** Set the 'raw' damage done, meaning damage before victim's armour calculations. This will cause the calculations
 	 * to be re-done and the finalDamage to be re-assigned.
 	 * The DamageEvent's current DamageType is important! It will affect the outcome. */
 	public void setRawDamage(double rawDamage) {

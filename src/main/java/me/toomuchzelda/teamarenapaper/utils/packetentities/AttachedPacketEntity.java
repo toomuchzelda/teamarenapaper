@@ -103,7 +103,7 @@ public class AttachedPacketEntity extends PacketEntity
 		this.move(loc);
 
 		if(entitysPose != this.oldPose) { // If pose changed handle offset change too.
-			if (this.data.hasIndex(MetaIndex.CUSTOM_NAME_IDX)) {
+			if (this.getMetadata(MetaIndex.CUSTOM_NAME_OBJ) != null) {
 				Byte byteObj = (Byte) this.getMetadata(MetaIndex.BASE_BITFIELD_OBJ);
 				byte bitfield;
 				if(byteObj == null)

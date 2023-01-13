@@ -33,7 +33,7 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
-import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
+import org.bukkit.craftbukkit.v1_19_R2.CraftWorld;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.Action;

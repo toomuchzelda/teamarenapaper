@@ -3,6 +3,8 @@ package me.toomuchzelda.teamarenapaper.utils;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
+import com.comphenix.protocol.wrappers.WrappedDataValue;
+import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import me.toomuchzelda.teamarenapaper.Main;
@@ -23,8 +25,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
-import org.bukkit.craftbukkit.v1_19_R1.CraftWorldBorder;
-import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_19_R2.CraftWorldBorder;
+import org.bukkit.craftbukkit.v1_19_R2.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.inventory.EntityEquipment;
@@ -36,12 +38,14 @@ import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 
 public class PlayerUtils {
     public static void sendPacket(Player player, PacketContainer... packets) {
 		sendPacket(player, false, packets);
 	}
+
 
 	public static void sendPacket(Player player, boolean triggerPacketListeners, PacketContainer... packets) {
 		for (PacketContainer packet : packets) {

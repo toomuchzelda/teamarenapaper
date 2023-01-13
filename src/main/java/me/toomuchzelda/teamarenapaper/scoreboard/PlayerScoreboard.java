@@ -6,7 +6,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.minecraft.server.ServerScoreboard;
 import net.minecraft.world.scores.PlayerTeam;
 import org.bukkit.Bukkit;
-import org.bukkit.craftbukkit.v1_19_R1.scoreboard.CraftScoreboard;
+import org.bukkit.craftbukkit.v1_19_R2.scoreboard.CraftScoreboard;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Objective;

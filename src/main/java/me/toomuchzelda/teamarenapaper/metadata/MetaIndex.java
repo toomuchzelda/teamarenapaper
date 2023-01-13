@@ -1,9 +1,9 @@
 package me.toomuchzelda.teamarenapaper.metadata;
 
-import com.comphenix.protocol.wrappers.EnumWrappers;
-import com.comphenix.protocol.wrappers.WrappedDataWatcher;
+import com.comphenix.protocol.wrappers.*;
 
-import java.util.Collections;
+import javax.annotation.Nullable;
+import java.util.*;
 
 /**
  * Values used by Entity metadata. May change with each Minecraft version.
@@ -11,6 +11,8 @@ import java.util.Collections;
  */
 public class MetaIndex
 {
+	private static final Map<Integer, WrappedDataWatcher.Serializer> INDEX_SERIALIZER_MAP = new HashMap<>();
+
 	public static final int MAX_FIELD_INDEX = 22;
 
 	public static final int BASE_BITFIELD_IDX = 0;
@@ -61,23 +63,94 @@ public class MetaIndex
 
 	public static final WrappedDataWatcher.WrappedDataWatcherObject GUARDIAN_TARGET_OBJ;
 
+	private static void addMapping(WrappedDataWatcher.WrappedDataWatcherObject object) {
+		INDEX_SERIALIZER_MAP.put(object.getIndex(), object.getSerializer());
+	}
+
 	static {
 		BASE_BITFIELD_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(BASE_BITFIELD_IDX, WrappedDataWatcher.Registry.get(Byte.class));
+		addMapping(BASE_BITFIELD_OBJ);
+
 		CUSTOM_NAME_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(CUSTOM_NAME_IDX, WrappedDataWatcher.Registry.getChatComponentSerializer(true));
+		addMapping(CUSTOM_NAME_OBJ);
+
 		CUSTOM_NAME_VISIBLE_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(CUSTOM_NAME_VISIBLE_IDX, WrappedDataWatcher.Registry.get(Boolean.class));
+		addMapping( CUSTOM_NAME_VISIBLE_OBJ);
+
 		NO_GRAVITY_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(NO_GRAVITY_IDX, WrappedDataWatcher.Registry.get(Boolean.class));
+		addMapping(NO_GRAVITY_OBJ);
+
 		POSE_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(POSE_IDX, WrappedDataWatcher.Registry.get(EnumWrappers.getEntityPoseClass()));
+		addMapping(POSE_OBJ);
 
 		ARMOR_STAND_BITFIELD_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(ARMOR_STAND_BITFIELD_IDX, WrappedDataWatcher.Registry.get(Byte.class));
+		addMapping(ARMOR_STAND_BITFIELD_OBJ);
 
 		CREEPER_STATE_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(CREEPER_STATE_IDX, WrappedDataWatcher.Registry.get(Integer.class));
+		addMapping(CREEPER_STATE_OBJ);
+
 		CREEPER_CHARGED_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(CREEPER_CHARGED_IDX, WrappedDataWatcher.Registry.get(Boolean.class));
+		addMapping(CREEPER_CHARGED_OBJ);
+
 		CREEPER_IGNITED_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(CREEPER_IGNITED_IDX, WrappedDataWatcher.Registry.get(Boolean.class));
+		addMapping(CREEPER_IGNITED_OBJ);
 
 		ALLAY_DANCING_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(ALLAY_DANCING_IDX, WrappedDataWatcher.Registry.get(Boolean.class));
+		addMapping(ALLAY_DANCING_OBJ);
 
 		AXOLOTL_COLOR_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(AXOLOTL_COLOR_IDX, WrappedDataWatcher.Registry.get(Integer.class));
+		addMapping(AXOLOTL_COLOR_OBJ);
 
 		GUARDIAN_TARGET_OBJ = new WrappedDataWatcher.WrappedDataWatcherObject(GUARDIAN_TARGET_IDX, WrappedDataWatcher.Registry.get(Integer.class));
+		addMapping(GUARDIAN_TARGET_OBJ);
+	}
+
+	/**
+	 * Get the Metadata Serializer for whatever's at that index
+	 * @param object An object of the desired type, so that the Serializer may be fetched by ProtocolLib if it
+	 *               has not been cached here.
+	 */
+	public static WrappedDataWatcher.Serializer serializerByIndex(int index, @Nullable Object object) {
+		WrappedDataWatcher.Serializer serializer;
+		if(object == null) {
+			serializer = INDEX_SERIALIZER_MAP.get(index);
+		}
+		else {
+			if(object instanceof AbstractWrapper wrapper)
+				object = wrapper.getHandle();
+
+			// If the mapping doesn't exist, get the serializer and cache it.
+			Object finalObject = object;
+			serializer = INDEX_SERIALIZER_MAP.computeIfAbsent(index,
+					integer -> WrappedDataWatcher.Registry.get(finalObject.getClass()));
+		}
+
+		return serializer;
+	}
+
+	public static WrappedDataValue copyValue(WrappedDataValue original) {
+		return new WrappedDataValue(original.getIndex(), original.getSerializer(), original.getValue());
+	}
+
+	public static WrappedDataValue copyWithValue(WrappedDataValue original, Object newValue) {
+		return new WrappedDataValue(original.getIndex(), original.getSerializer(), newValue);
+	}
+
+	public static WrappedDataValue newValue(WrappedDataWatcher.WrappedDataWatcherObject index, Object value) {
+		return new WrappedDataValue(index.getIndex(), index.getSerializer(), value);
+	}
+
+	public static WrappedDataValue fromWatchableObject(WrappedWatchableObject object) {
+		// getRawValue() to get NMS types and not Wrapped types
+		return new WrappedDataValue(object.getIndex(), object.getWatcherObject().getSerializer(), object.getRawValue());
+	}
+
+	public static List<WrappedDataValue> getFromWatchableObjectsList(List<WrappedWatchableObject> watchableObjects) {
+		List<WrappedDataValue> dataValues = new ArrayList<>(watchableObjects.size());
+		watchableObjects.forEach(wrappedWatchableObject -> {
+			dataValues.add(fromWatchableObject(wrappedWatchableObject));
+		});
+
+		return dataValues;
 	}
 }

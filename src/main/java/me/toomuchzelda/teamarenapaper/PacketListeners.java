@@ -6,11 +6,9 @@ import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.reflect.StructureModifier;
-import com.comphenix.protocol.wrappers.EnumWrappers;
-import com.comphenix.protocol.wrappers.PlayerInfoData;
+import com.comphenix.protocol.wrappers.*;
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Pair;
-import io.papermc.paper.adventure.PaperAdventure;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitbox;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxViewer;
@@ -18,7 +16,6 @@ import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.DisguiseManager;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitGhost;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSpy;
@@ -26,15 +23,22 @@ import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.AttachedPacketEntity;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
-import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.minecraft.network.protocol.game.*;
+import net.minecraft.core.Holder;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
+import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
+import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.GameType;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Sound;
-import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_19_R1.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.v1_19_R2.CraftSound;
+import org.bukkit.craftbukkit.v1_19_R2.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_19_R2.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -254,7 +258,147 @@ public class PacketListeners
 		});*/
 
 		//intercept player info packets and replace with disguise if needed
-		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin, PacketType.Play.Server.PLAYER_INFO) {
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
+				PacketType.Play.Server.PLAYER_INFO) {
+
+			@Override
+			public void onPacketSending(PacketEvent event) {
+				ClientboundPlayerInfoUpdatePacket nmsPacket = (ClientboundPlayerInfoUpdatePacket) event.getPacket().getHandle();
+
+				Set<ClientboundPlayerInfoUpdatePacket.Action> actions = nmsPacket.actions();
+
+				//final boolean stripChat = actions.contains(ClientboundPlayerInfoUpdatePacket.Action.INITIALIZE_CHAT);
+				final boolean addPlayer = actions.contains(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER);
+
+				List<ClientboundPlayerInfoUpdatePacket.Entry> list = nmsPacket.entries();
+				final int size = FakeHitboxManager.ACTIVE ? list.size() * 5 : list.size();
+				List<PlayerInfoData> newList = new ArrayList<>(size);
+
+				UUID receiverUuid = event.getPlayer().getUniqueId();
+				for(ClientboundPlayerInfoUpdatePacket.Entry entry : list) {
+					if(receiverUuid.equals(entry.profileId())) {
+						// If it's the players own just include their unmodified original
+						newList.add(PlayerInfoData.getConverter().getSpecific(entry));
+						continue;
+					}
+
+					PlayerInfoData wrappedEntryCopy = copyPlayerInfoEntry(entry, true);
+					final int originalIndex = newList.size(); // Keep track of this entry's position in the newList
+					newList.add(wrappedEntryCopy);
+
+					if(FakeHitboxManager.ACTIVE && addPlayer) {
+						// Ensure player doesn't see their own fake player entries
+						if(!entry.profileId().equals(event.getPlayer().getUniqueId())) {
+							FakeHitbox hitbox = FakeHitboxManager.getByPlayerUuid(entry.profileId());
+							if(hitbox != null) {
+								newList.addAll(hitbox.getPlayerInfoEntries());
+							}
+						}
+					}
+
+					Player updatedPlayer = Bukkit.getPlayer(entry.profileId());
+					if (updatedPlayer == null)
+						continue;
+
+					DisguiseManager.Disguise disguise = DisguiseManager.getDisguiseSeeing(updatedPlayer, event.getPlayer());
+					if (disguise != null) {
+						EnumWrappers.NativeGameMode nativeGameMode = getNativeGameMode(entry.gameMode());
+						WrappedChatComponent wrappedDisplayName = WrappedChatComponent.fromHandle(entry.displayName());
+						if(addPlayer) {
+							// The playerinfodata with the disguised player's UUID but
+							// the disguise target's skin
+							// not listed
+							PlayerInfoData replacementData = new PlayerInfoData(
+								disguise.disguisedGameProfile.getId(), entry.latency(), false,
+								nativeGameMode, WrappedGameProfile.fromHandle(disguise.disguisedGameProfile),
+								WrappedChatComponent.fromHandle(entry.displayName()), null);
+
+							newList.set(originalIndex, replacementData);
+
+							disguise.viewers.put(event.getPlayer(), TeamArena.getGameTick());
+						}
+
+						// The player profile of the tab list entry that looks like the
+						// original player, but has a different UUID to avoid conflict
+						// with the above replacementData profile
+						GameProfile tabListProfile = disguise.tabListGameProfile;
+						PlayerInfoData tabListData = new PlayerInfoData(tabListProfile.getId(), entry.latency(),
+								entry.listed(), nativeGameMode, WrappedGameProfile.fromHandle(tabListProfile),
+								wrappedDisplayName, null);
+
+						newList.add(tabListData);
+					}
+				}
+
+				// Modifications took place, so replace the packet
+				// The same packet instance is sent to many players, so we need to
+				// avoid mutating the original
+				if(newList.size() > 0) {
+					PacketContainer packet = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);
+					packet.getModifier().write(0, nmsPacket.actions());
+
+					// For some reason, packet.getPlayerInfoDataLists().write() is not working, so I will try to
+					// convert it to a list of the NMS object and pass that through with packet.getModifier()
+					List<ClientboundPlayerInfoUpdatePacket.Entry> nmsEntryList = new ArrayList<>(newList.size());
+					newList.forEach(playerInfoData -> {
+						ClientboundPlayerInfoUpdatePacket.Entry nmsEntry = (ClientboundPlayerInfoUpdatePacket.Entry)
+								PlayerInfoData.getConverter().getGeneric(playerInfoData);
+
+						nmsEntryList.add(nmsEntry);
+					});
+					//packet.getPlayerInfoDataLists().write(0, newList);
+					packet.getModifier().write(1, nmsEntryList);
+					event.setPacket(packet);
+				}
+			}
+		});
+
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
+				PacketType.Play.Server.PLAYER_INFO_REMOVE)
+		{
+			@Override
+			public void onPacketSending(PacketEvent event) {
+				ClientboundPlayerInfoRemovePacket nmsPacket = (ClientboundPlayerInfoRemovePacket) event.getPacket().getHandle();
+
+				List<UUID> copyList = new ArrayList<>(nmsPacket.profileIds().size() * 5);
+				copyList.addAll(nmsPacket.profileIds());
+
+				for (UUID uuid : nmsPacket.profileIds()) {
+					if(FakeHitboxManager.ACTIVE) {
+						// Ensure player doesn't see their own fake player entries
+						FakeHitbox hitbox = FakeHitboxManager.getByPlayerUuid(uuid);
+						if(hitbox != null) {
+							for(PlayerInfoData data : hitbox.getPlayerInfoEntries()) {
+								copyList.add(data.getProfileId());
+							}
+						}
+					}
+
+					Player updatedPlayer = Bukkit.getPlayer(uuid);
+					if (updatedPlayer == null)
+						continue;
+
+					DisguiseManager.Disguise disguise = DisguiseManager.getDisguiseSeeing(updatedPlayer, event.getPlayer());
+					if (disguise != null) {
+						// The player profile of the tab list entry that looks like the
+						// original player, but has a different UUID to avoid conflict
+						// with the above replacementData profile
+						GameProfile tabListProfile = disguise.tabListGameProfile;
+
+						copyList.add(tabListProfile.getId());
+					}
+				}
+
+				if (copyList.size() > nmsPacket.profileIds().size()) {
+					PacketContainer packet = event.getPacket().shallowClone();
+					packet.getModifier().write(0, copyList);
+					event.setPacket(packet);
+				}
+			}
+		});
+
+		/*ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
+				PacketType.Play.Server.PLAYER_INFO) {
 			@Override
 			public void onPacketSending(PacketEvent event) {
 				ClientboundPlayerInfoPacket nmsPacket = (ClientboundPlayerInfoPacket) event.getPacket().getHandle();
@@ -337,7 +481,7 @@ public class PacketListeners
 					}
 				}
 			}
-		});
+		});*/
 
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.NAMED_SOUND_EFFECT, PacketType.Play.Server.ENTITY_SOUND)
@@ -345,7 +489,10 @@ public class PacketListeners
 		{
 			@Override
 			public void onPacketSending(PacketEvent event) {
-				final Sound sound = event.getPacket().getSoundEffects().read(0);
+				//final Sound sound = event.getPacket().getSoundEffects().read(0);
+				final Holder<SoundEvent> soundHolder = (Holder<SoundEvent>) event.getPacket().getModifier().read(0);
+				SoundEvent soundEvent = soundHolder.value();
+				Sound sound = CraftSound.getBukkit(soundEvent);
 				if (cancelDamageSounds) {
 					if(sound == Sound.ENTITY_PLAYER_ATTACK_STRONG ||
 							sound == Sound.ENTITY_PLAYER_ATTACK_CRIT ||
@@ -470,13 +617,12 @@ public class PacketListeners
 
 	private static class NoChatKeys extends PacketAdapter {
 		NoChatKeys() {
-			super(Main.getPlugin(), PacketType.Play.Server.PLAYER_INFO,
-					PacketType.Play.Client.CHAT_PREVIEW,
+			super(Main.getPlugin(), /*PacketType.Play.Server.PLAYER_INFO,*/
 					PacketType.Play.Client.CHAT,
 					PacketType.Play.Client.CHAT_COMMAND);
 		}
 
-		@Override
+		/*@Override
 		public void onPacketSending(PacketEvent event) {
 			var packet = event.getPacket();
 			if (packet.getPlayerInfoAction().read(0) == EnumWrappers.PlayerInfoAction.ADD_PLAYER) {
@@ -493,12 +639,11 @@ public class PacketListeners
 				});
 				packet.getPlayerInfoDataLists().write(0, playerInfoList);
 			}
-		}
+		}*/
 
 		@Override
 		public void onPacketReceiving(PacketEvent event) {
 			var packet = event.getPacket();
-			var player = event.getPlayer();
 
 			if (packet.getType() == PacketType.Play.Client.CHAT ||
 					packet.getType() == PacketType.Play.Client.CHAT_COMMAND) {
@@ -514,18 +659,31 @@ public class PacketListeners
 					event.getPlayer().chat(originalMessage);
 				});
 			}
-			else if (packet.getType() == PacketType.Play.Client.CHAT_PREVIEW) {
-				if (Main.getPlayerInfo(player).permissionLevel.compareTo(CustomCommand.PermissionLevel.MOD) >= 0) {
-					var nmsPacket = (ServerboundChatPreviewPacket) packet.getHandle();
-					String message = nmsPacket.query();
-					var preview = MiniMessage.miniMessage().deserialize(message);
-
-					var response = new ClientboundChatPreviewPacket(nmsPacket.queryId(), PaperAdventure.asVanilla(preview));
-
-					PlayerUtils.sendPacket(event.getPlayer(), response);
-					event.setCancelled(true);
-				}
-			}
 		}
+	}
+
+	public static PlayerInfoData copyPlayerInfoEntry(ClientboundPlayerInfoUpdatePacket.Entry entry, boolean stripChat) {
+		EnumWrappers.NativeGameMode nativeGameMode = getNativeGameMode(entry.gameMode());
+		WrappedGameProfile wrappedGameProfile = WrappedGameProfile.fromHandle(entry.profile());
+		Component nmsComponent = entry.displayName();
+		WrappedChatComponent wrappedComponent = null;
+		if(nmsComponent != null)
+			wrappedComponent = WrappedChatComponent.fromHandle(nmsComponent);
+
+		return new PlayerInfoData(entry.profileId(), entry.latency(), entry.listed(),
+				nativeGameMode, wrappedGameProfile, wrappedComponent,
+				stripChat ? null : new WrappedProfilePublicKey.WrappedProfileKeyData(entry.chatSession()));
+	}
+
+	public static EnumWrappers.NativeGameMode getNativeGameMode(GameType nmsType) {
+		EnumWrappers.NativeGameMode nativeGameMode = null;
+		switch (nmsType) {
+			case SURVIVAL -> nativeGameMode = EnumWrappers.NativeGameMode.SURVIVAL;
+			case CREATIVE -> nativeGameMode = EnumWrappers.NativeGameMode.CREATIVE;
+			case ADVENTURE -> nativeGameMode = EnumWrappers.NativeGameMode.ADVENTURE;
+			case SPECTATOR -> nativeGameMode = EnumWrappers.NativeGameMode.SPECTATOR;
+		}
+
+		return nativeGameMode;
 	}
 }

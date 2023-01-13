@@ -3,8 +3,7 @@ package me.toomuchzelda.teamarenapaper.fakehitboxes;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
-import com.comphenix.protocol.wrappers.WrappedDataWatcher;
-import com.comphenix.protocol.wrappers.WrappedWatchableObject;
+import com.comphenix.protocol.wrappers.*;
 import com.mojang.authlib.GameProfile;
 import io.papermc.paper.adventure.PaperAdventure;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
@@ -13,15 +12,13 @@ import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.minecraft.network.protocol.game.ClientboundPlayerInfoPacket;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.Pose;
-import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.AABB;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
-import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_19_R2.CraftWorld;
+import org.bukkit.craftbukkit.v1_19_R2.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityPoseChangeEvent;
 import org.bukkit.util.Vector;
@@ -34,7 +31,7 @@ public class FakeHitbox
 	//index is the fake player number 0-3
 	private static final Vector[] OFFSETS;
 	//metadata to make them invisible
-	private static final List<WrappedWatchableObject> METADATA;
+	private static final List<WrappedDataValue> METADATA;
 	public static final String USERNAME = "zzzzzz";
 	public static final Component DONT_MIND_ME = Component.text("don't mind me");
 	public static final double VIEWING_RADIUS = 17d;
@@ -50,12 +47,10 @@ public class FakeHitbox
 			}
 		}
 
-		WrappedDataWatcher watcher = new WrappedDataWatcher();
-		watcher.setObject(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK);
-		METADATA = watcher.getWatchableObjects();
+		METADATA = List.of(MetaIndex.newValue(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK));
 	}
 
-	private final List<ClientboundPlayerInfoPacket.PlayerUpdate> playerInfoEntries;
+	private final List<PlayerInfoData> playerInfoEntries;
 	private final PacketContainer[] spawnPlayerPackets;
 	private final PacketContainer[] teleportPackets;
 	private final PacketContainer[] metadataPackets;
@@ -84,21 +79,22 @@ public class FakeHitbox
 		removeEntitiesPacket = new PacketContainer(PacketType.Play.Server.ENTITY_DESTROY);
 		fakePlayerIds = new int[4];
 
-		List<ClientboundPlayerInfoPacket.PlayerUpdate> playerUpdates = new ArrayList<>(4);
+		List<PlayerInfoData> playerUpdates = new ArrayList<>(4);
 
 		Location loc = owner.getLocation();
 		for(int i = 0; i < 4; i++) {
 			FakePlayer fPlayer = new FakePlayer();
 
 			GameProfile authLibProfile = new GameProfile(fPlayer.uuid, USERNAME);
-
-			Component displayNameComp = getDisplayNameComponent();
-
+			//Component displayNameComp = getDisplayNameComponent();
+			Component displayNameComp = Component.text(owner.getName() + i);
 			net.minecraft.network.chat.Component nmsComponent = PaperAdventure.asVanilla(displayNameComp);
-			ClientboundPlayerInfoPacket.PlayerUpdate update = new ClientboundPlayerInfoPacket.PlayerUpdate(authLibProfile, 1,
-					GameType.SURVIVAL, nmsComponent, null);
 
-			playerUpdates.add(update);
+			// Unlisted playerinfo entry.
+			PlayerInfoData wrappedEntry = new PlayerInfoData(fPlayer.uuid, 1, false, EnumWrappers.NativeGameMode.SURVIVAL,
+				WrappedGameProfile.fromHandle(authLibProfile), WrappedChatComponent.fromHandle(nmsComponent), null);
+
+			playerUpdates.add(wrappedEntry);
 
 			PacketContainer spawnPlayerPacket = new PacketContainer(PacketType.Play.Server.NAMED_ENTITY_SPAWN);
 			spawnPlayerPacket.getIntegers().write(0, fPlayer.entityId);
@@ -114,7 +110,8 @@ public class FakeHitbox
 
 			PacketContainer metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
 			metadataPacket.getIntegers().write(0, fPlayer.entityId);
-			metadataPacket.getWatchableCollectionModifier().write(0, METADATA);
+			//metadataPacket.getWatchableCollectionModifier().write(0, METADATA);
+			metadataPacket.getDataValueCollectionModifier().write(0, METADATA);
 			metadataPackets[i] = metadataPacket;
 			spawnAndMetaPackets[i + 4] = metadataPacket;
 
@@ -302,7 +299,7 @@ public class FakeHitbox
 		return this.viewers.computeIfAbsent(viewer, player1 -> new FakeHitboxViewer());
 	}
 
-	public List<ClientboundPlayerInfoPacket.PlayerUpdate> getPlayerInfoEntries() {
+	public List<PlayerInfoData> getPlayerInfoEntries() {
 		return this.playerInfoEntries;
 	}
 
@@ -357,23 +354,16 @@ public class FakeHitbox
 	}
 
 	public @Nullable PacketContainer[] createPoseMetadataPackets(PacketContainer packet) {
-		List<WrappedWatchableObject> objects = packet.getWatchableCollectionModifier().read(0);
-
 		PacketContainer[] newPackets = null;
-		for (WrappedWatchableObject obj : objects) {
-			if (obj.getIndex() == MetaIndex.POSE_IDX) { //if the metadata has pose
-				Pose pose = (Pose) obj.getValue();
-
+		for (WrappedDataValue dataValue : packet.getDataValueCollectionModifier().read(0)) {
+			if (dataValue.getIndex() == MetaIndex.POSE_IDX) { //if the metadata has pose
+				//Pose pose = (Pose) dataValue.getValue();
 				newPackets = new PacketContainer[4];
-
-				WrappedDataWatcher watcher = new WrappedDataWatcher();
-				watcher.setObject(MetaIndex.POSE_OBJ, pose);
-				List<WrappedWatchableObject> newObjects = watcher.getWatchableObjects();
-
+				List<WrappedDataValue> hitboxValueList = List.of(dataValue);
 				for(int i = 0; i < 4; i++) {
 					PacketContainer newPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
 					newPacket.getIntegers().write(0, this.fakePlayerIds[i]);
-					newPacket.getWatchableCollectionModifier().write(0, newObjects);
+					newPacket.getDataValueCollectionModifier().write(0, hitboxValueList);
 					newPackets[i] = newPacket;
 				}
 

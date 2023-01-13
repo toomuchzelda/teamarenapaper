@@ -53,6 +53,10 @@ public class MetadataBitfieldValue extends MetadataValue<Map<Integer, Boolean>>
 		return getValue().size();
 	}
 
+	public Byte getByte() {
+		return this.combine((byte) 0);
+	}
+
 	/**
 	 * Remove a bit from this bitfield mask. Not 'set it to 0 or 1', but make it so this MetadataBitfieldValue
 	 * has no more effect on the MetadataViewer.

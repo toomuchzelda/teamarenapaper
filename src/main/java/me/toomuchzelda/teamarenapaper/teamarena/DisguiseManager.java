@@ -4,16 +4,12 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
 import com.mojang.authlib.GameProfile;
-import io.papermc.paper.adventure.PaperAdventure;
 import me.toomuchzelda.teamarenapaper.Main;
-import net.kyori.adventure.text.Component;
-import net.minecraft.network.protocol.game.ClientboundPlayerInfoPacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.GameType;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.craftbukkit.v1_19_R1.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_19_R2.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 
 import java.util.*;
@@ -161,7 +157,7 @@ public class DisguiseManager
 
 		public PacketContainer removePlayerInfoPacket;
 
-		public PacketContainer addTabListPlayerInfoPacket;
+		//public PacketContainer addTabListPlayerInfoPacket;
 		public PacketContainer removeTabListPlayerInfoPacket;
 
 		public PacketContainer addRealPlayerInfoPacket;
@@ -182,23 +178,24 @@ public class DisguiseManager
 			this.disguisedGameProfile.getProperties().putAll("textures", disguiseAs.getProperties().get("textures"));
 
 			int latency = toDisguiseAs.getPing();
-			PacketContainer fakeInfoPacket = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);
+
+			/*PacketContainer fakeInfoPacket = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);
 			StructureModifier<Object> disguisedInfoModifier = fakeInfoPacket.getModifier();
 			var fakePlayerUpdate = new ClientboundPlayerInfoPacket.PlayerUpdate(disguisedGameProfile, latency,
 					GameType.SURVIVAL, PaperAdventure.asVanilla(Component.text(" ")), null);
 			disguisedInfoModifier.write(0, ClientboundPlayerInfoPacket.Action.ADD_PLAYER);
 			disguisedInfoModifier.write(1, Collections.singletonList(fakePlayerUpdate));
-			addDisguisedPlayerInfoPacket = fakeInfoPacket;
+			addDisguisedPlayerInfoPacket = fakeInfoPacket;*/
 
 			spawnDisguisedPlayerPacket = new PacketContainer(PacketType.Play.Server.NAMED_ENTITY_SPAWN);
 			StructureModifier<Object> modifier = spawnDisguisedPlayerPacket.getModifier();
 			modifier.write(0, disguisedPlayer.getEntityId());
 			modifier.write(1, disguisedPlayer.getUniqueId());
 
-			ServerPlayer nmsPlayer = ((CraftPlayer) disguisedPlayer).getHandle();
-			ClientboundPlayerInfoPacket removeInfoPacket =
-					new ClientboundPlayerInfoPacket(ClientboundPlayerInfoPacket.Action.REMOVE_PLAYER, nmsPlayer);
-			removePlayerInfoPacket = new PacketContainer(PacketType.Play.Server.PLAYER_INFO, removeInfoPacket);
+			//ServerPlayer nmsPlayer = ((CraftPlayer) disguisedPlayer).getHandle();
+			ClientboundPlayerInfoRemovePacket removeInfoPacket =
+					new ClientboundPlayerInfoRemovePacket(List.of(disguisedPlayer.getUniqueId()));
+			removePlayerInfoPacket = new PacketContainer(PacketType.Play.Server.PLAYER_INFO_REMOVE, removeInfoPacket);
 
 			removeDisguisedPlayerPacket = new ClientboundRemoveEntitiesPacket(disguisedPlayer.getEntityId());
 
@@ -206,42 +203,41 @@ public class DisguiseManager
 			//tab list player stuff-----
 
 			//======= Add tab list player packet
-			addTabListPlayerInfoPacket = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);
+			//addTabListPlayerInfoPacket = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);
 			//get this to copy the skin so the face appears in tab list
 			GameProfile realPlayerProifle = ((CraftPlayer) disguisedPlayer).getHandle().getGameProfile();
 			tabListGameProfile = new GameProfile(tabListPlayerUuid, disguisedPlayer.getName());
 			tabListGameProfile.getProperties().removeAll("textures");
 			tabListGameProfile.getProperties().putAll("textures", realPlayerProifle.getProperties().get("textures"));
 
-			var tabListUpdate =
-					new ClientboundPlayerInfoPacket.PlayerUpdate(tabListGameProfile, disguisedPlayer.getPing(),
-							GameType.SURVIVAL, PaperAdventure.asVanilla(disguisedPlayer.displayName()), null);
+			//var tabListUpdate =
+			//		new ClientboundPlayerInfoUpdatePacket.Entry(tabListGameProfile, disguisedPlayer.getPing(),
+			//				GameType.SURVIVAL, PaperAdventure.asVanilla(disguisedPlayer.displayName()), null);
 
-			StructureModifier<Object> modifier3 = addTabListPlayerInfoPacket.getModifier();
-			modifier3.write(0, ClientboundPlayerInfoPacket.Action.ADD_PLAYER);
-			modifier3.write(1, Collections.singletonList(tabListUpdate));
+			//StructureModifier<Object> modifier3 = addTabListPlayerInfoPacket.getModifier();
+			//modifier3.write(0, ClientboundPlayerInfoPacket.Action.ADD_PLAYER);
+			//modifier3.write(1, Collections.singletonList(tabListUpdate));
 			//====================================
 
 			//========Remove tab list player packet
-			removeTabListPlayerInfoPacket = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);
+			removeTabListPlayerInfoPacket = new PacketContainer(PacketType.Play.Server.PLAYER_INFO_REMOVE);
 			StructureModifier<Object> modifier4 = removeTabListPlayerInfoPacket.getModifier();
-			GameProfile removeTabProfile = new GameProfile(tabListPlayerUuid, disguisedPlayer.getName());
+			//GameProfile removeTabProfile = new GameProfile(tabListPlayerUuid, disguisedPlayer.getName());
 
-			var removeUpdate = new ClientboundPlayerInfoPacket.PlayerUpdate(removeTabProfile, 1, null,
-					null, null);
+			//var removeUpdate = new ClientboundPlayerInfoPacket.PlayerUpdate(removeTabProfile, 1, null,
+			//		null, null);
 
-			modifier4.write(0, ClientboundPlayerInfoPacket.Action.REMOVE_PLAYER);
-			modifier4.write(1, Collections.singletonList(removeUpdate));
+			modifier4.write(0, List.of(tabListPlayerUuid));
 			//==================================
 
-			addRealPlayerInfoPacket = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);
+			/*addRealPlayerInfoPacket = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);
 			//get this to copy the skin so the face appears in tab list
 			var realPlayerUpdate = new ClientboundPlayerInfoPacket.PlayerUpdate(realPlayerProifle,
 					disguisedPlayer.getPing(), GameType.SURVIVAL, null, null);
 
 			StructureModifier<Object> modifier5 = addTabListPlayerInfoPacket.getModifier();
 			modifier5.write(0, ClientboundPlayerInfoPacket.Action.ADD_PLAYER);
-			modifier5.write(1, Collections.singletonList(realPlayerUpdate));
+			modifier5.write(1, Collections.singletonList(realPlayerUpdate));*/
 		}
 
 		public PacketContainer getSpawnDisguisedPlayerPacket() {
