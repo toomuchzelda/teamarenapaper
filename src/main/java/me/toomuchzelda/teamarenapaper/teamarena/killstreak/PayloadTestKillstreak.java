@@ -6,7 +6,6 @@ import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
@@ -18,7 +17,7 @@ import java.util.Map;
 
 public class PayloadTestKillstreak extends CratedKillStreak {
 	PayloadTestKillstreak() {
-		super("Amogus", "amogus", TextColor.color(216, 212, 213), null);
+		super("Amogus", "amogus", TextColor.color(216, 212, 213), null, Material.BOOKSHELF);
 	}
 
 	private static final BlockData RED = Material.RED_CONCRETE.createBlockData();
@@ -97,11 +96,6 @@ public class PayloadTestKillstreak extends CratedKillStreak {
 				}
 			}
 		}.runTaskTimer(Main.getPlugin(), 0, 1);
-	}
-
-	@Override
-	public @NotNull ItemStack createCrateItem(Player player) {
-		return createSimpleCrateItem(Material.BOOKSHELF);
 	}
 
 	public static CratePayload createPayloadFromString(String string, Map<Character, BlockData> mappings) {

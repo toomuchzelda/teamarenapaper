@@ -288,6 +288,13 @@ public class PacketEntity
 	}
 
 	/**
+	 * Mark for syncing position on the next tick
+	 */
+	public void syncLocation() {
+		this.dirtyRelativePacketTime = 0;
+	}
+
+	/**
 	 * does not support moving between worlds
 	 */
 	public void move(Location newLocation) {
@@ -335,7 +342,7 @@ public class PacketEntity
 	/**
 	 * Spawn this if removed and mark as alive.
 	 */
-	public void respawn(boolean teleport) {
+	public void respawn() {
 		if(remove) {
 			throw new IllegalStateException("Cannot respawn PacketEntity that has been marked for removal");
 		}
@@ -345,13 +352,9 @@ public class PacketEntity
 				spawn(p);
 			}
 			this.isAlive = true;
-			if (teleport)
-				this.move(this.getLocation(), true);
+			//this.move(this.getLocation(), true);
+			this.syncLocation();
 		}
-	}
-
-	public void respawn() {
-		respawn(true);
 	}
 
 	/**

@@ -3,8 +3,6 @@ package me.toomuchzelda.teamarenapaper.utils;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.wrappers.WrappedDataValue;
-import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import me.toomuchzelda.teamarenapaper.Main;
@@ -20,6 +18,7 @@ import net.minecraft.network.protocol.game.ClientboundSetBorderWarningDistancePa
 import net.minecraft.network.protocol.game.ClientboundSetHealthPacket;
 import net.minecraft.network.protocol.game.ServerboundInteractPacket;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.InteractionHand;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -47,6 +46,11 @@ public class PlayerUtils {
 		sendPacket(player, false, packets);
 	}
 
+	public static void sendPacket(Collection<? extends Player> players, PacketContainer... packets) {
+		for (Player player : players) {
+			sendPacket(player, false, packets);
+		}
+	}
 
 	public static void sendPacket(Player player, boolean triggerPacketListeners, PacketContainer... packets) {
 		for (PacketContainer packet : packets) {
@@ -62,7 +66,7 @@ public class PlayerUtils {
 	}
 
 	public static void sendPacket(Player player, Collection<? extends Packet<?>> packets) {
-		var connection = ((CraftPlayer) player).getHandle().connection;
+		ServerGamePacketListenerImpl connection = ((CraftPlayer) player).getHandle().connection;
 		for (Packet<?> p : packets) {
 			connection.send(p);
 		}
