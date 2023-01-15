@@ -3,8 +3,6 @@ package me.toomuchzelda.teamarenapaper.utils;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.wrappers.WrappedDataValue;
-import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import me.toomuchzelda.teamarenapaper.Main;
@@ -19,7 +17,7 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundSetBorderWarningDistancePacket;
 import net.minecraft.network.protocol.game.ClientboundSetHealthPacket;
 import net.minecraft.network.protocol.game.ServerboundInteractPacket;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.InteractionHand;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -37,15 +35,27 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
 public class PlayerUtils {
+
+	public static void sendPacket(Player player, PacketContainer packet) {
+		ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet, false);
+	}
+
     public static void sendPacket(Player player, PacketContainer... packets) {
 		sendPacket(player, false, packets);
 	}
 
+	public static void sendPacket(Collection<? extends Player> players, PacketContainer... packets) {
+		for (Player player : players) {
+			sendPacket(player, false, packets);
+		}
+	}
 
 	public static void sendPacket(Player player, boolean triggerPacketListeners, PacketContainer... packets) {
 		for (PacketContainer packet : packets) {
@@ -53,12 +63,20 @@ public class PlayerUtils {
 		}
     }
 
-    public static void sendPacket(Player player, Packet<?>... packets) {
-        ServerPlayer nmsPlayer = ((CraftPlayer) player).getHandle();
-        for (Packet<?> p : packets) {
-            nmsPlayer.connection.send(p);
-        }
-    }
+	public static void sendPacket(Player player, Packet<?> packet) {
+		((CraftPlayer) player).getHandle().connection.send(packet);
+	}
+
+	public static void sendPacket(Player player, Packet<?>... packets) {
+		sendPacket(player, Arrays.asList(packets));
+	}
+
+	public static void sendPacket(Player player, Collection<? extends Packet<?>> packets) {
+		ServerGamePacketListenerImpl connection = ((CraftPlayer) player).getHandle().connection;
+		for (Packet<?> p : packets) {
+			connection.send(p);
+		}
+	}
 
 	public static Vector noNonFinites(Vector vector) {
 		if(!Double.isFinite(vector.getX())) vector.setX(0d);

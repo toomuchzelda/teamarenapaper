@@ -12,10 +12,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
-import org.bukkit.Bukkit;
-import org.bukkit.Chunk;
-import org.bukkit.Location;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.craftbukkit.v1_19_R2.block.data.CraftBlockData;
 import org.bukkit.entity.EntityType;
@@ -285,9 +282,16 @@ public class PacketEntity
 	/**
 	 * Call manually after updating this WrappedDataWatcher data
 	 */
-	protected void updateMetadataPacket() {
+	public void updateMetadataPacket() {
 		//this.dataValueCollectionModifier.write(0, this.data.getWatchableObjects());
 		this.dataValueCollectionModifier.write(0, MetaIndex.getFromWatchableObjectsList(this.data.getWatchableObjects()));
+	}
+
+	/**
+	 * Mark for syncing position on the next tick
+	 */
+	public void syncLocation() {
+		this.dirtyRelativePacketTime = 0;
 	}
 
 	/**
@@ -348,7 +352,8 @@ public class PacketEntity
 				spawn(p);
 			}
 			this.isAlive = true;
-			this.move(this.getLocation(), true);
+			//this.move(this.getLocation(), true);
+			this.syncLocation();
 		}
 	}
 

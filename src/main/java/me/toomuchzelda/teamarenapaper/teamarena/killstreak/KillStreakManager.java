@@ -11,7 +11,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 
 import java.util.*;
 
@@ -24,6 +26,7 @@ public class KillStreakManager
 {
 	private final Map<String, KillStreak> allKillstreaks;
 	private final Map<Integer, List<KillStreak>> killstreaksByKills;
+	private final Map<ItemStack, CratedKillStreak> crateItemLookup;
 
 	private final List<Crate> allCrates;
 
@@ -33,8 +36,10 @@ public class KillStreakManager
 	public KillStreakManager() {
 		this.allKillstreaks = new LinkedHashMap<>();
 		this.killstreaksByKills = new HashMap<>();
+		this.crateItemLookup = new HashMap<>();
 
 		// KillStreak map keys must not have spaces in them
+		addKillStreak(-1, new PayloadTestKillstreak());
 		addKillStreak(2, new CompassKillStreak());
 		addKillStreak(4, new WolvesKillStreak());
 		addKillStreak(7, new IronGolemKillStreak());
@@ -53,18 +58,23 @@ public class KillStreakManager
 
 	private void addKillStreak(int killCount, KillStreak killStreak) {
 		allKillstreaks.put(killStreak.getName().replaceAll(" ", ""), killStreak);
+
 		List<KillStreak> list = killstreaksByKills.computeIfAbsent(killCount, integer -> new ArrayList<>(1));
 		list.add(killStreak);
+
+		if (killStreak instanceof CratedKillStreak cratedKillStreak) {
+			this.crateItemLookup.put(cratedKillStreak.getCrateItem(), cratedKillStreak);
+		}
 	}
 
 	public void handleKill(Player killer, int newKills, PlayerInfo pinfo) {
 		List<KillStreak> streaks = killstreaksByKills.get(newKills);
 		if(streaks != null) {
 			for (KillStreak streak : streaks) {
-				if(!streak.isDeliveredByCrate())
-					streak.giveStreak(killer, pinfo);
+				if(streak instanceof CratedKillStreak cratedStreak)
+					killer.getInventory().addItem(cratedStreak.getCrateItem());
 				else {
-					killer.getInventory().addItem(Crate.createCrateItem(streak));
+					streak.giveStreak(killer, pinfo);
 				}
 
 				killer.sendMessage(Component.text()
@@ -80,26 +90,26 @@ public class KillStreakManager
 	 * When a player uses their crate call item, handle it and create the Crate instance that will fall to them.
 	 */
 	public void handleCrateItemUse(PlayerInteractEvent event) {
-		KillStreak streak = Crate.crateItems.get(event.getItem());
-		if(streak == null) return;
+		// Check for special ItemMeta
+		if (event.getItem() == null) return;
 
-		event.setUseItemInHand(Event.Result.DENY);
+		CratedKillStreak crateStreak = this.crateItemLookup.get(event.getItem().asOne());
+		if(crateStreak == null) return;
+
+		event.setUseItemInHand(Event.Result.DENY); // A crate item was used: cancel the event
 		event.setUseInteractedBlock(Event.Result.DENY);
 
-		// First validate it's a good position to drop a crate.
+		// Validate it's a good position to drop a crate.
 		if(event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
 		if(event.getBlockFace() != BlockFace.UP) return;
 		if(!event.getClickedBlock().getRelative(BlockFace.UP).getType().isAir()) return;
 
-		Crate.crateItems.remove(event.getItem());
-
 		// Decrement stack size by one
-		Inventory inventory = event.getPlayer().getInventory();
-		int index = inventory.first(event.getItem());
-		inventory.getItem(index).subtract();
-
-		Crate crate = new Crate(event.getPlayer(), streak.getCrateBlockType(),
-				event.getClickedBlock().getLocation().add(0.5d, 1d, 0.5d), streak);
+		PlayerInventory inventory = event.getPlayer().getInventory();
+		EquipmentSlot slot = event.getHand();
+		inventory.setItem(slot, inventory.getItem(slot).subtract());
+		Crate crate = new Crate(event.getPlayer(),
+				event.getClickedBlock().getLocation().add(0.5d, 1d, 0.5d), crateStreak);
 
 		allCrates.add(crate);
 	}
@@ -141,8 +151,6 @@ public class KillStreakManager
 
 		allKillstreaks.clear();
 		killstreaksByKills.clear();
-
-		Crate.crateItems.clear();
 	}
 
 	public boolean isCrateFirework(Entity entity) {
