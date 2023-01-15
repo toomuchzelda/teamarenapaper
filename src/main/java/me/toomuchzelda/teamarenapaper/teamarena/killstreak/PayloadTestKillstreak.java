@@ -4,16 +4,15 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.crate.CratePayload;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class PayloadTestKillstreak extends CratedKillStreak {
 	PayloadTestKillstreak() {
@@ -29,7 +28,7 @@ public class PayloadTestKillstreak extends CratedKillStreak {
 		....
 		 . .""";
 
-	private static final CratePayload CRATE_PAYLOAD = createPayloadFromString(ART, Map.of('.', RED, 'x', BLUE));
+	private static final CratePayload.Group CRATE_PAYLOAD = createPayloadFromString(ART, Map.of('.', RED, 'x', BLUE));
 	@Override
 	public @NotNull CratePayload getPayload(Player player, Location destination) {
 		return CRATE_PAYLOAD;
@@ -72,6 +71,15 @@ public class PayloadTestKillstreak extends CratedKillStreak {
 	public void onCrateLand(Player player, Location destination) {
 		World world = destination.getWorld();
 		Iterator<Note> iterator = SONG.iterator();
+
+		List<BlockState> modifiedBlocks = new ArrayList<>();
+		CRATE_PAYLOAD.children().forEach((offset, blockPayload) -> {
+			Location blockLocation = destination.clone().add(offset);
+			Block block = blockLocation.getBlock();
+			modifiedBlocks.add(block.getState());
+			block.setBlockData(((CratePayload.SimpleBlock) blockPayload).blockData(), false);
+		});
+
 		new BukkitRunnable() {
 			Note nextNote;
 			int ticksElapsed;
@@ -79,6 +87,11 @@ public class PayloadTestKillstreak extends CratedKillStreak {
 			public void run() {
 				if (nextNote == null) {
 					if (!iterator.hasNext()) {
+						// end of song
+						for (BlockState state : modifiedBlocks) {
+							state.update(true, false);
+						}
+
 						cancel();
 						return;
 					}
@@ -98,7 +111,7 @@ public class PayloadTestKillstreak extends CratedKillStreak {
 		}.runTaskTimer(Main.getPlugin(), 0, 1);
 	}
 
-	public static CratePayload createPayloadFromString(String string, Map<Character, BlockData> mappings) {
+	public static CratePayload.Group createPayloadFromString(String string, Map<Character, BlockData> mappings) {
 		Map<Vector, CratePayload.SimpleBlock> blocks = new LinkedHashMap<>();
 		int width = string.length() - string.lastIndexOf('\n') - 1;
 		double xOffset = width / 2d - 0.5;
