@@ -179,8 +179,11 @@ public class Flag
 	private PacketContainer contructNormalMetadataPacket() {
 		PacketContainer metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
 		metadataPacket.getIntegers().write(0, stand.getEntityId());
-		metadataPacket.getWatchableCollectionModifier().write(0,
-				WrappedDataWatcher.getEntityWatcher(stand).getWatchableObjects());
+		//metadataPacket.getWatchableCollectionModifier().write(0,
+		//		WrappedDataWatcher.getEntityWatcher(stand).getWatchableObjects());
+
+		metadataPacket.getDataValueCollectionModifier().write(0,
+			MetaIndex.getFromWatchableObjectsList(WrappedDataWatcher.getEntityWatcher(stand).getWatchableObjects()));
 
 		return metadataPacket;
 	}
