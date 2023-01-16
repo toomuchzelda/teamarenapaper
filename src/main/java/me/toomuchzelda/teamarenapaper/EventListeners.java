@@ -398,10 +398,15 @@ public class EventListeners implements Listener
 		//prevent them from moving outside the game border
 		if (player.getGameMode() != GameMode.SPECTATOR && !game.getBorder().contains(to)) {
 			// if they're hitting the bottom border call it falling into the void
-			if (to.getY() < game.getBorder().getMinY() && game.getGameState() == LIVE) {
-				event.setCancelled(false);
-				DamageEvent dEvent = DamageEvent.newDamageEvent(event.getPlayer(), 9999d, DamageType.VOID, null, false);
-				Main.getGame().queueDamage(dEvent);
+			if (to.getY() < game.getBorder().getMinY()) {
+				if (game.getGameState() == LIVE) {
+					event.setCancelled(false);
+					DamageEvent dEvent = DamageEvent.newDamageEvent(event.getPlayer(), 9999d, DamageType.VOID, null, false);
+					Main.getGame().queueDamage(dEvent);
+				}
+				else {
+					event.getPlayer().teleport(game.getSpawnPos());
+				}
 			} else {
 				Location newTo = event.getTo().clone();
 				newTo.set(from.getX(), from.getY(), from.getZ());

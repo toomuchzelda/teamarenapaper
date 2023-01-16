@@ -111,8 +111,8 @@ public class GameScheduler
 					GAMETYPE_MAPS.get(mapGameType).add(parsedConfig);
 				}
 			}
-			catch (IOException e) {
-				Main.logger().warning("Error when parsing config for map " + mapFolder.getName());
+			catch (Exception e) {
+				Main.logger().warning("Exception for: " + mapFolder.getName() + " " + e.getMessage());
 			}
 		}
 

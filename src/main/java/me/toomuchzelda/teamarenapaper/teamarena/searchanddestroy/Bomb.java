@@ -214,6 +214,10 @@ public class Bomb
 				lastHissTime = currentTick;
 				loc.getWorld().playSound(loc, Sound.BLOCK_FIRE_EXTINGUISH, SoundCategory.AMBIENT, 1f, 0f);
 			}
+
+			if(currentTick % 2 == 1) {
+				loc.getWorld().spawnParticle(Particle.SMOKE_LARGE, loc.clone().add(0, 1, 0), 1, 0d, 0d, 0d, 0d);
+			}
 		}
 
 		//process bomb countdown and move the hologram
