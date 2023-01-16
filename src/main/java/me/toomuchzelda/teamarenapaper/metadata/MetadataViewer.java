@@ -19,6 +19,9 @@ import java.util.*;
  * Class that allows modifying the entity metadata of an entity as seen by the player (viewer).
  * Entity's real metadata is not modified, and only the player this MetadataViewer belongs to sees the
  * changes.
+ * <p>
+ * After making changes, remember to refreshViewer()! (Unless you know that a Metadata packet will be sent by vanilla
+ * shortly after).
  *
  * @author toomuchzelda
  */
@@ -26,7 +29,7 @@ public class MetadataViewer
 {
 	/** Simple container class to keep a MetadataValue and whether it has been sent to the player viewer yet.*/
 	private static class MetadataValueStatus {
-		public MetadataValue value;
+		public MetadataValue value; // null value means refresh to default and remove on next sync
 		public boolean dirty;
 
 		public MetadataValueStatus(MetadataValue value) {
@@ -165,7 +168,7 @@ public class MetadataViewer
 	}
 
 	public void removeViewedValue(Entity viewedEntity, int index) {
-		var values = entityValues.get(viewedEntity.getEntityId());
+		EntityMetaValues values = entityValues.get(viewedEntity.getEntityId());
 		//values.indexedValues().remove(index);
 		MetadataValueStatus status = values.indexedValues().get(index);
 		if(status != null) {
@@ -217,6 +220,24 @@ public class MetadataViewer
 				}
 
 				if(entry.getValue().indexedValues().size() == 0) {
+					iter.remove();
+				}
+			}
+		}
+	}
+
+	/**
+	 * Clean up any null MetadataValue(Statuses) after having refreshed the viewer
+	 */
+	private void removeNulls(int viewerId) {
+		EntityMetaValues values = this.entityValues.get(viewerId);
+		if (values != null) {
+			var iter = values.indexedValues().entrySet().iterator();
+			while (iter.hasNext()) {
+				var entry = iter.next();
+				MetadataValueStatus status = entry.getValue();
+
+				if (!status.dirty && status.value == null) {
 					iter.remove();
 				}
 			}
@@ -277,6 +298,9 @@ public class MetadataViewer
 		metadataPacket.getDataValueCollectionModifier().write(0,
 				MetaIndex.getFromWatchableObjectsList(modifiedData.getWatchableObjects()));
 		PlayerUtils.sendPacket(this.player, metadataPacket);
+
+		// Clean up non-dirty nulls
+		removeNulls(viewedEntity.getEntityId());
 	}
 
 	/**
@@ -285,14 +309,14 @@ public class MetadataViewer
 	 * @param metadataPacket A vanilla generated metadata packet.
 	 */
 	public PacketContainer adjustMetadataPacket(@NotNull PacketContainer metadataPacket) {
-		int id = metadataPacket.getIntegers().read(0);
+		final int viewedId = metadataPacket.getIntegers().read(0);
 		//don't construct a new datawatcher and packet if it's not needed
-		if(this.hasMetadataFor(id)) {
+		if(this.hasMetadataFor(viewedId)) {
 			//MUST use a new packet. Without this, modifications to the packet are seen by unintended viewers.
 			// I think protocollib is re-using the same Packet instance for many players. So create a new one anytime
 			// there are any modifications.
 			PacketContainer newPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
-			newPacket.getIntegers().write(0, id);
+			newPacket.getIntegers().write(0, viewedId);
 
 			final List<WrappedDataValue> packetDataValues = metadataPacket.getDataValueCollectionModifier().read(0);
 			// Our resulting values to be seen by viewer
@@ -301,7 +325,7 @@ public class MetadataViewer
 			// First copy over any values already included in the packet by Vanilla and replace with custom values
 			// as needed
 			for (WrappedDataValue dataVal : packetDataValues) {
-				MetadataValue value = this.getViewedValue(id, dataVal.getIndex());
+				MetadataValue value = this.getViewedValue(viewedId, dataVal.getIndex());
 				if (value != null) {
 					//new watcher object to put into packet. Copy the properties of the old obj
 					Object newValue;
@@ -320,7 +344,7 @@ public class MetadataViewer
 			}
 
 			// Then copy over any custom values that are dirty but not included in the packet by Vanilla
-			Map<Integer, MetadataValueStatus> allValues = this.getViewedValues(id);
+			Map<Integer, MetadataValueStatus> allValues = this.getViewedValues(viewedId);
 			allValues.forEach((index, metadataValueStatus) -> {
 				if(metadataValueStatus.dirty && metadataValueStatus.value != null) {
 					if(!valueMap.containsKey(index)) {
@@ -332,6 +356,8 @@ public class MetadataViewer
 					}
 				}
 			});
+
+			removeNulls(viewedId);
 
 			// Put into list and put into packet
 			List<WrappedDataValue> newValues = new ArrayList<>(valueMap.values());

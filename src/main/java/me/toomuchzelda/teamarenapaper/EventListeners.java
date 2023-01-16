@@ -162,8 +162,8 @@ public class EventListeners implements Listener
 			e.printStackTrace();
 		}
 
-		//every 3 minutes
-		int count = event.getTickNumber() % (3 * 60  *20);
+		//every 2 minutes
+		int count = event.getTickNumber() % (2 * 60  *20);
 		if(count == 0) {
 			for(PlayerInfo pinfo : Main.getPlayerInfos()) {
 				pinfo.getMetadataViewer().cleanUp();
@@ -1013,7 +1013,7 @@ public class EventListeners implements Listener
 			Component.text("               "),
 			TextUtils.getUselessRGBText("Team Arena", TextColor.color(0x060894), TextColor.color(0x1ad3f0)),
 			Component.space(),
-			TextUtils.getUselessRainbowText("[1.19.2]"),
+			TextUtils.getUselessRainbowText("[1.19.3]"),
 			Component.newline(),
 			TextUtils.getUselessRGBText("King of the Hill", TextColor.color(0x595959), TextColor.color(0xadadad)),
 			MOTD_SEPARATOR,
