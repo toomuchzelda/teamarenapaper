@@ -30,7 +30,7 @@ public final class BuildingManager {
 	public static void tick() {
 		List<Building> staleBuildings = new ArrayList<>();
 		buildings.values().forEach(building -> {
-			if (building.invalid)
+			if (building.invalid || !building.owner.isOnline())
 				staleBuildings.add(building);
 			else
 				building.onTick();
@@ -71,9 +71,15 @@ public final class BuildingManager {
 		building.onDestroy();
 
 		buildings.remove(new BlockCoords(building.getLocation()));
-		playerBuildings.get(building.owner)
-				.get(building.getClass())
-				.remove(building);
+		var buildingsByClass = playerBuildings.get(building.owner);
+		var buildingsList = buildingsByClass.get(building.getClass());
+		buildingsList.remove(building);
+		if (buildingsList.size() == 0) {
+			buildingsByClass.remove(building.getClass());
+		}
+		if (buildingsByClass.size() == 0) {
+			playerBuildings.remove(building.owner);
+		}
 	}
 
 	/**

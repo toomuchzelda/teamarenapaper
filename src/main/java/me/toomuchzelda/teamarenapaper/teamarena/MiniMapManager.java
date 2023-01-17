@@ -364,8 +364,10 @@ public class MiniMapManager {
         @Override
         public void render(@NotNull MapView map, @NotNull MapCanvas canvas, @NotNull Player player) {
             MapCursorCollection mapCursors = new MapCursorCollection();
-            PlayerInfo playerInfo = Main.getPlayerInfo(player);
+			if (Main.getGame() == null)
+				return;
 
+            PlayerInfo playerInfo = Main.getPlayerInfo(player);
 			if (playerInfo == null)
 				return;
 

@@ -343,8 +343,7 @@ public class TextUtils {
 	}
 
 	public static List<Component> toLoreList(String string, Style style, TagResolver... tagResolvers) {
-		// TODO this won't create a new object, but use decorationIfAbsent when Adventure is updated
-		Style styleNoItalics = style.decoration(TextDecoration.ITALIC, false);
+		Style styleNoItalics = style.decorationIfAbsent(TextDecoration.ITALIC, TextDecoration.State.FALSE);
 		MiniMessage miniMessage = MiniMessage.builder()
 			.postProcessor(component -> component.compact().style(s -> s.merge(styleNoItalics,
 				Style.Merge.Strategy.IF_ABSENT_ON_TARGET))) // lets lines override the global style
@@ -366,19 +365,5 @@ public class TextUtils {
 
 	public static List<Component> toLoreList(String string, TagResolver... tagResolvers) {
 		return toLoreList(string, Style.empty(), tagResolvers);
-	}
-
-	public static Component stringArrayToComponent(String... strings) {
-		TextComponent.Builder messageBuilder = Component.text();
-		for(int i = 0; i < strings.length; i++) {
-			String word = strings[i];
-			messageBuilder.append(Component.text(word));
-
-			//manually include spaces
-			if(i != strings.length - 1) {
-				messageBuilder.append(Component.space());
-			}
-		}
-		return messageBuilder.build();
 	}
 }

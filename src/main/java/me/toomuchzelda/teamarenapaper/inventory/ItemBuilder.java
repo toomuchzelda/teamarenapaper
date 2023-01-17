@@ -1,16 +1,20 @@
 package me.toomuchzelda.teamarenapaper.inventory;
 
+import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.ComponentLike;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Color;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -48,9 +52,10 @@ public final class ItemBuilder {
         return this;
     }
 
+	@SuppressWarnings("unchecked")
     public <T extends ItemMeta> ItemBuilder meta(Class<T> clazz, Consumer<T> consumer) {
         if (clazz.isInstance(meta)) {
-            consumer.accept(clazz.cast(meta));
+            consumer.accept((T) meta);
         }
         return this;
     }
@@ -61,10 +66,7 @@ public final class ItemBuilder {
 	}
 
     public ItemBuilder displayName(ComponentLike component) {
-		var actualComponent = component.asComponent();
-		if (actualComponent.decoration(TextDecoration.ITALIC) == TextDecoration.State.NOT_SET)
-			actualComponent = actualComponent.decoration(TextDecoration.ITALIC, false);
-        meta.displayName(actualComponent);
+        meta.displayName(component.asComponent().decorationIfAbsent(TextDecoration.ITALIC, TextDecoration.State.FALSE));
         return this;
     }
 
@@ -80,11 +82,7 @@ public final class ItemBuilder {
     public ItemBuilder lore(List<? extends ComponentLike> components) {
         List<Component> lore = new ArrayList<>(components.size());
         for (ComponentLike componentLike : components) {
-			var actualComponent = componentLike.asComponent();
-			if (actualComponent.decoration(TextDecoration.ITALIC) == TextDecoration.State.NOT_SET) {
-				actualComponent = actualComponent.decoration(TextDecoration.ITALIC, TextDecoration.State.FALSE);
-			}
-			lore.add(actualComponent);
+			lore.add(componentLike.asComponent().decorationIfAbsent(TextDecoration.ITALIC, TextDecoration.State.FALSE));
         }
         meta.lore(lore);
         return this;
@@ -103,11 +101,7 @@ public final class ItemBuilder {
 			newLore = new ArrayList<>(components.size());
 		}
 		for (var componentLike : components) {
-			var actualComponent = componentLike.asComponent();
-			if (actualComponent.decoration(TextDecoration.ITALIC) == TextDecoration.State.NOT_SET) {
-				actualComponent = actualComponent.decoration(TextDecoration.ITALIC, TextDecoration.State.FALSE);
-			}
-			newLore.add(actualComponent);
+			newLore.add(componentLike.asComponent().decorationIfAbsent(TextDecoration.ITALIC, TextDecoration.State.FALSE));
 		}
 		meta.lore(newLore);
 		return this;
@@ -130,6 +124,12 @@ public final class ItemBuilder {
 
 	public ItemBuilder hideAll() {
 		return hide(ItemFlag.values());
+	}
+
+	private static final NamespacedKey UNIQUE_KEY = new NamespacedKey(Main.getPlugin(), "item_id");
+	public ItemBuilder unique() {
+		meta.getPersistentDataContainer().set(UNIQUE_KEY, PersistentDataType.INTEGER, ItemUtils._uniqueName++);
+		return this;
 	}
 
     public ItemStack build() {

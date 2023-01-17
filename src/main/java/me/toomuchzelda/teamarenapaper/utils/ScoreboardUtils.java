@@ -1,11 +1,9 @@
 package me.toomuchzelda.teamarenapaper.utils;
 
-import io.netty.buffer.Unpooled;
 import io.papermc.paper.adventure.PaperAdventure;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.minecraft.ChatFormatting;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundSetDisplayObjectivePacket;
 import net.minecraft.network.protocol.game.ClientboundSetObjectivePacket;
@@ -92,7 +90,7 @@ public class ScoreboardUtils {
 										  Component displayName, NamedTextColor color,
 										  Component prefix, Component suffix, Collection<String> entries) {
 		initTeamPacketConstructor();
-		// thats crazy
+		// that's crazy
 		var parameters = createParameter(displayName, color, prefix, suffix);
 		try {
 			var packet = TEAM_PACKET_CTOR.newInstance(name, update ? 2 : 0, Optional.of(parameters), entries);
@@ -129,10 +127,15 @@ public class ScoreboardUtils {
 	}
 
 	public static void sendDisplayObjectivePacket(Player player, @Nullable String objective, DisplaySlot slot) {
-		var packetBuf = new FriendlyByteBuf(Unpooled.buffer());
-		packetBuf.writeByte(CraftScoreboardTranslations.fromBukkitSlot(slot));
-		packetBuf.writeUtf(objective == null ? "" : objective);
-		var packet = new ClientboundSetDisplayObjectivePacket(packetBuf);
+		int slotId = CraftScoreboardTranslations.fromBukkitSlot(slot);
+		Objective fakeObjective;
+		if (objective == null)
+			fakeObjective = null;
+		else
+			fakeObjective = new Objective(null, objective, ObjectiveCriteria.DUMMY,
+				net.minecraft.network.chat.Component.empty(), ObjectiveCriteria.RenderType.INTEGER);
+
+		var packet = new ClientboundSetDisplayObjectivePacket(slotId, fakeObjective);
 		sendPacket(player, packet);
 	}
 

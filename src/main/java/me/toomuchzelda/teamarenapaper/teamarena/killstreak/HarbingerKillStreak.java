@@ -17,6 +17,7 @@ import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
@@ -136,7 +137,7 @@ public class HarbingerKillStreak extends CratedKillStreak
 		}
 
 		private static final Map<Player, Set<HarbingerStrike>> CURRENT_STRIKES = new LinkedHashMap<>();
-		private static final Map<BlockCoords, BlockData> CHANGED_BLOCKS = new HashMap<>();
+		private static final Map<BlockCoords, BlockState> CHANGED_BLOCKS = new HashMap<>();
 
 		@Override
 		public void giveAbility(Player player) {
@@ -286,33 +287,31 @@ public class HarbingerKillStreak extends CratedKillStreak
 				// Place the blocks and play effects
 				// Don't play block break particles for the one in the middle - noone can see it anyway
 				// don't override previously put data
-				{
-					BlockCoords coords = new BlockCoords(existingBlock);
-					if (CHANGED_BLOCKS.putIfAbsent(coords, existingBlock.getBlockData()) == null) {
-						strike.changedBlocks.add(coords);
-						existingBlock.setType(STRIKE_INNER_MATERIAL);
-					}
+				BlockCoords coords = new BlockCoords(existingBlock);
+				if (CHANGED_BLOCKS.get(coords) == null) {
+					CHANGED_BLOCKS.put(coords, existingBlock.getState());
+					strike.changedBlocks.add(coords);
+					existingBlock.setType(STRIKE_INNER_MATERIAL, false);
 				}
 
 				for(BlockFace face : FACES_TO_CHANGE) {
 					Block relativeBlock = existingBlock.getRelative(face);
 					BlockData relativeData = relativeBlock.getBlockData();
 					Location relativeBlockLoc = relativeBlock.getLocation();
-					BlockCoords coords = new BlockCoords(relativeBlock);
+					BlockCoords relativeCoords = new BlockCoords(relativeBlock);
 					// Play block breaking particle effect and sound
 					// Do it only if it's the first time this block is being overriden (blocks get overwritten multiple
 					// times by the glass effect otherwise)
-					{
-						if (CHANGED_BLOCKS.putIfAbsent(coords, relativeData) == null) {
-							strike.changedBlocks.add(coords);
-							if (!relativeData.getMaterial().isAir()) {
-								world.spawnParticle(Particle.BLOCK_DUST, relativeBlock.getLocation(), 20, relativeData);
-								world.playSound(relativeBlockLoc, relativeData.getSoundGroup().getBreakSound(), SoundCategory.BLOCKS, 2f, 1f);
-							}
-
-							world.playSound(relativeBlockLoc, Sound.ENTITY_WARDEN_SONIC_BOOM, 0.5f, 2f);
-							relativeBlock.setType(STRIKE_OUTER_MATERIAL);
+					if (CHANGED_BLOCKS.get(relativeCoords) == null) {
+						CHANGED_BLOCKS.put(relativeCoords, relativeBlock.getState());
+						strike.changedBlocks.add(relativeCoords);
+						if (!relativeData.getMaterial().isAir()) {
+							world.spawnParticle(Particle.BLOCK_DUST, relativeBlock.getLocation(), 20, relativeData);
+							world.playSound(relativeBlockLoc, relativeData.getSoundGroup().getBreakSound(), SoundCategory.BLOCKS, 2f, 1f);
 						}
+
+						world.playSound(relativeBlockLoc, Sound.ENTITY_WARDEN_SONIC_BOOM, 0.5f, 2f);
+						relativeBlock.setType(STRIKE_OUTER_MATERIAL, false);
 					}
 				}
 
@@ -336,29 +335,15 @@ public class HarbingerKillStreak extends CratedKillStreak
 
 		private static final BlockData AIR_DATA = Material.AIR.createBlockData();
 		private static void disappear(HarbingerStrike strike, World world) {
-			for (Iterator<BlockCoords> iter = strike.changedBlocks.iterator();
-				 iter.hasNext(); ) {
-				BlockCoords vector = iter.next();
-				BlockData data = CHANGED_BLOCKS.get(vector);
-				if(data == null || !data.getMaterial().isAir()) {
-					if(data == null)
-						Thread.dumpStack();
-					data = AIR_DATA;
-				}
-
-				world.setBlockData(vector.x(), vector.y(), vector.z(), data);
-
-				//BlockData data = entry.getValue();
-				//world.setBlockData(vector.x(), vector.y(), vector.z(), data);
-				//iter.remove();
+			for (BlockCoords vector : strike.changedBlocks) {
+				vector.toBlock(world).setBlockData(AIR_DATA, false);
 
 				Location loc = new Location(world, vector.x(), vector.y(), vector.z());
 				if (MathUtils.random.nextBoolean()) { // poofy smokey particle effect
 					loc.getWorld().spawnParticle(Particle.EXPLOSION_NORMAL, loc, 14);
-				}
-				else {
-					for(var entry : Main.getPlayerInfoMap().entrySet()) {
-						if(entry.getValue().getPreference(Preferences.VIEW_HARBINGER_PARTICLES)) {
+				} else {
+					for (var entry : Main.getPlayerInfoMap().entrySet()) {
+						if (entry.getValue().getPreference(Preferences.VIEW_HARBINGER_PARTICLES)) {
 							entry.getKey().spawnParticle(Particle.SMOKE_LARGE, loc, 3);
 						}
 					}
@@ -367,21 +352,17 @@ public class HarbingerKillStreak extends CratedKillStreak
 		}
 
 		private static void restoreBlocks(HarbingerStrike strike, World world) {
-			for (Iterator<BlockCoords> iter = strike.changedBlocks.iterator();
-				 iter.hasNext(); ) {
-
-				BlockCoords coords = iter.next();
-				BlockData data = CHANGED_BLOCKS.remove(coords);
-				if(data == null) {
+			for (BlockCoords coords : strike.changedBlocks) {
+				BlockState data = CHANGED_BLOCKS.remove(coords);
+				if (data == null) {
 					Main.logger().severe("data in restoreBlocks is null");
 					Thread.dumpStack();
 					return;
 				}
+				data.update(true, false);
 
-				world.setBlockData(coords.x(), coords.y(), coords.z(), data);
-
-				iter.remove();
 			}
+			strike.changedBlocks.clear();
 		}
 	}
 }

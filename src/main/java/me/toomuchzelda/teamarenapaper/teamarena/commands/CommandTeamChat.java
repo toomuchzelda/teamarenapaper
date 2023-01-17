@@ -6,7 +6,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
-import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
@@ -23,7 +22,6 @@ public class CommandTeamChat extends CustomCommand
 {
 	public static final Component CANT_CHAT_NOW = Component.text("You call out to your team, but only hear back the echo of your screaming, wailing voice."
 			, TextColors.ERROR_RED);
-	public static final Collection<String> TAB_COMPLETE = Collections.singleton("<message>");
 
 	public static final String TEAM_CHAT_PREFIX = "TEAM CHAT ";
 
@@ -39,7 +37,7 @@ public class CommandTeamChat extends CustomCommand
 			if(game.canTeamChatNow(player)) {
 				PlayerInfo pinfo = Main.getPlayerInfo(player);
 				TeamArenaTeam playersTeam = pinfo.team;
-				Component msgComponent = TextUtils.stringArrayToComponent(args);
+				Component msgComponent = Component.text(String.join(" ", args));
 
 				//they are defaulting to team chat, so the /t command should post to global chat instead
 				if(pinfo.getPreference(Preferences.DEFAULT_TEAM_CHAT)) {
@@ -60,9 +58,6 @@ public class CommandTeamChat extends CustomCommand
 
 	@Override
 	public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
-		if(args.length > 0)
-			return TAB_COMPLETE;
-
 		return Collections.emptyList();
 	}
 

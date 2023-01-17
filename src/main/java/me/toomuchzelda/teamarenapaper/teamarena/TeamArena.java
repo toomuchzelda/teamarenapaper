@@ -1386,7 +1386,10 @@ public abstract class TeamArena
 
 			if(this.isRespawningGame()) {
 				respawnTimers.put(playerVictim, new RespawnInfo(gameTick));
-				playerVictim.getInventory().addItem(kitMenuItem.clone());
+				PlayerInventory playerInventory = playerVictim.getInventory();
+				// prevent players from opening kit menu
+				playerInventory.setHeldItemSlot(4);
+				playerInventory.setItem(0, kitMenuItem.clone());
 			}
 		}
 		else if(victim instanceof Damageable dam) {

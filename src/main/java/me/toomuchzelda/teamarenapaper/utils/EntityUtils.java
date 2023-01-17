@@ -15,8 +15,6 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.Location;
 import org.bukkit.Sound;
@@ -25,7 +23,6 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.craftbukkit.v1_19_R2.CraftSound;
-import org.bukkit.craftbukkit.v1_19_R2.attribute.CraftAttributeInstance;
 import org.bukkit.craftbukkit.v1_19_R2.entity.CraftEntity;
 import org.bukkit.craftbukkit.v1_19_R2.entity.CraftLivingEntity;
 import org.bukkit.craftbukkit.v1_19_R2.entity.CraftPlayer;
@@ -37,24 +34,12 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.Iterator;
 
 public class EntityUtils {
-
-    public static Method getHurtSoundMethod;
     public static final double VANILLA_PROJECTILE_SPRAY = 0.0075d;
 
     public static void cacheReflection() {
-        try {
-            getHurtSoundMethod = net.minecraft.world.entity.LivingEntity.class
-                    .getDeclaredMethod("c", DamageSource.class);
-            getHurtSoundMethod.setAccessible(true);
-
-        } catch (NoSuchMethodException e) {
-            e.printStackTrace();
-        }
 	}
 
 	@NotNull
@@ -213,23 +198,13 @@ public class EntityUtils {
         Sound sound = null;
 
         if(!isSilent) {
-            try {
-                if (deathSound)
-                    nmsSound = nmsLivingEntity.getDeathSound();
-                    //nmsSound = (SoundEvent) getDeathSoundMethod.invoke(nmsLivingEntity);
-                else
-                    nmsSound = (SoundEvent) getHurtSoundMethod.invoke(nmsLivingEntity, damageType.getDamageSource());
+			if (deathSound)
+				nmsSound = nmsLivingEntity.getDeathSound();
+			else
+				nmsSound = nmsLivingEntity.getHurtSound0(damageType.getDamageSource());
 
-                pitch = nmsLivingEntity.getVoicePitch();
-                volume = nmsLivingEntity.getSoundVolume(); //(float) getSoundVolumeMethod.invoke(nmsLivingEntity);
-            }
-            catch (IllegalAccessException | InvocationTargetException e) {
-                e.printStackTrace();
-
-                nmsSound = SoundEvents.GOAT_SCREAMING_HURT;
-                pitch = 0.5f;
-                volume = 9999f;
-            }
+			pitch = nmsLivingEntity.getVoicePitch();
+			volume = nmsLivingEntity.getSoundVolume(); //(float) getSoundVolumeMethod.invoke(nmsLivingEntity);
             sound = CraftSound.getBukkit(nmsSound);
         }
 
@@ -262,7 +237,7 @@ public class EntityUtils {
 
 		byte newYaw = (byte) (yaw * 256d / 360d);
 		byte newPitch = (byte) (pitch * 256d / 360d);
-		var friendlyByteBuf = new FriendlyByteBuf(Unpooled.directBuffer());
+		var friendlyByteBuf = new FriendlyByteBuf(Unpooled.buffer());
 		friendlyByteBuf.writeVarInt(id);
 		friendlyByteBuf.writeDouble(x);
 		friendlyByteBuf.writeDouble(y);
@@ -281,10 +256,7 @@ public class EntityUtils {
 
 		if (xDelta >= MAX_RELATIVE_DELTA || yDelta >= MAX_RELATIVE_DELTA || zDelta >= MAX_RELATIVE_DELTA ||
 			xDelta <= MIN_RELATIVE_DELTA || yDelta <= MIN_RELATIVE_DELTA || zDelta <= MIN_RELATIVE_DELTA) {
-//			new Throwable("Teleporting EID %d because %.2f,%.2f,%.2f + %.2f,%.2f,%.2f exceeds 8 blocks".formatted(
-//				id, location.getX(), location.getY(), location.getZ(), xDelta, yDelta, zDelta
-//			)).printStackTrace();
-			var friendlyByteBuf = new FriendlyByteBuf(Unpooled.directBuffer());
+			var friendlyByteBuf = new FriendlyByteBuf(Unpooled.buffer());
 			friendlyByteBuf.writeVarInt(id);
 			friendlyByteBuf.writeDouble(location.getX() + xDelta);
 			friendlyByteBuf.writeDouble(location.getY() + yDelta);

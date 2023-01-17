@@ -44,7 +44,7 @@ public class IronGolemKillStreak extends CratedKillStreak
 
 	private static final CratePayload GOLEM_PAYLOAD = new CratePayload.Group(new Vector(0, 3, 0),
 		Map.of(
-			new Vector(0, 2, 0), new CratePayload.SimpleBlock(Material.PUMPKIN.createBlockData()),
+			new Vector(0, 2, 0), new CratePayload.SimpleBlock(Material.CARVED_PUMPKIN.createBlockData()),
 			new Vector(0, 1, 0), new CratePayload.SimpleBlock(Material.IRON_BLOCK.createBlockData()),
 			new Vector(1, 1, 0), new CratePayload.SimpleBlock(Material.IRON_BLOCK.createBlockData()),
 			new Vector(-1, 1, 0), new CratePayload.SimpleBlock(Material.IRON_BLOCK.createBlockData()),
