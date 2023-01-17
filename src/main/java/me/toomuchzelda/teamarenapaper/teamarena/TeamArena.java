@@ -1437,7 +1437,8 @@ public abstract class TeamArena
 
 		//if their number of kills increased to the next whole number
 		// and if their kit gets killstreak bonuses by getting kills
-		if(!pinfo.activeKit.handlesStreaksManually() && killsAfter != killsBefore) {
+		// Check dead because player may get kills while dead
+		if(!isDead(player) && !pinfo.activeKit.handlesStreaksManually() && killsAfter != killsBefore) {
 			this.killStreakManager.handleKill(player, killsAfter, pinfo);
 		}
 	}
