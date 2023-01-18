@@ -541,6 +541,8 @@ public abstract class TeamArena
 					}
 				}
 				else {
+					if (rinfo.selectedSlot != -1) // restore selected hotbar slot
+						p.getInventory().setHeldItemSlot(rinfo.selectedSlot);
 					respawnPlayer(p);
 					respawnIter.remove();
 					p.sendActionBar(Component.text("Respawned!").color(TextColor.color(0, 255, 0)));
@@ -724,6 +726,24 @@ public abstract class TeamArena
 		return victim.isDead() || !victim.isValid();
 	}
 
+	/**
+	 * Checks whether the player is dead and ineligible for respawn
+	 * @param player The player
+	 * @return Whether the player is permanently dead
+	 */
+	public boolean isPermanentlyDead(Player player) {
+		return isDead(player) && !isWaitingToRespawn(player);
+	}
+
+	/**
+	 * Checks if the player is waiting to respawn
+	 * @param player The player
+	 * @return Whether the player is waiting to respawn
+	 */
+	public boolean isWaitingToRespawn(Player player) {
+		return respawnTimers.containsKey(player);
+	}
+
 	public void onInteract(PlayerInteractEvent event) {
 		if (respawnItem.isSimilar(event.getItem())) {
 			event.setUseItemInHand(Event.Result.DENY);
@@ -743,7 +763,7 @@ public abstract class TeamArena
 				event.setUseItemInHand(Event.Result.DENY);
 				event.setUseInteractedBlock(Event.Result.DENY);
 				// TODO fix respawning players being able to see other teams
-				TeamArenaTeam teamFilter = isSpectator(clicker) ? null : team;
+				TeamArenaTeam teamFilter = isPermanentlyDead(clicker) ? null : team;
 				Inventories.openInventory(clicker, new SpectateInventory(teamFilter));
 				return;
 			}
@@ -1385,11 +1405,13 @@ public abstract class TeamArena
 			DamageTimes.clearDamageTimes(playerVictim);
 
 			if(this.isRespawningGame()) {
-				respawnTimers.put(playerVictim, new RespawnInfo(gameTick));
 				PlayerInventory playerInventory = playerVictim.getInventory();
+				respawnTimers.put(playerVictim, new RespawnInfo(gameTick, playerInventory.getHeldItemSlot()));
 				// prevent players from opening kit menu
 				playerInventory.setHeldItemSlot(4);
 				playerInventory.setItem(0, kitMenuItem.clone());
+				// use specialized minimap item
+				playerInventory.setItem(8, miniMap.getMapItem(Main.getPlayerInfo(playerVictim).team));
 			}
 		}
 		else if(victim instanceof Damageable dam) {
