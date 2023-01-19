@@ -57,12 +57,15 @@ public class TeamArenaMap
 	//info about the map that gets sent to players when they join / map loads
 	private Component infoComponent;
 
+	private final boolean inRotation;
+
 	public String toString() {
 		return "name: " + name
 				+ ", authors: " + authors
 				+ ", description: " + description
 				+ ", doDaylightCycle: " + doDaylightCycle
 				+ ", doWeatherCycle: " + doWeatherCycle
+				+ ", inRotation: " + inRotation
 				+ ", minBorderCorner: " + minBorderCorner.toString()
 				+ ", maxBorderCorner: " + maxBorderCorner.toString()
 				+ ", noVerticalBorder: " + noVerticalBorder
@@ -103,6 +106,15 @@ public class TeamArenaMap
 				doWeatherCycle = false;
 			}
 			this.doWeatherCycle = doWeatherCycle;
+
+			boolean inRotation;
+			try {
+				inRotation = (boolean) mainMap.get("InRotation");
+			}
+			catch(NullPointerException | ClassCastException e) {
+				inRotation = true;
+			}
+			this.inRotation = inRotation;
 
 			//Map border
 			// Only supports rectangular prism borders as of now
@@ -300,6 +312,10 @@ public class TeamArenaMap
 
 	public boolean isDoWeatherCycle() {
 		return doWeatherCycle;
+	}
+
+	public boolean isInRotation() {
+		return this.inRotation;
 	}
 
 	public Vector getMinBorderCorner() {

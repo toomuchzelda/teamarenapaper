@@ -492,7 +492,14 @@ public class PacketListeners
 				//final Sound sound = event.getPacket().getSoundEffects().read(0);
 				final Holder<SoundEvent> soundHolder = (Holder<SoundEvent>) event.getPacket().getModifier().read(0);
 				SoundEvent soundEvent = soundHolder.value();
-				Sound sound = CraftSound.getBukkit(soundEvent);
+				Sound sound;
+				try { // Band aid
+					sound = CraftSound.getBukkit(soundEvent);
+				}
+				catch (NullPointerException e) {
+					return;
+				}
+
 				if (cancelDamageSounds) {
 					if(sound == Sound.ENTITY_PLAYER_ATTACK_STRONG ||
 							sound == Sound.ENTITY_PLAYER_ATTACK_CRIT ||

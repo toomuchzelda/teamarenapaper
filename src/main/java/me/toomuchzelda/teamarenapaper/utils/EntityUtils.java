@@ -189,23 +189,23 @@ public class EntityUtils {
         net.minecraft.world.entity.LivingEntity nmsLivingEntity = ((CraftLivingEntity) entity).getHandle();
         ClientboundAnimatePacket packet = new ClientboundAnimatePacket(nmsLivingEntity, ClientboundAnimatePacket.HURT);
 
-        boolean isSilent = entity.isSilent();
-
         //get and construct sound
-        SoundEvent nmsSound;
         float pitch = 0f;
         float volume = 0f;
         Sound sound = null;
 
+		final boolean isSilent = entity.isSilent();
         if(!isSilent) {
-			if (deathSound)
-				nmsSound = nmsLivingEntity.getDeathSound();
-			else
-				nmsSound = nmsLivingEntity.getHurtSound0(damageType.getDamageSource());
+			if (deathSound) {
+				sound = entity.getDeathSound();
+			}
+			else {
+				SoundEvent nmsSound = nmsLivingEntity.getHurtSound0(damageType.getDamageSource());
+				sound = CraftSound.getBukkit(nmsSound);
+			}
 
 			pitch = nmsLivingEntity.getVoicePitch();
 			volume = nmsLivingEntity.getSoundVolume(); //(float) getSoundVolumeMethod.invoke(nmsLivingEntity);
-            sound = CraftSound.getBukkit(nmsSound);
         }
 
         //if a player send the packet to self as well

@@ -1307,6 +1307,7 @@ public abstract class TeamArena
 		}
 
 		player.teleport(pinfo.team.getNextSpawnpoint());
+		player.getWorld().playSound(player.getLocation(), Sound.ENTITY_ALLAY_AMBIENT_WITH_ITEM, 1f, 1f);
 
 		players.add(player);
 		spectators.remove(player);
@@ -1361,6 +1362,11 @@ public abstract class TeamArena
 					a.onKill(event);
 				}
 				attributeKillAndAssists(playerVictim, pinfo, playerKiller);
+
+				// Kill sound
+				if (Main.getPlayerInfo(playerKiller).getPreference(Preferences.KILL_SOUND)) {
+					playerKiller.playSound(playerKiller, Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.PLAYERS, 3f, 0.98f);
+				}
 			}
 
 			for(Ability a : Kit.getAbilities(playerVictim)) {
@@ -1420,7 +1426,6 @@ public abstract class TeamArena
 	}
 
 	private void attributeKillAndAssists(Player victim, PlayerInfo victimInfo, @Nullable Player finalDamager) {
-
 		//the finalDamager always gets 1 kill no matter what
 		if(finalDamager != null) {
 			addKillAmount(finalDamager, 1, victim);

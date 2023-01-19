@@ -45,8 +45,12 @@ public class GameScheduler
 		ArrayList<TeamArenaMap> queueTwo;
 
 		MapQueue(Collection<TeamArenaMap> maps) {
-			this.queueOne = new ArrayList<>(maps);
-			this.queueTwo = new ArrayList<>(maps.size());
+			// Don't include maps in the queue that are not marked to be in it.
+			List<TeamArenaMap> mapsToQueue = new ArrayList<>(maps);
+			mapsToQueue.removeIf(teamArenaMap -> !teamArenaMap.isInRotation());
+
+			this.queueOne = new ArrayList<>(mapsToQueue);
+			this.queueTwo = new ArrayList<>(mapsToQueue.size());
 			this.queue = queueOne;
 
 			Collections.shuffle(queue, MathUtils.random);
@@ -90,29 +94,18 @@ public class GameScheduler
 		GAMETYPE_MAPS.put(GameType.SND, new ArrayList<>(oneThird));
 
 		for(File mapFolder : maps) {
-			try {
-				TeamArenaMap parsedConfig = new TeamArenaMap(mapFolder);
-				ALL_MAPS.add(parsedConfig);
+			if (mapFolder.isDirectory()) {
+				try {
+					TeamArenaMap parsedConfig = new TeamArenaMap(mapFolder);
+					ALL_MAPS.add(parsedConfig);
 
-				//add to specific lists if has config for that gametype.
-				/*if(parsedConfig.getKothInfo() != null) {
-					GAMETYPE_MAPS.get(GameType.KOTH).add(parsedConfig);
+					for (GameType mapGameType : parsedConfig.getGameTypes()) {
+						GAMETYPE_MAPS.get(mapGameType).add(parsedConfig);
+					}
 				}
-
-				if(parsedConfig.getCtfInfo() != null) {
-					GAMETYPE_MAPS.get(GameType.CTF).add(parsedConfig);
+				catch (Exception e) {
+					Main.logger().warning("Exception for: " + mapFolder.getName() + " " + e.getMessage());
 				}
-
-				if(parsedConfig.getSndInfo() != null) {
-					GAMETYPE_MAPS.get(GameType.SND).add(parsedConfig);
-				}*/
-
-				for(GameType mapGameType : parsedConfig.getGameTypes()) {
-					GAMETYPE_MAPS.get(mapGameType).add(parsedConfig);
-				}
-			}
-			catch (Exception e) {
-				Main.logger().warning("Exception for: " + mapFolder.getName() + " " + e.getMessage());
 			}
 		}
 

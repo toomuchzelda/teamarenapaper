@@ -101,4 +101,7 @@ public class Preferences {
 
 	public static final Preference<Boolean> VIEW_HARBINGER_PARTICLES = SimplePreference.of("harbinger_view_particles", "See the laggy smoke particles of the Harbinger or not", true)
 			.setIcon(Material.NETHERRACK);
+
+	public static final Preference<Boolean> KILL_SOUND = SimplePreference.of("kill_sound", "Hear the ding sound when you kill a player", true)
+			.setIcon(Material.GOLDEN_SWORD);
 }

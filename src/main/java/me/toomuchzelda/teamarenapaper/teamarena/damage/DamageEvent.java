@@ -483,8 +483,12 @@ public class DamageEvent {
 				living.setHealth(newHealth);
 				living.setLastDamage(finalDamage);
 
-				if(doHurtEffect)
+				if(doHurtEffect) {
 					EntityUtils.playHurtAnimation(living, damageType, isDeath);
+					if (isDeath && living instanceof Player) { // Additional custom death sound for players
+						living.getWorld().playSound(living.getLocation(), Sound.ENTITY_RABBIT_DEATH, 0.9f, 1f);
+					}
+				}
 
 				if(isCritical)
 					EntityUtils.playCritEffect(living);

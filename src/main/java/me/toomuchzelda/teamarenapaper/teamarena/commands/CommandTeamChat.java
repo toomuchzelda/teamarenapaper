@@ -17,6 +17,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 
 public class CommandTeamChat extends CustomCommand
 {
@@ -24,6 +25,7 @@ public class CommandTeamChat extends CustomCommand
 			, TextColors.ERROR_RED);
 
 	public static final String TEAM_CHAT_PREFIX = "TEAM CHAT ";
+	private static final List<String> TAB_COMPLETE = List.of("<message>");
 
 	public CommandTeamChat() {
 		super("teamchat", "Send a message only your teammates can see (or to global depending on your preference)",
@@ -58,6 +60,10 @@ public class CommandTeamChat extends CustomCommand
 
 	@Override
 	public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
+		if (args.length > 0) {
+			return TAB_COMPLETE;
+		}
+
 		return Collections.emptyList();
 	}
 
