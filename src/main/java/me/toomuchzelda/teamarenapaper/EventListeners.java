@@ -834,6 +834,13 @@ public class EventListeners implements Listener
 	public void onPlayerArmorChange(InventoryClickEvent event) {
 		TeamArena game = Main.getGame();
 		InventoryAction action = event.getAction();
+
+		// First: if a chest or other external inventory is opened, cancel the event
+		if (event.getView().getTopInventory().getType() != InventoryType.CRAFTING) {
+			event.setCancelled(true);
+			return;
+		}
+
 		// these two actions move the current item so check the current item
 		if (action == InventoryAction.MOVE_TO_OTHER_INVENTORY || action == InventoryAction.HOTBAR_SWAP) {
 			if (!game.isWearableArmorPiece(event.getCurrentItem()))
