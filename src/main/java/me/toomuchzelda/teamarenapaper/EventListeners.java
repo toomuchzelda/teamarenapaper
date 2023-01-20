@@ -330,11 +330,7 @@ public class EventListeners implements Listener
 		Main.getPlayerInfo(player).getScoreboard().set();
 		// send sidebar objectives
 		SidebarManager.getInstance(player).registerObjectives(player);
-		Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
-			if (player.isOnline()) {
-				AnnouncerManager.sendResourcePack(player);
-			}
-		}, 1 * 20);
+		AnnouncerManager.sendResourcePack(player);
 
 		Main.getGame().joiningPlayer(player);
 	}
@@ -1054,6 +1050,11 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void onMotd(PaperServerListPingEvent e) {
 		e.motd(MOTD);
+	}
+
+	@EventHandler
+	public void playerResourcePackStatus(PlayerResourcePackStatusEvent event) {
+		AnnouncerManager.handleEvent(event);
 	}
 
 	@EventHandler

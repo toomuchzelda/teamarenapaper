@@ -48,7 +48,8 @@ public class ChatAnnouncerManager
 				String message = iter.next();
 
 				for (AnnouncerSound sound : AnnouncerSound.values()) {
-					if (sound.type == AnnouncerSound.Type.CHAT && message.toLowerCase(Locale.ENGLISH).contains(sound.name)) {
+					if (sound.type == AnnouncerSound.Type.CHAT &&
+						message.toLowerCase(Locale.ENGLISH).contains(sound.getPhraseName())) {
 						lastAnnounceTime = currentTick;
 						AnnouncerManager.broadcastSound(sound);
 

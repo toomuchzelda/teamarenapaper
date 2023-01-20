@@ -19,7 +19,8 @@ public enum AnnouncerSound {
 
 	// chat word sounds
 	CHAT_OBJECTION(Type.CHAT, "objection"),
-	CHAT_LEEROY_JENKINS(Type.CHAT, "leeroy");
+	CHAT_LEEROY_JENKINS(Type.CHAT, "leeroy"),
+	CHAT_MY_BODY_IS_READY(Type.CHAT, "my_body_is_ready");
 
 	public static final String NAMESPACE = "tmaannouncer";
 	// the typeAndName as the key
@@ -35,6 +36,7 @@ public enum AnnouncerSound {
 	public final String name;
 	private final String typeAndName;
 	private final String namespacedName;
+	private final String phraseName; // The string the check for in chat messages
 
 	private AnnouncerSound(Type type, String name) {
 		this.type = type;
@@ -42,6 +44,8 @@ public enum AnnouncerSound {
 
 		this.typeAndName = this.type.asString + "." + this.name;
 		this.namespacedName = NAMESPACE + ":" + this.typeAndName;
+
+		this.phraseName = this.name.replace('_', ' ');
 	}
 
 	// type.name
@@ -54,6 +58,12 @@ public enum AnnouncerSound {
 	// e.g: tmaannouncer:chat.objection
 	public String getNamespacedName() {
 		return this.namespacedName;
+	}
+
+	// string to check for in chat messages
+	// e.g: name = "my_body_is_ready", phraseName = "my body is ready"
+	public String getPhraseName() {
+		return this.phraseName;
 	}
 
 	public static AnnouncerSound getByTypedName(String namespacedName) {
