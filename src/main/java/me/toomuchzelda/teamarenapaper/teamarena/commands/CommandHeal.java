@@ -48,11 +48,7 @@ public class CommandHeal extends CustomCommand
 
 	@Override
 	public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
-		final Collection<? extends Player> allPlayers = Bukkit.getOnlinePlayers();
-
-		List<String> playerNames = new ArrayList<>(allPlayers.size());
-		allPlayers.forEach(player -> playerNames.add(player.getName()));
-
+		List<String> playerNames = CustomCommand.getOnlinePlayerNames();
 		playerNames.add("all");
 		return playerNames;
 	}

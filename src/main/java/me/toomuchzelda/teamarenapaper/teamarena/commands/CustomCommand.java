@@ -154,6 +154,17 @@ public abstract class CustomCommand extends Command {
 		}
 	}
 
+	/**
+	 * Convenience method for getting the names of all online players for tab complete suggestion
+	 */
+	public static List<String> getOnlinePlayerNames() {
+		Collection<? extends Player> players = Bukkit.getOnlinePlayers();
+		List<String> playerNames = new ArrayList<>(players.size());
+		players.forEach(player -> playerNames.add(player.getName()));
+
+		return playerNames;
+	}
+
     public static CustomCommand getFromName(String name) {
         return PLUGIN_COMMANDS.get(name);
     }

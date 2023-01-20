@@ -20,6 +20,7 @@ import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.sql.*;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
+import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerPackManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
@@ -315,12 +316,17 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void playerJoin(PlayerJoinEvent event) {
-		Player player = event.getPlayer();
+		final Player player = event.getPlayer();
 		//disable yellow "Player has joined the game" messages
 		event.joinMessage(null);
 		Main.getPlayerInfo(player).getScoreboard().set();
 		// send sidebar objectives
 		SidebarManager.getInstance(player).registerObjectives(player);
+		Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
+			if (player.isOnline()) {
+				AnnouncerPackManager.sendResourcePack(player);
+			}
+		}, 1 * 20);
 
 		Main.getGame().joiningPlayer(player);
 	}

@@ -123,6 +123,7 @@ public final class Main extends JavaPlugin
 		commandMap.register(fallbackPrefix, new CommandKillStreak());
 		commandMap.register(fallbackPrefix, new CommandCredits());
 		commandMap.register(fallbackPrefix, new CommandCosmetics());
+		commandMap.register(fallbackPrefix, new CommandPlayAnnouncer());
 	}
 
 	public static PlayerInfo getPlayerInfo(Player player) {
