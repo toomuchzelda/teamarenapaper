@@ -7,6 +7,7 @@ import me.toomuchzelda.teamarenapaper.sql.DatabaseManager;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.*;
+import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
@@ -45,11 +46,16 @@ public final class Main extends JavaPlugin
 		logger.info("Starting TMA");
 
 		getConfig().options().copyDefaults(true);
-		saveConfig();
+		saveDefaultConfig();
 
 		// load important classes
 		Preferences.registerPreferences();
 		FileUtils.init();
+		try {
+			Class.forName("me.toomuchzelda.teamarenapaper.sql.DBSetPreferences");
+		} catch (Exception ignored) {
+
+		}
 
 		int initialCapacity = Bukkit.getMaxPlayers();
 		playerInfo = Collections.synchronizedMap(new LinkedHashMap<>(initialCapacity));
@@ -60,6 +66,9 @@ public final class Main extends JavaPlugin
 		eventListeners = new EventListeners(this);
 		packetListeners = new PacketListeners(this);
 		Bukkit.getPluginManager().registerEvents(Inventories.INSTANCE, this);
+
+		// load cosmetics
+		CosmeticsManager.reloadCosmetics();
 
 		//teamArena = new SearchAndDestroy();//new CaptureTheFlag(); //new KingOfTheHill();
 		teamArena = GameScheduler.getNextGame();
@@ -115,6 +124,7 @@ public final class Main extends JavaPlugin
 		commandMap.register(fallbackPrefix, new CommandHeal());
 		commandMap.register(fallbackPrefix, new CommandKillStreak());
 		commandMap.register(fallbackPrefix, new CommandCredits());
+		commandMap.register(fallbackPrefix, new CommandCosmetics());
 	}
 
 	public static PlayerInfo getPlayerInfo(Player player) {

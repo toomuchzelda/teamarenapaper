@@ -2,9 +2,17 @@ package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.explosions.CustomExplosion;
-import me.toomuchzelda.teamarenapaper.inventory.*;
+import me.toomuchzelda.teamarenapaper.inventory.Inventories;
+import me.toomuchzelda.teamarenapaper.inventory.InventoryProvider;
+import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
+import me.toomuchzelda.teamarenapaper.inventory.TabBar;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
-import me.toomuchzelda.teamarenapaper.teamarena.*;
+import me.toomuchzelda.teamarenapaper.teamarena.GameState;
+import me.toomuchzelda.teamarenapaper.teamarena.MiniMapManager;
+import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
+import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
@@ -27,7 +35,6 @@ import org.bukkit.map.MinecraftFont;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.File;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
@@ -417,7 +424,7 @@ public class CommandDebug extends CustomCommand {
 						.toList();
 				case "setkit" -> Main.getGame().getTabKitList();
 				case "draw" -> Arrays.asList("text", "area", "clear", "invalidatebase");
-				case "graffititest" -> Main.getGame().graffiti.getAllGraffiti().stream().map(NamespacedKey::toString).toList();
+				case "graffititest" -> CosmeticsManager.getLoadedCosmetics(CosmeticType.GRAFFITI).stream().map(NamespacedKey::toString).toList();
 				default -> Collections.emptyList();
 			};
 		} else if (args.length == 3) {

@@ -54,6 +54,8 @@ public abstract class CustomCommand extends Command {
 			run(sender, commandLabel, args);
 		} catch (CommandException e) {
 			sender.sendMessage(e.message);
+		} catch (IllegalArgumentException ex) {
+			sender.sendMessage(Component.text(ex.toString(), TextColors.ERROR_RED));
         } catch (Throwable e) {
 			sender.sendMessage(Component.text("Internal error", TextColors.ERROR_RED));
             Main.logger().severe("Command " + getClass().getSimpleName() + " finished execution exceptionally " +
@@ -75,7 +77,9 @@ public abstract class CustomCommand extends Command {
         }
         Collection<String> completions = Collections.emptyList();
         try {
-            completions = onTabComplete(sender, alias, args);
+			completions = onTabComplete(sender, alias, args);
+		} catch (IllegalArgumentException ignored) {
+
         } catch (Throwable e) {
             Main.logger().severe("Command " + getClass().getSimpleName() + " failed to provide valid completions " +
                     "for input /" + alias + " " + String.join(" ", args));

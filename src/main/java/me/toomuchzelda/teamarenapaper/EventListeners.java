@@ -793,21 +793,6 @@ public class EventListeners implements Listener
 
 		TeamArena game = Main.getGame();
 		if (game != null) {
-			if (game.miniMap.isMapItem(event.getItemDrop().getItemStack()) &&
-				player.getCooldown(Material.FILLED_MAP) == 0 && player.isSneaking()) {
-				player.setCooldown(Material.FILLED_MAP, 40 * 20);
-				var playerInfo = Main.getPlayerInfo(player);
-				// spawn a random owned graffiti
-				var ownedGraffiti = game.graffiti.getAllGraffiti().stream()
-					.filter(playerInfo::hasCosmeticItem)
-					.toList();
-				if (ownedGraffiti.size() != 0) {
-					game.graffiti.spawnGraffiti(player, ownedGraffiti.get(MathUtils.random.nextInt(ownedGraffiti.size())));
-					event.setCancelled(true);
-					return;
-				}
-			}
-
 			if (game.getGameState() == LIVE) {
 				for (Ability a : Kit.getAbilities(player)) {
 					a.onPlayerDropItem(event);

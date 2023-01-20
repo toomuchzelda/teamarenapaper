@@ -4,7 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.utils.FileUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -22,10 +22,8 @@ import org.bukkit.map.MapView;
 import org.bukkit.util.RayTraceResult;
 import org.jetbrains.annotations.NotNull;
 
-import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -35,19 +33,12 @@ public class GraffitiManager {
 	final TeamArena game;
 	final Logger logger;
 	private static final World dummyWorld = Bukkit.getWorlds().get(0);
-	final Map<NamespacedKey, BufferedImage> loadedGraffiti = new HashMap<>();
 	static final Deque<MapView> pooledMapView = new ArrayDeque<>();
 	final Map<ItemFrame, MapView> spawnedMaps = new LinkedHashMap<>();
 
 	public GraffitiManager(TeamArena game) {
 		this.game = game;
 		this.logger = Main.logger();
-
-		loadNamespace(new File("graffiti"));
-	}
-
-	public Set<NamespacedKey> getAllGraffiti() {
-		return Collections.unmodifiableSet(loadedGraffiti.keySet());
 	}
 
 	public void spawnGraffiti(Player player, NamespacedKey graffiti) {
@@ -63,10 +54,11 @@ public class GraffitiManager {
 		spawnGraffiti(block, blockFace, player.getFacing(), graffiti);
 	}
 
-	public void spawnGraffiti(Block attached, BlockFace blockFace, BlockFace xzDirection, NamespacedKey graffiti) {
-		BufferedImage image = loadedGraffiti.get(graffiti);
-		if (image == null)
+	public void spawnGraffiti(Block attached, BlockFace blockFace, BlockFace xzDirection, NamespacedKey key) {
+		Graffiti graffiti = CosmeticsManager.getCosmetic(CosmeticType.GRAFFITI, key);
+		if (graffiti == null)
 			return;
+		BufferedImage image = graffiti.image;
 
 		var mapView = getNextMapView();
 		mapView.addRenderer(new MapRenderer() {
@@ -140,46 +132,6 @@ public class GraffitiManager {
 			releaseMapView(mapView);
 		});
 		spawnedMaps.clear();
-		loadedGraffiti.clear();
-	}
-
-	public void loadNamespace(File root) {
-		File[] namespaceFolders = root.listFiles();
-		if (namespaceFolders == null)
-			return;
-		for (File folder : namespaceFolders) {
-			loadGraffiti(folder.getName(), "graffiti/", folder);
-		}
-	}
-
-	public void loadGraffiti(String namespace, String prefix, File directory) {
-		File[] files = directory.listFiles();
-		if (files == null)
-			return;
-		for (File file : files) {
-			String fileName = file.getName();
-			if (file.isDirectory()) {
-				loadGraffiti(namespace, prefix + fileName + "/", directory);
-				continue;
-			}
-
-			FileUtils.FileInfo fileInfo = FileUtils.getFileExtension(fileName);
-
-			try {
-				BufferedImage image = ImageIO.read(file);
-				NamespacedKey key = new NamespacedKey(namespace, prefix + fileInfo.fileName());
-
-				if (image.getWidth() != 128 || image.getHeight() != 128) {
-					logger.warning("File " + key + " is not 128*128, skipping");
-					continue;
-				}
-
-				loadedGraffiti.put(key, image);
-				logger.info("Loaded " + file.getPath() + " as " + key);
-			} catch (IOException ex) {
-				logger.warning("Failed to read image " + file.getPath());
-			}
-		}
 	}
 
 	private static final WeakHashMap<Player, Integer> itemSwapTimes = new WeakHashMap<>();
@@ -192,19 +144,21 @@ public class GraffitiManager {
 		Integer lastSwapTick = itemSwapTimes.put(player, now);
 		if (lastSwapTick != null && now - lastSwapTick <= ITEM_SWAP_DURATION) {
 			PlayerInfo playerInfo = Main.getPlayerInfo(player);
-			playerInfo.getSelectedCosmetic(CosmeticType.GRAFFITI)
-				.ifPresent(graffiti -> {
-					int lastGraffiti = graffitiCooldown.getOrDefault(player, 0);
-					int ticksElapsed = now - lastGraffiti;
-					if (ticksElapsed >= GRAFFITI_COOLDOWN) {
-						graffitiCooldown.put(player, now);
-						spawnGraffiti(player, graffiti);
-					} else {
-						player.sendMessage(Component.text("Graffiti cooldown: " +
-							TextUtils.ONE_DECIMAL_POINT.format((GRAFFITI_COOLDOWN - ticksElapsed) / 20f) + "s",
-							NamedTextColor.RED));
-					}
-				});
+			Optional<NamespacedKey> selected = playerInfo.getSelectedCosmetic(CosmeticType.GRAFFITI);
+			if (selected.isPresent()) {
+				int lastGraffiti = graffitiCooldown.getOrDefault(player, 0);
+				int ticksElapsed = now - lastGraffiti;
+				if (ticksElapsed >= GRAFFITI_COOLDOWN) {
+					graffitiCooldown.put(player, now);
+					spawnGraffiti(player, selected.get());
+				} else {
+					player.sendActionBar(Component.text("Graffiti cooldown: " +
+						TextUtils.ONE_DECIMAL_POINT.format((GRAFFITI_COOLDOWN - ticksElapsed) / 20f) + "s",
+						NamedTextColor.RED));
+				}
+			} else {
+				player.sendMessage(Component.text("Please select a graffiti first!", TextColors.ERROR_RED));
+			}
 		}
 	}
 }
