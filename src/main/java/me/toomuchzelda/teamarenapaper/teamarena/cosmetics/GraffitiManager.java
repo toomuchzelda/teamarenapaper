@@ -4,6 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
@@ -16,29 +17,18 @@ import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.inventory.meta.MapMeta;
-import org.bukkit.map.MapCanvas;
-import org.bukkit.map.MapRenderer;
-import org.bukkit.map.MapView;
 import org.bukkit.util.RayTraceResult;
-import org.jetbrains.annotations.NotNull;
 
-import java.awt.image.BufferedImage;
-import java.io.File;
 import java.util.*;
-import java.util.logging.Logger;
 
 public class GraffitiManager {
 	public static final int GRAFFITI_DURATION = 20 * 20;
 
 	final TeamArena game;
-	final Logger logger;
-	private static final World dummyWorld = Bukkit.getWorlds().get(0);
-	static final Deque<MapView> pooledMapView = new ArrayDeque<>();
-	final Map<ItemFrame, MapView> spawnedMaps = new LinkedHashMap<>();
+	final List<ItemFrame> spawnedMaps = new ArrayList<>();
 
 	public GraffitiManager(TeamArena game) {
 		this.game = game;
-		this.logger = Main.logger();
 	}
 
 	public void spawnGraffiti(Player player, NamespacedKey graffiti) {
@@ -56,21 +46,12 @@ public class GraffitiManager {
 
 	public void spawnGraffiti(Block attached, BlockFace blockFace, BlockFace xzDirection, NamespacedKey key) {
 		Graffiti graffiti = CosmeticsManager.getCosmetic(CosmeticType.GRAFFITI, key);
-		if (graffiti == null)
+		if (graffiti == null) {
+			Main.logger().info("Graffiti " + key + " was null?");
 			return;
-		BufferedImage image = graffiti.image;
+		}
 
-		var mapView = getNextMapView();
-		mapView.addRenderer(new MapRenderer() {
-			boolean drawn = false;
-			@Override
-			public void render(@NotNull MapView map, @NotNull MapCanvas canvas, @NotNull Player player) {
-				if (drawn)
-					return;
-				drawn = true;
-				canvas.drawImage(0, 0, image);
-			}
-		});
+		var mapView = graffiti.getMapView();
 		var stack = ItemBuilder.of(Material.FILLED_MAP)
 			.meta(MapMeta.class, mapMeta -> mapMeta.setMapView(mapView))
 			.build();
@@ -88,37 +69,14 @@ public class GraffitiManager {
 			}
 		});
 		world.playSound(itemFrame, Sound.ENTITY_SILVERFISH_HURT, 0.2f, 1);
-		spawnedMaps.put(itemFrame, mapView);
-	}
-
-	private static MapView getNextMapView() {
-		MapView pooled = pooledMapView.poll();
-		if (pooled == null) {
-			pooled = Bukkit.createMap(dummyWorld);
-			pooled.removeRenderer(pooled.getRenderers().get(0));
-
-			// hope that the file is removed on exit
-			File mainWorldFile = new File(Bukkit.getWorldContainer(), dummyWorld.getName());
-			File mapDataFile = new File(mainWorldFile, "data" + File.separator + "map_" + pooled.getId() + ".dat");
-			mapDataFile.deleteOnExit();
-		}
-		return pooled;
-	}
-
-	private static void releaseMapView(MapView view) {
-		view.getRenderers().forEach(view::removeRenderer);
-		pooledMapView.add(view);
+		spawnedMaps.add(itemFrame);
 	}
 
 	public void tick() {
-		spawnedMaps.entrySet().removeIf(entry -> {
-			var itemFrame = entry.getKey();
-			var mapView = entry.getValue();
-
+		spawnedMaps.removeIf(itemFrame -> {
 			if (itemFrame.getTicksLived() >= GRAFFITI_DURATION) {
 				itemFrame.setItem(null, false);
 				itemFrame.remove();
-				releaseMapView(mapView);
 				return true;
 			}
 			return false;
@@ -126,10 +84,9 @@ public class GraffitiManager {
 	}
 
 	public void cleanUp() {
-		spawnedMaps.forEach((itemFrame, mapView) -> {
+		spawnedMaps.forEach(itemFrame -> {
 			itemFrame.setItem(null, false);
 			itemFrame.remove();
-			releaseMapView(mapView);
 		});
 		spawnedMaps.clear();
 	}
@@ -141,14 +98,15 @@ public class GraffitiManager {
 	public void onSwapHandItems(PlayerSwapHandItemsEvent e) {
 		Player player = e.getPlayer();
 		int now = TeamArena.getGameTick();
-		Integer lastSwapTick = itemSwapTimes.put(player, now);
+		Integer lastSwapTick = itemSwapTimes.get(player);
 		if (lastSwapTick != null && now - lastSwapTick <= ITEM_SWAP_DURATION) {
+			itemSwapTimes.put(player, 0); // reset swap time to avoid consecutive triggers
 			PlayerInfo playerInfo = Main.getPlayerInfo(player);
 			Optional<NamespacedKey> selected = playerInfo.getSelectedCosmetic(CosmeticType.GRAFFITI);
 			if (selected.isPresent()) {
 				int lastGraffiti = graffitiCooldown.getOrDefault(player, 0);
 				int ticksElapsed = now - lastGraffiti;
-				if (ticksElapsed >= GRAFFITI_COOLDOWN) {
+				if (ticksElapsed >= GRAFFITI_COOLDOWN || playerInfo.permissionLevel == CustomCommand.PermissionLevel.OWNER) {
 					graffitiCooldown.put(player, now);
 					spawnGraffiti(player, selected.get());
 				} else {
@@ -159,6 +117,8 @@ public class GraffitiManager {
 			} else {
 				player.sendMessage(Component.text("Please select a graffiti first!", TextColors.ERROR_RED));
 			}
+		} else {
+			itemSwapTimes.put(player, now);
 		}
 	}
 }

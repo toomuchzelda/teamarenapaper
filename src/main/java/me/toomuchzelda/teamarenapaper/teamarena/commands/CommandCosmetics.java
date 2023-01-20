@@ -1,8 +1,11 @@
 package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
+import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticItem;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
+import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
@@ -58,7 +61,7 @@ public class CommandCosmetics extends CustomCommand {
 			case "set" -> {
 				if (!(sender instanceof Player player))
 					throw new CommandException(PLAYER_ONLY);
-				if (args.length <= 2)
+				if (args.length < 3)
 					throw throwUsage("/cosmetics set <cosmeticType> <id>");
 
 				CosmeticType type = CosmeticType.valueOf(args[1].toUpperCase(Locale.ENGLISH));
@@ -75,16 +78,24 @@ public class CommandCosmetics extends CustomCommand {
 				}
 			}
 			case "info" -> {
-				if (args.length <= 2)
+				if (args.length < 3)
 					throw throwUsage("/cosmetics set <cosmeticType> <id>");
 
 				CosmeticType type = CosmeticType.valueOf(args[1].toUpperCase(Locale.ENGLISH));
 				NamespacedKey key = NamespacedKey.fromString(args[2]);
-				CosmeticsManager.CosmeticInfo info;
-				if (key == null || (info = CosmeticsManager.getCosmeticInfo(type, key)) == null)
+				CosmeticItem info;
+				if (key == null || (info = CosmeticsManager.getCosmetic(type, key)) == null)
 					throw new IllegalArgumentException("Invalid key " + args[2]);
 
-				sender.sendMessage(info.getDisplay());
+				sender.sendMessage(info.getInfo());
+			}
+			case "gui" -> {
+				if (!(sender instanceof Player player))
+					throw new CommandException(PLAYER_ONLY);
+				CosmeticType type = args.length >= 2 ?
+					CosmeticType.valueOf(args[1].toUpperCase(Locale.ENGLISH)) :
+					CosmeticType.GRAFFITI;
+				Inventories.openInventory(player, new CosmeticsInventory(type));
 			}
 			case "reload" -> {
 				if (!hasPermission(sender, PermissionLevel.OWNER))
@@ -98,7 +109,7 @@ public class CommandCosmetics extends CustomCommand {
 	public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
 		return switch (args.length) {
 			case 1 -> {
-				var subcommands = List.of("list", "set", "info");
+				var subcommands = List.of("list", "set", "info", "gui");
 				if (hasPermission(sender, PermissionLevel.OWNER)) {
 					yield Stream.concat(Stream.of("listall", "reload"), subcommands.stream()).toList();
 				} else {
@@ -106,7 +117,7 @@ public class CommandCosmetics extends CustomCommand {
 				}
 			}
 			case 2 -> switch (args[0]) {
-				case "list", "set", "info", "listall" -> Arrays.stream(CosmeticType.values())
+				case "list", "set", "info", "listall", "gui" -> Arrays.stream(CosmeticType.values())
 					.map(Enum::name)
 					.map(s -> s.toLowerCase(Locale.ENGLISH))
 					.toList();
