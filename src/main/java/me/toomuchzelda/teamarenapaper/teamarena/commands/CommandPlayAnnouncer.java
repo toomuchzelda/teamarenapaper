@@ -1,6 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
-import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerPackManager;
+import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerSound;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
@@ -32,14 +32,14 @@ public class CommandPlayAnnouncer extends CustomCommand
 			if (args.length > 1) {
 				Player target = Bukkit.getPlayer(args[1]);
 				if (target != null) {
-					AnnouncerPackManager.playSound(target, sound);
+					AnnouncerManager.playSound(target, sound);
 				}
 				else {
 					throw new CommandException("Unknown player");
 				}
 			}
 			else {
-				AnnouncerPackManager.broadcastSound(sound);
+				AnnouncerManager.broadcastSound(sound);
 			}
 		}
 	}

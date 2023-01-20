@@ -22,8 +22,6 @@ public class CommandCredits extends CustomCommand
 		Component T_0_E_D = TextUtils.getRGBManiacComponent(Component.text("T_0_E_D"), Style.empty(), 0.5d);
 		Component theRest = Component.text("Xtikman, Elitemaster5, jojosue, Kullanari, SevereMyopia, 22balletgirls, Woaxa", NamedTextColor.AQUA);
 
-		Component doubleSpace = Component.space().append(Component.space());
-
 		CREDITS = Component.text()
 				.append(Component.newline())
 				.append(Component.text("(✿◡‿◡) Team Arena (●'◡'●) - Credits -", NamedTextColor.YELLOW))
@@ -45,12 +43,15 @@ public class CommandCredits extends CustomCommand
 				.append(Component.newline())
 				.append(theRest).append(Component.text(" - Testing, feedback, and all other kinds of help."))
 				.append(Component.newline()).append(Component.newline())
+				.append(Component.text("The announcer voice lines are from Slaleky's Epic Voice Announcer series: "))
+				.append(Component.text("https://itch.io/profile/slaleky").clickEvent(ClickEvent.clickEvent(ClickEvent.Action.OPEN_URL, "https://itch.io/profile/slaleky")))
+				.append(Component.newline()).append(Component.newline())
 				.append(Component.text("The source code for Team Arena can be found here!: ", NamedTextColor.GOLD))
 				.append(Component.text("https://github.com/toomuchzelda/teamarenapaper")
 						.clickEvent(ClickEvent.clickEvent(ClickEvent.Action.OPEN_URL, "https://github.com/toomuchzelda/teamarenapaper")))
 				.append(Component.newline())
 				.append(Component.newline())
-				.append(Component.text("=|=|=|   Thank you for playing!   |=|=|=", NamedTextColor.LIGHT_PURPLE))
+				.append(Component.text("=|=|=|=|  Thank you for playing!  |=|=|=|=", NamedTextColor.LIGHT_PURPLE))
 				.append(Component.newline())
 				//.append(Component.text("Xtikman be strong", NamedTextColor.DARK_GRAY))
 				.build();

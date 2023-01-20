@@ -12,7 +12,7 @@ import org.bukkit.entity.Player;
  *
  * @author toomuchzelda
  */
-public class AnnouncerPackManager
+public class AnnouncerManager
 {
 	// Needs manual updating when resource pack changes
 	private static final String URL = "https://www.dropbox.com/s/yqhxzu21bv0dvgr/tmarescpack.zip?dl=1";

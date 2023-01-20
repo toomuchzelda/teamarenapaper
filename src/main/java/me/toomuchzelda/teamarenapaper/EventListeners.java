@@ -20,7 +20,8 @@ import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.sql.*;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
-import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerPackManager;
+import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
+import me.toomuchzelda.teamarenapaper.teamarena.announcer.ChatAnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
@@ -160,6 +161,13 @@ public class EventListeners implements Listener
 
 		try {
 			FakeHitboxManager.tick();
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+
+		try {
+			ChatAnnouncerManager.tick();
 		}
 		catch(Exception e) {
 			e.printStackTrace();
@@ -324,7 +332,7 @@ public class EventListeners implements Listener
 		SidebarManager.getInstance(player).registerObjectives(player);
 		Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
 			if (player.isOnline()) {
-				AnnouncerPackManager.sendResourcePack(player);
+				AnnouncerManager.sendResourcePack(player);
 			}
 		}, 1 * 20);
 
