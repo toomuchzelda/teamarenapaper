@@ -7,7 +7,6 @@ import net.kyori.adventure.text.TextComponent;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * Class to handle the announcing of words appearing in chat
@@ -22,7 +21,7 @@ import java.util.Locale;
  */
 public class ChatAnnouncerManager
 {
-	private static final int ANNOUNCE_COOLDOWN = 5 * 20; // once every 5 seconds
+	private static final int ANNOUNCE_COOLDOWN = 1;//5 * 20; // once every 5 seconds
 	private static final List<String> queuedMessages = Collections.synchronizedList(new LinkedList<>());
 
 	private static int lastAnnounceTime = 0;
@@ -48,8 +47,7 @@ public class ChatAnnouncerManager
 				String message = iter.next();
 
 				for (AnnouncerSound sound : AnnouncerSound.values()) {
-					if (sound.type == AnnouncerSound.Type.CHAT &&
-						message.toLowerCase(Locale.ENGLISH).contains(sound.getPhraseName())) {
+					if (sound.type == AnnouncerSound.Type.CHAT && sound.stringMatchesPhrases(message)) {
 						lastAnnounceTime = currentTick;
 						AnnouncerManager.broadcastSound(sound);
 

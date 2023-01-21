@@ -330,7 +330,6 @@ public class EventListeners implements Listener
 		Main.getPlayerInfo(player).getScoreboard().set();
 		// send sidebar objectives
 		SidebarManager.getInstance(player).registerObjectives(player);
-		AnnouncerManager.sendResourcePack(player);
 
 		Main.getGame().joiningPlayer(player);
 	}
