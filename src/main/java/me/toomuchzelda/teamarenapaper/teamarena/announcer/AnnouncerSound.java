@@ -14,21 +14,40 @@ import java.util.function.BiPredicate;
 public enum AnnouncerSound {
 
 	// game event sounds
-	GAME_A_WINNER_IS_YOU(Type.GAME, "awinnerisyou", MatchCriteria.NEVER_MATCH),
+	GAME_A_WINNER_IS_YOU(Type.GAME, "awinnerisyou", MatchCriteria.NEVER_MATCH, false),
+	GAME_BOMB_ARMED(Type.GAME, "bombarmed", MatchCriteria.NEVER_MATCH, false),
+	GAME_BOMB_DETONATED(Type.GAME, "bombdetonated", MatchCriteria.NEVER_MATCH, false),
+	GAME_BOMB_DISARMED(Type.GAME, "bombdisarmed", MatchCriteria.NEVER_MATCH, false),
+	GAME_FLAG_CAPTURED(Type.GAME, "flagcaptured", MatchCriteria.NEVER_MATCH, false),
+	GAME_FLAG_DROPPED(Type.GAME, "flagdropped", MatchCriteria.NEVER_MATCH, false),
+	GAME_FLAG_RECOVERED(Type.GAME, "flagrecovered", MatchCriteria.NEVER_MATCH, false),
+	GAME_FLAG_STOLEN(Type.GAME, "flagstolen", MatchCriteria.NEVER_MATCH, false),
+	GAME_FLAG_TAKEN(Type.GAME, "flagtaken", MatchCriteria.NEVER_MATCH, false),
+	GAME_FLAG_YOU_GOT_THE(Type.GAME, "flagyougotthe", MatchCriteria.NEVER_MATCH, false),
+	GAME_FLAG_YOU_LOST_THE(Type.GAME, "flagyoulostthe", MatchCriteria.NEVER_MATCH, false),
+	GAME_LAST_MAN_STANDING(Type.GAME, "lastmanstanding", MatchCriteria.NEVER_MATCH, false),
+
 
 	// chat word sounds
-	CHAT_OBJECTION(Type.CHAT, "objection", MatchCriteria.CONTAINS),
-	CHAT_LEEROY_JENKINS(Type.CHAT, "leeroy", MatchCriteria.CONTAINS),
-	CHAT_MY_BODY_IS_READY(Type.CHAT, "mybodyisready", MatchCriteria.CONTAINS,"my body is ready", "reggie"),
-	CHAT_AMAZING(Type.CHAT, "amazing", MatchCriteria.WHOLE_MESSAGE, "amazing!"),
-	CHAT_BATTLE_OF_THE_CENTURY(Type.CHAT, "battleofthecentury", MatchCriteria.CONTAINS, "battle of the century"),
-	CHAT_WHO_WILL_WIN(Type.CHAT, "whowillwin", MatchCriteria.CONTAINS, "who will win"),
-	CHAT_WELCOME(Type.CHAT, "welcome", MatchCriteria.WHOLE_WORD),
-	CHAT_UNTOUCHABLE(Type.CHAT, "untouchable", MatchCriteria.WHOLE_WORD),
-	CHAT_MY_GOD(Type.CHAT, "mygod", MatchCriteria.CONTAINS, "my god", "omg"),
-	CHAT_GODLIKE(Type.CHAT, "godlike", MatchCriteria.CONTAINS, "godlike", "god like", "god-like", "god tier", "god-tier", "godtier"),
-	CHAT_EXCELLENT(Type.CHAT, "excellent", MatchCriteria.WHOLE_WORD),
-	CHAT_HMMM(Type.CHAT, "hmmm", MatchCriteria.WHOLE_WORD)
+	CHAT_OBJECTION(Type.CHAT, "objection", MatchCriteria.CONTAINS, false),
+	CHAT_LEEROY_JENKINS(Type.CHAT, "leeroy", MatchCriteria.CONTAINS, false),
+	CHAT_MY_BODY_IS_READY(Type.CHAT, "mybodyisready", MatchCriteria.CONTAINS, false, "my body is ready", "reggie"),
+	CHAT_AMAZING(Type.CHAT, "amazing", MatchCriteria.WHOLE_MESSAGE, false, "amazing!"),
+	CHAT_BATTLE_OF_THE_CENTURY(Type.CHAT, "battleofthecentury", MatchCriteria.CONTAINS, false, "battle of the century"),
+	CHAT_WHO_WILL_WIN(Type.CHAT, "whowillwin", MatchCriteria.CONTAINS, false, "who will win"),
+	CHAT_WELCOME(Type.CHAT, "welcome", MatchCriteria.WHOLE_WORD, false),
+	CHAT_UNTOUCHABLE(Type.CHAT, "untouchable", MatchCriteria.WHOLE_WORD, false),
+	CHAT_MY_GOD(Type.CHAT, "mygod", MatchCriteria.CONTAINS, false, "my god", "omg"),
+	CHAT_GODLIKE(Type.CHAT, "godlike", MatchCriteria.CONTAINS, false, "godlike", "god like", "god-like", "god tier", "god-tier", "godtier"),
+	CHAT_EXCELLENT(Type.CHAT, "excellent", MatchCriteria.WHOLE_WORD, false),
+	CHAT_HMMM(Type.CHAT, "hmmm", MatchCriteria.WHOLE_WORD, false),
+	CHAT_DESPERATE(Type.CHAT, "desperate", MatchCriteria.CONTAINS, false),
+	CHAT_DISGRACEFUL(Type.CHAT, "disgraceful", MatchCriteria.CONTAINS, false),
+	CHAT_FUCK_YOU(Type.CHAT, "fuckyou", MatchCriteria.CONTAINS, true, "fuck you", "fuckyou"),
+	CHAT_NASTY(Type.CHAT, "nasty", MatchCriteria.CONTAINS, false),
+	CHAT_USELESS_PLAYER(Type.CHAT, "uselessplayer", MatchCriteria.CONTAINS, false, "toed", "selda"),
+	CHAT_YOU_COWARD(Type.CHAT, "youcoward", MatchCriteria.CONTAINS, false, "you coward"),
+	CHAT_YOURE_GARBAGE(Type.CHAT, "youregarbage", MatchCriteria.CONTAINS, false, "you're garbage", "youre garbage", "ur garbage")
 	;
 
 	public static final String NAMESPACE = "tmaannouncer";
@@ -45,6 +64,7 @@ public enum AnnouncerSound {
 	private final String typeAndName;
 	private final String namespacedName;
 	private final MatchCriteria matchCriteria;
+	public final boolean isSwear;
 	private final List<String> phraseNames;
 
 	/**
@@ -53,13 +73,14 @@ public enum AnnouncerSound {
 	 * @param phraseNames Optional list of phrases that match to this AnnouncerSound when detected in a chat message.
 	 *                    If none are specified, the name is used, replacing all underscores with spaces.
 	 */
-	private AnnouncerSound(Type type, String name, MatchCriteria matchCriteria, String... phraseNames) {
+	private AnnouncerSound(Type type, String name, MatchCriteria matchCriteria, boolean swear, String... phraseNames) {
 		this.type = type;
 
 		this.typeAndName = this.type.asString + "." + name;
 		this.namespacedName = NAMESPACE + ":" + this.typeAndName;
 
 		this.matchCriteria = matchCriteria;
+		this.isSwear = swear;
 		if (phraseNames.length > 0) {
 			this.phraseNames = List.of(phraseNames);
 		}
@@ -103,12 +124,14 @@ public enum AnnouncerSound {
 	}
 
 	public enum Type {
-		GAME("game"),
-		CHAT("chat");
+		GAME("game", 1f),
+		CHAT("chat", 0.9f); // Chat lines slightly quieter than Game announcements
 
 		private final String asString;
-		private Type(String type) {
+		public final float volumeMult;
+		private Type(String type, float volumeMult) {
 			this.asString = type;
+			this.volumeMult = volumeMult;
 		}
 	}
 

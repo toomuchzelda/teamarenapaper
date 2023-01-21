@@ -5,8 +5,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.Style;
-import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.SoundCategory;
 import org.bukkit.entity.Player;
@@ -42,7 +40,8 @@ public class AnnouncerManager
 			if((sound.type == AnnouncerSound.Type.GAME && pinfo.getPreference(Preferences.ANNOUNCER_GAME)) ||
 				(sound.type == AnnouncerSound.Type.CHAT && pinfo.getPreference(Preferences.ANNOUNCER_CHAT))
 			) {
-				player.playSound(player.getEyeLocation(), sound.getNamespacedName(), SoundCategory.VOICE, 1f, 1f);
+				player.playSound(player.getEyeLocation(), sound.getNamespacedName(), SoundCategory.VOICE,
+					sound.type.volumeMult, 1f);
 			}
 		}
 	}
