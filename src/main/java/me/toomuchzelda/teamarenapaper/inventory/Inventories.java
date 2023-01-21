@@ -154,7 +154,9 @@ public final class Inventories implements Listener {
             try {
                 eventHandler.accept(e);
             } catch (Exception ex) {
-                ex.printStackTrace();
+                new RuntimeException("Handling slot %d %s click (%s) for %s in %s".formatted(
+					e.getSlot(), e.getClick(), e.getAction(), e.getWhoClicked().getName(), data.provider
+				)).printStackTrace();
             }
         }
     }

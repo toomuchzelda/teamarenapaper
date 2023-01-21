@@ -210,7 +210,7 @@ public class SpectateInventory implements InventoryProvider {
 		BY_NAME(ignored -> Comparator.comparing(Player::getName),
 			Component.text("their name (A-Z)", NamedTextColor.WHITE)),
 		BY_NAME_DESC(ignored -> Comparator.comparing(Player::getName, Comparator.reverseOrder()),
-			Component.text("their name (A-Z)", NamedTextColor.WHITE)),
+			Component.text("their name (Z-A)", NamedTextColor.WHITE)),
 		BY_DISTANCE(viewer -> {
 			Location viewerLocation = viewer.getLocation();
 			return Comparator.comparingDouble(player -> player.getLocation().distance(viewerLocation));

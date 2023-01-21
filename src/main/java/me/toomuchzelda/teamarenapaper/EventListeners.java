@@ -58,6 +58,8 @@ import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.*;
 import org.bukkit.event.player.PlayerLoginEvent.Result;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.BoundingBox;
@@ -830,14 +832,24 @@ public class EventListeners implements Listener
 		}
 	}
 
-	@EventHandler
+	@EventHandler(ignoreCancelled = true) // might be handled by custom inventories
 	public void onPlayerArmorChange(InventoryClickEvent event) {
 		TeamArena game = Main.getGame();
+		Player player = (Player) event.getWhoClicked();
+		InventoryView view = event.getView();
 		InventoryAction action = event.getAction();
 
-		// First: if a chest or other external inventory is opened, cancel the event
-		if (event.getView().getTopInventory().getType() != InventoryType.CRAFTING) {
-			event.setCancelled(true);
+		// check for external inventories
+		if (event.getInventory().getType() != InventoryType.CRAFTING) {
+			if (event.getClickedInventory() != null && event.getClickedInventory() == event.getInventory()) {
+				event.setCancelled(true);
+				return;
+			} else if (action == InventoryAction.MOVE_TO_OTHER_INVENTORY || action == InventoryAction.COLLECT_TO_CURSOR ||
+				action == InventoryAction.NOTHING || action == InventoryAction.UNKNOWN) {
+				// actions that might influence external inventories
+				event.setCancelled(true);
+				return;
+			}
 			return;
 		}
 
@@ -845,7 +857,7 @@ public class EventListeners implements Listener
 		if (action == InventoryAction.MOVE_TO_OTHER_INVENTORY || action == InventoryAction.HOTBAR_SWAP) {
 			if (!game.isWearableArmorPiece(event.getCurrentItem()))
 				event.setCancelled(true);
-			else if (event.getHotbarButton() != -1 && !game.isWearableArmorPiece(event.getView().getBottomInventory().getItem(event.getHotbarButton())))
+			else if (event.getHotbarButton() != -1 && !game.isWearableArmorPiece(view.getBottomInventory().getItem(event.getHotbarButton())))
 				event.setCancelled(true);
 		} else if (event.getSlotType() == InventoryType.SlotType.ARMOR) {
 			if (!game.isWearableArmorPiece(event.getCursor())) {
@@ -853,33 +865,40 @@ public class EventListeners implements Listener
 			}
 		}
 
-		if(!event.isCancelled()) {
-			for(Ability a : Kit.getAbilities((Player) event.getWhoClicked())) {
-				a.onInventoryClick(event);
-			}
+		for (Ability a : Kit.getAbilities(player)) {
+			a.onInventoryClick(event);
 		}
 	}
 
 	@EventHandler
 	public void onPlayerArmorDrag(InventoryDragEvent event) {
-		ItemStack draggedItem = event.getOldCursor();
+		Player player = (Player) event.getWhoClicked();
+		InventoryView view = event.getView();
+		Inventory topInventory = view.getTopInventory();
+		Inventory bottomInventory = view.getBottomInventory();
+		int topSize = topInventory.getSize();
 
-		boolean isDraggingOnArmorSlot = false;
-		if(event.getInventory().getHolder() instanceof HumanEntity) {
-			for(int i : event.getInventorySlots()) {
-				if(ItemUtils.isArmorSlotIndex(i)) {
-					isDraggingOnArmorSlot = true;
-					break;
+		for (int i : event.getRawSlots()) {
+			// InventoryView#getInventory
+			if (i < topSize) { // top inventory
+				// external inventory
+				if (topInventory.getType() != InventoryType.CRAFTING) {
+					event.setCancelled(true);
+					return;
+				}
+			} else { // bottom inventory
+				// armor
+				if (bottomInventory.getType() == InventoryType.PLAYER &&
+					view.getSlotType(i) == InventoryType.SlotType.ARMOR &&
+					!Main.getGame().isWearableArmorPiece(event.getOldCursor())) {
+					event.setCancelled(true);
+					return;
 				}
 			}
 		}
 
-		if(isDraggingOnArmorSlot && !Main.getGame().isWearableArmorPiece(draggedItem)) {
-			event.setCancelled(true);
-		}
-
-		if(!event.isCancelled()) {
-			for(Ability a : Kit.getAbilities((Player) event.getWhoClicked())) {
+		if (!event.isCancelled()) {
+			for (Ability a : Kit.getAbilities(player)) {
 				a.onInventoryDrag(event);
 			}
 		}
