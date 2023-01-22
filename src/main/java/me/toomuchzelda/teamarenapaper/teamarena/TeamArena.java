@@ -9,6 +9,8 @@ import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandTeamChat;
+import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
+import me.toomuchzelda.teamarenapaper.teamarena.inventory.CosmeticsInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.GraffitiManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
@@ -112,8 +114,12 @@ public abstract class TeamArena
 
 	protected Map<String, Kit> kits = new LinkedHashMap<>();
 	protected static ItemStack kitMenuItem = ItemBuilder.of(Material.FEATHER)
-			.displayName(Component.text("Select a Kit", NamedTextColor.BLUE))
-			.build();
+		.displayName(Component.text("Select a Kit", NamedTextColor.BLUE))
+		.build();
+
+	protected static ItemStack cosmeticMenuItem = ItemBuilder.of(Material.ARMOR_STAND)
+		.displayName(Component.text("Cosmetics", NamedTextColor.LIGHT_PURPLE))
+		.build();
 
 	public static final Component OWN_TEAM_PREFIX = Component.text("▶ ");
 	public static final Component OWN_TEAM_PREFIX_DANGER = OWN_TEAM_PREFIX.color(NamedTextColor.RED);
@@ -745,30 +751,34 @@ public abstract class TeamArena
 	}
 
 	public void onInteract(PlayerInteractEvent event) {
-		if (respawnItem.isSimilar(event.getItem())) {
+		ItemStack item = event.getItem();
+		Player player = event.getPlayer();
+		if (respawnItem.isSimilar(item)) {
 			event.setUseItemInHand(Event.Result.DENY);
-			if (canRespawn(event.getPlayer()))
-				setToRespawn(event.getPlayer());
+			if (canRespawn(player))
+				setToRespawn(player);
 			else
-				event.getPlayer().sendMessage(Component.text("You can't respawn right now").color(NamedTextColor.RED));
-		} else if (kitMenuItem.isSimilar(event.getItem())) {
+				player.sendMessage(Component.text("You can't respawn right now").color(NamedTextColor.RED));
+		} else if (kitMenuItem.isSimilar(item)) {
 			event.setUseItemInHand(Event.Result.DENY);
-			Inventories.openInventory(event.getPlayer(), new KitInventory());
+			Inventories.openInventory(player, new KitInventory());
+		} else if (cosmeticMenuItem.isSimilar(item)) {
+			event.setUseItemInHand(Event.Result.DENY);
+			Inventories.openInventory(player, new CosmeticsInventory(CosmeticType.GRAFFITI));
 		}
 		else if (gameState == GameState.LIVE){
-			Player clicker = event.getPlayer();
-			PlayerInfo pinfo = Main.getPlayerInfo(clicker);
+			PlayerInfo pinfo = Main.getPlayerInfo(player);
 			TeamArenaTeam team = pinfo.team;
-			if (miniMap.isMapItem(event.getItem()) && event.useItemInHand() != Event.Result.DENY) {
+			if (miniMap.isMapItem(item) && event.useItemInHand() != Event.Result.DENY) {
 				event.setUseItemInHand(Event.Result.DENY);
 				event.setUseInteractedBlock(Event.Result.DENY);
 				// TODO fix respawning players being able to see other teams
-				TeamArenaTeam teamFilter = isPermanentlyDead(clicker) ? null : team;
-				Inventories.openInventory(clicker, new SpectateInventory(teamFilter));
+				TeamArenaTeam teamFilter = isPermanentlyDead(player) ? null : team;
+				Inventories.openInventory(player, new SpectateInventory(teamFilter));
 				return;
 			}
 			//right click to glow teammates
-			if(team.getHotbarItem().isSimilar(event.getItem())) {
+			if(team.getHotbarItem().isSimilar(item)) {
 				Action action = event.getAction();
 				if(action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK) {
 					event.setUseItemInHand(Event.Result.DENY);
@@ -1154,6 +1164,7 @@ public abstract class TeamArena
 	public void giveLobbyItems(Player player) {
 		PlayerInventory inventory = player.getInventory();
 		inventory.setItem(0, kitMenuItem.clone());
+		inventory.setItem(8, cosmeticMenuItem.clone());
 	}
 
 	public Collection<Kit> getKits() {

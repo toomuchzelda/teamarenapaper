@@ -1,8 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.cosmetics;
 
-import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.utils.FileUtils;
 import org.bukkit.NamespacedKey;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
@@ -35,16 +34,15 @@ public class CosmeticsManager {
 				continue;
 			}
 			// not a directory
-			FileUtils.FileInfo fileInfo = FileUtils.getFileExtension(fileName);
-			if (!type.fileExtension.equals(fileInfo.fileExtension()))
+			if (!(fileName.endsWith(".yml") || fileName.endsWith(".yaml")))
 				continue;
-			NamespacedKey key = new NamespacedKey(namespace, prefix + fileInfo.fileName());
+			NamespacedKey key = new NamespacedKey(namespace, prefix + fileName.substring(0, fileName.indexOf('.')));
 			try {
-				CosmeticItem loaded = type.loader.apply(file, new File(directory, fileName + ".yml"));
+				YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+				CosmeticItem loaded = type.loader.load(file, yaml);
 				loadedCosmetics.computeIfAbsent(type, ignored -> new LinkedHashMap<>()).put(key, loaded);
 			} catch (Exception ex) {
-				Main.logger().warning("Failed to load cosmetic " + key + " at " + file.getPath());
-				ex.printStackTrace();
+				new RuntimeException("Loading cosmetic " + key + " at " + file.getPath()).printStackTrace();
 			}
 		}
 	}

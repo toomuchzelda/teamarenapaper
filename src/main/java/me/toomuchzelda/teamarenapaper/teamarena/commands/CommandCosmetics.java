@@ -5,7 +5,7 @@ import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticItem;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
-import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsInventory;
+import me.toomuchzelda.teamarenapaper.teamarena.inventory.CosmeticsInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;

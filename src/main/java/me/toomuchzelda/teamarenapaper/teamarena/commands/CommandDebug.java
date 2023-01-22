@@ -461,7 +461,7 @@ public class CommandDebug extends CustomCommand {
 		@Override
 		public void init(Player player, InventoryAccessor inventory) {
 			tab.showTabs(inventory, wools, TabBar.highlightWhenSelected(ItemStack::new),
-					0, extended ? 3 : 7, true);
+					0, extended ? 3 : 8, true);
 
 			if (extended) {
 				for (int i = 4; i < 8; i++) {

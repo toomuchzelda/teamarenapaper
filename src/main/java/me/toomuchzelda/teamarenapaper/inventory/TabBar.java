@@ -1,14 +1,13 @@
 package me.toomuchzelda.teamarenapaper.inventory;
 
+import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
@@ -88,6 +87,15 @@ public class TabBar<T> {
 
 	int indexOffset = 0; // page of tabs for when there's more than 9 tabs
 
+	/**
+	 * Renders the tab bar
+	 * @param inventory The inventory
+	 * @param tabs A list of tabs
+	 * @param itemFunction The display item for tabs
+	 * @param start Index to start at
+	 * @param end Index to end at, exclusive
+	 * @param centered Whether the tab bar should be centered horizontally
+	 */
 	public void showTabs(InventoryProvider.InventoryAccessor inventory, List<T> tabs,
 							BiFunction<T, Boolean, ItemStack> itemFunction,
 							int start, int end, boolean centered) {
@@ -104,7 +112,16 @@ public class TabBar<T> {
 		} else {
 			sliceSize = tabs.size();
 		}
-		int offset = centered ? (maxTabs - sliceSize) / 2 : 0;
+		/* When centered = true:
+		 * For maxTabs = 7 and tab.size = 3,
+		 *   sliceSize = 3, showButtons = false, offset = 4 / 2 - 0 = 1
+		 *   Rendered: . . I I I . .
+		 * For maxTabs = 7 and tabs.size = 100,
+		 *   sliceSize = 5, showButtons = true, offset = 2 / 2 - 1 = 0
+		 *   Rendered: P I I I I I N
+		 * (Where . = empty space, I = an item, P = previous page, N = next page)
+		 */
+		int offset = centered ? (maxTabs - sliceSize) / 2 - (showButtons ? 1 : 0) : 0;
 		var iterator = tabs.subList(indexOffset, Math.min(tabs.size(), indexOffset + sliceSize)).iterator();
 		for (int i = 0; i < end - start; i++) {
 			ClickableItem item;
@@ -147,17 +164,7 @@ public class TabBar<T> {
 	}
 
 	public static <T> BiFunction<T, Boolean, ItemStack> highlightWhenSelected(Function<T, ItemStack> original) {
-		return (tab, selected) -> highlightIfSelected(original.apply(tab), selected);
+		return (tab, selected) -> ItemUtils.highlightIfSelected(original.apply(tab), selected);
 	}
 
-	public static ItemStack highlightIfSelected(ItemStack stack, boolean selected) {
-		return selected ? highlight(stack) : stack;
-	}
-
-	public static ItemStack highlight(ItemStack stack) {
-		return ItemBuilder.from(stack.clone())
-				.enchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1)
-				.hide(ItemFlag.HIDE_ENCHANTS)
-				.build();
-	}
 }

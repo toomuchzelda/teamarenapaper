@@ -120,11 +120,15 @@ public class PlayerInfo
 		return Optional.ofNullable(selectedCosmetic.get(type));
 	}
 
-	public void setSelectedCosmetic(@NotNull CosmeticType type, @NotNull NamespacedKey key) {
-		if (!type.checkKey(key)) {
-			throw new IllegalArgumentException("key incompatible with type");
+	public void setSelectedCosmetic(@NotNull CosmeticType type, @Nullable NamespacedKey key) {
+		if (key != null) {
+			if (!type.checkKey(key)) {
+				throw new IllegalArgumentException("key incompatible with type");
+			}
+			selectedCosmetic.put(type, key);
+		} else {
+			selectedCosmetic.remove(type);
 		}
-		selectedCosmetic.put(type, key);
 	}
 
 	/**

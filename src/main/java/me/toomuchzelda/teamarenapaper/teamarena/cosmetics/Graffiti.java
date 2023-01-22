@@ -7,6 +7,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.MapMeta;
@@ -20,23 +21,30 @@ import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 public class Graffiti extends CosmeticItem {
 
 	public final BufferedImage image;
-	public Graffiti(File file, File companionFile) {
-		super(file, companionFile);
+	public Graffiti(File file, YamlConfiguration info) {
+		super(file, info);
+		File imageFile = new File(file.getParent(), file.getName().substring(0, file.getName().lastIndexOf('.')));
 		try {
-			BufferedImage image = ImageIO.read(file);
+			BufferedImage image = ImageIO.read(imageFile);
 
 			if (image.getWidth() != 128 || image.getHeight() != 128) {
-				Main.logger().warning("File " + file.getName() + " is not 128*128, resizing automatically");
+				Main.logger().warning("File " + imageFile.getName() + " is not 128*128, resizing automatically");
 				image = resizeImage(image);
 			}
 			this.image = image;
 		} catch (IOException ex) {
-			throw new RuntimeException("Failed to read image " + file.getPath(), ex);
+			throw new UncheckedIOException("Failed to read image " + imageFile.getPath(), ex);
 		}
+	}
+
+	@Override
+	public CosmeticType getCosmeticType() {
+		return CosmeticType.GRAFFITI;
 	}
 
 	private static BufferedImage resizeImage(BufferedImage original) {
@@ -82,16 +90,14 @@ public class Graffiti extends CosmeticItem {
 	}
 
 	@Override
-	public ItemStack getDisplay(boolean complex) {
-		return ItemBuilder.of(complex ? Material.FILLED_MAP : Material.MAP)
+	public @NotNull ItemStack getDisplay(boolean complex) {
+		if (!complex)
+			return super.getDisplay(false);
+		return ItemBuilder.of(Material.FILLED_MAP)
 			.displayName(Component.text(name, NamedTextColor.GOLD))
-			.lore(getInfo())
+			.lore(getExtraInfo())
 			.hideAll()
-			.meta(MapMeta.class, mapMeta -> {
-				if (complex) {
-					mapMeta.setMapView(getMapView());
-				}
-			})
+			.meta(MapMeta.class, mapMeta -> mapMeta.setMapView(getMapView()))
 			.build();
 	}
 }
