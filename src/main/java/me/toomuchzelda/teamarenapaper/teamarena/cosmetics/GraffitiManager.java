@@ -13,6 +13,7 @@ import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockSupport;
+import org.bukkit.block.data.type.Door;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
@@ -38,8 +39,11 @@ public class GraffitiManager {
 		if (result == null || result.getHitBlock() == null || result.getHitBlockFace() == null)
 			return;
 		var block = result.getHitBlock();
+		var blockData = block.getBlockData();
 		var blockFace = result.getHitBlockFace();
-		if (!block.getBlockData().isFaceSturdy(blockFace, BlockSupport.FULL))
+		if (blockData instanceof Door) // disallowed at zelda's request
+			return;
+		if (!blockData.isFaceSturdy(blockFace, BlockSupport.FULL))
 			return;
 		spawnGraffiti(block, blockFace, player.getFacing(), graffiti);
 	}
