@@ -2,6 +2,8 @@ package me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
+import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
+import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerSound;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
@@ -227,6 +229,9 @@ public class SearchAndDestroy extends TeamArena
 							}
 						}
 					}
+
+					// Announcer sound
+					AnnouncerManager.broadcastSound(AnnouncerSound.GAME_BOMB_ARMED);
 				}
 				//just been disarmed, remove TNT from map
 				else if(armedTime == Bomb.JUST_BEEN_DISARMED) {
@@ -243,6 +248,8 @@ public class SearchAndDestroy extends TeamArena
 							}
 						}
 					}
+
+					AnnouncerManager.broadcastSound(AnnouncerSound.GAME_BOMB_DISARMED);
 				}
 				else if(armedTime == Bomb.JUST_EXPLODED) {
 					announceBombEvent(bomb, BombEvent.EXPLODED);
@@ -255,6 +262,8 @@ public class SearchAndDestroy extends TeamArena
 
 					//score 1 for dead
 					bomb.getTeam().score = TEAM_DEAD_SCORE;
+
+					AnnouncerManager.broadcastSound(AnnouncerSound.GAME_BOMB_DETONATED);
 				}
 				else if(bomb.isArmed()) {
 					soonestExplodingBomb = Math.max(soonestExplodingBomb, bomb.getArmedTime());
@@ -347,6 +356,7 @@ public class SearchAndDestroy extends TeamArena
 		PlayerUtils.sendOptionalTitle(Component.empty(), message, 10, 20, 10);
 
 		lastMan.getWorld().playSound(this.spawnPos, Sound.ENTITY_ENDER_DRAGON_HURT, 99999f, 1f);
+		AnnouncerManager.playSound(lastMan, AnnouncerSound.GAME_LAST_MAN_STANDING);
 	}
 
 	private void administerInstantFuse(final Player player, boolean give) {

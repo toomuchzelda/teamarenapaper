@@ -40,8 +40,10 @@ public class AnnouncerManager
 			if((sound.type == AnnouncerSound.Type.GAME && pinfo.getPreference(Preferences.ANNOUNCER_GAME)) ||
 				(sound.type == AnnouncerSound.Type.CHAT && pinfo.getPreference(Preferences.ANNOUNCER_CHAT))
 			) {
-				player.playSound(player.getEyeLocation(), sound.getNamespacedName(), SoundCategory.VOICE,
-					sound.type.volumeMult, 1f);
+				if (!sound.isSwear || pinfo.getPreference(Preferences.ANNOUNCER_SWEAR)) {
+					player.playSound(player.getEyeLocation(), sound.getNamespacedName(), SoundCategory.VOICE,
+						sound.type.volumeMult, 1f);
+				}
 			}
 		}
 	}

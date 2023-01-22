@@ -112,4 +112,7 @@ public class Preferences {
 	public static final Preference<Boolean> ANNOUNCER_CHAT = SimplePreference.of("announce_chat_phrases",
 		"Whether you hear the announcer speak out select phrases that appear in chat", true)
 		.setIcon(Material.GOAT_HORN);
+
+	public static final Preference<Boolean> ANNOUNCER_SWEAR = SimplePreference.of("announce_swear", "If you want to " +
+		"hear the announcer say swear words", true).setIcon(Material.GOAT_HORN);
 }

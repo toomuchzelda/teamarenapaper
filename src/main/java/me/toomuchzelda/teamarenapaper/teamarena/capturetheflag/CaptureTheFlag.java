@@ -2,6 +2,8 @@ package me.toomuchzelda.teamarenapaper.teamarena.capturetheflag;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
+import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
+import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerSound;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
@@ -499,10 +501,23 @@ public class CaptureTheFlag extends TeamArena
 					PlayerUtils.sendTitle(p, Component.empty(), pickupTitle, 7, 30, 7);
 				}
 
-				//todo maybe a preference for game sounds
 				p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_CLUSTER_BREAK, SoundCategory.AMBIENT, 2, 1f);
+
+				// Different sound for flag droppper / everyone else
+				if (p != player) {
+					TeamArenaTeam team = entry.getValue().team;
+					AnnouncerSound sound;
+					if (flag.team == team) {
+						sound = AnnouncerSound.GAME_FLAG_STOLEN;
+					}
+					else {
+						sound = AnnouncerSound.GAME_FLAG_TAKEN;
+					}
+					AnnouncerManager.playSound(p, sound);
+				}
 			}
 
+			AnnouncerManager.playSound(player, AnnouncerSound.GAME_FLAG_YOU_GOT_THE);
 			Bukkit.broadcast(pickupChat);
 		}
 	}
@@ -541,8 +556,6 @@ public class CaptureTheFlag extends TeamArena
 		currentSpeeders.remove(player);
 
 		if(broadcast) {
-			Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
-
 			final TextReplacementConfig playerConfig = TextReplacementConfig.builder().match("%holdingTeam%")
 					.replacement(player.playerListName()).build();
 			final TextReplacementConfig teamConfig = TextReplacementConfig.builder().match("%team%")
@@ -551,16 +564,21 @@ public class CaptureTheFlag extends TeamArena
 			Component titleText = DROP_TITLE.replaceText(playerConfig).replaceText(teamConfig);
 			Component chatText = DROP_MESSAGE.replaceText(playerConfig).replaceText(teamConfig);
 
+			Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
 			while (iter.hasNext()) {
 				Map.Entry<Player, PlayerInfo> entry = iter.next();
 				Player p = entry.getKey();
-				// dae use unsafe type casts because the preference system is so bad
 				if (entry.getValue().getPreference(Preferences.RECEIVE_GAME_TITLES)) {
 					PlayerUtils.sendTitle(p, Component.empty(), titleText, 7, 30, 7);
 				}
 
 				p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_CLUSTER_PLACE, SoundCategory.AMBIENT, 2, 1f);
+
+				if (p != player) {
+					AnnouncerManager.playSound(p, AnnouncerSound.GAME_FLAG_DROPPED);
+				}
 			}
+			AnnouncerManager.playSound(player, AnnouncerSound.GAME_FLAG_YOU_LOST_THE);
 			Bukkit.broadcast(chatText);
 		}
 	}
@@ -593,6 +611,7 @@ public class CaptureTheFlag extends TeamArena
 			p.playSound(p.getLocation(), Sound.BLOCK_LARGE_AMETHYST_BUD_PLACE, SoundCategory.AMBIENT, 2, 1);
 		}
 
+		AnnouncerManager.broadcastSound(AnnouncerSound.GAME_FLAG_RECOVERED);
 		Bukkit.broadcast(chatText);
 	}
 
@@ -628,6 +647,7 @@ public class CaptureTheFlag extends TeamArena
 		}
 
 		Bukkit.broadcast(chatText);
+		AnnouncerManager.broadcastSound(AnnouncerSound.GAME_FLAG_CAPTURED);
 
 		if(this.timeToSpeed <= 0) {
 			Bukkit.broadcast(SPEED_DONE_MESSAGE);
