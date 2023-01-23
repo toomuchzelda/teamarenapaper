@@ -69,6 +69,9 @@ public class AnnouncerSound {
 		}
 
 		BY_TYPED_NAME.put(this.typeAndName, this);
+		if (this.type == Type.CHAT) {
+			ALL_CHAT_SOUNDS.add(this);
+		}
 	}
 
 	private static String chopOffYml(String filename) {
@@ -224,8 +227,8 @@ public class AnnouncerSound {
 					phraseNames = new String[] {name.replace('_', ' ')};
 				}
 
-				AnnouncerSound sound = new AnnouncerSound(Type.CHAT, name, criteria, swear, phraseNames);
-				ALL_CHAT_SOUNDS.add(sound);
+				// Puts itself into static collection ins constructor
+				new AnnouncerSound(Type.CHAT, name, criteria, swear, phraseNames);
 			}
 			catch (IOException e) {
 				Main.logger().warning("Bad voice config file " + voiceFile.getName() + " " + e.getMessage());
