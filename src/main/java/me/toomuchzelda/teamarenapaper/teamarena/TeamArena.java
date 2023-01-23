@@ -6,6 +6,9 @@ import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
+import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
+import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerSound;
+import me.toomuchzelda.teamarenapaper.teamarena.announcer.ChatAnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandTeamChat;
@@ -29,6 +32,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.trigger.KitTrigger;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
@@ -838,6 +842,11 @@ public abstract class TeamArena
 		}
 		else { //else global chat
 			Bukkit.broadcast(constructChatMessage(chatter, event.message()));
+
+			// Queue for voice announcer
+			if (event.message() instanceof TextComponent textComponent) {
+				ChatAnnouncerManager.queueMessage(textComponent);
+			}
 		}
 	}
 
@@ -1016,6 +1025,8 @@ public abstract class TeamArena
 				if(entry.getValue().team == winningTeam) {
 					entry.getKey().playSound(entry.getKey().getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE,
 							SoundCategory.AMBIENT, 2f, 1f);
+
+					AnnouncerManager.playSound(entry.getKey(), AnnouncerSound.GAME_A_WINNER_IS_YOU);
 				}
 			}
 		}

@@ -104,4 +104,15 @@ public class Preferences {
 
 	public static final Preference<Boolean> KILL_SOUND = SimplePreference.of("kill_sound", "Hear the ding sound when you kill a player", true)
 			.setIcon(Material.GOLDEN_SWORD);
+
+	public static final Preference<Boolean> ANNOUNCER_GAME = SimplePreference.of("announce_game_events",
+		"Whether you hear the announcer say things that happen in the game. For example, a Flag being captured.", true)
+		.setIcon(Material.GOAT_HORN);
+
+	public static final Preference<Boolean> ANNOUNCER_CHAT = SimplePreference.of("announce_chat_phrases",
+		"Whether you hear the announcer speak out select phrases that appear in chat", true)
+		.setIcon(Material.GOAT_HORN);
+
+	public static final Preference<Boolean> ANNOUNCER_SWEAR = SimplePreference.of("announce_swear", "If you want to " +
+		"hear the announcer say swear words", true).setIcon(Material.GOAT_HORN);
 }

@@ -2,6 +2,8 @@ package me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
+import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
+import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerSound;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
@@ -79,6 +81,8 @@ public class SearchAndDestroy extends TeamArena
 
 	//sidebar
 	private final Map<TeamArenaTeam, Component> sidebarCache;
+
+	private static final DamageType FUSE_KILL = new DamageType(DamageType.MELEE, "%Killed% was pummelled by %Killer%'s Bomb Fuse");
 
 	//===========MESSAGE STUFF
 	@RegExp
@@ -227,6 +231,9 @@ public class SearchAndDestroy extends TeamArena
 							}
 						}
 					}
+
+					// Announcer sound
+					AnnouncerManager.broadcastSound(AnnouncerSound.GAME_BOMB_ARMED);
 				}
 				//just been disarmed, remove TNT from map
 				else if(armedTime == Bomb.JUST_BEEN_DISARMED) {
@@ -243,6 +250,8 @@ public class SearchAndDestroy extends TeamArena
 							}
 						}
 					}
+
+					AnnouncerManager.broadcastSound(AnnouncerSound.GAME_BOMB_DISARMED);
 				}
 				else if(armedTime == Bomb.JUST_EXPLODED) {
 					announceBombEvent(bomb, BombEvent.EXPLODED);
@@ -255,6 +264,8 @@ public class SearchAndDestroy extends TeamArena
 
 					//score 1 for dead
 					bomb.getTeam().score = TEAM_DEAD_SCORE;
+
+					AnnouncerManager.broadcastSound(AnnouncerSound.GAME_BOMB_DETONATED);
 				}
 				else if(bomb.isArmed()) {
 					soonestExplodingBomb = Math.max(soonestExplodingBomb, bomb.getArmedTime());
@@ -347,6 +358,7 @@ public class SearchAndDestroy extends TeamArena
 		PlayerUtils.sendOptionalTitle(Component.empty(), message, 10, 20, 10);
 
 		lastMan.getWorld().playSound(this.spawnPos, Sound.ENTITY_ENDER_DRAGON_HURT, 99999f, 1f);
+		AnnouncerManager.playSound(lastMan, AnnouncerSound.GAME_LAST_MAN_STANDING);
 	}
 
 	private void administerInstantFuse(final Player player, boolean give) {
@@ -538,6 +550,19 @@ public class SearchAndDestroy extends TeamArena
 
 	@Override
 	public void handleDeath(DamageEvent event) {
+		// Fuse kills
+		// Check raw damage coz there's some shenanigans with the order the DamageEvent is created -> held item changes
+		// are processed -> DamageEvent gets processed
+		if (event.getRawDamage() == 0.5d && event.getDamageType().is(DamageType.MELEE)) {
+			Player killer = (Player) event.getFinalAttacker();
+			if (killer.getEquipment().getItemInMainHand().getType() == BASE_FUSE.getType()) {
+				event.setDamageType(FUSE_KILL);
+
+				AnnouncerManager.playSound(killer, AnnouncerSound.CHAT_DISGRACEFUL);
+				AnnouncerManager.playSound(event.getPlayerVictim(), AnnouncerSound.CHAT_MY_GOD);
+			}
+		}
+
 		super.handleDeath(event);
 
 		this.checkWinner();

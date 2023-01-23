@@ -22,8 +22,6 @@ public class CommandCredits extends CustomCommand
 		Component T_0_E_D = TextUtils.getRGBManiacComponent(Component.text("T_0_E_D"), Style.empty(), 0.5d);
 		Component theRest = Component.text("Xtikman, Elitemaster5, jojosue, Kullanari, SevereMyopia, 22balletgirls, Woaxa", NamedTextColor.AQUA);
 
-		Component doubleSpace = Component.space().append(Component.space());
-
 		CREDITS = Component.text()
 				.append(Component.newline())
 				.append(Component.text("(✿◡‿◡) Team Arena (●'◡'●) - Credits -", NamedTextColor.YELLOW))
@@ -50,7 +48,7 @@ public class CommandCredits extends CustomCommand
 						.clickEvent(ClickEvent.clickEvent(ClickEvent.Action.OPEN_URL, "https://github.com/toomuchzelda/teamarenapaper")))
 				.append(Component.newline())
 				.append(Component.newline())
-				.append(Component.text("=|=|=|   Thank you for playing!   |=|=|=", NamedTextColor.LIGHT_PURPLE))
+				.append(Component.text("=|=|=|=|  Thank you for playing!  |=|=|=|=", NamedTextColor.LIGHT_PURPLE))
 				.append(Component.newline())
 				//.append(Component.text("Xtikman be strong", NamedTextColor.DARK_GRAY))
 				.build();

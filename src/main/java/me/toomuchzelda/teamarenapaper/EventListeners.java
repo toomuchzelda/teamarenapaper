@@ -20,6 +20,8 @@ import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.sql.*;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
+import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
+import me.toomuchzelda.teamarenapaper.teamarena.announcer.ChatAnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
@@ -159,6 +161,13 @@ public class EventListeners implements Listener
 
 		try {
 			FakeHitboxManager.tick();
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+
+		try {
+			ChatAnnouncerManager.tick();
 		}
 		catch(Exception e) {
 			e.printStackTrace();
@@ -315,7 +324,7 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void playerJoin(PlayerJoinEvent event) {
-		Player player = event.getPlayer();
+		final Player player = event.getPlayer();
 		//disable yellow "Player has joined the game" messages
 		event.joinMessage(null);
 		Main.getPlayerInfo(player).getScoreboard().set();
@@ -1040,6 +1049,11 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void onMotd(PaperServerListPingEvent e) {
 		e.motd(MOTD);
+	}
+
+	@EventHandler
+	public void playerResourcePackStatus(PlayerResourcePackStatusEvent event) {
+		AnnouncerManager.handleEvent(event);
 	}
 
 	@EventHandler
