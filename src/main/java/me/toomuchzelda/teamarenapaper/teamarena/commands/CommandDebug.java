@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.explosions.CustomExplosion;
+import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.InventoryProvider;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
@@ -44,6 +45,7 @@ public class CommandDebug extends CustomCommand {
 
 	// TODO temporary feature
 	public static boolean ignoreWinConditions;
+	public static boolean kitSniper;
 	public static boolean sniperAccuracy;
 	public static Predicate<Kit> kitPredicate = ignored -> true;
 
@@ -72,13 +74,16 @@ public class CommandDebug extends CustomCommand {
 				if (args[1].equalsIgnoreCase("start")) {
 					ignoreWinConditions = true;
 					skipGameState(GameState.LIVE);
-				} else if (args[1].equalsIgnoreCase("ignorewinconditions")) {
-					ignoreWinConditions = args.length == 3 ? "true".equalsIgnoreCase(args[2]) : !ignoreWinConditions;
+				} else if (args[1].equals("ignorewinconditions")) {
+					ignoreWinConditions = args.length == 3 ? Boolean.parseBoolean(args[2]) : !ignoreWinConditions;
 					sender.sendMessage(Component.text("Set ignore win conditions to " + ignoreWinConditions, NamedTextColor.GREEN));
-				} else if (args[1].equalsIgnoreCase("sniperaccuracy")) {
-					sniperAccuracy = args.length == 3 ? "true".equalsIgnoreCase(args[2]) : !sniperAccuracy;
+				} else if (args[1].equals("sniperaccuracy")) {
+					sniperAccuracy = args.length == 3 ? Boolean.parseBoolean(args[2]) : !sniperAccuracy;
 					sender.sendMessage(Component.text("Set sniper accuracy debug to " + sniperAccuracy, NamedTextColor.GREEN));
-				} else if (args[1].equalsIgnoreCase("kitfilter")) {
+				} else if (args[1].equals("enablekitsniper")) {
+					kitSniper = args.length == 3 ? Boolean.parseBoolean(args[2]) : !kitSniper;
+					sender.sendMessage(Component.text("Set enable kit sniper to " + kitSniper, NamedTextColor.GREEN));
+				} else if (args[1].equals("kitfilter")) {
 					setKitRestrictions(sender, args);
 				}
 			}
@@ -174,6 +179,10 @@ public class CommandDebug extends CustomCommand {
 			case "burst" -> {
 				KitBurst.BurstAbility.HIDE_SHOTGUN_ARROWS = !KitBurst.BurstAbility.HIDE_SHOTGUN_ARROWS;
 				sender.sendMessage("Set burst show arrows to: " + KitBurst.BurstAbility.HIDE_SHOTGUN_ARROWS);
+			}
+			case "fakehitbox" -> {
+				boolean show = args.length == 2 ? Boolean.parseBoolean(args[1]) : !FakeHitboxManager.show;
+				FakeHitboxManager.setVisibility(show);
 			}
 			default -> {
 				return false;
@@ -412,12 +421,12 @@ public class CommandDebug extends CustomCommand {
 	public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
 		if (args.length == 1) {
 			return Arrays.asList("hide", "gui", "guitest", "game", "setrank", "setteam", "setkit",
-				"setgame", "setnextgame", "votetest", "draw", "graffititest", "burst");
+				"setgame", "setnextgame", "votetest", "draw", "graffititest", "burst", "respawn", "fakehitbox");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");
 				case "guitest" -> Arrays.asList("tab", "spectate");
-				case "game" -> Arrays.asList("start", "ignorewinconditions", "sniperaccuracy", "kitfilter");
+				case "game" -> Arrays.asList("start", "ignorewinconditions", "sniperaccuracy", "enablekitsniper", "kitfilter");
 				case "setrank" -> Arrays.stream(PermissionLevel.values()).map(Enum::name).toList();
 				case "setteam" -> Arrays.stream(Main.getGame().getTeams())
 						.map(team -> team.getSimpleName().replace(' ', '_'))

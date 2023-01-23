@@ -267,6 +267,8 @@ public abstract class TeamArena
 
 	protected void registerKits() {
 		defaultKits.forEach(this::registerKit);
+		if (CommandDebug.kitSniper)
+			registerKit(new KitSniper());
 	}
 
 	protected void registerKit(Kit kit) {

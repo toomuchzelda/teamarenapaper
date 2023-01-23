@@ -818,7 +818,7 @@ public class EventListeners implements Listener
 	}
 
 	@EventHandler(ignoreCancelled = true) // might be handled by custom inventories
-	public void onPlayerArmorChange(InventoryClickEvent event) {
+	public void onPlayerInventoryClick(InventoryClickEvent event) {
 		TeamArena game = Main.getGame();
 		Player player = (Player) event.getWhoClicked();
 		InventoryView view = event.getView();
@@ -856,7 +856,7 @@ public class EventListeners implements Listener
 	}
 
 	@EventHandler
-	public void onPlayerArmorDrag(InventoryDragEvent event) {
+	public void onPlayerInventoryDrag(InventoryDragEvent event) {
 		Player player = (Player) event.getWhoClicked();
 		InventoryView view = event.getView();
 		Inventory topInventory = view.getTopInventory();

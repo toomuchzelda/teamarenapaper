@@ -119,8 +119,6 @@ public final class Main extends JavaPlugin
 		commandMap.register(fallbackPrefix, new CommandTicTacToe());
 		commandMap.register(fallbackPrefix, new CommandCallvote());
 		commandMap.register(fallbackPrefix, new CommandTeamChat());
-		commandMap.register(fallbackPrefix, new CommandFakeHitboxes());
-		commandMap.register(fallbackPrefix, new CommandSetNextGame());
 		commandMap.register(fallbackPrefix, new CommandHeal());
 		commandMap.register(fallbackPrefix, new CommandKillStreak());
 		commandMap.register(fallbackPrefix, new CommandCredits());

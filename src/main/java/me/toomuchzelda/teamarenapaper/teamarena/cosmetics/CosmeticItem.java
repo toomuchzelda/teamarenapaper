@@ -1,9 +1,11 @@
 package me.toomuchzelda.teamarenapaper.teamarena.cosmetics;
 
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.Style;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -12,6 +14,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 
 public abstract class CosmeticItem {
@@ -54,11 +57,13 @@ public abstract class CosmeticItem {
 				Component.text("Unknown", NamedTextColor.DARK_GRAY)
 		);
 		if (this.desc != null) {
-			var desc = Component.textOfChildren(
-				Component.text("Description: ", NamedTextColor.GOLD),
-				Component.text(this.desc, NamedTextColor.GRAY)
-			);
-			return List.of(author, desc);
+			var wrappedDesc = TextUtils.wrapString(this.desc, Style.style(NamedTextColor.GRAY), TextUtils.DEFAULT_WIDTH, true);
+			var list = new ArrayList<Component>(wrappedDesc.size() + 2);
+			list.add(author);
+			list.add(Component.text("Description:", NamedTextColor.GOLD));
+			list.addAll(wrappedDesc);
+
+			return List.copyOf(list);
 		} else {
 			return List.of(author);
 		}
