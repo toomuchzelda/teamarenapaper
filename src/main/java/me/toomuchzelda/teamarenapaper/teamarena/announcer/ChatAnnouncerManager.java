@@ -41,9 +41,10 @@ public class ChatAnnouncerManager
 		long time = System.currentTimeMillis();
 
 		synchronized (queuedMessages) {
-			boolean keepIteratingQueue = true;
 			var iter = queuedMessages.iterator();
-			while(iter.hasNext() && keepIteratingQueue) {
+
+			outerLoop:
+			while(iter.hasNext()) {
 				String message = iter.next();
 
 				for (AnnouncerSound sound : AnnouncerSound.ALL_CHAT_SOUNDS) {
@@ -51,8 +52,7 @@ public class ChatAnnouncerManager
 						lastAnnounceTime = currentTick;
 						AnnouncerManager.broadcastSound(sound);
 
-						keepIteratingQueue = false;
-						break;
+						break outerLoop;
 					}
 				}
 			}
