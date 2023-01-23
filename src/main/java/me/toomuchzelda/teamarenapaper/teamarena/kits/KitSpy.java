@@ -338,7 +338,7 @@ public class KitSpy extends Kit
 					.lore(Component.text("Players: ???", NamedTextColor.GRAY),
 						Component.text("Score: " + team.getTotalScore(), NamedTextColor.GRAY))
 					.build();
-				return TabBar.highlightIfSelected(stack, selected);
+				return ItemUtils.highlightIfSelected(stack, selected);
 			}
 			return super.teamToItem(team, selected);
 		}

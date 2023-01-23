@@ -1,7 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
-import me.toomuchzelda.teamarenapaper.inventory.TabBar;
+import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -62,7 +62,7 @@ public enum KitCategory {
 				.lore(TextUtils.toLoreList(description, NamedTextColor.GRAY))
 				.hide(ItemFlag.values())
 				.build();
-		this.displaySelected = TabBar.highlight(this.display);
+		this.displaySelected = ItemUtils.highlight(this.display);
 	}
 
 	KitCategory(TextColor color, ItemStack display, ItemStack displaySelected) {

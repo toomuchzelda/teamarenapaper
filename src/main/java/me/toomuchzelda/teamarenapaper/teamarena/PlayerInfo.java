@@ -1,10 +1,10 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
-import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
+import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.KillAssistTracker;
@@ -113,20 +113,22 @@ public class PlayerInfo
 	}
 
 	public Set<NamespacedKey> getCosmeticItems(CosmeticType type) {
-		return switch (type) {
-			case GRAFFITI -> Main.getGame().graffiti.getAllGraffiti();
-		};
+		return CosmeticsManager.getLoadedCosmetics(type);
 	}
 
 	public Optional<NamespacedKey> getSelectedCosmetic(CosmeticType type) {
 		return Optional.ofNullable(selectedCosmetic.get(type));
 	}
 
-	public void setSelectedCosmetic(@NotNull CosmeticType type, @NotNull NamespacedKey key) {
-		if (!type.checkKey(key)) {
-			throw new IllegalArgumentException("key incompatible with type");
+	public void setSelectedCosmetic(@NotNull CosmeticType type, @Nullable NamespacedKey key) {
+		if (key != null) {
+			if (!type.checkKey(key)) {
+				throw new IllegalArgumentException("key incompatible with type");
+			}
+			selectedCosmetic.put(type, key);
+		} else {
+			selectedCosmetic.remove(type);
 		}
-		selectedCosmetic.put(type, key);
 	}
 
 	/**

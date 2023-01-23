@@ -3,6 +3,8 @@ package me.toomuchzelda.teamarenapaper.utils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.flattener.ComponentFlattener;
+import net.kyori.adventure.text.flattener.FlattenerListener;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
@@ -21,12 +23,9 @@ import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
+import java.util.*;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 public class TextUtils {
 
@@ -316,7 +315,7 @@ public class TextUtils {
 					String innerLine = innerLines[i];
 					if (!line.isEmpty()) {
 						lines.add(Component.text(line.append(' ').append(innerLine).toString(), style));
-						line.delete(0, line.length());
+						line.setLength(0);
 					} else {
 						lines.add(Component.text(innerLine, style));
 					}
@@ -356,7 +355,7 @@ public class TextUtils {
 				else
 					return Component.text(line, styleNoItalics);
 			})
-			.collect(Collectors.toList());
+			.toList();
 	}
 
 	public static List<Component> toLoreList(String string, TextColor textColor, TagResolver... tagResolvers) {
@@ -365,5 +364,71 @@ public class TextUtils {
 
 	public static List<Component> toLoreList(String string, TagResolver... tagResolvers) {
 		return toLoreList(string, Style.empty(), tagResolvers);
+	}
+
+	/**
+	 * Splits a component into a list of components around matches of a regular expression
+	 * @param component The component to split
+	 * @param regex The regular expression
+	 * @return The split list
+	 */
+	// pretty inefficient, but does the job well enough
+	public static List<Component> split(Component component, Pattern regex) {
+		List<Component> splitResult = new ArrayList<>();
+
+		Deque<Style> mergedStyles = new ArrayDeque<>();
+		mergedStyles.push(Style.empty());
+		List<Component> acc = new ArrayList<>();
+		ComponentFlattener.basic().flatten(component, new FlattenerListener() {
+			@Override
+			public void pushStyle(@NotNull Style style) {
+				Style lastStyle = mergedStyles.getFirst();
+				mergedStyles.addFirst(lastStyle.merge(style));
+			}
+
+			@Override
+			public void popStyle(@NotNull Style style) {
+				mergedStyles.removeFirst();
+			}
+
+			@Override
+			public void component(@NotNull String text) {
+				Style style = mergedStyles.getFirst();
+				String[] split = regex.split(text, -1); // thank you Java, very cool
+				if (split.length > 1) {
+					for (int i = 0; i < split.length - 1; i++) {
+						String substring = split[i];
+						if (!substring.isEmpty())
+							acc.add(Component.text(substring, style));
+						if (acc.size() != 0)
+							splitResult.add(Component.textOfChildren(acc.toArray(new Component[0])).compact());
+						else
+							splitResult.add(Component.empty());
+						acc.clear();
+					}
+					// tail
+					if (!split[split.length - 1].isEmpty()) {
+						acc.add(Component.text(split[split.length - 1], style));
+					}
+				} else if (!text.isEmpty()) {
+					acc.add(Component.text(text, style));
+				}
+			}
+		});
+		// tail
+		if (acc.size() != 0) {
+			splitResult.add(Component.textOfChildren(acc.toArray(new Component[0])));
+		}
+		return List.copyOf(splitResult);
+	}
+
+	private static final Pattern LINE = Pattern.compile("\\n");
+	/**
+	 * Splits a component around new lines
+	 * @param component The component to split
+	 * @return The split list
+	 */
+	public static List<Component> splitLines(Component component) {
+		return split(component, LINE);
 	}
 }

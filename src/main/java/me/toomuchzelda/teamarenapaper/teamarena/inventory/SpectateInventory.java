@@ -5,6 +5,7 @@ import me.toomuchzelda.teamarenapaper.inventory.*;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -164,7 +165,7 @@ public class SpectateInventory implements InventoryProvider {
 				.lore(Component.text("Players: " + team.getPlayerMembers().size(), NamedTextColor.GRAY),
 					Component.text("Score: " + team.getTotalScore(), NamedTextColor.GRAY))
 				.build();
-			return TabBar.highlightIfSelected(stack, selected);
+			return ItemUtils.highlightIfSelected(stack, selected);
 		} else {
 			return ItemBuilder.of(selected ? Material.WITHER_SKELETON_SKULL : Material.SKELETON_SKULL)
 				.displayName(team.getComponentName().decorate(TextDecoration.STRIKETHROUGH))

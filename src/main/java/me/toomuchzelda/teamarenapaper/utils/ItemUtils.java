@@ -2,9 +2,11 @@ package me.toomuchzelda.teamarenapaper.utils;
 
 import com.destroystokyo.paper.MaterialSetTag;
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.*;
@@ -20,7 +22,9 @@ import java.util.UUID;
 import java.util.function.Predicate;
 
 public class ItemUtils {
-    public static int _uniqueName = 0;
+	// https://minecraft-heads.com/custom-heads/alphabet/56787-check-mark
+	private static final ItemStack CHECKMARK_HEAD = createPlayerHead("a79a5c95ee17abfef45c8dc224189964944d560f19a44f19f8a46aef3fee4756");
+	public static int _uniqueName = 0;
 
     /**
      * used to explicity set italics state of components to false
@@ -199,5 +203,19 @@ public class ItemUtils {
 		meta.setPlayerProfile(profile);
 		stack.setItemMeta(meta);
 		return stack;
+	}
+
+	public static ItemStack highlightIfSelected(ItemStack stack, boolean selected) {
+		return selected ? highlight(stack) : stack;
+	}
+
+	public static ItemStack highlight(ItemStack stack) {
+		// enchantments don't render on player heads, so replace the head with a checkmark
+		if (stack.getType() == Material.PLAYER_HEAD)
+			return CHECKMARK_HEAD.clone();
+		return ItemBuilder.from(stack.clone())
+				.enchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1)
+				.hide(ItemFlag.HIDE_ENCHANTS)
+				.build();
 	}
 }

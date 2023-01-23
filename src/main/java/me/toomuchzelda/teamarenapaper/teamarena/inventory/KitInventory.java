@@ -7,6 +7,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
+import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
@@ -110,7 +111,7 @@ public class KitInventory implements InventoryProvider {
 
 		categoryTab.showTabs(inventory, Arrays.asList(KitCategory.values()), KitCategory::display, 0, 9, true);
 		// extra button to show all tabs
-		inventory.set(0, TabBar.highlightIfSelected(ALL_TAB_ITEM, categoryTab.getCurrentTab() == null),
+		inventory.set(0, ItemUtils.highlightIfSelected(ALL_TAB_ITEM, categoryTab.getCurrentTab() == null),
 			e -> {
 				if (categoryTab.goToTab(null, inventory))
 					categoryTab.playSound(e);
