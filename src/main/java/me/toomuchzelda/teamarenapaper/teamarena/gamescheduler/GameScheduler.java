@@ -9,17 +9,16 @@ import me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy.SearchAndDestro
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.*;
 
 /**
  * @author toomuchzelda
  *
  * Keep track of maps, gamemodes, and schedule for playing
- *
+ * <p>
  * Games are scheduled by GameType. GameTypes are placed into a queue in a random order, and then played in that order
  * until the end of the queue is reached. Then all gametypes are marked as unplayed, shuffled again, and played again.
- *
+ * <p>
  * Maps are done the same, except a map is only taken from it's queue when that gametype is being played.
  * It is possible for a map to play twice in a row if it is picked from two gametype's separate map queues when
  * played after the other.
@@ -29,9 +28,6 @@ public class GameScheduler
 	private static final List<TeamArenaMap> ALL_MAPS;
 
 	private static final Map<GameType, List<TeamArenaMap>> GAMETYPE_MAPS;
-	/*private static final List<TeamArenaMap> KOTH_MAPS;
-	private static final List<TeamArenaMap> CTF_MAPS;
-	private static final List<TeamArenaMap> SND_MAPS;*/
 
 	//array index, track how much of the queue has been played
 	private static int gameTypeCtr;

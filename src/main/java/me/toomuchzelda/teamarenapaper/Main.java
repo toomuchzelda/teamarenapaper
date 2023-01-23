@@ -6,6 +6,7 @@ import me.toomuchzelda.teamarenapaper.sql.DBSetPreferences;
 import me.toomuchzelda.teamarenapaper.sql.DatabaseManager;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.*;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
@@ -69,6 +70,8 @@ public final class Main extends JavaPlugin
 
 		// load cosmetics
 		CosmeticsManager.reloadCosmetics();
+
+		AnnouncerManager.init();
 
 		//teamArena = new SearchAndDestroy();//new CaptureTheFlag(); //new KingOfTheHill();
 		teamArena = GameScheduler.getNextGame();

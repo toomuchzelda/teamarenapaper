@@ -82,6 +82,8 @@ public class SearchAndDestroy extends TeamArena
 	//sidebar
 	private final Map<TeamArenaTeam, Component> sidebarCache;
 
+	private static final DamageType FUSE_KILL = new DamageType(DamageType.MELEE, "%Killed% was pummelled by %Killer%'s Bomb Fuse");
+
 	//===========MESSAGE STUFF
 	@RegExp
 	public static final String BOMB_TEAM_KEY = "%bombTeam%";
@@ -548,6 +550,19 @@ public class SearchAndDestroy extends TeamArena
 
 	@Override
 	public void handleDeath(DamageEvent event) {
+		// Fuse kills
+		// Check raw damage coz there's some shenanigans with the order the DamageEvent is created -> held item changes
+		// are processed -> DamageEvent gets processed
+		if (event.getRawDamage() == 0.5d && event.getDamageType().is(DamageType.MELEE)) {
+			Player killer = (Player) event.getFinalAttacker();
+			if (killer.getEquipment().getItemInMainHand().getType() == BASE_FUSE.getType()) {
+				event.setDamageType(FUSE_KILL);
+
+				AnnouncerManager.playSound(killer, AnnouncerSound.CHAT_DISGRACEFUL);
+				AnnouncerManager.playSound(event.getPlayerVictim(), AnnouncerSound.CHAT_MY_GOD);
+			}
+		}
+
 		super.handleDeath(event);
 
 		this.checkWinner();

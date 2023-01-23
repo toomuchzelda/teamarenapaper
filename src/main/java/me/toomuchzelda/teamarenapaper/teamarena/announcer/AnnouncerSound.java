@@ -1,5 +1,11 @@
 package me.toomuchzelda.teamarenapaper.teamarena.announcer;
 
+import me.toomuchzelda.teamarenapaper.Main;
+import org.yaml.snakeyaml.Yaml;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.*;
 import java.util.function.BiPredicate;
 
@@ -11,54 +17,28 @@ import java.util.function.BiPredicate;
  *
  * @author toomuchzelda
  */
-public enum AnnouncerSound {
-
-	// game event sounds
-	GAME_A_WINNER_IS_YOU(Type.GAME, "awinnerisyou", MatchCriteria.NEVER_MATCH, false),
-	GAME_BOMB_ARMED(Type.GAME, "bombarmed", MatchCriteria.NEVER_MATCH, false),
-	GAME_BOMB_DETONATED(Type.GAME, "bombdetonated", MatchCriteria.NEVER_MATCH, false),
-	GAME_BOMB_DISARMED(Type.GAME, "bombdisarmed", MatchCriteria.NEVER_MATCH, false),
-	GAME_FLAG_CAPTURED(Type.GAME, "flagcaptured", MatchCriteria.NEVER_MATCH, false),
-	GAME_FLAG_DROPPED(Type.GAME, "flagdropped", MatchCriteria.NEVER_MATCH, false),
-	GAME_FLAG_RECOVERED(Type.GAME, "flagrecovered", MatchCriteria.NEVER_MATCH, false),
-	GAME_FLAG_STOLEN(Type.GAME, "flagstolen", MatchCriteria.NEVER_MATCH, false),
-	GAME_FLAG_TAKEN(Type.GAME, "flagtaken", MatchCriteria.NEVER_MATCH, false),
-	GAME_FLAG_YOU_GOT_THE(Type.GAME, "flagyougotthe", MatchCriteria.NEVER_MATCH, false),
-	GAME_FLAG_YOU_LOST_THE(Type.GAME, "flagyoulostthe", MatchCriteria.NEVER_MATCH, false),
-	GAME_LAST_MAN_STANDING(Type.GAME, "lastmanstanding", MatchCriteria.NEVER_MATCH, false),
-
-
-	// chat word sounds
-	CHAT_OBJECTION(Type.CHAT, "objection", MatchCriteria.CONTAINS, false),
-	CHAT_LEEROY_JENKINS(Type.CHAT, "leeroy", MatchCriteria.CONTAINS, false),
-	CHAT_MY_BODY_IS_READY(Type.CHAT, "mybodyisready", MatchCriteria.CONTAINS, false, "my body is ready", "reggie"),
-	CHAT_AMAZING(Type.CHAT, "amazing", MatchCriteria.WHOLE_MESSAGE, false, "amazing!"),
-	CHAT_BATTLE_OF_THE_CENTURY(Type.CHAT, "battleofthecentury", MatchCriteria.CONTAINS, false, "battle of the century"),
-	CHAT_WHO_WILL_WIN(Type.CHAT, "whowillwin", MatchCriteria.CONTAINS, false, "who will win"),
-	CHAT_WELCOME(Type.CHAT, "welcome", MatchCriteria.WHOLE_WORD, false),
-	CHAT_UNTOUCHABLE(Type.CHAT, "untouchable", MatchCriteria.WHOLE_WORD, false),
-	CHAT_MY_GOD(Type.CHAT, "mygod", MatchCriteria.CONTAINS, false, "my god", "omg"),
-	CHAT_GODLIKE(Type.CHAT, "godlike", MatchCriteria.CONTAINS, false, "godlike", "god like", "god-like", "god tier", "god-tier", "godtier"),
-	CHAT_EXCELLENT(Type.CHAT, "excellent", MatchCriteria.WHOLE_WORD, false),
-	CHAT_HMMM(Type.CHAT, "hmmm", MatchCriteria.WHOLE_WORD, false),
-	CHAT_DESPERATE(Type.CHAT, "desperate", MatchCriteria.CONTAINS, false),
-	CHAT_DISGRACEFUL(Type.CHAT, "disgraceful", MatchCriteria.CONTAINS, false),
-	CHAT_FUCK_YOU(Type.CHAT, "fuckyou", MatchCriteria.CONTAINS, true, "fuck you", "fuckyou"),
-	CHAT_NASTY(Type.CHAT, "nasty", MatchCriteria.CONTAINS, false),
-	CHAT_USELESS_PLAYER(Type.CHAT, "uselessplayer", MatchCriteria.CONTAINS, false, "toed", "selda"),
-	CHAT_YOU_COWARD(Type.CHAT, "youcoward", MatchCriteria.CONTAINS, false, "you coward"),
-	CHAT_YOURE_GARBAGE(Type.CHAT, "youregarbage", MatchCriteria.CONTAINS, false, "you're garbage", "youre garbage", "ur garbage")
-	;
-
+public class AnnouncerSound {
 	public static final String NAMESPACE = "tmaannouncer";
+	static final List<AnnouncerSound> ALL_CHAT_SOUNDS = new ArrayList<>();
 	// the typeAndName as the key
 	private static final Map<String, AnnouncerSound> BY_TYPED_NAME = new LinkedHashMap<>();
 
-	static {
-		for (AnnouncerSound sound : values()) {
-			BY_TYPED_NAME.put(sound.getTypeAndName(), sound);
-		}
-	}
+	// game event sounds
+	public static final AnnouncerSound GAME_A_WINNER_IS_YOU = new AnnouncerSound(Type.GAME, "awinnerisyou", MatchCriteria.NEVER_MATCH, false);
+	public static final AnnouncerSound GAME_BOMB_ARMED = new AnnouncerSound(Type.GAME, "bombarmed", MatchCriteria.NEVER_MATCH, false);
+	public static final AnnouncerSound GAME_BOMB_DETONATED = new AnnouncerSound(Type.GAME, "bombdetonated", MatchCriteria.NEVER_MATCH, false);
+	public static final AnnouncerSound GAME_BOMB_DISARMED = new AnnouncerSound(Type.GAME, "bombdisarmed", MatchCriteria.NEVER_MATCH, false);
+	public static final AnnouncerSound GAME_FLAG_CAPTURED = new AnnouncerSound(Type.GAME, "flagcaptured", MatchCriteria.NEVER_MATCH, false);
+	public static final AnnouncerSound GAME_FLAG_DROPPED = new AnnouncerSound(Type.GAME, "flagdropped", MatchCriteria.NEVER_MATCH, false);
+	public static final AnnouncerSound GAME_FLAG_RECOVERED = new AnnouncerSound(Type.GAME, "flagrecovered", MatchCriteria.NEVER_MATCH, false);
+	public static final AnnouncerSound GAME_FLAG_STOLEN = new AnnouncerSound(Type.GAME, "flagstolen", MatchCriteria.NEVER_MATCH, false);
+	public static final AnnouncerSound GAME_FLAG_TAKEN = new AnnouncerSound(Type.GAME, "flagtaken", MatchCriteria.NEVER_MATCH, false);
+	public static final AnnouncerSound GAME_FLAG_YOU_GOT_THE = new AnnouncerSound(Type.GAME, "flagyougotthe", MatchCriteria.NEVER_MATCH, false);
+	public static final AnnouncerSound GAME_FLAG_YOU_LOST_THE = new AnnouncerSound(Type.GAME, "flagyoulostthe", MatchCriteria.NEVER_MATCH, false);
+	public static final AnnouncerSound GAME_LAST_MAN_STANDING = new AnnouncerSound(Type.GAME, "lastmanstanding", MatchCriteria.NEVER_MATCH, false);
+
+	public static final AnnouncerSound CHAT_DISGRACEFUL = new AnnouncerSound(Type.CHAT, "disgraceful", MatchCriteria.CONTAINS, false);
+	public static final AnnouncerSound CHAT_MY_GOD = new AnnouncerSound(Type.CHAT, "mygod", MatchCriteria.CONTAINS, false, "my god", "omg");
 
 	public final Type type;
 	private final String typeAndName;
@@ -87,6 +67,17 @@ public enum AnnouncerSound {
 		else {
 			this.phraseNames = List.of(name.replace('_', ' '));
 		}
+
+		BY_TYPED_NAME.put(this.typeAndName, this);
+	}
+
+	private static String chopOffYml(String filename) {
+		int index = filename.indexOf(".yml");
+		return filename.substring(0, index);
+	}
+
+	private static String chopOffTypePrefix(String typeAndName) {
+		return typeAndName.substring(0, typeAndName.indexOf('.') + 1);
 	}
 
 	// "type.name"
@@ -185,6 +176,60 @@ public enum AnnouncerSound {
 		private final BiPredicate<AnnouncerSound, String> matchingFunction;
 		MatchCriteria(BiPredicate<AnnouncerSound, String> matchingFunction) {
 			this.matchingFunction = matchingFunction;
+		}
+	}
+
+	static void init() {
+		File voicesFolder = new File("VoiceLines");
+		File[] voices = voicesFolder.listFiles();
+
+		if (voices == null || voices.length == 0) {
+			Main.logger().info("There are no chat voice lines defined in /VoiceLines");
+			return;
+		}
+
+		for (File voiceFile : voices) {
+			if (voiceFile.isDirectory()) continue;
+
+			Yaml yaml = new Yaml();
+			try (FileInputStream voiceFileReader = new FileInputStream(voiceFile)) {
+				Map<String, Object> parsedMap = yaml.load(voiceFileReader);
+
+				final String name = chopOffYml(voiceFile.getName());
+
+				Main.logger().info("name: " + name);
+
+				MatchCriteria criteria;
+				try {
+					criteria = MatchCriteria.valueOf(((String) parsedMap.get("Criteria")).toUpperCase(Locale.ENGLISH));
+				}
+				catch (NullPointerException | ClassCastException e) {
+					criteria = MatchCriteria.WHOLE_WORD;
+				}
+
+				boolean swear;
+				try {
+					swear = (Boolean) parsedMap.get("IsSwear");
+				}
+				catch (NullPointerException | ClassCastException e) {
+					swear = false;
+				}
+
+				String[] phraseNames;
+				try {
+					List<String> list = (List<String>) parsedMap.get("Phrases");
+					phraseNames = list.toArray(new String[0]);
+				}
+				catch (NullPointerException | ClassCastException e) {
+					phraseNames = new String[] {name.replace('_', ' ')};
+				}
+
+				AnnouncerSound sound = new AnnouncerSound(Type.CHAT, name, criteria, swear, phraseNames);
+				ALL_CHAT_SOUNDS.add(sound);
+			}
+			catch (IOException e) {
+				Main.logger().warning("Bad voice config file " + voiceFile.getName() + " " + e.getMessage());
+			}
 		}
 	}
 }
