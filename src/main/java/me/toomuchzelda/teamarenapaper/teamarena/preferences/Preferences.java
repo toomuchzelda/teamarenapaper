@@ -114,5 +114,5 @@ public class Preferences {
 		.setIcon(Material.GOAT_HORN);
 
 	public static final Preference<Boolean> ANNOUNCER_SWEAR = SimplePreference.of("announce_swear", "If you want to " +
-		"hear the announcer say swear words", true).setIcon(Material.GOAT_HORN);
+		"hear the announcer say swear words", false).setIcon(Material.GOAT_HORN);
 }

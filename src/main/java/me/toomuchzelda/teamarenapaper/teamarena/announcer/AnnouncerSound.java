@@ -37,8 +37,8 @@ public class AnnouncerSound {
 	public static final AnnouncerSound GAME_FLAG_YOU_LOST_THE = new AnnouncerSound(Type.GAME, "flagyoulostthe", MatchCriteria.NEVER_MATCH, false);
 	public static final AnnouncerSound GAME_LAST_MAN_STANDING = new AnnouncerSound(Type.GAME, "lastmanstanding", MatchCriteria.NEVER_MATCH, false);
 
-	public static final AnnouncerSound CHAT_DISGRACEFUL = new AnnouncerSound(Type.CHAT, "disgraceful", MatchCriteria.CONTAINS, false);
-	public static final AnnouncerSound CHAT_MY_GOD = new AnnouncerSound(Type.CHAT, "mygod", MatchCriteria.CONTAINS, false, "my god", "omg");
+	public static final AnnouncerSound CHAT_DISGRACEFUL = new AnnouncerSound(Type.CHAT, "disgraceful", MatchCriteria.NEVER_MATCH, false);
+	public static final AnnouncerSound CHAT_MY_GOD = new AnnouncerSound(Type.CHAT, "mygod", MatchCriteria.NEVER_MATCH, false, "my god", "omg");
 
 	public final Type type;
 	private final String typeAndName;
@@ -69,7 +69,7 @@ public class AnnouncerSound {
 		}
 
 		BY_TYPED_NAME.put(this.typeAndName, this);
-		if (this.type == Type.CHAT) {
+		if (this.type.isChattable()) {
 			ALL_CHAT_SOUNDS.add(this);
 		}
 	}
@@ -118,14 +118,21 @@ public class AnnouncerSound {
 	}
 
 	public enum Type {
-		GAME("game", 1f),
-		CHAT("chat", 0.9f); // Chat lines slightly quieter than Game announcements
+		GAME("game", 1f, false),
+		CHAT("chat", 0.9f, true), // Chat lines slightly quieter than Game announcements
+		NAME("chat", 0.8f, true);
 
 		private final String asString;
 		public final float volumeMult;
-		private Type(String type, float volumeMult) {
+		private final boolean chat;
+		private Type(String type, float volumeMult, boolean chat) {
 			this.asString = type;
 			this.volumeMult = volumeMult;
+			this.chat = chat;
+		}
+
+		public boolean isChattable() {
+			return chat;
 		}
 	}
 
@@ -183,55 +190,62 @@ public class AnnouncerSound {
 	}
 
 	static void init() {
-		File voicesFolder = new File("VoiceLines");
-		File[] voices = voicesFolder.listFiles();
+		File[] folders = new File[]{new File("VoiceLines"), new File("VoiceLines/Names")};
+		Type[] types = new Type[]{Type.CHAT, Type.NAME};
 
-		if (voices == null || voices.length == 0) {
-			Main.logger().info("There are no chat voice lines defined in /VoiceLines");
-			return;
-		}
+		for (int i = 0; i < folders.length; i++) {
+			final File folder = folders[i];
+			final Type type = types[i];
+			File[] voices = folder.listFiles();
 
-		for (File voiceFile : voices) {
-			if (voiceFile.isDirectory()) continue;
-
-			Yaml yaml = new Yaml();
-			try (FileInputStream voiceFileReader = new FileInputStream(voiceFile)) {
-				Map<String, Object> parsedMap = yaml.load(voiceFileReader);
-
-				final String name = chopOffYml(voiceFile.getName());
-
-				Main.logger().info("name: " + name);
-
-				MatchCriteria criteria;
-				try {
-					criteria = MatchCriteria.valueOf(((String) parsedMap.get("Criteria")).toUpperCase(Locale.ENGLISH));
-				}
-				catch (NullPointerException | ClassCastException e) {
-					criteria = MatchCriteria.WHOLE_WORD;
-				}
-
-				boolean swear;
-				try {
-					swear = (Boolean) parsedMap.get("IsSwear");
-				}
-				catch (NullPointerException | ClassCastException e) {
-					swear = false;
-				}
-
-				String[] phraseNames;
-				try {
-					List<String> list = (List<String>) parsedMap.get("Phrases");
-					phraseNames = list.toArray(new String[0]);
-				}
-				catch (NullPointerException | ClassCastException e) {
-					phraseNames = new String[] {name.replace('_', ' ')};
-				}
-
-				// Puts itself into static collection ins constructor
-				new AnnouncerSound(Type.CHAT, name, criteria, swear, phraseNames);
+			if (voices == null || voices.length == 0) {
+				Main.logger().info("No chat voice lines defined in " + folder.getName());
+				return;
 			}
-			catch (IOException e) {
-				Main.logger().warning("Bad voice config file " + voiceFile.getName() + " " + e.getMessage());
+
+			for (File voiceFile : voices) {
+				if (voiceFile.isDirectory())
+					continue;
+
+				Yaml yaml = new Yaml();
+				try (FileInputStream voiceFileReader = new FileInputStream(voiceFile)) {
+					Map<String, Object> parsedMap = yaml.load(voiceFileReader);
+
+					final String name = chopOffYml(voiceFile.getName());
+
+					Main.logger().info("name: " + name);
+
+					MatchCriteria criteria;
+					try {
+						criteria = MatchCriteria.valueOf(((String) parsedMap.get("Criteria")).toUpperCase(Locale.ENGLISH));
+					}
+					catch (NullPointerException | ClassCastException e) {
+						criteria = MatchCriteria.WHOLE_WORD;
+					}
+
+					boolean swear;
+					try {
+						swear = (Boolean) parsedMap.get("IsSwear");
+					}
+					catch (NullPointerException | ClassCastException e) {
+						swear = false;
+					}
+
+					String[] phraseNames;
+					try {
+						List<String> list = (List<String>) parsedMap.get("Phrases");
+						phraseNames = list.toArray(new String[0]);
+					}
+					catch (NullPointerException | ClassCastException e) {
+						phraseNames = new String[]{name.replace('_', ' ')};
+					}
+
+					// Puts itself into static collections in constructor
+					new AnnouncerSound(type, name, criteria, swear, phraseNames);
+				}
+				catch (IOException e) {
+					Main.logger().warning("Bad voice config file " + voiceFile.getName() + " " + e.getMessage());
+				}
 			}
 		}
 	}

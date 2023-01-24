@@ -49,7 +49,7 @@ public class AnnouncerManager
 		if (hasResourcePack(player)) {
 			PlayerInfo pinfo = Main.getPlayerInfo(player);
 			if((sound.type == AnnouncerSound.Type.GAME && pinfo.getPreference(Preferences.ANNOUNCER_GAME)) ||
-				(sound.type == AnnouncerSound.Type.CHAT && pinfo.getPreference(Preferences.ANNOUNCER_CHAT))
+				(sound.type.isChattable() && pinfo.getPreference(Preferences.ANNOUNCER_CHAT))
 			) {
 				if (!sound.isSwear || pinfo.getPreference(Preferences.ANNOUNCER_SWEAR)) {
 					player.playSound(player.getEyeLocation(), sound.getNamespacedName(), SoundCategory.VOICE,
