@@ -9,7 +9,6 @@ import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.ChunkPos;
@@ -42,9 +41,7 @@ import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
 public class MiniMapManager {
-    final TeamArena game;
     public final MapView view;
-    final GameRenderer renderer;
     final int mapWidth;
     final int centerX, centerZ;
 	final int scale;
@@ -86,8 +83,6 @@ public class MiniMapManager {
     final List<CanvasOperation> canvasOperations = new ArrayList<>();
 
     public MiniMapManager(TeamArena game) {
-        this.game = game;
-
         // create map view and adjust center and scale
         view = Bukkit.createMap(game.gameWorld);
         BoundingBox box = game.border;
@@ -108,11 +103,10 @@ public class MiniMapManager {
 		File mapDataFile = new File(mainWorldFile, "data" + File.separator + "map_" + view.getId() + ".dat");
 		mapDataFile.deleteOnExit();
 
-        // our renderer
+        // our renderers
 		view.removeRenderer(view.getRenderers().get(0));
-		view.addRenderer(new GameMapRenderer());
-        renderer = new GameRenderer();
-        view.addRenderer(renderer);
+		view.addRenderer(new GameMapRenderer(scale, centerX, centerZ));
+        view.addRenderer(new GameRenderer());
 
         stack = ItemBuilder.of(Material.FILLED_MAP).meta(MapMeta.class, mapMeta -> mapMeta.setMapView(view)).build();
     }
@@ -120,7 +114,8 @@ public class MiniMapManager {
     public void cleanUp() {
         cursors.clear();
         complexCursors.clear();
-        view.removeRenderer(renderer);
+		// properly release the renderers, or get nasty memory leaks
+		view.getRenderers().forEach(view::removeRenderer);
     }
 
     public void removeMapView() {
@@ -135,14 +130,11 @@ public class MiniMapManager {
     @NotNull
     public ItemStack getMapItem(TeamArenaTeam team) {
         return ItemBuilder.of(Material.FILLED_MAP)
+				.displayName(Component.text("Game map", team != null ? team.getRGBTextColor() : NamedTextColor.WHITE))
                 .meta(MapMeta.class, mapMeta -> {
                     mapMeta.setMapView(view);
                     if (team != null) {
-                        mapMeta.displayName(team.getComponentName().decoration(TextDecoration.ITALIC, false));
                         mapMeta.setColor(team.getColour());
-                    } else {
-                        mapMeta.displayName(Component.text("Game map", NamedTextColor.WHITE)
-                                .decoration(TextDecoration.ITALIC, false));
                     }
                 })
                 .build();
@@ -227,9 +219,15 @@ public class MiniMapManager {
 		return (byte) (Math.floorMod(yaw, 360) * 16 / 360);
 	}
 
-	public final class GameMapRenderer extends MapRenderer {
-		GameMapRenderer() {
+	public static final class GameMapRenderer extends MapRenderer {
+		public final int scale;
+		public final int centerX;
+		public final int centerZ;
+		GameMapRenderer(int scale, int centerX, int centerZ) {
 			super(false);
+			this.scale = scale;
+			this.centerX = centerX;
+			this.centerZ = centerZ;
 		}
 
 		private BlockState getCorrectStateForFluidBlock(Level world, BlockState state, BlockPos pos) {

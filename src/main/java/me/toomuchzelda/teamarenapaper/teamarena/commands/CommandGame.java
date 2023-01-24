@@ -67,7 +67,7 @@ public class CommandGame extends CustomCommand {
 			GameScheduler.nextMap = newMap;
 			sender.sendMessage(Component.textOfChildren(
 				Component.text("Set game type to "), Component.text(args[1], NamedTextColor.GOLD),
-				Component.text("and map to "), (newMap != null ?
+				Component.text(" and map to "), (newMap != null ?
 					Component.text(newMap.getName(), NamedTextColor.YELLOW) :
 					Component.text("random", NamedTextColor.GRAY))
 			).color(NamedTextColor.BLUE));

@@ -211,8 +211,12 @@ public class ItemUtils {
 
 	public static ItemStack highlight(ItemStack stack) {
 		// enchantments don't render on player heads, so replace the head with a checkmark
-		if (stack.getType() == Material.PLAYER_HEAD)
-			return CHECKMARK_HEAD.clone();
+		if (stack.getType() == Material.PLAYER_HEAD) {
+			SkullMeta meta = (SkullMeta) CHECKMARK_HEAD.getItemMeta();
+			return ItemBuilder.from(stack.clone())
+				.meta(SkullMeta.class, skullMeta -> skullMeta.setPlayerProfile(meta.getPlayerProfile()))
+				.build();
+		}
 		return ItemBuilder.from(stack.clone())
 				.enchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1)
 				.hide(ItemFlag.HIDE_ENCHANTS)

@@ -88,9 +88,9 @@ public class PayloadTestKillstreak extends CratedKillStreak {
 				if (nextNote == null) {
 					if (!iterator.hasNext()) {
 						// end of song
-						for (BlockState state : modifiedBlocks) {
-							state.update(true, false);
-						}
+//						for (BlockState state : modifiedBlocks) {
+//							state.update(true, false);
+//						}
 
 						cancel();
 						return;

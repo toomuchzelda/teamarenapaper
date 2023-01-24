@@ -72,26 +72,25 @@ public abstract class CustomCommand extends Command {
         if (sender instanceof Player player) {
             PlayerInfo playerInfo = Main.getPlayerInfo(player);
             if (playerInfo.permissionLevel.compareTo(permissionLevel) < 0) {
-                return Collections.emptyList();
+                return List.of();
             }
         }
-        Collection<String> completions = Collections.emptyList();
         try {
-			completions = onTabComplete(sender, alias, args);
+			Collection<String> completions = onTabComplete(sender, alias, args);
+			return filterCompletions(completions, args[args.length - 1]);
 		} catch (IllegalArgumentException ignored) {
-
+			return List.of();
         } catch (Throwable e) {
-            Main.logger().severe("Command " + getClass().getSimpleName() + " failed to provide valid completions " +
-                    "for input /" + alias + " " + String.join(" ", args));
+			new RuntimeException("Tab complete for input /" + alias + " " + String.join(" ", args), e).printStackTrace();
+			return List.of();
         }
-        return filterCompletions(completions, args[args.length - 1]);
     }
 
     @NotNull
     public abstract Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args);
 
     public static List<String> filterCompletions(@NotNull Collection<String> completions, @NotNull String input) {
-        List<String> list = new ArrayList<>();
+        List<String> list = new ArrayList<>(completions.size());
         for (String completion : completions) {
             if (completion.regionMatches(true, 0, input, 0, input.length())) {
                 list.add(completion);

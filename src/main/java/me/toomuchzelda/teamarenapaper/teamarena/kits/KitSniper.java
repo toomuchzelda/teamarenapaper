@@ -195,26 +195,21 @@ public class KitSniper extends Kit {
 			Player shooter = (Player) projectile.getShooter();
 			Location projLoc = projectile.getLocation().clone();
 			if (victim instanceof Player player) {
-				double victimHeadLoc = player.getEyeLocation().getY() - 0.1d;
-				double projectileHitY = projLoc.getY();
-				//Must consider when shooter is below victim, which makes getting headshots much harder.
-				double heightDiff = victimHeadLoc - (shooter.getEyeLocation()).getY();
-				//If victim is higher than shooter, height diff is positive
-				//If victim is lower than shooter, height diff is negative
-				double headshotThresh = 0;
-				headshotThresh = -(heightDiff * (.15));
-				//Further restrict shots where victim is on lower ground, since it tends to be inconsistent
-				if(headshotThresh > 0){
-					headshotThresh *= 1.5;
+				double headLocation = player.getLocation().getY();
+				double projectileHitY = projectile.getLocation().getY();
+				//Must consider when player is below the other player, which makes getting headshots much harder.
+				double headshotThresh = 1.35d;
+				double heightDiff = victim.getLocation().getBlockY() - shooter.getLocation().getBlockY();
+				if (heightDiff > 0) {
+					headshotThresh -= Math.min(0.35, (heightDiff / 10));
 				}
-
 				//Disabled headshot if you are too close since it was buggy
-				if (projectileHitY - victimHeadLoc >= headshotThresh && projectile.getOrigin().distance(projLoc) > 15) {
-					DamageEvent dEvent = DamageEvent.newDamageEvent(player, 12d, DamageType.SNIPER_HEADSHOT, shooter, false);
+				if (projectileHitY - headLocation > headshotThresh && projectile.getOrigin().distance(projectile.getLocation()) > 10) {
+					DamageEvent dEvent = DamageEvent.newDamageEvent(player, 999d, DamageType.SNIPER_HEADSHOT, shooter, false);
 					Main.getGame().queueDamage(dEvent);
 
 					//Hitmarker Sound effect
-					shooter.playSound(shooter.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 2f, 1.5f);
+					//shooter.playSound(shooter.getLocation(), Sound.ENTITY_ITEM_FRAME_PLACE, 2f, 2.0f);
 				}
 			}
 		}
