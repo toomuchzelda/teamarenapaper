@@ -724,7 +724,7 @@ public abstract class TeamArena
 			// Replicate the vertical knockback iron golems do.
 			if(event.getDamageType().is(DamageType.MELEE) && event.getAttacker() instanceof IronGolem && event.hasKnockback()) {
 				double y = event.getKnockback().getY();
-				event.setKnockback(event.getKnockback().setY(y + 0.2d));
+				event.setKnockback(event.getKnockback().setY(y + 0.25d));
 			}
 			IronGolemKillStreak.GolemAbility.handleIronGolemAttemptAttack(event);
 		}
@@ -744,7 +744,7 @@ public abstract class TeamArena
 	 * @return Whether the player is permanently dead
 	 */
 	public boolean isPermanentlyDead(Player player) {
-		return isDead(player) && !isWaitingToRespawn(player);
+		return isDead(player) && !isRespawningGame();
 	}
 
 	/**
@@ -759,12 +759,14 @@ public abstract class TeamArena
 	public void onInteract(PlayerInteractEvent event) {
 		ItemStack item = event.getItem();
 		Player player = event.getPlayer();
+
+		// Item handling
 		if (respawnItem.isSimilar(item)) {
 			event.setUseItemInHand(Event.Result.DENY);
 			if (canRespawn(player))
 				setToRespawn(player);
 			else
-				player.sendMessage(Component.text("You can't respawn right now").color(NamedTextColor.RED));
+				player.sendMessage(Component.text("You can't respawn right now", NamedTextColor.RED));
 		} else if (kitMenuItem.isSimilar(item)) {
 			event.setUseItemInHand(Event.Result.DENY);
 			Inventories.openInventory(player, new KitInventory());
@@ -772,7 +774,7 @@ public abstract class TeamArena
 			event.setUseItemInHand(Event.Result.DENY);
 			Inventories.openInventory(player, new CosmeticsInventory(CosmeticType.GRAFFITI));
 		}
-		else if (gameState == GameState.LIVE){
+		else if (gameState == GameState.LIVE) {
 			PlayerInfo pinfo = Main.getPlayerInfo(player);
 			TeamArenaTeam team = pinfo.team;
 			if (miniMap.isMapItem(item) && event.useItemInHand() != Event.Result.DENY) {
@@ -794,6 +796,18 @@ public abstract class TeamArena
 			// Killstreak crate items
 			else {
 				this.killStreakManager.handleCrateItemUse(event);
+			}
+		}
+
+		// Block handling
+		// Prevent spectators from interacting with blocks when the game is in progress
+		// opening doors, flipping levers etc.
+		if (this.gameState == GameState.LIVE) {
+			final Action action = event.getAction();
+			if (action == Action.PHYSICAL || action == Action.RIGHT_CLICK_BLOCK) {
+				if (isSpectator(event.getPlayer())) {
+					event.setUseInteractedBlock(Event.Result.DENY);
+				}
 			}
 		}
 	}
@@ -987,16 +1001,12 @@ public abstract class TeamArena
 			damageQueue.clear();
 		}
 
-		Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
-		while(iter.hasNext()) {
-			Map.Entry<Player, PlayerInfo> entry = iter.next();
-			final Player player = entry.getKey();
-
+		for (Player player : this.players) {
 			PlayerUtils.resetState(player);
 			player.setSaturatedRegenRate(0);
 			PlayerListScoreManager.setKills(player, 0);
 
-			givePlayerItems(player, entry.getValue(), true);
+			givePlayerItems(player, Main.getPlayerInfo(player), true);
 
 			player.playSound(player.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.AMBIENT, 2, 1);
 		}

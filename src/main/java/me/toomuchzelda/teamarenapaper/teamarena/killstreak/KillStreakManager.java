@@ -90,7 +90,6 @@ public class KillStreakManager
 	 * When a player uses their crate call item, handle it and create the Crate instance that will fall to them.
 	 */
 	public void handleCrateItemUse(PlayerInteractEvent event) {
-		// Check for special ItemMeta
 		if (event.getItem() == null) return;
 
 		CratedKillStreak crateStreak = this.crateItemLookup.get(event.getItem().asOne());
@@ -108,9 +107,9 @@ public class KillStreakManager
 		PlayerInventory inventory = event.getPlayer().getInventory();
 		EquipmentSlot slot = event.getHand();
 		inventory.setItem(slot, inventory.getItem(slot).subtract());
+
 		Crate crate = new Crate(event.getPlayer(),
 				event.getClickedBlock().getLocation().add(0.5d, 1d, 0.5d), crateStreak);
-
 		allCrates.add(crate);
 	}
 
