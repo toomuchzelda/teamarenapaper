@@ -5,6 +5,7 @@ import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
@@ -129,16 +130,18 @@ public class KitValkyrie extends Kit {
 		}
 
 		public void onAttemptedAttack(DamageEvent event) {
-			Player player = (Player) event.getAttacker();
-			ItemStack item = player.getInventory().getItemInMainHand();
+			if (event.getDamageType().is(DamageType.MELEE)) {
+				Player player = (Player) event.getFinalAttacker();
+				ItemStack item = player.getInventory().getItemInMainHand();
 
-			if(item.getType() == VALK_AXE_MAT) {
-				//Cancelling attacks attempted during Cleave wind-up
-				if(ACTIVE_WINDUP.containsKey(player)) {
-					event.setCancelled(true);
+				if (item.getType() == VALK_AXE_MAT) {
+					//Cancelling attacks attempted during Cleave wind-up
+					if (ACTIVE_WINDUP.containsKey(player)) {
+						event.setCancelled(true);
 
-					if(RECEIVED_AXE_CHAT_MESSAGE.add(player)) {
-						player.sendMessage(AXE_ATTACK_CANCEL_MESSAGE);
+						if (RECEIVED_AXE_CHAT_MESSAGE.add(player)) {
+							player.sendMessage(AXE_ATTACK_CANCEL_MESSAGE);
+						}
 					}
 				}
 			}
