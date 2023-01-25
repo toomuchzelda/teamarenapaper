@@ -361,6 +361,13 @@ public class CommandDebug extends CustomCommand {
 				};
 				Inventories.openInventory(player, inventory);
 			}
+			case "signtest" -> {
+				var message = args.length < 2 ?
+					Component.text("signtest") :
+					Component.text(String.join(" ", Arrays.copyOfRange(args, 1, args.length)));
+				Inventories.openSign(player, message, message.content())
+					.thenAccept(input -> player.sendMessage(Component.text("Got input: " + input)));
+			}
 			case "hide" -> {
 				for (Player viewer : Bukkit.getOnlinePlayers()) {
 					if (viewer.canSee(player)) {
@@ -420,8 +427,8 @@ public class CommandDebug extends CustomCommand {
 	@Override
 	public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
 		if (args.length == 1) {
-			return Arrays.asList("hide", "gui", "guitest", "game", "setrank", "setteam", "setkit",
-				"setgame", "setnextgame", "votetest", "draw", "graffititest", "burst", "respawn", "fakehitbox");
+			return Arrays.asList("hide", "gui", "guitest", "signtest", "game", "setrank", "setteam", "setkit",
+				"votetest", "draw", "graffititest", "burst", "respawn", "fakehitbox");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");

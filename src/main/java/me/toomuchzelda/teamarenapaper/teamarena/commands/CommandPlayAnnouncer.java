@@ -50,7 +50,7 @@ public class CommandPlayAnnouncer extends CustomCommand
 			return AnnouncerSound.getTypedNames();
 		}
 		else if (args.length == 2) {
-			return CustomCommand.getOnlinePlayerNames();
+			return CustomCommand.suggestOnlinePlayers();
 		}
 
 		return Collections.emptyList();

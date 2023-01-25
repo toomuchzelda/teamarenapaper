@@ -24,27 +24,27 @@ public class Preferences {
 			Arrays.asList(Sound.values()), Registry.SOUNDS::get)
 		.setIcon(Material.BOW);
 
-	public static final Preference<Boolean> HEARTS_FLASH_DAMAGE = SimplePreference.of("hearts_flash_damage",
+	public static final Preference<Boolean> HEARTS_FLASH_DAMAGE = SimplePreference.ofBoolean("hearts_flash_damage",
 			"If your hearts should flash when taking damage", true)
 		// https://minecraft-heads.com/custom-heads/miscellaneous/34659-damage-particle
 		.setIcon(ItemUtils.createPlayerHead("5ee118eddaee0dfb2cbc2c3d59c13a41a7d68cce945e42167aa1dcb8d0670517"));
 
-	public static final Preference<Boolean> HEARTS_FLASH_REGEN = SimplePreference.of("hearts_flash_regen",
+	public static final Preference<Boolean> HEARTS_FLASH_REGEN = SimplePreference.ofBoolean("hearts_flash_regen",
 			"If your hearts should flash while regenerating", true)
 		// https://minecraft-heads.com/custom-heads/miscellaneous/34655-heart-particle
 		.setIcon(ItemUtils.createPlayerHead("f1266b748242115b303708d59ce9d5523b7d79c13f6db4ebc91dd47209eb759c"));
 
-	public static final Preference<Boolean> DAMAGE_TILT = SimplePreference.of("damage_tilt",
+	public static final Preference<Boolean> DAMAGE_TILT = SimplePreference.ofBoolean("damage_tilt",
 			"Whether your screen should tilt in pain when taking damage. Due to a limitation this will only work if HEARTS_FLASH_DAMAGE is also set to false.", true)
 		.setIcon(ItemBuilder.of(Material.POTION)
 			.meta(PotionMeta.class, potionMeta -> potionMeta.setBasePotionData(new PotionData(PotionType.INSTANT_DAMAGE)))
 			.build());
 
-	public static final Preference<Boolean> KIT_ACTION_BAR = SimplePreference.of("kit_action_bar",
+	public static final Preference<Boolean> KIT_ACTION_BAR = SimplePreference.ofBoolean("kit_action_bar",
 			"Receive kit-related messages in the Action bar slot (the little text space above your hotbar)", true)
 		.setIcon(Material.BIRCH_SIGN);
 
-	public static final Preference<Boolean> KIT_CHAT_MESSAGES = SimplePreference.of("kit_chat_messages",
+	public static final Preference<Boolean> KIT_CHAT_MESSAGES = SimplePreference.ofBoolean("kit_chat_messages",
 			"Receive kit-related messages in chat", true)
 		// https://minecraft-heads.com/custom-heads/miscellaneous/28599-speech-bubble-chat
 		.setIcon(ItemUtils.createPlayerHead("b02af3ca2d5a160ca1114048b7947594269afe2b1b5ec255ee72b683b60b99b9"));
@@ -55,15 +55,15 @@ public class Preferences {
 		// https://minecraft-heads.com/custom-heads/miscellaneous/34656-glint-particle
 		.setIcon(ItemUtils.createPlayerHead("9f84735fc9c760e95eaf10cec4f10edb5f3822a5ff9551eeb5095135d1ffa302"));
 
-	public static final Preference<Boolean> RECEIVE_GAME_TITLES = SimplePreference.of("receive_game_titles",
+	public static final Preference<Boolean> RECEIVE_GAME_TITLES = SimplePreference.ofBoolean("receive_game_titles",
 			"Receive titles that cover up part of your screen during gameplay (you will also get a chat message regardless)", true)
 		.setIcon(Material.COMMAND_BLOCK);
 
-	public static final Preference<Boolean> VIEW_OWN_DAMAGE_DISPLAYERS = SimplePreference.of("damage_hologram_own",
+	public static final Preference<Boolean> VIEW_OWN_DAMAGE_DISPLAYERS = SimplePreference.ofBoolean("damage_hologram_own",
 			"See damage displayers for damage that was caused by you", true)
 		.setIcon(Material.IRON_CHESTPLATE);
 
-	public static final Preference<Boolean> VIEW_OTHER_DAMAGE_DISPLAYERS = SimplePreference.of("damage_hologram_others",
+	public static final Preference<Boolean> VIEW_OTHER_DAMAGE_DISPLAYERS = SimplePreference.ofBoolean("damage_hologram_others",
 			"See damage displayers for damage caused by other players", true)
 		.setIcon(Material.IRON_SWORD);
 
@@ -86,7 +86,7 @@ public class Preferences {
 		// https://minecraft-heads.com/custom-heads/alphabet/24498-information
 		.setIcon(ItemUtils.createPlayerHead("d01afe973c5482fdc71e6aa10698833c79c437f21308ea9a1a095746ec274a0f"));
 
-	public static final Preference<Boolean> TEAM_CHAT_SOUND = SimplePreference.of("team_chat_sound",
+	public static final Preference<Boolean> TEAM_CHAT_SOUND = SimplePreference.ofBoolean("team_chat_sound",
 			"Hear a sound when receiving a team chat message", true)
 		.setIcon(Material.BELL);
 
@@ -95,24 +95,24 @@ public class Preferences {
 					aFloat -> aFloat > 0f && aFloat <= 100f)
 			.setIcon(Material.TNT);
 
-	public static final Preference<Boolean> DEFAULT_TEAM_CHAT = SimplePreference.of("default_team_chat",
+	public static final Preference<Boolean> DEFAULT_TEAM_CHAT = SimplePreference.ofBoolean("default_team_chat",
 			"Whether your chat messages should go to team chat instead of all chat by default. (Use /t to talk in the opposite chat)",
 			false).setIcon(Material.GOAT_HORN);
 
-	public static final Preference<Boolean> VIEW_HARBINGER_PARTICLES = SimplePreference.of("harbinger_view_particles", "See the laggy smoke particles of the Harbinger or not", true)
+	public static final Preference<Boolean> VIEW_HARBINGER_PARTICLES = SimplePreference.ofBoolean("harbinger_view_particles", "See the laggy smoke particles of the Harbinger or not", true)
 			.setIcon(Material.NETHERRACK);
 
-	public static final Preference<Boolean> KILL_SOUND = SimplePreference.of("kill_sound", "Hear the ding sound when you kill a player", true)
+	public static final Preference<Boolean> KILL_SOUND = SimplePreference.ofBoolean("kill_sound", "Hear the ding sound when you kill a player", true)
 			.setIcon(Material.GOLDEN_SWORD);
 
-	public static final Preference<Boolean> ANNOUNCER_GAME = SimplePreference.of("announce_game_events",
+	public static final Preference<Boolean> ANNOUNCER_GAME = SimplePreference.ofBoolean("announce_game_events",
 		"Whether you hear the announcer say things that happen in the game. For example, a Flag being captured.", true)
 		.setIcon(Material.GOAT_HORN);
 
-	public static final Preference<Boolean> ANNOUNCER_CHAT = SimplePreference.of("announce_chat_phrases",
+	public static final Preference<Boolean> ANNOUNCER_CHAT = SimplePreference.ofBoolean("announce_chat_phrases",
 		"Whether you hear the announcer speak out select phrases that appear in chat", true)
 		.setIcon(Material.GOAT_HORN);
 
-	public static final Preference<Boolean> ANNOUNCER_SWEAR = SimplePreference.of("announce_swear", "If you want to " +
+	public static final Preference<Boolean> ANNOUNCER_SWEAR = SimplePreference.ofBoolean("announce_swear", "If you want to " +
 		"hear the announcer say swear words", false).setIcon(Material.GOAT_HORN);
 }

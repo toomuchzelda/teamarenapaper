@@ -20,6 +20,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
 public class CosmeticsInventory implements InventoryProvider {
@@ -70,6 +71,7 @@ public class CosmeticsInventory implements InventoryProvider {
 		CosmeticType cosmeticType = tabBar.getCurrentTab();
 
 		List<NamespacedKey> itemKeys = new ArrayList<>(info.getCosmeticItems(cosmeticType));
+		itemKeys.sort(Comparator.comparing(NamespacedKey::toString));
 		NamespacedKey selectedKey = info.getSelectedCosmetic(cosmeticType).orElse(null);
 
 

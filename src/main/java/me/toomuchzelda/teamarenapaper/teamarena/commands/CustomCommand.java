@@ -156,12 +156,27 @@ public abstract class CustomCommand extends Command {
 	/**
 	 * Convenience method for getting the names of all online players for tab complete suggestion
 	 */
-	public static List<String> getOnlinePlayerNames() {
+	public static List<String> suggestOnlinePlayers() {
 		Collection<? extends Player> players = Bukkit.getOnlinePlayers();
 		List<String> playerNames = new ArrayList<>(players.size());
-		players.forEach(player -> playerNames.add(player.getName()));
+		for (Player player : players) {
+			playerNames.add(player.getName());
+		}
 
 		return playerNames;
+	}
+
+	/**
+	 * Convenience method for getting player selectors for tab complete suggestion
+	 */
+	public static List<String> suggestPlayerSelectors() {
+		var playerNames = suggestOnlinePlayers();
+		var selectors = new ArrayList<String>(playerNames.size() + 3);
+		selectors.addAll(playerNames);
+		selectors.add("@a");
+		selectors.add("@s");
+		selectors.add("@p");
+		return selectors;
 	}
 
     public static CustomCommand getFromName(String name) {

@@ -1,8 +1,26 @@
 package me.toomuchzelda.teamarenapaper.inventory;
 
+import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.ProtocolLibrary;
+import com.comphenix.protocol.events.PacketAdapter;
+import com.comphenix.protocol.events.PacketEvent;
+import io.papermc.paper.adventure.PaperAdventure;
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.Style;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.protocol.game.ClientboundOpenSignEditorPacket;
+import net.minecraft.network.protocol.game.ServerboundSignUpdatePacket;
+import net.minecraft.world.level.block.entity.SignBlockEntity;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.World;
+import org.bukkit.block.BlockState;
+import org.bukkit.craftbukkit.v1_19_R2.block.data.CraftBlockData;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
@@ -21,7 +39,9 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.WeakHashMap;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 /**
@@ -30,12 +50,42 @@ import java.util.function.Consumer;
 public final class Inventories implements Listener {
     private static final WeakHashMap<Player, Inventory> playerInventories = new WeakHashMap<>();
     private static final WeakHashMap<Inventory, InventoryData> pluginInventories = new WeakHashMap<>();
+
+	private record ManagedSign(BlockCoords location, BlockState originalState, CompletableFuture<String> future) {}
+	private static final WeakHashMap<Player, ManagedSign> managedSigns = new WeakHashMap<>();
     public static Inventories INSTANCE = new Inventories();
 
     public static boolean debug = false;
 
     private Inventories() {
         Bukkit.getScheduler().runTaskTimer(Main.getPlugin(), Inventories::tick, 1, 1);
+
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(Main.getPlugin(), PacketType.Play.Client.UPDATE_SIGN) {
+			@Override
+			public void onPacketReceiving(PacketEvent event) {
+				Player player = event.getPlayer();
+				ManagedSign managedSign = managedSigns.remove(player);
+				if (managedSign == null) // ignore if not our sign
+					return;
+				ServerboundSignUpdatePacket packet = (ServerboundSignUpdatePacket) event.getPacket().getHandle();
+				// put it back if not the correct sign somehow
+				if (packet.getPos().getX() != managedSign.location.x() ||
+					packet.getPos().getY() != managedSign.location.y() ||
+					packet.getPos().getZ() != managedSign.location.z()) {
+					managedSigns.put(player, managedSign);
+					return;
+				}
+
+				event.setCancelled(true);
+				String[] lines = packet.getLines();
+				String fullMessage = lines[0];
+				if (!lines[1].isBlank()) {
+					fullMessage += " " + lines[1];
+				}
+				managedSign.future.complete(fullMessage); // not null
+				player.sendBlockChanges(List.of(managedSign.originalState), true);
+			}
+		});
     }
 
     public static void tick() {
@@ -89,12 +139,51 @@ public final class Inventories implements Listener {
         }
     }
 
+	public static CompletableFuture<String> openSign(Player player, Component message, String defaultValue) {
+		if (!player.isValid()) { // sanity check
+			return CompletableFuture.completedFuture("");
+		}
+
+		var future = new CompletableFuture<String>();
+		World world = player.getWorld();
+		Location signLocation = player.getLocation().toBlockLocation();
+		signLocation.setY(world.getMinHeight());
+
+		BlockState originalState = world.getBlockState(signLocation);
+
+		// send a fake sign and make the player edit it
+		var fakeData = Material.OAK_SIGN.createBlockData();
+		// send the associated data
+		var blockPos = new BlockPos(signLocation.getBlockX(), signLocation.getBlockY(), signLocation.getBlockZ());
+		var fakeSign = new SignBlockEntity(blockPos, ((CraftBlockData) fakeData).getState());
+
+		List<Component> wrapped = TextUtils.wrapString(defaultValue, Style.empty(), 80);
+		for (int i = 0; i < Math.min(wrapped.size(), 2); i++) {
+			fakeSign.setMessage(i, PaperAdventure.asVanilla(wrapped.get(i)));
+		}
+
+		fakeSign.setMessage(2, PaperAdventure.asVanilla(Component.text("^^^^^^^^^^^^^^^")));
+		fakeSign.setMessage(3, PaperAdventure.asVanilla(message));
+
+		Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
+			player.closeInventory();
+			player.sendBlockChange(signLocation, fakeData);
+			managedSigns.put(player, new ManagedSign(new BlockCoords(signLocation), originalState, future));
+			// we will just have to pray that the player isn't currently editing a sign
+			PlayerUtils.sendPacket(player, fakeSign.getUpdatePacket(), new ClientboundOpenSignEditorPacket(blockPos));
+		}, 1);
+		return future;
+	}
+
     @EventHandler
     public void onCleanUp(PluginDisableEvent e) {
         if (e.getPlugin() instanceof Main) {
             playerInventories.keySet().forEach(Player::closeInventory);
             playerInventories.clear();
             pluginInventories.clear();
+
+			managedSigns.values().forEach(sign -> sign.future.complete(""));
+			managedSigns.clear();
         }
     }
 
@@ -104,6 +193,11 @@ public final class Inventories implements Listener {
         if (inv != null) {
             inv.close();
         }
+		ManagedSign managedSign = managedSigns.remove(e.getPlayer());
+		if (managedSign != null) {
+			Main.logger().info("Player quit before sending sign edit packet");
+			managedSign.future.complete("");
+		}
     }
 
     @EventHandler

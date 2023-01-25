@@ -41,9 +41,9 @@ public class KitInventory implements InventoryProvider {
 	public KitInventory(Collection<? extends Kit> kits) {
 		categoryTab.setClickSound(Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.BLOCKS, 0.5f, 1);
 
-		var temp = new ArrayList<>(kits);
-		temp.sort(Kit.COMPARATOR);
-		this.kits = List.copyOf(temp);
+		var temp = kits.toArray(new Kit[0]);
+		Arrays.sort(temp, Kit.COMPARATOR);
+		this.kits = List.of(temp);
 	}
 
 	public KitInventory() {

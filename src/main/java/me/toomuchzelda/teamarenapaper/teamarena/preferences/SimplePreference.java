@@ -47,7 +47,7 @@ public class SimplePreference<T> extends Preference<T> {
 		this.fromStringFunction = fromStringFunction;
 	}
 
-	public static SimplePreference<Boolean> of(String name, String description, boolean defaultValue) {
+	public static SimplePreference<Boolean> ofBoolean(String name, String description, boolean defaultValue) {
 		return new SimplePreference<>(name, description, Boolean.class, defaultValue,
 				List.of(true, false), Object::toString, Boolean::valueOf);
 	}
@@ -67,7 +67,7 @@ public class SimplePreference<T> extends Preference<T> {
 				arg -> {
 					T value = Enum.valueOf(clazz, arg.toUpperCase(Locale.ENGLISH));
 					if (!predicate.test(value))
-						throw new IllegalArgumentException(arg);
+						throw new IllegalArgumentException(arg + " is not accepted by preference " + name);
 					return value;
 				});
 	}
@@ -93,10 +93,13 @@ public class SimplePreference<T> extends Preference<T> {
 																Function<NamespacedKey, T> registry) {
 		return new SimplePreference<>(name, description, clazz, defaultValue, values, value -> value.getKey().toString(),
 			input -> {
-				NamespacedKey result = NamespacedKey.fromString(input);
-				if (result == null)
+				NamespacedKey key = NamespacedKey.fromString(input);
+				if (key == null)
 					throw new IllegalArgumentException("Invalid resource location " + input);
-				return Objects.requireNonNull(registry.apply(result), "Illegal resource location " + input);
+				T result = registry.apply(key);
+				if (result == null)
+					throw new IllegalArgumentException("Illegal resource location " + input);
+				return result;
 			});
 	}
 
@@ -116,10 +119,12 @@ public class SimplePreference<T> extends Preference<T> {
 				@SuppressWarnings("unchecked")
 				T value = (T) valueOfMethod.invoke(null, arg);
 				if (!predicate.test(value))
-					throw new IllegalArgumentException(arg);
+					throw new IllegalArgumentException(arg + " is not accepted by preference " + value);
 				return value;
-			} catch (IllegalAccessException | InvocationTargetException e) {
-				throw new IllegalArgumentException(arg, e);
+			} catch (InvocationTargetException ex) { // unwrap
+				throw new IllegalArgumentException(ex.getTargetException().getMessage());
+			} catch (IllegalAccessException ex) {
+				throw new IllegalArgumentException("Bad numeric preference " + name, ex);
 			}
 		});
 	}

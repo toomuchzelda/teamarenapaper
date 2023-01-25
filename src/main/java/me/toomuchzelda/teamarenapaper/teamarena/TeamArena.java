@@ -18,6 +18,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.GraffitiManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.KitInventory;
+import me.toomuchzelda.teamarenapaper.teamarena.inventory.PreferencesInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.IronGolemKillStreak;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.KillStreakManager;
@@ -770,6 +771,9 @@ public abstract class TeamArena
 		} else if (kitMenuItem.isSimilar(item)) {
 			event.setUseItemInHand(Event.Result.DENY);
 			Inventories.openInventory(player, new KitInventory());
+		} else if (PreferencesInventory.PREFERENCE.isSimilar(item)) {
+			event.setUseItemInHand(Event.Result.DENY);
+			Inventories.openInventory(player, new PreferencesInventory());
 		} else if (cosmeticMenuItem.isSimilar(item)) {
 			event.setUseItemInHand(Event.Result.DENY);
 			Inventories.openInventory(player, new CosmeticsInventory(CosmeticType.GRAFFITI));
@@ -1187,6 +1191,7 @@ public abstract class TeamArena
 	public void giveLobbyItems(Player player) {
 		PlayerInventory inventory = player.getInventory();
 		inventory.setItem(0, kitMenuItem.clone());
+		inventory.setItem(7, PreferencesInventory.PREFERENCE.clone());
 		inventory.setItem(8, cosmeticMenuItem.clone());
 	}
 

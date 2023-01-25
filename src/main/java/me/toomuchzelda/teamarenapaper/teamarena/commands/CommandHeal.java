@@ -9,7 +9,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -48,7 +47,7 @@ public class CommandHeal extends CustomCommand
 
 	@Override
 	public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
-		List<String> playerNames = CustomCommand.getOnlinePlayerNames();
+		List<String> playerNames = CustomCommand.suggestOnlinePlayers();
 		playerNames.add("all");
 		return playerNames;
 	}
