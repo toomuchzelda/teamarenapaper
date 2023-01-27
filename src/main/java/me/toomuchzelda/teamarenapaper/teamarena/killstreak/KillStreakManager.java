@@ -1,6 +1,9 @@
 package me.toomuchzelda.teamarenapaper.teamarena.killstreak;
 
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
+import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerSound;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -19,11 +22,22 @@ import java.util.*;
 
 /**
  * Class to manage TeamArena's killstreaks.
+ * Also handles the killstreak announcer voice lines.
  *
  * @author toomuchzelda
  */
 public class KillStreakManager
 {
+	// The amount of time since the last kill that each announcer line can play when getting a kill.
+	// Index is the amount of kills - 2 (sounds start at 2 kills), value is the time in ticks and sound
+	private static final int[] TIMES_SINCE_LAST_KILL = new int[] {20, 2 * 20, 3 * 20, 4 * 20};
+	private static final AnnouncerSound[] SUCCESSIVE_KILL_SOUNDS = new AnnouncerSound[] {
+		AnnouncerSound.GAME_DOUBLE_KILL,
+		AnnouncerSound.GAME_TRIPLE_KILL,
+		AnnouncerSound.GAME_QUAD_KILL,
+		AnnouncerSound.GAME_UNSTOPPABLE
+	};
+
 	private final Map<String, KillStreak> allKillstreaks;
 	private final Map<Integer, List<KillStreak>> killstreaksByKills;
 	private final Map<ItemStack, CratedKillStreak> crateItemLookup;
@@ -42,7 +56,7 @@ public class KillStreakManager
 		addKillStreak(-1, new PayloadTestKillstreak());
 		addKillStreak(2, new CompassKillStreak());
 		addKillStreak(4, new WolvesKillStreak());
-		addKillStreak(7, new IronGolemKillStreak());
+		addKillStreak(8, new IronGolemKillStreak());
 		addKillStreak(11, new HarbingerKillStreak());
 
 		// Register all killstreaks
@@ -82,6 +96,14 @@ public class KillStreakManager
 						.append(streak.getComponentName())
 						.build()
 				);
+			}
+		}
+
+		// Play the announcer sound if they got another kill in fast enough succession
+		final int index = newKills - 2;
+		if (index >= 0 && index < TIMES_SINCE_LAST_KILL.length) {
+			if (TeamArena.getGameTick() <= pinfo.lastKillTime + TIMES_SINCE_LAST_KILL[index]) {
+				AnnouncerManager.playSound(killer, SUCCESSIVE_KILL_SOUNDS[index]);
 			}
 		}
 	}

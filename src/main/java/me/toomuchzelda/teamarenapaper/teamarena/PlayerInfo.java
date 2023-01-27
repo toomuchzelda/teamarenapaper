@@ -48,7 +48,10 @@ public class PlayerInfo
 	private final PlayerScoreboard scoreboard; //scoreboard they view
 	private final MetadataViewer metadataViewer; //custom entity metadata tracker
 
+	// Kills + kill assists
 	public double kills;
+	// Currently used for KillStreak announcements
+	public int lastKillTime;
 	//for right clicking the leather chestplate
 	public boolean viewingGlowingTeammates;
 
@@ -75,6 +78,7 @@ public class PlayerInfo
 
 		killAssistTracker = new KillAssistTracker(player);
 		kills = 0;
+		lastKillTime = 0;
 		viewingGlowingTeammates = false;
 		lastInteractUnknownEntityTimes = new int[2];
 

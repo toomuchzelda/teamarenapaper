@@ -37,6 +37,11 @@ public class AnnouncerSound {
 	public static final AnnouncerSound GAME_FLAG_YOU_LOST_THE = new AnnouncerSound(Type.GAME, "flagyoulostthe", MatchCriteria.NEVER_MATCH, false);
 	public static final AnnouncerSound GAME_LAST_MAN_STANDING = new AnnouncerSound(Type.GAME, "lastmanstanding", MatchCriteria.NEVER_MATCH, false);
 
+	public static final AnnouncerSound GAME_DOUBLE_KILL = new AnnouncerSound(Type.GAME, "doublekill", MatchCriteria.NEVER_MATCH, false);
+	public static final AnnouncerSound GAME_TRIPLE_KILL = new AnnouncerSound(Type.GAME, "triplekill", MatchCriteria.NEVER_MATCH, false);
+	public static final AnnouncerSound GAME_QUAD_KILL = new AnnouncerSound(Type.GAME, "quadkill", MatchCriteria.NEVER_MATCH, false);
+	public static final AnnouncerSound GAME_UNSTOPPABLE = new AnnouncerSound(Type.GAME, "unstoppable", MatchCriteria.NEVER_MATCH, false);
+
 	public static final AnnouncerSound CHAT_DISGRACEFUL = new AnnouncerSound(Type.CHAT, "disgraceful", MatchCriteria.NEVER_MATCH, false);
 	public static final AnnouncerSound CHAT_MY_GOD = new AnnouncerSound(Type.CHAT, "mygod", MatchCriteria.NEVER_MATCH, false, "my god", "omg");
 

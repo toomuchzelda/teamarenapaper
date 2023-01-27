@@ -1419,13 +1419,17 @@ public abstract class TeamArena
 
 			players.remove(playerVictim);
 			spectators.add(playerVictim);
-
 			makeSpectator(playerVictim);
 
 			StatusBarManager.hideStatusBar(playerVictim, pinfo);
 
 			DamageLogEntry.sendDamageLog(playerVictim);
 			pinfo.clearDamageReceivedLog();
+
+			//clear attack givers so they don't get falsely attributed on this next player's death
+			DamageTimes.clearDamageTimes(playerVictim);
+
+			pinfo.lastKillTime = 0;
 
 			//if they died in the void teleport them back to map
 			// only for non-respawning games
@@ -1444,12 +1448,7 @@ public abstract class TeamArena
 			}
 			else {
 				SpectatorAngelManager.spawnAngel(playerVictim, true);
-			}
 
-			//clear attack givers so they don't get falsely attributed on this next player's death
-			DamageTimes.clearDamageTimes(playerVictim);
-
-			if(this.isRespawningGame()) {
 				PlayerInventory playerInventory = playerVictim.getInventory();
 				respawnTimers.put(playerVictim, new RespawnInfo(gameTick, playerInventory.getHeldItemSlot()));
 				// prevent players from opening kit menu
@@ -1502,6 +1501,10 @@ public abstract class TeamArena
 		//player kill Assist abilities
 		for(Ability a : Kit.getAbilities(player)) {
 			a.onAssist(player, amount, victim);
+		}
+
+		if (amount >= 0.9) {
+			pinfo.lastKillTime = TeamArena.gameTick;
 		}
 
 		//if their number of kills increased to the next whole number
