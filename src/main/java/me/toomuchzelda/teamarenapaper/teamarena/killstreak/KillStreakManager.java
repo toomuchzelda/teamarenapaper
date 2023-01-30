@@ -28,6 +28,7 @@ import java.util.*;
  */
 public class KillStreakManager
 {
+	private static final boolean ANNOUNCE_SUCCESSIVE_KILLS = false;
 	// The amount of time since the last kill that each announcer line can play when getting a kill.
 	// Index is the amount of kills - 2 (sounds start at 2 kills), value is the time in ticks and sound
 	private static final int[] TIMES_SINCE_LAST_KILL = new int[] {20, 2 * 20, 3 * 20, 4 * 20};
@@ -99,11 +100,13 @@ public class KillStreakManager
 			}
 		}
 
-		// Play the announcer sound if they got another kill in fast enough succession
-		final int index = newKills - 2;
-		if (index >= 0 && index < TIMES_SINCE_LAST_KILL.length) {
-			if (TeamArena.getGameTick() <= pinfo.lastKillTime + TIMES_SINCE_LAST_KILL[index]) {
-				AnnouncerManager.playSound(killer, SUCCESSIVE_KILL_SOUNDS[index]);
+		if (ANNOUNCE_SUCCESSIVE_KILLS) {
+			// Play the announcer sound if they got another kill in fast enough succession
+			final int index = newKills - 2;
+			if (index >= 0 && index < TIMES_SINCE_LAST_KILL.length) {
+				if (TeamArena.getGameTick() <= pinfo.lastKillTime + TIMES_SINCE_LAST_KILL[index]) {
+					AnnouncerManager.playSound(killer, SUCCESSIVE_KILL_SOUNDS[index]);
+				}
 			}
 		}
 	}

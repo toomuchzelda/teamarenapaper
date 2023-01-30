@@ -356,7 +356,7 @@ public class CommandDebug extends CustomCommand {
 					throw throwUsage("/debug guitest <tab/spectate>");
 				var inventory = switch (args[1]) {
 					case "tab" -> new TabTest();
-					case "spectate" -> new SpectateInventory(null);
+					case "spectate" -> new SpectateInventory(null, false);
 					default -> throw throwUsage("/debug guitest <tab/spectate>");
 				};
 				Inventories.openInventory(player, inventory);

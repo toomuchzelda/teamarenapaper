@@ -778,7 +778,7 @@ public abstract class TeamArena
 			event.setUseItemInHand(Event.Result.DENY);
 			Inventories.openInventory(player, new CosmeticsInventory(CosmeticType.GRAFFITI));
 		}
-		else if (gameState == GameState.LIVE) {
+		else {
 			PlayerInfo pinfo = Main.getPlayerInfo(player);
 			TeamArenaTeam team = pinfo.team;
 			if (miniMap.isMapItem(item) && event.useItemInHand() != Event.Result.DENY) {
@@ -786,20 +786,22 @@ public abstract class TeamArena
 				event.setUseInteractedBlock(Event.Result.DENY);
 				// TODO fix respawning players being able to see other teams
 				TeamArenaTeam teamFilter = isPermanentlyDead(player) ? null : team;
-				Inventories.openInventory(player, new SpectateInventory(teamFilter));
+				Inventories.openInventory(player, new SpectateInventory(teamFilter, this.gameState.teamsChosen()));
 				return;
 			}
-			//right click to glow teammates
-			if(team.getHotbarItem().isSimilar(item)) {
-				Action action = event.getAction();
-				if(action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK) {
-					event.setUseItemInHand(Event.Result.DENY);
-					setViewingGlowingTeammates(pinfo, !pinfo.viewingGlowingTeammates, true);
+			else if (gameState == GameState.LIVE) {
+				//right click to glow teammates
+				if (team.getHotbarItem().isSimilar(item)) {
+					Action action = event.getAction();
+					if (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK) {
+						event.setUseItemInHand(Event.Result.DENY);
+						setViewingGlowingTeammates(pinfo, !pinfo.viewingGlowingTeammates, true);
+					}
 				}
-			}
-			// Killstreak crate items
-			else {
-				this.killStreakManager.handleCrateItemUse(event);
+				// Killstreak crate items
+				else {
+					this.killStreakManager.handleCrateItemUse(event);
+				}
 			}
 		}
 
@@ -967,7 +969,7 @@ public abstract class TeamArena
 			StatusBarManager.setBarText(pinfo, pinfo.kit.getDisplayName());
 
 			// give all players map item so they can view teammates kits
-			//p.getInventory().addItem(miniMap.getMapItem(pinfo.team));
+			p.getInventory().addItem(miniMap.getMapItem(pinfo.team));
 		}
 		Main.logger().info("Decided Teams");
 
@@ -977,7 +979,7 @@ public abstract class TeamArena
 		for(Player p : spectators) {
 			makeSpectator(p);
 
-			//p.getInventory().addItem(miniMap.getMapItem(Main.getPlayerInfo(p).team));
+			p.getInventory().addItem(miniMap.getMapItem());
 		}
 
 		sendCountdown(true);

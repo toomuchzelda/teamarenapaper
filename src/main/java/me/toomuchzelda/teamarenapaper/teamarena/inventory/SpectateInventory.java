@@ -29,10 +29,14 @@ public class SpectateInventory implements InventoryProvider {
 	TabBar<TeamArenaTeam> teamFilterTab;
 	Pagination pagination = new Pagination();
 
-	public SpectateInventory(@Nullable TeamArenaTeam teamFilter) {
+	public SpectateInventory(@Nullable TeamArenaTeam teamFilter, boolean sortByKits) {
 		this.teamFilter = teamFilter;
 		this.teamFilterTab = new TabBar<>(teamFilter)
 			.setClickSound(Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.BLOCKS, 0.5f, 1);
+
+		if (sortByKits) {
+			this.sortByButton.setState(SortOption.BY_KIT);
+		}
 	}
 
 	@Override
@@ -181,7 +185,8 @@ public class SpectateInventory implements InventoryProvider {
 
 	protected ClickableItem playerToItem(@NotNull Player player, Location distanceOrigin, boolean showKit) {
 		var playerInfo = Main.getPlayerInfo(player);
-		var kit = playerInfo.activeKit;
+		// if no active kit (eg game hasn't started) then use selected kit.
+		var kit = playerInfo.activeKit == null ? playerInfo.kit : playerInfo.activeKit;
 
 		double distance = player.getLocation().distance(distanceOrigin);
 

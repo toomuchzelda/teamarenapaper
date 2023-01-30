@@ -320,7 +320,7 @@ public class KitSpy extends Kit
 	public class SpyInventory extends SpectateInventory {
 		private TeamArenaTeam viewerTeam;
 		public SpyInventory(@NotNull TeamArenaTeam viewerTeam) {
-			super(null);
+			super(null, false);
 			this.viewerTeam = viewerTeam;
 		}
 
