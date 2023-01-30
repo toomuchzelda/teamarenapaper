@@ -949,7 +949,7 @@ public abstract class TeamArena
 			TeamArenaTeam.playFireworks(winningTeam);
 
 		if(gameTick - waitingSince >= END_GAME_TIME) {
-			Bukkit.broadcastMessage("Prepping dead....");
+			//Bukkit.broadcastMessage("Prepping dead....");
 			prepDead();
 		}
 	}
@@ -965,6 +965,9 @@ public abstract class TeamArena
 			informOfTeam(p);
 			PlayerInfo pinfo = Main.getPlayerInfo(p);
 			StatusBarManager.setBarText(pinfo, pinfo.kit.getDisplayName());
+
+			// give all players map item so they can view teammates kits
+			//p.getInventory().addItem(miniMap.getMapItem(pinfo.team));
 		}
 		Main.logger().info("Decided Teams");
 
@@ -973,6 +976,8 @@ public abstract class TeamArena
 
 		for(Player p : spectators) {
 			makeSpectator(p);
+
+			//p.getInventory().addItem(miniMap.getMapItem(Main.getPlayerInfo(p).team));
 		}
 
 		sendCountdown(true);
@@ -1020,6 +1025,9 @@ public abstract class TeamArena
 			//	player.showBossBar(team.bossBar);
 
 			team.bossBar.progress(0); //init to 0, normally is 1
+
+			// Players who joined a team via the /team command need to have their tags updated manually
+			team.updateNametags();
 		}
 	}
 
@@ -1260,7 +1268,7 @@ public abstract class TeamArena
 			maxOnTeam++;
 
 		if (requestedTeam.getPlayerMembers().size() >= maxOnTeam) {
-			player.sendMessage(Component.text("This team is already full!").color(NamedTextColor.RED));
+			player.sendMessage(Component.text("This team is already full!", TextColors.ERROR_RED));
 		} else {
 			requestedTeam.addMembers(player);
 			/*player.sendMessage(Component.text("You are now on ").color(NamedTextColor.GOLD)

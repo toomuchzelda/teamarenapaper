@@ -307,10 +307,8 @@ public class TeamArenaTeam
 	}
 
 	public void updateNametags() {
-		for(Entity e : playerMembers) {
-			if(e instanceof Player player) {
-				updateNametag(player);
-			}
+		for(Player player : playerMembers) {
+			updateNametag(player);
 		}
 	}
 

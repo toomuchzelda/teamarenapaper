@@ -103,6 +103,8 @@ public class CaptureTheFlag extends TeamArena
 		}
 
 		toBeVehicle.addPassenger(flag.getArmorStand());
+
+		flag.getArmorStand().setMarker(true);
 	}
 
 	private void removeFlags(Player player) {
@@ -124,6 +126,8 @@ public class CaptureTheFlag extends TeamArena
 
 		if(flags.size() == 0)
 			flagHolders.remove(player);
+
+		flag.getArmorStand().setMarker(false);
 	}
 
 	public CaptureTheFlag(TeamArenaMap map) {
