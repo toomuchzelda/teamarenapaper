@@ -218,7 +218,7 @@ public class AnnouncerSound {
 
 					final String name = chopOffYml(voiceFile.getName());
 
-					Main.logger().info("name: " + name);
+					//Main.logger().info("name: " + name);
 
 					MatchCriteria criteria;
 					try {

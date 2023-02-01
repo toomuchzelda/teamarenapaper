@@ -40,6 +40,9 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
+import org.bukkit.block.Sign;
 import org.bukkit.craftbukkit.v1_19_R2.CraftWorld;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
@@ -135,6 +138,16 @@ public abstract class TeamArena
 	public final GraffitiManager graffiti;
 	private final KillStreakManager killStreakManager;
 
+	private static final String[] BUY_SIGN_MESSAGES = new String[] {
+		"The ancient relic of 2013 crumbles as you move your hand near it.",
+		"You have a flashback of screaming players fleeing from a Dwarf with ender pearls...",
+		"You remember a time when you tried to attack a base where on every block, a landmine sat.",
+		"... kit... sacrificial...",
+		"You feel a moment of intense euphoria, as you see yourself slaying hoards of enemies while biting into one of many steaks.",
+		"... shooting someone... 50 blocks...",
+		"... credits... unfair... ratsmax... steaks... balanced..."
+	};
+
 	public TeamArena(TeamArenaMap map) {
 		File worldFile = map.getFile();
 		Main.logger().info("Loading world: " + map.getName() + ", file: " + worldFile.getAbsolutePath());
@@ -196,6 +209,30 @@ public abstract class TeamArena
 
 		//force disable relative projectile velocity (projectiles inheriting the velocity of their shooter)
 		((CraftWorld) gameWorld).getHandle().paperConfig().misc.disableRelativeProjectileVelocity = true;
+
+		// Force load all the chunks that are within the playing area
+		{
+			final int chunkWidthX = ((int) (border.getWidthX() / 16d)) + 1;
+			final int chunkWidthZ = ((int) (border.getWidthZ() / 16d)) + 1;
+
+			final Location cornerLoc = border.getMin().toLocation(this.gameWorld);
+			for (int chunkX = 0; chunkX < chunkWidthX; chunkX++) {
+				for (int chunkZ = 0; chunkZ < chunkWidthZ; chunkZ++) {
+					Chunk chunk = this.gameWorld.getChunkAt(cornerLoc.getChunk().getX() +
+						chunkX, cornerLoc.getChunk().getZ() + chunkZ);
+
+					chunk.setForceLoaded(true);
+
+					// Remove almost all of the old Buy signs if any - leave a few at random for easter egg
+					Collection<BlockState> signs = chunk.getTileEntities(block -> isOldBuySign(block.getState()), false);
+					for (BlockState state : signs) {
+						if (MathUtils.random.nextDouble() < 0.95d) {
+							state.getBlock().setType(Material.AIR);
+						}
+					}
+				}
+			}
+		}
 
 		waitingSince = gameTick;
 		//gameState = GameState.PREGAME;
@@ -816,6 +853,32 @@ public abstract class TeamArena
 				}
 			}
 		}
+		// Destroy old buy signs when they are clicked
+		if (event.getAction() == Action.RIGHT_CLICK_BLOCK && event.useInteractedBlock() != Event.Result.DENY) {
+			final Block clickedBlock = event.getClickedBlock();
+			if (isOldBuySign(clickedBlock.getState())) {
+				event.setUseInteractedBlock(Event.Result.DENY);
+				clickedBlock.breakNaturally(true);
+
+				if (Main.getPlayerInfo(event.getPlayer()).messageHasCooldowned("buySign", 3 * 20)) {
+					String message = BUY_SIGN_MESSAGES[MathUtils.random.nextInt(BUY_SIGN_MESSAGES.length)];
+					event.getPlayer().sendMessage(Component.text(message, NamedTextColor.GRAY));
+				}
+			}
+		}
+	}
+
+	private static boolean isOldBuySign(BlockState blockState) {
+		if (blockState.getType().name().endsWith("SIGN")) {
+			final Sign signState = (Sign) blockState;
+			final String asString = ((TextComponent) signState.lines().get(0)).content();
+
+			if (asString.equals("§4[Buy]")) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	public void setViewingGlowingTeammates(PlayerInfo pinfo, boolean glow, boolean message) {

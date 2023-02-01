@@ -46,7 +46,7 @@ public class CaptureTheFlag extends TeamArena
 	protected static final AttributeModifier SPEED_ATTR = new AttributeModifier("CTFSpeedBoost", 0.2d, AttributeModifier.Operation.ADD_SCALAR);
 	protected Set<Player> currentSpeeders = new HashSet<>();
 	protected int capsToWin;
-	public static final int TIME_TO_SPEED_BOOST = 5 * 60 * 20;
+	public static final int TIME_TO_SPEED_BOOST = 6 * 60 * 20;
 	protected int timeToSpeed = TIME_TO_SPEED_BOOST;
 	public static final int TIME_TO_END_AFTER_SPEED = 3 * 60 * 20;
 	public static final int TIME_TO_END_MINUTES = (TIME_TO_END_AFTER_SPEED / 60) / 20;
