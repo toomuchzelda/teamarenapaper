@@ -5,7 +5,11 @@ import me.toomuchzelda.teamarenapaper.teamarena.GameType;
 import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.ComponentBuilder;
+import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
 import org.yaml.snakeyaml.Yaml;
@@ -37,6 +41,7 @@ public class TeamArenaMap
 	private final String name;
 	private final String authors;
 	private final String description;
+	private final String url; // for example linking author's website
 
 	private final boolean doDaylightCycle;
 	private final boolean doWeatherCycle;
@@ -63,6 +68,7 @@ public class TeamArenaMap
 		return "name: " + name
 				+ ", authors: " + authors
 				+ ", description: " + description
+				+ ", url: " + url
 				+ ", doDaylightCycle: " + doDaylightCycle
 				+ ", doWeatherCycle: " + doWeatherCycle
 				+ ", inRotation: " + inRotation
@@ -87,6 +93,15 @@ public class TeamArenaMap
 			this.name = (String) mainMap.get("Name");
 			this.authors = (String) mainMap.get("Author");
 			this.description = (String) mainMap.get("Description");
+
+			String url;
+			try {
+				url = (String) mainMap.get("URL");
+			}
+			catch (NullPointerException | ClassCastException e) {
+				url = null;
+			}
+			this.url = url;
 
 			boolean doDayCycle;
 			try {
@@ -284,11 +299,21 @@ public class TeamArenaMap
 
 	public Component getMapInfoComponent() {
 		if(infoComponent == null) {
-			infoComponent = Component.text()
-					.append(Component.text("Map Name: " , NamedTextColor.GOLD), Component.text(name, NamedTextColor.YELLOW), Component.newline(),
-							Component.text("Author(s): ", NamedTextColor.GOLD), Component.text(authors, NamedTextColor.YELLOW), Component.newline(),
-							Component.text("Description: ", NamedTextColor.GOLD), Component.text(description, NamedTextColor.YELLOW))
-					.build();
+			ComponentBuilder<TextComponent, TextComponent.Builder> builder = Component.text().append(
+					Component.text("Map Name: " , NamedTextColor.GOLD), Component.text(name, NamedTextColor.YELLOW), Component.newline(),
+					Component.text("Author(s): ", NamedTextColor.GOLD), Component.text(authors, NamedTextColor.YELLOW), Component.newline(),
+					Component.text("Description: ", NamedTextColor.GOLD), Component.text(description, NamedTextColor.YELLOW));
+
+			if (this.url != null) {
+				builder.append(
+					Component.newline(),
+					Component.text( "URL: ", NamedTextColor.GOLD),
+					Component.text(this.url, NamedTextColor.YELLOW, TextDecoration.UNDERLINED)
+						.clickEvent(ClickEvent.clickEvent(ClickEvent.Action.OPEN_URL, this.url))
+				);
+			}
+
+			this.infoComponent = builder.build();
 		}
 
 		return this.infoComponent;
