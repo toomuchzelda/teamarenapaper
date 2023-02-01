@@ -155,7 +155,7 @@ public abstract class TeamArena
 
 		//copy the map to another directory and load from there to avoid any accidental modifying of the original
 		// map
-		File dest = new File("temp_" + worldFile.getName().toLowerCase(Locale.ENGLISH) + "_" + System.currentTimeMillis());
+		File dest = new File("temp_" + worldFile.getName().toLowerCase(Locale.ENGLISH).substring(0, 5) + "_" + System.currentTimeMillis());
 		if (dest.mkdir()) {
 			FileUtils.copyFolder(worldFile, dest);
 			//delete the uid.dat
