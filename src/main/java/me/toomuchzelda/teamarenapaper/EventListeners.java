@@ -1067,6 +1067,7 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void onMotd(PaperServerListPingEvent e) {
 		e.motd(MOTD);
+		e.getPlayerSample().clear();
 	}
 
 	@EventHandler
