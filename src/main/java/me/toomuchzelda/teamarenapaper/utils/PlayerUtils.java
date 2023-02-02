@@ -269,13 +269,16 @@ public class PlayerUtils {
 		}
 	}
 
-	private static final PacketContainer MAX_DISTANCE_WARNING_PACKET;
+	public static int getOpLevel(Player player) {
+		net.minecraft.world.entity.player.Player nmsPlayer = ((CraftPlayer) player).getHandle();
+		return nmsPlayer.getServer().getProfilePermissions(nmsPlayer.getGameProfile());
+	}
 
+	private static final PacketContainer MAX_DISTANCE_WARNING_PACKET;
 	static {
 		MAX_DISTANCE_WARNING_PACKET = new PacketContainer(PacketType.Play.Server.SET_BORDER_WARNING_DISTANCE);
 		MAX_DISTANCE_WARNING_PACKET.getIntegers().write(0, Integer.MAX_VALUE);
 	}
-
 	public static void sendMaxWarningPacket(Player player) {
 		PlayerUtils.sendPacket(player, MAX_DISTANCE_WARNING_PACKET);
 	}

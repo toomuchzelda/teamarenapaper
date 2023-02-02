@@ -304,6 +304,11 @@ public abstract class TeamArena
 			this.sendGameAndMapInfo(p);
 
 			StatusBarManager.showStatusBar(p, pinfo);
+
+			// Players that joined during end gamestate remain hidden. they need to be revealed.
+			for (Player otherP : Bukkit.getOnlinePlayers()) {
+				p.showPlayer(Main.getPlugin(), otherP);
+			}
 		}
 	}
 

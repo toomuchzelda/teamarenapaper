@@ -28,6 +28,7 @@ import java.util.*;
 public class PlayerInfo
 {
 	public CustomCommand.PermissionLevel permissionLevel;
+	public boolean displayPermissionLevel; // if should be displayed in chat and playerlistname
 	public TeamArenaTeam team;
 	public Location spawnPoint;
 	public final int statusIndicatorId; // Only one of these per-player, so can reserve and re-use an entity ID for them.
@@ -74,6 +75,7 @@ public class PlayerInfo
 		//defaultKit = "Trooper";
 
 		this.permissionLevel = permissionLevel;
+		this.displayPermissionLevel = false;
 		damageReceivedLog = new LinkedList<>();
 
 		killAssistTracker = new KillAssistTracker(player);

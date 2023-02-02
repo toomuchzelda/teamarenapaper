@@ -26,7 +26,7 @@ public class DBSetPreferences extends DBOperation<Void>
 	protected Void execute(Connection connection) throws SQLException {
 		try (PreparedStatement stmt = connection.prepareStatement("INSERT INTO Preferences VALUES (?,?,?) " +
 				"ON CONFLICT(uuid, name) DO UPDATE SET value = ?;");
-			 //delete statement so don't store any default values
+			 //delete statement so no default values are stored.
 			 PreparedStatement deleteStmt = connection.prepareStatement("DELETE FROM Preferences WHERE " +
 					 "uuid = ? AND name = ?")
 		) {

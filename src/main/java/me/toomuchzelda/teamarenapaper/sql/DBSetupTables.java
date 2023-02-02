@@ -47,9 +47,21 @@ public class DBSetupTables extends DBOperation<Void>
 					);
 					""";
 
+			final String createPermissionLevel =
+					"""
+					CREATE TABLE IF NOT EXISTS PermissionLevels (
+						uuid CHAR(36) NOT NULL,
+						permissionLevel VARCHAR(20) NOT NULL,
+
+						PRIMARY KEY (uuid),
+						FOREIGN KEY (uuid) REFERENCES PlayerInfo(uuid) ON UPDATE CASCADE ON DELETE CASCADE
+					)
+					""";
+
 			stmt.execute(createPlayerInfo);
 			stmt.execute(createDefaultKits);
 			stmt.execute(createPreferences);
+			stmt.execute(createPermissionLevel);
 		}
 
 		return null;

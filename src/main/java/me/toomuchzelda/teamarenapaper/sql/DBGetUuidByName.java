@@ -17,6 +17,7 @@ public class DBGetUuidByName extends DBOperation<UUID>
 
 		this.name = username;
 	}
+
 	@Override
 	protected UUID execute(Connection connection) throws SQLException {
 		try (PreparedStatement stmt = connection.prepareStatement("SELECT uuid FROM PlayerInfo WHERE ? = name")) {

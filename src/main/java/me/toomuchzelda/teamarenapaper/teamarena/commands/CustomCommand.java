@@ -5,6 +5,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -12,12 +13,23 @@ import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
+import javax.annotation.Nullable;
 import java.util.*;
 
 public abstract class CustomCommand extends Command {
     public final PermissionLevel permissionLevel;
     public enum PermissionLevel {
-        ALL, MOD, OWNER
+        ALL(null),
+		MOD(Component.text("[Staff] ", TextColor.color(49, 235, 42))),
+		OWNER(Component.text("[Admin] ", TextColor.color(145, 10, 166)));
+
+		public final Component tag;
+		/** @param tag The tag that accompanies the player's name if they choose to display it.
+		 *             Remember to include a space after it.
+		 */
+		PermissionLevel(@Nullable Component tag) {
+			this.tag = tag;
+		}
     }
 
     private static final HashMap<String, CustomCommand> PLUGIN_COMMANDS = new HashMap<>();
@@ -39,8 +51,8 @@ public abstract class CustomCommand extends Command {
         }
     }
 
-    public static final Component NO_PERMISSION = Component.text("You do not have permission to run this command!", NamedTextColor.DARK_RED);
-    public static final Component PLAYER_ONLY = Component.text("You can't run this command from the console!", NamedTextColor.RED);
+    public static final Component NO_PERMISSION = Component.text("You do not have permission to run this command!", TextColors.ERROR_RED);
+    public static final Component PLAYER_ONLY = Component.text("You can't run this command from the console!", TextColors.ERROR_RED);
     @Override
     public final boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         if (sender instanceof Player player) {

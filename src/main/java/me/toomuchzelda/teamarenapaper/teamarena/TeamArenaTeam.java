@@ -320,6 +320,13 @@ public class TeamArenaTeam
 		else
 			component = Main.getGame().noTeamTeam.colourWord(player.getName());
 
+		PlayerInfo pinfo = Main.getPlayerInfo(player);
+		if (pinfo.displayPermissionLevel) {
+			Component rank = pinfo.permissionLevel.tag;
+			if (rank != null)
+				component = rank.append(component);
+		}
+
 		//don't change name if it's not different
 		// avoid sending packets and trouble
 		if (!player.playerListName().equals(component)) {

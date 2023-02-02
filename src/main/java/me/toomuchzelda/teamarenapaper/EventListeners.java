@@ -82,8 +82,9 @@ public class EventListeners implements Listener
 {
 
 	private static final boolean[] BREAKABLE_BLOCKS;
-	private final ConcurrentHashMap<UUID, Map<Preference<?>, ?>> preferenceFutureMap = new ConcurrentHashMap<>();
-	private final ConcurrentHashMap<UUID, String> defaultKitMap = new ConcurrentHashMap<>();
+	private record DBLoadedData(Map<Preference<?>, ?> preferenceMap, String defaultKit, CustomCommand.PermissionLevel permissionLevel) {}
+
+	private final ConcurrentHashMap<UUID, DBLoadedData> loadedDbDataCache = new ConcurrentHashMap<>();
 
 	static {
 		BREAKABLE_BLOCKS = new boolean[Material.values().length];
@@ -241,11 +242,10 @@ public class EventListeners implements Listener
 		Map<Preference<?>, ?> retrievedPrefs;
 		try {
 			retrievedPrefs = getPreferences.run();
-			preferenceFutureMap.put(uuid, retrievedPrefs);
 		}
 		catch (SQLException e) {
 			event.setLoginResult(AsyncPlayerPreLoginEvent.Result.KICK_OTHER);
-			event.kickMessage(Component.text("Could not retrieve preferences! Run for your lives!!!", MathUtils.randomTextColor()));
+			event.kickMessage(Component.text("Could not retrieve preferences! Run for your life!!!", MathUtils.randomTextColor()));
 			return;
 		}
 
@@ -260,29 +260,46 @@ public class EventListeners implements Listener
 			defaultKit = getDefaultKit.getDefaultValue();
 			Main.logger().severe("Could not load default kit for " + uuid.toString() + ", username " + event.getName());
 		}
-		defaultKitMap.put(uuid, defaultKit);
+
+		// Load CustomCommand permission level if any set.
+		CustomCommand.PermissionLevel permissionLevel;
+		DBGetPermissionLevel getPermissionLevel = new DBGetPermissionLevel(uuid);
+		try {
+			permissionLevel = getPermissionLevel.run();
+			if (permissionLevel == null) {
+				permissionLevel = CustomCommand.PermissionLevel.ALL;
+			}
+		}
+		catch (SQLException e) {
+			permissionLevel = CustomCommand.PermissionLevel.ALL;
+		}
+
+		DBLoadedData data = new DBLoadedData(retrievedPrefs, defaultKit, permissionLevel);
+		loadedDbDataCache.put(uuid, data);
 	}
 
 	//these three events are called in this order
 	@EventHandler
 	public void playerLogin(PlayerLoginEvent event) {
-		Player player = event.getPlayer();
-		UUID uuid = player.getUniqueId();
-		PlayerInfo playerInfo;
+		final Player player = event.getPlayer();
+		final UUID uuid = player.getUniqueId();
+		final PlayerInfo playerInfo;
 
-		//todo: read perms from db or other
-		if (player.isOp()) {
+		final DBLoadedData loadedData = loadedDbDataCache.remove(uuid);
+
+		if (PlayerUtils.getOpLevel(player) == 4) { // Being max level op on vanilla server overrides DB
 			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.OWNER, player);
-			Bukkit.getScheduler().runTask(Main.getPlugin(),
-					() -> player.sendMessage(Component.text("Your rank has been updated to OWNER", NamedTextColor.GREEN)));
 		} else {
-			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.ALL, player);
+			playerInfo = new PlayerInfo(loadedData.permissionLevel(), player);
 		}
 
-		//remove the default kit now so if the preferences are null and the method returns here
-		// there isn't a memory leak in the map.
-		String defaultKit = defaultKitMap.remove(uuid);
-		Map<Preference<?>, ?> prefMap = preferenceFutureMap.remove(uuid);
+		if (playerInfo.permissionLevel != CustomCommand.PermissionLevel.ALL) {
+			Bukkit.getScheduler().runTask(Main.getPlugin(),
+				() -> player.sendMessage(Component.text("Your rank has been updated to " + playerInfo.permissionLevel.name(),
+					NamedTextColor.GREEN)));
+		}
+
+		Map<Preference<?>, ?> prefMap = loadedData.preferenceMap();
 		if (prefMap == null) {
 			event.disallow(Result.KICK_OTHER, Component.text("Failed to load preferences!")
 					.color(TextColors.ERROR_RED));
@@ -307,6 +324,7 @@ public class EventListeners implements Listener
 		}
 		playerInfo.setPreferenceValues(prefMap);
 
+		String defaultKit = loadedData.defaultKit();
 		if(defaultKit == null)
 			defaultKit = DBGetDefaultKit.DEFAULT_KIT;
 		playerInfo.defaultKit = defaultKit;
