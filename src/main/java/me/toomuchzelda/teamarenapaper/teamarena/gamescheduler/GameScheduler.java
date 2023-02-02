@@ -7,6 +7,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
 import me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy.SearchAndDestroy;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import org.bukkit.Bukkit;
 
 import java.io.File;
 import java.util.*;
@@ -64,6 +65,10 @@ public class GameScheduler
 			}
 
 			return chosen;
+		}
+
+		public int getMapCount() {
+			return this.queueOne.size() + this.queueTwo.size();
 		}
 	}
 	private static final Map<GameType, MapQueue> GAME_TYPE_MAP_QUEUE;
@@ -155,6 +160,15 @@ public class GameScheduler
 		else {
 			MapQueue mapQueue = GAME_TYPE_MAP_QUEUE.get(gameType);
 			map = mapQueue.getNextMap();
+
+			// If there aren't enough players for the chosen map pick another one.
+			// Give up when the queue has been exhausted to avoid infinite loop.
+			int i = 0;
+			final int playerCount = Bukkit.getOnlinePlayers().size(); // slight flaw; includes potential spectators
+			while (playerCount < map.getMinPlayers() && i < mapQueue.getMapCount()) {
+				i++;
+				map = mapQueue.getNextMap();
+			}
 		}
 
 		TeamArena newGame;

@@ -7,6 +7,7 @@ import com.google.common.collect.Multisets;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.minecraft.core.BlockPos;
@@ -74,6 +75,11 @@ public class MiniMapManager {
 	// default cursors
 	private static final BiPredicate<Player, PlayerInfo> ALWAYS_SHOW_CURSOR = (ignored1, ignored2) -> true;
 
+	// For the map item
+	private static final List<Component> ITEM_LORE = List.of(
+		Component.text("Right click to view teammates/players kits", TextUtils.RIGHT_CLICK_TO)
+	);
+
 	// canvas access
     @FunctionalInterface
     public interface CanvasOperation {
@@ -137,6 +143,7 @@ public class MiniMapManager {
                         mapMeta.setColor(team.getColour());
                     }
                 })
+				.lore(ITEM_LORE)
                 .build();
     }
 

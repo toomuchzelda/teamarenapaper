@@ -1032,7 +1032,7 @@ public abstract class TeamArena
 			StatusBarManager.setBarText(pinfo, pinfo.kit.getDisplayName());
 
 			// give all players map item so they can view teammates kits
-			p.getInventory().addItem(miniMap.getMapItem(pinfo.team));
+			p.getInventory().setItem(6, miniMap.getMapItem(pinfo.team));
 		}
 		Main.logger().info("Decided Teams");
 
@@ -1042,7 +1042,7 @@ public abstract class TeamArena
 		for(Player p : spectators) {
 			makeSpectator(p);
 
-			p.getInventory().addItem(miniMap.getMapItem());
+			p.getInventory().setItem(6, miniMap.getMapItem());
 		}
 
 		sendCountdown(true);

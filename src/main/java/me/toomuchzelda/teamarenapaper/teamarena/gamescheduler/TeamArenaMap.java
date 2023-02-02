@@ -51,6 +51,9 @@ public class TeamArenaMap
 	//if there is a floor/ceiling border or not.
 	private final boolean noVerticalBorder;
 
+	private final boolean inRotation;
+	private final int minPlayers;
+
 	private final Map<String, Vector[]> teamSpawns;
 
 	private final List<GameType> gameTypes;
@@ -61,8 +64,6 @@ public class TeamArenaMap
 	private final File file;
 	//info about the map that gets sent to players when they join / map loads
 	private Component infoComponent;
-
-	private final boolean inRotation;
 
 	public String toString() {
 		return "name: " + name
@@ -130,6 +131,19 @@ public class TeamArenaMap
 				inRotation = true;
 			}
 			this.inRotation = inRotation;
+
+			int minPlayers;
+			try {
+				minPlayers = (int) mainMap.get("MinPlayers");
+			}
+			catch (NullPointerException e) {
+				minPlayers = 0;
+			}
+			catch (ClassCastException e) {
+				Main.logger().warning("Bad MinPlayers for " + this.name);
+				minPlayers = 0;
+			}
+			this.minPlayers = minPlayers;
 
 			//Map border
 			// Only supports rectangular prism borders as of now
@@ -341,6 +355,10 @@ public class TeamArenaMap
 
 	public boolean isInRotation() {
 		return this.inRotation;
+	}
+
+	public int getMinPlayers() {
+		return this.minPlayers;
 	}
 
 	public Vector getMinBorderCorner() {
