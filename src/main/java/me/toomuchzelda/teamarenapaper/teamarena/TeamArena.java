@@ -13,10 +13,10 @@ import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandTeamChat;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
-import me.toomuchzelda.teamarenapaper.teamarena.inventory.CosmeticsInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.GraffitiManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
+import me.toomuchzelda.teamarenapaper.teamarena.inventory.CosmeticsInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.KitInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.PreferencesInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
@@ -148,6 +148,8 @@ public abstract class TeamArena
 		"... credits... unfair... ratsmax... steaks... balanced..."
 	};
 
+	private final Component gameAndMapMessage;
+
 	public TeamArena(TeamArenaMap map) {
 		File worldFile = map.getFile();
 		Main.logger().info("Loading world: " + map.getName() + ", file: " + worldFile.getAbsolutePath());
@@ -271,6 +273,17 @@ public abstract class TeamArena
 		DamageTimes.clear();
 
 		StatusBarManager.StatusBarHologram.updatePregameText();
+
+		{
+			var builder = Component.text()
+				.append(Component.text("GameType: ", NamedTextColor.GOLD))
+				.append(this.getGameName());
+			if (!this.isRespawningGame())
+				builder.append(Component.text(" (No Respawning!)", NamedTextColor.RED));
+			builder.append(Component.newline());
+			builder.append(this.gameMap.getMapInfoComponent());
+			this.gameAndMapMessage = builder.build();
+		}
 
 		//init all the players online at time of construction
 		Kit fallbackKit = CommandDebug.filterKit(kits.values().iterator().next());
@@ -1842,12 +1855,7 @@ public abstract class TeamArena
 	}
 
 	public void sendGameAndMapInfo(Player player) {
-		player.sendMessage(Component.textOfChildren(
-				Component.text("GameType: ", NamedTextColor.GOLD),
-				this.getGameName(),
-				Component.newline(),
-				this.gameMap.getMapInfoComponent()
-		));
+		player.sendMessage(gameAndMapMessage);
 	}
 
 	public void loadConfig(TeamArenaMap map) {
