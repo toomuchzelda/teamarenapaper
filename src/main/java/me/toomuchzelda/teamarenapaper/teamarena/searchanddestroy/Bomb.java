@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy;
 
 import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
 import me.toomuchzelda.teamarenapaper.explosions.VanillaExplosionInfo;
+import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
@@ -16,8 +17,11 @@ import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Slab;
 import org.bukkit.block.data.type.Stairs;
+import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
 
 import java.util.*;
@@ -60,6 +64,9 @@ public class Bomb
 
 	private Component sidebarStatus = BOMB_IS_SAFE;
 
+	private ArmorStand glowingBlockStand; // An entity to make the solid block TNT appear as if it is glowing.
+	private Team visualTeam; // Team for the glowing entities to be on to give them correct colour.
+
 	public Bomb(TeamArenaTeam team, Location spawnLoc) {
 		this.owningTeam = team;
 		this.spawnLoc = spawnLoc;
@@ -69,12 +76,14 @@ public class Bomb
 		responsibleArmers = new HashSet<>();
 	}
 
-	public void init() {
+	public void init(Team visualTeam) {
+		this.visualTeam = visualTeam;
 		spawnLoc.getBlock().setType(Material.TNT);
 		//add half block XZ offsets to put it above centre of block
 		this.hologram = new RealHologram(spawnLoc.clone().add(0.5d, 1d, 0.5d), RealHologram.Alignment.BOTTOM, this.title);
 		//add offsets for tnt spawning/despawning
 		spawnLoc.add(0.5d, 0d, 0.5d);
+		this.glowingBlockStand = this.spawnGlowerStand(spawnLoc);
 	}
 
 	public void setGrave() {
@@ -100,6 +109,11 @@ public class Bomb
 		this.tnt = spawnLoc.getWorld().spawn(spawnLoc, TNTPrimed.class);
 		tnt.setFuseTicks(BOMB_DETONATION_TIME + 1); //+1 so that the TNT explodes after the VanillaExplosionInfo is placed.
 		tnt.setVelocity(new Vector(0d, 0.4d, 0d));
+		tnt.setGlowing(true);
+
+		this.visualTeam.addEntity(tnt); // Make tnt glow the team's colour
+		PlayerScoreboard.addMembersAll(this.visualTeam, tnt);
+		this.removeGlowerStand();
 
 		this.armingTeam = armingTeam;
 		this.armedTime = TeamArena.getGameTick();
@@ -111,6 +125,10 @@ public class Bomb
 		this.hologram.moveTo(spawnLoc.clone().add(TNT_HOLOGRAM_OFFSET));
 
 		this.tnt.remove();
+		this.visualTeam.removeEntities(tnt);
+		PlayerScoreboard.removeMembersAll(this.visualTeam, this.tnt);
+
+		this.glowingBlockStand = spawnGlowerStand(this.spawnLoc);
 
 		this.armingTeam = null;
 		this.armedTime = JUST_BEEN_DISARMED;
@@ -280,6 +298,29 @@ public class Bomb
 
 		Component[] finalLines = hologramLines.toArray(new Component[0]);
 		this.hologram.setText(finalLines);
+	}
+
+	private ArmorStand spawnGlowerStand(Location spawnLoc) {
+		return spawnLoc.getWorld().spawn(spawnLoc.clone().add(0d, -1.1875, 0d), ArmorStand.class, armorStand -> {
+			armorStand.setMarker(true);
+			armorStand.setInvisible(true);
+			armorStand.setCanTick(false);
+			armorStand.setSilent(true);
+			armorStand.setGlowing(true);
+
+			armorStand.getEquipment().setHelmet(new ItemStack(Material.REDSTONE_BLOCK), true);
+
+			this.visualTeam.addEntity(armorStand);
+			PlayerScoreboard.addMembersAll(this.visualTeam, armorStand);
+		});
+	}
+
+	private void removeGlowerStand() {
+		this.visualTeam.removeEntities(this.glowingBlockStand);
+		PlayerScoreboard.removeMembersAll(this.visualTeam, this.glowingBlockStand);
+
+		this.glowingBlockStand.remove();
+		this.glowingBlockStand = null;
 	}
 
 	/**

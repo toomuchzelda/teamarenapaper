@@ -75,9 +75,9 @@ public abstract class TeamArena
 	private final TeamArenaMap gameMap;
 
 	//ticks of wait time before teams are decided
-	protected static final int PRE_TEAMS_TIME = 25 * 20;
+	protected static final int PRE_TEAMS_TIME = 30 * 20;
 	//ticks of wait time after teams chosen, before game starting phase
-	protected static final int PRE_GAME_STARTING_TIME = 30 * 20;
+	protected static final int PRE_GAME_STARTING_TIME = 35 * 20;
 	//ticks of game starting time
 	protected static final int GAME_STARTING_TIME = 10 * 20;
 	protected static final int TOTAL_WAITING_TIME = PRE_TEAMS_TIME + PRE_GAME_STARTING_TIME + GAME_STARTING_TIME;

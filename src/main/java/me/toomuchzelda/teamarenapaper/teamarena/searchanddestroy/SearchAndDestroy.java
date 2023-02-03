@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerSound;
@@ -33,6 +34,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.map.MapCursor;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scoreboard.Team;
 import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
 import org.intellij.lang.annotations.RegExp;
@@ -53,10 +55,14 @@ public class SearchAndDestroy extends TeamArena
 
 	//record it here from the map config but won't use it for anything
 	protected boolean randomBases = false;
-	//initialised in parseConfig
+	//initialised in loadConfig
 	protected Map<TeamArenaTeam, List<Bomb>> teamBombs;
 	protected Map<BlockVector, Bomb> bombPositions;
 	protected Map<TNTPrimed, Bomb> bombTNTs;
+
+	// Minecraft scoreboard teams for the bomb entities to be put on for visual effects
+	protected Map<TeamArenaTeam, Team> bombVisualTeams;
+
 	public static final int POISON_TIME = 60 * 5 * 20;
 	//starts counting down when game is live
 	// is increased by player death and bomb arms
@@ -82,7 +88,7 @@ public class SearchAndDestroy extends TeamArena
 	//sidebar
 	private final Map<TeamArenaTeam, Component> sidebarCache;
 
-	private static final DamageType FUSE_KILL = new DamageType(DamageType.MELEE, "%Killed% was pummelled by %Killer%'s Bomb Fuse");
+	private static final DamageType FUSE_KILL = new DamageType(DamageType.MELEE, "%Killed% was pummelled to death by %Killer%'s Bomb Fuse");
 
 	//===========MESSAGE STUFF
 	@RegExp
@@ -156,10 +162,12 @@ public class SearchAndDestroy extends TeamArena
 	public SearchAndDestroy(TeamArenaMap map) {
 		super(map);
 
+		initBombVisualTeams(); // init before init'ing Bombs as Bombs will put themselves onto visual teams.
+
 		double longest = 0d;
 		for(List<Bomb> bombsList : teamBombs.values()) {
 			for(Bomb bomb : bombsList) {
-				bomb.init();
+				bomb.init(bombVisualTeams.get(bomb.getTeam()));
 				double distance = bomb.getSpawnLoc().distance(this.spawnPos);
 				longest = Math.max(distance, longest);
 			}
@@ -200,6 +208,16 @@ public class SearchAndDestroy extends TeamArena
 							.toArray(MiniMapManager.CursorInfo[]::new)
 			);
 		});
+	}
+
+	@Override
+	public void prepDead() {
+		super.prepDead();
+
+		for (Team visualTeam : bombVisualTeams.values()) {
+			PlayerScoreboard.removeGlobalTeam(visualTeam);
+			visualTeam.unregister();
+		}
 	}
 
 	public void liveTick() {
@@ -553,7 +571,8 @@ public class SearchAndDestroy extends TeamArena
 		// Fuse kills
 		// Check raw damage coz there's some shenanigans with the order the DamageEvent is created -> held item changes
 		// are processed -> DamageEvent gets processed
-		if (event.getRawDamage() == 0.5d && event.getDamageType().is(DamageType.MELEE)) {
+		if ((event.getRawDamage() == 1d || event.getRawDamage() == 1.5d)
+			&& event.getDamageType().is(DamageType.MELEE)) {
 			Player killer = (Player) event.getFinalAttacker();
 			if (killer.getEquipment().getItemInMainHand().getType() == BASE_FUSE.getType()) {
 				event.setDamageType(FUSE_KILL);
@@ -809,6 +828,24 @@ public class SearchAndDestroy extends TeamArena
 
 			if(sounds[idx] != null)
 				receiver.playSound(receiver.getLocation(), sounds[idx], SoundCategory.AMBIENT, volume, pitches[idx]);
+		}
+	}
+
+	private void initBombVisualTeams() {
+		this.bombVisualTeams = new HashMap<>();
+		for (TeamArenaTeam team : teams) {
+			final String teamName = team.getName() + "Bomb";
+			Team bukkitTeam = PlayerScoreboard.SCOREBOARD.getTeam(teamName);
+			if (bukkitTeam != null)
+				bukkitTeam.unregister();
+
+			bukkitTeam = PlayerScoreboard.SCOREBOARD.registerNewTeam(teamName);
+			bukkitTeam.color(NamedTextColor.nearestTo(team.getRGBTextColor()));
+			bukkitTeam.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
+			bukkitTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.ALWAYS);
+
+			bombVisualTeams.put(team, bukkitTeam);
+			PlayerScoreboard.addGlobalTeam(bukkitTeam);
 		}
 	}
 
