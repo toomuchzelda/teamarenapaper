@@ -721,8 +721,8 @@ public class SearchAndDestroy extends TeamArena
 		inventory.remove(Material.GOLDEN_APPLE);
 		inventory.remove(Material.ENCHANTED_GOLDEN_APPLE);
 		inventory.remove(Material.COOKED_BEEF);
-		//TODO: medic healing wand
-		inventory.remove(Material.BLAZE_ROD);
+		inventory.remove(Material.FISHING_ROD);
+		inventory.remove(Material.POTION);
 
 		player.setAbsorptionAmount(0d);
 

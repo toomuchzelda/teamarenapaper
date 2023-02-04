@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.utils.packetentities;
 
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
 import org.bukkit.Location;
@@ -37,9 +38,9 @@ public class AttachedPacketEntity extends PacketEntity
 		if(viewerRule != null) {
 			Predicate<Player> viewingPlayer;
 			if(selfSee)
-				viewingPlayer = viewer -> viewer == entity || entity.getTrackedPlayers().contains(viewer);
+				viewingPlayer = viewer -> viewer == entity || EntityUtils.isTrackingEntity(viewer, entity);
 			else
-				viewingPlayer = viewer -> entity.getTrackedPlayers().contains(viewer);
+				viewingPlayer = viewer -> EntityUtils.isTrackingEntity(viewer, entity);
 
 			this.viewerRule = viewingPlayer.and(viewerRule);
 		}

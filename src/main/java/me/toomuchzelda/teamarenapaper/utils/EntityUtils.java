@@ -14,6 +14,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerPlayerConnection;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.Location;
@@ -34,7 +35,9 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.Set;
 
 public class EntityUtils {
     public static final double VANILLA_PROJECTILE_SPRAY = 0.0075d;
@@ -289,5 +292,19 @@ public class EntityUtils {
 	public static Packet<?> createMovePacket(PacketEntity entity, double xDelta, double yDelta, double zDelta,
 											 double yawDelta, double pitchDelta, boolean onGround) {
 		return createMovePacket(entity.getId(), entity.getLocation(), xDelta, yDelta, zDelta, yawDelta, pitchDelta, onGround);
+	}
+
+	@Deprecated
+	public static Set<ServerPlayerConnection> getTrackedPlayers0(Entity viewedEntity) {
+		net.minecraft.world.entity.Entity nmsEntity = ((CraftEntity) viewedEntity).getHandle();
+		if (nmsEntity.tracker == null) {
+			return Collections.emptySet();
+		}
+
+		return nmsEntity.tracker.seenBy;
+	}
+
+	public static boolean isTrackingEntity(Player viewer, Entity viewedEntity) {
+		return getTrackedPlayers0(viewedEntity).contains(((CraftPlayer) viewer).getHandle().connection);
 	}
 }

@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
@@ -50,6 +51,8 @@ public class StatusBarManager
 	{
 		private static final Component PREGAME_TEXT = Component.text("I love Team Arena!");
 		private static Component pregameComp;
+		// RGB effect uses a ton of CPU time, so limit who gets it.
+		private final boolean preGameRgb;
 		private Component currentText;
 
 		// Called by TeamArena
@@ -63,6 +66,9 @@ public class StatusBarManager
 			super(player, null, viewer -> Main.getGame().canSeeStatusBar(player, viewer), PREGAME_TEXT, false);
 
 			this.currentText = PREGAME_TEXT;
+			this.preGameRgb =
+				Main.getPlayerInfo(player).permissionLevel.compareTo(CustomCommand.PermissionLevel.MOD) >= 0 ||
+				MathUtils.random.nextDouble() >= 0.95d;
 		}
 
 		@Override
@@ -71,7 +77,8 @@ public class StatusBarManager
 
 			final GameState gameState = Main.getGame().getGameState();
 			if(gameState == GameState.PREGAME) {
-				this.setText(pregameComp, true);
+				if (this.preGameRgb)
+					this.setText(pregameComp, true);
 			}
 			// Show health and other during the game
 			else if(gameState == GameState.LIVE) {

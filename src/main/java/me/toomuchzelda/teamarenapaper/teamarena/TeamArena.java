@@ -1412,7 +1412,8 @@ public abstract class TeamArena
 				player.sendMessage(text);
 			}
 			else {
-				final Component text = Component.text("You can't rejoin after becoming a spectator").color(NamedTextColor.RED);
+				final Component text = Component.text("You can't rejoin this game after becoming a spectator. Wait for the next game."
+					, NamedTextColor.RED);
 				player.sendMessage(text);
 			}
 		}
