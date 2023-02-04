@@ -56,13 +56,12 @@ public class CommandTicTacToe extends CustomCommand {
                 return;
             }
             // check for incoming invitation
-            Invitation invitation = requests.get(targetPlayer.getUniqueId());
+            Invitation invitation = requests.remove(targetPlayer.getUniqueId());
             if (invitation != null && now - invitation.timestamp() <= 60000 && invitation.uuid().equals(player.getUniqueId())) {
                 TicTacToe game = new TicTacToe(TicTacToe.getPlayer(targetPlayer), TicTacToe.getPlayer(player));
                 game.schedule();
                 if (!invitation.task.isCancelled())
                     invitation.task().cancel();
-                requests.remove(targetPlayer.getUniqueId());
                 return;
             }
 
@@ -78,11 +77,18 @@ public class CommandTicTacToe extends CustomCommand {
                     .clickEvent(ClickEvent.runCommand("/tictactoe " + player.getName()))
                     .hoverEvent(HoverEvent.showText(Component.text("/tictactoe " + player.getName()).color(NamedTextColor.WHITE)))
             );
+			UUID senderUuid = player.getUniqueId();
+			UUID targetUuid = targetPlayer.getUniqueId();
             BukkitTask task = Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
-                player.sendMessage(Component.text("The tic tac toe invitation to " + target + " has expired.").color(NamedTextColor.YELLOW));
-                targetPlayer.sendMessage(Component.text("The tic tac toe invitation from " + target + " has expired.").color(NamedTextColor.YELLOW));
+				// don't capture player objects
+				Player sender1 = Bukkit.getPlayer(senderUuid);
+				Player target1 = Bukkit.getPlayer(targetUuid);
+				if (sender1 == null || target1 == null)
+					return;
+                sender1.sendMessage(Component.text("The tic tac toe invitation to " + target1.getName() + " has expired.", NamedTextColor.YELLOW));
+                target1.sendMessage(Component.text("The tic tac toe invitation from " + sender1.getName() + " has expired.", NamedTextColor.YELLOW));
             }, 60 * 20);
-            requests.put(player.getUniqueId(), new Invitation(targetPlayer.getUniqueId(), now, task));
+            requests.put(senderUuid, new Invitation(targetUuid, now, task));
         }
     }
 

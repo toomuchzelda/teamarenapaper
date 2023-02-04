@@ -193,29 +193,25 @@ public class TicTacToe {
             case IMPOSSIBLE -> ticTacToe -> {
                 State[] board = ticTacToe.board;
                 // special moves
-                switch (ticTacToe.moves) {
-                    case 0 -> {
-                        // take one of the corners
-                        return getDelayedResponse(0, 10);
-                    }
-                    case 1 -> {
-                        // take middle or one of the corners
-                        return getDelayedResponse(board[4] == null ? 4 : 0, 10);
-                    }
+                return switch (ticTacToe.moves) {
+                    case 0 -> // take one of the corners
+						getDelayedResponse(0, 10);
+                    case 1 -> // take middle or one of the corners
+						getDelayedResponse(board[4] == null ? 4 : 0, 10);
                     case 2, 4 -> {
                         // strategy
                         if (board[1] == null && board[2] == null) {
-                            return getDelayedResponse(2, 10);
+                            yield getDelayedResponse(2, 10);
                         } else if (board[3] == null && board[6] == null) {
-                            return getDelayedResponse(6, 10);
+                            yield getDelayedResponse(6, 10);
                         } else if ((board[5] == null || board[7] == null) && board[8] == null) {
-                            return getDelayedResponse(8, 10);
+                            yield getDelayedResponse(8, 10);
                         } else {
-                            return getWinningMove(ticTacToe);
+                            yield getWinningMove(ticTacToe);
                         }
                     }
-                }
-                return getWinningMove(ticTacToe);
+					default -> getWinningMove(ticTacToe);
+                };
             };
         };
     }

@@ -52,13 +52,16 @@ public enum KitCategory {
 			disorients enemy positioning""");
 
 	private final TextColor color;
-	private final ItemStack display, displaySelected;
+	private final Component displayName;
+	private final ItemStack display;
+	private final ItemStack displaySelected;
 
 	KitCategory(TextColor color, ItemStack display, String description) {
 		var stylizedName = capitalize(name().toLowerCase(Locale.ENGLISH).replace('_', ' '));
 		this.color = color;
+		this.displayName = Component.text(stylizedName, color);
 		this.display = ItemBuilder.from(display)
-				.displayName(Component.text(stylizedName, color))
+				.displayName(displayName)
 				.lore(TextUtils.toLoreList(description, NamedTextColor.GRAY))
 				.hide(ItemFlag.values())
 				.build();
@@ -67,8 +70,13 @@ public enum KitCategory {
 
 	KitCategory(TextColor color, ItemStack display, ItemStack displaySelected) {
 		this.color = color;
+		this.displayName = display.getItemMeta().displayName();
 		this.display = display;
 		this.displaySelected = displaySelected;
+	}
+
+	public Component displayName() {
+		return displayName;
 	}
 
 	public ItemStack display(boolean selected) {

@@ -340,7 +340,6 @@ public abstract class TeamArena
 
 	// player as in players in the players set
 	public void givePlayerItems(Player player, PlayerInfo info, boolean clear) {
-		player.sendMap(miniMap.view);
 		PlayerInventory inventory = player.getInventory();
 		if(clear)
 			inventory.clear();
@@ -1050,7 +1049,7 @@ public abstract class TeamArena
 			StatusBarManager.setBarText(pinfo, pinfo.kit.getDisplayName());
 
 			// give all players map item so they can view teammates kits
-			p.getInventory().setItem(6, miniMap.getMapItem(pinfo.team));
+			p.getInventory().setItem(8, miniMap.getMapItem(pinfo.team));
 		}
 		Main.logger().info("Decided Teams");
 
@@ -1060,7 +1059,7 @@ public abstract class TeamArena
 		for(Player p : spectators) {
 			makeSpectator(p);
 
-			p.getInventory().setItem(6, miniMap.getMapItem());
+			p.getInventory().setItem(8, miniMap.getMapItem());
 		}
 
 		sendCountdown(true);
@@ -1069,11 +1068,9 @@ public abstract class TeamArena
 	public void prepGameStarting() {
 		//teleport players to team spawns
 		for(TeamArenaTeam team : teams) {
-			for(Entity e : team.getPlayerMembers()) {
-				if(e instanceof Player p)
-					p.setAllowFlight(false);
-
-				e.teleport(team.getNextSpawnpoint());
+			for (Player player : team.getPlayerMembers()) {
+				player.setAllowFlight(false);
+				player.teleport(team.getNextSpawnpoint());
 			}
 		}
 
@@ -1282,8 +1279,8 @@ public abstract class TeamArena
 	public void giveLobbyItems(Player player) {
 		PlayerInventory inventory = player.getInventory();
 		inventory.setItem(0, kitMenuItem.clone());
-		inventory.setItem(7, PreferencesInventory.PREFERENCE.clone());
-		inventory.setItem(8, cosmeticMenuItem.clone());
+		inventory.setItem(5, PreferencesInventory.PREFERENCE.clone());
+		inventory.setItem(6, cosmeticMenuItem.clone());
 	}
 
 	public Collection<Kit> getKits() {

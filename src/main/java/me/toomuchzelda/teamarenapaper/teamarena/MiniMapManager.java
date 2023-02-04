@@ -34,7 +34,6 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,7 +45,6 @@ public class MiniMapManager {
     final int mapWidth;
     final int centerX, centerZ;
 	final int scale;
-    final ItemStack stack;
 
     private record CursorProvider(BiPredicate<Player, PlayerInfo> displayCondition,
                                   BiFunction<Player, PlayerInfo, @NotNull CursorInfo> infoSupplier) { }
@@ -55,7 +53,6 @@ public class MiniMapManager {
                                          @Nullable BiFunction<Player, PlayerInfo, boolean @NotNull []> complexCondition,
                                          BiFunction<Player, PlayerInfo, @NotNull CursorInfo @NotNull[]> infoSupplier) { }
 
-    @ParametersAreNonnullByDefault
     public record CursorInfo(Location location, boolean directional, MapCursor.Type icon, @Nullable Component caption) {
         public CursorInfo(Location location, boolean directional, MapCursor.Type icon) {
             this(location, directional, icon, null);
@@ -113,19 +110,18 @@ public class MiniMapManager {
 		view.removeRenderer(view.getRenderers().get(0));
 		view.addRenderer(new GameMapRenderer(scale, centerX, centerZ));
         view.addRenderer(new GameRenderer());
-
-        stack = ItemBuilder.of(Material.FILLED_MAP).meta(MapMeta.class, mapMeta -> mapMeta.setMapView(view)).build();
     }
 
     public void cleanUp() {
         cursors.clear();
         complexCursors.clear();
+		canvasOperations.clear();
 		// properly release the renderers, or get nasty memory leaks
 		view.getRenderers().forEach(view::removeRenderer);
     }
 
     public void removeMapView() {
-        // TODO
+
     }
 
     @NotNull
@@ -134,7 +130,7 @@ public class MiniMapManager {
     }
 
     @NotNull
-    public ItemStack getMapItem(TeamArenaTeam team) {
+    public ItemStack getMapItem(@Nullable TeamArenaTeam team) {
         return ItemBuilder.of(Material.FILLED_MAP)
 				.displayName(Component.text("Game map", team != null ? team.getRGBTextColor() : NamedTextColor.WHITE))
                 .meta(MapMeta.class, mapMeta -> {
@@ -168,7 +164,6 @@ public class MiniMapManager {
      *                         If not null, the returned array must be the same size as the return value of {@code infoSupplier}
      * @param infoSupplier A function to calculate the properties of each cursor.
      */
-    @ParametersAreNonnullByDefault
     public void registerCursors(BiPredicate<Player, PlayerInfo> displayCondition,
                                 @Nullable BiFunction<Player, PlayerInfo, boolean @NotNull[]> complexCondition,
                                 BiFunction<Player, PlayerInfo, @NotNull CursorInfo @NotNull[]> infoSupplier) {
