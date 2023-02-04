@@ -285,7 +285,11 @@ public class EventListeners implements Listener
 		final UUID uuid = player.getUniqueId();
 		final PlayerInfo playerInfo;
 
+		// Remove before check if they are allowed to join to prevent memory leak
 		final DBLoadedData loadedData = loadedDbDataCache.remove(uuid);
+		if (event.getResult() != Result.ALLOWED) {
+			return;
+		}
 
 		if (PlayerUtils.getOpLevel(player) == 4) { // Being max level op on vanilla server overrides DB
 			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.OWNER, player);
