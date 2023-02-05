@@ -88,7 +88,11 @@ public class Bomb
 
 	public void setGrave() {
 		if(this.tnt != null) {
-			this.tnt.remove();
+			this.removeTnt();
+		}
+
+		if (this.glowingBlockStand != null) {
+			this.removeGlowerStand();
 		}
 
 		this.spawnLoc.getBlock().setType(Material.AIR);
@@ -124,9 +128,7 @@ public class Bomb
 		this.spawnLoc.getBlock().setType(Material.TNT);
 		this.hologram.moveTo(spawnLoc.clone().add(TNT_HOLOGRAM_OFFSET));
 
-		this.tnt.remove();
-		this.visualTeam.removeEntities(tnt);
-		PlayerScoreboard.removeMembersAll(this.visualTeam, this.tnt);
+		this.removeTnt();
 
 		this.glowingBlockStand = spawnGlowerStand(this.spawnLoc);
 
@@ -321,6 +323,12 @@ public class Bomb
 
 		this.glowingBlockStand.remove();
 		this.glowingBlockStand = null;
+	}
+
+	private void removeTnt() {
+		this.tnt.remove();
+		this.visualTeam.removeEntities(tnt);
+		PlayerScoreboard.removeMembersAll(this.visualTeam, this.tnt);
 	}
 
 	/**

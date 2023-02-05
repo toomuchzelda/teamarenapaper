@@ -63,6 +63,8 @@ public class PlayerInfo
 	 */
 	public int[] lastInteractUnknownEntityTimes;
 
+	public UUID lastMessageSender;
+
 	public PlayerInfo(CustomCommand.PermissionLevel permissionLevel, Player player) {
 		team = null;
 		spawnPoint = null;
@@ -83,6 +85,7 @@ public class PlayerInfo
 		lastKillTime = 0;
 		viewingGlowingTeammates = false;
 		lastInteractUnknownEntityTimes = new int[2];
+		this.lastMessageSender = null;
 
 		this.scoreboard = new PlayerScoreboard(player);
 		this.metadataViewer = new MetadataViewer(player);

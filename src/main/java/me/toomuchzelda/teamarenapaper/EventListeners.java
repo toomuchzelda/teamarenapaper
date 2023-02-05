@@ -51,6 +51,7 @@ import org.bukkit.command.Command;
 import org.bukkit.craftbukkit.v1_19_R2.CraftWorldBorder;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
@@ -377,8 +378,10 @@ public class EventListeners implements Listener
 		});
 	}
 
-	@EventHandler
+	@EventHandler (priority = EventPriority.HIGHEST) // Get called after other plugins.
 	public void asyncChat(AsyncChatEvent event) {
+		if (event.isCancelled()) return;
+
 		if (Main.getPlayerInfo(event.getPlayer()).permissionLevel.compareTo(CustomCommand.PermissionLevel.MOD) >= 0) {
 			event.message(MiniMessage.miniMessage().deserialize(PlainTextComponentSerializer.plainText().serialize(event.message())));
 		}

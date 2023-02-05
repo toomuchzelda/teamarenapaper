@@ -397,92 +397,6 @@ public class PacketListeners
 			}
 		});
 
-		/*ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
-				PacketType.Play.Server.PLAYER_INFO) {
-			@Override
-			public void onPacketSending(PacketEvent event) {
-				ClientboundPlayerInfoPacket nmsPacket = (ClientboundPlayerInfoPacket) event.getPacket().getHandle();
-
-				ClientboundPlayerInfoPacket.Action action = nmsPacket.getAction();
-				if(action == ClientboundPlayerInfoPacket.Action.ADD_PLAYER ||
-						action == ClientboundPlayerInfoPacket.Action.REMOVE_PLAYER) {
-
-					//make a copy of the list before making modifications as it gets re-used and sent to multiple
-					// players who we may not want to see these modifications
-					List<ClientboundPlayerInfoPacket.PlayerUpdate> copyList = new LinkedList<>(nmsPacket.getEntries());
-
-					boolean modified = false;
-					var iter = copyList.listIterator();
-					while(iter.hasNext()) {
-						ClientboundPlayerInfoPacket.PlayerUpdate update = iter.next();
-
-						GameProfile profile = update.getProfile();
-
-						//add the fake player hitbox player infos
-						if(FakeHitboxManager.ACTIVE) {
-							if(!profile.getId().equals(event.getPlayer().getUniqueId())) {
-								FakeHitbox hitbox = FakeHitboxManager.getByPlayerUuid(profile.getId());
-								if(hitbox != null) {
-									modified = true;
-									for (ClientboundPlayerInfoPacket.PlayerUpdate playerUpdate : hitbox.getPlayerInfoEntries()) {
-										//reset the listiterator state so it does not throw if subsequent
-										// iter.set is called
-										iter.previous();
-										iter.add(playerUpdate);
-										iter.next();
-									}
-								}
-							}
-						}
-
-						Player pinfoPlayer = Bukkit.getPlayer(profile.getId());
-						if (pinfoPlayer == null)
-							continue;
-
-						DisguiseManager.Disguise disguise = DisguiseManager.getDisguiseSeeing(pinfoPlayer, event.getPlayer());
-						if(disguise != null) {
-							modified = true;
-							if(action == ClientboundPlayerInfoPacket.Action.ADD_PLAYER) {
-
-								var replacementUpdate =
-										new ClientboundPlayerInfoPacket.PlayerUpdate(disguise.disguisedGameProfile,
-												update.getLatency(), update.getGameMode(), update.getDisplayName(), null);
-
-								iter.set(replacementUpdate);
-
-								var tabListUpdate =
-										new ClientboundPlayerInfoPacket.PlayerUpdate(disguise.tabListGameProfile,
-												update.getLatency(), update.getGameMode(), update.getDisplayName(), null);
-
-								// remove the player info of the disguised player so they don't appear in tab list
-								// do it 2 ticks later as too quick will not make the skin appear correctly
-								Bukkit.getScheduler().runTaskLater(Main.getPlugin(),
-										() -> PlayerUtils.sendPacket(event.getPlayer(), disguise.removePlayerInfoPacket), 2);
-
-								iter.add(tabListUpdate);
-
-								disguise.viewers.put(event.getPlayer(), TeamArena.getGameTick()); //record time so don't send packet twice in spawn player listener
-							}
-							else {
-
-								var tabListUpdate =
-										new ClientboundPlayerInfoPacket.PlayerUpdate(disguise.tabListGameProfile,
-												update.getLatency(), update.getGameMode(), update.getDisplayName(), null);
-
-								iter.add(tabListUpdate);
-							}
-						}
-					}
-
-					if(modified) {
-						PacketContainer copy = event.getPacket().shallowClone();
-						copy.getModifier().write(1, copyList);
-						event.setPacket(copy);
-					}
-				}
-			}
-		});*/
-
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.NAMED_SOUND_EFFECT, PacketType.Play.Server.ENTITY_SOUND)
 				//PacketType.Play.Server.CUSTOM_SOUND_EFFECT)
@@ -619,7 +533,7 @@ public class PacketListeners
 			}
 		});
 
-		ProtocolLibrary.getProtocolManager().addPacketListener(new NoChatKeys());
+		//ProtocolLibrary.getProtocolManager().addPacketListener(new NoChatKeys());
 	}
 
 	private static class NoChatKeys extends PacketAdapter {
@@ -628,25 +542,6 @@ public class PacketListeners
 					PacketType.Play.Client.CHAT,
 					PacketType.Play.Client.CHAT_COMMAND);
 		}
-
-		/*@Override
-		public void onPacketSending(PacketEvent event) {
-			var packet = event.getPacket();
-			if (packet.getPlayerInfoAction().read(0) == EnumWrappers.PlayerInfoAction.ADD_PLAYER) {
-				var playerInfoList = packet.getPlayerInfoDataLists().read(0);
-				UUID viewerUuid = event.getPlayer().getUniqueId();
-				playerInfoList.replaceAll(data -> {
-					if(!viewerUuid.equals(data.getProfile().getUUID())) {
-						return new PlayerInfoData(data.getProfile(), data.getLatency(), data.getGameMode(),
-								data.getDisplayName(), null);
-					}
-					else {
-						return data;
-					}
-				});
-				packet.getPlayerInfoDataLists().write(0, playerInfoList);
-			}
-		}*/
 
 		@Override
 		public void onPacketReceiving(PacketEvent event) {
