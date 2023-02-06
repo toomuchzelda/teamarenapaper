@@ -23,7 +23,6 @@ import org.bukkit.map.MapPalette;
 import org.bukkit.util.BoundingBox;
 
 import java.io.File;
-import java.lang.ref.WeakReference;
 import java.util.*;
 
 public class KingOfTheHill extends TeamArena
@@ -477,16 +476,19 @@ public class KingOfTheHill extends TeamArena
 		}
 
 		this.lastHillChangeTime = gameTick;
+	}
 
+	@Override
+	public void setupMiniMap() {
 		// register hill cursor
 		for (Hill hill : hills) {
 			miniMap.registerCursor((ignored, ignored1) -> {
 				boolean active = hill == activeHill;
 				Location center = hill.getBorder().getCenter().toLocation(gameWorld);
 				Component currentHillText = Component.text(hill.getName(),
-						active ?
-								(owningTeam != null ? owningTeam.getRGBTextColor() : NamedTextColor.WHITE) :
-								NamedTextColor.DARK_GRAY
+					active ?
+						(owningTeam != null ? owningTeam.getRGBTextColor() : NamedTextColor.WHITE) :
+						NamedTextColor.DARK_GRAY
 				);
 				MapCursor.Type icon = active ? MapCursor.Type.WHITE_CROSS : MapCursor.Type.SMALL_WHITE_CIRCLE;
 				return new MiniMapManager.CursorInfo(center, false, icon, currentHillText);
@@ -499,7 +501,7 @@ public class KingOfTheHill extends TeamArena
 				// clear old overlay
 				BoundingBox oldBox = lastActiveHill.getBorder();
 				renderer.drawRect(canvas, oldBox.getMin(), oldBox.getMax(),
-						MiniMapManager.GameRenderer.TRANSPARENT, MiniMapManager.GameRenderer.TRANSPARENT);
+					MiniMapManager.GameRenderer.TRANSPARENT, MiniMapManager.GameRenderer.TRANSPARENT);
 				lastActiveHill = activeHill;
 			}
 
@@ -509,13 +511,11 @@ public class KingOfTheHill extends TeamArena
 				var teamColor = owningTeam != null ? new java.awt.Color(owningTeam.getColour().asRGB(), false) : null;
 				@SuppressWarnings("deprecation")
 				byte color = teamColor != null ? MapPalette.matchColor(teamColor) : MapPalette.TRANSPARENT;
-//				@SuppressWarnings("deprecation")
-//				byte borderColor = teamColor != null ? MapPalette.matchColor(teamColor.darker()) : 29 /*COLOR_BLACK*/ * 4 + 3;
-				byte borderColor = 29 * 4 + 3;
+				byte borderColor = 29 * 4 + 3; // black
 				renderer.drawRect(canvas, box.getMin(), box.getMax(), color, borderColor);
 			} else {
 				renderer.drawRect(canvas, box.getMin(), box.getMax(),
-						MiniMapManager.GameRenderer.TRANSPARENT, MiniMapManager.GameRenderer.TRANSPARENT);
+					MiniMapManager.GameRenderer.TRANSPARENT, MiniMapManager.GameRenderer.TRANSPARENT);
 			}
 		});
 	}

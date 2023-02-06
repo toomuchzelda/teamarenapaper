@@ -824,6 +824,10 @@ public class CaptureTheFlag extends TeamArena
 	public void prepLive() {
 		super.prepLive();
 
+	}
+
+	@Override
+	public void setupMiniMap() {
 		// register flag cursors
 		for (var entry : teamToFlags.entrySet()) {
 			TeamArenaTeam team = entry.getKey();
@@ -834,19 +838,20 @@ public class CaptureTheFlag extends TeamArena
 			Component flagText = Component.text(team.getSimpleName() + " flag", team.getRGBTextColor());
 			Component yourFlagText = Component.text("Your flag", team.getRGBTextColor());
 			miniMap.registerCursor(
-					(ignored1, ignored2) -> CommandDebug.ignoreWinConditions || team.isAlive(), // hide dead flags
-					(player, playerInfo) -> {
-						// display extra information for own flag
-						if (playerInfo.team == team) {
-							if (flag.holder != null && gameTick % 40 < 20) {
-								return new MiniMapManager.CursorInfo(flag.holder.getLocation(), true, MapCursor.Type.RED_POINTER, yourFlagText);
-							} else {
-								return new MiniMapManager.CursorInfo(stand.getLocation(), false, icon, yourFlagText);
-							}
+				// hide dead flags
+				(ignored1, ignored2) -> CommandDebug.ignoreWinConditions || gameState == GameState.PREGAME || team.isAlive(),
+				(player, playerInfo) -> {
+					// display extra information for own flag
+					if (playerInfo.team == team) {
+						if (flag.holder != null && gameTick % 40 < 20) {
+							return new MiniMapManager.CursorInfo(flag.holder.getLocation(), true, MapCursor.Type.RED_POINTER, yourFlagText);
 						} else {
-							return new MiniMapManager.CursorInfo(stand.getLocation(), false, icon, flagText);
+							return new MiniMapManager.CursorInfo(stand.getLocation(), false, icon, yourFlagText);
 						}
+					} else {
+						return new MiniMapManager.CursorInfo(stand.getLocation(), false, icon, flagText);
 					}
+				}
 			);
 		}
 	}

@@ -285,6 +285,8 @@ public abstract class TeamArena
 			this.gameAndMapMessage = builder.build();
 		}
 
+		setupMiniMap();
+
 		//init all the players online at time of construction
 		Kit fallbackKit = CommandDebug.filterKit(kits.values().iterator().next());
 		for (var entry : Main.getPlayerInfoMap().entrySet()) {
@@ -812,6 +814,9 @@ public abstract class TeamArena
 	}
 
 	public void onInteract(PlayerInteractEvent event) {
+		if (event.useItemInHand() == Event.Result.DENY)
+			return;
+
 		ItemStack item = event.getItem();
 		Player player = event.getPlayer();
 
@@ -835,13 +840,13 @@ public abstract class TeamArena
 		else {
 			PlayerInfo pinfo = Main.getPlayerInfo(player);
 			TeamArenaTeam team = pinfo.team;
-			if (miniMap.isMapItem(item) && event.useItemInHand() != Event.Result.DENY) {
+			// prevent opening maps pregame
+			if (gameState != GameState.PREGAME && miniMap.isMapItem(item)) {
 				event.setUseItemInHand(Event.Result.DENY);
 				event.setUseInteractedBlock(Event.Result.DENY);
 				// TODO fix respawning players being able to see other teams
 				TeamArenaTeam teamFilter = isPermanentlyDead(player) ? null : team;
 				Inventories.openInventory(player, new SpectateInventory(teamFilter, this.gameState.teamsChosen()));
-				return;
 			}
 			else if (gameState == GameState.LIVE) {
 				//right click to glow teammates
@@ -1173,7 +1178,7 @@ public abstract class TeamArena
 			}
 		}
 
-		miniMap.cleanUp();
+		miniMap.onGameEnd();
 		graffiti.cleanUp();
 
 		players.clear();
@@ -1204,7 +1209,7 @@ public abstract class TeamArena
 		noTeamTeam.unregister();
 
 		// remove map
-		miniMap.removeMapView();
+		miniMap.onGameCleanup();
 
 		this.killStreakManager.unregister();
 
@@ -1258,6 +1263,10 @@ public abstract class TeamArena
 		spectatorTeam.updateNametags();
 	}
 
+	public void setupMiniMap() {
+
+	}
+
 	public void balancePlayerLeave() {
 		if(gameState == GameState.PREGAME) {
 			int maxTeamSize = players.size() / teams.length;
@@ -1281,6 +1290,7 @@ public abstract class TeamArena
 		inventory.setItem(0, kitMenuItem.clone());
 		inventory.setItem(5, PreferencesInventory.PREFERENCE.clone());
 		inventory.setItem(6, cosmeticMenuItem.clone());
+		inventory.setItem(8, miniMap.getMapItem());
 	}
 
 	public Collection<Kit> getKits() {
@@ -1647,7 +1657,6 @@ public abstract class TeamArena
 	}
 
 	public void giveSpectatorItems(Player player) {
-		player.sendMap(miniMap.view);
 		PlayerInventory inventory = player.getInventory();
 		inventory.setItem(8, miniMap.getMapItem());
 	}

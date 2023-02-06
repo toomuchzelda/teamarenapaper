@@ -16,7 +16,6 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.chunk.ChunkStatus;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.material.FluidState;
@@ -93,13 +92,19 @@ public class MiniMapManager {
         centerZ = Location.locToBlock(box.getCenterZ());
         view.setCenterX(centerX);
         view.setCenterZ(centerZ);
-        double side = Math.max(box.getWidthX(), box.getWidthZ());
-        int log = (int) Math.ceil(Math.log(side) / Math.log(2));
-        mapWidth = (int) Math.pow(2, log);
+        int side = Math.max((int) Math.ceil(box.getWidthX()), (int) Math.ceil(box.getWidthZ()));
+        int log = 32 - Integer.numberOfLeadingZeros(side - 1); // ceil(log2(side))
+		if (log < 7) { // map cannot be shorter than 128 blocks
+			Main.logger().info("[Minimap] Map was too short in length (" + side + " blocks), extended to 128 blocks");
+			log = 7;
+		}
+        mapWidth = 1 << log;
         scale = MathUtils.clamp(0, 4,  log - 7);
         //noinspection deprecation,ConstantConditions
         view.setScale(MapView.Scale.valueOf((byte) scale));
         view.setTrackingPosition(false);
+
+		Main.logger().info("[MiniMap] Center: (%d, %d), width: %d, scale: %d".formatted(centerX, centerZ, mapWidth, scale));
 
 		// let's hope the map file is removed
 		File mainWorldFile = new File(Bukkit.getWorldContainer(), Bukkit.getWorlds().get(0).getName());
@@ -108,20 +113,19 @@ public class MiniMapManager {
 
         // our renderers
 		view.removeRenderer(view.getRenderers().get(0));
-		view.addRenderer(new GameMapRenderer(scale, centerX, centerZ));
+		view.addRenderer(new GameMapRenderer(scale, mapWidth, centerX, centerZ));
         view.addRenderer(new GameRenderer());
     }
 
-    public void cleanUp() {
-        cursors.clear();
-        complexCursors.clear();
+    public void onGameEnd() {
+    }
+
+    public void onGameCleanup() {
+		cursors.clear();
+		complexCursors.clear();
 		canvasOperations.clear();
 		// properly release the renderers, or get nasty memory leaks
 		view.getRenderers().forEach(view::removeRenderer);
-    }
-
-    public void removeMapView() {
-
     }
 
     @NotNull
@@ -223,11 +227,13 @@ public class MiniMapManager {
 
 	public static final class GameMapRenderer extends MapRenderer {
 		public final int scale;
+		public final int mapWidth;
 		public final int centerX;
 		public final int centerZ;
-		GameMapRenderer(int scale, int centerX, int centerZ) {
+		GameMapRenderer(int scale, int mapWidth, int centerX, int centerZ) {
 			super(false);
 			this.scale = scale;
+			this.mapWidth = mapWidth;
 			this.centerX = centerX;
 			this.centerZ = centerZ;
 		}
@@ -251,9 +257,17 @@ public class MiniMapManager {
 			var box = Main.getGame().border;
 			var bukkitWorld = player.getWorld();
 			int minY = Math.max((int) box.getMinY(), bukkitWorld.getMinHeight());
+			int maxY = Math.min((int) box.getMaxY(), bukkitWorld.getMaxHeight());
 
 			var world = ((CraftWorld) bukkitWorld).getHandle();
 			int blocksPerPixel = 1 << scale;
+
+			int minX = (int) Math.floor(box.getMinX());
+			int maxX = (int) Math.ceil(box.getMaxX());
+			int minZ = (int) Math.floor(box.getMinZ());
+			int maxZ = (int) Math.ceil(box.getMaxZ());
+
+			Multiset<MaterialColor> multiset = LinkedHashMultiset.create();
 
 			for (int mapX = 0; mapX < 128; ++mapX) {
 				double d0 = 0.0D;
@@ -264,12 +278,12 @@ public class MiniMapManager {
 
 					// check if within map borders
 					// render every block outside of map borders
-					boolean isOutsideBorder = false/*blockX < box.getMinX() || blockX + blocksPerPixel > box.getMaxX() ||
-							blockZ < box.getMinZ() || blockZ + blocksPerPixel > box.getMaxZ()*/;
+					boolean isOutsideBorder = blockX < minX || blockX + blocksPerPixel > maxX ||
+							blockZ < minZ || blockZ + blocksPerPixel > maxZ;
 
-					Multiset<MaterialColor> multiset = LinkedHashMultiset.create();
-					var chunk = (LevelChunk) world.getChunk(blockX >> 4, blockZ >> 4, ChunkStatus.FULL, false);
-					if (chunk == null || chunk.isEmpty()) {
+					multiset.clear();
+					var chunk = (LevelChunk) world.getChunk(blockX >> 4, blockZ >> 4); // will load unloaded chunks
+					if (chunk.isEmpty()) {
 						continue;
 					}
 					ChunkPos chunkPos = chunk.getPos();
@@ -283,14 +297,14 @@ public class MiniMapManager {
 
 					for (int i = 0; i < blocksPerPixel; ++i) {
 						for (int j = 0; j < blocksPerPixel; ++j) {
-							if (isOutsideBorder) {
-								multiset.add(MaterialColor.NONE);
-								continue;
-							}
+//							if (isOutsideBorder) {
+//								multiset.add(MaterialColor.NONE);
+//								continue;
+//							}
 
 
 							int surface = chunk.getHeight(Heightmap.Types.WORLD_SURFACE, i + chunkBlockX, j + chunkBlockZ) + 1;
-							int blockY = Math.min(surface, (int) box.getMaxY());
+							int blockY = Math.min(surface, maxY);
 							BlockState blockState;
 
 							if (blockY > minY + 1) {
@@ -329,23 +343,27 @@ public class MiniMapManager {
 					double d2;
 					MaterialColor.Brightness brightness;
 
-					if (materialColor == MaterialColor.WATER) {
-						d2 = (double) k3 * 0.1D + (double) (mapX + mapZ & 1) * 0.2D;
-						if (d2 < 0.5D) {
-							brightness = MaterialColor.Brightness.HIGH;
-						} else if (d2 > 0.9D) {
-							brightness = MaterialColor.Brightness.LOW;
-						} else {
-							brightness = MaterialColor.Brightness.NORMAL;
-						}
+					if (isOutsideBorder) {
+						brightness = MaterialColor.Brightness.LOWEST; // dark pixels to indicate that it is outside the playable area
 					} else {
-						d2 = (d1 - d0) * 4.0D / (double) (blocksPerPixel + 4) + ((double) (mapX + mapZ & 1) - 0.5D) * 0.4D;
-						if (d2 > 0.6D) {
-							brightness = MaterialColor.Brightness.HIGH;
-						} else if (d2 < -0.6D) {
-							brightness = MaterialColor.Brightness.LOW;
+						if (materialColor == MaterialColor.WATER) {
+							d2 = (double) k3 * 0.1D + (double) (mapX + mapZ & 1) * 0.2D;
+							if (d2 < 0.5D) {
+								brightness = MaterialColor.Brightness.HIGH;
+							} else if (d2 > 0.9D) {
+								brightness = MaterialColor.Brightness.LOW;
+							} else {
+								brightness = MaterialColor.Brightness.NORMAL;
+							}
 						} else {
-							brightness = MaterialColor.Brightness.NORMAL;
+							d2 = (d1 - d0) * 4.0D / (double) (blocksPerPixel + 4) + ((double) (mapX + mapZ & 1) - 0.5D) * 0.4D;
+							if (d2 > 0.6D) {
+								brightness = MaterialColor.Brightness.HIGH;
+							} else if (d2 < -0.6D) {
+								brightness = MaterialColor.Brightness.LOW;
+							} else {
+								brightness = MaterialColor.Brightness.NORMAL;
+							}
 						}
 					}
 
@@ -363,11 +381,11 @@ public class MiniMapManager {
 
         @Override
         public void render(@NotNull MapView map, @NotNull MapCanvas canvas, @NotNull Player player) {
-            MapCursorCollection mapCursors = new MapCursorCollection();
 			if (Main.getGame() == null)
 				return;
 
-            PlayerInfo playerInfo = Main.getPlayerInfo(player);
+			MapCursorCollection mapCursors = new MapCursorCollection();
+			PlayerInfo playerInfo = Main.getPlayerInfo(player);
 			if (playerInfo == null)
 				return;
 

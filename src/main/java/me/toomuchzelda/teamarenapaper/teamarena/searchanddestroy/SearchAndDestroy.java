@@ -192,20 +192,23 @@ public class SearchAndDestroy extends TeamArena
 		for(TeamArenaTeam team : teams) {
 			team.bossBar.progress(1f);
 		}
+	}
 
+	@Override
+	public void setupMiniMap() {
 		teamBombs.forEach((team, bombs) -> {
 			MapCursor.Type icon = MapCursor.Type.valueOf("BANNER_" + team.getDyeColour().name());
 			var bombText = Component.text(team.getSimpleName() + "'s bomb", team.getRGBTextColor());
 			miniMap.registerCursors(
-					(ignored1, ignored2) -> CommandDebug.ignoreWinConditions || team.isAlive(),
-					null,
-					(player, playerInfo) -> bombs.stream()
-							.map(bomb -> new MiniMapManager.CursorInfo(
-									bomb.getSpawnLoc(), false, icon,
-									playerInfo.team == team ?
-											Component.text("Your bomb", team.getRGBTextColor()) :
-											bombText))
-							.toArray(MiniMapManager.CursorInfo[]::new)
+				(ignored1, ignored2) -> CommandDebug.ignoreWinConditions || gameState == GameState.PREGAME || team.isAlive(),
+				null,
+				(player, playerInfo) -> bombs.stream()
+					.map(bomb -> new MiniMapManager.CursorInfo(
+						bomb.getSpawnLoc(), false, icon,
+						playerInfo.team == team ?
+							Component.text("Your bomb", team.getRGBTextColor()) :
+							bombText))
+					.toArray(MiniMapManager.CursorInfo[]::new)
 			);
 		});
 	}
