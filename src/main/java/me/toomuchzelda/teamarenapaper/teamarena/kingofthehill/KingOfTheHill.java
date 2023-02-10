@@ -48,6 +48,7 @@ public class KingOfTheHill extends TeamArena
 	public final int TICKS_TO_WIN;
 
 	private static final Component GAME_NAME = Component.text("King of the Hill", NamedTextColor.YELLOW);
+	public static final Component HOW_TO_PLAY = Component.text("Stand on the active hill to capture it! The first team to be King for enough time wins!", NamedTextColor.YELLOW);
 
 	private final Map<TeamArenaTeam, Component> sidebarCache = new LinkedHashMap<>();
 
@@ -606,8 +607,14 @@ public class KingOfTheHill extends TeamArena
 		return true;
 	}
 
+	@Override
 	public Component getGameName() {
 		return GAME_NAME;
+	}
+
+	@Override
+	public Component getHowToPlayBrief() {
+		return HOW_TO_PLAY;
 	}
 
 	@Override

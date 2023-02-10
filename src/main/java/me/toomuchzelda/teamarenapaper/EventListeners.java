@@ -171,6 +171,13 @@ public class EventListeners implements Listener
 			e.printStackTrace();
 		}
 
+		try {
+			TipBroadcaster.tick();
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+
 		//every 2 minutes
 		int count = event.getTickNumber() % (2 * 60  *20);
 		if(count == 0) {

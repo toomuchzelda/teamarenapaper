@@ -57,6 +57,7 @@ public class CaptureTheFlag extends TeamArena
 	public static final String DROPPED_PROGRESS_STRING = "█".repeat(DROPPED_PROGRESS_BAR_LENGTH);
 
 	private static final Component GAME_NAME = Component.text("Capture the Flag", NamedTextColor.AQUA);
+	public static final Component HOW_TO_PLAY = Component.text("Take other team's flags and bring them to yours to win! You can't capture another flag if your flag has been taken.", NamedTextColor.AQUA);
 
 	public static final Component PICK_UP_MESSAGE = Component.text("%holdingTeam% has picked up %team%'s flag").color(NamedTextColor.GOLD);
 	public static final Component DROP_MESSAGE = Component.text("%holdingTeam% has dropped %team%'s flag").color(NamedTextColor.GOLD);
@@ -909,8 +910,14 @@ public class CaptureTheFlag extends TeamArena
 		return flagHolders.containsKey(p);
 	}
 
+	@Override
 	public Component getGameName() {
 		return GAME_NAME;
+	}
+
+	@Override
+	public Component getHowToPlayBrief() {
+		return HOW_TO_PLAY;
 	}
 
 	@Override

@@ -1114,6 +1114,8 @@ public abstract class TeamArena
 			// Players who joined a team via the /team command need to have their tags updated manually
 			team.updateNametags();
 		}
+
+		Bukkit.broadcast(this.getHowToPlayBrief());
 	}
 
 	public void prepEnd() {
@@ -1855,7 +1857,7 @@ public abstract class TeamArena
 				Bukkit.broadcast(Component.text(s + timeLeft + 's').color(NamedTextColor.RED));
 
 				for (Player p : Bukkit.getOnlinePlayers()) {
-					p.playSound(p.getLocation(), Sound.ENTITY_CREEPER_DEATH, SoundCategory.AMBIENT, 10, 0);
+					p.playSound(p, Sound.ENTITY_CREEPER_DEATH, SoundCategory.AMBIENT, 10, 0);
 				}
 			}
 		}
@@ -2028,6 +2030,8 @@ public abstract class TeamArena
 	}
 
 	public abstract Component getGameName();
+
+	public abstract Component getHowToPlayBrief();
 
 	public File getMapPath() {
 		return new File("Maps");

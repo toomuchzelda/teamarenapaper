@@ -52,6 +52,7 @@ import java.util.*;
 public class SearchAndDestroy extends TeamArena
 {
 	public static final Component GAME_NAME = Component.text("Search and Destroy", NamedTextColor.GOLD);
+	public static final Component HOW_TO_PLAY = Component.text("Arm and detonate other team's bombs or kill every enemy to win! Remember: there's no respawning, so play carefully!", NamedTextColor.GOLD);
 
 	//record it here from the map config but won't use it for anything
 	protected boolean randomBases = false;
@@ -1018,6 +1019,11 @@ public class SearchAndDestroy extends TeamArena
 	@Override
 	public Component getGameName() {
 		return GAME_NAME;
+	}
+
+	@Override
+	public Component getHowToPlayBrief() {
+		return HOW_TO_PLAY;
 	}
 
 	@Override
