@@ -105,7 +105,7 @@ public class KitDwarf extends Kit
 				expToGain = -0.03f;
 			}
 			else if (player.isSneaking()) {
-				expToGain = 0.055f; // 0.005f
+				expToGain = 0.01f;
 			}
 			else
 				expToGain = -0.005f;
