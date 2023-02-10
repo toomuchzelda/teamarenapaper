@@ -81,11 +81,7 @@ import static me.toomuchzelda.teamarenapaper.teamarena.GameState.LIVE;
 
 public class EventListeners implements Listener
 {
-
 	private static final boolean[] BREAKABLE_BLOCKS;
-	private record DBLoadedData(Map<Preference<?>, ?> preferenceMap, String defaultKit, CustomCommand.PermissionLevel permissionLevel) {}
-
-	private final ConcurrentHashMap<UUID, DBLoadedData> loadedDbDataCache = new ConcurrentHashMap<>();
 
 	static {
 		BREAKABLE_BLOCKS = new boolean[Material.values().length];
@@ -191,153 +187,19 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void asyncPlayerPreLogin(AsyncPlayerPreLoginEvent event) {
-		if (event.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED)
-			return;
+		LoginHandler.handleAsyncPreLogin(event);
+	}
 
-		//if in offline mode, get UUID from stored playerinfo, by the player's name.
-		// for players joining for the first time a temporary entry in the PlayerInfo table
-		// is made for them and deleted afterwards.
-		// why do i need offline mode? it is very good in testing with bots
-		if(!DatabaseManager.ONLINE_MODE) {
-			//don't need bukkit async scheduler as this event is called async
-			DBGetUuidByName getUuidByName = new DBGetUuidByName(event.getName());
-			try {
-				UUID newUuid = getUuidByName.run();
-				if(newUuid != null) {
-					PlayerProfile old = event.getPlayerProfile();
-					PlayerProfile newProfile = new CraftPlayerProfile(newUuid, old.getName());
-					newProfile.setTextures(old.getTextures());
-					newProfile.setProperties(old.getProperties());
-					event.setPlayerProfile(newProfile);
-				}
-			}
-			catch (SQLException | IllegalArgumentException exception) {
-				//sql exception will already be printed
-				if(exception instanceof IllegalArgumentException)
-					exception.printStackTrace();
-
-				event.setLoginResult(AsyncPlayerPreLoginEvent.Result.KICK_OTHER);
-				event.kickMessage(Component.text("Database error"));
-				return;
-			}
-		}
-
-		final UUID uuid = event.getUniqueId();
-
-		//update player info, cancel and return if fail
-		DBSetPlayerInfo setPlayerInfo = new DBSetPlayerInfo(uuid, event.getName());
-		try {
-			setPlayerInfo.run();
-		}
-		catch(SQLException e) {
-			event.setLoginResult(AsyncPlayerPreLoginEvent.Result.KICK_OTHER);
-			event.kickMessage(TextUtils.getRGBManiacComponent(
-					Component.text("Could not update DBPlayerInfo in AsyncPreLogin! Please tell an admin."),
-					Style.empty(), 0d));
-			return;
-		}
-
-		//load preferences from DB
-		// cancel and return if fail
-		DBGetPreferences getPreferences = new DBGetPreferences(uuid);
-		Map<Preference<?>, ?> retrievedPrefs;
-		try {
-			retrievedPrefs = getPreferences.run();
-		}
-		catch (SQLException e) {
-			event.setLoginResult(AsyncPlayerPreLoginEvent.Result.KICK_OTHER);
-			event.kickMessage(Component.text("Could not retrieve preferences! Run for your life!!!", MathUtils.randomTextColor()));
-			return;
-		}
-
-		//load default kit from DB
-		// log error and just use default kit if fail
-		DBGetDefaultKit getDefaultKit = new DBGetDefaultKit(uuid);
-		String defaultKit;
-		try {
-			defaultKit = getDefaultKit.run();
-		}
-		catch(SQLException e) {
-			defaultKit = getDefaultKit.getDefaultValue();
-			Main.logger().severe("Could not load default kit for " + uuid.toString() + ", username " + event.getName());
-		}
-
-		// Load CustomCommand permission level if any set.
-		CustomCommand.PermissionLevel permissionLevel;
-		DBGetPermissionLevel getPermissionLevel = new DBGetPermissionLevel(uuid);
-		try {
-			permissionLevel = getPermissionLevel.run();
-			if (permissionLevel == null) {
-				permissionLevel = CustomCommand.PermissionLevel.ALL;
-			}
-		}
-		catch (SQLException e) {
-			permissionLevel = CustomCommand.PermissionLevel.ALL;
-		}
-
-		DBLoadedData data = new DBLoadedData(retrievedPrefs, defaultKit, permissionLevel);
-		loadedDbDataCache.put(uuid, data);
+	/** Monitor the outcome of the above event listener to prevent leaks in the dbDataCache */
+	@EventHandler(priority = EventPriority.MONITOR)
+	public void asyncPlayerPreLoginMonitor(AsyncPlayerPreLoginEvent event) {
+		LoginHandler.asyncMonitor(event);
 	}
 
 	//these three events are called in this order
-	@EventHandler
+	@EventHandler(priority = EventPriority.MONITOR)
 	public void playerLogin(PlayerLoginEvent event) {
-		final Player player = event.getPlayer();
-		final UUID uuid = player.getUniqueId();
-		final PlayerInfo playerInfo;
-
-		// Remove before check if they are allowed to join to prevent memory leak
-		final DBLoadedData loadedData = loadedDbDataCache.remove(uuid);
-		if (event.getResult() != Result.ALLOWED) {
-			return;
-		}
-
-		if (PlayerUtils.getOpLevel(player) == 4) { // Being max level op on vanilla server overrides DB
-			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.OWNER, player);
-		} else {
-			playerInfo = new PlayerInfo(loadedData.permissionLevel(), player);
-		}
-
-		if (playerInfo.permissionLevel != CustomCommand.PermissionLevel.ALL) {
-			Bukkit.getScheduler().runTask(Main.getPlugin(),
-				() -> player.sendMessage(Component.text("Your rank has been updated to " + playerInfo.permissionLevel.name(),
-					NamedTextColor.GREEN)));
-		}
-
-		Map<Preference<?>, ?> prefMap = loadedData.preferenceMap();
-		if (prefMap == null) {
-			event.disallow(Result.KICK_OTHER, Component.text("Failed to load preferences!")
-					.color(TextColors.ERROR_RED));
-			return;
-		}
-		//null values are inserted in the DBGetPreferences operation to signal that a previously
-		// stored value is now invalid for some reason.
-		// so notify the player here of that.
-		for(var entry : prefMap.entrySet()) {
-			Preference<?> pref = entry.getKey();
-			if(entry.getValue() == null) {
-				((Map.Entry<Preference<?>, Object> ) entry).setValue(pref.getDefaultValue());
-				Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
-					player.sendMessage(Component.text(
-							"Your previous set value for preference " + pref.getName() +
-									" is now invalid and has been reset to default: " + pref.getDefaultValue().toString() +
-									". This may have happened because the preference itself was changed or perhaps due to " +
-									"some extraneous shenanigans and perchance, a sizeable portion of tomfoolery.",
-							TextColors.ERROR_RED));}
-				);
-			}
-		}
-		playerInfo.setPreferenceValues(prefMap);
-
-		String defaultKit = loadedData.defaultKit();
-		if(defaultKit == null)
-			defaultKit = DBGetDefaultKit.DEFAULT_KIT;
-		playerInfo.defaultKit = defaultKit;
-
-		Main.addPlayerInfo(player, playerInfo);
-		Main.playerIdLookup.put(player.getEntityId(), player);
-		FakeHitboxManager.addFakeHitbox(player);
-		Main.getGame().loggingInPlayer(player, playerInfo);
+		LoginHandler.handlePlayerLogin(event);
 	}
 
 	@EventHandler

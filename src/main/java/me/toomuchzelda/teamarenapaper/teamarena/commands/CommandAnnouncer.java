@@ -38,6 +38,8 @@ public class CommandAnnouncer extends CustomCommand
 		.append(Component.newline())
 		.append(Component.text("John Carroll's voice packs (FREE): "))
 		.append(Component.text("https://johncarroll.itch.io/").clickEvent(ClickEvent.clickEvent(ClickEvent.Action.OPEN_URL, "https://johncarroll.itch.io/")))
+		.append(Component.newline())
+		.append(Component.text("Kerri Duncan on fiverr (paid)"))
 		.build();
 
 	public CommandAnnouncer() {

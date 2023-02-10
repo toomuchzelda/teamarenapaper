@@ -42,6 +42,8 @@ public class CommandCredits extends CustomCommand
 				.append(T_0_E_D).append(Component.text(" - Game and Kit design and play testing."))
 				.append(Component.newline())
 				.append(theRest).append(Component.text(" - Testing, feedback, and all other kinds of help."))
+				.append(Component.newline())
+				.append(Component.text("And all the map creators who lent us their maps.", NamedTextColor.GOLD))
 				.append(Component.newline()).append(Component.newline())
 				.append(Component.text("The source code for Team Arena can be found here!: ", NamedTextColor.GOLD))
 				.append(Component.text("https://github.com/toomuchzelda/teamarenapaper")
