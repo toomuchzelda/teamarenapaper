@@ -66,8 +66,9 @@ public class StatusBarManager
 			super(player, null, viewer -> Main.getGame().canSeeStatusBar(player, viewer), PREGAME_TEXT, false);
 
 			this.currentText = PREGAME_TEXT;
-			this.preGameRgb =
-				Main.getPlayerInfo(player).permissionLevel.compareTo(CustomCommand.PermissionLevel.MOD) >= 0 ||
+			PlayerInfo pinfo = Main.getPlayerInfo(player);
+			// If they're mod or higher and have their tag displayed, else random 5% chance.
+			this.preGameRgb = (pinfo.displayPermissionLevel && pinfo.permissionLevel.compareTo(CustomCommand.PermissionLevel.MOD) >= 0) ||
 				MathUtils.random.nextDouble() >= 0.95d;
 		}
 

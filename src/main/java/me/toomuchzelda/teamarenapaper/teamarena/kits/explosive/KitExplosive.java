@@ -171,12 +171,18 @@ public class KitExplosive extends Kit
 			}
 		}
 
-		//Prevent RPG arrow from hitting players
 		@Override
 		public void onAttemptedAttack(DamageEvent event) {
-			if (event.getDamageType().is(DamageType.PROJECTILE)) {
+			if (event.getDamageType().is(DamageType.PROJECTILE)) { //Prevent RPG arrow from hitting players
 				event.setCancelled(true);
 				event.getAttacker().remove();
+			}
+			else if (event.getDamageType().is(DamageType.EXPLOSIVE_RPG)) { // slightly boost RPG upwards kb
+				if (event.hasKnockback()) {
+					Vector kb = event.getKnockback();
+					kb.setY(Math.max(kb.getY() + 0.1d, 0.2d));
+					event.setKnockback(kb);
+				}
 			}
 		}
 
@@ -308,8 +314,8 @@ public class KitExplosive extends Kit
 
 		public void rpgBlast(Location explodeLoc, Player owner) {
 			//self damage multiplier does not matter here, is overridden in attempted damage
-			RPGExplosion explosion = new RPGExplosion(explodeLoc, RPG_BLAST_RADIUS, 1.3d,
-					24, 1, 1.7, DamageType.EXPLOSIVE_RPG, owner, 1.2d, 1, SELF_RPG);
+			RPGExplosion explosion = new RPGExplosion(explodeLoc, RPG_BLAST_RADIUS, 1.4d,
+					25, 2, 1.7, DamageType.EXPLOSIVE_RPG, owner, 1.2d, 1, SELF_RPG);
 			explosion.explode();
 		}
 
