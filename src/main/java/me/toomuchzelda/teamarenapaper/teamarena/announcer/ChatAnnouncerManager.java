@@ -21,7 +21,7 @@ import java.util.List;
  */
 public class ChatAnnouncerManager
 {
-	private static final int ANNOUNCE_COOLDOWN = 1;//4 * 20; // once every 4 seconds
+	private static final int ANNOUNCE_COOLDOWN = 4 * 20; // once every 4 seconds
 	private static final List<String> queuedMessages = Collections.synchronizedList(new LinkedList<>());
 
 	private static int lastAnnounceTime = 0;

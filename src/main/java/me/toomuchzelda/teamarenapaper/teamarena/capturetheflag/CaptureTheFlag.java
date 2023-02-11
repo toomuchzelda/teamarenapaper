@@ -724,7 +724,7 @@ public class CaptureTheFlag extends TeamArena
 	//passing the flag from one player to another
 	@Override
 	public void onInteractEntity(PlayerInteractEntityEvent event) {
-
+		super.onInteractEntity(event);
 		if(event.getRightClicked() instanceof Player receiver) {
 			ItemStack usedItem = event.getPlayer().getEquipment().getItem(event.getHand());
 			Set<Flag> flagsHeld = flagHolders.get(event.getPlayer());

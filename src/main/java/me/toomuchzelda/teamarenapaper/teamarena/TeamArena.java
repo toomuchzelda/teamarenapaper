@@ -931,7 +931,11 @@ public abstract class TeamArena
 		}
 	}
 
-	public void onInteractEntity(PlayerInteractEntityEvent event) {}
+	public void onInteractEntity(PlayerInteractEntityEvent event) {
+		if (isDead(event.getPlayer())) { // Prevent spectators from using entities like boats.
+			event.setCancelled(true);
+		}
+	}
 
 	public void onPlaceBlock(BlockPlaceEvent event) {}
 

@@ -440,6 +440,7 @@ public class SearchAndDestroy extends TeamArena
 
 	@Override
 	public void onInteractEntity(PlayerInteractEntityEvent event) {
+		super.onInteractEntity(event);
 		Player clicker = event.getPlayer();
 		//get the item they used and check if it's a fuse
 		ItemStack item = clicker.getEquipment().getItem(event.getHand());
@@ -462,7 +463,6 @@ public class SearchAndDestroy extends TeamArena
 					}
 				}
 			}
-
 		}
 	}
 
