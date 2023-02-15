@@ -215,7 +215,7 @@ public class FallingCrate {
 
 		@Override
 		public void move(Location location, double xOffset, double yOffset, double zOffset) {
-			entity.move(location.clone().add(xOffset, yOffset, zOffset));
+			entity.move(location.clone().add(offset).add(xOffset, yOffset, zOffset));
 		}
 	}
 
@@ -237,7 +237,7 @@ public class FallingCrate {
 			if (leashKnot != null) {
 				leashKnot.respawn();
 				if (leashPacket != null) {
-					PlayerUtils.sendPacket(viewers(), mountPacket);
+					PlayerUtils.sendPacket(viewers(), leashPacket);
 				}
 			}
 		}
