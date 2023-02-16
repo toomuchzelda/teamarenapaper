@@ -91,6 +91,18 @@ public class PlayerInfo
 		this.metadataViewer = new MetadataViewer(player);
 	}
 
+	/**
+	 * Gets the player's "effective" kit, which is calculated as such:
+	 * <ul>
+	 *     <li>If the player has an active kit, return the active kit.</li>
+	 *     <li>Otherwise, return the player's selected kit.</li>
+	 * </ul>
+	 * @return
+	 */
+	public Kit getEffectiveKit() {
+		return activeKit != null ? activeKit : kit;
+	}
+
 	public void setPreferenceValues(Map<Preference<?>, ?> values) {
 		preferences = new HashMap<>(values);
 	}
@@ -101,7 +113,10 @@ public class PlayerInfo
 	}
 
 	public <T> void resetPreference(Preference<T> preference) {
-		preferences.remove(preference);
+		// HOTFIX: DBSetPreferences doesn't handle reset preferences properly
+		//         set the preference to the default value instead
+		// preferences.remove(preference);
+		preferences.put(preference, preference.getDefaultValue());
 	}
 
 	public <T> void setPreference(Preference<T> preference, T value) {
