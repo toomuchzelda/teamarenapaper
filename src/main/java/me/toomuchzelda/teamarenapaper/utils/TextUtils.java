@@ -63,6 +63,17 @@ public class TextUtils {
 			.hoverEvent(HoverEvent.showText(Component.text(timeString, NamedTextColor.YELLOW)));
 	}
 
+	public static boolean containsIgnoreCase(String needle, String haystack) {
+		int needleLength = needle.length();
+		if (needleLength == 0)
+			return true;
+
+		for (int i = 0, max = haystack.length() - needleLength; i <= max; i++)
+			if (haystack.regionMatches(true, i, needle, 0, needleLength))
+				return true;
+		return false;
+	}
+
 	public static final Style PLAIN_STYLE = Style.style(builder -> {
 		builder.color(NamedTextColor.WHITE);
 		for (var decoration : TextDecoration.values()) {

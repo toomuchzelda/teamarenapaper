@@ -1,7 +1,9 @@
 package me.toomuchzelda.teamarenapaper.teamarena.preferences;
 
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.Style;
 import org.bukkit.Keyed;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -14,6 +16,7 @@ import java.lang.reflect.Method;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 public class SimplePreference<T> extends Preference<T> {
 	public final Class<T> clazz;
@@ -27,6 +30,8 @@ public class SimplePreference<T> extends Preference<T> {
 
 	private Component displayName;
 	private ItemStack icon = new ItemStack(Material.PAPER);
+	private Map<T, List<Component>> valueDescriptions = Map.of();
+	private Function<String, T> migrator;
 
 	public SimplePreference(String name, String description, Class<T> clazz,
 							@NotNull T defaultValue,
@@ -52,15 +57,15 @@ public class SimplePreference<T> extends Preference<T> {
 				List.of(true, false), Object::toString, Boolean::valueOf);
 	}
 
-	public static <T extends Enum<T>> SimplePreference<T> of(String name, String description, Class<T> clazz, T defaultValue) {
-		return of(name, description, clazz, defaultValue, t -> true);
+	public static <T extends Enum<T>> SimplePreference<T> ofEnum(String name, String description, Class<T> clazz, T defaultValue) {
+		return ofEnum(name, description, clazz, defaultValue, t -> true);
 	}
 
 	/**
 	 * @param predicate Predicate to indicate whether the enum value is allowed
 	 */
-	public static <T extends Enum<T>> SimplePreference<T> of(String name, String description, Class<T> clazz, T defaultValue,
-															 Predicate<T> predicate) {
+	public static <T extends Enum<T>> SimplePreference<T> ofEnum(String name, String description, Class<T> clazz, T defaultValue,
+																 Predicate<T> predicate) {
 		return new SimplePreference<>(name, description, clazz, defaultValue,
 				Arrays.stream(clazz.getEnumConstants()).filter(predicate).toList(),
 				value -> value.name().toLowerCase(Locale.ENGLISH),
@@ -72,11 +77,11 @@ public class SimplePreference<T> extends Preference<T> {
 				});
 	}
 
-	public static <T extends Number> SimplePreference<T> of(String name, String description, Class<T> clazz, T defaultValue) {
-		return of(name, description, clazz, defaultValue, t -> true);
+	public static <T extends Number> SimplePreference<T> ofNumber(String name, String description, Class<T> clazz, T defaultValue) {
+		return ofNumber(name, description, clazz, defaultValue, t -> true);
 	}
 
-	public static SimplePreference<NamespacedKey> of(String name, String description, NamespacedKey defaultValue, Collection<? extends NamespacedKey> values, Predicate<NamespacedKey> predicate) {
+	public static SimplePreference<NamespacedKey> ofKey(String name, String description, NamespacedKey defaultValue, Collection<? extends NamespacedKey> values, Predicate<NamespacedKey> predicate) {
 		return new SimplePreference<>(name, description, NamespacedKey.class,
 			defaultValue, values, NamespacedKey::toString, input -> {
 			NamespacedKey result = NamespacedKey.fromString(input);
@@ -106,7 +111,7 @@ public class SimplePreference<T> extends Preference<T> {
 	/**
 	 * @param predicate Predicate to indicate whether the numerical value is allowed
 	 */
-	public static <T extends Number> SimplePreference<T> of(String name, String description, Class<T> clazz, T defaultValue, Predicate<T> predicate) {
+	public static <T extends Number> SimplePreference<T> ofNumber(String name, String description, Class<T> clazz, T defaultValue, Predicate<T> predicate) {
 		Method valueOfMethod;
 		try {
 			valueOfMethod = clazz.getMethod("valueOf", String.class);
@@ -151,7 +156,17 @@ public class SimplePreference<T> extends Preference<T> {
 
 	@Override
 	public T deserialize(String arg) throws IllegalArgumentException {
-		return fromStringFunction.apply(arg);
+		try {
+			return fromStringFunction.apply(arg);
+		} catch (IllegalArgumentException ex) {
+			if (migrator != null) {
+				T migrated = migrator.apply(arg);
+				if (migrated != null) {
+					return migrated;
+				}
+			}
+			throw ex; // rethrow
+		}
 	}
 
 	@Override
@@ -181,6 +196,34 @@ public class SimplePreference<T> extends Preference<T> {
 
 	public SimplePreference<T> setIcon(ItemStack icon) {
 		this.icon = icon.clone();
+		return this;
+	}
+
+	@Override
+	public @Nullable List<Component> getValueDescription(@NotNull T value) {
+		return valueDescriptions.get(value);
+	}
+
+	public SimplePreference<T> setValueDescriptions(@NotNull Map<T, List<Component>> descriptions) {
+		valueDescriptions = Map.copyOf(descriptions);
+		return this;
+	}
+
+	// thank you Java generics, very cool
+	public SimplePreference<T> setValueDescriptionStrings(@NotNull Map<T, String> descriptions) {
+		return setValueDescriptions(descriptions.entrySet().stream()
+			.collect(Collectors.toUnmodifiableMap(Map.Entry::getKey,
+				entry -> TextUtils.wrapString(entry.getValue(), Style.style(NamedTextColor.GRAY), TextUtils.DEFAULT_WIDTH, true)
+			))
+		);
+	}
+
+	/**
+	 * Sets how invalid values should be migrated.
+	 * @param migrator The migration function. Return null to continue propagation of IllegalArgumentException.
+	 */
+	public SimplePreference<T> setMigrationFunction(@NotNull Function<String, @Nullable T> migrator) {
+		this.migrator = migrator;
 		return this;
 	}
 }

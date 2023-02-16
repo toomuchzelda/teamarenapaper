@@ -58,6 +58,16 @@ public abstract class Preference<T> {
 	@Nullable
 	public abstract Collection<? extends T> getValues();
 
+	/**
+	 * Returns an optional description of the value
+	 * @param value The value to describe
+	 * @return The description, split into lines
+	 */
+	@Nullable
+	public List<Component> getValueDescription(@NotNull T value) {
+		return null;
+	}
+
 	@Nullable
 	public abstract List<String> getTabSuggestions();
 

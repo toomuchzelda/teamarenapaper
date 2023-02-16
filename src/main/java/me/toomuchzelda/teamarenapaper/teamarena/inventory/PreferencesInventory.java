@@ -23,8 +23,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-import static net.kyori.adventure.text.Component.text;
-import static net.kyori.adventure.text.Component.textOfChildren;
+import static net.kyori.adventure.text.Component.*;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
 
 public class PreferencesInventory implements InventoryProvider {
@@ -111,19 +110,15 @@ public class PreferencesInventory implements InventoryProvider {
 	}
 
 	private static final Component CURRENT_VALUE = text("Currently set to: ", GRAY);
+//	private static final Component SEPARATOR = text(" - ", GRAY);
 	private static final Component LCLICK_EDIT = textOfChildren(
 		text("Left click", TextUtils.LEFT_CLICK_TO), text(" to ", GRAY), text("edit", GOLD)
-	);
-	private static final Component LCLICK_SET_TRUE = textOfChildren(
-		text("Left click", TextUtils.LEFT_CLICK_TO), text(" to ", GRAY), text("enable", GREEN)
-	);
-	private static final Component LCLICK_SET_FALSE = textOfChildren(
-		text("Left click", TextUtils.LEFT_CLICK_TO), text(" to ", GRAY), text("disable", RED)
 	);
 	private static final Component RCLICK_RESET = textOfChildren(
 		text("Right click", TextUtils.RIGHT_CLICK_TO), text(" to ", GRAY), text("reset", RED)
 	);
-	private static <T> ClickableItem prefToItem(InventoryProvider parent, @Nullable InventoryAccessor inventory, Preference<T> preference, T current) {
+	private static <T> ClickableItem prefToItem(@Nullable InventoryProvider parent, @Nullable InventoryAccessor inventory,
+												Preference<T> preference, T current) {
 		var builder = ItemBuilder.from(preference.getIcon().clone())
 			.displayName(preference.getDisplayName())
 			.lore(TextUtils.wrapString(preference.getDescription(), Style.style(YELLOW),
@@ -133,13 +128,14 @@ public class PreferencesInventory implements InventoryProvider {
 		if (inventory == null) {
 			return builder.toEmptyClickableItem();
 		}
+		if (preference instanceof SimplePreference<T> simplePreference && simplePreference.clazz == Boolean.class) {
+			// noinspection unchecked
+			return boolPrefToItem(parent, inventory, (Preference<Boolean>) preference, (Boolean) current, builder);
+		}
 		String currentValue = preference.serialize(current);
 		String defaultValue = preference.serialize(preference.getDefaultValue());
-		boolean isToggle = preference instanceof SimplePreference<T> simplePreference && simplePreference.clazz == Boolean.class;
 		boolean isValueTooLong = TextUtils.measureWidth(currentValue) >= 100;
-		Component currentValueComponent = isToggle ?
-			text(currentValue, ((Boolean) current) ? GREEN : RED) :
-			text(currentValue, YELLOW);
+		Component currentValueComponent = text(currentValue, YELLOW);
 
 		// add extra lore
 		List<Component> lore = new ArrayList<>();
@@ -150,12 +146,7 @@ public class PreferencesInventory implements InventoryProvider {
 		} else {
 			lore.add(textOfChildren(CURRENT_VALUE, currentValueComponent));
 		}
-		if (isToggle) {
-			// left click to en/disable
-			lore.add(((Boolean) current) ? LCLICK_SET_FALSE : LCLICK_SET_TRUE);
-		} else {
-			lore.add(LCLICK_EDIT);
-		}
+		lore.add(LCLICK_EDIT);
 		lore.add(RCLICK_RESET);
 		lore.add(textOfChildren(text("  (to "), text(defaultValue, Style.style(TextDecoration.UNDERLINED)), text(")")).color(GRAY));
 		lore.add(text("ID: " + preference.getName(), DARK_GRAY));
@@ -167,11 +158,6 @@ public class PreferencesInventory implements InventoryProvider {
 			if (e.isRightClick()) {
 				resetPreference(player, preference);
 				inventory.invalidate();
-			} else if (isToggle) {
-				@SuppressWarnings("unchecked")
-				Preference<Boolean> booleanPreference = (Preference<Boolean>) preference;
-				togglePreference(player, booleanPreference);
-				inventory.invalidate();
 			} else if (preference.getValues() != null) {
 				openEditGUI(player, preference, parent);
 			} else {
@@ -180,7 +166,61 @@ public class PreferencesInventory implements InventoryProvider {
 		});
 	}
 
-	private static <T> void openEditGUI(Player player, Preference<T> preference, InventoryProvider parent) {
+
+	private static final Component LCLICK_SET_TRUE = textOfChildren(
+		text("Left click", TextUtils.LEFT_CLICK_TO), text(" to ", GRAY), text("enable", GREEN)
+	);
+	private static final Component LCLICK_SET_FALSE = textOfChildren(
+		text("Left click", TextUtils.LEFT_CLICK_TO), text(" to ", GRAY), text("disable", RED)
+	);
+	private static final Component TRUE = text("true");
+	private static final Component FALSE = text("false");
+	private static final Component IS_CURRENT = text(" (current)", GRAY);
+	private static final Component IS_DEFAULT = text(" (default)", GRAY);
+	private static final Component IS_CURRENT_AND_DEFAULT = text(" (current & default)", GRAY);
+	private static final Component SELECTED_ARROW = text("-> ");
+	private static final Component NOT_SELECTED = text("   ");
+
+	private static Component buildComponentFromBool(boolean value, boolean isCurrent, boolean isDefault) {
+		return textOfChildren(
+			isCurrent ? SELECTED_ARROW : NOT_SELECTED,
+			value ? TRUE : FALSE,
+			isCurrent ?
+				(isDefault ? IS_CURRENT_AND_DEFAULT : IS_CURRENT) :
+				(isDefault ? IS_DEFAULT : Component.empty())
+		).color(isCurrent ? (value ? GREEN : RED) : WHITE);
+	}
+
+	private static ClickableItem boolPrefToItem(@Nullable InventoryProvider parent, @NotNull InventoryAccessor inventory,
+												Preference<Boolean> preference, boolean current,
+												ItemBuilder builder) {
+		boolean defaultValue = preference.getDefaultValue();
+
+		List<Component> lore = new ArrayList<>();
+		lore.add(Component.empty());
+		// descriptions won't be shown because it is too cumbersome
+		lore.add(buildComponentFromBool(true, current, defaultValue));
+		lore.add(buildComponentFromBool(false, !current, !defaultValue));
+
+
+		lore.add(Component.empty());
+		lore.add(current ? LCLICK_SET_FALSE : LCLICK_SET_TRUE);
+		lore.add(RCLICK_RESET);
+		lore.add(text("ID: " + preference.getName(), DARK_GRAY));
+
+		builder.addLore(lore);
+		return builder.toClickableItem(e -> {
+			Player player = (Player) e.getWhoClicked();
+			if (e.isRightClick()) {
+				resetPreference(player, preference);
+			} else {
+				togglePreference(player, preference);
+			}
+			inventory.invalidate();
+		});
+	}
+
+	private static <T> void openEditGUI(Player player, Preference<T> preference, @Nullable InventoryProvider parent) {
 		Collection<? extends T> values = preference.getValues();
 		if (values != null) {
 			var inventory = new PreferenceEditInventory<>(preference, List.copyOf(values), parent);
@@ -188,7 +228,7 @@ public class PreferencesInventory implements InventoryProvider {
 		}
 	}
 
-	private static <T> void doEdit(Player player, Preference<T> preference, String currentValue, InventoryProvider parent) {
+	private static <T> void doEdit(Player player, Preference<T> preference, String currentValue, @Nullable InventoryProvider parent) {
 		Inventories.openSign(player, Component.text("Enter new value"), currentValue)
 			.thenAccept(newStr -> Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
 				try {
@@ -226,6 +266,7 @@ public class PreferencesInventory implements InventoryProvider {
 		}
 
 		Pagination pagination = new Pagination();
+		String query;
 
 		@Override
 		public void init(Player player, InventoryAccessor inventory) {
@@ -253,7 +294,32 @@ public class PreferencesInventory implements InventoryProvider {
 				.toClickableItem(e -> doEdit(player, preference, preference.serialize(currentValue), parent))
 			);
 			inventory.set(4, prefToItem(null, null, preference, currentValue));
-			pagination.showPageItems(inventory, values, option -> prefOptionToItem(inventory, option, currentValue.equals(option)),
+			inventory.set(8, ItemBuilder.of(Material.SPYGLASS)
+				.displayName(text("Search", GOLD))
+				.lore(query != null ?
+					List.of(
+						textOfChildren(text("Current query: ", YELLOW), text(query, WHITE)),
+						text("Left click to change query", TextUtils.LEFT_CLICK_TO),
+						text("Right click to clear query", TextUtils.RIGHT_CLICK_TO)) :
+					List.of(text("Left click to enter a query", TextUtils.LEFT_CLICK_TO)))
+				.toClickableItem(e -> {
+					if (e.isRightClick()) {
+						query = null;
+						inventory.invalidate();
+					} else {
+						Player p = (Player) e.getWhoClicked();
+						Inventories.openSign(p, text("Enter a query"), query != null ? query : "")
+							.thenAccept(input -> Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
+								query = input;
+								Inventories.openInventory(p, this);
+							}));
+					}
+				}));
+			// not very efficient, oh well
+			var toDisplay = query != null ?
+				values.stream().filter(value -> TextUtils.containsIgnoreCase(query, preference.serialize(value))).toList() :
+				values;
+			pagination.showPageItems(inventory, toDisplay, option -> prefOptionToItem(inventory, option, currentValue.equals(option)),
 				9, 45, true);
 			if (pagination.getMaxPage() > 1) {
 				inventory.set(45, pagination.getPreviousPageItem(inventory));
@@ -270,10 +336,18 @@ public class PreferencesInventory implements InventoryProvider {
 
 		private ClickableItem prefOptionToItem(InventoryAccessor inventory, T option, boolean selected) {
 			String name = preference.serialize(option);
+			List<Component> description = preference.getValueDescription(option);
 			var builder = ItemBuilder.of(selected ? Material.MAP : Material.PAPER)
 				.displayName(text(name, YELLOW));
-			if (selected)
-				builder.lore(text("Currently selected!", NamedTextColor.GREEN));
+			if (description != null) {
+				var lore = new ArrayList<Component>(description.size() + (selected ? 2 : 0));
+				lore.addAll(description);
+				if (selected) {
+					lore.add(empty());
+					lore.add(text("Currently selected!", NamedTextColor.GREEN));
+				}
+				builder.lore(lore);
+			}
 			return builder.toClickableItem(e -> {
 				Player player = (Player) e.getWhoClicked();
 				changePreference(player, preference, option);

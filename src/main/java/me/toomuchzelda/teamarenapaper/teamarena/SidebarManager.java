@@ -145,6 +145,5 @@ public class SidebarManager {
 		MODERN,
 		RGB_MANIAC,
 		LEGACY,
-		LEGACY_RGB_MANIAC
 	}
 }

@@ -326,7 +326,7 @@ public class KitSpy extends Kit
 
 		@Override
 		public @NotNull Component getTitle(Player player) {
-			return Component.text("Spy Inventory");
+			return Component.text("Select a spy disguise");
 		}
 
 		@Override
