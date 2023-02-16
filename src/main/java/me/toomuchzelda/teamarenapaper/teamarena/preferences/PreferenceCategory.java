@@ -12,9 +12,9 @@ public enum PreferenceCategory {
 		.displayName(text("Announcer", RED))
 		.lore(text("Announcer-related preferences", GRAY))
 		.build()),
-	CLIENTSIDE("Clientside", ItemBuilder.of(Material.GRASS_BLOCK)
-		.displayName(text("Clientside Effects", YELLOW))
-		.lore(text("Clientside effects that don't affect gameplay", GRAY))
+	CLIENTSIDE("Visual Effects", ItemBuilder.of(Material.SPYGLASS)
+		.displayName(text("Visual Effects", YELLOW))
+		.lore(text("Visual effects that don't affect gameplay", GRAY))
 		.build()),
 	GAMEPLAY("Gameplay", ItemBuilder.of(Material.COMMAND_BLOCK)
 		.displayName(text("Gameplay", GREEN))
