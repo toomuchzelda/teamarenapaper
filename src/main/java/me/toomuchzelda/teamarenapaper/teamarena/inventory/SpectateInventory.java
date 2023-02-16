@@ -33,8 +33,7 @@ public class SpectateInventory implements InventoryProvider {
 
 	public SpectateInventory(@Nullable TeamArenaTeam teamFilter, boolean sortByKits) {
 		this.teamFilter = teamFilter;
-		this.teamFilterTab = new TabBar<>(teamFilter)
-			.setClickSound(Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.BLOCKS, 0.5f, 1);
+		this.teamFilterTab = new TabBar<>(teamFilter);
 
 		if (sortByKits) {
 			this.sortByButton.setState(SortOption.BY_KIT);

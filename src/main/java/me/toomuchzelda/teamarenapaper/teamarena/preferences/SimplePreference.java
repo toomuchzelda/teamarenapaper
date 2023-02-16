@@ -32,6 +32,7 @@ public class SimplePreference<T> extends Preference<T> {
 	private ItemStack icon = new ItemStack(Material.PAPER);
 	private Map<T, List<Component>> valueDescriptions = Map.of();
 	private Function<String, T> migrator;
+	private PreferenceCategory category;
 
 	public SimplePreference(String name, String description, Class<T> clazz,
 							@NotNull T defaultValue,
@@ -83,20 +84,26 @@ public class SimplePreference<T> extends Preference<T> {
 
 	public static SimplePreference<NamespacedKey> ofKey(String name, String description, NamespacedKey defaultValue, Collection<? extends NamespacedKey> values, Predicate<NamespacedKey> predicate) {
 		return new SimplePreference<>(name, description, NamespacedKey.class,
-			defaultValue, values, NamespacedKey::toString, input -> {
-			NamespacedKey result = NamespacedKey.fromString(input);
-			if (result == null)
-				throw new IllegalArgumentException("Invalid resource location " + input);
-			if (!predicate.test(result))
-				throw new IllegalArgumentException("Illegal resource location " + result);
-			return result;
-		});
+			defaultValue, values,
+			key -> key.getNamespace().equals(NamespacedKey.MINECRAFT) ? key.getKey() : key.toString(),
+			input -> {
+				NamespacedKey result = NamespacedKey.fromString(input);
+				if (result == null)
+					throw new IllegalArgumentException("Invalid resource location " + input);
+				if (!predicate.test(result))
+					throw new IllegalArgumentException("Illegal resource location " + result);
+				return result;
+			});
 	}
 
 	public static <T extends Keyed> SimplePreference<T> ofKeyed(String name, String description, Class<T> clazz,
 																T defaultValue, @Nullable Collection<? extends T> values,
 																Function<NamespacedKey, T> registry) {
-		return new SimplePreference<>(name, description, clazz, defaultValue, values, value -> value.getKey().toString(),
+		return new SimplePreference<>(name, description, clazz, defaultValue, values,
+			value -> {
+				NamespacedKey key = value.getKey();
+				return key.getNamespace().equals(NamespacedKey.MINECRAFT) ? key.getKey() : key.toString();
+			},
 			input -> {
 				NamespacedKey key = NamespacedKey.fromString(input);
 				if (key == null)
@@ -224,6 +231,16 @@ public class SimplePreference<T> extends Preference<T> {
 	 */
 	public SimplePreference<T> setMigrationFunction(@NotNull Function<String, @Nullable T> migrator) {
 		this.migrator = migrator;
+		return this;
+	}
+
+	@Override
+	public @Nullable PreferenceCategory getCategory() {
+		return category;
+	}
+
+	public SimplePreference<T> setCategory(@Nullable PreferenceCategory category) {
+		this.category = category;
 		return this;
 	}
 }

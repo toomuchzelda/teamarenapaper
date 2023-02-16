@@ -68,6 +68,16 @@ public abstract class Preference<T> {
 		return null;
 	}
 
+	/**
+	 * Returns the (optional) category of the preference.
+	 * UIs may group preferences with the same category together.
+	 * @return The category of the preference
+	 */
+	@Nullable
+	public PreferenceCategory getCategory() {
+		return null;
+	}
+
 	@Nullable
 	public abstract List<String> getTabSuggestions();
 

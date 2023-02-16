@@ -5,13 +5,13 @@ import me.toomuchzelda.teamarenapaper.inventory.*;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandPreference;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
+import me.toomuchzelda.teamarenapaper.teamarena.preferences.PreferenceCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.SimplePreference;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
-import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -22,11 +22,21 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static net.kyori.adventure.text.Component.*;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
 
 public class PreferencesInventory implements InventoryProvider {
+	private final EnumMap<PreferenceCategory, List<Preference<?>>> preferencesByCategory;
+	public PreferencesInventory() {
+		preferencesByCategory = Preference.PREFERENCES.values().stream()
+			.filter(preference -> preference.getCategory() != null)
+			.collect(Collectors.groupingBy(Preference::getCategory,
+				() -> new EnumMap<>(PreferenceCategory.class),
+				Collectors.toUnmodifiableList()));
+	}
+
 	@Override
 	public @NotNull Component getTitle(Player player) {
 		return text("Preferences", NamedTextColor.BLACK);
@@ -44,21 +54,26 @@ public class PreferencesInventory implements InventoryProvider {
 
 	private static final ItemStack BORDER = ItemBuilder.of(Material.BLACK_STAINED_GLASS_PANE).displayName(Component.empty()).build();
 
+	TabBar<PreferenceCategory> categoryTab = new TabBar<>(null);
 	Pagination pagination = new Pagination();
 
 	@Override
 	public void init(Player player, InventoryAccessor inventory) {
-		for (int i = 0; i < 9; i++) {
-			inventory.set(i, BORDER);
-			inventory.set(i + 5 * 9, BORDER);
-		}
+		categoryTab.showTabs(inventory, Arrays.asList(PreferenceCategory.values()),
+			TabBar.highlightWhenSelected(PreferenceCategory::display), 1, 9, false);
 
-		inventory.set(4, PREFERENCE);
+		PreferenceCategory categoryFilter = categoryTab.getCurrentTab();
+
+		inventory.set(0, ItemUtils.highlightIfSelected(PREFERENCE, categoryFilter == null), e -> {
+			if (categoryTab.goToTab(null, inventory))
+				categoryTab.playSound(e);
+		});
 
 		// TODO add option to change sorting on both inventories
 
 		PlayerInfo playerInfo = Main.getPlayerInfo(player);
-		var temp = Preference.PREFERENCES.values().toArray(new Preference<?>[0]);
+		var filteredPreferences = categoryFilter != null ? preferencesByCategory.get(categoryFilter) : Preference.PREFERENCES.values();
+		var temp = filteredPreferences.toArray(new Preference<?>[0]);
 		Arrays.sort(temp, Comparator.comparing(Preference::getName));
 		List<Preference<?>> preferences = List.of(temp);
 		pagination.showPageItems(inventory, preferences, pref -> prefToItem(this, inventory, pref, playerInfo), 9, 45, true);
@@ -109,8 +124,18 @@ public class PreferencesInventory implements InventoryProvider {
 		return prefToItem(parent, inventory, preference, playerInfo.getPreference(preference));
 	}
 
-	private static final Component CURRENT_VALUE = text("Currently set to: ", GRAY);
-//	private static final Component SEPARATOR = text(" - ", GRAY);
+	private static final Component IS_CURRENT = text(" (current)", GRAY);
+	private static final Component IS_DEFAULT = text(" (default)", GRAY);
+	private static final Component IS_CURRENT_AND_DEFAULT = text(" (current & default)", GRAY);
+	private static final Component SELECTED_ARROW = text("▶ ");
+	private static final Component NOT_SELECTED = text("   ");
+	/** returns a status component based on whether an option is currently selected and/or is the default value */
+	private static Component buildStatus(boolean isCurrent, boolean isDefault) {
+		return isCurrent ?
+			(isDefault ? IS_CURRENT_AND_DEFAULT : IS_CURRENT) :
+			(isDefault ? IS_DEFAULT : Component.empty());
+	}
+
 	private static final Component LCLICK_EDIT = textOfChildren(
 		text("Left click", TextUtils.LEFT_CLICK_TO), text(" to ", GRAY), text("edit", GOLD)
 	);
@@ -133,22 +158,25 @@ public class PreferencesInventory implements InventoryProvider {
 			return boolPrefToItem(parent, inventory, (Preference<Boolean>) preference, (Boolean) current, builder);
 		}
 		String currentValue = preference.serialize(current);
-		String defaultValue = preference.serialize(preference.getDefaultValue());
-		boolean isValueTooLong = TextUtils.measureWidth(currentValue) >= 100;
-		Component currentValueComponent = text(currentValue, YELLOW);
+		T defaultValue = preference.getDefaultValue();
 
 		// add extra lore
 		List<Component> lore = new ArrayList<>();
 		lore.add(Component.empty());
-		if (isValueTooLong) {
-			lore.add(CURRENT_VALUE);
-			lore.add(textOfChildren(text("  "), currentValueComponent));
-		} else {
-			lore.add(textOfChildren(CURRENT_VALUE, currentValueComponent));
+		boolean isDefault = Objects.equals(current, defaultValue);
+		lore.add(textOfChildren(
+			SELECTED_ARROW, text(currentValue, YELLOW), buildStatus(true, isDefault)
+		).color(YELLOW));
+		// show default value if not already selected
+		if (!isDefault) {
+			lore.add(textOfChildren(
+				NOT_SELECTED, text(preference.serialize(defaultValue)), buildStatus(false, true)
+			).color(WHITE));
 		}
+		lore.add(empty());
+
 		lore.add(LCLICK_EDIT);
 		lore.add(RCLICK_RESET);
-		lore.add(textOfChildren(text("  (to "), text(defaultValue, Style.style(TextDecoration.UNDERLINED)), text(")")).color(GRAY));
 		lore.add(text("ID: " + preference.getName(), DARK_GRAY));
 
 		builder.addLore(lore);
@@ -160,7 +188,7 @@ public class PreferencesInventory implements InventoryProvider {
 				inventory.invalidate();
 			} else if (preference.getValues() != null) {
 				openEditGUI(player, preference, parent);
-			} else {
+			} else { // open a sign
 				doEdit(player, preference, currentValue, parent);
 			}
 		});
@@ -175,19 +203,11 @@ public class PreferencesInventory implements InventoryProvider {
 	);
 	private static final Component TRUE = text("true");
 	private static final Component FALSE = text("false");
-	private static final Component IS_CURRENT = text(" (current)", GRAY);
-	private static final Component IS_DEFAULT = text(" (default)", GRAY);
-	private static final Component IS_CURRENT_AND_DEFAULT = text(" (current & default)", GRAY);
-	private static final Component SELECTED_ARROW = text("-> ");
-	private static final Component NOT_SELECTED = text("   ");
-
 	private static Component buildComponentFromBool(boolean value, boolean isCurrent, boolean isDefault) {
 		return textOfChildren(
 			isCurrent ? SELECTED_ARROW : NOT_SELECTED,
 			value ? TRUE : FALSE,
-			isCurrent ?
-				(isDefault ? IS_CURRENT_AND_DEFAULT : IS_CURRENT) :
-				(isDefault ? IS_DEFAULT : Component.empty())
+			buildStatus(isCurrent, isDefault)
 		).color(isCurrent ? (value ? GREEN : RED) : WHITE);
 	}
 
@@ -201,9 +221,8 @@ public class PreferencesInventory implements InventoryProvider {
 		// descriptions won't be shown because it is too cumbersome
 		lore.add(buildComponentFromBool(true, current, defaultValue));
 		lore.add(buildComponentFromBool(false, !current, !defaultValue));
-
-
 		lore.add(Component.empty());
+
 		lore.add(current ? LCLICK_SET_FALSE : LCLICK_SET_TRUE);
 		lore.add(RCLICK_RESET);
 		lore.add(text("ID: " + preference.getName(), DARK_GRAY));
@@ -229,7 +248,7 @@ public class PreferencesInventory implements InventoryProvider {
 	}
 
 	private static <T> void doEdit(Player player, Preference<T> preference, String currentValue, @Nullable InventoryProvider parent) {
-		Inventories.openSign(player, Component.text("Enter new value"), currentValue)
+		Inventories.openSign(player, text("Enter new value"), currentValue)
 			.thenAccept(newStr -> Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
 				try {
 					T newValue = preference.deserialize(newStr);
@@ -310,7 +329,7 @@ public class PreferencesInventory implements InventoryProvider {
 						Player p = (Player) e.getWhoClicked();
 						Inventories.openSign(p, text("Enter a query"), query != null ? query : "")
 							.thenAccept(input -> Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
-								query = input;
+								query = input.isBlank() ? null : input;
 								Inventories.openInventory(p, this);
 							}));
 					}

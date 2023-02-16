@@ -22,8 +22,6 @@ import java.util.UUID;
 import java.util.function.Predicate;
 
 public class ItemUtils {
-	// https://minecraft-heads.com/custom-heads/alphabet/56787-check-mark
-	private static final ItemStack CHECKMARK_HEAD = createPlayerHead("a79a5c95ee17abfef45c8dc224189964944d560f19a44f19f8a46aef3fee4756");
 	public static int _uniqueName = 0;
 
     /**
@@ -209,12 +207,14 @@ public class ItemUtils {
 		return selected ? highlight(stack) : stack;
 	}
 
+
+	// https://minecraft-heads.com/custom-heads/alphabet/56787-check-mark
+	private static final SkullMeta CHECKMARK_HEAD = (SkullMeta) createPlayerHead("a79a5c95ee17abfef45c8dc224189964944d560f19a44f19f8a46aef3fee4756").getItemMeta();
 	public static ItemStack highlight(ItemStack stack) {
 		// enchantments don't render on player heads, so replace the head with a checkmark
 		if (stack.getType() == Material.PLAYER_HEAD) {
-			SkullMeta meta = (SkullMeta) CHECKMARK_HEAD.getItemMeta();
 			return ItemBuilder.from(stack.clone())
-				.meta(SkullMeta.class, skullMeta -> skullMeta.setPlayerProfile(meta.getPlayerProfile()))
+				.meta(SkullMeta.class, skullMeta -> skullMeta.setPlayerProfile(CHECKMARK_HEAD.getPlayerProfile()))
 				.build();
 		}
 		return ItemBuilder.from(stack.clone())
