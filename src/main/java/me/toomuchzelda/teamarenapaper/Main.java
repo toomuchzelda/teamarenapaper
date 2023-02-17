@@ -92,6 +92,9 @@ public final class Main extends JavaPlugin
 			e.printStackTrace();
 		}
 
+		// unload cosmetics
+		CosmeticsManager.cleanUp();
+
 		// delete temporarily loaded map if any
 		if (teamArena != null) {
 			TeamArena temp = teamArena;

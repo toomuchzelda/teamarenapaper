@@ -11,7 +11,7 @@ public class CosmeticsManager {
 	private static final Map<CosmeticType, Map<NamespacedKey, CosmeticItem>> loadedCosmetics = new EnumMap<>(CosmeticType.class);
 
 	public static void reloadCosmetics() {
-		loadedCosmetics.clear();
+		cleanUp();
 		for (CosmeticType type : CosmeticType.values()) {
 			File root = new File(type.keyPrefix);
 			File[] namespaceFolders = root.listFiles();
@@ -21,6 +21,11 @@ public class CosmeticsManager {
 				loadCosmetic(type, folder.getName(), type.keyPrefix, folder);
 			}
 		}
+	}
+
+	public static void cleanUp() {
+		loadedCosmetics.values().forEach(map -> map.values().forEach(CosmeticItem::unload));
+		loadedCosmetics.clear();
 	}
 
 	private static void loadCosmetic(CosmeticType type, String namespace, String prefix, File directory) {

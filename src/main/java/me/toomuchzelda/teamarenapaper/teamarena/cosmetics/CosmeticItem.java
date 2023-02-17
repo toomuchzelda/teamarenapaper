@@ -45,6 +45,10 @@ public abstract class CosmeticItem {
 
 	public abstract CosmeticType getCosmeticType();
 
+	public void unload() {
+
+	}
+
 	@NotNull
 	public final Component getExtras() {
 		return Component.join(JoinConfiguration.newlines(), getExtraInfo());

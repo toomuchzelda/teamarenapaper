@@ -32,4 +32,7 @@ public enum CosmeticType {
 	public ItemStack getDisplay() {
 		return display.clone();
 	}
+
+	// bandaid
+	public static final String PREFERENCE_PREFIX = "__cosmetic_";
 }

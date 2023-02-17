@@ -47,6 +47,13 @@ public class Graffiti extends CosmeticItem {
 		return CosmeticType.GRAFFITI;
 	}
 
+	@Override
+	public void unload() {
+		if (cachedMapView != null) {
+			cachedMapView.getRenderers().forEach(cachedMapView::removeRenderer);
+		}
+	}
+
 	private static BufferedImage resizeImage(BufferedImage original) {
 		Image scaled = original.getScaledInstance(128, 128, Image.SCALE_FAST);
 		BufferedImage ret = new BufferedImage(128, 128, BufferedImage.TYPE_INT_RGB);

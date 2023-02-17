@@ -6,6 +6,9 @@ import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.sql.*;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
+import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticItem;
+import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
+import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
@@ -15,19 +18,19 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
 
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class LoginHandler
 {
-	private record DBLoadedData(Map<Preference<?>, ?> preferenceMap, String defaultKit, CustomCommand.PermissionLevel permissionLevel) {}
+	private record DBLoadedData(Map<Preference<?>, ?> preferenceMap, Map<CosmeticType, NamespacedKey> cosmeticMap,
+								String defaultKit, CustomCommand.PermissionLevel permissionLevel) {}
 
 	private static final ConcurrentHashMap<UUID, DBLoadedData> loadedDbDataCache = new ConcurrentHashMap<>();
 
@@ -81,7 +84,7 @@ public class LoginHandler
 		//load preferences from DB
 		// cancel and return if fail
 		DBGetPreferences getPreferences = new DBGetPreferences(uuid);
-		Map<Preference<?>, ?> retrievedPrefs;
+		DBGetPreferences.LoadedPreferences retrievedPrefs;
 		try {
 			retrievedPrefs = getPreferences.run();
 			if (retrievedPrefs == null) {
@@ -122,7 +125,7 @@ public class LoginHandler
 			permissionLevel = CustomCommand.PermissionLevel.ALL;
 		}
 
-		DBLoadedData data = new DBLoadedData(retrievedPrefs, defaultKit, permissionLevel);
+		DBLoadedData data = new DBLoadedData(retrievedPrefs.preferenceMap(), retrievedPrefs.cosmeticMap(), defaultKit, permissionLevel);
 		loadedDbDataCache.put(uuid, data);
 	}
 
@@ -136,6 +139,7 @@ public class LoginHandler
 		final Player player = event.getPlayer();
 		final UUID uuid = player.getUniqueId();
 		final PlayerInfo playerInfo;
+		List<Component> motd = new ArrayList<>();
 
 		// Remove before check if they are allowed to join to prevent memory leak
 		final DBLoadedData loadedData = loadedDbDataCache.remove(uuid);
@@ -150,9 +154,7 @@ public class LoginHandler
 		}
 
 		if (playerInfo.permissionLevel != CustomCommand.PermissionLevel.ALL) {
-			Bukkit.getScheduler().runTask(Main.getPlugin(),
-				() -> player.sendMessage(Component.text("Your rank has been updated to " + playerInfo.permissionLevel.name(),
-					NamedTextColor.GREEN)));
+			motd.add(Component.text("Your rank has been updated to " + playerInfo.permissionLevel.name(), NamedTextColor.GREEN));
 		}
 
 		Map<Preference<?>, ?> prefMap = loadedData.preferenceMap();
@@ -164,20 +166,27 @@ public class LoginHandler
 		// stored value is now invalid for some reason.
 		// so notify the player here of that.
 		for(var entry : prefMap.entrySet()) {
-			Preference<?> pref = entry.getKey();
-			if(entry.getValue() == null) {
-				((Map.Entry<Preference<?>, Object> ) entry).setValue(pref.getDefaultValue());
-				Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
-					player.sendMessage(Component.text(
-						"Your previous set value for preference " + pref.getName() +
-							" is now invalid and has been reset to default: " + pref.getDefaultValue().toString() +
-							". This may have happened because the preference itself was changed or perhaps due to " +
-							"some extraneous shenanigans and perchance, a sizeable portion of tomfoolery.",
-						TextColors.ERROR_RED));}
-				);
+			@SuppressWarnings("rawtypes")
+			Preference pref = entry.getKey();
+			Object value = entry.getValue();
+			if(value == null) {
+				motd.add(Component.text("Your preference " + pref.getName() +
+						" has been reset to default (" + pref.serialize(pref.getDefaultValue()) + ").",
+					TextColors.ERROR_RED));
+			} else {
+				playerInfo.setPreference(pref, value);
 			}
 		}
-		playerInfo.setPreferenceValues(prefMap);
+
+		loadedData.cosmeticMap.forEach((cosmeticType, key) -> {
+			if (playerInfo.hasCosmeticItem(key)) {
+				playerInfo.setSelectedCosmetic(cosmeticType, key);
+			} else {
+				CosmeticItem item = CosmeticsManager.getCosmetic(cosmeticType, key);
+				String name = item != null ? item.name : key.toString();
+				motd.add(Component.text("Your equipped " + cosmeticType + " " + name + " has expired!", NamedTextColor.GOLD));
+			}
+		});
 
 		String defaultKit = loadedData.defaultKit();
 		if(defaultKit == null)
@@ -188,5 +197,8 @@ public class LoginHandler
 		Main.playerIdLookup.put(player.getEntityId(), player);
 		FakeHitboxManager.addFakeHitbox(player);
 		Main.getGame().loggingInPlayer(player, playerInfo);
+
+		if (motd.size() != 0)
+			Bukkit.getScheduler().runTask(Main.getPlugin(), () -> motd.forEach(player::sendMessage));
 	}
 }
