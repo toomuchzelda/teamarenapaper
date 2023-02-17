@@ -46,9 +46,6 @@ public final class Main extends JavaPlugin
 		componentLogger = this.getComponentLogger();
 		logger.info("Starting TMA");
 
-		getConfig().options().copyDefaults(true);
-		saveDefaultConfig();
-
 		// load important classes
 		Preferences.registerPreferences();
 		FileUtils.init();

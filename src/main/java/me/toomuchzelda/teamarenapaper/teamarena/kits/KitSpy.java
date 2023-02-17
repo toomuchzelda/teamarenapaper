@@ -40,7 +40,7 @@ public class KitSpy extends Kit
 	public static final Material DISGUISE_MENU_MATERIAL = Material.CARVED_PUMPKIN;
 	public static final Component DISGUISE_MENU_NAME = ItemUtils.noItalics(Component.text("Sussy Mask")
 			.color(TextColors.ERROR_RED));
-	public static final Component DISGUISE_MENU_DESC = ItemUtils.noItalics(Component.text("Click to disguise!"));
+	public static final Component DISGUISE_MENU_DESC = ItemUtils.noItalics(Component.text("Click to disguise!", TextUtils.RIGHT_CLICK_TO));
 	public static final Component DISGUISE_MENU_DESC2 = ItemUtils.noItalics(Component.text(DISGUISE_MENU_COOLDOWN + "sec recharge. "
 			+ (TIME_TO_DISGUISE_MENU / 20) + "sec disguise time"));
 
@@ -186,6 +186,10 @@ public class KitSpy extends Kit
 					}
 					else {
 						event.getPlayer().sendMessage(COOLDOWN_MESSAGE);
+						// Need to update their client that the block wasn't placed
+						if (event.getClickedBlock() != null) {
+							event.getPlayer().updateInventory();
+						}
 					}
 				}
 				else if (event.getMaterial() == Material.PLAYER_HEAD){
