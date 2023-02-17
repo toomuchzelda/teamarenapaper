@@ -58,6 +58,26 @@ public abstract class Preference<T> {
 	@Nullable
 	public abstract Collection<? extends T> getValues();
 
+	/**
+	 * Returns an optional description of the value
+	 * @param value The value to describe
+	 * @return The description, split into lines
+	 */
+	@Nullable
+	public List<Component> getValueDescription(@NotNull T value) {
+		return null;
+	}
+
+	/**
+	 * Returns the (optional) category of the preference.
+	 * UIs may group preferences with the same category together.
+	 * @return The category of the preference
+	 */
+	@Nullable
+	public PreferenceCategory getCategory() {
+		return null;
+	}
+
 	@Nullable
 	public abstract List<String> getTabSuggestions();
 

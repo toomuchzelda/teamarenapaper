@@ -412,14 +412,14 @@ public abstract class TeamArena
 				}
 			} else {
 				sharedSidebar.forEach(sidebar::addEntry);
-				if (style == SidebarManager.Style.MODERN || style == SidebarManager.Style.RGB_MANIAC) {
+				if (style != SidebarManager.Style.LEGACY) {
 					updateSidebar(player, sidebar);
 				} else { // for conservatives like toomuchzelda
 					updateLegacySidebar(player, sidebar);
 				}
 			}
 
-			if (style == SidebarManager.Style.RGB_MANIAC || style == SidebarManager.Style.LEGACY_RGB_MANIAC) {
+			if (style == SidebarManager.Style.RGB_MANIAC) {
 				double progress = (TeamArena.getGameTick() / 5 * 5) / 70d;
 				for (var iterator = sidebar.getEntries().listIterator(); iterator.hasNext(); ) {
 					var index = iterator.nextIndex();

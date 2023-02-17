@@ -47,7 +47,7 @@ public class TabBar<T> {
 	}
 
 	@Nullable
-	private net.kyori.adventure.sound.Sound clickSound;
+	private net.kyori.adventure.sound.Sound clickSound = net.kyori.adventure.sound.Sound.sound(Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.BLOCKS, 0.5f, 1);
 
 	@Nullable
 	public net.kyori.adventure.sound.Sound getClickSound() {

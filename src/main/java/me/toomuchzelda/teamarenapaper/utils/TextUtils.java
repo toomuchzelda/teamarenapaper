@@ -63,6 +63,17 @@ public class TextUtils {
 			.hoverEvent(HoverEvent.showText(Component.text(timeString, NamedTextColor.YELLOW)));
 	}
 
+	public static boolean containsIgnoreCase(String needle, String haystack) {
+		int needleLength = needle.length();
+		if (needleLength == 0)
+			return true;
+
+		for (int i = 0, max = haystack.length() - needleLength; i <= max; i++)
+			if (haystack.regionMatches(true, i, needle, 0, needleLength))
+				return true;
+		return false;
+	}
+
 	public static final Style PLAIN_STYLE = Style.style(builder -> {
 		builder.color(NamedTextColor.WHITE);
 		for (var decoration : TextDecoration.values()) {
@@ -71,9 +82,8 @@ public class TextUtils {
 	});
 
 	public static int measureWidth(int codePoint) {
-		var font = MinecraftFont.Font;
 		if (Character.isBmpCodePoint(codePoint)) {
-			var sprite = font.getChar((char) codePoint);
+			var sprite = MinecraftFont.Font.getChar((char) codePoint);
 			if (sprite != null) { // has Bukkit sprite data
 				return sprite.getWidth();
 			}
@@ -90,6 +100,17 @@ public class TextUtils {
 		// 1px gap or something
 		result += codePoints.length - 1;
 		return result;
+	}
+
+	public static boolean checkTextFit(CharSequence string, int width) {
+		int result = 0;
+		for (var iter = string.codePoints().iterator(); iter.hasNext();) {
+			int codePoint = iter.nextInt();
+			result += measureWidth(codePoint) + 1;
+			if (result > width)
+				return false;
+		}
+		return true;
 	}
 
 
@@ -309,36 +330,35 @@ public class TextUtils {
 		String[] split = preserveNewlines ? string.split(" ") : SAFE_TO_WRAP.split(string);
 		for (String word : split) {
 			// check if line contains newline and make an effort to retain them
-			if (preserveNewlines && word.indexOf('\n') > -1) {
-				String[] innerLines = word.split("\\n");
-				for (int i = 0; i < innerLines.length - 1; i++) {
-					String innerLine = innerLines[i];
-					if (!line.isEmpty()) {
-						lines.add(Component.text(line.append(' ').append(innerLine).toString(), style));
-						line.setLength(0);
-					} else {
-						lines.add(Component.text(innerLine, style));
-					}
+			String[] innerLines;
+			if (preserveNewlines && (innerLines = word.split("\\n", -1)).length != 1) {
+				if (!line.isEmpty()) {
+					lines.add(Component.text(line.append(' ').append(innerLines[0]).toString(), style));
+					line.setLength(0);
+				} else {
+					lines.add(Component.text(innerLines[0], style));
 				}
 				// line should be empty by now
+				for (int i = 1; i < innerLines.length - 1; i++) {
+					lines.add(Component.text(innerLines[i], style));
+				}
 				line.append(innerLines[innerLines.length - 1]);
 				continue;
 			}
 
-			var currentLine = line.toString();
-			if (TextUtils.measureWidth(currentLine) < maxWidth) {
+			if (checkTextFit(line, maxWidth)) {
 				if (!line.isEmpty())
 					line.append(' ');
 				line.append(word);
 			} else {
-				lines.add(Component.text(currentLine, style));
-				line.delete(0, line.length());
+				lines.add(Component.text(line.toString(), style));
+				line.setLength(0);
 				line.append(word);
 			}
 		}
 		// final line
 		lines.add(Component.text(line.toString(), style));
-		return Collections.unmodifiableList(lines);
+		return List.copyOf(lines);
 	}
 
 	public static List<Component> toLoreList(String string, Style style, TagResolver... tagResolvers) {

@@ -2,11 +2,9 @@ package me.toomuchzelda.teamarenapaper.teamarena.inventory;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.*;
-import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
@@ -20,7 +18,10 @@ import org.bukkit.inventory.meta.SkullMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
 import java.util.function.Function;
 
 /**
@@ -33,8 +34,7 @@ public class SpectateInventory implements InventoryProvider {
 
 	public SpectateInventory(@Nullable TeamArenaTeam teamFilter, boolean sortByKits) {
 		this.teamFilter = teamFilter;
-		this.teamFilterTab = new TabBar<>(teamFilter)
-			.setClickSound(Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.BLOCKS, 0.5f, 1);
+		this.teamFilterTab = new TabBar<>(teamFilter);
 
 		if (sortByKits) {
 			this.sortByButton.setState(SortOption.BY_KIT);
@@ -172,31 +172,13 @@ public class SpectateInventory implements InventoryProvider {
 			return selected ? ALL_PLAYERS_SELECTED : ALL_PLAYERS;
 		} else if (team.isAlive()) { // team size != 0
 			// calculate team composition
-			var teamKitComposition = new EnumMap<KitCategory, Integer>(KitCategory.class);
-			for (var member : team.getPlayerMembers()) {
-				var effectiveKit = getEffectiveKit(Main.getPlayerInfo(member));
-				teamKitComposition.merge(effectiveKit.getCategory(), 1, Integer::sum);
-			}
-			for (var kitCategory : KitCategory.values()) { // fill with zeroes
-				teamKitComposition.putIfAbsent(kitCategory, 0);
-			}
-
 			var lore = new ArrayList<Component>();
 			int totalPlayers = team.getPlayerMembers().size();
 			lore.add(Component.text("Players: " + totalPlayers, NamedTextColor.GRAY));
 			lore.add(Component.text("Score: " + team.getTotalScore(), NamedTextColor.GRAY));
 			lore.add(Component.text("Team composition: ", NamedTextColor.GRAY));
-			teamKitComposition.forEach((kitCategory, integer) -> {
-				int percentage = 100 * integer / totalPlayers;
-				lore.add(Component.textOfChildren(
-					Component.text("  "), // indentation
-					kitCategory.displayName(),
-					Component.text(": ", NamedTextColor.GRAY),
-					integer != 0 ?
-						Component.text(integer + " (" + percentage + "%)", kitCategory.textColor()) :
-						Component.text("0 (0%)", NamedTextColor.RED, TextDecoration.BOLD)
-				));
-			});
+
+			lore.addAll(KitInventory.calculateTeamKitComposition(team, null));
 
 			var stack = ItemBuilder.of(team.getIconItem().getType())
 				.displayName(team.getComponentName())
@@ -218,7 +200,7 @@ public class SpectateInventory implements InventoryProvider {
 
 	protected ClickableItem playerToItem(@NotNull Player player, Location distanceOrigin, boolean showKit) {
 		var playerInfo = Main.getPlayerInfo(player);
-		var kit = getEffectiveKit(playerInfo);
+		var kit = playerInfo.getEffectiveKit();
 
 		double distance = player.getLocation().distance(distanceOrigin);
 
@@ -245,11 +227,6 @@ public class SpectateInventory implements InventoryProvider {
 			});
 	}
 
-	private static Kit getEffectiveKit(PlayerInfo info) {
-		// if no active kit (eg game hasn't started) then use selected kit.
-		return info.activeKit != null ? info.activeKit : info.kit;
-	}
-
 	enum SortOption {
 		BY_NAME(ignored -> Comparator.comparing(Player::getName),
 			Component.text("their name (A-Z)", NamedTextColor.WHITE)),
@@ -259,7 +236,7 @@ public class SpectateInventory implements InventoryProvider {
 			Location viewerLocation = viewer.getLocation();
 			return Comparator.comparingDouble(player -> player.getLocation().distance(viewerLocation));
 		}, Component.text("their distance to you", NamedTextColor.WHITE)),
-		BY_KIT(ignored -> Comparator.comparing(player -> getEffectiveKit(Main.getPlayerInfo(player)), Kit.COMPARATOR),
+		BY_KIT(ignored -> Comparator.comparing(player -> Main.getPlayerInfo(player).getEffectiveKit(), Kit.COMPARATOR),
 			Component.text("their selected kit", NamedTextColor.WHITE));
 
 		final Function<Player, Comparator<Player>> comparator;

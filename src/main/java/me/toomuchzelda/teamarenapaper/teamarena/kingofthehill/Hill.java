@@ -70,7 +70,7 @@ public class Hill {
 					if (num == 0)
 						continue;
 
-                    if(TeamArena.getGameTick() % num == 0) {
+                    if(TeamArena.getGameTick() % (11 - num) == 0) {
                         p.spawnParticle(Particle.SPELL_MOB, location.getX(), location.getY(),
                                 location.getZ(), 0, red, green, blue, 1);
 
@@ -100,14 +100,14 @@ public class Hill {
             location.setZ(border.getMinZ() + z);
 
             for(Player p : Bukkit.getOnlinePlayers()) {
+				int freq = Main.getPlayerInfo(p).getPreference(Preferences.KOTH_HILL_PARTICLES);
+				if (freq == 0)
+					continue;
                 //if player is within 35 blocks
                 if(p.getLocation().toVector().distanceSquared(border.getCenter()) < VIEW_DISTANCE * VIEW_DISTANCE) {
 
-                    int num = Main.getPlayerInfo(p).getPreference(Preferences.KOTH_HILL_PARTICLES);
-					if (num == 0)
-						continue;
 
-                    if(TeamArena.getGameTick() % num == 0) {
+                    if(TeamArena.getGameTick() % (11 - freq) == 0) {
                         p.spawnParticle(Particle.SPELL_MOB, location.getX(), location.getY(),
                                 location.getZ(), 0, red, green, blue, 1);
 
