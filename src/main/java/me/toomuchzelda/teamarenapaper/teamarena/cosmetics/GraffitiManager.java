@@ -5,13 +5,10 @@ import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.Style;
-import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -102,47 +99,30 @@ public class GraffitiManager {
 	private static final int ITEM_SWAP_DURATION = 20;
 	private static final WeakHashMap<Player, Integer> graffitiCooldown = new WeakHashMap<>();
 	private static final int GRAFFITI_COOLDOWN = 40 * 20;
-	private static final HashSet<UUID> setCosmeticReminder = new HashSet<>();
 	public void onSwapHandItems(PlayerSwapHandItemsEvent e) {
 		Player player = e.getPlayer();
 		int now = TeamArena.getGameTick();
 		Integer lastSwapTick = itemSwapTimes.get(player);
-		// check if the players swapped hands twice within 20 ticks
-		if (lastSwapTick == null || now - lastSwapTick > ITEM_SWAP_DURATION) {
-			itemSwapTimes.put(player, now);
-			return;
-		}
-		itemSwapTimes.put(player, 0); // reset swap time to avoid consecutive triggers
-		PlayerInfo playerInfo = Main.getPlayerInfo(player);
-		Optional<NamespacedKey> optionalGraffiti = playerInfo.getSelectedCosmetic(CosmeticType.GRAFFITI);
-		NamespacedKey graffiti = optionalGraffiti.orElseGet(() -> {
-			// randomly pick an owned graffiti
-			var owned = playerInfo.getCosmeticItems(CosmeticType.GRAFFITI);
-			if (owned.size() == 0)
-				return null;
-			if (setCosmeticReminder.add(player.getUniqueId())) {
-				player.sendMessage(Component.textOfChildren(
-					Component.text("You can pick a graffiti you like "),
-					Component.text("here", Style.style(TextDecoration.UNDERLINED))
-						.clickEvent(ClickEvent.runCommand("/cosmetics gui"))
-						.hoverEvent(Component.text("Click to run /cosmetics gui", NamedTextColor.YELLOW).asHoverEvent()),
-					Component.text("!")
-				).color(NamedTextColor.AQUA));
+		if (lastSwapTick != null && now - lastSwapTick <= ITEM_SWAP_DURATION) {
+			itemSwapTimes.put(player, 0); // reset swap time to avoid consecutive triggers
+			PlayerInfo playerInfo = Main.getPlayerInfo(player);
+			Optional<NamespacedKey> selected = playerInfo.getSelectedCosmetic(CosmeticType.GRAFFITI);
+			if (selected.isPresent()) {
+				int lastGraffiti = graffitiCooldown.getOrDefault(player, 0);
+				int ticksElapsed = now - lastGraffiti;
+				if (ticksElapsed >= GRAFFITI_COOLDOWN || playerInfo.permissionLevel == CustomCommand.PermissionLevel.OWNER) {
+					graffitiCooldown.put(player, now);
+					spawnGraffiti(player, selected.get());
+				} else {
+					player.sendActionBar(Component.text("Graffiti cooldown: " +
+						TextUtils.ONE_DECIMAL_POINT.format((GRAFFITI_COOLDOWN - ticksElapsed) / 20f) + "s",
+						NamedTextColor.RED));
+				}
+			} else {
+				player.sendMessage(Component.text("Please select a graffiti first!", TextColors.ERROR_RED));
 			}
-			var arr = owned.toArray(new NamespacedKey[0]);
-			return arr[MathUtils.random.nextInt(arr.length)];
-		});
-		if (graffiti == null) // fail-fast
-			return;
-		int lastGraffiti = graffitiCooldown.getOrDefault(player, 0);
-		int ticksElapsed = now - lastGraffiti;
-		if (ticksElapsed >= GRAFFITI_COOLDOWN || playerInfo.permissionLevel == CustomCommand.PermissionLevel.OWNER) {
-			graffitiCooldown.put(player, now);
-			spawnGraffiti(player, graffiti);
 		} else {
-			player.sendActionBar(Component.text("Graffiti cooldown: " +
-				TextUtils.ONE_DECIMAL_POINT.format((GRAFFITI_COOLDOWN - ticksElapsed) / 20f) + "s",
-				NamedTextColor.RED));
+			itemSwapTimes.put(player, now);
 		}
 	}
 }

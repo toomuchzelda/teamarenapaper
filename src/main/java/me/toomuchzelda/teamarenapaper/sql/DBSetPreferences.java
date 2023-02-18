@@ -2,32 +2,24 @@ package me.toomuchzelda.teamarenapaper.sql;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
-import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import org.bukkit.Bukkit;
-import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Collection;
-import java.util.EnumMap;
 import java.util.Map;
 
 public class DBSetPreferences extends DBOperation<Void>
 {
 	private final Map<Preference<?>, ?> preferenceMap;
-	private final Map<CosmeticType, NamespacedKey> cosmeticMap;
 	private final String uuid;
 
 	public <T> DBSetPreferences(Player player, PlayerInfo pinfo) {
 		this.preferenceMap = pinfo.getPreferences();
 		this.uuid = player.getUniqueId().toString();
-		this.cosmeticMap = new EnumMap<>(CosmeticType.class);
-		for (CosmeticType type : CosmeticType.values()) {
-			cosmeticMap.put(type, pinfo.getSelectedCosmetic(type).orElse(null));
-		}
 	}
 
 	@Override
@@ -62,21 +54,6 @@ public class DBSetPreferences extends DBOperation<Void>
 					stmt.execute();
 				}
 			}
-
-			for (var entry : cosmeticMap.entrySet()) {
-				CosmeticType cosmeticType = entry.getKey();
-				NamespacedKey key = entry.getValue();
-				String fakePrefName = CosmeticType.PREFERENCE_PREFIX + cosmeticType.name();
-				if (key == null) {
-					deleteStmt.setString(2, fakePrefName);
-					deleteStmt.execute();
-				} else {
-					stmt.setString(2, fakePrefName);
-					stmt.setString(3, key.toString());
-					stmt.setString(4, key.toString());
-					stmt.execute();
-				}
-			}
 		}
 
 		return null;
@@ -84,7 +61,7 @@ public class DBSetPreferences extends DBOperation<Void>
 
 	@Override
 	protected String getLogMessage() {
-		return "uuid:" + uuid + " preferenceMap:" + preferenceMap + " cosmeticMap:" + cosmeticMap;
+		return "uuid:" + uuid.toString() + " preferenceMap:" + preferenceMap.toString();
 	}
 
 	public static void savePlayerPreferences(Collection<? extends Player> players) {
