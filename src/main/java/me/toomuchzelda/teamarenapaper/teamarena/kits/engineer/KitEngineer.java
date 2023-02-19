@@ -202,6 +202,9 @@ public class KitEngineer extends Kit {
 			Inventories.closeInventory(player, BuildingInventory.class);
 			// remove all player buildings
 			BuildingManager.getAllPlayerBuildings(player).forEach(BuildingManager::destroyBuilding);
+
+			player.setCooldown(SENTRY.getType(), 0);
+			player.setCooldown(WRENCH.getType(), 0);
 		}
 
 		//Modifying sentry fire to deal less KB
