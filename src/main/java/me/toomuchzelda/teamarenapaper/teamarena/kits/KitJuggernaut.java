@@ -20,7 +20,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 public class KitJuggernaut extends Kit {
 
 	private static final ItemStack BATON = ItemBuilder.of(Material.STICK)
-		.displayName(Component.text("Extremely Fragile Baton")).enchant(Enchantment.KNOCKBACK, 3)
+		.displayName(Component.text("Extremely Fragile Baton")).enchant(Enchantment.KNOCKBACK, 4)
 		.lore(TextUtils.wrapString(
 			"Use this to knock away troublesome enemies. It breaks instantly, but somehow heals itself quickly",
 			Style.style(TextUtils.LEFT_CLICK_TO))

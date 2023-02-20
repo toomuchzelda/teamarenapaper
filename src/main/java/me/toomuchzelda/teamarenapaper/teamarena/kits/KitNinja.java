@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
@@ -20,11 +21,18 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.util.Vector;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class KitNinja extends Kit
 {
-	public static final AttributeModifier NINJA_SPEED_MODIFIER = new AttributeModifier("Ninja Speed", 0.4, AttributeModifier.Operation.MULTIPLY_SCALAR_1);
-	public static final Component NO_SPEED_WITH_FLAG = Component.text( "The weight of the flag bears down on you. You're no longer fast!", NamedTextColor.LIGHT_PURPLE);
+	private static final AttributeModifier NINJA_SPEED_MODIFIER = new AttributeModifier("Ninja Speed", 0.4, AttributeModifier.Operation.MULTIPLY_SCALAR_1);
+	private static final Component NO_SPEED_WITH_FLAG = Component.text( "The weight of the flag bears down on you. You're no longer fast!", NamedTextColor.LIGHT_PURPLE);
+
+	private static final ItemStack PEARL = ItemBuilder.of(Material.ENDER_PEARL)
+		.displayName(Component.text("Really heavy ender pearl")).build();
 
 	public KitNinja() {
 		super("Ninja", "A kit that's a fast runner and a faster swinger. Every sword strike it does is weak, but " +
@@ -44,7 +52,7 @@ public class KitNinja extends Kit
 		swordMeta.displayName(Component.text("Fast Dagger"));
 		sword.setItemMeta(swordMeta);
 
-		setItems(sword, new ItemStack(Material.ENDER_PEARL));
+		setItems(sword, PEARL);
 
 		setAbilities(new NinjaAbility());
 
@@ -53,6 +61,10 @@ public class KitNinja extends Kit
 
 	public static class NinjaAbility extends Ability
 	{
+		private static final Vector EXTRA_GRAVITY_DELTA = new Vector(0d, -0.1d, 0d);
+
+		private final Map<Player, EnderPearl> THROWN_PEARLS = new LinkedHashMap<>();
+
 		@Override
 		public void giveAbility(Player player) {
 			player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).addModifier(NINJA_SPEED_MODIFIER);
@@ -61,13 +73,15 @@ public class KitNinja extends Kit
 		@Override
 		public void removeAbility(Player player) {
 			player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).removeModifier(NINJA_SPEED_MODIFIER);
+			THROWN_PEARLS.remove(player);
 		}
 
 		//infinite enderpearls on a cooldown
 		@Override
 		public void onLaunchProjectile(PlayerLaunchProjectileEvent event) {
-			if(event.getProjectile() instanceof EnderPearl) {
+			if(event.getProjectile() instanceof EnderPearl pearl) {
 				event.setShouldConsume(false);
+				THROWN_PEARLS.put(event.getPlayer(), pearl);
 			}
 		}
 
@@ -75,6 +89,23 @@ public class KitNinja extends Kit
 		public void onItemCooldown(PlayerItemCooldownEvent event) {
 			if(event.getType() == Material.ENDER_PEARL) {
 				event.setCooldown(6 * 20);
+			}
+		}
+
+		// Apply extra gravity to ninja's ender pearls
+		@Override
+		public void onTick() {
+			var iter = THROWN_PEARLS.entrySet().iterator();
+			while (iter.hasNext()) {
+				var entry = iter.next();
+				EnderPearl pearl = entry.getValue();
+
+				if (!pearl.isValid()) {
+					iter.remove();
+				}
+				else {
+					pearl.setVelocity(pearl.getVelocity().add(EXTRA_GRAVITY_DELTA));
+				}
 			}
 		}
 
