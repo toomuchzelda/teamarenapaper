@@ -42,7 +42,9 @@ public class KingOfTheHill extends TeamArena
 	// and field score2 is used for their total score excluding current hill
 	// every time the hill changes the amount of points they earned on that one is put onto their score2
 	// and score is cleared
-	public static final float INITIAL_CAP_TIME = 13 * 20;
+	public static final float INITIAL_CAP_TIME = 10 * 20;
+	// Amount that owning players on hill reduces other team's cap progress from -1 to 0
+	private static final float KING_REDUCE_RATIO = -0.4f;
 	public float ticksAndPlayersToCaptureHill = INITIAL_CAP_TIME;
 	//the total score u need to get to win
 	public final int TICKS_TO_WIN;
@@ -156,7 +158,7 @@ public class KingOfTheHill extends TeamArena
 					toEarn = 0;
 
 				//decrease gain speed for every owning team player on the hill concurrently
-				toEarn += numOwningPlayers * -0.6;
+				toEarn += numOwningPlayers * KING_REDUCE_RATIO;
 				hillCapChange.put(team, toEarn);
 				points += toEarn;
 
