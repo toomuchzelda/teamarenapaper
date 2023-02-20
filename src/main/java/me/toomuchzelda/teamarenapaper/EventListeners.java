@@ -379,15 +379,18 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void blockBreak(BlockBreakEvent event) {
-		//Handling breaking teleporter blocks
-		if(Main.getGame() != null) {
+		//Handling breaking blocks
+		TeamArena game = Main.getGame();
+		if(game != null) {
 			GameState state = Main.getGame().getGameState();
 			if (state == LIVE || state == GameState.END) {
 				if(state == LIVE)
 					BuildingManager.EventListener.onBlockBreak(event);
 
+				// Players in creative can break any blocks
 				if (event.getPlayer().getGameMode() != GameMode.CREATIVE) {
-					if (!isBlockBreakable(event.getBlock().getType()))
+					// If the block is breakable and player is alive in game.
+					if (!isBlockBreakable(event.getBlock().getType()) || game.isDead(event.getPlayer()))
 						event.setCancelled(true);
 				}
 			}

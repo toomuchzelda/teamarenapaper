@@ -62,7 +62,11 @@ public class KitDemolitions extends Kit
 			else if(mat.name().endsWith("LEAVES")) {
 				setValidMineBlock(mat);
 			}
+			else if (mat.name().contains("GLASS")) {
+				setValidMineBlock(mat);
+			}
 		}
+		setValidMineBlock(Material.DIRT_PATH);
 
 		Style style = Style.style(TextUtils.RIGHT_CLICK_TO).decoration(TextDecoration.ITALIC, false);
 		String strUsage = "Right click the top of a block to place the trap down. " +
