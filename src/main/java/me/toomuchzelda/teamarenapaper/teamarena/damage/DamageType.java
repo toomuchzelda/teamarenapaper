@@ -131,6 +131,8 @@ public class DamageType {
 
     public static final DamageType SUICIDE = new DamageType("Suicide", "%Killed% died").setInstantDeath().setNoKnockback();
 
+	public static final DamageType SPECTATE = new DamageType("Suicide", "%Killed% died").setInstantDeath().setNoKnockback();
+
     public static final DamageType SUICIDE_ASSISTED = new DamageType("Assisted Suicide",
             "%Killed% saw T_0_E_D's face and died", "%Killed% caught a whiff " +
             "of their own body odour", "%Killed% thought Mineplex was better than Red Warfare", "%Killed% kicked a stray " +

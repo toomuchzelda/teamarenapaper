@@ -1381,7 +1381,7 @@ public abstract class TeamArena
 			} else {
 				//EntityDamageEvent event = new EntityDamageEvent(player, EntityDamageEvent.DamageCause.VOID, 9999d);
 				//DamageEvent dEvent = DamageEvent.createFromBukkitEvent(event, DamageType.SUICIDE);
-				this.processDamageEvent(DamageEvent.newDamageEvent(player, 99999d, DamageType.SUICIDE, null, false));
+				this.processDamageEvent(DamageEvent.newDamageEvent(player, 99999d, DamageType.SPECTATE, null, false));
 
 				if(isRespawningGame()) {
 					respawnTimers.remove(player); //if respawning game remove them from respawn queue
@@ -1524,7 +1524,7 @@ public abstract class TeamArena
 
 			//if they died in the void teleport them back to map
 			// only for non-respawning games
-			if(!this.isRespawningGame()) {
+			if(!this.isRespawningGame() || event.getDamageType().is(DamageType.SPECTATE)) {
 				if(playerVictim.getLocation().getY() <= border.getMinY()) {
 					Location toTele;
 					if (killer != null) {
