@@ -1974,6 +1974,19 @@ public abstract class TeamArena
 			return false;
 		}
 
+		if (target instanceof IronGolem golem && IronGolemKillStreak.GolemAbility.isKillStreakGolem(golem)) {
+			return false;
+		}
+
+		if (target instanceof Skeleton skeleton) {
+			Player sentryOwner = KitEngineer.EngineerAbility.getOwnerBySkeleton(skeleton);
+			if (sentryOwner != null) {
+				if (!Main.getPlayerInfo(sentryOwner).team.getPlayerMembers().contains(medic)) {
+					return false;
+				}
+			}
+		}
+
 		return true;
 	}
 

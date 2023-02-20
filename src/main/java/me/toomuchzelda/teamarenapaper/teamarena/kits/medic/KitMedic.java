@@ -123,7 +123,7 @@ public class KitMedic extends Kit
 		private static final Component TOO_FAR = Component.text("You need to be close to the healing target", TextColors.ERROR_RED);
 		private static final Component TOO_FAR_ACTION_BAR = Component.text("Too far from the target", TextColors.ERROR_RED);
 
-		private static final double HEAL_PER_TICK = 1.5d / 20d; // 0.75 hearts per second
+		private static final double HEAL_PER_TICK = 1.6d / 20d; // 0.8 health per second
 		private static final double MAX_HEALING_DISTANCE = 15d;
 		private static final double MAX_HEALING_DISTANCE_SQR = MAX_HEALING_DISTANCE * MAX_HEALING_DISTANCE;
 

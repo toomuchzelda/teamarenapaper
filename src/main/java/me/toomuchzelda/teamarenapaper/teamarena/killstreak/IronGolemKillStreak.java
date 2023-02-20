@@ -122,6 +122,10 @@ public class IronGolemKillStreak extends CratedKillStreak
 			GOLEM_OWNERS.clear();
 		}
 
+		public static boolean isKillStreakGolem(IronGolem golem) {
+			return GOLEM_LOOKUP.containsKey(golem);
+		}
+
 		public static void handleIronGolemAttemptDamage(DamageEvent event) {
 			Player owner = GOLEM_LOOKUP.get(event.getVictim());
 			if(owner == null) return;

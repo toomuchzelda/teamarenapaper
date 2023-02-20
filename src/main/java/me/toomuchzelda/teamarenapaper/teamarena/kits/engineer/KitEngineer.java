@@ -172,9 +172,9 @@ public class KitEngineer extends Kit {
 
 	public static class EngineerAbility extends Ability {
 
-		public static final Map<Player, SentryProjection> activePlayerProjections = new HashMap<>();
+		private static final Map<Player, SentryProjection> activePlayerProjections = new HashMap<>();
 		@Deprecated // temporary API
-		public static final Map<LivingEntity, Sentry> sentryEntityToSentryMap = new HashMap<>();
+		private static final Map<Skeleton, Sentry> sentryEntityToSentryMap = new HashMap<>();
 		//SENTRY_CD should be 300, it may be altered for testing purposes
 		public static final int SENTRY_CD = 300;
 		public static final int SENTRY_PLACEMENT_RANGE = 3;
@@ -458,6 +458,15 @@ public class KitEngineer extends Kit {
 					event.setCancelled(true);
 				}
 			}
+		}
+
+		public static Player getOwnerBySkeleton(Skeleton skeleton) {
+			Sentry sentry = sentryEntityToSentryMap.get(skeleton);
+			if (sentry != null) {
+				return sentry.owner;
+			}
+
+			return null;
 		}
 	}
 }
