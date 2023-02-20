@@ -66,7 +66,7 @@ public class KitDemolitions extends Kit
 
 		Style style = Style.style(TextUtils.RIGHT_CLICK_TO).decoration(TextDecoration.ITALIC, false);
 		String strUsage = "Right click the top of a block to place the trap down. " +
-				"It will triggered by your remote detonator or when enemies step on it.";
+				"It will be triggered by your remote detonator or when enemies step on it.";
 		List<Component> usage = TextUtils.wrapString(strUsage, style, 200);
 
 		TNT_MINE_ITEM = new ItemStack(Material.TNT, TNT_MINE_COUNT);
@@ -512,16 +512,16 @@ public class KitDemolitions extends Kit
 
 			regenningMines.add(new RegeneratingMine(type, startTime));
 
-			final Component message = Component.text("Your " + type.name + " exploded or was destroyed. You'll get it back in "
-							+ (type.timeToRegen / 20) + " seconds",
+			final Component message = Component.text("You'll get " + type.name + " back in " + (type.timeToRegen / 20) + " seconds",
 					NamedTextColor.AQUA);
 
 			PlayerUtils.sendKitMessage(player, message, message);
 		}
 
 		public static void handleHitboxPunch(PacketMineHitbox hitbox, Player puncher) {
-			DemoMine mine = AXOLOTL_TO_DEMO_MINE.get(hitbox);
+			if (Main.getGame().isDead(puncher)) return;
 
+			DemoMine mine = AXOLOTL_TO_DEMO_MINE.get(hitbox);
 			//teammate punches it
 			if (puncher != mine.owner && mine.team.getPlayerMembers().contains(puncher)) {
 				puncher.sendMessage(Component.text("This is ", NamedTextColor.AQUA).append(

@@ -5,6 +5,8 @@ import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -151,12 +153,17 @@ public abstract class DemoMine
 		unGlow();
 		this.triggerer = triggerer;
 
+		Component message;
 		if(this.owner == triggerer) {
 			this.timeToDetonate = type.timeToDetonateRemote;
+			message = Component.text("Remote triggered your " + this.type.name, NamedTextColor.AQUA);
 		}
 		else {
 			this.timeToDetonate = type.timeToDetonate;
+			message = Component.text("Your " + this.type.name + " was triggered!", NamedTextColor.AQUA);
 		}
+
+		PlayerUtils.sendKitMessage(this.owner, message, message);
 
 		World world = hitboxEntity.getWorld();
 		Location loc = hitboxEntity.getLocation();
