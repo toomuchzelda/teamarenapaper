@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
+import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
@@ -27,6 +28,8 @@ import java.util.*;
 //container class to store per-player info
 public class PlayerInfo
 {
+	private final UUID playerUuid;
+
 	public CustomCommand.PermissionLevel permissionLevel;
 	public boolean displayPermissionLevel; // if should be displayed in chat and playerlistname
 	public TeamArenaTeam team;
@@ -66,6 +69,7 @@ public class PlayerInfo
 	public UUID lastMessageSender;
 
 	public PlayerInfo(CustomCommand.PermissionLevel permissionLevel, Player player) {
+		this.playerUuid = player.getUniqueId();
 		team = null;
 		spawnPoint = null;
 		statusIndicatorId = Bukkit.getUnsafe().nextEntityId();
@@ -117,10 +121,14 @@ public class PlayerInfo
 		//         set the preference to the default value instead
 		// preferences.remove(preference);
 		preferences.put(preference, preference.getDefaultValue());
+
+		Main.logger().info(this.playerUuid + " reset preference " + preference.getName());
 	}
 
 	public <T> void setPreference(Preference<T> preference, T value) {
 		preferences.put(preference, value);
+
+		Main.logger().info(this.playerUuid + " set preference " + preference.getName() + " to " + value.toString());
 	}
 
 	@SuppressWarnings("unchecked")

@@ -11,11 +11,9 @@ import java.util.Collections;
 
 public class SentryProjection extends PacketEntity
 {
-	//every player can only see a maximum of 1 sentry projection at a time so can use the same ID for all of them
-	private static final int SENTRY_ID = Bukkit.getUnsafe().nextEntityId();
 
 	public SentryProjection(Location location, Player owner) {
-		super(SENTRY_ID, EntityType.SKELETON, location, Collections.singleton(owner), null);
+		super(PacketEntity.NEW_ID, EntityType.SKELETON, location, Collections.singleton(owner), null);
 
 		byte glowInvis = MetaIndex.BASE_BITFIELD_INVIS_MASK | MetaIndex.BASE_BITFIELD_GLOWING_MASK;
 		this.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, glowInvis);

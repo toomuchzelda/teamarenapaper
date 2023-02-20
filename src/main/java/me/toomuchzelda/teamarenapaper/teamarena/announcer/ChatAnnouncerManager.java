@@ -1,67 +1,90 @@
 package me.toomuchzelda.teamarenapaper.teamarena.announcer;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import net.kyori.adventure.text.TextComponent;
+import org.bukkit.Bukkit;
 
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Class to handle the announcing of words appearing in chat
  * <p>
  * There is a global cooldown for voice lines so that they aren't constantly being played.
  * <p>
- * When chat messages are sent, they are queued here for processing at the end of the tick.
- * To avoid wasting Main thread tick time, their processing is deferred until the end of the Main thread tick.
- * If processing times are really bad, then this later could be adapted to do the processing asynchronously.
+ * When chat messages are sent, if it's on the Main server thread, they are queued for processing at the end
+ * of the tick.
  *
  * @author toomuchzelda
  */
 public class ChatAnnouncerManager
 {
-	private static final int ANNOUNCE_COOLDOWN = 4 * 20; // once every 4 seconds
-	private static final List<String> queuedMessages = Collections.synchronizedList(new LinkedList<>());
+	private static final int ANNOUNCE_COOLDOWN = 4 * 1000; // once every 4 seconds
+	// Also serves as a lock for the lastAnnounceTime
+	private static final List<TextComponent> queuedMessages = new LinkedList<>();
 
-	private static int lastAnnounceTime = 0;
+	// Unix time in milliseconds
+	// Use system time as the time gets queried asynchronously so TeamArena.getGameTick() may be faulty.
+	// Accessed only when a lock on queuedMessages is acquired
+	private static long lastAnnounceTime = 0;
 
+	/** @return true if the message matched a sound */
+	private static boolean processMessage(String message, long time) {
+		for (AnnouncerSound sound : AnnouncerSound.ALL_CHAT_SOUNDS) {
+			if (sound.stringMatchesPhrases(message)) {
+				lastAnnounceTime = time;
+				AnnouncerManager.broadcastSound(sound);
+
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	// May be called asynchronously
 	public static void queueMessage(TextComponent message) {
-		if (TeamArena.getGameTick() - lastAnnounceTime >= ANNOUNCE_COOLDOWN) {
-			queuedMessages.add(message.content());
+		// Decide if the time is valid atomically
+		// Unfortunately this means only 1 thread can process a message at once but that's still better than
+		// doing it on the main thread.
+		synchronized (queuedMessages) {
+			final long time = System.currentTimeMillis();
+			if (time - lastAnnounceTime >= ANNOUNCE_COOLDOWN) {
+				if (Bukkit.isPrimaryThread()) {
+					queuedMessages.add(message);
+				}
+				else { // Process it on the async thread.
+					processMessage(message.content(), time);
+				}
+			}
 		}
 	}
 
 	public static void tick() {
-		final int currentTick = TeamArena.getGameTick();
-		if (currentTick - lastAnnounceTime < ANNOUNCE_COOLDOWN) {
-			return;
-		}
-
-		long time = System.currentTimeMillis();
-
 		synchronized (queuedMessages) {
+			if (queuedMessages.size() == 0)
+				return;
+
+			final long currentTime = System.currentTimeMillis();
+			if (currentTime - lastAnnounceTime < ANNOUNCE_COOLDOWN) {
+				return;
+			}
+
+			long timer = currentTime;
 			var iter = queuedMessages.iterator();
+			while (iter.hasNext()) {
+				String message = iter.next().content();
+				iter.remove();
 
-			outerLoop:
-			while(iter.hasNext()) {
-				String message = iter.next();
-
-				for (AnnouncerSound sound : AnnouncerSound.ALL_CHAT_SOUNDS) {
-					if (sound.stringMatchesPhrases(message)) {
-						lastAnnounceTime = currentTick;
-						AnnouncerManager.broadcastSound(sound);
-
-						break outerLoop;
-					}
+				if (processMessage(message, currentTime)) {
+					break;
 				}
 			}
 
-			queuedMessages.clear();
+			timer = System.currentTimeMillis() - timer;
+			if (timer > 1)
+				Main.logger().info("ChatAnnouncerMessage tick took " + timer + "ms");
 		}
-
-		time = System.currentTimeMillis() - time;
-		if (time > 1)
-			Main.logger().info("ChatAnnouncerMessage tick took " + time + "ms");
 	}
 }

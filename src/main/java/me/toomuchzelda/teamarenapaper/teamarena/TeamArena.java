@@ -583,16 +583,6 @@ public abstract class TeamArena
 			Player p = entry.getKey();
 			RespawnInfo rinfo = entry.getValue();
 
-			//player interrupted respawning, ready to respawn
-			// now handled with the interrupted boolean
-			/*if(rinfo.deathTime == -1) {
-
-
-				respawnPlayer(p);
-				respawnIter.remove();
-				continue;
-			}*/
-
 			//respawn after five seconds
 			int ticksLeft = getGameTick() - rinfo.deathTime;
 			if (ticksLeft >= RESPAWN_SECONDS * 20) {
@@ -654,42 +644,35 @@ public abstract class TeamArena
 			DamageEvent event = iter.next();
 			iter.remove();
 
-			onDamage(event);
-			if(event.isCancelled())
-				continue;
+			processDamageEvent(event);
+		}
+	}
 
-			//ability on confirmed attacks done in this.onConfirmedDamage() called by DamageEvent.executeAttack()
-			if(event.getFinalAttacker() instanceof Player p && event.getVictim() instanceof Player p2) {
-				if(!canAttack(p, p2))
-					event.setCancelled(true);
-			}
+	// For immediately, manually processing Damage Events instead of waiting for the ticker.
+	private void processDamageEvent(DamageEvent event) {
+		this.onDamage(event);
+		if(event.isCancelled())
+			return;
 
-			//ability pre-attack events
-			if(event.getFinalAttacker() instanceof Player p) {
-				for(Ability ability : Kit.getAbilities(p)) {
-					ability.onAttemptedAttack(event);
-				}
-			}
-			if(event.getVictim() instanceof Player p) {
-				for(Ability ability : Kit.getAbilities(p)) {
-					ability.onAttemptedDamage(event);
-				}
-			}
-
-			event.executeAttack();
+		//ability on confirmed attacks done in this.onConfirmedDamage() called by DamageEvent.executeAttack()
+		if(event.getFinalAttacker() instanceof Player p && event.getVictim() instanceof Player p2) {
+			if(!canAttack(p, p2))
+				event.setCancelled(true);
 		}
 
-		/*var indiIter = activeDamageIndicators.iterator();
-		while(indiIter.hasNext()) {
-			DamageIndicatorHologram h = indiIter.next();
-			if(h.age >= 300) {
-				h.despawn();
-				indiIter.remove();
+		//ability pre-attack events
+		if(event.getFinalAttacker() instanceof Player p) {
+			for(Ability ability : Kit.getAbilities(p)) {
+				ability.onAttemptedAttack(event);
 			}
-			else {
-				h.tick();
+		}
+		if(event.getVictim() instanceof Player p) {
+			for(Ability ability : Kit.getAbilities(p)) {
+				ability.onAttemptedDamage(event);
 			}
-		}*/
+		}
+
+		event.executeAttack();
 	}
 
 	public void onConfirmedDamage(DamageEvent event) {
@@ -770,7 +753,7 @@ public abstract class TeamArena
 		else if(event.getVictim() instanceof Wolf) {
 			WolvesKillStreak.WolvesAbility.handleWolfAttemptDamage(event);
 		}
-		else if(event.getVictim() instanceof IronGolem golem) {
+		else if(event.getVictim() instanceof IronGolem) {
 			if(event.hasKnockback()) {
 				event.setKnockback(event.getKnockback().multiply(0.3d));
 			}
@@ -1168,7 +1151,6 @@ public abstract class TeamArena
 			if(pinfo.activeKit != null) { //!isSpectator(p)) {
 				pinfo.activeKit.removeKit(p, pinfo);
 			}
-			pinfo.kit = null;
 			//unglow before setting pinfo.team to null as it needs that.
 			setViewingGlowingTeammates(pinfo, false, false);
 
@@ -1230,7 +1212,7 @@ public abstract class TeamArena
 		MathUtils.shuffleArray(shuffledTeams);
 
 		//players that didn't choose a team yet
-		ArrayList<Player> shuffledPlayers = new ArrayList<>();
+		ArrayList<Player> shuffledPlayers = new ArrayList<>(players.size());
 		for(Player p : players) {
 			if(/*p.getTeamArenaTeam() == null || */Main.getPlayerInfo(p).team == noTeamTeam)
 				shuffledPlayers.add(p);
@@ -1241,11 +1223,14 @@ public abstract class TeamArena
 
 		Collections.shuffle(shuffledPlayers, MathUtils.random);
 
-		//not considering remainders/odd players
-		int maxOnTeam = players.size() / teams.length;
+		int teamCtr = 0;
+		for (Player player : shuffledPlayers) {
+			final int i = teamCtr++ % shuffledTeams.length;
+			shuffledTeams[i].addMembers(player);
+		}
 
 		//theoretically playerIdx shouldn't become larger than the number of players so i don't need to modulus
-		int playerIdx = 0;
+		/*int playerIdx = 0;
 		for(TeamArenaTeam team : shuffledTeams) {
 			while(team.getPlayerMembers().size() < maxOnTeam) {
 				team.addMembers(shuffledPlayers.get(playerIdx));
@@ -1259,7 +1244,7 @@ public abstract class TeamArena
 				shuffledTeams[i].addMembers(shuffledPlayers.get(playerIdx));
 				playerIdx++;
 			}
-		}
+		}*/
 
 		for(TeamArenaTeam team : teams) {
 			team.updateNametags();
@@ -1389,17 +1374,14 @@ public abstract class TeamArena
 	// teams stuff only, practical changes happen in makeSpectator(Player)
 	public void setSpectator(Player player, boolean spec, boolean shame) {
 		if(spec) {
-			players.remove(player);
-			spectators.add(player);
-
 			if (gameState == GameState.PREGAME) {
-				final Component text = Component.text("You will spectate this game").color(NamedTextColor.GRAY);
+				final Component text = Component.text("You will spectate this game", NamedTextColor.GRAY);
 				//player.showTitle(Title.title(Component.empty(), text));
 				player.sendMessage(text);
 			} else {
 				//EntityDamageEvent event = new EntityDamageEvent(player, EntityDamageEvent.DamageCause.VOID, 9999d);
 				//DamageEvent dEvent = DamageEvent.createFromBukkitEvent(event, DamageType.SUICIDE);
-				queueDamage(DamageEvent.newDamageEvent(player, 99999d, DamageType.SUICIDE, null, false));
+				this.processDamageEvent(DamageEvent.newDamageEvent(player, 99999d, DamageType.SUICIDE, null, false));
 
 				if(isRespawningGame()) {
 					respawnTimers.remove(player); //if respawning game remove them from respawn queue
@@ -1411,6 +1393,9 @@ public abstract class TeamArena
 					Bukkit.broadcast(text);
 				}
 			}
+			players.remove(player);
+			spectators.add(player);
+
 			//do after so it gets the correct displayName above
 			spectatorTeam.addMembers(player);
 		}
@@ -1500,7 +1485,8 @@ public abstract class TeamArena
 
 			final PlayerInfo pinfo = Main.getPlayerInfo(playerVictim);
 			//if not null and player
-			if(killer instanceof Player playerKiller) {
+			// check if online because they may have quit after attacking and before the death
+			if(killer instanceof Player playerKiller && playerKiller.isOnline()) {
 				//killer's onKill ability
 				for (Ability a : Kit.getAbilities(playerKiller)) {
 					a.onKill(event);
@@ -1751,6 +1737,7 @@ public abstract class TeamArena
 
 		players.remove(player);
 		spectators.remove(player);
+		respawnTimers.remove(player);
 		SpectatorAngelManager.removeAngel(player);
 		balancePlayerLeave();
 		PlayerListScoreManager.removeScore(player);

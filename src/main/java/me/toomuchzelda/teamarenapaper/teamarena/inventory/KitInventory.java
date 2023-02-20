@@ -197,7 +197,7 @@ public class KitInventory implements InventoryProvider {
 			teamKitComposition.putIfAbsent(kitCategory, 0);
 		}
 
-		int finalAlivePlayers = alivePlayers;
+		int finalAlivePlayers = Math.max(alivePlayers, 1); // Minimum 1 to avoid divide by zero.
 		return teamKitComposition.entrySet().stream().map(entry -> {
 			KitCategory kitCategory = entry.getKey();
 			int integer = entry.getValue();

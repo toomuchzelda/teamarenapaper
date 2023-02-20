@@ -81,12 +81,9 @@ public class MetadataViewer
 				integer -> new EntityMetaValues(viewedEntity, new HashMap<>(1)));
 
 		MetadataValueStatus origStatus = viewedValues.indexedValues().computeIfAbsent(index, integer -> new MetadataValueStatus(null));
-		MetadataValue origValue = origStatus.value;
 		if(value instanceof MetadataBitfieldValue bitfield) {
 			if(origStatus.value == null)
 				origStatus.value = MetadataBitfieldValue.create(new HashMap<>(1));
-			else
-				throw new IllegalArgumentException("MetadataViewer#setViewedValue Mismatching types");
 
 			MetadataBitfieldValue origBitfield = (MetadataBitfieldValue) origStatus.value;
 			origBitfield.setBits(bitfield.getValue());

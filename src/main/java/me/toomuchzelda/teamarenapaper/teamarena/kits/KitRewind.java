@@ -263,9 +263,13 @@ public class KitRewind extends Kit {
 		//Cancels attacks that are attempted while in stasis
 		@Override
 		public void onAttemptedAttack(DamageEvent event) {
-			Player player = (Player) event.getAttacker();
-			if (player.getCooldown(Material.SHULKER_SHELL) >= (12 * 20 - STASIS_DURATION)) {
-				event.setCancelled(true);
+			Player player = (Player) event.getFinalAttacker();
+			// Check to make sure the immediate attacker is the final attacker
+			// this isn't always the case e.g a rewind's wolf attacks someone.
+			if (player == event.getAttacker()) {
+				if (player.getCooldown(Material.SHULKER_SHELL) >= (12 * 20 - STASIS_DURATION)) {
+					event.setCancelled(true);
+				}
 			}
 		}
 

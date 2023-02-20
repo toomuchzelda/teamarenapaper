@@ -229,8 +229,12 @@ public class EventListeners implements Listener
 	//don't show any commands the player doesn't have permission to use in the tab list
 	@EventHandler
 	public void playerCommandSend(PlayerCommandSendEvent event) {
-		@NotNull Collection<String> commands = event.getCommands();
+		if (!event.getPlayer().isOnline()) {
+			Main.logger().warning("PlayerCommandSend called for offline player: " + event.getPlayer().getName());
+			return;
+		}
 
+		@NotNull Collection<String> commands = event.getCommands();
 		Player player = event.getPlayer();
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
 
