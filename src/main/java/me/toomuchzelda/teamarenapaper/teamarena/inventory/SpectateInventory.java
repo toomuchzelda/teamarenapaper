@@ -71,7 +71,7 @@ public class SpectateInventory implements InventoryProvider {
 			.lore(Component.empty())
 			.build(),
 		SwitchItem.applyStyleWhenSelected(SortOption::display)
-	).setClickSound(Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.BLOCKS, 0.5f, 1);
+	);
 
 	// show kits by default
 	protected SwitchItem<Boolean> showKitButton = SwitchItem.ofBoolean(true,
@@ -163,19 +163,29 @@ public class SpectateInventory implements InventoryProvider {
 	protected static final ItemStack ALL_PLAYERS = ItemBuilder.of(Material.PLAYER_HEAD)
 		.displayName(Component.text("Show all players", NamedTextColor.YELLOW))
 		.build();
-	protected static final ItemStack ALL_PLAYERS_SELECTED = ItemBuilder.of(Material.ZOMBIE_HEAD)
-		.displayName(Component.text("Show all players", NamedTextColor.AQUA))
-		.build();
 
 	protected ItemStack teamToItem(@Nullable TeamArenaTeam team, boolean selected) {
 		if (team == null) {
-			return selected ? ALL_PLAYERS_SELECTED : ALL_PLAYERS;
-		} else if (team.isAlive()) { // team size != 0
-			// calculate team composition
+			return ItemUtils.highlightIfSelected(ALL_PLAYERS, selected);
+		} else if (team.hasLivingMembers()) { // team isn't "eliminated"
 			var lore = new ArrayList<Component>();
-			int totalPlayers = team.getPlayerMembers().size();
-			lore.add(Component.text("Players: " + totalPlayers, NamedTextColor.GRAY));
+			// show non-dead players for non-respawning games
+			var game = Main.getGame();
+			String playersString;
+			if (!game.isRespawningGame()) {
+				int alive = 0;
+				for (var player : team.getPlayerMembers()) {
+					if (!game.isPermanentlyDead(player))
+						alive++;
+				}
+				playersString = "Players: " + alive + " alive / " + team.getPlayerMembers().size() + " total";
+			} else {
+				playersString = "Players: " + team.getPlayerMembers().size();
+			}
+			lore.add(Component.text(playersString, NamedTextColor.GRAY));
 			lore.add(Component.text("Score: " + team.getTotalScore(), NamedTextColor.GRAY));
+
+			// calculate team composition
 			lore.add(Component.text("Team composition: ", NamedTextColor.GRAY));
 
 			lore.addAll(KitInventory.calculateTeamKitComposition(team, null));
@@ -227,7 +237,7 @@ public class SpectateInventory implements InventoryProvider {
 			});
 	}
 
-	enum SortOption {
+	protected enum SortOption {
 		BY_NAME(ignored -> Comparator.comparing(Player::getName),
 			Component.text("their name (A-Z)", NamedTextColor.WHITE)),
 		BY_NAME_DESC(ignored -> Comparator.comparing(Player::getName, Comparator.reverseOrder()),
@@ -247,11 +257,11 @@ public class SpectateInventory implements InventoryProvider {
 			this.display = display;
 		}
 
-		Component display() {
+		public Component display() {
 			return display;
 		}
 
-		Comparator<Player> getComparator(Player viewer) {
+		public Comparator<Player> getComparator(Player viewer) {
 			return comparator.apply(viewer);
 		}
 	}

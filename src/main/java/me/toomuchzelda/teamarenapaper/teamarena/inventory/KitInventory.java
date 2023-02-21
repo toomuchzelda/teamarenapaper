@@ -193,24 +193,28 @@ public class KitInventory implements InventoryProvider {
 			teamKitComposition.merge(effectiveKit.getCategory(), 1, Integer::sum);
 			alivePlayers++;
 		}
+		if (alivePlayers == 0) // everyone is dead
+			return List.of();
+
 		for (var kitCategory : KitCategory.values()) { // fill with zeroes
 			teamKitComposition.putIfAbsent(kitCategory, 0);
 		}
 
-		int finalAlivePlayers = Math.max(alivePlayers, 1); // Minimum 1 to avoid divide by zero.
-		return teamKitComposition.entrySet().stream().map(entry -> {
+		var components = new ArrayList<Component>();
+		for (var entry : teamKitComposition.entrySet()) {
 			KitCategory kitCategory = entry.getKey();
 			int integer = entry.getValue();
-			int percentage = 100 * integer / finalAlivePlayers;
-			return Component.textOfChildren(
+			int percentage = 100 * integer / alivePlayers;
+			components.add(Component.textOfChildren(
 				viewerCategory == kitCategory ? TEXT_INDENTATION_KIT.color(kitCategory.textColor()) : TEXT_INDENTATION,
 				kitCategory.displayName(),
 				TEXT_SEPARATOR,
 				integer != 0 ?
 					Component.text(integer + " (" + percentage + "%)", kitCategory.textColor()) :
-					Component.text("0 (0%)", NamedTextColor.RED)
-			);
-		}).toList();
+					Component.text("0 (0%)", NamedTextColor.DARK_RED)
+			));
+		}
+		return components;
 	}
 
 	private static void saveDefaultKit(InventoryClickEvent e) {

@@ -140,21 +140,28 @@ public final class BuildingManager {
 		}
 
 		// temporary API
-		public static void onBlockBreak(BlockBreakEvent event) {
+		public static boolean onBlockBreak(BlockBreakEvent event) {
 			var block = event.getBlock();
 			Map<Building, Consumer<BlockBreakEvent>> handlers = blockBreakCallbacks.get(block);
 			if (handlers != null) {
-				for (var registeredHandler : handlers.entrySet()) {
+				boolean handled = false;
+				for (var iter = handlers.entrySet().iterator(); iter.hasNext();) {
+					var registeredHandler = iter.next();
 					var building = registeredHandler.getKey();
-					if (building.invalid)
+					if (building.invalid) {
+						iter.remove();
 						continue;
+					}
 					var handler = registeredHandler.getValue();
 					handler.accept(event);
+					handled = true;
 				}
 				if (!event.isCancelled()) {
 					blockBreakCallbacks.remove(block);
 				}
+				return handled;
 			}
+			return false;
 		}
 	}
 }

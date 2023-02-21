@@ -326,6 +326,8 @@ public class KitSpy extends Kit
 		public SpyInventory(@NotNull TeamArenaTeam viewerTeam) {
 			super(null, false);
 			this.viewerTeam = viewerTeam;
+			// disallow sorting by distance
+			this.sortByButton = this.sortByButton.withValues(EnumSet.of(SortOption.BY_NAME, SortOption.BY_NAME_DESC, SortOption.BY_KIT), SortOption.BY_NAME);
 		}
 
 		@Override
@@ -336,7 +338,7 @@ public class KitSpy extends Kit
 		@Override
 		protected ItemStack teamToItem(@Nullable TeamArenaTeam team, boolean selected) {
 			// conceal player count
-			if (team != viewerTeam && team != null && team.isAlive()) {
+			if (team != viewerTeam && team != null && team.hasLivingMembers()) {
 				var stack = ItemBuilder.of(team.getIconItem().getType())
 					.displayName(team.getComponentName())
 					.lore(Component.text("Players: ???", NamedTextColor.GRAY),

@@ -8,8 +8,6 @@ import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import com.destroystokyo.paper.event.player.PlayerUseUnknownEntityEvent;
 import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
-import com.destroystokyo.paper.profile.CraftPlayerProfile;
-import com.destroystokyo.paper.profile.PlayerProfile;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.*;
@@ -18,7 +16,7 @@ import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitbox;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
-import me.toomuchzelda.teamarenapaper.sql.*;
+import me.toomuchzelda.teamarenapaper.sql.DBSetPreferences;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.ChatAnnouncerManager;
@@ -34,13 +32,11 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.KitGhost;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitReach;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitVenom;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
-import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -60,7 +56,6 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.*;
-import org.bukkit.event.player.PlayerLoginEvent.Result;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
@@ -71,10 +66,11 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 
-import java.sql.SQLException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static me.toomuchzelda.teamarenapaper.teamarena.GameState.DEAD;
 import static me.toomuchzelda.teamarenapaper.teamarena.GameState.LIVE;
@@ -267,6 +263,7 @@ public class EventListeners implements Listener
 		event.quitMessage(null);
 		Player leaver = event.getPlayer();
 		Main.getGame().leavingPlayer(leaver);
+		BuildingManager.EventListener.onPlayerQuit(event);
 		//Main.getPlayerInfo(event.getPlayer()).nametag.remove();
 		FakeHitboxManager.removeFakeHitbox(leaver);
 		PlayerInfo pinfo = Main.removePlayerInfo(leaver);
@@ -384,13 +381,15 @@ public class EventListeners implements Listener
 		if(game != null) {
 			GameState state = Main.getGame().getGameState();
 			if (state == LIVE || state == GameState.END) {
-				if(state == LIVE)
-					BuildingManager.EventListener.onBlockBreak(event);
-
+				Player player = event.getPlayer();
 				// Players in creative can break any blocks
-				if (event.getPlayer().getGameMode() != GameMode.CREATIVE) {
-					// If the block is breakable and player is alive in game.
-					if (!isBlockBreakable(event.getBlock().getType()) || game.isDead(event.getPlayer()))
+				if (player.getGameMode() != GameMode.CREATIVE) {
+					if (game.isDead(player)) {
+						event.setCancelled(true);
+						return;
+					}
+					// not handled by BuildingManager and not breakable
+					if (!BuildingManager.EventListener.onBlockBreak(event) && !isBlockBreakable(event.getBlock().getType()))
 						event.setCancelled(true);
 				}
 			}

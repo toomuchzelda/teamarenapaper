@@ -273,7 +273,7 @@ public class CaptureTheFlag extends TeamArena
 		sidebarCache.clear();
 
 		var flags = teamToFlags.values().stream()
-				.filter(flag -> CommandDebug.ignoreWinConditions || flag.team.isAlive())
+				.filter(flag -> CommandDebug.ignoreWinConditions || flag.team.hasLivingMembers())
 				.sorted(Flag.BY_SCORE_DESC)
 				.toList();
 
@@ -840,7 +840,7 @@ public class CaptureTheFlag extends TeamArena
 			Component yourFlagText = Component.text("Your flag", team.getRGBTextColor());
 			miniMap.registerCursor(
 				// hide dead flags
-				(ignored1, ignored2) -> CommandDebug.ignoreWinConditions || gameState == GameState.PREGAME || team.isAlive(),
+				(ignored1, ignored2) -> CommandDebug.ignoreWinConditions || gameState == GameState.PREGAME || team.hasLivingMembers(),
 				(player, playerInfo) -> {
 					// display extra information for own flag
 					if (playerInfo.team == team) {

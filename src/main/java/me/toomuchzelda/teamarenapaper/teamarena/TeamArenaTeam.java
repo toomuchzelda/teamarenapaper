@@ -297,6 +297,18 @@ public class TeamArenaTeam
 		return playerMembers.size() > 0;
 	}
 
+	/** Checks whether the team has players not considered permanently dead. */
+	public boolean hasLivingMembers() {
+		if (!isAlive())
+			return false;
+		var game = Main.getGame();
+		for (var player : getPlayerMembers()) {
+			if (!game.isPermanentlyDead(player))
+				return true;
+		}
+		return false;
+	}
+
 	public boolean hasMember(Entity entity) {
 		if(entity == null) return false;
 		if(entity instanceof Player p) {

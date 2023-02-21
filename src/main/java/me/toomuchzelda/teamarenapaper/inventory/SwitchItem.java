@@ -25,7 +25,7 @@ public class SwitchItem<T> {
 	private final Function<SwitchItem<T>, ItemStack> itemFunction;
 	private boolean disabled;
 	@Nullable
-	private net.kyori.adventure.sound.Sound clickSound;
+	private net.kyori.adventure.sound.Sound clickSound = net.kyori.adventure.sound.Sound.sound(Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.BLOCKS, 0.5f, 1);
 
 	// thanks type erasure
 	private SwitchItem(Collection<? extends T> values, T defaultValue, Function<SwitchItem<T>, ItemStack> itemFunction, boolean ignored) {
@@ -54,6 +54,13 @@ public class SwitchItem<T> {
 
 	private void incrementState(int increment) {
 		index = Math.floorMod(index + increment, values.size());
+	}
+
+	/**
+	 * Returns a new instance of {@code SwitchItem} with values replaced.
+	 */
+	public SwitchItem<T> withValues(Collection<? extends T> values, T defaultValue) {
+		return new SwitchItem<>(values, defaultValue, itemFunction, true);
 	}
 
 	public boolean isDisabled() {
@@ -94,7 +101,7 @@ public class SwitchItem<T> {
 	}
 
 	public static SwitchItem<Boolean> ofBoolean(boolean defaultValue, ItemStack trueItem, ItemStack falseItem) {
-		return new SwitchItem<>(List.of(true, false), defaultValue, bool -> bool ? trueItem : falseItem);
+		return new SwitchItem<>(List.of(true, false), defaultValue, state -> state.getState() ? trueItem : falseItem, true);
 	}
 
 	public static <T> SwitchItem<T> ofSimple(Collection<? extends T> values, T defaultValue,
@@ -103,7 +110,13 @@ public class SwitchItem<T> {
 			ItemStack stack = template.clone();
 			ItemMeta meta = stack.getItemMeta();
 			var loreList = meta.lore();
-			var newLoreList = loreList != null ? new ArrayList<>(loreList) : new ArrayList<Component>();
+			ArrayList<Component> newLoreList;
+			if (loreList != null) {
+				newLoreList = new ArrayList<>(loreList.size() + state.values.size());
+				newLoreList.addAll(loreList);
+			} else {
+				newLoreList = new ArrayList<>(state.values.size());
+			}
 			for (int i = 0; i < state.values.size(); i++) {
 				boolean isCurrentState = i == state.index;
 				var lineComponent = lineFunction.apply(state.values.get(i), isCurrentState);

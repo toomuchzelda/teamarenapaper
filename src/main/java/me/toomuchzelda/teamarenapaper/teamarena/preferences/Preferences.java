@@ -94,7 +94,7 @@ public class Preferences {
 				The frequency of particles along the Hill border in King of the Hill.
 				0 = disable particles
 				1 = fewer particles
-				10 = more particles""", Integer.class, 5,
+				10 = more particles""", Integer.class, 4,
 			value -> value >= 0 && value <= 10)
 		// https://minecraft-heads.com/custom-heads/miscellaneous/34656-glint-particle
 		.setIcon(ItemUtils.createPlayerHead("9f84735fc9c760e95eaf10cec4f10edb5f3822a5ff9551eeb5095135d1ffa302"))

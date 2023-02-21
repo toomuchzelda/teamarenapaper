@@ -784,7 +784,7 @@ public abstract class TeamArena
 	 * @return Whether the player is permanently dead
 	 */
 	public boolean isPermanentlyDead(Player player) {
-		return isDead(player) && !isRespawningGame();
+		return !isRespawningGame() && isDead(player);
 	}
 
 	/**
