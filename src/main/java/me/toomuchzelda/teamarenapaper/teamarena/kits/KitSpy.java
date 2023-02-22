@@ -338,7 +338,7 @@ public class KitSpy extends Kit
 		@Override
 		protected ItemStack teamToItem(@Nullable TeamArenaTeam team, boolean selected) {
 			// conceal player count
-			if (team != viewerTeam && team != null && team.hasLivingMembers()) {
+			if (team != viewerTeam && team != null && team.hasLivingOrRespawningMembers()) {
 				var stack = ItemBuilder.of(team.getIconItem().getType())
 					.displayName(team.getComponentName())
 					.lore(Component.text("Players: ???", NamedTextColor.GRAY),

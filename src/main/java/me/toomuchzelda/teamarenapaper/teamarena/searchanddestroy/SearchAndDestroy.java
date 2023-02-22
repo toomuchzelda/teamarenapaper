@@ -201,7 +201,7 @@ public class SearchAndDestroy extends TeamArena
 			MapCursor.Type icon = MapCursor.Type.valueOf("BANNER_" + team.getDyeColour().name());
 			var bombText = Component.text(team.getSimpleName() + "'s bomb", team.getRGBTextColor());
 			miniMap.registerCursors(
-				(ignored1, ignored2) -> CommandDebug.ignoreWinConditions || gameState == GameState.PREGAME || team.hasLivingMembers(),
+				(ignored1, ignored2) -> CommandDebug.ignoreWinConditions || gameState == GameState.PREGAME || team.hasLivingOrRespawningMembers(),
 				null,
 				(player, playerInfo) -> bombs.stream()
 					.map(bomb -> new MiniMapManager.CursorInfo(
@@ -897,7 +897,7 @@ public class SearchAndDestroy extends TeamArena
 		for (var entry : teamBombs.entrySet()) {
 			var team = entry.getKey();
 			var bombs = entry.getValue();
-			if (!CommandDebug.ignoreWinConditions && !team.hasLivingMembers())
+			if (!CommandDebug.ignoreWinConditions && !team.hasLivingOrRespawningMembers())
 				continue;
 
 			var builder = Component.text();

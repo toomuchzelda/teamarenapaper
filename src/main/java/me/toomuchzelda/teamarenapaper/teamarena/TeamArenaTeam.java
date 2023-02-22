@@ -298,11 +298,11 @@ public class TeamArenaTeam
 	}
 
 	/** Checks whether the team has players not considered permanently dead. */
-	public boolean hasLivingMembers() {
+	public boolean hasLivingOrRespawningMembers() {
 		if (!isAlive())
 			return false;
-		var game = Main.getGame();
-		for (var player : getPlayerMembers()) {
+		TeamArena game = Main.getGame();
+		for (Player player : getPlayerMembers()) {
 			if (!game.isPermanentlyDead(player))
 				return true;
 		}

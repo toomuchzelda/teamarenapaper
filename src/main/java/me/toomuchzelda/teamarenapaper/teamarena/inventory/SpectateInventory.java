@@ -167,7 +167,7 @@ public class SpectateInventory implements InventoryProvider {
 	protected ItemStack teamToItem(@Nullable TeamArenaTeam team, boolean selected) {
 		if (team == null) {
 			return ItemUtils.highlightIfSelected(ALL_PLAYERS, selected);
-		} else if (team.hasLivingMembers()) { // team isn't "eliminated"
+		} else if (team.hasLivingOrRespawningMembers()) { // team isn't "eliminated"
 			var lore = new ArrayList<Component>();
 			// show non-dead players for non-respawning games
 			var game = Main.getGame();

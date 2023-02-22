@@ -263,7 +263,7 @@ public class KingOfTheHill extends TeamArena
 		sidebarCache.clear();
 		record CaptureSummary(TeamArenaTeam team, float progress, float change) {}
 		var teamSummary = Arrays.stream(teams)
-				.filter(team -> CommandDebug.ignoreWinConditions || team.hasLivingMembers())
+				.filter(team -> CommandDebug.ignoreWinConditions || team.hasLivingOrRespawningMembers())
 				.map(team -> new CaptureSummary(
 						team,
 						// max capture progress if king of the hill for sorting purposes
