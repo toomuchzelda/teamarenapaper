@@ -305,6 +305,8 @@ public abstract class TeamArena
 			pinfo.clearDamageReceivedLog();
 			pinfo.getKillAssistTracker().clear();
 			pinfo.kills = 0;
+			pinfo.totalKills = 0;
+			pinfo.deaths = 0;
 			noTeamTeam.addMembers(p);
 
 			if(pinfo.kit == null)
@@ -1158,6 +1160,8 @@ public abstract class TeamArena
 			SpectatorAngelManager.removeAngel(p);
 
 			this.killStreakManager.removeKillStreaks(p, pinfo);
+
+			this.informKillsDeaths(p, pinfo);
 		}
 
 		for(Kit kit : kits.values()) {
@@ -1484,6 +1488,8 @@ public abstract class TeamArena
 			}
 
 			final PlayerInfo pinfo = Main.getPlayerInfo(playerVictim);
+			pinfo.deaths++;
+
 			//if not null and player
 			// check if online because they may have quit after attacking and before the death
 			if(killer instanceof Player playerKiller && playerKiller.isOnline()) {
@@ -1583,6 +1589,8 @@ public abstract class TeamArena
 			player.sendMessage(Component.text("Scored a kill assist of " + MathUtils.round(amount, 2) + "!", NamedTextColor.RED));
 
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
+		pinfo.totalKills += amount;
+
 		int killsBefore = (int) pinfo.kills;
 		pinfo.kills += amount;
 		int killsAfter = (int) pinfo.kills;
@@ -1757,6 +1765,12 @@ public abstract class TeamArena
 		}
 		p.sendMessage(text);
 		p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.AMBIENT, 2f, 0.5f);
+	}
+
+	private void informKillsDeaths(Player player, PlayerInfo pinfo) {
+		final double killsRounded = MathUtils.round(pinfo.totalKills, 2);
+		Component msg = Component.text("You got " + killsRounded + " kills and died " + pinfo.deaths + " times this game.", NamedTextColor.DARK_GRAY);
+		player.sendMessage(msg);
 	}
 
 	//find an appropriate team to put player on at any point during game

@@ -293,6 +293,7 @@ public class TeamArenaTeam
 		return last;
 	}
 
+	/** Returns true if the team has any members on it. Having members does NOT mean those members are alive in-game */
 	public boolean isAlive() {
 		return playerMembers.size() > 0;
 	}

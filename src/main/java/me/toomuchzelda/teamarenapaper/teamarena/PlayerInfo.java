@@ -54,6 +54,9 @@ public class PlayerInfo
 
 	// Kills + kill assists
 	public double kills;
+	// Amount of kills/deaths they got in the whole game.
+	public double totalKills;
+	public int deaths;
 	// Currently used for KillStreak announcements
 	public int lastKillTime;
 	//for right clicking the leather chestplate
@@ -86,6 +89,8 @@ public class PlayerInfo
 
 		killAssistTracker = new KillAssistTracker(player);
 		kills = 0;
+		totalKills = 0;
+		deaths = 0;
 		lastKillTime = 0;
 		viewingGlowingTeammates = false;
 		lastInteractUnknownEntityTimes = new int[2];
