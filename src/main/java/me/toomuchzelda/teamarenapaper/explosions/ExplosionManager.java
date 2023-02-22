@@ -14,10 +14,6 @@ import java.util.WeakHashMap;
  */
 public class ExplosionManager {
 
-	public static final byte DEFAULT_FIRE = -1;
-	public static final byte YES_FIRE = 1;
-	public static final byte NO_FIRE = 0;
-
 	private static final Map<Entity, EntityExplosionInfo> ENTITY_EXPLOSION_MAP = new WeakHashMap<>();
 
 	public static void setEntityInfo(Entity entity, EntityExplosionInfo info) {

@@ -136,8 +136,8 @@ public class HarbingerKillStreak extends CratedKillStreak
 			}
 		}
 
-		private static final Map<Player, Set<HarbingerStrike>> CURRENT_STRIKES = new LinkedHashMap<>();
-		private static final Map<BlockCoords, BlockState> CHANGED_BLOCKS = new HashMap<>();
+		private final Map<Player, Set<HarbingerStrike>> CURRENT_STRIKES = new LinkedHashMap<>();
+		private final Map<BlockCoords, BlockState> CHANGED_BLOCKS = new HashMap<>();
 
 		@Override
 		public void giveAbility(Player player) {
@@ -255,7 +255,8 @@ public class HarbingerKillStreak extends CratedKillStreak
 				BlockFace.SOUTH_EAST, BlockFace.SOUTH_WEST,
 				BlockFace.NORTH_EAST, BlockFace.NORTH_WEST
 		};
-		private static void strike(final int diff, final HarbingerStrike strike, final World world, final Player user) {
+
+		private void strike(final int diff, final HarbingerStrike strike, final World world, final Player user) {
 			float start = (float) diff / (float) STRIKE_DURATION;
 			if(start < 0f || start > 1f) {
 				Thread.dumpStack();
@@ -351,7 +352,7 @@ public class HarbingerKillStreak extends CratedKillStreak
 			}
 		}
 
-		private static void restoreBlocks(HarbingerStrike strike, World world) {
+		private void restoreBlocks(HarbingerStrike strike, World world) {
 			for (BlockCoords coords : strike.changedBlocks) {
 				BlockState data = CHANGED_BLOCKS.remove(coords);
 				if (data == null) {
