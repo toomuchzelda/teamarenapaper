@@ -193,7 +193,7 @@ public class CommandCallvote extends CustomCommand {
 					separator,
 					Component.text("Most votes: ", NamedTextColor.GREEN),
 					popular.getKey().display(),
-					Component.text(" (" + TextUtils.ONE_DECIMAL_POINT.format(percentage * 100) + "%)")
+					Component.text(" (" + TextUtils.formatNumber(percentage * 100) + "%)")
 			));
 			bar.progress(percentage);
 		}

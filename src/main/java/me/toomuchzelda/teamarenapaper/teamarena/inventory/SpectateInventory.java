@@ -213,6 +213,7 @@ public class SpectateInventory implements InventoryProvider {
 		var kit = playerInfo.getEffectiveKit();
 
 		double distance = player.getLocation().distance(distanceOrigin);
+		String distanceStr = distance > 10 ? "" + Math.round(distance) : TextUtils.formatNumber(distance);
 
 		var uuid = player.getUniqueId();
 		return ItemBuilder.from(showKit ? kit.getIcon() : new ItemStack(Material.PLAYER_HEAD))
@@ -224,7 +225,7 @@ public class SpectateInventory implements InventoryProvider {
 				),
 				Component.textOfChildren(
 					Component.text("Distance: ", NamedTextColor.GRAY),
-					Component.text(TextUtils.ONE_DECIMAL_POINT.format(distance) + " block(s)", NamedTextColor.YELLOW)
+					Component.text(distanceStr + " block(s)", NamedTextColor.YELLOW)
 				)
 			)
 			.meta(SkullMeta.class, skullMeta -> skullMeta.setOwningPlayer(player))

@@ -151,7 +151,7 @@ public class GraffitiManager {
 			}
 		} else {
 			player.sendActionBar(Component.text("Graffiti cooldown: " +
-					TextUtils.ONE_DECIMAL_POINT.format((GRAFFITI_COOLDOWN - ticksElapsed) / 20f) + "s",
+					TextUtils.formatNumber((GRAFFITI_COOLDOWN - ticksElapsed) / 20f) + "s",
 				NamedTextColor.RED));
 		}
 	}

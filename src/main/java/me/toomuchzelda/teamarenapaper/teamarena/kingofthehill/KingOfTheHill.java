@@ -377,7 +377,7 @@ public class KingOfTheHill extends TeamArena
 
 					sidebar.addEntry(Component.textOfChildren(
 							Component.text("Cap: " + percent + "%", Style.style(TextDecoration.BOLD)),
-							Component.text(" @" + TextUtils.TWO_DECIMAL_POINT.format(rate) + "%/s")
+							Component.text(" @" + TextUtils.formatNumber(rate, 2) + "%/s")
 					));
 				}
 			}

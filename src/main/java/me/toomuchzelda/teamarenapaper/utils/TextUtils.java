@@ -18,7 +18,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.awt.*;
-import java.text.DecimalFormat;
 import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -29,8 +28,6 @@ import java.util.regex.Pattern;
 
 public class TextUtils {
 
-	public static final DecimalFormat ONE_DECIMAL_POINT = new DecimalFormat("0.#");
-	public static final DecimalFormat TWO_DECIMAL_POINT = new DecimalFormat("0.##");
 	/**
 	 * For item lores that have "left click to do x" and/or "right click to do y"
 	 */
@@ -40,6 +37,9 @@ public class TextUtils {
 	public static final int DEFAULT_WIDTH = 150;
 
 	public static TextComponent formatDuration(@NotNull Duration duration) {
+		if (duration.isZero())
+			return Component.text("just now", NamedTextColor.YELLOW);
+
 		long days = duration.toDaysPart();
 		int hours = duration.toHoursPart();
 		int minutes = duration.toMinutesPart();
@@ -52,8 +52,23 @@ public class TextUtils {
 		if (minutes != 0)
 			string.append(minutes).append('m');
 		if (remainingSeconds != 0)
-			string.append(ONE_DECIMAL_POINT.format(remainingSeconds)).append('s');
+			string.append(formatNumber(remainingSeconds)).append('s');
 		return Component.text(string.length() == 0 ? "just now" : string.toString(), NamedTextColor.YELLOW);
+	}
+
+	public static String formatNumber(double value, int scale) {
+		if ((int) value == value) {
+			return "" + ((int) value);
+		}
+		double pow = Math.pow(10, scale);
+		return "" + (Math.round(value * pow) / pow);
+	}
+
+	public static String formatNumber(double value) {
+		if ((int) value == value) {
+			return "" + ((int) value);
+		}
+		return "" + (Math.round(value * 10d) / 10d);
 	}
 
 	public static TextComponent formatDuration(@NotNull Duration duration, @NotNull ZonedDateTime time, @Nullable Locale locale) {
@@ -61,6 +76,10 @@ public class TextUtils {
 			.localizedBy(locale == null ? Locale.getDefault() : locale));
 		return formatDuration(duration)
 			.hoverEvent(HoverEvent.showText(Component.text(timeString, NamedTextColor.YELLOW)));
+	}
+
+	public static String formatHealth(double health) {
+		return "" + Math.round(health * 5d) / 10d + "❤";
 	}
 
 	public static boolean containsIgnoreCase(String needle, String haystack) {

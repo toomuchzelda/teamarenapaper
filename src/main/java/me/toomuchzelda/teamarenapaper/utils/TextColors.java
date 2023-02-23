@@ -15,6 +15,8 @@ public final class TextColors {
 	public static final TextColor LIGHT_YELLOW = TextColor.color(242, 236, 145);
 	public static final TextColor LIGHT_BROWN = TextColor.color(199, 157, 74);
 
-	public static final Component HEART = Component.text("❤", TextColor.color(247, 18, 18));
+	public static final TextColor HEALTH = TextColor.color(247, 18, 18);
+
+	public static final Component HEART = Component.text("❤", HEALTH);
 	public static final Component YELLOW_HEART = Component.text("❤", TextColor.color(212, 175, 55));
 }

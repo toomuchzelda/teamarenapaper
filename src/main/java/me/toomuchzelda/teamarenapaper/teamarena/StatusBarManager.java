@@ -94,8 +94,7 @@ public class StatusBarManager
 						heartChar = TextColors.HEART; // red heart
 					}
 
-					final double hearts = MathUtils.round((player.getHealth() + absorp) / 2d, 2);
-					Component health = Component.text(hearts + " ").append(heartChar);
+					Component health = Component.text(MathUtils.round((player.getHealth() + absorp) / 2d, 2) + " ").append(heartChar);
 					this.setText(health, true);
 				}
 			}

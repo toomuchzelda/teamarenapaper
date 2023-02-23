@@ -412,19 +412,23 @@ public class KitMedic extends Kit
 			TOO_FAR, NO_LINE_OF_SIGHT, CAN_HEAL
 		}
 
+		private static final Component SEPARATOR = Component.text(" | ", NamedTextColor.DARK_GRAY);
+		private static final Component FULL = Component.text("Full", NamedTextColor.GREEN);
 		private static Component getHealingMessage(LivingEntity healed) {
-			double healthPercent =
-					(healed.getHealth() / healed.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue()) * 100d;
-			healthPercent = MathUtils.round(healthPercent, 2);
+			double health = healed.getHealth() + healed.getAbsorptionAmount();
+			double maxHealth = healed.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+			double ticksToFull = (maxHealth - health) / HEAL_PER_TICK;
+			double healthPercentage = health / maxHealth * 100d;
 
-			Component healingName = Component.text()
-					.append(Component.text("Healing "))
-					.append(EntityUtils.getComponent(healed))
-					.color(NamedTextColor.LIGHT_PURPLE)
-					.append(Component.text().append(Component.text(" " + healthPercent + "%")).append(TextColors.HEART).build())
-					.build();
-
-			return healingName;
+			return Component.textOfChildren(
+				Component.text("Healing ", NamedTextColor.LIGHT_PURPLE),
+				EntityUtils.getComponent(healed),
+				SEPARATOR,
+				TextColors.HEART, Component.space(),
+				Component.text(TextUtils.formatNumber(healthPercentage) + "%", TextColors.HEALTH),
+				SEPARATOR,
+				ticksToFull < 1 ? FULL : Component.text(TextUtils.formatNumber(ticksToFull / 20) + "s to full", NamedTextColor.YELLOW)
+			);
 		}
 
 		private static Component getTotalHealedMessage(@Nullable Double amountHealed) {

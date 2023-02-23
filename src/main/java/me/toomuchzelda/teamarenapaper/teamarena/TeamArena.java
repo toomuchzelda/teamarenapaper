@@ -1768,9 +1768,13 @@ public abstract class TeamArena
 	}
 
 	private void informKillsDeaths(Player player, PlayerInfo pinfo) {
-		final double killsRounded = MathUtils.round(pinfo.totalKills, 2);
-		Component msg = Component.text("You got " + killsRounded + " kills and died " + pinfo.deaths + " times this game.", NamedTextColor.DARK_GRAY);
-		player.sendMessage(msg);
+		player.sendMessage(Component.textOfChildren(
+			Component.text("You got "),
+			Component.text(TextUtils.formatNumber(pinfo.totalKills, 2), NamedTextColor.BLUE),
+			Component.text(" kills and died "),
+			Component.text(pinfo.deaths, NamedTextColor.RED),
+			Component.text(" times this game.")
+		).color(NamedTextColor.DARK_GRAY));
 	}
 
 	//find an appropriate team to put player on at any point during game

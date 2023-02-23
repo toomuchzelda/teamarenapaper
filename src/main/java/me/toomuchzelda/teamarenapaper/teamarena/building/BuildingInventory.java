@@ -43,7 +43,7 @@ public class BuildingInventory implements InventoryProvider {
 			var itemStack = ItemBuilder.from(building.getIcon())
 					.displayName(Component.text(building.name, NamedTextColor.BLUE))
 					.lore(Component.text(
-							TextUtils.TWO_DECIMAL_POINT.format(distance) + " blocks away", NamedTextColor.WHITE
+							TextUtils.formatNumber(distance) + " blocks away", NamedTextColor.WHITE
 					))
 					.build();
 

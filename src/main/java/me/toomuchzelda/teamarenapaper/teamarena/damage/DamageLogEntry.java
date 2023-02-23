@@ -4,6 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
+import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
@@ -24,7 +25,7 @@ public record DamageLogEntry(DamageType damageType, double damage, @Nullable Com
 	public static final Comparator<DamageLogEntry> DESCENDING = ASCENDING.reversed();
 
 	private static final DecimalFormat DAMAGE_FORMAT = new DecimalFormat("#.##");
-	private static final TextColor HEART_COLOR = TextColor.color(217, 45, 2);
+	private static final TextColor HEART_COLOR = TextColors.HEALTH;
 
 	public Component asComponent() {
 		return asComponent(false);
@@ -44,35 +45,24 @@ public record DamageLogEntry(DamageType damageType, double damage, @Nullable Com
 
 	public Component asComponent(boolean legacy) {
 		var builder = Component.text();
-		if (legacy) {
-			builder.append(Component.text(DAMAGE_FORMAT.format(damage / 2) + " ♥", HEART_COLOR));
-			builder.append(Component.text(", Cause: " + damageType.getName(), TextColor.color(255, 247, 0)));
-			if (damager != null) {
-				builder.append(Component.text(", Damager: ", TextColor.color(6, 122, 0)), damager);
-			}
-			float timeAgo = TeamArena.getGameTick() - time;
-			timeAgo /= 20;
-			builder.append(Component.text(", " + timeAgo + "s ago", NamedTextColor.WHITE));
-		} else {
+		builder.append(
+				Component.text("-" + TextUtils.formatHealth(damage), HEART_COLOR),
+				Component.text(" from ", NamedTextColor.YELLOW),
+				getDamageTypeComponent(damageType)
+		);
+		if (damager != null) {
 			builder.append(
-					Component.text("-" + DAMAGE_FORMAT.format(damage / 2) + "♥", HEART_COLOR),
-					Component.text(" from ", NamedTextColor.YELLOW),
-					getDamageTypeComponent(damageType)
+					Component.text(" by ", NamedTextColor.DARK_GREEN),
+					damager
 			);
-			if (damager != null) {
-				builder.append(
-						Component.text(" by ", NamedTextColor.DARK_GREEN),
-						damager
-				);
-			}
-			long timeAgo = (TeamArena.getGameTick() - time) * 50L;
-			if (timeAgo == 0) {
-				builder.append(Component.text(" just now", NamedTextColor.YELLOW));
-			} else {
-				builder.append(Component.space(),
-						TextUtils.formatDuration(Duration.ofMillis(timeAgo)),
-						Component.text(" ago", NamedTextColor.YELLOW));
-			}
+		}
+		long timeAgo = (TeamArena.getGameTick() - time) * 50L;
+		if (timeAgo == 0) {
+			builder.append(Component.text(" just now", NamedTextColor.YELLOW));
+		} else {
+			builder.append(Component.space(),
+					TextUtils.formatDuration(Duration.ofMillis(timeAgo)),
+					Component.text(" ago", NamedTextColor.YELLOW));
 		}
 		return builder.build();
 	}
@@ -113,6 +103,7 @@ public record DamageLogEntry(DamageType damageType, double damage, @Nullable Com
 			return;
 
 		List<DamageLogEntry> list = pinfo.getDamageReceivedLog();
+		double totalDamage = list.stream().mapToDouble(DamageLogEntry::damage).sum();
 		if (style == Style.COMPACT) {
 			player.sendMessage(Component.text("Here's how you died: (hover to see more)", NamedTextColor.DARK_PURPLE));
 			Map<DamageType, DamageLogEntry.DamageSummary> damageSummary = createSummary(list);
@@ -142,6 +133,11 @@ public record DamageLogEntry(DamageType damageType, double damage, @Nullable Com
 			}
 			player.sendMessage(Component.join(JoinConfiguration.newlines(), components));
 		}
+		player.sendMessage(Component.textOfChildren(
+			Component.text("You took "),
+			Component.text(TextUtils.formatHealth(totalDamage), TextColors.HEALTH),
+			Component.text(" damage this life.")
+		).color(NamedTextColor.WHITE));
 	}
 
 	public enum Style {
