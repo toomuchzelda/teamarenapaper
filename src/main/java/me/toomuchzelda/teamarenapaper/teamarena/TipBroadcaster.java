@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
+import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
@@ -49,7 +50,8 @@ public class TipBroadcaster
 		Component.text("Flags in Capture the Flag can't be held forever! A flag will forcefully return to base if it's been gone for a maximum of " + (CaptureTheFlag.TAKEN_FLAG_RETURN_TIME / (20 * 60)) + " minutes", COLOR),
 		Component.text("In King of the Hill, more team members on the Hill means faster capture speed", COLOR),
 		Component.text("An Engineer can mount and control their Sentry by right-clicking it with the Wrench", COLOR),
-		Component.text("Kit Explosive makes a very loud sound when it charges up it's RPG. If you hear it from an enemy, hide!", COLOR)
+		Component.text("Kit Explosive makes a very loud sound when it charges up it's RPG. If you hear it from an enemy, hide!", COLOR),
+		Component.text("Want to see how you died? Check your preferences for the " + Preferences.RECEIVE_DAMAGE_RECEIVED_LIST.getName() + " option!", COLOR)
 	};
 
 	private static final List<Component> queue = new ArrayList<>(Arrays.asList(TIPS));

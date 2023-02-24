@@ -931,25 +931,10 @@ public class EventListeners implements Listener
 		event.setCancelled(true);
 	}
 
-
-	static final Component MOTD_SEPARATOR = Component.textOfChildren(Component.space(),
-			Component.text("|", NamedTextColor.DARK_RED, TextDecoration.BOLD), Component.space());
-	static final Component MOTD = Component.textOfChildren(
-			Component.text("               "),
-			TextUtils.getUselessRGBText("Team Arena", TextColor.color(0x060894), TextColor.color(0x1ad3f0)),
-			Component.space(),
-			TextUtils.getUselessRainbowText("[1.19.3]"),
-			Component.newline(),
-			TextUtils.getUselessRGBText("King of the Hill", TextColor.color(0x595959), TextColor.color(0xadadad)),
-			MOTD_SEPARATOR,
-			TextUtils.getUselessRGBText("Capture the Flag", TextColor.color(0x1d6e16), TextColor.color(0x00ff40)),
-			MOTD_SEPARATOR,
-			TextUtils.getUselessRGBText("Search and Destroy", TextColor.color(0x631773), TextColor.color(0xff00f2))
-	);
+	// Asynchronous event
 	@EventHandler
-	public void onMotd(PaperServerListPingEvent e) {
-		e.motd(MOTD);
-		e.getPlayerSample().clear();
+	public void paperServerListPing(PaperServerListPingEvent e) {
+		ServerListPingManager.handleEvent(e);
 	}
 
 	@EventHandler

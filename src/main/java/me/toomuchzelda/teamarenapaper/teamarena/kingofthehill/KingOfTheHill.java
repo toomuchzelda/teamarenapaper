@@ -49,7 +49,7 @@ public class KingOfTheHill extends TeamArena
 	//the total score u need to get to win
 	public final int TICKS_TO_WIN;
 
-	private static final Component GAME_NAME = Component.text("King of the Hill", NamedTextColor.YELLOW);
+	public static final Component GAME_NAME = Component.text("King of the Hill", NamedTextColor.YELLOW);
 	public static final Component HOW_TO_PLAY = Component.text("Stand on the active hill to capture it! The first team to be King for enough time wins!", NamedTextColor.YELLOW);
 
 	private final Map<TeamArenaTeam, Component> sidebarCache = new LinkedHashMap<>();
