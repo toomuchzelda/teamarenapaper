@@ -1171,7 +1171,6 @@ public abstract class TeamArena
 		}
 
 		miniMap.onGameEnd();
-		graffiti.cleanUp();
 
 		players.clear();
 		spectators.clear();
@@ -1199,6 +1198,9 @@ public abstract class TeamArena
 		//spectatorTeam.removeAllMembers();
 		spectatorTeam.unregister();
 		noTeamTeam.unregister();
+
+		// remove graffiti
+		graffiti.cleanUp();
 
 		// remove map
 		miniMap.onGameCleanup();
