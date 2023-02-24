@@ -9,10 +9,11 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import org.jetbrains.annotations.Nullable;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
+import java.time.Duration;
+import java.time.ZonedDateTime;
+import java.util.StringJoiner;
 
 /**
  * Class to manage the motd in server list pings and show the next event time if one is set
@@ -21,8 +22,7 @@ import java.time.temporal.ChronoUnit;
  */
 public class ServerListPingManager
 {
-	private static final Component MOTD_SEPARATOR = Component.textOfChildren(Component.space(),
-		Component.text("|", NamedTextColor.DARK_RED, TextDecoration.BOLD), Component.space());
+	private static final Component MOTD_SEPARATOR = Component.text(" | ", NamedTextColor.DARK_RED, TextDecoration.BOLD);
 
 	// First line of the MOTD
 	private static final Component FIRST_LINE = Component.text()
@@ -42,10 +42,12 @@ public class ServerListPingManager
 
 	private static final long REFRESH_COOLDOWN = 60 * 1000; // In milliseconds
 	private static final long GAMING_NOW_PERIOD = 60 * 60 * 2; // Period of time after event start the motd reports "GAMING NOW"
+	private static final Duration GAMING_NOW_DURATION = Duration.ofHours(2);
 	public static final long NO_EVENT_TIME_SET = -1;
 
 	/** Time the event starts in Unix seconds */
-	private static long eventTime = NO_EVENT_TIME_SET;
+	@Nullable
+	private static ZonedDateTime eventTime = null;
 	private static final Object eventTimeLock = new Object();
 
 	/** Last time the cached motd was updated in Unix milliseconds */
@@ -58,9 +60,9 @@ public class ServerListPingManager
 	// Synchronise when accessing motd
 	private static final Object motdLock = new Object();
 
-	public static void setEventTime(long time) {
+	public static void setEventTime(@Nullable ZonedDateTime dateTime) {
 		synchronized (eventTimeLock) {
-			eventTime = time;
+			eventTime = dateTime;
 		}
 		updateMotd();
 	}
@@ -68,39 +70,32 @@ public class ServerListPingManager
 	private static void updateMotd() {
 		synchronized (eventTimeLock) {
 			Component newMotd;
-			final long currentTime = System.currentTimeMillis() / 1000;
-			if (eventTime != NO_EVENT_TIME_SET && currentTime <= (eventTime + GAMING_NOW_PERIOD)) {
-				var builder = Component.text().append(Component.text("GAMING IN: ", NamedTextColor.GOLD, TextDecoration.BOLD));
-				if (currentTime < eventTime) {
-					/*final long secondsLeft = eventTime - currentTime;
-					final long minutesLeft = secondsLeft % 60;
-					final long hoursLeft = secondsLeft % (60 * 60);
-					final long daysLeft = secondsLeft / (60 * 60 * 24);*/
+			ZonedDateTime now = ZonedDateTime.now();
+			if (eventTime != null && now.isBefore(eventTime.plus(GAMING_NOW_DURATION))) {
+				var builder = Component.text().color(TextColor.color(58, 169, 255))
+					.append(Component.text("GAMING IN: ", NamedTextColor.GOLD, TextDecoration.BOLD));
 
-					ZoneOffset zoneOffset = ZoneOffset.ofTotalSeconds(0);
-					LocalDateTime event = LocalDateTime.ofEpochSecond(eventTime, 0, zoneOffset);
-					LocalDateTime now = LocalDateTime.ofEpochSecond(currentTime, 0, zoneOffset);
-
-					final long daysLeft = now.until(event, ChronoUnit.DAYS);
-					now = now.plusDays(daysLeft);
-					final long hoursLeft = now.until(event, ChronoUnit.HOURS);
-					now = now.plusHours(hoursLeft);
-					final long minutesLeft = now.until(event, ChronoUnit.MINUTES);
-
-					if (daysLeft > 0)
-						builder.append(Component.text(daysLeft + " days, "));
-
-					if (hoursLeft > 0)
-						builder.append(Component.text(hoursLeft + " hours, "));
-
-					if (minutesLeft > 0)
-						builder.append(Component.text(minutesLeft + " minutes."));
-				}
-				else if (currentTime - eventTime <= GAMING_NOW_PERIOD) {
+				Duration duration = Duration.between(now, eventTime);
+				if (duration.isNegative() /* now > eventTime */ && duration.abs().compareTo(GAMING_NOW_DURATION) < 0) {
 					builder.append(Component.text("NOW NOW NOW GET IN HERE", NamedTextColor.AQUA));
+				} else if (!duration.isNegative()) {
+					long days = duration.toDaysPart();
+					long hours = duration.toHoursPart();
+					long minutes = duration.toMinutesPart();
+
+					StringJoiner joiner = new StringJoiner(", ", "", ".");
+					joiner.setEmptyValue("SOON (TM)");
+
+					if (days > 0)
+						joiner.add(days + " day" + (days != 1 ? "s" : ""));
+					if (hours > 0)
+						joiner.add(hours + " hour" + (hours != 1 ? "s" : ""));
+					if (minutes > 0)
+						joiner.add(minutes + " minute" + (minutes != 1 ? "s" : ""));
+
+					builder.append(Component.text(joiner.toString()));
 				}
 
-				builder.color(TextColor.color(58, 169, 255));
 				newMotd = Component.textOfChildren(FIRST_LINE, Component.newline(), builder.build());
 			}
 			else {
@@ -113,7 +108,7 @@ public class ServerListPingManager
 		}
 	}
 
-	static void handleEvent(PaperServerListPingEvent event) {
+	public static void handleEvent(PaperServerListPingEvent event) {
 		event.getPlayerSample().clear();
 
 		synchronized (lastRefreshTimeLock) { // Lazily update the MOTD to reflect the new countdown every while

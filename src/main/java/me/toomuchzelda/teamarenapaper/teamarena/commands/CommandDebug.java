@@ -1,6 +1,9 @@
 package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
+import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
+import com.destroystokyo.paper.network.StatusClient;
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.ServerListPingManager;
 import me.toomuchzelda.teamarenapaper.explosions.CustomExplosion;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
@@ -35,7 +38,9 @@ import org.bukkit.map.MapPalette;
 import org.bukkit.map.MinecraftFont;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
@@ -183,6 +188,26 @@ public class CommandDebug extends CustomCommand {
 			case "fakehitbox" -> {
 				boolean show = args.length == 2 ? Boolean.parseBoolean(args[1]) : !FakeHitboxManager.show;
 				FakeHitboxManager.setVisibility(show);
+			}
+			case "testmotd" -> {
+				var fakeEvent = new PaperServerListPingEvent(new StatusClient() {
+					@Override
+					public @NotNull InetSocketAddress getAddress() {
+						return InetSocketAddress.createUnresolved("127.0.0.1", 25565);
+					}
+
+					@Override
+					public int getProtocolVersion() {
+						return 0;
+					}
+
+					@Override
+					public @Nullable InetSocketAddress getVirtualHost() {
+						return null;
+					}
+				}, Component.empty(), 0, 0, "1.1x", -1, null);
+				ServerListPingManager.handleEvent(fakeEvent);
+				sender.sendMessage(fakeEvent.motd());
 			}
 			default -> {
 				return false;
@@ -428,7 +453,7 @@ public class CommandDebug extends CustomCommand {
 	public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
 		if (args.length == 1) {
 			return Arrays.asList("hide", "gui", "guitest", "signtest", "game", "setrank", "setteam", "setkit",
-				"votetest", "draw", "graffititest", "burst", "respawn", "fakehitbox");
+				"votetest", "draw", "graffititest", "burst", "respawn", "fakehitbox", "testmotd");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");
