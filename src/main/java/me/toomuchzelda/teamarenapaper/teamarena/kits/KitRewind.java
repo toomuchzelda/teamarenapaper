@@ -350,6 +350,7 @@ public class KitRewind extends Kit {
 
 		//When rewinding, a buff is given based on a 15 second cycle with 3 sections, each with a 5 second timeframe
 		public void rewindBuff(Player player, RewindInfo info, int currTick) {
+			final TeamArena game = Main.getGame();
 			//Returns how far the currTick is in the cycle
 			//[0, 299]
 			int elapsedTick = (currTick - info.startingTick()) % TICK_CYCLE;
@@ -360,10 +361,14 @@ public class KitRewind extends Kit {
 				//Time Dilation: Gives nearby enemies Slow 3 + No Jump for 3 seconds
 				List<Entity> affectedEnemies = player.getNearbyEntities(6, 6, 6);
 				for (Entity entity : affectedEnemies) {
-					if (entity instanceof LivingEntity victim && !(entity instanceof ArmorStand)) {
-						//change to 3*20 tick duration, extended for testing purposes
-						victim.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, 3 * 20, 250, true));
-						victim.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 3 * 20, 2, true));
+					if (entity instanceof LivingEntity victim) {
+						if (victim instanceof ArmorStand stand && stand.isMarker()) continue;
+						if (victim instanceof Player pVictim && !game.canAttack(player, pVictim)) continue;
+						if (!game.isDead(victim)) {
+							//change to 3*20 tick duration, extended for testing purposes
+							victim.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, 3 * 20, 250, true));
+							victim.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 3 * 20, 2, true));
+						}
 					}
 				}
 				player.getWorld().playSound(player.getLocation(), Sound.BLOCK_BEACON_DEACTIVATE, SoundCategory.AMBIENT, 0.5f, 1f);
@@ -374,8 +379,9 @@ public class KitRewind extends Kit {
 				//KB Amp
 				List<Entity> affectedEnemies = player.getNearbyEntities(3, 3, 3);
 				for (Entity entity : affectedEnemies) {
+					if (game.isDead(entity)) continue;
 					if (entity instanceof LivingEntity victim && !(entity instanceof ArmorStand)) {
-						if(!(victim instanceof Player p) || Main.getGame().canAttack(player, p)) {
+						if(!(victim instanceof Player p) || game.canAttack(player, p)) {
 							Vector currVel = victim.getVelocity().clone();
 							Vector playerLoc = player.getLocation().clone().toVector();
 							Vector victimLoc = victim.getLocation().clone().toVector();
