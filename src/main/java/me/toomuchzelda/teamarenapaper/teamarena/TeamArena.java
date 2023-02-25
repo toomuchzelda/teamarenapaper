@@ -43,6 +43,7 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Sign;
+import org.bukkit.command.CommandSender;
 import org.bukkit.craftbukkit.v1_19_R2.CraftWorld;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
@@ -1138,6 +1139,7 @@ public abstract class TeamArena
 					Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.AMBIENT, 2, 0.5f));
 		}
 
+		this.informGameTime(null, false);
 
 		//cleanup everything before dropping the reference to this for garbage collection
 		// everything here may not need to be manually cleared, but better safe than sorry
@@ -1772,11 +1774,35 @@ public abstract class TeamArena
 	private void informKillsDeaths(Player player, PlayerInfo pinfo) {
 		player.sendMessage(Component.textOfChildren(
 			Component.text("You got "),
-			Component.text(TextUtils.formatNumber(pinfo.totalKills, 2), NamedTextColor.BLUE),
-			Component.text(" kills and died "),
-			Component.text(pinfo.deaths, NamedTextColor.RED),
-			Component.text(" times this game.")
+			Component.text(TextUtils.formatNumber(pinfo.totalKills, 2), NamedTextColor.YELLOW),
+			Component.text(" kills and died " + pinfo.deaths + " times this game.")
 		).color(NamedTextColor.DARK_GRAY));
+	}
+
+	/**Sends a chat message to the player telling how long the game has gone on for.
+	 * @param requester CommandSender to send message to or null for all players
+	 */
+	public void informGameTime(@Nullable CommandSender requester, boolean inProgress) {
+		Component msg;
+		if (gameLiveTime <= 0) {
+			msg = Component.text("The game has not started", NamedTextColor.GRAY);
+		}
+		else {
+			int diff = gameTick - this.gameLiveTime;
+			diff /= 20; // convert to seconds
+			int minutes = diff / 60; // seconds should be lost in integer division
+			int seconds = diff % 60;
+
+			if (inProgress)
+				msg = Component.text("The game has been going for " + minutes + " minutes and " + seconds + " seconds.", NamedTextColor.GRAY);
+			else
+				msg = Component.text("This game took " + minutes + " minutes and " + seconds + " seconds.", NamedTextColor.GRAY);
+		}
+
+		if (requester != null)
+			requester.sendMessage(msg);
+		else
+			Bukkit.broadcast(msg);
 	}
 
 	//find an appropriate team to put player on at any point during game
