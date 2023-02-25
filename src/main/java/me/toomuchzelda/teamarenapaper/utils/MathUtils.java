@@ -47,6 +47,10 @@ public class MathUtils
 		return false;
 	}
 
+	public static <T> T randomElement(T[] array) {
+		return array[random.nextInt(array.length)];
+	}
+
 	public static int clamp(int min, int max, int value) {
 		return Math.max(Math.min(value, max), min);
 	}
