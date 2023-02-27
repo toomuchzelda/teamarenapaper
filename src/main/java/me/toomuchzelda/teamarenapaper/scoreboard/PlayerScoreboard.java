@@ -15,10 +15,7 @@ import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 
 import java.lang.reflect.Field;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -164,21 +161,28 @@ public class PlayerScoreboard
 	 * add members on to team, and only this player will see the change
 	 */
 	public void addMembers(Team bukkitTeam, Entity... members) {
+		addEntities(bukkitTeam, List.of(members));
+	}
+
+	public void addEntities(Team bukkitTeam, Collection<? extends Entity> members) {
 		Team team = getLocalTeam(bukkitTeam);
-		if(team != null)
-			team.addEntities(members);
-		else{
+		if (team != null) {
+			team.addEntities((Collection<Entity>) members);
+		} else {
 			Main.logger().warning(player.getName() + "'s scoreboard does not have team " + bukkitTeam.getName());
 			Thread.dumpStack();
 		}
 	}
 
 	public void addMembers(Team bukkitTeam, String... members) {
+		addEntries(bukkitTeam, List.of(members));
+	}
+
+	public void addEntries(Team bukkitTeam, Collection<String> members) {
 		Team team = getLocalTeam(bukkitTeam);
-		if(team != null) {
+		if (team != null) {
 			team.addEntries(members);
-		}
-		else {
+		} else {
 			Main.logger().warning(player.getName() + "'s scoreboard does not have team " + bukkitTeam.getName());
 			Thread.dumpStack();
 		}
@@ -214,6 +218,24 @@ public class PlayerScoreboard
 		else {
 			Main.logger().warning(player.getName() + "'s scoreboard does not have team " + bukkitTeam.getName());
 			Thread.dumpStack();
+		}
+	}
+
+	public void removeEntities(Collection<? extends Entity> entries) {
+		for (Entity entity : entries) {
+			Team localTeam = scoreboard.getEntityTeam(entity);
+			if (localTeam != null) {
+				localTeam.removeEntity(entity);
+			}
+		}
+	}
+
+	public void removeEntries(Collection<String> entries) {
+		for (String entry : entries) {
+			Team localTeam = scoreboard.getEntryTeam(entry);
+			if (localTeam != null) {
+				localTeam.removeEntry(entry);
+			}
 		}
 	}
 

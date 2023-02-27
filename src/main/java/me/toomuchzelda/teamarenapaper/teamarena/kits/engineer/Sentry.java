@@ -267,12 +267,12 @@ public class Sentry extends EntityBuilding {
 	}
 
 	public void shoot(Vector direction) {
-		AbstractArrow sentryFire = sentry.launchProjectile(Arrow.class);
-		sentryFire.setVelocity(direction.multiply(4.1));
-		sentryFire.setDamage(1.0);
-		sentryFire.setShooter(owner);
-		sentryFire.setCritical(false);
-		sentryFire.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
+		sentry.launchProjectile(Arrow.class, direction.multiply(4.1), arrow -> {
+			arrow.setDamage(1.0);
+			arrow.setShooter(owner);
+			arrow.setCritical(false);
+			arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
+		});
 
 		sentry.getWorld().playSound(sentry, Sound.ENTITY_FISHING_BOBBER_THROW, 1.5f, 0.8f);
 	}

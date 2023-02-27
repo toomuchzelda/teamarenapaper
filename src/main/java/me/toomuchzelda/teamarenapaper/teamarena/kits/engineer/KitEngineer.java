@@ -4,6 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
+import me.toomuchzelda.teamarenapaper.teamarena.building.Building;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingSelector;
@@ -197,9 +198,14 @@ public class KitEngineer extends Kit {
 			}
 		}
 
+		private static final Component SELECTOR_MESSAGE = Component.textOfChildren(
+			Component.text("Left click: remove selected", TextUtils.LEFT_CLICK_TO),
+			Component.text(" | ", NamedTextColor.GRAY),
+			Component.text("Right click: manage buildings", TextUtils.RIGHT_CLICK_TO)
+		);
 		@Override
 		protected void giveAbility(Player player) {
-			buildingSelectors.put(player, new BuildingSelector(DESTRUCTION_PDA));
+			buildingSelectors.put(player, new BuildingSelector(SELECTOR_MESSAGE, SENTRY, TP_CREATOR, DESTRUCTION_PDA));
 		}
 
 		public void removeAbility(Player player) {
@@ -226,10 +232,10 @@ public class KitEngineer extends Kit {
 
 		@Override
 		public void onInteract(PlayerInteractEvent event) {
-			if (!event.getAction().isRightClick())
-				return;
 			if (event.useItemInHand() == Event.Result.DENY)
 				return;
+
+			boolean rightClick = event.getAction().isRightClick();
 
 			Player player = event.getPlayer();
 			Material mat = event.getMaterial();
@@ -251,7 +257,7 @@ public class KitEngineer extends Kit {
 				player.setCooldown(Material.IRON_SHOVEL, Sentry.SENTRY_FIRE_RATE * 3 / 4);
 			}
 
-			if (mat == Material.QUARTZ) {
+			if (rightClick && mat == Material.QUARTZ) {
 				// Creating / Destroying Teleporters
 				// validate placement first
 				if (block == null || blockFace != BlockFace.UP || !BuildingManager.isLocationValid(block.getRelative(BlockFace.UP))) {
@@ -288,7 +294,7 @@ public class KitEngineer extends Kit {
 					}
 				}
 				player.sendMessage(message);
-			} else if (mat == Material.CHEST_MINECART) {
+			} else if (rightClick && mat == Material.CHEST_MINECART) {
 				//Initializing Sentry Build
 				if (activePlayerProjections.containsKey(player) &&
 						isValidProjection(activePlayerProjections.get(player).getLocation()) &&
@@ -297,7 +303,13 @@ public class KitEngineer extends Kit {
 				}
 			} else if (mat == Material.BOOK) {
 				// Destruction PDA
-				Inventories.openInventory(player, new BuildingInventory());
+				if (rightClick) {
+					Inventories.openInventory(player, new BuildingInventory());
+				} else {
+					Building selected = buildingSelectors.get(player).getSelected();
+					if (selected != null)
+						BuildingManager.destroyBuilding(selected);
+				}
 			} else {
 				// undo cancelling if not handled
 				event.setUseItemInHand(Event.Result.DEFAULT);
@@ -327,13 +339,27 @@ public class KitEngineer extends Kit {
 
 		@Override
 		public void onPlayerTick(Player player) {
-			buildingSelectors.get(player).tick(player);
-			//Initializing Sentry Projection
-			if (PlayerUtils.isHolding(player, SENTRY) &&
-					!activePlayerProjections.containsKey(player) &&
-					!player.hasCooldown(Material.CHEST_MINECART)) {
-				createProjection(player);
+			BuildingSelector selector = buildingSelectors.get(player);
+
+			selector.buildingFilter = null;
+			selector.message = SELECTOR_MESSAGE;
+			if (PlayerUtils.isHolding(player, TP_CREATOR)) {
+				selector.buildingFilter = building -> building instanceof Teleporter;
+				selector.message = Component.text("Right click: place or remove teleporter", TextUtils.RIGHT_CLICK_TO);
 			}
+
+
+			//Initializing Sentry Projection
+			if (PlayerUtils.isHolding(player, SENTRY)) {
+				selector.buildingFilter = building -> building instanceof Sentry;
+				selector.message = Component.text("Right click: place sentry", TextUtils.RIGHT_CLICK_TO);
+
+				if (!activePlayerProjections.containsKey(player) && !player.hasCooldown(Material.CHEST_MINECART)) {
+					createProjection(player);
+				}
+			}
+
+			selector.tick(player);
 
 			//Cancel Sentry Projection
 			if ((!PlayerUtils.isHolding(player, SENTRY) ||
