@@ -2,10 +2,12 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.engineer;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.building.Building;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BlockBuilding;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
+import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -22,12 +24,12 @@ import org.bukkit.util.BoundingBox;
 import org.jetbrains.annotations.Nullable;
 
 
-public class Teleporter extends Building {
+public class Teleporter extends BlockBuilding {
 	public static final int TELEPORT_COOLDOWN = 30;
 
 	int lastUsedTick;
 	@Nullable
-	Block linkedTeleporter;
+	BlockCoords linkedTeleporter;
 	BlockState originalBlockState;
 	BoundingBox hitBox;
 	TextColor teamColor;
@@ -56,7 +58,7 @@ public class Teleporter extends Building {
 		this.lastUsedTick = newTick;
 	}
 
-	public int getRemainingCD() {
+	public int getTimeElapsed() {
 		return TeamArena.getGameTick() - lastUsedTick;
 	}
 
@@ -65,11 +67,11 @@ public class Teleporter extends Building {
 	}
 
 	@Nullable
-	public Block getLinkedTeleporter() {
+	public BlockCoords getLinkedTeleporter() {
 		return linkedTeleporter;
 	}
 
-	public void setLinkedTeleporter(Block block) {
+	public void setLinkedTeleporter(BlockCoords block) {
 		this.linkedTeleporter = block;
 		setLastUsedTick(TeamArena.getGameTick());
 	}
@@ -83,25 +85,26 @@ public class Teleporter extends Building {
 		block.setType(Material.HONEYCOMB_BLOCK, false);
 
 		// restore original block
-		BuildingManager.registerBlockBreakCallback(block, this, this::onBlockBroken);
+//		BuildingManager.registerBlockBreakCallback(block, this, this::onBlockBroken);
 
 		this.lastUsedTick = TeamArena.getGameTick();
 
 		var otherTeleporters = BuildingManager.getPlayerBuildings(owner, Teleporter.class);
 		if (otherTeleporters.size() >= 2) {
 			Teleporter toLink = otherTeleporters.get(otherTeleporters.size() - 2);
-			setLinkedTeleporter(toLink.location.getBlock());
-			toLink.setLinkedTeleporter(location.getBlock());
+			setLinkedTeleporter(new BlockCoords(toLink.location));
+			toLink.setLinkedTeleporter(new BlockCoords(location));
 
 			owner.sendMessage(Component.text("A link to the teleporter at (%d, %d, %d) has been established."
-							.formatted(linkedTeleporter.getX(), linkedTeleporter.getY(), linkedTeleporter.getZ()),
+							.formatted(linkedTeleporter.x(), linkedTeleporter.y(), linkedTeleporter.z()),
 					NamedTextColor.YELLOW));
 		}
 	}
 
-	public void onBlockBroken(BlockBreakEvent event) {
+	@Override
+	public boolean onBreak(BlockBreakEvent event) {
 		if (event.isCancelled())
-			return;
+			return false;
 		event.setCancelled(true);
 
 		var player = event.getPlayer();
@@ -127,6 +130,7 @@ public class Teleporter extends Building {
 					Component.text(".", NamedTextColor.BLUE)
 			));
 		}
+		return true;
 	}
 
 	boolean checkCanTeleport(Entity entity) {
@@ -163,8 +167,10 @@ public class Teleporter extends Building {
 				if (nearbyEntities.size() != 0)
 					teleport((Player) nearbyEntities.iterator().next(), other);
 			} else {
-				long percCD = Math.round(100d * (double) other.getRemainingCD() / TELEPORT_COOLDOWN);
-				hologramText = Component.text("Recharging... " + percCD + "%", teamColor);
+				double progress = Math.min(1, (double) other.getTimeElapsed() / TELEPORT_COOLDOWN);
+				int percentage = (int) Math.round(100d * progress);
+				hologramText = TextUtils.getProgressText("Recharging... " + percentage + "%",
+					NamedTextColor.GRAY, teamColor, teamColor, progress);
 			}
 		} else {
 			hologramText = NOT_CONNECTED;

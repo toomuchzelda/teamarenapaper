@@ -9,6 +9,7 @@ import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerSound;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.ChatAnnouncerManager;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingListeners;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandTeamChat;
@@ -730,6 +731,10 @@ public abstract class TeamArena
 			//don't bother passing it to event handlers?
 			return;
 		}
+
+		// let buildings handle events first
+		if (BuildingListeners.onEntityAttack(event))
+			return;
 
 		final Entity finalAttacker = event.getFinalAttacker();
 		if(this.killStreakManager.isCrateFirework(finalAttacker)) {
@@ -1789,9 +1794,11 @@ public abstract class TeamArena
 	}
 
 	private void informKillsDeaths(Player player, PlayerInfo pinfo) {
-		player.sendMessage(Component.text("You got " +
-			TextUtils.formatNumber(pinfo.totalKills, 2) + " kills and died " + pinfo.deaths + " times this game.",
-			NamedTextColor.DARK_GRAY));
+		player.sendMessage(Component.textOfChildren(
+			Component.text("You got "),
+			Component.text(TextUtils.formatNumber(pinfo.totalKills, 2), NamedTextColor.YELLOW),
+			Component.text(" kills and died " + pinfo.deaths + " times this game.")
+		).color(NamedTextColor.DARK_GRAY));
 	}
 
 	/**Sends a chat message to the player telling how long the game has gone on for.

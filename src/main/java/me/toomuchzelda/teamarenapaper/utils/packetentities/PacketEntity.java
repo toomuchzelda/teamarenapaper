@@ -3,16 +3,19 @@ package me.toomuchzelda.teamarenapaper.utils.packetentities;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
-import com.comphenix.protocol.wrappers.AdventureComponentConverter;
 import com.comphenix.protocol.wrappers.WrappedDataValue;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
+import io.papermc.paper.adventure.PaperAdventure;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
+import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.craftbukkit.v1_19_R3.block.data.CraftBlockData;
 import org.bukkit.entity.EntityType;
@@ -40,6 +43,7 @@ public class PacketEntity
 
 	private final int id;
 	private final UUID uuid;
+	private final EntityType entityType;
 
 	private PacketContainer spawnPacket;
 	private StructureModifier<Double> spawnPacketDoubles; //keep spawn location modifier
@@ -88,6 +92,7 @@ public class PacketEntity
 			this.id = id;
 
 		this.uuid = UUID.randomUUID();
+		this.entityType = entityType;
 
 		this.location = location.clone();
 
@@ -178,15 +183,21 @@ public class PacketEntity
 		return this.data.getObject(index);
 	}
 
-	public void setText(Component component, boolean sendPacket) {
-		Optional<?> nameComponent = Optional.of(AdventureComponentConverter.fromComponent(
-				component).getHandle());
+	public WrappedDataWatcher getDataWatcher() {
+		return this.data;
+	}
+
+	public void setText(@Nullable Component component, boolean sendPacket) {
+		Optional<?> nameComponent = Optional.ofNullable(PaperAdventure.asVanilla(component));
 
 		//this.data.setObject(MetaIndex.CUSTOM_NAME_OBJ, nameComponent);
-		this.setMetadata(MetaIndex.CUSTOM_NAME_OBJ, nameComponent);
+		Optional<?> oldName = (Optional<?>) getMetadata(MetaIndex.CUSTOM_NAME_OBJ);
+		if (!nameComponent.equals(oldName)) {
+			this.setMetadata(MetaIndex.CUSTOM_NAME_OBJ, nameComponent);
 
-		if(sendPacket) {
-			this.refreshViewerMetadata();
+			if (sendPacket) {
+				this.refreshViewerMetadata();
+			}
 		}
 	}
 
@@ -571,5 +582,9 @@ public class PacketEntity
 
 	public UUID getUuid() {
 		return uuid;
+	}
+
+	public EntityType getEntityType() {
+		return entityType;
 	}
 }

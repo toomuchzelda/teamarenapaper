@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.metadata;
 
 import com.comphenix.protocol.wrappers.*;
+import net.minecraft.network.syncher.SynchedEntityData;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -21,6 +22,8 @@ public class MetaIndex
 	public static final int NO_GRAVITY_IDX = 5;
 	public static final int POSE_IDX = 6;
 
+	public static final int BASE_BITFIELD_ON_FIRE_IDX = 0;
+	public static final byte BASE_BITFIELD_ON_FIRE_MASK = 0x01;
 	public static final int BASE_BITFIELD_SNEAKING_IDX = 1;
 	public static final byte BASE_BITFIELD_SNEAKING_MASK = 0x02;
 	public static final int BASE_BITFIELD_INVIS_IDX = 5;
@@ -142,7 +145,7 @@ public class MetaIndex
 
 	public static WrappedDataValue fromWatchableObject(WrappedWatchableObject object) {
 		// getRawValue() to get NMS types and not Wrapped types
-		return new WrappedDataValue(object.getIndex(), object.getWatcherObject().getSerializer(), object.getRawValue());
+		return new WrappedDataValue(((SynchedEntityData.DataItem<?>) object.getHandle()).value());
 	}
 
 	public static List<WrappedDataValue> getFromWatchableObjectsList(List<WrappedWatchableObject> watchableObjects) {

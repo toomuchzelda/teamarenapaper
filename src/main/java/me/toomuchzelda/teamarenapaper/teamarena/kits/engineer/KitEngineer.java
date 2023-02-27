@@ -6,6 +6,7 @@ import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingSelector;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
@@ -23,7 +24,6 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Arrow;
-import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Skeleton;
 import org.bukkit.event.Event;
@@ -173,6 +173,8 @@ public class KitEngineer extends Kit {
 	public static class EngineerAbility extends Ability {
 
 		private static final Map<Player, SentryProjection> activePlayerProjections = new HashMap<>();
+		private final Map<Player, BuildingSelector> buildingSelectors = new HashMap<>();
+
 		@Deprecated // temporary API
 		private static final Map<Skeleton, Sentry> sentryEntityToSentryMap = new HashMap<>();
 		//SENTRY_CD should be 300, it may be altered for testing purposes
@@ -195,10 +197,16 @@ public class KitEngineer extends Kit {
 			}
 		}
 
+		@Override
+		protected void giveAbility(Player player) {
+			buildingSelectors.put(player, new BuildingSelector(DESTRUCTION_PDA));
+		}
+
 		public void removeAbility(Player player) {
 			if (activePlayerProjections.containsKey(player)) {
 				destroyProjection(player);
 			}
+			buildingSelectors.remove(player).cleanUp();
 			Inventories.closeInventory(player, BuildingInventory.class);
 			// remove all player buildings
 			BuildingManager.getAllPlayerBuildings(player).forEach(BuildingManager::destroyBuilding);
@@ -319,6 +327,7 @@ public class KitEngineer extends Kit {
 
 		@Override
 		public void onPlayerTick(Player player) {
+			buildingSelectors.get(player).tick(player);
 			//Initializing Sentry Projection
 			if (PlayerUtils.isHolding(player, SENTRY) &&
 					!activePlayerProjections.containsKey(player) &&

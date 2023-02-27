@@ -47,7 +47,12 @@ public final class BuildingManager {
 
 	@Nullable
 	public static Building getBuildingAt(@NotNull Block block) {
-		return buildings.get(new BlockCoords(block));
+		return getBuildingAt(new BlockCoords(block));
+	}
+
+	@Nullable
+	public static Building getBuildingAt(@NotNull BlockCoords block) {
+		return buildings.get(block);
 	}
 
 	public static boolean isLocationValid(@NotNull Block block) {

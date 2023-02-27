@@ -20,6 +20,7 @@ import me.toomuchzelda.teamarenapaper.sql.DBSetPreferences;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.ChatAnnouncerManager;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingListeners;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
@@ -33,12 +34,12 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.KitReach;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitVenom;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.*;
+import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
@@ -389,7 +390,7 @@ public class EventListeners implements Listener
 						return;
 					}
 					// not handled by BuildingManager and not breakable
-					if (!BuildingManager.EventListener.onBlockBreak(event) && !isBlockBreakable(event.getBlock().getType()))
+					if (!BuildingListeners.onBlockBroken(event) && !isBlockBreakable(event.getBlock().getType()))
 						event.setCancelled(true);
 				}
 			}

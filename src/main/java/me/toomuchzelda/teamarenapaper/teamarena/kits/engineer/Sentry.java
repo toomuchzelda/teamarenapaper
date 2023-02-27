@@ -2,9 +2,10 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.engineer;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.building.Building;
+import me.toomuchzelda.teamarenapaper.teamarena.building.EntityBuilding;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.entity.*;
@@ -12,10 +13,12 @@ import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
+import java.util.List;
 
-public class Sentry extends Building {
+public class Sentry extends EntityBuilding {
 	enum State {
 		STARTUP,
 		NEUTRAL,
@@ -83,6 +86,16 @@ public class Sentry extends Building {
 		sentry.getEquipment().setItemInMainHand(sentryBow, true);
 
 		//player.getWorld().playSound(sentry, Sound.BLOCK_ANVIL_USE, 1.0f, 0.8f);
+	}
+
+	@Override
+	public @NotNull Collection<? extends Entity> getEntities() {
+		return List.of(sentry);
+	}
+
+	@Override
+	public @NotNull Collection<? extends PacketEntity> getPacketEntities() {
+		return List.of();
 	}
 
 	@Override

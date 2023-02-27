@@ -8,7 +8,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
-public abstract class Building {
+public abstract sealed class Building permits BlockBuilding, EntityBuilding {
 	public final Player owner;
 	protected Location location;
 	private RealHologram hologram;
