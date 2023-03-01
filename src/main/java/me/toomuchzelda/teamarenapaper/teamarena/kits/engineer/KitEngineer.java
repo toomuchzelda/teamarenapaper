@@ -1,6 +1,5 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.engineer;
 
-import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.building.Building;
@@ -29,7 +28,6 @@ import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Skeleton;
 import org.bukkit.event.Event;
-import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.RayTraceResult;
@@ -153,8 +151,6 @@ public class KitEngineer extends Kit {
 		private static final Map<Player, SentryProjection> activePlayerProjections = new HashMap<>();
 		private final Map<Player, BuildingSelector> buildingSelectors = new HashMap<>();
 
-		@Deprecated // temporary API
-		private static final Map<Skeleton, Sentry> sentryEntityToSentryMap = new HashMap<>();
 		//SENTRY_CD should be 300, it may be altered for testing purposes
 		public static final int SENTRY_CD = 300;
 		public static final int SENTRY_PLACEMENT_RANGE = 3;
@@ -163,7 +159,6 @@ public class KitEngineer extends Kit {
 		public void registerAbility() {
 			//Cleaning up is done in registerAbility so structures remain after game ends
 			activePlayerProjections.clear();
-			sentryEntityToSentryMap.clear();
 		}
 
 		@Override
@@ -222,8 +217,7 @@ public class KitEngineer extends Kit {
 			if(mat == Material.IRON_SHOVEL &&
 					!player.hasCooldown(Material.IRON_SHOVEL) &&
 					player.getVehicle() instanceof Skeleton skeleton &&
-					sentryEntityToSentryMap.get(skeleton) != null){
-				Sentry sentry = sentryEntityToSentryMap.get(skeleton);
+					BuildingManager.getBuilding(skeleton) instanceof Sentry sentry) {
 				sentry.forceFire();
 				//a mounted sentry has slightly faster fire rate
 				player.setCooldown(Material.IRON_SHOVEL, Sentry.SENTRY_FIRE_RATE * 3 / 4);
@@ -293,21 +287,13 @@ public class KitEngineer extends Kit {
 		//Converts the Projection into a Sentry + Handles static hashmaps + Inventory
 		public void createSentry(Player player) {
 			SentryProjection projection = activePlayerProjections.remove(player);
-			Skeleton skeleton = player.getWorld().spawn(projection.getLocation(), Skeleton.class);
-			Sentry sentry = new Sentry(player, skeleton);
+			Sentry sentry = new Sentry(player, projection.getLocation());
 			projection.remove(); //destroy the old projection so it doesn't linger
 
 			BuildingManager.placeBuilding(sentry);
 
-			sentryEntityToSentryMap.put(skeleton, sentry);
 			if (player.getGameMode() != GameMode.CREATIVE)
 				player.setCooldown(Material.CHEST_MINECART, SENTRY_CD);
-		}
-
-		//Destroys sentry + Handles static hashmaps + Inventory
-		public void destroySentry(Player player, Sentry sentry) {
-			BuildingManager.destroyBuilding(sentry);
-			sentryEntityToSentryMap.remove(sentry.sentry);
 		}
 
 		@Override
@@ -356,30 +342,9 @@ public class KitEngineer extends Kit {
 			}
 
 			//If player is riding skeleton (sentry), wrangle it
-			if(player.getVehicle() instanceof Skeleton skeleton){
-				Sentry sentry = sentryEntityToSentryMap.get(skeleton);
-				if(sentry != null){
-					sentry.currState = Sentry.State.WRANGLED;
-				}
-			}
+			// now wrangled when mounted
 
 		}
-
-		//Allowing engineers to ride their own sentries and manually aim + fire
-		@Override
-		public void onInteractEntity(PlayerInteractEntityEvent event) {
-			Player rider = event.getPlayer();
-			//If the right-clicked mob is a skeleton
-			//Check all sentries made by that player but also make sure it is not in STARTUP
-			if(event.getRightClicked() instanceof Skeleton skeleton){
-				Sentry sentry = sentryEntityToSentryMap.get(skeleton);
-				if(sentry != null && sentry.owner.equals(rider) &&
-						sentry.currState != Sentry.State.STARTUP){
-					skeleton.addPassenger(rider);
-				}
-			}
-		}
-
 
 		public boolean isValidProjection(Location projLoc) {
 			projLoc = projLoc.clone();
@@ -453,23 +418,10 @@ public class KitEngineer extends Kit {
 			return distance;
 		}
 
-		//Cancel damage events where the attacker is an ally of the engineer
-		public static void handleSentryAttemptDamage(DamageEvent event) {
-			Skeleton skele = (Skeleton) event.getVictim();
-			Sentry sentry = sentryEntityToSentryMap.get(skele);
-			if (sentry != null) {
-				if (event.getFinalAttacker() instanceof Player attacker &&
-						!Main.getGame().canAttack(attacker, sentry.owner)) {
-					event.setCancelled(true);
-				}
-			}
-		}
-
 		public static Player getOwnerBySkeleton(Skeleton skeleton) {
-			Sentry sentry = sentryEntityToSentryMap.get(skeleton);
-			if (sentry != null) {
+			Building building = BuildingManager.getBuilding(skeleton);
+			if (building instanceof Sentry sentry)
 				return sentry.owner;
-			}
 
 			return null;
 		}

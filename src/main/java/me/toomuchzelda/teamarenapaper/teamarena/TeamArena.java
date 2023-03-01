@@ -767,6 +767,7 @@ public abstract class TeamArena
 			KitEngineer.EngineerAbility.handleSentryAttemptDamage(event);
 		}
 		else if(event.getVictim() instanceof Wolf) {
+		if (event.getVictim() instanceof Wolf) {
 			WolvesKillStreak.WolvesAbility.handleWolfAttemptDamage(event);
 		}
 		else if(event.getVictim() instanceof IronGolem) {

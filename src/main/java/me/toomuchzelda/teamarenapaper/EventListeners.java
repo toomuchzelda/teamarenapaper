@@ -21,7 +21,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.ChatAnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingListeners;
-import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
@@ -264,7 +263,7 @@ public class EventListeners implements Listener
 		event.quitMessage(null);
 		Player leaver = event.getPlayer();
 		Main.getGame().leavingPlayer(leaver);
-		BuildingManager.EventListener.onPlayerQuit(event);
+		BuildingListeners.onPlayerQuit(event);
 		//Main.getPlayerInfo(event.getPlayer()).nametag.remove();
 		FakeHitboxManager.removeFakeHitbox(leaver);
 		PlayerInfo pinfo = Main.removePlayerInfo(leaver);
@@ -804,6 +803,9 @@ public class EventListeners implements Listener
 		if(Main.getGame() != null) {
 			Main.getGame().onInteract(event);
 
+			if (BuildingListeners.onInteract(event))
+				return; // handled by buildings
+
 			if(Main.getGame().getGameState() == LIVE) {
 				for (Ability a : Kit.getAbilities(event.getPlayer())) {
 					a.onInteract(event);
@@ -816,6 +818,9 @@ public class EventListeners implements Listener
 	public void playerInteractEntity(PlayerInteractEntityEvent event) {
 		if(Main.getGame() != null) {
 			Main.getGame().onInteractEntity(event);
+
+			if (BuildingListeners.onEntityInteract(event))
+				return; // handled by buildings
 
 			if(Main.getGame().getGameState() == LIVE) {
 				for (Ability a : Kit.getAbilities(event.getPlayer())) {

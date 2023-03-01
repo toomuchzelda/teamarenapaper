@@ -6,6 +6,7 @@ import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -35,6 +36,10 @@ public abstract non-sealed class EntityBuilding extends Building {
 
 	public boolean onDamage(DamageEvent e) {
 		return false; // not handled
+	}
+
+	public void onInteract(PlayerInteractEntityEvent e) {
+
 	}
 
 	@NotNull

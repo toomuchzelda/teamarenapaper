@@ -3,12 +3,14 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.engineer;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.building.EntityBuilding;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.entity.*;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.RayTraceResult;
@@ -46,12 +48,11 @@ public class Sentry extends EntityBuilding {
 
 	private static final ItemStack ICON = new ItemStack(Material.BOW);
 
-	public Sentry(Player player, Skeleton sentry) {
-		super(player, sentry.getLocation());
+	public Sentry(Player player, Location sentryLocation) {
+		super(player, sentryLocation);
 		setName("Sentry");
 		setIcon(ICON);
 		this.currState = State.STARTUP;
-		this.sentry = sentry;
 		this.initYaw = this.location.getYaw();
 		this.initTick = TeamArena.getGameTick();
 		this.creationTick = TeamArena.getGameTick() + SENTRY_STARTUP_TIME;
@@ -63,15 +64,19 @@ public class Sentry extends EntityBuilding {
 
 		//Changing properties from Projection state to Active state
 
-		sentry.setAI(false);
-		sentry.setRemoveWhenFarAway(false);
-		sentry.setShouldBurnInDay(false);
-		sentry.getEquipment().clear();
-		sentry.setCanPickupItems(false);
-		sentry.setInvisible(false);
-		sentry.setCollidable(true);
-		sentry.setSilent(false);
-		sentry.customName(player.playerListName().append(Component.text("'s Sentry", player.playerListName().style())));
+		this.sentry = sentryLocation.getWorld().spawn(sentryLocation, Skeleton.class, skeleton -> {
+			skeleton.setAI(false);
+			skeleton.setRemoveWhenFarAway(false);
+			skeleton.setShouldBurnInDay(false);
+			skeleton.getEquipment().clear();
+			skeleton.setCanPickupItems(false);
+			skeleton.setInvisible(false);
+			skeleton.setCollidable(true);
+			skeleton.setSilent(false);
+			skeleton.customName(player.playerListName().append(Component.text("'s Sentry", player.playerListName().style())));
+			ItemStack sentryBow = new ItemStack(Material.BOW);
+			skeleton.getEquipment().setItemInMainHand(sentryBow, true);
+		});
 		this.armor = new ItemStack[4];
 		armor[3] = new ItemStack(Material.LEATHER_HELMET);
 		armor[2] = new ItemStack(Material.LEATHER_CHESTPLATE);
@@ -79,13 +84,6 @@ public class Sentry extends EntityBuilding {
 		armor[0] = new ItemStack(Material.IRON_BOOTS);
 		ItemUtils.colourLeatherArmor(teamColor, armor[3]);
 		ItemUtils.colourLeatherArmor(teamColor, armor[2]);
-		//ItemUtils.colourLeatherArmor(teamColor, armor[1]);
-		//ItemUtils.colourLeatherArmor(teamColor, armor[0]);
-
-		ItemStack sentryBow = new ItemStack(Material.BOW);
-		sentry.getEquipment().setItemInMainHand(sentryBow, true);
-
-		//player.getWorld().playSound(sentry, Sound.BLOCK_ANVIL_USE, 1.0f, 0.8f);
 	}
 
 	@Override
@@ -342,7 +340,22 @@ public class Sentry extends EntityBuilding {
 
 	@Override
 	public void onDestroy() {
-		super.onDestroy();
 		sentry.remove();
+	}
+
+	@Override
+	public boolean onDamage(DamageEvent e) {
+		if (e.getAttacker() instanceof Player attacker && !Main.getGame().canAttack(attacker, owner))
+			e.setCancelled(true); // ally damage
+		return false; // continue handling
+	}
+
+	@Override
+	public void onInteract(PlayerInteractEntityEvent e) {
+		Player rider = e.getPlayer();
+		if (owner.equals(rider) && currState != Sentry.State.STARTUP) {
+			sentry.addPassenger(rider);
+			currState = State.WRANGLED;
+		}
 	}
 }

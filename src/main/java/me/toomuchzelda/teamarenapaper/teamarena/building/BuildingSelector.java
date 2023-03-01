@@ -68,7 +68,6 @@ public class BuildingSelector {
 
 	private final Map<Building, Outline> buildingOutlines = new LinkedHashMap<>();
 
-
 	private static final double MAX_DISTANCE = 16;
 
 	private static Outline spawnOutline(Building building) {

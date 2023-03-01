@@ -4,6 +4,7 @@ import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,5 +36,9 @@ public abstract non-sealed class BlockBuilding extends Building {
 
 	public boolean onBreak(BlockBreakEvent e) {
 		return false; // not handled
+	}
+
+	public void onInteract(PlayerInteractEvent e) {
+
 	}
 }
