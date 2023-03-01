@@ -20,6 +20,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import org.bukkit.FluidCollisionMode;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -299,7 +300,8 @@ public class KitEngineer extends Kit {
 			BuildingManager.placeBuilding(sentry);
 
 			sentryEntityToSentryMap.put(skeleton, sentry);
-			player.setCooldown(Material.CHEST_MINECART, SENTRY_CD);
+			if (player.getGameMode() != GameMode.CREATIVE)
+				player.setCooldown(Material.CHEST_MINECART, SENTRY_CD);
 		}
 
 		//Destroys sentry + Handles static hashmaps + Inventory
