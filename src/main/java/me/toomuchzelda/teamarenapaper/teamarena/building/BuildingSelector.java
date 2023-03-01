@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.building;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
+import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.comphenix.protocol.wrappers.Pair;
 import com.comphenix.protocol.wrappers.WrappedDataValue;
@@ -66,7 +67,43 @@ public class BuildingSelector {
 		return selected != null && !selected.invalid ? selected : null;
 	}
 
+	public <T extends Building & PreviewableBuilding> boolean addPreview(Class<T> clazz, T building) {
+		if (buildingPreviews.containsKey(building.getClass()))
+			return false;
+		buildingPreviews.put(clazz, building);
+		return true;
+	}
+
+	public <T extends Building & PreviewableBuilding> boolean hasPreview(Class<T> clazz) {
+		return buildingPreviews.containsKey(clazz);
+	}
+
+	@Nullable
+	public <T extends Building & PreviewableBuilding> T removePreview(Class<T> clazz) {
+		T building = (T) buildingPreviews.remove(clazz);
+		if (building == null)
+			return null;
+		var outline = buildingOutlines.remove(building);
+		if (outline != null)
+			outline.despawn();
+		return building;
+	}
+
+	@Nullable
+	public <T extends Building & PreviewableBuilding> T placePreview(Class<T> clazz) {
+		T building = removePreview(clazz);
+		if (building == null)
+			return null;
+		var result = building.doRayTrace();
+		if (result == null || !result.valid())
+			return null;
+		building.setLocation(result.location()); // ensure location is up-to-date
+		BuildingManager.placeBuilding(building);
+		return building;
+	}
+
 	private final Map<Building, Outline> buildingOutlines = new LinkedHashMap<>();
+	private final Map<Class<? extends Building>, PreviewableBuilding> buildingPreviews = new HashMap<>();
 
 	private static final double MAX_DISTANCE = 16;
 
@@ -81,6 +118,26 @@ public class BuildingSelector {
 
 	private void removeStaleOutlines(Player player) {
 		Location location = player.getEyeLocation();
+
+		for (PreviewableBuilding preview : buildingPreviews.values()) {
+			var building = (Building) preview;
+			var result = preview.doRayTrace();
+			if (result == null) {
+				var outline = buildingOutlines.get(building);
+				if (outline != null)
+					outline.despawn();
+			} else {
+				Location newLoc = result.location();
+				building.setLocation(newLoc);
+				var outline = buildingOutlines.computeIfAbsent(building, ignored -> {
+					var custom = preview.getPreviewEntity(newLoc);
+					return custom != null ? new EntityOutline(player, custom, newLoc) : spawnOutline(building);
+				});
+				outline.respawn();
+				GlowUtils.setPacketGlowing(List.of(player), List.of(outline.getUuid().toString()),
+					result.valid() ? NamedTextColor.GREEN : NamedTextColor.RED);
+			}
+		}
 		for (var iter = buildingOutlines.entrySet().iterator(); iter.hasNext();) {
 			var entry = iter.next();
 			var building = entry.getKey();
@@ -145,8 +202,8 @@ public class BuildingSelector {
 			if (selectableFilter == null || selectableFilter.test(building))
 				selectableBuildings.put(building, outline);
 		}
-
-		if (selectableBuildings.size() == 0) {
+		// don't select when a preview is active
+		if (selectableBuildings.size() == 0 || buildingPreviews.size() != 0) {
 			selected = null;
 			return;
 		}
@@ -185,6 +242,7 @@ public class BuildingSelector {
 	public void cleanUp() {
 		buildingOutlines.values().forEach(Outline::despawn);
 		buildingOutlines.clear();
+		buildingPreviews.clear();
 		selected = null;
 	}
 
@@ -221,8 +279,10 @@ public class BuildingSelector {
 		@Override
 		public void respawn() {
 			super.respawn();
-			nameHologram.respawn();
-			statusHologram.respawn();
+			if (hasText) {
+				nameHologram.respawn();
+				statusHologram.respawn();
+			}
 		}
 
 		@Override
@@ -270,7 +330,7 @@ public class BuildingSelector {
 			// glowing and invisible
 			setMetadata(MetaIndex.BASE_BITFIELD_OBJ, BITFIELD_MASK);
 			setMetadata(MetaIndex.NO_GRAVITY_OBJ, true);
-			setMetadata(MetaIndex.CUSTOM_NAME_VISIBLE_OBJ, true);
+			setMetadata(MetaIndex.CUSTOM_NAME_VISIBLE_OBJ, false);
 			updateMetadataPacket();
 
 		}
@@ -306,6 +366,16 @@ public class BuildingSelector {
 
 		public EntityOutline(Player viewer, PacketEntity packetEntity, Location location) {
 			super(NEW_ID, packetEntity.getEntityType(), location, ZERO, Set.of(viewer));
+			// copy spawn meta, if any
+			spawnPacket = packetEntity.getSpawnPacket().deepClone();
+			// ...but change distinctive info to our own
+			spawnPacket.getIntegers().write(0, getId());
+			spawnPacket.getEntityTypeModifier().write(0, getEntityType());
+			StructureModifier<Double> doubles = spawnPacket.getDoubles();
+			doubles.write(0, location.getX());
+			doubles.write(1, location.getY());
+			doubles.write(2, location.getZ());
+			spawnPacket.getUUIDs().write(0, getUuid());
 			// copy packet entity metadata
 			metadataPacket.getDataValueCollectionModifier().write(0, copyEntityData(packetEntity.getDataWatcher()));
 		}
@@ -324,9 +394,11 @@ public class BuildingSelector {
 		private static List<WrappedDataValue> copyEntityData(WrappedDataWatcher dataWatcher) {
 			WrappedDataWatcher clonedEntityData = new WrappedDataWatcher(dataWatcher.getWatchableObjects());
 			// make outline invisible and glowing
+			Byte baseBitfield = (Byte) clonedEntityData.getObject(MetaIndex.BASE_BITFIELD_OBJ);
 			clonedEntityData.setObject(MetaIndex.BASE_BITFIELD_OBJ,
-				(byte) ((byte) clonedEntityData.getObject(MetaIndex.BASE_BITFIELD_OBJ) | BITFIELD_MASK));
-			clonedEntityData.setObject(MetaIndex.CUSTOM_NAME_VISIBLE_OBJ, true);
+				(byte) ((baseBitfield != null ? baseBitfield : 0) | BITFIELD_MASK));
+			clonedEntityData.setObject(MetaIndex.CUSTOM_NAME_VISIBLE_OBJ, false);
+			clonedEntityData.setObject(MetaIndex.NO_GRAVITY_OBJ, true);
 
 			var wrappedWatchables = clonedEntityData.getWatchableObjects();
 			List<WrappedDataValue> wrappedDataValues = new ArrayList<>(wrappedWatchables.size());

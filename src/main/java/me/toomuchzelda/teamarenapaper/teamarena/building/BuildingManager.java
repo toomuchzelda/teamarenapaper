@@ -68,6 +68,8 @@ public final class BuildingManager {
 	}
 
 	public static void placeBuilding(@NotNull Building building) {
+		building.onPlace();
+
 		buildings.put(new BlockCoords(building.getLocation()), building);
 		if (building instanceof EntityBuilding entityBuilding) {
 			entityBuilding.getEntities().forEach(entity -> entityBuildings.put(entity, entityBuilding));
@@ -77,7 +79,6 @@ public final class BuildingManager {
 				.computeIfAbsent(building.getClass(), ignored -> new ArrayList<>())
 				.add(building);
 
-		building.onPlace();
 	}
 
 	public static void destroyBuilding(@NotNull Building building) {
@@ -139,6 +140,24 @@ public final class BuildingManager {
 			return Collections.unmodifiableList((List<T>) buildings);
 		} else {
 			return Collections.emptyList();
+		}
+	}
+
+	/**
+	 * Returns the number of buildings owned by {@code player}.
+	 * @param player The player.
+	 * @param clazz The type of building.
+	 * @return The number of the specific type of building placed by the player
+	 */
+	public static int getPlayerBuildingCount(@NotNull Player player, @NotNull Class<? extends Building> clazz) {
+		if (clazz == Building.class)
+			throw new IllegalArgumentException("Not a concrete building type");
+		var playerBuildingsByType = playerBuildings.getOrDefault(player, Collections.emptyMap());
+		var buildings = playerBuildingsByType.get(clazz);
+		if (buildings != null) {
+			return buildings.size();
+		} else {
+			return 0;
 		}
 	}
 }

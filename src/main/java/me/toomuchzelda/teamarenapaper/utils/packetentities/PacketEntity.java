@@ -3,7 +3,6 @@ package me.toomuchzelda.teamarenapaper.utils.packetentities;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
-import com.comphenix.protocol.wrappers.WrappedDataValue;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import io.papermc.paper.adventure.PaperAdventure;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -45,11 +44,12 @@ public class PacketEntity
 	private final UUID uuid;
 	private final EntityType entityType;
 
-	private PacketContainer spawnPacket;
-	private StructureModifier<Double> spawnPacketDoubles; //keep spawn location modifier
+	protected PacketContainer spawnPacket;
+	// StructureModifiers are already cached by ProtocolLib
+//	private StructureModifier<Double> spawnPacketDoubles; //keep spawn location modifier
 	private PacketContainer deletePacket;
 	protected PacketContainer metadataPacket;
-	private StructureModifier<List<WrappedDataValue>> dataValueCollectionModifier;
+//	private StructureModifier<List<WrappedDataValue>> dataValueCollectionModifier;
 	private PacketContainer teleportPacket;
 	private StructureModifier<Double> teleportPacketDoubles;
 	private StructureModifier<Byte> teleportPacketBytes;
@@ -151,7 +151,7 @@ public class PacketEntity
 		doubles.write(0, location.getX());
 		doubles.write(1, location.getY());
 		doubles.write(2, location.getZ());
-		this.spawnPacketDoubles = doubles;
+//		this.spawnPacketDoubles = doubles;
 
 		spawnPacket.getUUIDs().write(0, this.uuid);
 	}
@@ -171,8 +171,8 @@ public class PacketEntity
 
 		//this.dataValueCollectionModifier = this.metadataPacket.getWatchableCollectionModifier();
 		//this.dataValueCollectionModifier.write(0, this.data.getWatchableObjects());
-		this.dataValueCollectionModifier = this.metadataPacket.getDataValueCollectionModifier();
-		this.dataValueCollectionModifier.write(0, MetaIndex.getFromWatchableObjectsList(this.data.getWatchableObjects()));
+		this.metadataPacket.getDataValueCollectionModifier()
+			.write(0, MetaIndex.getFromWatchableObjectsList(this.data.getWatchableObjects()));
 	}
 
 	public void setMetadata(WrappedDataWatcher.WrappedDataWatcherObject index, Object object) {
@@ -188,9 +188,7 @@ public class PacketEntity
 	}
 
 	public void setText(@Nullable Component component, boolean sendPacket) {
-		Optional<?> nameComponent = component == Component.empty() ?
-			Optional.empty() :
-			Optional.ofNullable(PaperAdventure.asVanilla(component));
+		Optional<?> nameComponent = Optional.ofNullable(PaperAdventure.asVanilla(component));
 
 		//this.data.setObject(MetaIndex.CUSTOM_NAME_OBJ, nameComponent);
 		Optional<?> oldName = (Optional<?>) getMetadata(MetaIndex.CUSTOM_NAME_OBJ);
@@ -280,10 +278,10 @@ public class PacketEntity
 	}
 
 	protected void updateSpawnPacket(Location newLocation) {
-		StructureModifier<Double> doubles = this.spawnPacketDoubles;
-		doubles.write(0, newLocation.getX());
-		doubles.write(1, newLocation.getY());
-		doubles.write(2, newLocation.getZ());
+		this.spawnPacket.getDoubles()
+			.write(0, newLocation.getX())
+			.write(1, newLocation.getY())
+			.write(2, newLocation.getZ());
 	}
 
 
@@ -297,7 +295,8 @@ public class PacketEntity
 	 */
 	public void updateMetadataPacket() {
 		//this.dataValueCollectionModifier.write(0, this.data.getWatchableObjects());
-		this.dataValueCollectionModifier.write(0, MetaIndex.getFromWatchableObjectsList(this.data.getWatchableObjects()));
+		this.metadataPacket.getDataValueCollectionModifier()
+			.write(0, MetaIndex.getFromWatchableObjectsList(this.data.getWatchableObjects()));
 	}
 
 	/**

@@ -1,30 +1,38 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.engineer;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BlockBuilding;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
+import me.toomuchzelda.teamarenapaper.teamarena.building.PreviewableBuilding;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
+import org.bukkit.FluidCollisionMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.BoundingBox;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 
-public class Teleporter extends BlockBuilding {
+
+public class Teleporter extends BlockBuilding implements PreviewableBuilding {
 	public static final int TELEPORT_COOLDOWN = 30;
 
 	int lastUsedTick;
@@ -90,8 +98,8 @@ public class Teleporter extends BlockBuilding {
 		this.lastUsedTick = TeamArena.getGameTick();
 
 		var otherTeleporters = BuildingManager.getPlayerBuildings(owner, Teleporter.class);
-		if (otherTeleporters.size() >= 2) {
-			Teleporter toLink = otherTeleporters.get(otherTeleporters.size() - 2);
+		if (otherTeleporters.size() > 0) {
+			Teleporter toLink = otherTeleporters.get(otherTeleporters.size() - 1);
 			setLinkedTeleporter(new BlockCoords(toLink.location));
 			toLink.setLinkedTeleporter(new BlockCoords(location));
 
@@ -197,5 +205,29 @@ public class Teleporter extends BlockBuilding {
 		super.onDestroy();
 		// reset the block
 		originalBlockState.update(true, false);
+	}
+
+	@Override
+	public @Nullable PreviewResult doRayTrace() {
+		Location eyeLocation = owner.getEyeLocation();
+		var result = owner.getWorld().rayTraceBlocks(eyeLocation, eyeLocation.getDirection(), 4,
+			FluidCollisionMode.NEVER, false);
+		if (result != null) {
+			// only accept blockFace = UP
+			return new PreviewResult(result.getHitBlockFace() == BlockFace.UP,
+				result.getHitBlock().getLocation().add(0.5, 0.01, 0.5));
+		}
+		return null;
+	}
+
+	private static PacketEntity PREVIEW;
+	@Override
+	public @Nullable PacketEntity getPreviewEntity(Location location) {
+		if (PREVIEW == null) {
+			PREVIEW = new PacketEntity(PacketEntity.NEW_ID, EntityType.FALLING_BLOCK, location, List.of(), null);
+			PREVIEW.setBlockType(Material.HONEYCOMB_BLOCK.createBlockData());
+			PREVIEW.setMetadata(MetaIndex.NO_GRAVITY_OBJ, true);
+		}
+		return PREVIEW;
 	}
 }

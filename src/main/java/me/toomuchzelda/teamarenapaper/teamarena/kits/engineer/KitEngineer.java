@@ -11,7 +11,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
-import me.toomuchzelda.teamarenapaper.utils.GlowUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
@@ -148,7 +147,6 @@ public class KitEngineer extends Kit {
 
 	public static class EngineerAbility extends Ability {
 
-		private static final Map<Player, SentryProjection> activePlayerProjections = new HashMap<>();
 		private final Map<Player, BuildingSelector> buildingSelectors = new HashMap<>();
 
 		//SENTRY_CD should be 300, it may be altered for testing purposes
@@ -157,8 +155,6 @@ public class KitEngineer extends Kit {
 
 		@Override
 		public void registerAbility() {
-			//Cleaning up is done in registerAbility so structures remain after game ends
-			activePlayerProjections.clear();
 		}
 
 		@Override
@@ -176,9 +172,6 @@ public class KitEngineer extends Kit {
 		}
 
 		public void removeAbility(Player player) {
-			if (activePlayerProjections.containsKey(player)) {
-				destroyProjection(player);
-			}
 			buildingSelectors.remove(player).cleanUp();
 			Inventories.closeInventory(player, BuildingInventory.class);
 			// remove all player buildings
@@ -231,6 +224,8 @@ public class KitEngineer extends Kit {
 				}
 				Component message;
 
+				buildingSelectors.get(player).removePreview(Teleporter.class);
+
 				// check if block occupied
 				var building = BuildingManager.getBuildingAt(block);
 				if (building != null) {
@@ -250,22 +245,22 @@ public class KitEngineer extends Kit {
 					} else {
 						//Success: TP is created
 						var teleporter = new Teleporter(player, block.getLocation());
-						BuildingManager.placeBuilding(teleporter);
 						if (playerTeleporters.size() == 1) {
 							//Syncing the Cooldowns for the newly created TP.
 							int lastUsedTick = teleporter.getLastUsedTick();
 							playerTeleporters.get(0).setLastUsedTick(lastUsedTick);
 						}
+						BuildingManager.placeBuilding(teleporter);
 						message = Component.text("Successfully placed your teleporter.", NamedTextColor.GREEN);
 					}
 				}
 				player.sendMessage(message);
 			} else if (rightClick && mat == Material.CHEST_MINECART) {
-				//Initializing Sentry Build
-				if (activePlayerProjections.containsKey(player) &&
-						isValidProjection(activePlayerProjections.get(player).getLocation()) &&
-						!player.hasCooldown(Material.CHEST_MINECART)) {
-					createSentry(player);
+				if (!player.hasCooldown(Material.CHEST_MINECART)) {
+					Sentry sentry = buildingSelectors.get(player).placePreview(Sentry.class);
+					if (sentry != null && player.getGameMode() != GameMode.CREATIVE) {
+						player.setCooldown(Material.CHEST_MINECART, SENTRY_CD);
+					}
 				}
 			} else if (mat == Material.BOOK) {
 				// Destruction PDA
@@ -284,18 +279,6 @@ public class KitEngineer extends Kit {
 
 		}
 
-		//Converts the Projection into a Sentry + Handles static hashmaps + Inventory
-		public void createSentry(Player player) {
-			SentryProjection projection = activePlayerProjections.remove(player);
-			Sentry sentry = new Sentry(player, projection.getLocation());
-			projection.remove(); //destroy the old projection so it doesn't linger
-
-			BuildingManager.placeBuilding(sentry);
-
-			if (player.getGameMode() != GameMode.CREATIVE)
-				player.setCooldown(Material.CHEST_MINECART, SENTRY_CD);
-		}
-
 		@Override
 		public void onPlayerTick(Player player) {
 			BuildingSelector selector = buildingSelectors.get(player);
@@ -305,6 +288,12 @@ public class KitEngineer extends Kit {
 			if (PlayerUtils.isHolding(player, TP_CREATOR)) {
 				selector.buildingFilter = building -> building instanceof Teleporter;
 				selector.message = Component.text("Right click: place or remove teleporter", TextUtils.RIGHT_CLICK_TO);
+
+				if (BuildingManager.getPlayerBuildingCount(player, Teleporter.class) != 2 &&
+					!selector.hasPreview(Teleporter.class))
+					selector.addPreview(Teleporter.class, new Teleporter(player, player.getLocation()));
+			} else {
+				selector.removePreview(Teleporter.class);
 			}
 
 
@@ -313,33 +302,13 @@ public class KitEngineer extends Kit {
 				selector.buildingFilter = building -> building instanceof Sentry;
 				selector.message = Component.text("Right click: place sentry", TextUtils.RIGHT_CLICK_TO);
 
-				if (!activePlayerProjections.containsKey(player) && !player.hasCooldown(Material.CHEST_MINECART)) {
-					createProjection(player);
-				}
+				if (BuildingManager.getPlayerBuildingCount(player, Sentry.class) == 0 && !selector.hasPreview(Sentry.class))
+					selector.addPreview(Sentry.class, new Sentry(player, player.getLocation()));
+			} else {
+				selector.removePreview(Sentry.class);
 			}
 
 			selector.tick(player);
-
-			//Cancel Sentry Projection
-			if ((!PlayerUtils.isHolding(player, SENTRY) ||
-					player.hasCooldown(Material.CHEST_MINECART)) &&
-					activePlayerProjections.containsKey(player)) {
-				destroyProjection(player);
-			}
-
-			//Controlling position of Sentry Projection
-			if (activePlayerProjections.containsKey(player) &&
-					!player.hasCooldown(Material.CHEST_MINECART)) {
-				SentryProjection projection = activePlayerProjections.get(player);
-				//Y Coordinate is lowered so the projection doesn't obstruct the Engineer's view
-				Location playerLoc = player.getEyeLocation().add(0, -0.8, 0);
-				Location projPos = projectSentry(playerLoc);
-				projection.move(projPos);
-
-				//Handling color display that indicates validity of current sentry location
-				GlowUtils.setPacketGlowing(List.of(player), List.of(projection.getUuid().toString()),
-					isValidProjection(projPos) ? NamedTextColor.GREEN : NamedTextColor.RED);
-			}
 
 			//If player is riding skeleton (sentry), wrangle it
 			// now wrangled when mounted
@@ -384,18 +353,6 @@ public class KitEngineer extends Kit {
 			else{
 				return false;
 			}
-		}
-
-		public void createProjection(Player player) {
-			Location loc = projectSentry(player.getEyeLocation().clone().add(0, -.8, 0));
-			SentryProjection projection = new SentryProjection(loc, player);
-			projection.respawn();
-			activePlayerProjections.put(player, projection);
-		}
-
-		public void destroyProjection(Player player) {
-			SentryProjection projection = activePlayerProjections.remove(player);
-			projection.remove();
 		}
 
 		//From entity's eyes, find the location in their line of sight that is within range
