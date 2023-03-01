@@ -1,6 +1,6 @@
 plugins {
-    java
-    id("io.papermc.paperweight.userdev") version "1.4.0"
+    id("java")
+    id("io.papermc.paperweight.userdev") version "1.5.2"
 }
 
 repositories {
