@@ -23,13 +23,14 @@ public class GlowUtils {
 		for (NamedTextColor color : NamedTextColor.NAMES.values()) {
 			Team team = temp.registerNewTeam("color_" + color.toString());
 			team.color(color);
+			team.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
 			PlayerScoreboard.addGlobalTeam(team);
 			coloredTeams.put(color, team);
 		}
 		COLORED_TEAMS = Map.copyOf(coloredTeams);
 	}
 
-	public static void setGlowing(List<Player> players, Collection<? extends Entity> entities, boolean glowing, @Nullable NamedTextColor color) {
+	public static void setGlowing(Collection<? extends Player> players, Collection<? extends Entity> entities, boolean glowing, @Nullable NamedTextColor color) {
 		Team team = color != null ? COLORED_TEAMS.get(color) : null;
 		Entity[] entitiesArr = entities.toArray(new Entity[0]);
 		for (Player player : players) {
@@ -45,13 +46,12 @@ public class GlowUtils {
 		}
 	}
 
-	public static void setPacketGlowing(List<Player> players, Collection<String> entries, @Nullable NamedTextColor color) {
+	public static void setPacketGlowing(Collection<? extends Player> players, Collection<String> entries, @Nullable NamedTextColor color) {
 		if (color != null) {
 			Team team = COLORED_TEAMS.get(color);
 			for (Player player : players) {
 				PlayerInfo info = Main.getPlayerInfo(player);
 				info.getScoreboard().addEntries(team, entries);
-//			ScoreboardUtils.sendTeamPacket(player, team.getName(), glowing, uuidArr);
 			}
 		} else {
 			for (Player player : players) {

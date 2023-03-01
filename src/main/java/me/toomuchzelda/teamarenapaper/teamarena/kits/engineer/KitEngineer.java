@@ -3,7 +3,6 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.engineer;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
-import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.building.Building;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
@@ -13,6 +12,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.utils.GlowUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
@@ -31,7 +31,6 @@ import org.bukkit.event.Event;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.scoreboard.Team;
 import org.bukkit.util.RayTraceResult;
 
 import java.util.ArrayList;
@@ -78,9 +77,6 @@ import static me.toomuchzelda.teamarenapaper.teamarena.kits.engineer.KitEngineer
  * @author onett425
  */
 public class KitEngineer extends Kit {
-	static final Team[] COLOUR_TEAMS;
-	static final Team RED_GLOWING_TEAM;
-	static final Team GREEN_GLOWING_TEAM;
 	private static final String PROJECTION_STATUS = "ProjectionStatus";
 
 	public static final ItemStack WRENCH = ItemBuilder.of(Material.IRON_SHOVEL)
@@ -133,26 +129,6 @@ public class KitEngineer extends Kit {
 			.lore(Component.text("Right click to manage active buildings!", TextColors.LIGHT_YELLOW))
 			.build();
 
-	static {
-		//Stolen from toomuchzelda
-		//Sentry Projection changes color based on whether it is a valid spot or not
-		COLOUR_TEAMS = new Team[2];
-
-		NamedTextColor[] matchingColours = new NamedTextColor[]{NamedTextColor.RED, NamedTextColor.GREEN};
-
-		for (int i = 0; i < 2; i++) {
-			COLOUR_TEAMS[i] = PlayerScoreboard.SCOREBOARD.registerNewTeam(PROJECTION_STATUS + matchingColours[i].value());
-			COLOUR_TEAMS[i].color(matchingColours[i]);
-			COLOUR_TEAMS[i].setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
-
-			PlayerScoreboard.addGlobalTeam(COLOUR_TEAMS[i]);
-		}
-
-		//Red = Invalid, Green = Valid
-		RED_GLOWING_TEAM = COLOUR_TEAMS[0];
-		GREEN_GLOWING_TEAM = COLOUR_TEAMS[1];
-	}
-
 	public KitEngineer() {
 		super("Engineer", "A utility kit that uses its buildings to support its team. " +
 				"Gun down enemies with your automatic sentry and set up teleporters to " +
@@ -191,11 +167,6 @@ public class KitEngineer extends Kit {
 
 		@Override
 		public void unregisterAbility() {
-			//Cleaning up display of sentry projection color
-			for (Team team : COLOUR_TEAMS) {
-				PlayerScoreboard.removeEntriesAll(team, team.getEntries());
-				team.removeEntries(team.getEntries());
-			}
 		}
 
 		private static final Component SELECTOR_MESSAGE = Component.textOfChildren(
@@ -378,11 +349,8 @@ public class KitEngineer extends Kit {
 				projection.move(projPos);
 
 				//Handling color display that indicates validity of current sentry location
-				if (isValidProjection(projPos)) {
-					Main.getPlayerInfo(player).getScoreboard().addMembers(GREEN_GLOWING_TEAM, projection.getUuid().toString());
-				} else {
-					Main.getPlayerInfo(player).getScoreboard().addMembers(RED_GLOWING_TEAM, projection.getUuid().toString());
-				}
+				GlowUtils.setPacketGlowing(List.of(player), List.of(projection.getUuid().toString()),
+					isValidProjection(projPos) ? NamedTextColor.GREEN : NamedTextColor.RED);
 			}
 
 			//If player is riding skeleton (sentry), wrangle it

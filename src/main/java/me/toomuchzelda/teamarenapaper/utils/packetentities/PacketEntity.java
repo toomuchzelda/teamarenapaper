@@ -188,7 +188,9 @@ public class PacketEntity
 	}
 
 	public void setText(@Nullable Component component, boolean sendPacket) {
-		Optional<?> nameComponent = Optional.ofNullable(PaperAdventure.asVanilla(component));
+		Optional<?> nameComponent = component == Component.empty() ?
+			Optional.empty() :
+			Optional.ofNullable(PaperAdventure.asVanilla(component));
 
 		//this.data.setObject(MetaIndex.CUSTOM_NAME_OBJ, nameComponent);
 		Optional<?> oldName = (Optional<?>) getMetadata(MetaIndex.CUSTOM_NAME_OBJ);
