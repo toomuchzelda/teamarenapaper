@@ -156,10 +156,11 @@ public class ItemUtils {
             player.setItemOnCursor(null);
     }
 
-    public static void colourLeatherArmor(Color color, ItemStack armorPiece) {
+    public static ItemStack colourLeatherArmor(Color color, ItemStack armorPiece) {
         LeatherArmorMeta meta = (LeatherArmorMeta) armorPiece.getItemMeta();
         meta.setColor(color);
         armorPiece.setItemMeta(meta);
+		return armorPiece;
     }
 
     /**

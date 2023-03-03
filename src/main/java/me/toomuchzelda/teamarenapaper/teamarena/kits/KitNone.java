@@ -6,7 +6,6 @@ import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.meta.Damageable;
 
 public class KitNone extends Kit {
 
