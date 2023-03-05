@@ -9,6 +9,9 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Represents a block-based building.
+ */
 public abstract non-sealed class BlockBuilding extends Building {
 	public BlockBuilding(Player player, Location loc) {
 		super(player, loc);

@@ -8,6 +8,11 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Represents a building in the world.
+ * Note that the building will not be in the world before {@link Building#onPlace()} is called.
+ * As such, in-world side effects before then are discouraged.
+ */
 public abstract sealed class Building permits BlockBuilding, EntityBuilding {
 	public final Player owner;
 	protected Location location;

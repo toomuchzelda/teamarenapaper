@@ -35,6 +35,11 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.function.Predicate;
 
+/**
+ * Represents a building selector, usually bound to a player.
+ * A building selector allows a player to see outlines of their existing buildings,
+ * select buildings by looking in the general direction, and preview new buildings.
+ */
 public class BuildingSelector {
 
 	public BuildingSelector(@Nullable Component selectorMessage, ItemStack... selectorItems) {
@@ -46,15 +51,31 @@ public class BuildingSelector {
 		this.selectorItems = List.copyOf(items);
 	}
 
+	/**
+	 * The action bar message sent to player when the building selector is active.
+	 * If null, no message is sent.
+	 */
 	@Nullable
 	public Component message;
+	/**
+	 * A filter to limit the building outlines being shown.
+	 */
 	@Nullable
 	public Predicate<Building> buildingFilter;
+	/**
+	 * A filter to limit the buildings the player can select.
+	 */
 	@Nullable
 	public Predicate<Building> selectableFilter;
 
+	/**
+	 * The color of building outlines.
+	 */
 	@Nullable
 	public NamedTextColor outlineColor = null;
+	/**
+	 * The color of the selected building's outline.
+	 */
 	@Nullable
 	public NamedTextColor selectedOutlineColor = NamedTextColor.BLUE;
 
@@ -62,11 +83,21 @@ public class BuildingSelector {
 
 	private Building selected;
 
+	/**
+	 * Returns the selected building.
+	 */
 	@Nullable
 	public Building getSelected() {
 		return selected != null && !selected.invalid ? selected : null;
 	}
 
+	/**
+	 * Adds a building to be previewed to the player.
+	 * @param clazz The class of the building
+	 * @param building The building
+	 * @return Whether the add operation succeeded, i.e. the player wasn't previously shown
+	 * 			another building of the same class.
+	 */
 	public <T extends Building & PreviewableBuilding> boolean addPreview(Class<T> clazz, T building) {
 		if (buildingPreviews.containsKey(building.getClass()))
 			return false;
@@ -74,10 +105,19 @@ public class BuildingSelector {
 		return true;
 	}
 
+	/**
+	 * Returns whether the player can see a building preview.
+	 * @param clazz The class of the building
+	 */
 	public <T extends Building & PreviewableBuilding> boolean hasPreview(Class<T> clazz) {
 		return buildingPreviews.containsKey(clazz);
 	}
 
+	/**
+	 * Removes a building preview.
+	 * @param clazz The class of the building
+	 * @return The building removed, or null if there were no matching previews.
+	 */
 	@Nullable
 	public <T extends Building & PreviewableBuilding> T removePreview(Class<T> clazz) {
 		T building = (T) buildingPreviews.remove(clazz);
@@ -89,6 +129,11 @@ public class BuildingSelector {
 		return building;
 	}
 
+	/**
+	 * Attempts to place a building preview in the world, if permitted by the preview.
+	 * @param clazz The class of the building
+	 * @return The placed building, or null if placement was invalid
+	 */
 	@Nullable
 	public <T extends Building & PreviewableBuilding> T placePreview(Class<T> clazz) {
 		T building = removePreview(clazz);
@@ -258,11 +303,13 @@ public class BuildingSelector {
 
 		private final Vector offset;
 
-		public Outline(int id, EntityType entityType, Location location, Vector offset, Collection<? extends Player> players) {
-			super(id, entityType, location.clone().add(offset), players, null);
+		public Outline(int id, EntityType entityType, Location location, Vector offset, Player player) {
+			super(id, entityType, ensureOutlineVisible(player.getEyeLocation(), location, offset), List.of(player), null);
 			this.offset = offset;
-			nameHologram = new PacketHologram(location.clone().add(NAME_OFFSET), players, null, Component.empty());
-			statusHologram = new PacketHologram(location.clone().add(STATUS_OFFSET), players, null, Component.empty());
+			List<Player> list = List.of(player);
+			Location nameLoc = ensureTextVisible(player.getEyeLocation(), location, offset);
+			nameHologram = new PacketHologram(nameLoc, list, null, Component.empty());
+			statusHologram = new PacketHologram(nameLoc.clone().subtract(NAME_OFFSET).add(STATUS_OFFSET), list, null, Component.empty());
 		}
 
 		@Override
@@ -292,21 +339,20 @@ public class BuildingSelector {
 			statusHologram.despawn();
 		}
 
-		public void update(Location eyeLocation, Location buildingLocation) {
-			Vector direction = buildingLocation.clone().add(offset).subtract(eyeLocation).toVector().normalize();
-			Location newLocation;
+		private static Location ensureOutlineVisible(Location eyeLocation, Location buildingLocation, Vector offset) {
 			if (eyeLocation.distanceSquared(buildingLocation) > MAX_DISTANCE * MAX_DISTANCE) {
 				// move it closer
-				newLocation = eyeLocation.clone().add(direction.multiply(MAX_DISTANCE));
+				Vector direction = buildingLocation.clone().add(offset).subtract(eyeLocation).toVector().normalize();
+				Location newLocation = eyeLocation.clone().add(direction.multiply(MAX_DISTANCE));
 				newLocation.setYaw(buildingLocation.getYaw());
 				newLocation.setPitch(buildingLocation.getPitch());
+				return newLocation;
 			} else {
-				newLocation = buildingLocation.clone().add(offset);
+				return buildingLocation.clone().add(offset);
 			}
-			move(newLocation);
-			if (!hasText)
-				return;
-			// ensure holograms are always visible
+		}
+
+		private static Location ensureTextVisible(Location eyeLocation, Location buildingLocation, Vector offset) {
 			Vector textDirection = buildingLocation.clone().add(offset).add(NAME_OFFSET).subtract(eyeLocation)
 				.toVector().normalize();
 			World world = eyeLocation.getWorld();
@@ -317,6 +363,15 @@ public class BuildingSelector {
 			} else {
 				hit = eyeLocation.clone().add(textDirection.multiply(MAX_DISTANCE / 2));
 			}
+			return hit;
+		}
+
+		public void update(Location eyeLocation, Location buildingLocation) {
+			move(ensureOutlineVisible(eyeLocation, buildingLocation, offset));
+			if (!hasText)
+				return;
+			// ensure holograms are always visible
+			Location hit = ensureTextVisible(eyeLocation, buildingLocation, offset);
 			nameHologram.move(hit);
 			statusHologram.move(hit.clone().subtract(NAME_OFFSET).add(STATUS_OFFSET));
 		}
@@ -325,7 +380,7 @@ public class BuildingSelector {
 	private static class BlockOutline extends Outline {
 		public static final Vector LOC_OFFSET = new Vector(0.5, -0.001, 0.5);
 		public BlockOutline(Player viewer, Block block, Location location) {
-			super(NEW_ID, EntityType.FALLING_BLOCK, location.add(LOC_OFFSET), LOC_OFFSET, Set.of(viewer));
+			super(NEW_ID, EntityType.FALLING_BLOCK, location.add(LOC_OFFSET), LOC_OFFSET, viewer);
 			setBlockType(block.getBlockData());
 			// glowing and invisible
 			setMetadata(MetaIndex.BASE_BITFIELD_OBJ, BITFIELD_MASK);
@@ -340,7 +395,7 @@ public class BuildingSelector {
 		private PacketContainer equipmentPacket;
 		private static final Vector ZERO = new Vector();
 		public EntityOutline(Player viewer, Entity entity, Location location) {
-			super(NEW_ID, entity.getType(), location, ZERO, Set.of(viewer));
+			super(NEW_ID, entity.getType(), location, ZERO, viewer);
 			// copy entity metadata
 			WrappedDataWatcher entityData = WrappedDataWatcher.getEntityWatcher(entity);
 			metadataPacket.getDataValueCollectionModifier().write(0, copyEntityData(entityData));
@@ -365,7 +420,7 @@ public class BuildingSelector {
 		}
 
 		public EntityOutline(Player viewer, PacketEntity packetEntity, Location location) {
-			super(NEW_ID, packetEntity.getEntityType(), location, ZERO, Set.of(viewer));
+			super(NEW_ID, packetEntity.getEntityType(), location, ZERO, viewer);
 			// copy spawn meta, if any
 			spawnPacket = packetEntity.getSpawnPacket().deepClone();
 			// ...but change distinctive info to our own
