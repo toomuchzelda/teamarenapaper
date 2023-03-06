@@ -20,6 +20,7 @@ import org.bukkit.craftbukkit.v1_19_R3.block.data.CraftBlockData;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.util.Vector;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -147,11 +148,7 @@ public class PacketEntity
 		spawnPacket.getEntityTypeModifier().write(0, type);
 
 		//spawn location
-		StructureModifier<Double> doubles = spawnPacket.getDoubles();
-		doubles.write(0, location.getX());
-		doubles.write(1, location.getY());
-		doubles.write(2, location.getZ());
-//		this.spawnPacketDoubles = doubles;
+		updateSpawnPacket(location);
 
 		spawnPacket.getUUIDs().write(0, this.uuid);
 	}
@@ -187,12 +184,11 @@ public class PacketEntity
 		return this.data;
 	}
 
+	Component customName;
 	public void setText(@Nullable Component component, boolean sendPacket) {
-		Optional<?> nameComponent = Optional.ofNullable(PaperAdventure.asVanilla(component));
-
-		//this.data.setObject(MetaIndex.CUSTOM_NAME_OBJ, nameComponent);
-		Optional<?> oldName = (Optional<?>) getMetadata(MetaIndex.CUSTOM_NAME_OBJ);
-		if (!nameComponent.equals(oldName)) {
+		if (!Objects.equals(customName, component)) {
+			customName = component;
+			Optional<?> nameComponent = Optional.ofNullable(PaperAdventure.asVanilla(component));
 			this.setMetadata(MetaIndex.CUSTOM_NAME_OBJ, nameComponent);
 
 			if (sendPacket) {
@@ -282,6 +278,11 @@ public class PacketEntity
 			.write(0, newLocation.getX())
 			.write(1, newLocation.getY())
 			.write(2, newLocation.getZ());
+		byte yaw = (byte) (newLocation.getYaw() * 256d / 360d);
+		spawnPacket.getBytes()
+			.write(0, (byte) (newLocation.getPitch() * 256d / 360d))
+			.write(1, yaw)
+			.write(2, yaw);
 	}
 
 
@@ -313,8 +314,9 @@ public class PacketEntity
 		this.move(newLocation, false);
 	}
 
+	private static final double EPSILON = Vector.getEpsilon();
 	protected void move(Location newLocation, boolean force) {
-		if(this.location.equals(newLocation) && !force)
+		if(location.distance(newLocation) < EPSILON && !force)
 			return;
 
 		newLocation = newLocation.clone();

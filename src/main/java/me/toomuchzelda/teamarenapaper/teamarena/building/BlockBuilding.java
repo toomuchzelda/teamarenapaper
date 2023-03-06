@@ -14,7 +14,7 @@ import java.util.List;
  */
 public abstract non-sealed class BlockBuilding extends Building {
 	public BlockBuilding(Player player, Location loc) {
-		super(player, loc);
+		super(player, loc.toCenterLocation());
 	}
 
 	private final List<Block> managedBlocks = new ArrayList<>();

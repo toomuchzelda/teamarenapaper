@@ -2,7 +2,6 @@ package me.toomuchzelda.teamarenapaper.teamarena.building;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.comphenix.protocol.wrappers.Pair;
 import com.comphenix.protocol.wrappers.WrappedDataValue;
@@ -82,6 +81,7 @@ public class BuildingSelector {
 	private final List<ItemStack> selectorItems;
 
 	private Building selected;
+	private Building lastSelected;
 
 	/**
 	 * Returns the selected building.
@@ -156,7 +156,7 @@ public class BuildingSelector {
 		if (building instanceof BlockBuilding blockBuilding) {
 			return new BlockOutline(building.owner, blockBuilding.getBlock(), building.getLocation());
 		} else if (building instanceof EntityBuilding entityBuilding) {
-			return new EntityOutline(building.owner, entityBuilding.getEntities().iterator().next(), building.getLocation());
+			return EntityOutline.fromBuilding(entityBuilding);
 		}
 		throw new IllegalStateException();
 	}
@@ -176,7 +176,12 @@ public class BuildingSelector {
 				building.setLocation(newLoc);
 				var outline = buildingOutlines.computeIfAbsent(building, ignored -> {
 					var custom = preview.getPreviewEntity(newLoc);
-					return custom != null ? new EntityOutline(player, custom, newLoc) : spawnOutline(building);
+					if (custom != null) {
+						Location offset = custom.getLocation().subtract(newLoc);
+						return new EntityOutline(player, custom, offset, List.of(), newLoc);
+					} else {
+						return spawnOutline(building);
+					}
 				});
 				outline.respawn();
 				GlowUtils.setPacketGlowing(List.of(player), List.of(outline.getUuid().toString()),
@@ -189,7 +194,7 @@ public class BuildingSelector {
 			var outline = entry.getValue();
 			if (building.invalid) {
 				iter.remove();
-				outline.despawn();
+				outline.remove();
 			} else {
 				outline.update(location, building.getLocation());
 			}
@@ -223,7 +228,7 @@ public class BuildingSelector {
 			player.sendActionBar(message);
 
 		List<Building> buildings = BuildingManager.getAllPlayerBuildings(player);
-		Map<Building, Outline> selectableBuildings = new HashMap<>(buildings.size());
+		List<Building> selectableBuildings = new ArrayList<>(buildings.size());
 		Location playerLoc = player.getLocation();
 
 		for (Building building : buildings) {
@@ -236,7 +241,7 @@ public class BuildingSelector {
 			}
 
 			double distance = building.getLocation().distance(playerLoc);
-			Component nameDisplay = Component.text(building.getName(), NamedTextColor.WHITE);
+			Component nameDisplay = Component.text(building.getName(), building == selected ? selectedOutlineColor : NamedTextColor.WHITE);
 			Component distanceDisplay = Component.text(TextUtils.formatNumber(distance) + " blocks away", NamedTextColor.YELLOW);
 
 			var outline = buildingOutlines.computeIfAbsent(building, BuildingSelector::spawnOutline);
@@ -245,22 +250,20 @@ public class BuildingSelector {
 			outline.respawn();
 
 			if (selectableFilter == null || selectableFilter.test(building))
-				selectableBuildings.put(building, outline);
+				selectableBuildings.add(building);
 		}
 		// don't select when a preview is active
 		if (selectableBuildings.size() == 0 || buildingPreviews.size() != 0) {
 			selected = null;
+			lastSelected = null;
 			return;
 		}
 		Location eyeLocation = player.getEyeLocation();
 		Vector playerDir = playerLoc.getDirection();
 		double closestAngle = Double.MAX_VALUE;
 		Building closest = null;
-		for (var entry : selectableBuildings.entrySet()) {
-			Building building = entry.getKey();
-			Outline outline = entry.getValue();
-
-			Vector direction = outline.getLocation().subtract(eyeLocation).toVector();
+		for (var building : selectableBuildings) {
+			Vector direction = building.getLocation().subtract(eyeLocation).toVector();
 			double angle = direction.angle(playerDir);
 			if (angle < VIEWING_ANGLE && angle < closestAngle) {
 				closestAngle = angle;
@@ -268,27 +271,39 @@ public class BuildingSelector {
 			}
 		}
 		selected = closest;
+//		if (selected != null) {
+//			buildingOutlines.get(selected).setText(Component.text(selected.getName(), selectedOutlineColor), true);
+//		}
 
 		// highlight selected
-		List<String> notSelected = new ArrayList<>();
-		List<Player> set = List.of(player);
-		for (Building building : buildings) {
-			boolean isSelected = selected == building;
-			var outline = buildingOutlines.get(building);
-			if (isSelected) {
-				GlowUtils.setPacketGlowing(set, List.of(outline.getUuid().toString()), selectedOutlineColor);
-			} else {
-				notSelected.add(outline.getUuid().toString());
+		if (lastSelected != selected) {
+			lastSelected = selected;
+			List<String> notSelected = new ArrayList<>();
+			List<Player> set = List.of(player);
+			for (Building building : buildings) {
+				if (buildingFilter != null && !buildingFilter.test(building))
+					continue;
+
+				boolean isSelected = selected == building;
+				var outline = buildingOutlines.get(building);
+				if (isSelected) {
+					List<String> entries = new ArrayList<>();
+					outline.addEntries(entries);
+					GlowUtils.setPacketGlowing(set, entries, selectedOutlineColor);
+				} else {
+					outline.addEntries(notSelected);
+				}
 			}
+			GlowUtils.setPacketGlowing(set, notSelected, outlineColor);
 		}
-		GlowUtils.setPacketGlowing(set, notSelected, outlineColor);
 	}
 
 	public void cleanUp() {
-		buildingOutlines.values().forEach(Outline::despawn);
+		buildingOutlines.values().forEach(Outline::remove);
 		buildingOutlines.clear();
 		buildingPreviews.clear();
 		selected = null;
+		lastSelected = null;
 	}
 
 	private static final byte BITFIELD_MASK = MetaIndex.BASE_BITFIELD_GLOWING_MASK | MetaIndex.BASE_BITFIELD_INVIS_MASK;
@@ -301,13 +316,18 @@ public class BuildingSelector {
 		private static final Vector NAME_OFFSET = new Vector(0, 1.25, 0);
 		private static final Vector STATUS_OFFSET = new Vector(0, 1, 0);
 
-		private final Vector offset;
+		protected final Location offset;
 
-		public Outline(int id, EntityType entityType, Location location, Vector offset, Player player) {
-			super(id, entityType, ensureOutlineVisible(player.getEyeLocation(), location, offset), List.of(player), null);
+		public Outline(int id, EntityType entityType, Location location, Location offset, Player player) {
+			super(id, entityType, location, List.of(player), null);
 			this.offset = offset;
 			List<Player> list = List.of(player);
-			Location nameLoc = ensureTextVisible(player.getEyeLocation(), location, offset);
+
+			Location eyeLocation = player.getEyeLocation();
+
+			// also updates the spawn packet
+			move(ensureOutlineVisible(eyeLocation, location, offset));
+			Location nameLoc = ensureTextVisible(eyeLocation, location, offset);
 			nameHologram = new PacketHologram(nameLoc, list, null, Component.empty());
 			statusHologram = new PacketHologram(nameLoc.clone().subtract(NAME_OFFSET).add(STATUS_OFFSET), list, null, Component.empty());
 		}
@@ -339,27 +359,41 @@ public class BuildingSelector {
 			statusHologram.despawn();
 		}
 
-		private static Location ensureOutlineVisible(Location eyeLocation, Location buildingLocation, Vector offset) {
+		@Override
+		public void remove() {
+			super.remove();
+			nameHologram.remove();
+			statusHologram.remove();
+		}
+
+		public void addEntries(List<String> scoreboard) {
+			scoreboard.add(getUuid().toString());
+		}
+
+		protected Location ensureOutlineVisible(Location eyeLocation, Location buildingLocation, Location offset) {
 			if (eyeLocation.distanceSquared(buildingLocation) > MAX_DISTANCE * MAX_DISTANCE) {
 				// move it closer
-				Vector direction = buildingLocation.clone().add(offset).subtract(eyeLocation).toVector().normalize();
-				Location newLocation = eyeLocation.clone().add(direction.multiply(MAX_DISTANCE));
-				newLocation.setYaw(buildingLocation.getYaw());
-				newLocation.setPitch(buildingLocation.getPitch());
+				Vector direction = buildingLocation.clone().subtract(eyeLocation).toVector().normalize();
+				Location newLocation = eyeLocation.clone().add(direction.multiply(MAX_DISTANCE)).add(offset);
+				newLocation.setYaw(offset.getYaw());
+				newLocation.setPitch(offset.getPitch());
 				return newLocation;
 			} else {
-				return buildingLocation.clone().add(offset);
+				Location newLocation = buildingLocation.clone().add(offset);
+				newLocation.setYaw(offset.getYaw());
+				newLocation.setPitch(offset.getPitch());
+				return newLocation;
 			}
 		}
 
-		private static Location ensureTextVisible(Location eyeLocation, Location buildingLocation, Vector offset) {
+		protected Location ensureTextVisible(Location eyeLocation, Location buildingLocation, Location offset) {
 			Vector textDirection = buildingLocation.clone().add(offset).add(NAME_OFFSET).subtract(eyeLocation)
 				.toVector().normalize();
 			World world = eyeLocation.getWorld();
 			var result = world.rayTraceBlocks(eyeLocation, textDirection, MAX_DISTANCE / 2, FluidCollisionMode.ALWAYS, false);
 			Location hit;
 			if (result != null) {
-				hit = result.getHitPosition().toLocation(world);
+				hit = result.getHitPosition().subtract(textDirection).toLocation(world);
 			} else {
 				hit = eyeLocation.clone().add(textDirection.multiply(MAX_DISTANCE / 2));
 			}
@@ -378,9 +412,9 @@ public class BuildingSelector {
 	}
 
 	private static class BlockOutline extends Outline {
-		public static final Vector LOC_OFFSET = new Vector(0.5, -0.001, 0.5);
+		public static final Vector LOC_OFFSET = new Vector(0, -0.501, 0);
 		public BlockOutline(Player viewer, Block block, Location location) {
-			super(NEW_ID, EntityType.FALLING_BLOCK, location.add(LOC_OFFSET), LOC_OFFSET, viewer);
+			super(NEW_ID, EntityType.FALLING_BLOCK, location, LOC_OFFSET.toLocation(location.getWorld()), viewer);
 			setBlockType(block.getBlockData());
 			// glowing and invisible
 			setMetadata(MetaIndex.BASE_BITFIELD_OBJ, BITFIELD_MASK);
@@ -393,9 +427,11 @@ public class BuildingSelector {
 
 	private static class EntityOutline extends Outline {
 		private PacketContainer equipmentPacket;
-		private static final Vector ZERO = new Vector();
-		public EntityOutline(Player viewer, Entity entity, Location location) {
-			super(NEW_ID, entity.getType(), location, ZERO, viewer);
+		private final List<EntityOutline> additionalOutlines;
+		public EntityOutline(Player viewer, Entity entity, Location offset, List<EntityOutline> additional, Location location) {
+			super(NEW_ID, entity.getType(), location, offset, viewer);
+			this.additionalOutlines = List.copyOf(additional);
+
 			// copy entity metadata
 			WrappedDataWatcher entityData = WrappedDataWatcher.getEntityWatcher(entity);
 			metadataPacket.getDataValueCollectionModifier().write(0, copyEntityData(entityData));
@@ -419,20 +455,59 @@ public class BuildingSelector {
 			}
 		}
 
-		public EntityOutline(Player viewer, PacketEntity packetEntity, Location location) {
-			super(NEW_ID, packetEntity.getEntityType(), location, ZERO, viewer);
+		public EntityOutline(Player viewer, PacketEntity packetEntity, Location offset, List<EntityOutline> additional, Location location) {
+			super(NEW_ID, packetEntity.getEntityType(), location, offset, viewer);
+			this.additionalOutlines = List.copyOf(additional);
+
 			// copy spawn meta, if any
 			spawnPacket = packetEntity.getSpawnPacket().deepClone();
 			// ...but change distinctive info to our own
 			spawnPacket.getIntegers().write(0, getId());
 			spawnPacket.getEntityTypeModifier().write(0, getEntityType());
-			StructureModifier<Double> doubles = spawnPacket.getDoubles();
-			doubles.write(0, location.getX());
-			doubles.write(1, location.getY());
-			doubles.write(2, location.getZ());
+			spawnPacket.getDoubles()
+				.write(0, location.getX())
+				.write(1, location.getY())
+				.write(2, location.getZ());
+			byte yaw = (byte) (location.getYaw() * 256d / 360d);
+			spawnPacket.getBytes()
+				.write(0, (byte) (location.getPitch() * 256d / 360d))
+				.write(1, yaw)
+				.write(2, yaw);
 			spawnPacket.getUUIDs().write(0, getUuid());
 			// copy packet entity metadata
 			metadataPacket.getDataValueCollectionModifier().write(0, copyEntityData(packetEntity.getDataWatcher()));
+		}
+
+		private static EntityOutline fromEntityLike(Player viewer, Object entityLike, Location baseLocation, List<EntityOutline> additional) {
+			if (entityLike instanceof Entity entity) {
+				Location offset = entity.getLocation().subtract(baseLocation);
+				return new EntityOutline(viewer, entity, offset, additional, baseLocation);
+			} else if (entityLike instanceof PacketEntity packetEntity) {
+				Location offset = packetEntity.getLocation().subtract(baseLocation);
+				return new EntityOutline(viewer, packetEntity, offset, additional, baseLocation);
+			} else {
+				throw new IllegalStateException();
+			}
+		}
+
+		public static EntityOutline fromBuilding(EntityBuilding building) {
+			Player player = building.owner;
+			Location loc = building.getLocation().add(building.getOffset());
+			Object first = null;
+			List<Object> remaining = new ArrayList<>();
+			for (var entity : building.getEntities()) {
+				if (first == null)
+					first = entity;
+				else
+					remaining.add(entity);
+			}
+			// TODO
+//			for (var packetEntity : building.getPacketEntities()) {
+//
+//			}
+			return fromEntityLike(player, first, loc.clone(), remaining.size() == 0 ? List.of() : remaining.stream()
+				.map(entityLike -> fromEntityLike(player, entityLike, loc.clone(), List.of()))
+				.toList());
 		}
 
 		@Override
@@ -440,6 +515,42 @@ public class BuildingSelector {
 			super.spawn(player);
 			if (equipmentPacket != null)
 				PlayerUtils.sendPacket(player, equipmentPacket);
+		}
+
+		@Override
+		public void respawn() {
+			super.respawn();
+			additionalOutlines.forEach(EntityOutline::respawn);
+		}
+
+		@Override
+		public void despawn() {
+			super.despawn();
+			additionalOutlines.forEach(EntityOutline::despawn);
+		}
+
+		@Override
+		public void remove() {
+			super.remove();
+			additionalOutlines.forEach(EntityOutline::remove);
+		}
+
+		@Override
+		public void update(Location eyeLocation, Location buildingLocation) {
+			super.update(eyeLocation, buildingLocation);
+			// other outlines won't have text, so move it relative to our location
+			additionalOutlines.forEach(outline -> {
+				Location newLocation = location.clone().subtract(offset).add(outline.offset);
+				newLocation.setYaw(outline.offset.getYaw());
+				newLocation.setPitch(outline.offset.getPitch());
+				outline.move(newLocation);
+			});
+		}
+
+		@Override
+		public void addEntries(List<String> scoreboard) {
+			super.addEntries(scoreboard);
+			additionalOutlines.forEach(outline -> outline.addEntries(scoreboard));
 		}
 
 		public int size() {

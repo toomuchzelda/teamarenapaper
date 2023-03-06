@@ -1,10 +1,10 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
-import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingSelector;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
@@ -20,7 +20,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.*;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.enchantments.Enchantment;
@@ -30,9 +30,7 @@ import org.bukkit.event.Event;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.util.BlockVector;
-import org.bukkit.util.Vector;
-import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -140,12 +138,8 @@ public class KitDemolitions extends Kit
 
 	public static class DemolitionsAbility extends Ability
 	{
-		public static final Map<Player, List<DemoMine>> PLAYER_MINES = new HashMap<>();
 		public static final Map<Player, List<RegeneratingMine>> REGENERATING_MINES = new LinkedHashMap<>();
-		public static final Map<Player, DemoMine> TARGETTED_MINE = new HashMap<>();
-
-		public static final Map<PacketMineHitbox, DemoMine> AXOLOTL_TO_DEMO_MINE = new LinkedHashMap<>();
-		public static final Set<BlockVector> MINE_POSITIONS = new HashSet<>();
+		private final Map<Player, BuildingSelector> buildingSelectors = new HashMap<>();
 
 		public static final DamageType DEMO_TNTMINE_BYSTANDER = new DamageType(DamageType.DEMO_TNTMINE,
 				"%Killed% was blown up by %Killer%'s TNT Mine because %Cause% stepped on it. Thanks a lot!");
@@ -156,87 +150,26 @@ public class KitDemolitions extends Kit
 
 		@Override
 		public void unregisterAbility() {
-			PLAYER_MINES.clear();
 			REGENERATING_MINES.clear();
-			AXOLOTL_TO_DEMO_MINE.clear();
-			TARGETTED_MINE.clear();
-			MINE_POSITIONS.clear();
-
-			DemoMine.clearTeams();
 		}
 
 		@Override
 		public void giveAbility(Player player) {
-			/*PlayerInventory inventory = player.getInventory();
-
-			ItemStack playersTNT = ItemUtils.getItemInInventory(TNT_MINE_ITEM, player.getInventory());
-			ItemStack playersPush = ItemUtils.getItemInInventory(PUSH_MINE_ITEM, player.getInventory());
-			//should not be null
-			playersTNT.setAmount(TNT_MINE_COUNT);
-			playersPush.setAmount(PUSH_MINE_COUNT);*/
+			var selector = new BuildingSelector(Component.empty(), REMOTE_DETONATOR_ITEM);
+			selector.selectableFilter = selector.buildingFilter =
+				building -> building instanceof DemoMine demoMine &&
+					demoMine.isArmed() && !demoMine.isTriggered();
+			buildingSelectors.put(player, selector);
 		}
+
 		@Override
 		public void removeAbility(Player player) {
-			removeMines(player);
-		}
-
-		public static void addMine(@NotNull DemoMine mine) {
-			Player player = mine.owner;
-			List<DemoMine> fromPlayer = PLAYER_MINES.computeIfAbsent(player, demoMines -> {
-				return new ArrayList<>(TNT_MINE_COUNT + PUSH_MINE_COUNT);
-			});
-			fromPlayer.add(mine);
-
-			//slightly hacky, but this is already done inside the DemoMine constructor.
-			// it needs to be put into this map before the armor stands are spawned so the
-			// Metadata packet listener for them will read from it and know it's
-			// a mine that needs the glowing effect applied.
-			/*for(Player viewer : player's teammates) {
-				Main.getPlayerInfo(viewer).getMetadataViewer().setViewedValue(0, DemoMine.GLOWING_METADATA, armor stands);
-			}*/
-
-			AXOLOTL_TO_DEMO_MINE.put(mine.hitboxEntity, mine);
-
-			MINE_POSITIONS.add(mine.getBlockVector());
-		}
-
-		public void removeMines(Player player) {
-			List<DemoMine> list = PLAYER_MINES.remove(player);
-			if(list != null) {
-				var iter = list.iterator();
-				while(iter.hasNext()) {
-					DemoMine mine = iter.next();
-					for(Player viewer : mine.team.getPlayerMembers()) {
-						Main.getPlayerInfo(viewer).getMetadataViewer().removeViewedValues(mine.stands);
-					}
-
-					AXOLOTL_TO_DEMO_MINE.remove(mine.hitboxEntity);
-
-					MINE_POSITIONS.remove(mine.getBlockVector());
-
-					mine.removeEntities();
-					iter.remove();
+			buildingSelectors.remove(player).cleanUp();
+			BuildingManager.getAllPlayerBuildings(player).forEach(building -> {
+				if (building instanceof DemoMine) {
+					BuildingManager.destroyBuilding(building);
 				}
-			}
-
-			REGENERATING_MINES.remove(player);
-		}
-
-		public void removeMine(DemoMine mine) {
-			List<DemoMine> list = PLAYER_MINES.get(mine.owner);
-			if(list != null) {
-				list.remove(mine);
-			}
-
-			for(Player viewer : mine.team.getPlayerMembers()) {
-				Main.getPlayerInfo(viewer).getMetadataViewer().removeViewedValues(mine.stands);
-			}
-
-			AXOLOTL_TO_DEMO_MINE.remove(mine.hitboxEntity);
-
-			MINE_POSITIONS.remove(mine.getBlockVector());
-
-			mine.removeEntities();
+			});
 		}
 
 		@Override
@@ -255,14 +188,14 @@ public class KitDemolitions extends Kit
 			if (type > 0 && block != null && event.getBlockFace() == BlockFace.UP) {
 				event.setUseItemInHand(Event.Result.DENY);
 				if(isValidMineBlock(block)) {
-					if (!MINE_POSITIONS.contains(block.getLocation().toVector().toBlockVector())) {
+					if (BuildingManager.canPlaceAt(block.getRelative(BlockFace.UP))) {
 						if (type == 1) { //tnt mine
 							DemoMine mine = new TNTMine(event.getPlayer(), block);
-							addMine(mine);
+							BuildingManager.placeBuilding(mine);
 						}
 						else { //push mine
 							DemoMine mine = new PushMine(event.getPlayer(), block);
-							addMine(mine);
+							BuildingManager.placeBuilding(mine);
 						}
 
 						event.getItem().subtract();
@@ -276,17 +209,16 @@ public class KitDemolitions extends Kit
 				else {
 					final Component message = Component.text("You can't place a Mine here", TextColors.ERROR_RED);
 					PlayerUtils.sendKitMessage(event.getPlayer(), message, message);
-					event.getPlayer().updateInventory(); // Refresh the 'placed' block
+//					event.getPlayer().updateInventory(); // Refresh the 'placed' block
 				}
 			}
 			else if(mat == REMOTE_DETONATOR_ITEM.getType()) {
 				Player demo = event.getPlayer();
 				event.setUseItemInHand(Event.Result.DENY);
 				event.setUseInteractedBlock(Event.Result.DENY); //prevent arming tnt
-				DemoMine mine = TARGETTED_MINE.get(demo);
+				DemoMine mine = (DemoMine) buildingSelectors.get(demo).getSelected();
 				if(mine != null) {
 					mine.trigger(demo);
-					TARGETTED_MINE.remove(demo);
 				}
 			}
 		}
@@ -329,130 +261,12 @@ public class KitDemolitions extends Kit
 
 		@Override
 		public void onPlayerTick(Player demo) {
-			if(!PlayerUtils.isHolding(demo, REMOTE_DETONATOR_ITEM)) {
-				DemoMine mine = TARGETTED_MINE.remove(demo);
-				if(mine != null)
-					mine.unGlow();
-
-			}
-			else {
-				//Credit jacky8399 for in-field-of-view algorithm
-				Location demoLoc = demo.getEyeLocation();
-				Vector demoLocVec = demoLoc.toVector();
-				Vector direction = demoLoc.getDirection();
-
-				//create a sort of method-local scope container class
-				record targettedMinePair(DemoMine mine, double angle) {}
-
-				List<DemoMine> mines = PLAYER_MINES.get(demo);
-				List<targettedMinePair> targetCandidates;
-
-				if (mines != null) {
-					targetCandidates = new ArrayList<>(mines.size());
-					for (DemoMine mine : mines) {
-						if (!mine.isTriggered() && mine.isArmed() &&
-								mine.getTargetLoc().distanceSquared(demoLocVec) <= DemoMine.REMOTE_ARMING_DISTANCE_SQRD) {
-							Vector playerToPoint = mine.getTargetLoc().clone().subtract(demoLocVec).normalize();
-							double angle = playerToPoint.angle(direction);
-
-							if (angle <= DemoMine.TARGETTING_ANGLE) {
-								targetCandidates.add(new targettedMinePair(mine, angle));
-								/*demoLoc.getWorld().spawnParticle(Particle.CRIT,
-										mine.getTargetLoc().toLocation(demoLoc.getWorld()), 1);*/
-							}
-						}
-					}
-				}
-				else {
-					targetCandidates = new ArrayList<>(0);
-				}
-
-				//get the one being closest pointed at
-				double smallestAngle = 10000d;
-				DemoMine targettedMine = null;
-				for(targettedMinePair pair : targetCandidates) {
-					if(pair.angle() < smallestAngle) {
-						smallestAngle = pair.angle();
-						targettedMine = pair.mine();
-					}
-				}
-
-				if(targettedMine != null) {
-					if(!targettedMine.glowing)
-						targettedMine.glow();
-
-					//unglow the previous mine if any and put the new one in
-					final DemoMine finalTargettedMine = targettedMine;
-					TARGETTED_MINE.compute(demo, (player, demoMine) -> {
-						if(demoMine != null && demoMine != finalTargettedMine) {
-							demoMine.unGlow();
-						}
-
-						return finalTargettedMine;
-					});
-				}
-				else if(targetCandidates.size() == 0) {
-					DemoMine mine = TARGETTED_MINE.remove(demo);
-					if(mine != null)
-						mine.unGlow();
-				}
-			}
+			buildingSelectors.get(demo).tick(demo);
 		}
 
 		@Override
 		public void onTick() {
 			final int gameTick = TeamArena.getGameTick();
-
-			{
-				//add mines to be removed to this list and remove afterwards to prevent concurrent modification
-				List<DemoMine> toRemove = new LinkedList<>();
-				for (Map.Entry<PacketMineHitbox, DemoMine> entry : AXOLOTL_TO_DEMO_MINE.entrySet()) {
-					DemoMine mine = entry.getValue();
-
-					mine.tick();
-
-					if (mine.removeNextTick) {
-						toRemove.add(mine);
-						addRegeneratingMine(mine.owner, mine.type, gameTick);
-					}
-					//determine if needs to be removed (next tick)
-					else if (mine.isDone()) {
-						mine.removeNextTick = true;
-					}
-					//if it hasn't been armed yet
-					else if (!mine.isArmed()) {
-						//indicate its armed
-						if (gameTick == mine.creationTime + DemoMine.TIME_TO_ARM) {
-							World world = mine.hitboxEntity.getWorld();
-							world.playSound(mine.hitboxEntity.getLocation(), Sound.BLOCK_STONE_BUTTON_CLICK_OFF, 1f, 1f);
-							world.spawnParticle(Particle.CRIT, mine.hitboxEntity.getLocation()
-									.add(0, 0.4, 0), 2, 0, 0, 0, 0);
-
-							Component message = Component.text("Your " + mine.type.name + " is now armed")
-									.color(NamedTextColor.GREEN);
-							PlayerUtils.sendKitMessage(mine.owner, message, message);
-						}
-						// else do nothing and don't enter the control statement below that checks for collision
-					}
-					//if it hasn't been stepped on already check if anyone's standing on it
-					else if (!mine.isTriggered()) {
-						for (Player stepper : Main.getGame().getPlayers()) {
-							if (mine.team.getPlayerMembers().contains(stepper))
-								continue;
-
-							PacketMineHitbox axolotl = entry.getKey();
-							if (stepper.getBoundingBox().overlaps(axolotl.getBoundingBox())) {
-								//they stepped on mine, trigger explosion
-								mine.trigger(stepper);
-							}
-						}
-					}
-				}
-
-				for (DemoMine remove : toRemove) {
-					removeMine(remove);
-				}
-			}
 
 			//tick regenerating mines
 			{
@@ -487,30 +301,11 @@ public class KitDemolitions extends Kit
 			}
 		}
 
-		/**
-		 * Add the appropriate metadata for glowing mines for players leaving and joining the team.
-		 */
-		public static void teamSwitch(Player player, TeamArenaTeam oldTeam, TeamArenaTeam newTeam) {
-			//iterate through all mines.
-			// if it's old team's mines, make it un-glow.
-			// if new team's mines, make it glow
-			MetadataViewer metadataViewer = Main.getPlayerInfo(player).getMetadataViewer();
-			for(Map.Entry<PacketMineHitbox, DemoMine> entry : AXOLOTL_TO_DEMO_MINE.entrySet()) {
-				DemoMine mine = entry.getValue();
+		@Override
+		public void onTeamSwitch(Player player, @Nullable TeamArenaTeam oldTeam, @Nullable TeamArenaTeam newTeam) {
 
-				if(mine.team == oldTeam) {
-					metadataViewer.removeViewedValues(mine.stands);
-				}
-				else if(mine.team == newTeam) {
-					metadataViewer.setViewedValues(MetaIndex.BASE_BITFIELD_IDX, MetaIndex.GLOWING_METADATA_VALUE,
-							mine.stands);
-				}
-
-				metadataViewer.refreshViewer(mine.stands);
-			}
 		}
-
-		public void addRegeneratingMine(Player player, MineType type, int startTime) {
+		public static void addRegeneratingMine(Player player, MineType type, int startTime) {
 			List<RegeneratingMine> regenningMines = REGENERATING_MINES.computeIfAbsent(player,
 					player1 -> new ArrayList<>(TNT_MINE_COUNT + PUSH_MINE_COUNT));
 
@@ -520,41 +315,6 @@ public class KitDemolitions extends Kit
 					NamedTextColor.AQUA);
 
 			PlayerUtils.sendKitMessage(player, message, message);
-		}
-
-		public static void handleHitboxPunch(PacketMineHitbox hitbox, Player puncher) {
-			if (Main.getGame().isDead(puncher)) return;
-
-			DemoMine mine = AXOLOTL_TO_DEMO_MINE.get(hitbox);
-			//teammate punches it
-			if (puncher != mine.owner && mine.team.getPlayerMembers().contains(puncher)) {
-				puncher.sendMessage(Component.text("This is ", NamedTextColor.AQUA).append(
-						mine.owner.playerListName()).append(Component.text("'s " + mine.type.name)));
-			}
-			else {
-				final int currentTick = TeamArena.getGameTick();
-				int diff = currentTick - hitbox.lastHurtTime;
-				if(diff >= 10) {
-					hitbox.lastHurtTime = currentTick;
-					if(mine.hurt()) {
-						Component message;
-						if(puncher != mine.owner) {
-							message = Component.text("You've broken one of ", NamedTextColor.AQUA).append(
-									mine.owner.playerListName()).append(Component.text("'s " + mine.type.name + "s!",
-									NamedTextColor.AQUA));
-
-							Component ownerMessage = Component.text("Someone broke one of your " + mine.type.name + "s!",
-									NamedTextColor.AQUA);
-
-							PlayerUtils.sendKitMessage(mine.owner, ownerMessage, ownerMessage);
-						}
-						else {
-							message = Component.text("Broke your " + mine.type.name).color(NamedTextColor.AQUA);
-						}
-						puncher.sendMessage(message);
-					}
-				}
-			}
 		}
 	}
 }

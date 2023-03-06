@@ -3,7 +3,6 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
-import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
@@ -12,9 +11,14 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Collection;
+import java.util.List;
 
 public class PushMine extends DemoMine
 {
@@ -28,6 +32,12 @@ public class PushMine extends DemoMine
 		super(demo, block);
 
 		this.type = MineType.PUSHMINE;
+		setName(type.name);
+	}
+
+	@Override
+	public void onPlace() {
+		super.onPlace();
 
 		//put downwards slightly so rotated legs lay flat on ground and boots partially in ground
 		Location spawnLoc = baseLoc.clone().add(0, -1.8, 0);
@@ -52,20 +62,17 @@ public class PushMine extends DemoMine
 			for(Player viewer : this.team.getPlayerMembers()) {
 				MetadataViewer metaViewer = Main.getPlayerInfo(viewer).getMetadataViewer();
 				metaViewer.setViewedValue(MetaIndex.BASE_BITFIELD_IDX,
-						MetaIndex.GLOWING_METADATA_VALUE, stand.getEntityId(), stand);
+					MetaIndex.GLOWING_METADATA_VALUE, stand.getEntityId(), stand);
 
 				//Don't need to refresh metaViewer as this has been put in before the metadata packet is sent
 			}
 		};
 		stands[0] = world.spawn(spawnLoc, ArmorStand.class, propApplier);
+	}
 
-		this.glowingTeam = DARK_GREEN_GLOWING_TEAM;
-		this.ownerGlowingTeam = GREEN_GLOWING_TEAM;
-		glowingTeam.addEntities(stands);
-		PlayerScoreboard.addMembersAll(glowingTeam, stands);
-
-		//owner demo should see it as lighter colour
-		Main.getPlayerInfo(owner).getScoreboard().addMembers(GREEN_GLOWING_TEAM, stands);
+	@Override
+	public @NotNull Collection<? extends Entity> getEntities() {
+		return List.of(stands);
 	}
 
 	@Override
@@ -80,7 +87,8 @@ public class PushMine extends DemoMine
 	}
 
 	@Override
-	void tick() {
+	public void onTick() {
+		super.onTick();
 		if(isTriggered()) {
 			if(TeamArena.getGameTick() - triggerTime == this.timeToDetonate) {
 				Location explodeLoc = baseLoc.clone().add(0, 0.1, 0);

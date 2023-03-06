@@ -1396,7 +1396,6 @@ public abstract class TeamArena
 			ability.onTeamSwitch(player, oldTeam, newTeam);
 		}
 
-		KitDemolitions.DemolitionsAbility.teamSwitch(player, oldTeam, newTeam);
 		KitBeekeeper.BeekeeperAbility.teamSwitch(player, oldTeam, newTeam);
 	}
 

@@ -7,6 +7,7 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -62,4 +63,8 @@ public abstract non-sealed class EntityBuilding extends Building {
 	 */
 	@NotNull
 	public abstract Collection<? extends PacketEntity> getPacketEntities();
+
+	public Vector getOffset() {
+		return new Vector();
+	}
 }

@@ -5,21 +5,22 @@ import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 public class GlowUtils {
 
 	private static final Map<NamedTextColor, Team> COLORED_TEAMS;
 	static {
 		var coloredTeams = new HashMap<NamedTextColor, Team>();
-		Scoreboard temp = Bukkit.getScoreboardManager().getMainScoreboard();
+		Scoreboard temp = PlayerScoreboard.SCOREBOARD;
 		for (NamedTextColor color : NamedTextColor.NAMES.values()) {
 			Team team = temp.registerNewTeam("color_" + color.toString());
 			team.color(color);
