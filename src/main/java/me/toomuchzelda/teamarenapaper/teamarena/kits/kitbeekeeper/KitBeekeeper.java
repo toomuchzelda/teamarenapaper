@@ -1,5 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.kitbeekeeper;
 
+import com.destroystokyo.paper.entity.ai.Goal;
+import com.destroystokyo.paper.entity.ai.MobGoals;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
@@ -10,15 +12,15 @@ import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
+import net.minecraft.world.entity.ai.goal.FloatGoal;
 import org.bukkit.*;
+import org.bukkit.craftbukkit.v1_19_R2.entity.CraftBee;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Bee;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -47,8 +49,8 @@ public class KitBeekeeper extends Kit
 		TextColor color = TextColor.color(255, 210, 81);
 		lore.add(Component.text("Use this to command one bee at a time", color));
 		lore.add(Component.text("Right click a block to ", TextUtils.RIGHT_CLICK_TO).append(Component.text("defend", color)));
-		lore.add(Component.text("Right click a teammate to ", TextUtils.RIGHT_CLICK_TO).append(Component.text(" give honey", NamedTextColor.LIGHT_PURPLE)));
-		lore.add(Component.text("Attack an enemy to ", TextUtils.LEFT_CLICK_TO).append(Component.text(" pursue", NamedTextColor.RED)));
+		lore.add(Component.text("Right click a teammate to ", TextUtils.RIGHT_CLICK_TO).append(Component.text("give honey", NamedTextColor.LIGHT_PURPLE)));
+		lore.add(Component.text("Attack an enemy to ", TextUtils.LEFT_CLICK_TO).append(Component.text("pursue", NamedTextColor.RED)));
 		lore.add(Component.text("Click any bee to return to following you"));
 
 		BEE_WAND = ItemBuilder.of(Material.HONEYCOMB)
@@ -75,15 +77,29 @@ public class KitBeekeeper extends Kit
 
 	public static class BeekeeperAbility extends Ability {
 
-		private static final int MAX_BEES = 3;
+		static final int MAX_BEES = 3;
 
 		private static class BeekeeperBee {
 			Bee beeEntity;
-			BeeTask task; // instance of the task they're carrying out. Contains all the information needed for the task too.
+			// instance of the task they're carrying out. Contains all the information needed for the task too.
+			private BeeTask task;
 
-			BeekeeperBee(Location loc, Player owner) {
+			BeekeeperBee(Location loc) {
 				beeEntity = loc.getWorld().spawn(loc, Bee.class);
-				this.task = new BeeTask.FollowOwner(beeEntity, owner);
+			}
+
+			void setTask(BeeTask task) {
+				// Remove previous BeeTask goals
+				if (this.task != null) {
+					for (Goal<Bee> previousGoal : this.task.getMobGoals()) {
+						Bukkit.getMobGoals().removeGoal(this.beeEntity, previousGoal);
+					}
+				}
+				// Add new
+				for (Goal<Bee> goal : task.getMobGoals()) {
+					Bukkit.getMobGoals().addGoal(beeEntity, 1, goal);
+				}
+				this.task = task;
 			}
 		}
 
@@ -103,8 +119,16 @@ public class KitBeekeeper extends Kit
 		public void giveAbility(Player player) {
 			BeekeeperBee[] bees = new BeekeeperBee[MAX_BEES];
 			final int currentTick = TeamArena.getGameTick();
+			MobGoals manager = Bukkit.getMobGoals();
 			for (int i = 0; i < bees.length; i++) {
-				bees[i] = new BeekeeperBee(calculateBeeLocation(player, i, currentTick), player);
+				bees[i] = new BeekeeperBee(FollowOwnerTask.calculateBeeLocation(player, i, currentTick));
+
+				manager.removeAllGoals(bees[i].beeEntity);
+				// Need to use NMS to add vanilla goals
+				net.minecraft.world.entity.animal.Bee nmsBee = ((CraftBee) bees[i].beeEntity).getHandle();
+				nmsBee.goalSelector.addGoal(9, new FloatGoal(nmsBee));
+
+				bees[i].setTask(new FollowOwnerTask(bees[i].beeEntity, currentTick, i, player));
 			}
 
 			BeekeeperInfo info = new BeekeeperInfo(bees);
@@ -121,7 +145,7 @@ public class KitBeekeeper extends Kit
 			}
 
 			for (BeekeeperBee bee : beekeeperInfo.bees) {
-				Location loc = bee.beeEntity.getLocation();
+				Location loc = bee.beeEntity.getLocation().add(0, bee.beeEntity.getHeight() / 2, 0);
 				loc.getWorld().spawnParticle(Particle.CLOUD, loc, 1, 0.2d, 0.2d, 0.2d, 0.02d);
 				loc.getWorld().playSound(loc, Sound.ENTITY_BEE_DEATH, 0.85f, 1f);
 				bee.beeEntity.remove();
@@ -133,27 +157,5 @@ public class KitBeekeeper extends Kit
 		public void onInteract(PlayerInteractEvent event) {}
 		@Override
 		public void onInteractEntity(PlayerInteractEntityEvent event) {}
-
-		/**
-		 * Method to calculate position of bee for initial spawn and during FOLLOW_OWNER task
-		 * @param beeOwner Boundingbox to surround
-		 * @param beeNum index of bee out of all the bees (0, 1, 2 etc)
-		 * @return Position as Location
-		 */
-		private static Location calculateBeeLocation(Entity beeOwner, int beeNum, int spawnTime) {
-			//yaw : -180 to 180
-			float offset = (float) (TeamArena.getGameTick() - spawnTime);
-			offset %= 360f;
-			offset -= 180f; // get it between -180 and 180
-
-			Location loc = beeOwner.getLocation().add(0, beeOwner.getHeight() / 2, 0);
-			loc.setYaw(offset);
-			Vector direction = loc.getDirection();
-			direction.multiply(beeOwner.getWidth() * 1.41);
-
-			loc.add(direction);
-
-			return loc; // TODO improve positioning for visual effect
-		}
 	}
 }
