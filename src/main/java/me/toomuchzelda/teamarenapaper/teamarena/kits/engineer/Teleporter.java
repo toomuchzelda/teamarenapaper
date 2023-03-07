@@ -4,6 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BlockBuilding;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingAllyOutlines;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.PreviewableBuilding;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
@@ -55,7 +56,7 @@ public class Teleporter extends BlockBuilding implements PreviewableBuilding {
 
 	@Override
 	protected Location getHologramLocation() {
-		return getLocation().add(0.5, 1.5, 0.5);
+		return getLocation().add(0, 1, 0);
 	}
 
 	public int getLastUsedTick() {
@@ -92,9 +93,6 @@ public class Teleporter extends BlockBuilding implements PreviewableBuilding {
 		this.originalBlockState = block.getState();
 		block.setType(Material.HONEYCOMB_BLOCK, false);
 
-		// restore original block
-//		BuildingManager.registerBlockBreakCallback(block, this, this::onBlockBroken);
-
 		this.lastUsedTick = TeamArena.getGameTick();
 
 		var otherTeleporters = BuildingManager.getPlayerBuildings(owner, Teleporter.class);
@@ -107,6 +105,8 @@ public class Teleporter extends BlockBuilding implements PreviewableBuilding {
 							.formatted(linkedTeleporter.x(), linkedTeleporter.y(), linkedTeleporter.z()),
 					NamedTextColor.YELLOW));
 		}
+
+		BuildingAllyOutlines.registerBuilding(this);
 	}
 
 	@Override
@@ -151,7 +151,7 @@ public class Teleporter extends BlockBuilding implements PreviewableBuilding {
 
 		//Allies and spies disguised as allies can use
 		//User must be sneaking and be on top of the teleporter block
-		return player.isSneaking() && player.getLocation().getY() - 1 == location.getY() &&
+		return player.isSneaking() && player.getLocation().getY() - 1 == (int)location.getY() &&
 			(!Main.getGame().canAttack(owner, player) || PlayerUtils.isDisguisedAsAlly(owner, player));
 	}
 

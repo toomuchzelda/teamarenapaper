@@ -21,8 +21,8 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.Nullable;
 
-import javax.annotation.Nullable;
 import java.util.*;
 import java.util.function.Predicate;
 
@@ -184,6 +184,10 @@ public class PacketEntity
 		return this.data;
 	}
 
+	public void setViewerRule(@Nullable Predicate<Player> rule) {
+		this.viewerRule = rule;
+	}
+
 	Component customName;
 	public void setText(@Nullable Component component, boolean sendPacket) {
 		if (!Objects.equals(customName, component)) {
@@ -316,7 +320,8 @@ public class PacketEntity
 
 	private static final double EPSILON = Vector.getEpsilon();
 	protected void move(Location newLocation, boolean force) {
-		if(location.distance(newLocation) < EPSILON && !force)
+		if (!force && location.distance(newLocation) < EPSILON &&
+			location.getYaw() == newLocation.getYaw() && location.getPitch() == newLocation.getPitch())
 			return;
 
 		newLocation = newLocation.clone();

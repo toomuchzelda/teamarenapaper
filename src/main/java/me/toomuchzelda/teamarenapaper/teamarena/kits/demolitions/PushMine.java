@@ -1,9 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions;
 
-import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
-import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingAllyOutlines;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import org.bukkit.Location;
@@ -58,16 +56,10 @@ public class PushMine extends DemoMine
 			stand.setBasePlate(false);
 			stand.setInvisible(true);
 			stand.getEquipment().setHelmet(leatherHelmet, true);
-
-			for(Player viewer : this.team.getPlayerMembers()) {
-				MetadataViewer metaViewer = Main.getPlayerInfo(viewer).getMetadataViewer();
-				metaViewer.setViewedValue(MetaIndex.BASE_BITFIELD_IDX,
-					MetaIndex.GLOWING_METADATA_VALUE, stand.getEntityId(), stand);
-
-				//Don't need to refresh metaViewer as this has been put in before the metadata packet is sent
-			}
 		};
 		stands[0] = world.spawn(spawnLoc, ArmorStand.class, propApplier);
+
+		BuildingAllyOutlines.registerBuilding(this);
 	}
 
 	@Override

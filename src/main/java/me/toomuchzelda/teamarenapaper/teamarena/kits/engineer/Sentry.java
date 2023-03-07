@@ -342,6 +342,8 @@ public class Sentry extends EntityBuilding implements PreviewableBuilding {
 			}
 		} else if (this.currState == State.WRANGLED) {
 			wranglerParticleBeam();
+			Location ownerLoc = owner.getLocation();
+			sentry.setRotation(ownerLoc.getYaw(), ownerLoc.getPitch());
 			//If engineer leaves mount, return to NEUTRAL
 			if(sentry.getPassengers().isEmpty()){
 				this.currState = State.NEUTRAL;
@@ -383,6 +385,8 @@ public class Sentry extends EntityBuilding implements PreviewableBuilding {
 		if (result != null) {
 			BlockFace face = result.getHitBlockFace();
 			blockLoc = result.getHitPosition().toLocation(owner.getWorld());
+			blockLoc.setYaw(eyeLocation.getYaw());
+			blockLoc.setPitch(eyeLocation.getPitch());
 			if (face != null && face != BlockFace.UP) {
 				blockLoc.add(face.getModX() * 0.5, face.getModY() * 2, face.getModZ() * 0.5);
 			}

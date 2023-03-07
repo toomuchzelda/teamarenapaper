@@ -83,6 +83,7 @@ public final class BuildingManager {
 
 	public static void destroyBuilding(@NotNull Building building) {
 		building.onDestroy();
+		building.markInvalid(); // ensure that it is invalid
 
 		buildings.remove(new BlockCoords(building.getLocation()));
 		if (building instanceof EntityBuilding entityBuilding) {
@@ -159,5 +160,9 @@ public final class BuildingManager {
 		} else {
 			return 0;
 		}
+	}
+
+	public enum AllyVisibility {
+		ALWAYS, NEARBY, NEVER
 	}
 }
