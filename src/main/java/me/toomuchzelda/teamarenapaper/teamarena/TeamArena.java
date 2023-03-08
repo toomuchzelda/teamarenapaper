@@ -9,7 +9,7 @@ import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerSound;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.ChatAnnouncerManager;
-import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingAllyOutlines;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingOutlineManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingListeners;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
@@ -528,7 +528,7 @@ public abstract class TeamArena
 
 	public void liveTick() {
 		BuildingManager.tick();
-		BuildingAllyOutlines.tick();
+		BuildingOutlineManager.tick();
 
 		//checking team states (win/lose) done in liveTick() per-game
 
@@ -1233,7 +1233,7 @@ public abstract class TeamArena
 		this.killStreakManager.unregister();
 
 		BuildingManager.cleanUp();
-		BuildingAllyOutlines.cleanUp();
+		BuildingOutlineManager.cleanUp();
 
 		setGameState(GameState.DEAD);
 	}

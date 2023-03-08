@@ -4,7 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BlockBuilding;
-import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingAllyOutlines;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingOutlineManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.PreviewableBuilding;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
@@ -49,6 +49,7 @@ public class Teleporter extends BlockBuilding implements PreviewableBuilding {
 		super(player, loc);
 		setName("Teleporter");
 		setIcon(ICON);
+		setOutlineColor(NamedTextColor.AQUA);
 		teamColor = Main.getPlayerInfo(player).team.getRGBTextColor();
 		Block block = loc.getBlock();
 		hitBox = BoundingBox.of(block.getRelative(-1, 1, -1), block.getRelative(1, 2, 1));
@@ -106,7 +107,7 @@ public class Teleporter extends BlockBuilding implements PreviewableBuilding {
 					NamedTextColor.YELLOW));
 		}
 
-		BuildingAllyOutlines.registerBuilding(this);
+		BuildingOutlineManager.registerBuilding(this);
 	}
 
 	@Override

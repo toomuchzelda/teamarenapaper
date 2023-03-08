@@ -201,6 +201,11 @@ public class PacketEntity
 		}
 	}
 
+	@Nullable
+	public Component getText() {
+		return customName;
+	}
+
 	private void createRotateHead() {
 		this.rotateHeadPacket = new PacketContainer(PacketType.Play.Server.ENTITY_HEAD_ROTATION);
 

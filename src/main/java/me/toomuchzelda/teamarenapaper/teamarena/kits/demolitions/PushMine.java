@@ -1,9 +1,9 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions;
 
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingAllyOutlines;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -31,6 +31,7 @@ public class PushMine extends DemoMine
 
 		this.type = MineType.PUSHMINE;
 		setName(type.name);
+		setOutlineColor(NamedTextColor.DARK_GREEN);
 	}
 
 	@Override
@@ -59,7 +60,8 @@ public class PushMine extends DemoMine
 		};
 		stands[0] = world.spawn(spawnLoc, ArmorStand.class, propApplier);
 
-		BuildingAllyOutlines.registerBuilding(this);
+		// TODO toomuchzelda's horrible code here
+//		BuildingOutlineManager.registerBuilding(this);
 	}
 
 	@Override

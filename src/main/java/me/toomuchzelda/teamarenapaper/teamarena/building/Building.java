@@ -2,6 +2,8 @@ package me.toomuchzelda.teamarenapaper.teamarena.building;
 
 import me.toomuchzelda.teamarenapaper.utils.RealHologram;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -19,6 +21,7 @@ public abstract sealed class Building permits BlockBuilding, EntityBuilding {
 	private RealHologram hologram;
 	String name;
 	private ItemStack icon = NO_ICON;
+	private NamedTextColor outlineColor = NamedTextColor.WHITE;
 	boolean invalid;
 
 	public Building(Player player, Location loc) {
@@ -66,6 +69,14 @@ public abstract sealed class Building permits BlockBuilding, EntityBuilding {
 
 	public void setIcon(ItemStack icon) {
 		this.icon = icon.clone();
+	}
+
+	public TextColor getOutlineColor() {
+		return outlineColor;
+	}
+
+	public void setOutlineColor(TextColor color) {
+		this.outlineColor = NamedTextColor.nearestTo(color);
 	}
 
 	public void onPlace() {

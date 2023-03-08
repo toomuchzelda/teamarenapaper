@@ -4,6 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingOutlineManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingSelector;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
@@ -139,7 +140,6 @@ public class KitDemolitions extends Kit
 	public static class DemolitionsAbility extends Ability
 	{
 		public static final Map<Player, List<RegeneratingMine>> REGENERATING_MINES = new LinkedHashMap<>();
-		private final Map<Player, BuildingSelector> buildingSelectors = new HashMap<>();
 
 		public static final DamageType DEMO_TNTMINE_BYSTANDER = new DamageType(DamageType.DEMO_TNTMINE,
 				"%Killed% was blown up by %Killer%'s TNT Mine because %Cause% stepped on it. Thanks a lot!");
@@ -159,12 +159,12 @@ public class KitDemolitions extends Kit
 			selector.selectableFilter = selector.buildingFilter =
 				building -> building instanceof DemoMine demoMine &&
 					demoMine.isArmed() && !demoMine.isTriggered();
-			buildingSelectors.put(player, selector);
+			BuildingOutlineManager.registerSelector(player, selector);
 		}
 
 		@Override
 		public void removeAbility(Player player) {
-			buildingSelectors.remove(player).cleanUp();
+			BuildingOutlineManager.unregisterSelector(player);
 			BuildingManager.getAllPlayerBuildings(player).forEach(building -> {
 				if (building instanceof DemoMine) {
 					BuildingManager.destroyBuilding(building);
@@ -216,7 +216,7 @@ public class KitDemolitions extends Kit
 				Player demo = event.getPlayer();
 				event.setUseItemInHand(Event.Result.DENY);
 				event.setUseInteractedBlock(Event.Result.DENY); //prevent arming tnt
-				DemoMine mine = (DemoMine) buildingSelectors.get(demo).getSelected();
+				DemoMine mine = (DemoMine) BuildingOutlineManager.getSelector(demo).getSelected();
 				if(mine != null) {
 					mine.trigger(demo);
 				}
@@ -257,11 +257,6 @@ public class KitDemolitions extends Kit
 					}
 				}
 			}
-		}
-
-		@Override
-		public void onPlayerTick(Player demo) {
-			buildingSelectors.get(demo).tick(demo);
 		}
 
 		@Override

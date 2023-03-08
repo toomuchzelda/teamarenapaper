@@ -3,10 +3,10 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions;
 import me.toomuchzelda.teamarenapaper.explosions.CustomExplosionInfo;
 import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaExplosion;
-import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingAllyOutlines;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -32,6 +32,7 @@ public class TNTMine extends DemoMine
 
 		this.type = MineType.TNTMINE;
 		setName(type.name);
+		setOutlineColor(NamedTextColor.RED);
 	}
 
 	@Override
@@ -65,7 +66,8 @@ public class TNTMine extends DemoMine
 		stands[0] = world.spawn(spawnLoc1, ArmorStand.class, propApplier);
 		stands[1] = world.spawn(spawnLoc2, ArmorStand.class, propApplier);
 
-		BuildingAllyOutlines.registerBuilding(this);
+		// TODO toomuchzelda's horrible code here
+//		BuildingOutlineManager.registerBuilding(this);
 	}
 
 	@Override

@@ -7,10 +7,13 @@ import com.comphenix.protocol.wrappers.Pair;
 import com.comphenix.protocol.wrappers.WrappedDataValue;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
+import me.toomuchzelda.teamarenapaper.utils.GlowUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import net.minecraft.network.syncher.SynchedEntityData;
 import org.bukkit.FluidCollisionMode;
 import org.bukkit.Location;
@@ -42,6 +45,8 @@ public sealed class BuildingOutline extends PacketEntity {
 
 	protected final Location offset;
 
+	protected TextColor outlineColor;
+
 	/**
 	 * Whether the outline moves with the player to ensure visibility
 	 */
@@ -72,22 +77,57 @@ public sealed class BuildingOutline extends PacketEntity {
 	public void setText(@Nullable Component component, boolean sendPacket) {
 		if (nameHologram == null)
 			initHolograms();
+		if (component != null) {
+			nameHologram.respawn();
+		} else {
+			nameHologram.despawn();
+		}
 		nameHologram.setText(component, sendPacket);
-
 	}
 
 	public void setStatus(@Nullable Component component, boolean sendPacket) {
 		if (statusHologram == null)
 			initHolograms();
+		if (component != null) {
+			statusHologram.respawn();
+		} else {
+			statusHologram.despawn();
+		}
 		statusHologram.setText(component, sendPacket);
+	}
+
+	public void setOutlineColor(TextColor color) {
+		if (!Objects.equals(outlineColor, color)) {
+			this.outlineColor = color;
+			updateOutline();
+		}
+	}
+
+	protected void updateOutline() {
+		if (isAlive()) {
+			List<String> entries = new ArrayList<>();
+			appendScoreboardEntries(entries);
+			GlowUtils.setPacketGlowing(getRealViewers(), entries, outlineColor != null ? NamedTextColor.nearestTo(outlineColor) : null);
+		}
+	}
+
+	@Override
+	protected void spawn(Player player) {
+		// send team packet before entity is spawned
+		List<String> entries = new ArrayList<>();
+		appendScoreboardEntries(entries);
+		GlowUtils.setPacketGlowing(List.of(player), entries, outlineColor != null ? NamedTextColor.nearestTo(outlineColor) : null);
+		super.spawn(player);
 	}
 
 	@Override
 	public void respawn() {
 		super.respawn();
 		if (nameHologram != null) {
-			nameHologram.respawn();
-			statusHologram.respawn();
+			if (nameHologram.getText() != null)
+				nameHologram.respawn();
+			if (statusHologram.getText() != null)
+				statusHologram.respawn();
 		}
 	}
 
@@ -109,7 +149,7 @@ public sealed class BuildingOutline extends PacketEntity {
 		}
 	}
 
-	public void addEntries(List<String> scoreboard) {
+	public void appendScoreboardEntries(List<String> scoreboard) {
 		scoreboard.add(getUuid().toString());
 	}
 
@@ -132,25 +172,26 @@ public sealed class BuildingOutline extends PacketEntity {
 		}
 	}
 
+	public static final double TEXT_MAX_DISTANCE = 6;
 	protected Location ensureTextVisible(Location eyeLocation, Location buildingLocation, Location offset) {
 		if (!dynamicLocation)
 			return buildingLocation.clone().add(offset).add(NAME_OFFSET);
 		Vector textDirection = buildingLocation.clone().add(offset).add(NAME_OFFSET).subtract(eyeLocation)
 			.toVector().normalize();
 		World world = eyeLocation.getWorld();
-		var result = world.rayTraceBlocks(eyeLocation, textDirection, MAX_DISTANCE / 2, FluidCollisionMode.ALWAYS, false);
+		var result = world.rayTraceBlocks(eyeLocation, textDirection, TEXT_MAX_DISTANCE, FluidCollisionMode.ALWAYS, false);
 		Location hit;
 		if (result != null) {
 			hit = result.getHitPosition().subtract(textDirection).toLocation(world);
 		} else {
-			hit = eyeLocation.clone().add(textDirection.multiply(MAX_DISTANCE / 2));
+			hit = eyeLocation.clone().add(textDirection.multiply(TEXT_MAX_DISTANCE));
 		}
 		return hit;
 	}
 
 	public void update(Location eyeLocation, Location buildingLocation) {
 		move(ensureOutlineVisible(eyeLocation, buildingLocation, offset));
-		if (nameHologram == null)
+		if (nameHologram == null || nameHologram.getText() == null)
 			return;
 		// ensure holograms are always visible
 		Location hit = ensureTextVisible(eyeLocation, buildingLocation, offset);
@@ -189,14 +230,16 @@ public sealed class BuildingOutline extends PacketEntity {
 		}
 
 		static BlockOutline fromBuilding(BlockBuilding building, List<Player> viewers) {
-			return new BlockOutline(viewers, building.getBlock(), building.getLocation());
+			var outline = new BlockOutline(viewers, building.getBlock(), building.getLocation());
+			outline.setOutlineColor(building.getOutlineColor());
+			return outline;
 		}
 	}
 
 	public static non-sealed class EntityOutline extends BuildingOutline {
 		private PacketContainer equipmentPacket;
 		private final List<EntityOutline> additionalOutlines;
-		private final Object entityLike;
+		private Object entityLike;
 		public EntityOutline(List<Player> viewers, Entity entity, Location offset, List<EntityOutline> additional, Location location) {
 			super(NEW_ID, entity.getType(), viewers.size() == 1, location, offset, viewers);
 			this.additionalOutlines = List.copyOf(additional);
@@ -238,6 +281,7 @@ public sealed class BuildingOutline extends PacketEntity {
 		}
 
 		static EntityOutline fromBuilding(EntityBuilding building, List<Player> viewers) {
+			TextColor outlineColor = building.getOutlineColor();
 			Location loc = building.getLocation().add(building.getOffset());
 			Object first = null;
 			List<Object> remaining = new ArrayList<>();
@@ -251,9 +295,15 @@ public sealed class BuildingOutline extends PacketEntity {
 //			for (var packetEntity : building.getPacketEntities()) {
 //
 //			}
-			return fromEntityLike(viewers, first, loc.clone(), remaining.size() == 0 ? List.of() : remaining.stream()
-				.map(entityLike -> fromEntityLike(viewers, entityLike, loc.clone(), List.of()))
+			var realOutline = fromEntityLike(viewers, first, loc.clone(), remaining.size() == 0 ? List.of() : remaining.stream()
+				.map(entityLike -> {
+					var outline = fromEntityLike(viewers, entityLike, loc.clone(), List.of());
+					outline.setOutlineColor(outlineColor);
+					return outline;
+				})
 				.toList());
+			realOutline.setOutlineColor(outlineColor);
+			return realOutline;
 		}
 
 		@Override
@@ -279,6 +329,7 @@ public sealed class BuildingOutline extends PacketEntity {
 		public void remove() {
 			super.remove();
 			additionalOutlines.forEach(EntityOutline::remove);
+			entityLike = null;
 		}
 
 		@Override
@@ -350,9 +401,9 @@ public sealed class BuildingOutline extends PacketEntity {
 		}
 
 		@Override
-		public void addEntries(List<String> scoreboard) {
-			super.addEntries(scoreboard);
-			additionalOutlines.forEach(outline -> outline.addEntries(scoreboard));
+		public void appendScoreboardEntries(List<String> scoreboard) {
+			super.appendScoreboardEntries(scoreboard);
+			additionalOutlines.forEach(outline -> outline.appendScoreboardEntries(scoreboard));
 		}
 
 		public int size() {

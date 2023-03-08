@@ -52,6 +52,7 @@ public class BuildingSelector {
 	 * The color of building outlines.
 	 */
 	@Nullable
+	@Deprecated
 	public NamedTextColor outlineColor = null;
 	/**
 	 * The color of the selected building's outline.
@@ -214,12 +215,18 @@ public class BuildingSelector {
 			}
 
 			double distance = building.getLocation().distance(playerLoc);
-			Component nameDisplay = Component.text(building.getName(), building == selected ? selectedOutlineColor : NamedTextColor.WHITE);
-			Component distanceDisplay = Component.text(TextUtils.formatNumber(distance) + " blocks away", NamedTextColor.YELLOW);
-
 			var outline = buildingOutlines.computeIfAbsent(building, BuildingOutline::fromBuilding);
-			outline.setText(nameDisplay, true);
-			outline.setStatus(distanceDisplay, true);
+			// hide text if nearby
+			if (distance > 5) {
+				Component nameDisplay = Component.text(building.getName(), building == selected ? selectedOutlineColor : building.getOutlineColor());
+				Component distanceDisplay = Component.text(TextUtils.formatNumber(distance) + "m", NamedTextColor.YELLOW);
+
+				outline.setText(nameDisplay, true);
+				outline.setStatus(distanceDisplay, true);
+			} else {
+				outline.setText(null, true);
+				outline.setStatus(null, true);
+			}
 			outline.respawn();
 
 			if (selectableFilter == null || selectableFilter.test(building))
@@ -244,15 +251,10 @@ public class BuildingSelector {
 			}
 		}
 		selected = closest;
-//		if (selected != null) {
-//			buildingOutlines.get(selected).setText(Component.text(selected.getName(), selectedOutlineColor), true);
-//		}
 
 		// highlight selected
 		if (lastSelected != selected) {
 			lastSelected = selected;
-			List<String> notSelected = new ArrayList<>();
-			List<Player> set = List.of(player);
 			for (Building building : buildings) {
 				if (buildingFilter != null && !buildingFilter.test(building))
 					continue;
@@ -260,14 +262,11 @@ public class BuildingSelector {
 				boolean isSelected = selected == building;
 				var outline = buildingOutlines.get(building);
 				if (isSelected) {
-					List<String> entries = new ArrayList<>();
-					outline.addEntries(entries);
-					GlowUtils.setPacketGlowing(set, entries, selectedOutlineColor);
+					outline.setOutlineColor(selectedOutlineColor);
 				} else {
-					outline.addEntries(notSelected);
+					outline.setOutlineColor(building.getOutlineColor());
 				}
 			}
-			GlowUtils.setPacketGlowing(set, notSelected, outlineColor);
 		}
 	}
 

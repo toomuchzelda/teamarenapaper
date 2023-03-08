@@ -2,10 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.engineer;
 
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
-import me.toomuchzelda.teamarenapaper.teamarena.building.Building;
-import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingInventory;
-import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
-import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingSelector;
+import me.toomuchzelda.teamarenapaper.teamarena.building.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
@@ -32,9 +29,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.RayTraceResult;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static me.toomuchzelda.teamarenapaper.teamarena.kits.engineer.KitEngineer.EngineerAbility.SENTRY_CD;
 
@@ -147,8 +142,6 @@ public class KitEngineer extends Kit {
 
 	public static class EngineerAbility extends Ability {
 
-		private final Map<Player, BuildingSelector> buildingSelectors = new HashMap<>();
-
 		//SENTRY_CD should be 300, it may be altered for testing purposes
 		public static final int SENTRY_CD = 300;
 		public static final int SENTRY_PLACEMENT_RANGE = 3;
@@ -168,11 +161,13 @@ public class KitEngineer extends Kit {
 		);
 		@Override
 		protected void giveAbility(Player player) {
-			buildingSelectors.put(player, new BuildingSelector(SELECTOR_MESSAGE, SENTRY, TP_CREATOR, DESTRUCTION_PDA));
+
+			BuildingOutlineManager.registerSelector(player,
+				new BuildingSelector(SELECTOR_MESSAGE, SENTRY, TP_CREATOR, DESTRUCTION_PDA));
 		}
 
 		public void removeAbility(Player player) {
-			buildingSelectors.remove(player).cleanUp();
+			BuildingOutlineManager.unregisterSelector(player);
 			Inventories.closeInventory(player, BuildingInventory.class);
 			// remove all player buildings
 			BuildingManager.getAllPlayerBuildings(player).forEach(BuildingManager::destroyBuilding);
@@ -198,6 +193,7 @@ public class KitEngineer extends Kit {
 			boolean rightClick = event.getAction().isRightClick();
 
 			Player player = event.getPlayer();
+			BuildingSelector selector = BuildingOutlineManager.getSelector(player);
 			Material mat = event.getMaterial();
 			Block block = event.getClickedBlock();
 			BlockFace blockFace = event.getBlockFace();
@@ -224,7 +220,7 @@ public class KitEngineer extends Kit {
 				}
 				Component message;
 
-				buildingSelectors.get(player).removePreview(Teleporter.class);
+				selector.removePreview(Teleporter.class);
 
 				// check if block occupied
 				var building = BuildingManager.getBuildingAt(block);
@@ -257,7 +253,7 @@ public class KitEngineer extends Kit {
 				player.sendMessage(message);
 			} else if (rightClick && mat == Material.CHEST_MINECART) {
 				if (!player.hasCooldown(Material.CHEST_MINECART)) {
-					Sentry sentry = buildingSelectors.get(player).placePreview(Sentry.class);
+					Sentry sentry = selector.placePreview(Sentry.class);
 					if (sentry != null && player.getGameMode() != GameMode.CREATIVE) {
 						player.setCooldown(Material.CHEST_MINECART, SENTRY_CD);
 					}
@@ -267,7 +263,7 @@ public class KitEngineer extends Kit {
 				if (rightClick) {
 					Inventories.openInventory(player, new BuildingInventory());
 				} else {
-					Building selected = buildingSelectors.get(player).getSelected();
+					Building selected = selector.getSelected();
 					if (selected != null)
 						BuildingManager.destroyBuilding(selected);
 				}
@@ -281,7 +277,7 @@ public class KitEngineer extends Kit {
 
 		@Override
 		public void onPlayerTick(Player player) {
-			BuildingSelector selector = buildingSelectors.get(player);
+			BuildingSelector selector = BuildingOutlineManager.getSelector(player);
 
 			selector.buildingFilter = null;
 			selector.message = SELECTOR_MESSAGE;

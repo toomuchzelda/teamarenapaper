@@ -7,18 +7,27 @@ import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.WeakHashMap;
+import java.util.*;
 
-public class BuildingAllyOutlines {
+public class BuildingOutlineManager {
 
-	private static final Map<Building, BuildingOutline> outlines = new LinkedHashMap<>();
+	private static final Map<Building, BuildingOutline> allyOutlines = new LinkedHashMap<>();
+	private static final Map<Player, BuildingSelector> buildingSelectors = new HashMap<>();
 
+	public static void registerSelector(Player player, BuildingSelector buildingSelector) {
+		buildingSelectors.put(player, buildingSelector);
+	}
+
+	public static void unregisterSelector(Player player) {
+		buildingSelectors.remove(player).cleanUp();
+	}
+
+	public static BuildingSelector getSelector(Player player) {
+		return buildingSelectors.get(player);
+	}
 
 	public static void registerBuilding(Building building) {
-		outlines.put(building, buildingToOutline(building));
+		allyOutlines.put(building, buildingToOutline(building));
 	}
 
 	public static void registerPlacedBuilding(Building building) {
@@ -27,7 +36,7 @@ public class BuildingAllyOutlines {
 
 	public static void tick() {
 		boolean updateOutlines = TeamArena.getGameTick() % 2 == 0;
-		outlines.entrySet().removeIf(entry -> {
+		allyOutlines.entrySet().removeIf(entry -> {
 			var building = entry.getKey();
 			var outline = entry.getValue();
 			if (building.invalid) {
@@ -40,11 +49,14 @@ public class BuildingAllyOutlines {
 			}
 			return false;
 		});
+		buildingSelectors.forEach((player, selector) -> selector.tick(player));
 	}
 
 	public static void cleanUp() {
-		outlines.values().forEach(BuildingOutline::remove);
-		outlines.clear();
+		allyOutlines.values().forEach(BuildingOutline::remove);
+		allyOutlines.clear();
+		buildingSelectors.values().forEach(BuildingSelector::cleanUp);
+		buildingSelectors.clear();
 		teamCache.clear();
 	}
 
@@ -67,8 +79,13 @@ public class BuildingAllyOutlines {
 		return teamCache.computeIfAbsent(player, p -> Main.getPlayerInfo(p).team);
 	}
 
-	private static final double MAX_DISTANCE = 8;
+	private static final double MAX_DISTANCE = 12;
 	private static boolean shouldSeeOutline(Building building, Player player) {
+		if (player == building.owner) {
+			// hide ally outlines for owner if selector is active
+			BuildingSelector selector = getSelector(player);
+			return selector == null || !selector.isActive(player);
+		}
 		TeamArenaTeam ownerTeam = teamOf(building.owner);
 		TeamArenaTeam viewerTeam = teamOf(player);
 		if (ownerTeam != viewerTeam)
