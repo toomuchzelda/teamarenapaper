@@ -220,8 +220,6 @@ public class KitEngineer extends Kit {
 				}
 				Component message;
 
-				selector.removePreview(Teleporter.class);
-
 				// check if block occupied
 				var building = BuildingManager.getBuildingAt(block);
 				if (building != null) {
@@ -230,23 +228,16 @@ public class KitEngineer extends Kit {
 						BuildingManager.destroyBuilding(teleporter);
 						message = Component.text("You removed your teleporter.", NamedTextColor.BLUE);
 					} else {
-						message = Component.text("Another teleporter already exists as this spot.", TextColors.ERROR_RED);
+						message = Component.text("Another building already exists as this spot.", TextColors.ERROR_RED);
 					}
 				} else {
-					var playerTeleporters = BuildingManager.getPlayerBuildings(player, Teleporter.class);
 					//Creating TP
-					if (playerTeleporters.size() >= 2) {
+					if (BuildingManager.getPlayerBuildingCount(player, Teleporter.class) >= 2) {
 						//Failure: 2 TPs already exist
 						message = Component.text("Two teleporters are already active! Destroy one with your Destruction PDA!", TextColors.ERROR_RED);
 					} else {
 						//Success: TP is created
-						var teleporter = new Teleporter(player, block.getLocation());
-						if (playerTeleporters.size() == 1) {
-							//Syncing the Cooldowns for the newly created TP.
-							int lastUsedTick = teleporter.getLastUsedTick();
-							playerTeleporters.get(0).setLastUsedTick(lastUsedTick);
-						}
-						BuildingManager.placeBuilding(teleporter);
+						selector.placePreview(Teleporter.class);
 						message = Component.text("Successfully placed your teleporter.", NamedTextColor.GREEN);
 					}
 				}
@@ -285,9 +276,8 @@ public class KitEngineer extends Kit {
 				selector.buildingFilter = building -> building instanceof Teleporter;
 				selector.message = Component.text("Right click: place or remove teleporter", TextUtils.RIGHT_CLICK_TO);
 
-				if (BuildingManager.getPlayerBuildingCount(player, Teleporter.class) != 2 &&
-					!selector.hasPreview(Teleporter.class))
-					selector.addPreview(Teleporter.class, new Teleporter(player, player.getLocation()));
+				if (BuildingManager.getPlayerBuildingCount(player, Teleporter.class) != 2)
+					selector.addPreviewIfAbsent(Teleporter.class, () -> new Teleporter(player, player.getLocation()));
 			} else {
 				selector.removePreview(Teleporter.class);
 			}
@@ -298,8 +288,8 @@ public class KitEngineer extends Kit {
 				selector.buildingFilter = building -> building instanceof Sentry;
 				selector.message = Component.text("Right click: place sentry", TextUtils.RIGHT_CLICK_TO);
 
-				if (BuildingManager.getPlayerBuildingCount(player, Sentry.class) == 0 && !selector.hasPreview(Sentry.class))
-					selector.addPreview(Sentry.class, new Sentry(player, player.getLocation()));
+				if (BuildingManager.getPlayerBuildingCount(player, Sentry.class) == 0)
+					selector.addPreviewIfAbsent(Sentry.class, () -> new Sentry(player, player.getLocation()));
 			} else {
 				selector.removePreview(Sentry.class);
 			}

@@ -124,7 +124,8 @@ public abstract class DemoMine extends EntityBuilding
 
 	@Override
 	public @NotNull Collection<? extends PacketEntity> getPacketEntities() {
-		return List.of(hitboxEntity);
+//		return List.of(hitboxEntity);
+		return List.of(); // hitbox entity shouldn't be visible
 	}
 
 	public void onTeamSwitch(TeamArenaTeam oldTeam, TeamArenaTeam newTeam) {

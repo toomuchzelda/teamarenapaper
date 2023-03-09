@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.utils;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
+import com.mojang.datafixers.util.Pair;
 import io.netty.buffer.Unpooled;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
@@ -18,21 +19,23 @@ import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
+import org.bukkit.craftbukkit.v1_19_R3.CraftEquipmentSlot;
 import org.bukkit.craftbukkit.v1_19_R3.CraftWorld;
 import org.bukkit.craftbukkit.v1_19_R3.entity.CraftEntity;
 import org.bukkit.craftbukkit.v1_19_R3.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_19_R3.inventory.CraftItemStack;
 import org.bukkit.craftbukkit.v1_19_R3.util.CraftVector;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.*;
 
 public class EntityUtils {
     public static void cacheReflection() {
@@ -267,5 +270,15 @@ public class EntityUtils {
 		Vec3 posTwo = ((CraftEntity) two).getHandle().position();
 
 		return posOne.distanceToSqr(posTwo);
+	}
+
+	public static List<Pair<net.minecraft.world.entity.EquipmentSlot, net.minecraft.world.item.ItemStack>>
+	getNMSEquipmentList(Map<EquipmentSlot, ItemStack> equipment) {
+		// truly one of the class names of all time
+		List<Pair<net.minecraft.world.entity.EquipmentSlot, net.minecraft.world.item.ItemStack>> list = new ArrayList<>(equipment.size());
+		for (var entry : equipment.entrySet()) {
+			list.add(Pair.of(CraftEquipmentSlot.getNMS(entry.getKey()), CraftItemStack.asNMSCopy(entry.getValue())));
+		}
+		return list;
 	}
 }

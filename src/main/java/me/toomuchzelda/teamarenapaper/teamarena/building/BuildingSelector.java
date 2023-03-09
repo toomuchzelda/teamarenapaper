@@ -1,7 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.building;
 
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.utils.GlowUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -14,6 +13,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /**
  * Represents a building selector, usually bound to a player.
@@ -81,9 +81,23 @@ public class BuildingSelector {
 	 * 			another building of the same class.
 	 */
 	public <T extends Building & PreviewableBuilding> boolean addPreview(Class<T> clazz, T building) {
-		if (buildingPreviews.containsKey(building.getClass()))
+		if (buildingPreviews.containsKey(clazz))
 			return false;
 		buildingPreviews.put(clazz, building);
+		return true;
+	}
+
+	/**
+	 * Adds a building to be previewed to the player.
+	 * @param clazz The class of the building
+	 * @param buildingSupplier A supplier to create the building if absent
+	 * @return Whether the add operation succeeded, i.e. the player wasn't previously shown
+	 * 			another building of the same class.
+	 */
+	public <T extends Building & PreviewableBuilding> boolean addPreviewIfAbsent(Class<T> clazz, Supplier<? extends T> buildingSupplier) {
+		if (buildingPreviews.containsKey(clazz))
+			return false;
+		buildingPreviews.put(clazz, buildingSupplier.get());
 		return true;
 	}
 
@@ -132,7 +146,7 @@ public class BuildingSelector {
 	private final Map<Building, BuildingOutline> buildingOutlines = new LinkedHashMap<>();
 	private final Map<Class<? extends Building>, PreviewableBuilding> buildingPreviews = new HashMap<>();
 
-	private void removeStaleOutlines(Player player) {
+	private void tickOutlines(Player player) {
 		Location location = player.getEyeLocation();
 
 		for (PreviewableBuilding preview : buildingPreviews.values()) {
@@ -148,17 +162,22 @@ public class BuildingSelector {
 				var outline = buildingOutlines.computeIfAbsent(building, ignored -> {
 					var custom = preview.getPreviewEntity(newLoc);
 					if (custom != null) {
-//						Location offset = custom.getLocation().subtract(newLoc);
-						return new BuildingOutline.EntityOutline(List.of(player), custom,
+						var newOutline = new BuildingOutline.EntityOutline(List.of(player), custom,
 							new Location(newLoc.getWorld(), 0, 0, 0, newLoc.getYaw(), newLoc.getPitch()),
 							List.of(), newLoc);
+						// use building rotation
+						newOutline.useEntityRotation = false;
+						return newOutline;
 					} else {
 						return BuildingOutline.fromBuilding(building);
 					}
 				});
+				// synchronize preview direction
+				var offset = outline.offset;
+				offset.setYaw(newLoc.getYaw());
+				offset.setPitch(newLoc.getPitch());
+				outline.setOutlineColor(result.valid() ? NamedTextColor.GREEN : NamedTextColor.RED);
 				outline.respawn();
-				GlowUtils.setPacketGlowing(List.of(player), List.of(outline.getUuid().toString()),
-					result.valid() ? NamedTextColor.GREEN : NamedTextColor.RED);
 			}
 		}
 		boolean updateOutline = TeamArena.getGameTick() % 2 == 0;
@@ -189,7 +208,7 @@ public class BuildingSelector {
 	private static final double VIEWING_ANGLE = Math.PI / 6d; // 30 degrees
 	public void tick(Player player) {
 		// remove invalid buildings first
-		removeStaleOutlines(player);
+		tickOutlines(player);
 
 		boolean holdingItem = isActive(player);
 

@@ -54,7 +54,7 @@ public class PacketEntity
 	private PacketContainer teleportPacket;
 	private StructureModifier<Double> teleportPacketDoubles;
 	private StructureModifier<Byte> teleportPacketBytes;
-	private PacketContainer rotateHeadPacket;
+	protected PacketContainer rotateHeadPacket;
 	private StructureModifier<Byte> headPacketBytes;
 
 	//entity's WrappedDataWatcher

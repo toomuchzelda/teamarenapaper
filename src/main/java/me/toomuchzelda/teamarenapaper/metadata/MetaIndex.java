@@ -150,9 +150,9 @@ public class MetaIndex
 
 	public static List<WrappedDataValue> getFromWatchableObjectsList(List<WrappedWatchableObject> watchableObjects) {
 		List<WrappedDataValue> dataValues = new ArrayList<>(watchableObjects.size());
-		watchableObjects.forEach(wrappedWatchableObject -> {
+		for (WrappedWatchableObject wrappedWatchableObject : watchableObjects) {
 			dataValues.add(fromWatchableObject(wrappedWatchableObject));
-		});
+		}
 
 		return dataValues;
 	}

@@ -2,11 +2,10 @@ package me.toomuchzelda.teamarenapaper.teamarena.building;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.wrappers.EnumWrappers;
-import com.comphenix.protocol.wrappers.Pair;
 import com.comphenix.protocol.wrappers.WrappedDataValue;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.GlowUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
@@ -14,10 +13,9 @@ import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
-import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
 import org.bukkit.FluidCollisionMode;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
@@ -30,11 +28,12 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Predicate;
 
+/**
+ * Represents an outline of a building.
+ */
 public sealed class BuildingOutline extends PacketEntity {
 	@Nullable
 	private PacketHologram nameHologram;
@@ -43,6 +42,9 @@ public sealed class BuildingOutline extends PacketEntity {
 	private static final Vector NAME_OFFSET = new Vector(0, 1.25, 0);
 	private static final Vector STATUS_OFFSET = new Vector(0, 1, 0);
 
+	/**
+	 * The offset of this outline, relative to the building's location
+	 */
 	protected final Location offset;
 
 	protected TextColor outlineColor;
@@ -147,6 +149,7 @@ public sealed class BuildingOutline extends PacketEntity {
 			nameHologram.remove();
 			statusHologram.remove();
 		}
+		setOutlineColor(null); // remove from scoreboard teams
 	}
 
 	public void appendScoreboardEntries(List<String> scoreboard) {
@@ -162,13 +165,19 @@ public sealed class BuildingOutline extends PacketEntity {
 		return location;
 	}
 
+	protected static Location setDirection(Location location, Location direction) {
+		location.setYaw(direction.getYaw());
+		location.setPitch(direction.getPitch());
+		return location;
+	}
+
 	protected Location ensureOutlineVisible(Location eyeLocation, Location buildingLocation, Location offset) {
 		if (dynamicLocation && eyeLocation.distanceSquared(buildingLocation) > MAX_DISTANCE * MAX_DISTANCE) {
 			// move it closer
 			Vector direction = buildingLocation.clone().subtract(eyeLocation).toVector().normalize();
-			return addOffset(eyeLocation.clone().add(direction.multiply(MAX_DISTANCE)), offset);
+			return eyeLocation.clone().add(direction.multiply(MAX_DISTANCE)).add(offset);
 		} else {
-			return addOffset(buildingLocation.clone(), offset);
+			return buildingLocation.clone().add(offset);
 		}
 	}
 
@@ -212,6 +221,9 @@ public sealed class BuildingOutline extends PacketEntity {
 
 	private static final byte BITFIELD_MASK = MetaIndex.BASE_BITFIELD_GLOWING_MASK | MetaIndex.BASE_BITFIELD_INVIS_MASK;
 
+	/**
+	 * Represents an outline for a {@link BlockBuilding}
+	 */
 	public static non-sealed class BlockOutline extends BuildingOutline {
 		public static final Vector LOC_OFFSET = new Vector(0, -0.501, 0);
 		public BlockOutline(List<Player> viewers, Block block, Location location) {
@@ -236,15 +248,20 @@ public sealed class BuildingOutline extends PacketEntity {
 		}
 	}
 
+	/**
+	 * Represents an outline for an {@link EntityBuilding}
+	 */
 	public static non-sealed class EntityOutline extends BuildingOutline {
 		private PacketContainer equipmentPacket;
 		private final List<EntityOutline> additionalOutlines;
-		private Object entityLike;
+		private Entity entity;
+		private PacketEntity packetEntity;
+		boolean useEntityRotation = true;
 		public EntityOutline(List<Player> viewers, Entity entity, Location offset, List<EntityOutline> additional, Location location) {
 			super(NEW_ID, entity.getType(), viewers.size() == 1, location, offset, viewers);
 			this.additionalOutlines = List.copyOf(additional);
 
-			entityLike = entity;
+			this.entity = entity;
 			updateMetadata();
 		}
 
@@ -260,17 +277,20 @@ public sealed class BuildingOutline extends PacketEntity {
 			updateSpawnPacket(addOffset(location.clone(), offset));
 			spawnPacket.getUUIDs().write(0, getUuid());
 
-			entityLike = packetEntity;
+			this.packetEntity = packetEntity;
 			updateMetadata();
 		}
 
 		private static EntityOutline fromEntityLike(List<Player> viewers, Object entityLike, Location baseLocation, List<EntityOutline> additional) {
 			if (entityLike instanceof Entity entity) {
-				Location offset = entity.getLocation().subtract(baseLocation);
-				return new EntityOutline(viewers, entity, offset, additional, baseLocation);
+				Location loc = entity.getLocation();
+				Location offset = loc.subtract(baseLocation);
+				// pass in the entity's direction
+				return new EntityOutline(viewers, entity, offset, additional, setDirection(baseLocation.clone(), loc));
 			} else if (entityLike instanceof PacketEntity packetEntity) {
-				Location offset = packetEntity.getLocation().subtract(baseLocation);
-				return new EntityOutline(viewers, packetEntity, offset, additional, baseLocation);
+				Location loc = packetEntity.getLocation();
+				Location offset = loc.subtract(baseLocation);
+				return new EntityOutline(viewers, packetEntity, offset, additional, setDirection(baseLocation.clone(), loc));
 			} else {
 				throw new IllegalStateException();
 			}
@@ -329,7 +349,8 @@ public sealed class BuildingOutline extends PacketEntity {
 		public void remove() {
 			super.remove();
 			additionalOutlines.forEach(EntityOutline::remove);
-			entityLike = null;
+			entity = null;
+			packetEntity = null;
 		}
 
 		@Override
@@ -340,14 +361,20 @@ public sealed class BuildingOutline extends PacketEntity {
 
 		@Override
 		public void update(Location eyeLocation, Location buildingLocation) {
-			super.update(eyeLocation, buildingLocation);
+			Location buildingLoc;
+			if (useEntityRotation) {
+				var entityLoc = entity != null ? entity.getLocation() : packetEntity.getLocation();
+				buildingLoc = setDirection(buildingLocation.clone(), entityLoc);
+			} else {
+				buildingLoc = buildingLocation;
+			}
+			super.update(eyeLocation, buildingLoc);
 			// other outlines won't have text, so move it relative to our location
 			for (EntityOutline outline : additionalOutlines) {
 				if (dynamicLocation) {
+					Location direction = outline.entity != null ? outline.entity.getLocation() : outline.packetEntity.getLocation();
 					Location newLocation = location.clone().subtract(offset).add(outline.offset);
-					newLocation.setYaw(outline.offset.getYaw());
-					newLocation.setPitch(outline.offset.getPitch());
-					outline.move(newLocation);
+					outline.move(setDirection(newLocation, direction));
 				}
 				outline.updateMetadata();
 			}
@@ -355,49 +382,51 @@ public sealed class BuildingOutline extends PacketEntity {
 		}
 
 		private WrappedDataWatcher oldWatcher;
-		private List<Pair<EnumWrappers.ItemSlot, ItemStack>> oldEquipment;
+		private final Map<EquipmentSlot, ItemStack> oldEquipment = new EnumMap<>(EquipmentSlot.class);
 		private void updateMetadata() {
+			if (!isAlive())
+				return;
 			List<PacketContainer> packets = new ArrayList<>();
-			if (entityLike instanceof Entity entity) {
+			if (entity != null) {
 				// copy entity metadata
 				WrappedDataWatcher entityData = WrappedDataWatcher.getEntityWatcher(entity);
 				if (!Objects.equals(entityData, oldWatcher)) {
-					oldWatcher = entityData;
+					oldWatcher = entityData.deepClone();
 					metadataPacket.getDataValueCollectionModifier().write(0, copyEntityData(entityData));
 					packets.add(metadataPacket);
-					if (entity instanceof LivingEntity livingEntity) {
-						EntityEquipment equipment = livingEntity.getEquipment();
-						if (equipment != null) {
-							List<Pair<EnumWrappers.ItemSlot, ItemStack>> slots = new ArrayList<>();
-							for (EquipmentSlot slot : EquipmentSlot.values()) {
-								ItemStack stack = equipment.getItem(slot);
-								if (stack != null && stack.getType() != Material.AIR) {
-									slots.add(new Pair<>(EnumWrappers.ItemSlot.values()[slot.ordinal()], stack));
-								}
+				}
+				// copy entity armor
+				if (entity instanceof LivingEntity livingEntity) {
+					EntityEquipment equipment = livingEntity.getEquipment();
+					if (equipment != null) {
+						var modifiedSlots = new EnumMap<EquipmentSlot, ItemStack>(EquipmentSlot.class);
+						for (EquipmentSlot slot : EquipmentSlot.values()) {
+							ItemStack newStack = equipment.getItem(slot);
+							ItemStack oldStack = oldEquipment.put(slot, newStack);
+							if (!newStack.isSimilar(oldStack)) {
+								modifiedSlots.put(slot, newStack);
 							}
+						}
 
-							if (!Objects.equals(slots, oldEquipment)) {
-								oldEquipment = slots;
-								equipmentPacket = new PacketContainer(PacketType.Play.Server.ENTITY_EQUIPMENT);
-								equipmentPacket.getIntegers().write(0, getId());
-								equipmentPacket.getSlotStackPairLists().write(0, slots);
-								packets.add(equipmentPacket);
-							}
+						if (modifiedSlots.size() != 0) {
+							// update equipment packet for respawning
+							equipmentPacket = new PacketContainer(PacketType.Play.Server.ENTITY_EQUIPMENT,
+								new ClientboundSetEquipmentPacket(getId(), EntityUtils.getNMSEquipmentList(oldEquipment)));
+							// but send a partial packet
+							packets.add(new PacketContainer(PacketType.Play.Server.ENTITY_EQUIPMENT,
+								new ClientboundSetEquipmentPacket(getId(), EntityUtils.getNMSEquipmentList(modifiedSlots))));
 						}
 					}
 				}
 			} else {
-				PacketEntity packetEntity = (PacketEntity) entityLike;
 				WrappedDataWatcher entityData = packetEntity.getDataWatcher();
 				if (!Objects.equals(entityData, oldWatcher)) {
-					oldWatcher = entityData;
+					oldWatcher = entityData.deepClone();
 					metadataPacket.getDataValueCollectionModifier().write(0, copyEntityData(entityData));
 					packets.add(metadataPacket);
 				}
 			}
-			if (isAlive()) {
-				PlayerUtils.sendPacket(getRealViewers(), packets.toArray(new PacketContainer[0]));
-			}
+			PlayerUtils.sendPacket(getRealViewers(), packets.toArray(new PacketContainer[0]));
 		}
 
 		@Override
@@ -416,16 +445,12 @@ public sealed class BuildingOutline extends PacketEntity {
 			Byte baseBitfield = (Byte) clonedEntityData.getObject(MetaIndex.BASE_BITFIELD_OBJ);
 			clonedEntityData.setObject(MetaIndex.BASE_BITFIELD_OBJ,
 				(byte) ((baseBitfield != null ? baseBitfield : 0) | BITFIELD_MASK));
+			clonedEntityData.setObject(MetaIndex.CUSTOM_NAME_OBJ, Optional.empty());
 			clonedEntityData.setObject(MetaIndex.CUSTOM_NAME_VISIBLE_OBJ, false);
 			clonedEntityData.setObject(MetaIndex.NO_GRAVITY_OBJ, true);
 
 			var wrappedWatchables = clonedEntityData.getWatchableObjects();
-			List<WrappedDataValue> wrappedDataValues = new ArrayList<>(wrappedWatchables.size());
-			for (var watchable : wrappedWatchables) {
-				var nmsWatchable = (SynchedEntityData.DataItem<?>) watchable.getHandle();
-				wrappedDataValues.add(new WrappedDataValue(nmsWatchable.value()));
-			}
-			return wrappedDataValues;
+			return MetaIndex.getFromWatchableObjectsList(wrappedWatchables);
 		}
 	}
 }
