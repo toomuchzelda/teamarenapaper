@@ -2,8 +2,10 @@ package me.toomuchzelda.teamarenapaper.teamarena.building;
 
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import org.bukkit.Location;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.function.Predicate;
 
 /**
@@ -45,10 +47,9 @@ public interface PreviewableBuilding {
 	PreviewResult doRayTrace();
 
 	/**
-	 * Returns the custom preview entity that will be used.
-	 * If null, will use the default preview entity for this building
-	 * @return A custom preview entity
+	 * Returns the custom preview entities that will be used.
+	 * @return A list of custom preview entities
 	 */
-	@Nullable
-	PacketEntity getPreviewEntity(Location location);
+	@NotNull
+	List<PacketEntity> getPreviewEntity(Location location);
 }

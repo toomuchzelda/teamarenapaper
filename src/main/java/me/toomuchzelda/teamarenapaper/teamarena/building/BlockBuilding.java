@@ -17,6 +17,11 @@ public abstract non-sealed class BlockBuilding extends Building {
 		super(player, loc.toCenterLocation());
 	}
 
+	@Override
+	public void setLocation(Location newLoc) {
+		super.setLocation(newLoc.toCenterLocation());
+	}
+
 	private final List<Block> managedBlocks = new ArrayList<>();
 	protected void registerBlocks(Block... blocks) {
 		Block baseBlock = location.getBlock();

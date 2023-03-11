@@ -4,16 +4,20 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * Represents a building selector, usually bound to a player.
@@ -22,13 +26,10 @@ import java.util.function.Supplier;
  */
 public class BuildingSelector {
 
-	public BuildingSelector(@Nullable Component selectorMessage, ItemStack... selectorItems) {
-		var items = new ArrayList<ItemStack>(selectorItems.length);
-		for (var stack : selectorItems) {
-			items.add(stack.clone());
-		}
-		this.message = selectorMessage;
-		this.selectorItems = List.copyOf(items);
+	public BuildingSelector(Map<ItemStack, List<Action>> selectorItems) {
+		this.selectorItems = selectorItems.entrySet().stream()
+			.map(entry -> Map.entry(entry.getKey().clone(), List.copyOf(entry.getValue())))
+			.collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
 	}
 
 	/**
@@ -60,7 +61,7 @@ public class BuildingSelector {
 	@Nullable
 	public NamedTextColor selectedOutlineColor = NamedTextColor.BLUE;
 
-	private final List<ItemStack> selectorItems;
+	private final Map<ItemStack, List<Action>> selectorItems;
 
 	private Building selected;
 	private Building lastSelected;
@@ -94,7 +95,7 @@ public class BuildingSelector {
 	 * @return Whether the add operation succeeded, i.e. the player wasn't previously shown
 	 * 			another building of the same class.
 	 */
-	public <T extends Building & PreviewableBuilding> boolean addPreviewIfAbsent(Class<T> clazz, Supplier<? extends T> buildingSupplier) {
+	public <T extends Building & PreviewableBuilding> boolean addPreviewIfAbsent(Class<T> clazz, Supplier<T> buildingSupplier) {
 		if (buildingPreviews.containsKey(clazz))
 			return false;
 		buildingPreviews.put(clazz, buildingSupplier.get());
@@ -121,7 +122,7 @@ public class BuildingSelector {
 			return null;
 		var outline = buildingOutlines.remove(building);
 		if (outline != null)
-			outline.despawn();
+			outline.remove();
 		return building;
 	}
 
@@ -158,51 +159,42 @@ public class BuildingSelector {
 					outline.despawn();
 			} else {
 				Location newLoc = result.location();
+				TextColor outlineColor = result.valid() ? NamedTextColor.GREEN : NamedTextColor.RED;
 				building.setLocation(newLoc);
 				var outline = buildingOutlines.computeIfAbsent(building, ignored -> {
-					var custom = preview.getPreviewEntity(newLoc);
-					if (custom != null) {
-						var newOutline = new BuildingOutline.EntityOutline(List.of(player), custom,
-							new Location(newLoc.getWorld(), 0, 0, 0, newLoc.getYaw(), newLoc.getPitch()),
-							List.of(), newLoc);
-						// use building rotation
-						newOutline.useEntityRotation = false;
-						return newOutline;
-					} else {
-						return BuildingOutline.fromBuilding(building);
-					}
+					var customPacketEntities = preview.getPreviewEntity(newLoc);
+					var newOutline = BuildingOutline.EntityOutline.fromEntityLikes(
+						List.of(player), customPacketEntities, newLoc, outlineColor
+					);
+					// ignore offset
+					Location outlineLoc = newOutline.getLocation();
+					newOutline.offset.zero();
+					newOutline.additionalOutlines.forEach(additional -> {
+						Location offset = additional.getLocation().subtract(outlineLoc);
+						additional.offset.set(offset.getX(), offset.getY(), offset.getZ());
+					});
+					// use building rotation
+					newOutline.useEntityRotation = false;
+					return newOutline;
 				});
 				// synchronize preview direction
-				var offset = outline.offset;
-				offset.setYaw(newLoc.getYaw());
-				offset.setPitch(newLoc.getPitch());
-				outline.setOutlineColor(result.valid() ? NamedTextColor.GREEN : NamedTextColor.RED);
+				outline.setOutlineColor(outlineColor);
+				outline.update(location, newLoc);
 				outline.respawn();
 			}
 		}
-		boolean updateOutline = TeamArena.getGameTick() % 2 == 0;
-		for (var iter = buildingOutlines.entrySet().iterator(); iter.hasNext();) {
-			var entry = iter.next();
-			var building = entry.getKey();
-			var outline = entry.getValue();
-			if (building.invalid) {
-				iter.remove();
-				outline.remove();
-			} else if (updateOutline) {
-				outline.update(location, building.getLocation());
-			}
-		}
-	}
-
-	public boolean isActive(Player player) {
-		PlayerInventory inventory = player.getInventory();
-		ItemStack mainhand = inventory.getItemInMainHand(), offhand = inventory.getItemInOffHand();
-		for (var stack : selectorItems) {
-			if (mainhand.isSimilar(stack) || offhand.isSimilar(stack)) {
+		buildingOutlines.entrySet().removeIf(entry -> {
+			if (entry.getKey().invalid) {
+				entry.getValue().remove();
 				return true;
 			}
-		}
-		return false;
+			return false;
+		});
+	}
+
+	private List<Action> actions;
+	public boolean isActive(Player player) {
+		return actions != null;
 	}
 
 	private static final double VIEWING_ANGLE = Math.PI / 6d; // 30 degrees
@@ -210,19 +202,67 @@ public class BuildingSelector {
 		// remove invalid buildings first
 		tickOutlines(player);
 
-		boolean holdingItem = isActive(player);
+		actions = null;
+		PlayerInventory inventory = player.getInventory();
+		ItemStack mainhand = inventory.getItemInMainHand(), offhand = inventory.getItemInOffHand();
+		for (var entry : selectorItems.entrySet()) {
+			var stack = entry.getKey();
+			if (mainhand.isSimilar(stack) || offhand.isSimilar(stack)) {
+				actions = entry.getValue();
+				break;
+			}
+		}
 
-		if (!holdingItem) {
+
+		if (actions == null) {
 			// despawn all outlines
 			buildingOutlines.values().forEach(BuildingOutline::despawn);
+			// remove previews
+			for (var clazz : new ArrayList<>(buildingPreviews.keySet())) {
+				// noinspection rawtypes,unchecked
+				removePreview((Class) clazz);
+			}
 			return;
 		}
+		Class<?> previewClazz = null;
+		for (Action action : actions) {
+			if (action instanceof Action.FilterBuilding filter) {
+				buildingFilter = filter.buildingFilter;
+				selectableFilter = filter.selectableFilter;
+			} else if (action instanceof Action.SelectBuilding selectBuilding) {
+				message = selectBuilding.message;
+				buildingFilter = selectBuilding.buildingFilter;
+				selectableFilter = selectBuilding.selectableFilter;
+			} else if (action instanceof Action.ShowPreview<?> showPreview) {
+				message = showPreview.message;
+				buildingFilter = showPreview.clazz::isInstance;
+				previewClazz = showPreview.clazz;
+
+				if (showPreview.condition == null || showPreview.condition.test(player)) {
+					// thank you Java, very cool
+					// noinspection rawtypes,unchecked
+					addPreviewIfAbsent((Class) showPreview.clazz, () -> showPreview.buildingSupplier.apply(player));
+				} else {
+					removePreview(showPreview.clazz);
+				}
+			}
+		}
+		// hide other previews
+		for (var clazz : new ArrayList<>(buildingPreviews.keySet())) {
+			if (clazz != previewClazz) {
+				// noinspection rawtypes,unchecked
+				removePreview((Class) clazz);
+			}
+		}
+
 		if (message != null)
 			player.sendActionBar(message);
 
 		List<Building> buildings = BuildingManager.getAllPlayerBuildings(player);
 		List<Building> selectableBuildings = new ArrayList<>(buildings.size());
 		Location playerLoc = player.getLocation();
+		Location eyeLocation = player.getEyeLocation();
+		boolean shouldUpdateLocation = TeamArena.getGameTick() % 2 == 0;
 
 		for (Building building : buildings) {
 			if (buildingFilter != null && !buildingFilter.test(building)) {
@@ -233,7 +273,8 @@ public class BuildingSelector {
 				continue;
 			}
 
-			double distance = building.getLocation().distance(playerLoc);
+			Location location = building.getLocation();
+			double distance = location.distance(playerLoc);
 			var outline = buildingOutlines.computeIfAbsent(building, BuildingOutline::fromBuilding);
 			// hide text if nearby
 			if (distance > 5) {
@@ -246,6 +287,8 @@ public class BuildingSelector {
 				outline.setText(null, true);
 				outline.setStatus(null, true);
 			}
+			if (shouldUpdateLocation)
+				outline.update(eyeLocation, location);
 			outline.respawn();
 
 			if (selectableFilter == null || selectableFilter.test(building))
@@ -257,7 +300,6 @@ public class BuildingSelector {
 			lastSelected = null;
 			return;
 		}
-		Location eyeLocation = player.getEyeLocation();
 		Vector playerDir = playerLoc.getDirection();
 		double closestAngle = Double.MAX_VALUE;
 		Building closest = null;
@@ -295,5 +337,34 @@ public class BuildingSelector {
 		buildingPreviews.clear();
 		selected = null;
 		lastSelected = null;
+	}
+
+	public sealed interface Action {
+		record FilterBuilding(@Nullable Predicate<Building> buildingFilter, @Nullable Predicate<Building> selectableFilter)
+			implements Action {}
+
+		record SelectBuilding(@Nullable Component message, @Nullable Predicate<Building> buildingFilter, @Nullable Predicate<Building> selectableFilter)
+			implements Action {}
+
+		static Action selectBuilding(@Nullable Component message) {
+			return selectBuilding(message, null, null);
+		}
+
+		static Action selectBuilding(@Nullable Component message, @Nullable Predicate<Building> buildingFilter, @Nullable Predicate<Building> selectableFilter) {
+			return new SelectBuilding(message, buildingFilter, selectableFilter);
+		}
+
+		record ShowPreview<T extends Building & PreviewableBuilding>(@Nullable Component message,
+																	 @NotNull Class<T> clazz,
+																	 @NotNull Function<Player, T> buildingSupplier,
+																	 @Nullable Predicate<Player> condition)
+			implements Action {}
+
+		static <T extends Building & PreviewableBuilding> Action showPreview(@Nullable Component message,
+								  @NotNull Class<T> clazz,
+								  @NotNull Function<Player, T> buildingSupplier,
+								  @Nullable Predicate<Player> condition) {
+			return new ShowPreview<>(message, clazz, buildingSupplier, condition);
+		}
 	}
 }

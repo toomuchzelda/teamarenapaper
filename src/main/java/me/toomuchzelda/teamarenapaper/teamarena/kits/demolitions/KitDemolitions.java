@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.building.Building;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingOutlineManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingSelector;
@@ -34,6 +35,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Predicate;
 
 
 public class KitDemolitions extends Kit
@@ -153,13 +155,21 @@ public class KitDemolitions extends Kit
 			REGENERATING_MINES.clear();
 		}
 
+		private static final Component RCLICK_PLACE = Component.text("Right click: place mine", TextUtils.RIGHT_CLICK_TO);
+		private static final Component RCLICK_DETONATE = Component.text("Right click: detonate selected mine", TextUtils.RIGHT_CLICK_TO);
+		private static final Predicate<Building> BUILDING_FILTER =
+			building -> building instanceof DemoMine demoMine &&
+				demoMine.isArmed() && !demoMine.isTriggered();
 		@Override
 		public void giveAbility(Player player) {
-			var selector = new BuildingSelector(Component.empty(), REMOTE_DETONATOR_ITEM);
-			selector.selectableFilter = selector.buildingFilter =
-				building -> building instanceof DemoMine demoMine &&
-					demoMine.isArmed() && !demoMine.isTriggered();
-			BuildingOutlineManager.registerSelector(player, selector);
+			BuildingOutlineManager.registerSelector(player, new BuildingSelector(
+				Map.of(
+					REMOTE_DETONATOR_ITEM, List.of(BuildingSelector.Action.selectBuilding(RCLICK_DETONATE, BUILDING_FILTER, BUILDING_FILTER))//,
+					// TODO preview landmines
+//					TNT_MINE_ITEM, List.of(BuildingSelector.Action.showPreview(RCLICK_PLACE, TNTMine.class, p -> new TNTMine(p, p.getLocation().getBlock()), null)),
+//					PUSH_MINE_ITEM, List.of(BuildingSelector.Action.showPreview(RCLICK_PLACE, PushMine.class, p -> new PushMine(p, p.getLocation().getBlock()), null))
+				)
+			));
 		}
 
 		@Override

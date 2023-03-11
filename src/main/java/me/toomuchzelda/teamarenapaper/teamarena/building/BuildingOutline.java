@@ -56,7 +56,7 @@ public sealed class BuildingOutline extends PacketEntity {
 
 	public BuildingOutline(int id, EntityType entityType, boolean dynamicLocation, Location location, Location offset, List<Player> viewers) {
 		super(id, entityType, addOffset(location.clone(), offset), viewers, null);
-		this.offset = offset;
+		this.offset = offset.clone();
 		this.dynamicLocation = dynamicLocation;
 
 		if (dynamicLocation && viewers.size() != 0) {
@@ -199,7 +199,8 @@ public sealed class BuildingOutline extends PacketEntity {
 	}
 
 	public void update(Location eyeLocation, Location buildingLocation) {
-		move(ensureOutlineVisible(eyeLocation, buildingLocation, offset));
+		if (dynamicLocation)
+			move(ensureOutlineVisible(eyeLocation, buildingLocation, offset));
 		if (nameHologram == null || nameHologram.getText() == null)
 			return;
 		// ensure holograms are always visible
@@ -227,7 +228,8 @@ public sealed class BuildingOutline extends PacketEntity {
 	public static non-sealed class BlockOutline extends BuildingOutline {
 		public static final Vector LOC_OFFSET = new Vector(0, -0.501, 0);
 		public BlockOutline(List<Player> viewers, Block block, Location location) {
-			super(NEW_ID, EntityType.FALLING_BLOCK, viewers.size() == 1, location, LOC_OFFSET.toLocation(location.getWorld()), viewers);
+			super(NEW_ID, EntityType.FALLING_BLOCK, viewers.size() == 1,
+				location, LOC_OFFSET.toLocation(location.getWorld()), viewers);
 			setBlockType(block.getBlockData());
 			// glowing and invisible
 			setMetadata(MetaIndex.BASE_BITFIELD_OBJ, BITFIELD_MASK);
@@ -246,6 +248,11 @@ public sealed class BuildingOutline extends PacketEntity {
 			outline.setOutlineColor(building.getOutlineColor());
 			return outline;
 		}
+
+		@Override
+		public void update(Location eyeLocation, Location buildingLocation) {
+			super.update(eyeLocation, buildingLocation.toCenterLocation());
+		}
 	}
 
 	/**
@@ -253,7 +260,7 @@ public sealed class BuildingOutline extends PacketEntity {
 	 */
 	public static non-sealed class EntityOutline extends BuildingOutline {
 		private PacketContainer equipmentPacket;
-		private final List<EntityOutline> additionalOutlines;
+		public final List<EntityOutline> additionalOutlines;
 		private Entity entity;
 		private PacketEntity packetEntity;
 		boolean useEntityRotation = true;
@@ -296,6 +303,26 @@ public sealed class BuildingOutline extends PacketEntity {
 			}
 		}
 
+		public static EntityOutline fromEntityLikes(List<Player> viewers, Collection<?> entityLikes, Location baseLocation, @Nullable TextColor outlineColor) {
+			Object first = null;
+			List<Object> remaining = new ArrayList<>();
+			for (var entity : entityLikes) {
+				if (first == null)
+					first = entity;
+				else
+					remaining.add(entity);
+			}
+			var realOutline = fromEntityLike(viewers, first, baseLocation.clone(), remaining.stream()
+				.map(entityLike -> {
+					var outline = fromEntityLike(viewers, entityLike, baseLocation.clone(), List.of());
+					outline.setOutlineColor(outlineColor);
+					return outline;
+				})
+				.toList());
+			realOutline.setOutlineColor(outlineColor);
+			return realOutline;
+		}
+
 		public static EntityOutline fromBuilding(EntityBuilding building) {
 			return fromBuilding(building, List.of(building.owner));
 		}
@@ -303,27 +330,7 @@ public sealed class BuildingOutline extends PacketEntity {
 		static EntityOutline fromBuilding(EntityBuilding building, List<Player> viewers) {
 			TextColor outlineColor = building.getOutlineColor();
 			Location loc = building.getLocation().add(building.getOffset());
-			Object first = null;
-			List<Object> remaining = new ArrayList<>();
-			for (var entity : building.getEntities()) {
-				if (first == null)
-					first = entity;
-				else
-					remaining.add(entity);
-			}
-			// TODO
-//			for (var packetEntity : building.getPacketEntities()) {
-//
-//			}
-			var realOutline = fromEntityLike(viewers, first, loc.clone(), remaining.size() == 0 ? List.of() : remaining.stream()
-				.map(entityLike -> {
-					var outline = fromEntityLike(viewers, entityLike, loc.clone(), List.of());
-					outline.setOutlineColor(outlineColor);
-					return outline;
-				})
-				.toList());
-			realOutline.setOutlineColor(outlineColor);
-			return realOutline;
+			return fromEntityLikes(viewers, building.getEntities(), loc, outlineColor);
 		}
 
 		@Override
@@ -361,14 +368,16 @@ public sealed class BuildingOutline extends PacketEntity {
 
 		@Override
 		public void update(Location eyeLocation, Location buildingLocation) {
-			Location buildingLoc;
-			if (useEntityRotation) {
-				var entityLoc = entity != null ? entity.getLocation() : packetEntity.getLocation();
-				buildingLoc = setDirection(buildingLocation.clone(), entityLoc);
-			} else {
-				buildingLoc = buildingLocation;
+			if (dynamicLocation) {
+				Location buildingLoc;
+				if (useEntityRotation) {
+					var entityLoc = entity != null ? entity.getLocation() : packetEntity.getLocation();
+					buildingLoc = setDirection(buildingLocation.clone(), entityLoc);
+				} else {
+					buildingLoc = buildingLocation;
+				}
+				super.update(eyeLocation, buildingLoc);
 			}
-			super.update(eyeLocation, buildingLoc);
 			// other outlines won't have text, so move it relative to our location
 			for (EntityOutline outline : additionalOutlines) {
 				if (dynamicLocation) {

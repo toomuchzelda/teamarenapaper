@@ -74,7 +74,7 @@ public class BuildingOutlineManager {
 		return outline;
 	}
 
-	private static Map<Player, TeamArenaTeam> teamCache = new WeakHashMap<>();
+	private static final Map<Player, TeamArenaTeam> teamCache = new WeakHashMap<>();
 	private static TeamArenaTeam teamOf(Player player) {
 		return teamCache.computeIfAbsent(player, p -> Main.getPlayerInfo(p).team);
 	}
@@ -84,7 +84,8 @@ public class BuildingOutlineManager {
 		if (player == building.owner) {
 			// hide ally outlines for owner if selector is active
 			BuildingSelector selector = getSelector(player);
-			return selector == null || !selector.isActive(player);
+			if (selector != null && selector.isActive(player))
+				return false;
 		}
 		TeamArenaTeam ownerTeam = teamOf(building.owner);
 		TeamArenaTeam viewerTeam = teamOf(player);

@@ -8,7 +8,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
@@ -30,6 +29,7 @@ import org.bukkit.util.RayTraceResult;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static me.toomuchzelda.teamarenapaper.teamarena.kits.engineer.KitEngineer.EngineerAbility.SENTRY_CD;
 
@@ -154,6 +154,8 @@ public class KitEngineer extends Kit {
 		public void unregisterAbility() {
 		}
 
+		private static final Component RCLICK_PLACE_SENTRY = Component.text("Right click: place sentry", TextUtils.RIGHT_CLICK_TO);
+		private static final Component RCLICK_PLACE_TELEPORTER = Component.text("Right click: place teleporter", TextUtils.RIGHT_CLICK_TO);
 		private static final Component SELECTOR_MESSAGE = Component.textOfChildren(
 			Component.text("Left click: remove selected", TextUtils.LEFT_CLICK_TO),
 			Component.text(" | ", NamedTextColor.GRAY),
@@ -161,9 +163,13 @@ public class KitEngineer extends Kit {
 		);
 		@Override
 		protected void giveAbility(Player player) {
-
 			BuildingOutlineManager.registerSelector(player,
-				new BuildingSelector(SELECTOR_MESSAGE, SENTRY, TP_CREATOR, DESTRUCTION_PDA));
+				new BuildingSelector(Map.of(
+					DESTRUCTION_PDA, List.of(BuildingSelector.Action.selectBuilding(SELECTOR_MESSAGE)),
+					SENTRY, List.of(BuildingSelector.Action.showPreview(RCLICK_PLACE_SENTRY, Sentry.class, p -> new Sentry(p, p.getLocation()), p -> !p.hasCooldown(SENTRY.getType()))),
+					TP_CREATOR, List.of(BuildingSelector.Action.showPreview(RCLICK_PLACE_TELEPORTER, Teleporter.class, p -> new Teleporter(p, p.getLocation()),
+						p -> BuildingManager.getPlayerBuildingCount(p, Teleporter.class) < 2))
+				)));
 		}
 
 		public void removeAbility(Player player) {
@@ -269,30 +275,6 @@ public class KitEngineer extends Kit {
 		@Override
 		public void onPlayerTick(Player player) {
 			BuildingSelector selector = BuildingOutlineManager.getSelector(player);
-
-			selector.buildingFilter = null;
-			selector.message = SELECTOR_MESSAGE;
-			if (PlayerUtils.isHolding(player, TP_CREATOR)) {
-				selector.buildingFilter = building -> building instanceof Teleporter;
-				selector.message = Component.text("Right click: place or remove teleporter", TextUtils.RIGHT_CLICK_TO);
-
-				if (BuildingManager.getPlayerBuildingCount(player, Teleporter.class) != 2)
-					selector.addPreviewIfAbsent(Teleporter.class, () -> new Teleporter(player, player.getLocation()));
-			} else {
-				selector.removePreview(Teleporter.class);
-			}
-
-
-			//Initializing Sentry Projection
-			if (PlayerUtils.isHolding(player, SENTRY)) {
-				selector.buildingFilter = building -> building instanceof Sentry;
-				selector.message = Component.text("Right click: place sentry", TextUtils.RIGHT_CLICK_TO);
-
-				if (BuildingManager.getPlayerBuildingCount(player, Sentry.class) == 0)
-					selector.addPreviewIfAbsent(Sentry.class, () -> new Sentry(player, player.getLocation()));
-			} else {
-				selector.removePreview(Sentry.class);
-			}
 
 			selector.tick(player);
 

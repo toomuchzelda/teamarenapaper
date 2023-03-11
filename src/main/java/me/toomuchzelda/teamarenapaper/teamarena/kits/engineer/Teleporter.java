@@ -28,6 +28,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.BoundingBox;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -221,13 +222,15 @@ public class Teleporter extends BlockBuilding implements PreviewableBuilding {
 		return null;
 	}
 
-	private static PacketEntity PREVIEW;
+	private static List<PacketEntity> PREVIEW;
 	@Override
-	public @Nullable PacketEntity getPreviewEntity(Location location) {
+	public @NotNull List<PacketEntity> getPreviewEntity(Location location) {
 		if (PREVIEW == null) {
-			PREVIEW = new PacketEntity(PacketEntity.NEW_ID, EntityType.FALLING_BLOCK, location, List.of(), null);
-			PREVIEW.setBlockType(Material.HONEYCOMB_BLOCK.createBlockData());
-			PREVIEW.setMetadata(MetaIndex.NO_GRAVITY_OBJ, true);
+			var block = new PacketEntity(PacketEntity.NEW_ID, EntityType.FALLING_BLOCK, location, List.of(), null);
+			block.setBlockType(Material.HONEYCOMB_BLOCK.createBlockData());
+			block.setMetadata(MetaIndex.NO_GRAVITY_OBJ, true);
+			block.remove();
+			PREVIEW = List.of(block);
 		}
 		return PREVIEW;
 	}

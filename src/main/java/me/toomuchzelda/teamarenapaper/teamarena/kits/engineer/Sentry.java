@@ -407,11 +407,14 @@ public class Sentry extends EntityBuilding implements PreviewableBuilding {
 		return !location.getWorld().hasCollisionsIn(aabb);
 	}
 
-	private static PacketEntity PREVIEW;
+	private static List<PacketEntity> PREVIEW;
 	@Override
-	public @Nullable PacketEntity getPreviewEntity(Location location) {
-		if (PREVIEW == null)
-			PREVIEW = new PacketEntity(PacketEntity.NEW_ID, EntityType.SKELETON, location, List.of(), null);
+	public @NotNull List<PacketEntity> getPreviewEntity(Location location) {
+		if (PREVIEW == null) {
+			var outline = new PacketEntity(PacketEntity.NEW_ID, EntityType.SKELETON, location, List.of(), null);
+			outline.remove();
+			PREVIEW = List.of(outline);
+		}
 		return PREVIEW;
 	}
 
