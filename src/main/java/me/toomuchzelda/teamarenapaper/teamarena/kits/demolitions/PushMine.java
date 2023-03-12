@@ -1,8 +1,10 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions;
 
+import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -10,9 +12,11 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
@@ -100,5 +104,18 @@ public class PushMine extends DemoMine
 	@Override
 	boolean isDone() {
 		return !this.stands[0].isValid();
+	}
+
+	private static List<PreviewEntity> PREVIEW;
+	@Override
+	public @NotNull List<PreviewEntity> getPreviewEntity(Location location) {
+		if (PREVIEW == null) {
+			var outline = new PacketEntity(PacketEntity.NEW_ID, EntityType.ARMOR_STAND, location, List.of(), null);
+			outline.setEquipment(EquipmentSlot.HEAD, new ItemStack(Material.LEATHER_HELMET));
+			outline.setMetadata(MetaIndex.ARMOR_STAND_BITFIELD_OBJ, MetaIndex.ARMOR_STAND_MARKER_MASK);
+			outline.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK);
+			PREVIEW = List.of(new PreviewEntity(outline, new Vector(0, -1.8, 0)));
+		}
+		return PREVIEW;
 	}
 }

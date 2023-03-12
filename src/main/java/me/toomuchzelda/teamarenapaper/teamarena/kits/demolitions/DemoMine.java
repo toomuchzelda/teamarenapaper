@@ -4,7 +4,9 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.EntityBuilding;
+import me.toomuchzelda.teamarenapaper.teamarena.building.PreviewableBuilding;
 import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
@@ -13,6 +15,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.minecraft.world.phys.AABB;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -20,11 +23,12 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.List;
 
-public abstract class DemoMine extends EntityBuilding
+public abstract class DemoMine extends EntityBuilding implements PreviewableBuilding
 {
 	public static final int TIME_TO_ARM = 30;
 	public static final double REMOTE_ARMING_DISTANCE = 1000d;
@@ -207,10 +211,20 @@ public abstract class DemoMine extends EntityBuilding
 		return TeamArena.getGameTick() > this.creationTime + DemoMine.TIME_TO_ARM;
 	}
 
-//	@Override
-//	public Vector getOffset() {
-//		return offset;
-//	}
+	@Override
+	public @Nullable PreviewResult doRayTrace() {
+		Location eyeLocation = owner.getEyeLocation();
+		World world = owner.getWorld();
+		var result = world.rayTraceBlocks(eyeLocation, eyeLocation.getDirection(), 5, FluidCollisionMode.NEVER, true);
+		if (result == null || result.getHitBlock() == null)
+			return null;
+		Block block = result.getHitBlock();
+		boolean canPlace = result.getHitBlockFace() == BlockFace.UP &&
+			BuildingManager.canPlaceAt(block.getRelative(BlockFace.UP)) &&
+			KitDemolitions.isValidMineBlock(block);
+		Location location = block.getLocation().add(0.5, BlockUtils.getBlockHeight(block), 0.5);
+		return new PreviewResult(canPlace, location);
+	}
 
 	protected class PacketMineHitbox extends PacketEntity {
 		private final BoundingBox hitbox;

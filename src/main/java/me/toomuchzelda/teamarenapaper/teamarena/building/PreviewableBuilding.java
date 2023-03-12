@@ -2,6 +2,8 @@ package me.toomuchzelda.teamarenapaper.teamarena.building;
 
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -46,10 +48,29 @@ public interface PreviewableBuilding {
 	@Nullable
 	PreviewResult doRayTrace();
 
+	record PreviewEntity(PacketEntity packetEntity, Vector offset, float yaw, float pitch) {
+		public PreviewEntity {
+			packetEntity.remove();
+			offset = offset.clone();
+		}
+
+		public PreviewEntity(PacketEntity packetEntity) {
+			this(packetEntity, new Vector(), 0, 0);
+		}
+
+		public PreviewEntity(PacketEntity packetEntity, Vector offset) {
+			this(packetEntity, offset, 0, 0);
+		}
+
+		public Location getOffset(World world) {
+			return offset.toLocation(world, yaw, pitch);
+		}
+	}
+
 	/**
 	 * Returns the custom preview entities that will be used.
 	 * @return A list of custom preview entities
 	 */
 	@NotNull
-	List<PacketEntity> getPreviewEntity(Location location);
+	List<PreviewEntity> getPreviewEntity(Location location);
 }

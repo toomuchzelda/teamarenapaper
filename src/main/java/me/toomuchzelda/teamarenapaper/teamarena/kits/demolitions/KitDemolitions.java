@@ -164,10 +164,9 @@ public class KitDemolitions extends Kit
 		public void giveAbility(Player player) {
 			BuildingOutlineManager.registerSelector(player, new BuildingSelector(
 				Map.of(
-					REMOTE_DETONATOR_ITEM, List.of(BuildingSelector.Action.selectBuilding(RCLICK_DETONATE, BUILDING_FILTER, BUILDING_FILTER))//,
-					// TODO preview landmines
-//					TNT_MINE_ITEM, List.of(BuildingSelector.Action.showPreview(RCLICK_PLACE, TNTMine.class, p -> new TNTMine(p, p.getLocation().getBlock()), null)),
-//					PUSH_MINE_ITEM, List.of(BuildingSelector.Action.showPreview(RCLICK_PLACE, PushMine.class, p -> new PushMine(p, p.getLocation().getBlock()), null))
+					REMOTE_DETONATOR_ITEM, List.of(BuildingSelector.Action.selectBuilding(RCLICK_DETONATE, BUILDING_FILTER, BUILDING_FILTER)),
+					TNT_MINE_ITEM, List.of(BuildingSelector.Action.showPreview(RCLICK_PLACE, TNTMine.class, p -> new TNTMine(p, p.getLocation().getBlock()), null)),
+					PUSH_MINE_ITEM, List.of(BuildingSelector.Action.showPreview(RCLICK_PLACE, PushMine.class, p -> new PushMine(p, p.getLocation().getBlock()), null))
 				)
 			));
 		}

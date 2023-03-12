@@ -161,22 +161,10 @@ public class BuildingSelector {
 				Location newLoc = result.location();
 				TextColor outlineColor = result.valid() ? NamedTextColor.GREEN : NamedTextColor.RED;
 				building.setLocation(newLoc);
-				var outline = buildingOutlines.computeIfAbsent(building, ignored -> {
-					var customPacketEntities = preview.getPreviewEntity(newLoc);
-					var newOutline = BuildingOutline.EntityOutline.fromEntityLikes(
-						List.of(player), customPacketEntities, newLoc, outlineColor
-					);
-					// ignore offset
-					Location outlineLoc = newOutline.getLocation();
-					newOutline.offset.zero();
-					newOutline.additionalOutlines.forEach(additional -> {
-						Location offset = additional.getLocation().subtract(outlineLoc);
-						additional.offset.set(offset.getX(), offset.getY(), offset.getZ());
-					});
-					// use building rotation
-					newOutline.useEntityRotation = false;
-					return newOutline;
-				});
+				var outline = buildingOutlines.computeIfAbsent(building, ignored ->
+					BuildingOutline.EntityOutline.fromEntityLikes(
+						List.of(player), preview.getPreviewEntity(newLoc), newLoc, outlineColor
+					));
 				// synchronize preview direction
 				outline.setOutlineColor(outlineColor);
 				outline.update(location, newLoc);

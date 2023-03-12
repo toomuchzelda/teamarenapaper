@@ -52,8 +52,6 @@ public class Teleporter extends BlockBuilding implements PreviewableBuilding {
 		setIcon(ICON);
 		setOutlineColor(NamedTextColor.AQUA);
 		teamColor = Main.getPlayerInfo(player).team.getRGBTextColor();
-		Block block = loc.getBlock();
-		hitBox = BoundingBox.of(block.getRelative(-1, 1, -1), block.getRelative(1, 2, 1));
 	}
 
 	@Override
@@ -92,6 +90,7 @@ public class Teleporter extends BlockBuilding implements PreviewableBuilding {
 		super.onPlace();
 
 		Block block = getLocation().getBlock();
+		hitBox = BoundingBox.of(block.getRelative(-1, 1, -1), block.getRelative(1, 2, 1));
 		this.originalBlockState = block.getState();
 		block.setType(Material.HONEYCOMB_BLOCK, false);
 
@@ -222,15 +221,14 @@ public class Teleporter extends BlockBuilding implements PreviewableBuilding {
 		return null;
 	}
 
-	private static List<PacketEntity> PREVIEW;
+	private static List<PreviewEntity> PREVIEW;
 	@Override
-	public @NotNull List<PacketEntity> getPreviewEntity(Location location) {
+	public @NotNull List<PreviewEntity> getPreviewEntity(Location location) {
 		if (PREVIEW == null) {
 			var block = new PacketEntity(PacketEntity.NEW_ID, EntityType.FALLING_BLOCK, location, List.of(), null);
 			block.setBlockType(Material.HONEYCOMB_BLOCK.createBlockData());
 			block.setMetadata(MetaIndex.NO_GRAVITY_OBJ, true);
-			block.remove();
-			PREVIEW = List.of(block);
+			PREVIEW = List.of(new PreviewEntity(block));
 		}
 		return PREVIEW;
 	}

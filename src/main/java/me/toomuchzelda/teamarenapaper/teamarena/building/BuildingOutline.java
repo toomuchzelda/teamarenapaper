@@ -1,11 +1,9 @@
 package me.toomuchzelda.teamarenapaper.teamarena.building;
 
-import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.WrappedDataValue;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
-import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.GlowUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
@@ -13,7 +11,6 @@ import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
-import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
 import org.bukkit.FluidCollisionMode;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -175,9 +172,9 @@ public sealed class BuildingOutline extends PacketEntity {
 		if (dynamicLocation && eyeLocation.distanceSquared(buildingLocation) > MAX_DISTANCE * MAX_DISTANCE) {
 			// move it closer
 			Vector direction = buildingLocation.clone().subtract(eyeLocation).toVector().normalize();
-			return eyeLocation.clone().add(direction.multiply(MAX_DISTANCE)).add(offset);
+			return addOffset(eyeLocation.clone().add(direction.multiply(MAX_DISTANCE)), offset);
 		} else {
-			return buildingLocation.clone().add(offset);
+			return addOffset(buildingLocation.clone(), offset);
 		}
 	}
 
@@ -259,7 +256,6 @@ public sealed class BuildingOutline extends PacketEntity {
 	 * Represents an outline for an {@link EntityBuilding}
 	 */
 	public static non-sealed class EntityOutline extends BuildingOutline {
-		private PacketContainer equipmentPacket;
 		public final List<EntityOutline> additionalOutlines;
 		private Entity entity;
 		private PacketEntity packetEntity;
@@ -298,6 +294,12 @@ public sealed class BuildingOutline extends PacketEntity {
 				Location loc = packetEntity.getLocation();
 				Location offset = loc.subtract(baseLocation);
 				return new EntityOutline(viewers, packetEntity, offset, additional, setDirection(baseLocation.clone(), loc));
+			} else if (entityLike instanceof PreviewableBuilding.PreviewEntity previewEntity) {
+				PacketEntity packetEntity = previewEntity.packetEntity();
+				Location offset = previewEntity.getOffset(baseLocation.getWorld());
+				var outline = new EntityOutline(viewers, packetEntity, offset, additional, setDirection(baseLocation.clone(), offset));
+				outline.useEntityRotation = false;
+				return outline;
 			} else {
 				throw new IllegalStateException();
 			}
@@ -334,13 +336,6 @@ public sealed class BuildingOutline extends PacketEntity {
 		}
 
 		@Override
-		protected void spawn(Player player) {
-			super.spawn(player);
-			if (equipmentPacket != null)
-				PlayerUtils.sendPacket(player, equipmentPacket);
-		}
-
-		@Override
 		public void respawn() {
 			super.respawn();
 			additionalOutlines.forEach(EntityOutline::respawn);
@@ -373,15 +368,23 @@ public sealed class BuildingOutline extends PacketEntity {
 				if (useEntityRotation) {
 					var entityLoc = entity != null ? entity.getLocation() : packetEntity.getLocation();
 					buildingLoc = setDirection(buildingLocation.clone(), entityLoc);
-				} else {
-					buildingLoc = buildingLocation;
+				} else { // use offset direction
+					if (offset.getYaw() != 0 || offset.getPitch() != 0)
+						buildingLoc = setDirection(buildingLocation.clone(), offset);
+					else
+						buildingLoc = buildingLocation;
 				}
 				super.update(eyeLocation, buildingLoc);
 			}
 			// other outlines won't have text, so move it relative to our location
 			for (EntityOutline outline : additionalOutlines) {
 				if (dynamicLocation) {
-					Location direction = outline.entity != null ? outline.entity.getLocation() : outline.packetEntity.getLocation();
+					Location direction;
+					if (useEntityRotation) {
+						direction = outline.entity != null ? outline.entity.getLocation() : outline.packetEntity.getLocation();
+					} else {
+						direction = outline.offset;
+					}
 					Location newLocation = location.clone().subtract(offset).add(outline.offset);
 					outline.move(setDirection(newLocation, direction));
 				}
@@ -391,10 +394,7 @@ public sealed class BuildingOutline extends PacketEntity {
 		}
 
 		private WrappedDataWatcher oldWatcher;
-		private final Map<EquipmentSlot, ItemStack> oldEquipment = new EnumMap<>(EquipmentSlot.class);
 		private void updateMetadata() {
-			if (!isAlive())
-				return;
 			List<PacketContainer> packets = new ArrayList<>();
 			if (entity != null) {
 				// copy entity metadata
@@ -408,23 +408,11 @@ public sealed class BuildingOutline extends PacketEntity {
 				if (entity instanceof LivingEntity livingEntity) {
 					EntityEquipment equipment = livingEntity.getEquipment();
 					if (equipment != null) {
-						var modifiedSlots = new EnumMap<EquipmentSlot, ItemStack>(EquipmentSlot.class);
+						var equipmentMap = new EnumMap<EquipmentSlot, ItemStack>(EquipmentSlot.class);
 						for (EquipmentSlot slot : EquipmentSlot.values()) {
-							ItemStack newStack = equipment.getItem(slot);
-							ItemStack oldStack = oldEquipment.put(slot, newStack);
-							if (!newStack.isSimilar(oldStack)) {
-								modifiedSlots.put(slot, newStack);
-							}
+							equipmentMap.put(slot, equipment.getItem(slot));
 						}
-
-						if (modifiedSlots.size() != 0) {
-							// update equipment packet for respawning
-							equipmentPacket = new PacketContainer(PacketType.Play.Server.ENTITY_EQUIPMENT,
-								new ClientboundSetEquipmentPacket(getId(), EntityUtils.getNMSEquipmentList(oldEquipment)));
-							// but send a partial packet
-							packets.add(new PacketContainer(PacketType.Play.Server.ENTITY_EQUIPMENT,
-								new ClientboundSetEquipmentPacket(getId(), EntityUtils.getNMSEquipmentList(modifiedSlots))));
-						}
+						setEquipment(equipmentMap);
 					}
 				}
 			} else {
@@ -434,8 +422,11 @@ public sealed class BuildingOutline extends PacketEntity {
 					metadataPacket.getDataValueCollectionModifier().write(0, copyEntityData(entityData));
 					packets.add(metadataPacket);
 				}
+				// copy equipment
+				setEquipment(packetEntity.getAllEquipment());
 			}
-			PlayerUtils.sendPacket(getRealViewers(), packets.toArray(new PacketContainer[0]));
+			if (isAlive() && packets.size() != 0)
+				PlayerUtils.sendPacket(getRealViewers(), packets.toArray(new PacketContainer[0]));
 		}
 
 		@Override

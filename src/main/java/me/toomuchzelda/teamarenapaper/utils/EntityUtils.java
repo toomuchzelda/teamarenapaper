@@ -274,6 +274,8 @@ public class EntityUtils {
 
 	public static List<Pair<net.minecraft.world.entity.EquipmentSlot, net.minecraft.world.item.ItemStack>>
 	getNMSEquipmentList(Map<EquipmentSlot, ItemStack> equipment) {
+		if (equipment.size() == 0)
+			throw new IllegalArgumentException("equipment cannot be empty");
 		// truly one of the class names of all time
 		List<Pair<net.minecraft.world.entity.EquipmentSlot, net.minecraft.world.item.ItemStack>> list = new ArrayList<>(equipment.size());
 		for (var entry : equipment.entrySet()) {

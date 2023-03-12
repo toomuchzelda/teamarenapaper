@@ -2,11 +2,14 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions;
 
 import me.toomuchzelda.teamarenapaper.explosions.CustomExplosionInfo;
 import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
+import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaExplosion;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.minecraft.core.Rotations;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -120,5 +123,31 @@ public class TNTMine extends DemoMine
 			}
 		}
 		return null;
+	}
+
+	private static List<PreviewEntity> PREVIEW;
+	@Override
+	public @NotNull List<PreviewEntity> getPreviewEntity(Location location) {
+		if (PREVIEW == null) {
+			var rotations = new Rotations(
+				(float) Math.toDegrees(LEG_ANGLE.getX()),
+				(float) Math.toDegrees(LEG_ANGLE.getY()),
+				(float) Math.toDegrees(LEG_ANGLE.getZ())
+			);
+			PacketEntity outline1 = new PacketEntity(PacketEntity.NEW_ID, EntityType.ARMOR_STAND, location, List.of(), null);
+			PacketEntity outline2 = new PacketEntity(PacketEntity.NEW_ID, EntityType.ARMOR_STAND, location, List.of(), null);
+
+			PREVIEW = List.of(new PreviewEntity(outline2, new Vector(0, -0.855, -0.5), 180, 0),
+				new PreviewEntity(outline1, new Vector(0, -0.85, 0.5)));
+			for (var preview : PREVIEW) {
+				var outline = preview.packetEntity();
+				outline.setEquipment(EquipmentSlot.FEET, new ItemStack(Material.LEATHER_BOOTS));
+				outline.setMetadata(MetaIndex.ARMOR_STAND_BITFIELD_OBJ, MetaIndex.ARMOR_STAND_MARKER_MASK);
+				outline.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK);
+				outline.setMetadata(MetaIndex.ARMOR_STAND_LEFT_LEG_POSE, rotations);
+				outline.setMetadata(MetaIndex.ARMOR_STAND_RIGHT_LEG_POSE, rotations);
+			}
+		}
+		return PREVIEW;
 	}
 }

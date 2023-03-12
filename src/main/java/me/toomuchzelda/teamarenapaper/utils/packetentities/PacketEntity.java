@@ -8,9 +8,11 @@ import io.papermc.paper.adventure.PaperAdventure;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
+import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
@@ -20,11 +22,14 @@ import org.bukkit.craftbukkit.v1_19_R3.block.data.CraftBlockData;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * "Fake" entity the internal server is not aware exists.
@@ -56,6 +61,10 @@ public class PacketEntity
 	private StructureModifier<Byte> teleportPacketBytes;
 	protected PacketContainer rotateHeadPacket;
 	private StructureModifier<Byte> headPacketBytes;
+	@Nullable
+	protected EnumMap<EquipmentSlot, ItemStack> equipment;
+	@Nullable
+	protected PacketContainer equipmentPacket;
 
 	//entity's WrappedDataWatcher
 	private WrappedDataWatcher data;
@@ -204,6 +213,58 @@ public class PacketEntity
 	@Nullable
 	public Component getText() {
 		return customName;
+	}
+
+	public void setEquipment(EquipmentSlot slot, ItemStack stack) {
+		setEquipment(Map.of(slot, stack));
+	}
+
+	public void setEquipment(@NotNull Map<EquipmentSlot, @Nullable ItemStack> equipmentMap) {
+		if (equipment == null)
+			equipment = new EnumMap<>(EquipmentSlot.class);
+		Map<EquipmentSlot, ItemStack> changed = new EnumMap<>(EquipmentSlot.class);
+		for (var entry : equipmentMap.entrySet()) {
+			EquipmentSlot slot = entry.getKey();
+			ItemStack stack = entry.getValue();
+			ItemStack oldStack = stack == null ? equipment.remove(slot) : equipment.put(slot, stack);
+			if (!Objects.equals(stack, oldStack)) {
+				changed.put(slot, stack);
+			}
+		}
+		// update equipment packet for respawning, but send smaller change packet
+		updateEquipmentPacket();
+		if (isAlive() && changed.size() != 0) {
+			var equipmentDeltaPacket = new ClientboundSetEquipmentPacket(getId(), EntityUtils.getNMSEquipmentList(changed));
+			for (Player viewer : getRealViewers()) {
+				PlayerUtils.sendPacket(viewer, equipmentDeltaPacket);
+			}
+		}
+	}
+
+	@Nullable
+	public ItemStack getEquipment(EquipmentSlot slot) {
+		if (equipment == null)
+			return null;
+		ItemStack stack = equipment.get(slot);
+		return stack != null ? stack.clone() : null;
+	}
+
+	@NotNull
+	public Map<EquipmentSlot, ItemStack> getAllEquipment() {
+		if (equipment == null)
+			return Map.of();
+		// clone ItemStacks
+		return equipment.entrySet().stream()
+			.map(entry -> Map.entry(entry.getKey(), entry.getValue().clone()))
+			.collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+	}
+
+	private void updateEquipmentPacket() {
+		if (equipment == null || equipment.size() == 0) // ok
+			equipmentPacket = null;
+		else
+			equipmentPacket = new PacketContainer(PacketType.Play.Server.ENTITY_EQUIPMENT,
+				new ClientboundSetEquipmentPacket(getId(), EntityUtils.getNMSEquipmentList(equipment)));
 	}
 
 	private void createRotateHead() {
@@ -357,6 +418,8 @@ public class PacketEntity
 
 	protected void spawn(Player player) {
 		PlayerUtils.sendPacket(player, spawnPacket, metadataPacket);
+		if (equipmentPacket != null)
+			PlayerUtils.sendPacket(player, equipmentPacket);
 	}
 
 	private void despawn(Player player) {
