@@ -142,7 +142,7 @@ public class Preferences {
 		.setIcon(Material.SMITHING_TABLE)
 		.setValueDescriptionStrings(Map.of(
 			BuildingManager.AllyVisibility.ALWAYS, "Always show ally building outlines.",
-			BuildingManager.AllyVisibility.NEARBY, "Show outlines of ally buildings in an 8 block radius.",
+			BuildingManager.AllyVisibility.NEARBY, "Show outlines of ally buildings if nearby.",
 			BuildingManager.AllyVisibility.NEVER, "Never see ally building outlines."
 		))
 		.setCategory(PreferenceCategory.GAMEPLAY);

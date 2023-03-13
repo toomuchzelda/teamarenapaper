@@ -30,8 +30,13 @@ public class PushMine extends DemoMine
 
 	private int triggerTime;
 
-	public PushMine(Player demo, Block block) {
-		super(demo, block);
+	/**
+	 * Creates a new push mine
+	 * @param player The demolition player
+	 * @param block The block the mine is sitting on
+	 */
+	public PushMine(Player player, Block block) {
+		super(player, block);
 
 		this.type = MineType.PUSHMINE;
 		setName(type.name);
@@ -46,10 +51,8 @@ public class PushMine extends DemoMine
 		Location spawnLoc = baseLoc.clone().add(0, -1.8, 0);
 
 		World world = baseLoc.getWorld();
-		this.armorSlot = EquipmentSlot.HEAD;
 		ItemStack leatherHelmet = new ItemStack(Material.LEATHER_HELMET);
 		ItemUtils.colourLeatherArmor(color, leatherHelmet);
-		stands = new ArmorStand[1];
 
 		org.bukkit.util.Consumer<ArmorStand> propApplier = stand -> {
 			stand.setGlowing(false);
@@ -62,10 +65,7 @@ public class PushMine extends DemoMine
 			stand.setInvisible(true);
 			stand.getEquipment().setHelmet(leatherHelmet, true);
 		};
-		stands[0] = world.spawn(spawnLoc, ArmorStand.class, propApplier);
-
-		// TODO toomuchzelda's horrible code here
-//		BuildingOutlineManager.registerBuilding(this);
+		stands = new ArmorStand[] {world.spawn(spawnLoc, ArmorStand.class, propApplier)};
 	}
 
 	@Override
@@ -96,7 +96,7 @@ public class PushMine extends DemoMine
 						BLAST_STRENGTH, DamageType.DEMO_PUSHMINE, this.owner);
 				explosion.explode();
 
-				this.removeEntities();
+				markInvalid();
 			}
 		}
 	}

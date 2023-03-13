@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.building.Building;
@@ -13,7 +14,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
-import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
@@ -29,12 +29,15 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
 import org.bukkit.event.Event;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Predicate;
 
 
@@ -69,39 +72,31 @@ public class KitDemolitions extends Kit
 		}
 		setValidMineBlock(Material.DIRT_PATH);
 
-		Style style = Style.style(TextUtils.RIGHT_CLICK_TO).decoration(TextDecoration.ITALIC, false);
-		String strUsage = "Right click the top of a block to place the trap down. " +
-				"It will be triggered by your remote detonator or when enemies step on it.";
-		List<Component> usage = TextUtils.wrapString(strUsage, style, 200);
+		List<Component> usage = TextUtils.wrapString("Right click the top of a block to place the trap down. " +
+				"It will be triggered by your remote detonator or when enemies step on it.",
+			Style.style(TextUtils.RIGHT_CLICK_TO), 200);
 
-		TNT_MINE_ITEM = new ItemStack(Material.TNT, TNT_MINE_COUNT);
-		ItemMeta meta = TNT_MINE_ITEM.getItemMeta();
+		TNT_MINE_ITEM = ItemBuilder.of(Material.TNT)
+			.amount(TNT_MINE_COUNT)
+			.displayName(Component.text("TNT Mine", TNT_COLOR))
+			.lore(TextUtils.wrapString("A TNT landmine trap that blows enemies to smithereens",
+				Style.style(TNT_COLOR), 200))
+			.addLore(usage)
+			.build();
 
-		meta.displayName(ItemUtils.noItalics(Component.text("TNT Mine", TNT_COLOR)));
+		PUSH_MINE_ITEM = ItemBuilder.of(Material.WHITE_WOOL)
+			.amount(PUSH_MINE_COUNT)
+			.displayName(Component.text("Push Mine"))
+			.lore(TextUtils.wrapString("A trap that creates an explosive gust of air, pushing away all enemies near it",
+				Style.empty().decoration(TextDecoration.ITALIC, false), 200))
+			.addLore(usage)
+			.build();
 
-		List<Component> lore = new ArrayList<>();
-		lore.addAll(TextUtils.wrapString("A TNT landmine trap that blows enemies to smithereens",
-				Style.style(TNT_COLOR).decoration(TextDecoration.ITALIC, false), 200));
-		lore.addAll(usage);
-		meta.lore(lore);
-		TNT_MINE_ITEM.setItemMeta(meta);
-
-		PUSH_MINE_ITEM = new ItemStack(Material.WHITE_WOOL, PUSH_MINE_COUNT);
-		meta = PUSH_MINE_ITEM.getItemMeta();
-		meta.displayName(ItemUtils.noItalics(Component.text("Push Mine")));
-		lore = new ArrayList<>();
-		lore.addAll(TextUtils.wrapString("A trap that creates an explosive gust of air, pushing away all enemies near it"
-				, Style.empty().decoration(TextDecoration.ITALIC, false), 200));
-		lore.addAll(usage);
-		meta.lore(lore);
-		PUSH_MINE_ITEM.setItemMeta(meta);
-
-		REMOTE_DETONATOR_ITEM = new ItemStack(Material.FLINT_AND_STEEL);
-		meta = REMOTE_DETONATOR_ITEM.getItemMeta();
-		meta.displayName(ItemUtils.noItalics(Component.text("Remote Trigger", NamedTextColor.BLUE)));
-		lore = new ArrayList<>(TextUtils.wrapString("Point at any of your mines from any distance to select one. Once selected, it will turn blue. Right click and boom!", style, 200));
-		meta.lore(lore);
-		REMOTE_DETONATOR_ITEM.setItemMeta(meta);
+		REMOTE_DETONATOR_ITEM = ItemBuilder.of(Material.FLINT_AND_STEEL)
+			.displayName(Component.text("Remote Trigger", NamedTextColor.BLUE))
+			.lore(TextUtils.wrapString("Point at any of your mines from any distance to select one. " +
+				"Once selected, it will turn blue. Right click and boom!", Style.style(TextUtils.RIGHT_CLICK_TO), 200))
+			.build();
 	}
 
 	private static void setValidMineBlock(Material mat) {
@@ -109,12 +104,12 @@ public class KitDemolitions extends Kit
 	}
 
 	public KitDemolitions() {
-		super("Demolitions", "This kit comes with traps! Specifically, those that explode when people step on them. " +
-				"They also blend in with the ground no matter the color!\n\n" +
-				"It comes with a TNT trap that does lots of damage " +
-				"and a Push Mine trap that sends enemies flying!\n\n" +
-				"After placing them down, enemies can step on them to trigger them or they can be triggered remotely " +
-				"by the kit user.",
+		super("Demolitions", """
+				This kit comes with traps! Specifically, those that explode when people step on them. They also blend in with the ground no matter the color!
+
+				It comes with a TNT trap that does lots of damage and a Push Mine trap that sends enemies flying!
+
+				After placing them down, enemies can step on them to trigger them or they can be triggered remotely by the kit user.""",
 				Material.STONE_PRESSURE_PLATE);
 
 		ItemStack sword = new ItemStack(Material.IRON_SWORD);
@@ -179,6 +174,7 @@ public class KitDemolitions extends Kit
 					BuildingManager.destroyBuilding(building);
 				}
 			});
+			REGENERATING_MINES.remove(player);
 		}
 
 		@Override
@@ -187,48 +183,47 @@ public class KitDemolitions extends Kit
 				return;
 
 			Material mat = event.getMaterial();
-			int type = 0;
-			if(TNT_MINE_ITEM.getType() == mat)
-				type = 1;
-			else if(PUSH_MINE_ITEM.getType() == mat)
-				type = 2;
-
-			Block block = event.getClickedBlock();
-			if (type > 0 && block != null && event.getBlockFace() == BlockFace.UP) {
-				event.setUseItemInHand(Event.Result.DENY);
-				if(isValidMineBlock(block)) {
-					if (BuildingManager.canPlaceAt(block.getRelative(BlockFace.UP))) {
-						if (type == 1) { //tnt mine
-							DemoMine mine = new TNTMine(event.getPlayer(), block);
-							BuildingManager.placeBuilding(mine);
-						}
-						else { //push mine
-							DemoMine mine = new PushMine(event.getPlayer(), block);
-							BuildingManager.placeBuilding(mine);
-						}
-
-						event.getItem().subtract();
-					}
-					else {
-						final Component message = Component.text("A Mine has already been placed here",
-								TextColors.ERROR_RED);
-						PlayerUtils.sendKitMessage(event.getPlayer(), message, message);
-					}
-				}
-				else {
-					final Component message = Component.text("You can't place a Mine here", TextColors.ERROR_RED);
-					PlayerUtils.sendKitMessage(event.getPlayer(), message, message);
-//					event.getPlayer().updateInventory(); // Refresh the 'placed' block
-				}
-			}
-			else if(mat == REMOTE_DETONATOR_ITEM.getType()) {
+			if (mat == REMOTE_DETONATOR_ITEM.getType()) {
 				Player demo = event.getPlayer();
 				event.setUseItemInHand(Event.Result.DENY);
 				event.setUseInteractedBlock(Event.Result.DENY); //prevent arming tnt
 				DemoMine mine = (DemoMine) BuildingOutlineManager.getSelector(demo).getSelected();
-				if(mine != null) {
+				if (mine != null && !mine.isTriggered()) {
 					mine.trigger(demo);
 				}
+			}
+		}
+
+		@Override
+		public void onPlaceBlock(BlockPlaceEvent event) {
+			ItemStack stack = event.getItemInHand();
+			Block block = event.getBlock();
+			Block base = block.getRelative(BlockFace.DOWN);
+
+			Material mat = stack.getType();
+			MineType type;
+			if (TNT_MINE_ITEM.getType() == mat)
+				type = MineType.TNTMINE;
+			else if (PUSH_MINE_ITEM.getType() == mat)
+				type = MineType.PUSHMINE;
+			else
+				return;
+
+			event.setCancelled(true);
+			if (isValidMineBlock(base)) {
+				if (BuildingManager.getBuildingAt(block) == null) {
+					// pass in the block the mine will sit on
+					DemoMine mine = type.constructor.apply(event.getPlayer(), base);
+					BuildingManager.placeBuilding(mine);
+
+					stack.subtract();
+				} else {
+					Component message = Component.text("This block is already occupied", TextColors.ERROR_RED);
+					PlayerUtils.sendKitMessage(event.getPlayer(), message, message);
+				}
+			} else {
+				Component message = Component.text("You can't place a mine here", TextColors.ERROR_RED);
+				PlayerUtils.sendKitMessage(event.getPlayer(), message, message);
 			}
 		}
 

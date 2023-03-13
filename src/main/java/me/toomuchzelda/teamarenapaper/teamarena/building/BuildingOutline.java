@@ -103,11 +103,9 @@ public sealed class BuildingOutline extends PacketEntity {
 	}
 
 	protected void updateOutline() {
-		if (isAlive()) {
-			List<String> entries = new ArrayList<>();
-			appendScoreboardEntries(entries);
-			GlowUtils.setPacketGlowing(getRealViewers(), entries, outlineColor != null ? NamedTextColor.nearestTo(outlineColor) : null);
-		}
+		List<String> entries = new ArrayList<>();
+		appendScoreboardEntries(entries);
+		GlowUtils.setPacketGlowing(getRealViewers(), entries, outlineColor != null ? NamedTextColor.nearestTo(outlineColor) : null);
 	}
 
 	@Override
@@ -431,12 +429,10 @@ public sealed class BuildingOutline extends PacketEntity {
 
 		@Override
 		public void appendScoreboardEntries(List<String> scoreboard) {
-			super.appendScoreboardEntries(scoreboard);
-			additionalOutlines.forEach(outline -> outline.appendScoreboardEntries(scoreboard));
-		}
-
-		public int size() {
-			return 1; // TODO manage additional outlines as well
+			scoreboard.add(getUuid().toString());
+			for (EntityOutline additional : additionalOutlines) {
+				scoreboard.add(additional.getUuid().toString());
+			}
 		}
 
 		private static List<WrappedDataValue> copyEntityData(WrappedDataWatcher dataWatcher) {

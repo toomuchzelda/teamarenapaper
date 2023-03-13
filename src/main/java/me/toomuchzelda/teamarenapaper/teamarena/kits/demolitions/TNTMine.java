@@ -30,8 +30,13 @@ public class TNTMine extends DemoMine
 
 	TNTPrimed tnt;
 
-	public TNTMine(Player demo, Block block) {
-		super(demo, block);
+	/**
+	 * Creates a new TNT mine
+	 * @param player The demolition player
+	 * @param block The block the mine is sitting on
+	 */
+	public TNTMine(Player player, Block block) {
+		super(player, block);
 
 		this.type = MineType.TNTMINE;
 		setName(type.name);
@@ -49,10 +54,8 @@ public class TNTMine extends DemoMine
 		spawnLoc2.setYaw(180f);
 
 		World world = baseLoc.getWorld();
-		this.armorSlot = EquipmentSlot.FEET;
 		ItemStack leatherBoots = new ItemStack(Material.LEATHER_BOOTS);
 		ItemUtils.colourLeatherArmor(color, leatherBoots);
-		stands = new ArmorStand[2];
 		org.bukkit.util.Consumer<ArmorStand> propApplier = stand -> {
 			stand.setGlowing(false);
 			stand.setSilent(true);
@@ -66,11 +69,10 @@ public class TNTMine extends DemoMine
 			stand.setRightLegPose(LEG_ANGLE);
 			stand.getEquipment().setBoots(leatherBoots, true);
 		};
-		stands[0] = world.spawn(spawnLoc1, ArmorStand.class, propApplier);
-		stands[1] = world.spawn(spawnLoc2, ArmorStand.class, propApplier);
-
-		// TODO toomuchzelda's horrible code here
-//		BuildingOutlineManager.registerBuilding(this);
+		stands = new ArmorStand[] {
+			world.spawn(spawnLoc1, ArmorStand.class, propApplier),
+			world.spawn(spawnLoc2, ArmorStand.class, propApplier)
+		};
 	}
 
 	@Override
@@ -88,7 +90,7 @@ public class TNTMine extends DemoMine
 	public void trigger(Player triggerer) {
 		super.trigger(triggerer);
 
-		removeEntities(); //won't remove the tnt as it's still null as of now
+		markInvalid();
 
 		TNTPrimed tnt = (TNTPrimed) baseLoc.getWorld().spawnEntity(hitboxEntity.getLocation().subtract(0d, 0.35d, 0d),
 				EntityType.PRIMED_TNT);
@@ -106,13 +108,6 @@ public class TNTMine extends DemoMine
 	@Override
 	boolean isDone() {
 		return this.type == MineType.TNTMINE && this.tnt != null && !this.tnt.isValid();
-	}
-
-	@Override
-	void removeEntities() {
-		super.removeEntities();
-		if(this.tnt != null)
-			tnt.remove();
 	}
 
 	public static TNTMine getByTNT(Player player, TNTPrimed tnt) {

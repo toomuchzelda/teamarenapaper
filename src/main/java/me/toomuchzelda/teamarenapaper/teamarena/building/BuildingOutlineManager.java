@@ -80,7 +80,7 @@ public class BuildingOutlineManager {
 	}
 
 	private static final double MAX_DISTANCE = 12;
-	private static boolean shouldSeeOutline(Building building, Player player) {
+	public static boolean shouldSeeOutline(Building building, Player player) {
 		if (player == building.owner) {
 			// hide ally outlines for owner if selector is active
 			BuildingSelector selector = getSelector(player);

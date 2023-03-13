@@ -36,13 +36,22 @@ public class GlowUtils {
 		Entity[] entitiesArr = entities.toArray(new Entity[0]);
 		for (Player player : players) {
 			PlayerInfo info = Main.getPlayerInfo(player);
-			var metadata = info.getMetadataViewer();
-			metadata.setViewedValues(MetaIndex.BASE_BITFIELD_IDX, glowing ? MetaIndex.GLOWING_METADATA_VALUE : null, entitiesArr);
-			if (team != null)
-				info.getScoreboard().addEntities(team, entities);
+			var scoreboard = info.getScoreboard();
+			if (glowing && team != null)
+				scoreboard.addEntities(team, entities);
 			else
-				info.getScoreboard().removeEntities(entities);
-//			ScoreboardUtils.sendTeamPacket(player, team.getName(), glowing, entitiesArr);
+				scoreboard.removeEntities(entities);
+			var metadata = info.getMetadataViewer();
+			if (glowing) {
+				for (Entity entity : entitiesArr) {
+					metadata.updateBitfieldValue(entity,
+						MetaIndex.BASE_BITFIELD_IDX, MetaIndex.BASE_BITFIELD_GLOWING_IDX, true);
+				}
+			} else {
+				for (Entity entity : entitiesArr) {
+					metadata.removeBitfieldValue(entity, MetaIndex.BASE_BITFIELD_IDX, MetaIndex.BASE_BITFIELD_GLOWING_IDX);
+				}
+			}
 			metadata.refreshViewer(entitiesArr);
 		}
 	}

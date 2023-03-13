@@ -5,9 +5,11 @@ import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingOutlineManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.EntityBuilding;
 import me.toomuchzelda.teamarenapaper.teamarena.building.PreviewableBuilding;
 import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
+import me.toomuchzelda.teamarenapaper.utils.GlowUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
@@ -21,37 +23,26 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.util.BoundingBox;
-import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
-public abstract class DemoMine extends EntityBuilding implements PreviewableBuilding
-{
+public abstract class DemoMine extends EntityBuilding implements PreviewableBuilding {
 	public static final int TIME_TO_ARM = 30;
-	public static final double REMOTE_ARMING_DISTANCE = 1000d;
-	public static final double REMOTE_ARMING_DISTANCE_SQRD = REMOTE_ARMING_DISTANCE * REMOTE_ARMING_DISTANCE;
 
 	public final TeamArenaTeam team;
 	ArmorStand[] stands;
-	final PacketMineHitbox hitboxEntity;
+	PacketMineHitbox hitboxEntity;
 	Player triggerer; //store the player that stepped on it for shaming OR the demo if remote detonate
 
 	//for construction
-	final Location baseLoc;
-	final Vector offset;
-	final Color color;
-	EquipmentSlot armorSlot;
+	Location baseLoc;
+	Color color;
 
 	int damage = 0; //amount of damage it has
-	//whether to remove on next tick
-	// whether it needs to be removed from hashmaps is checked every tick, and we can't remove it on the same tick
-	// as the damage events are processed after the ability tick, so we need to 'schedule' it for removal next tick
-//	boolean removeNextTick = false;
 	int creationTime; //store for knowing when it gets 'armed' after placing
-	boolean glowing; //if it's glowing the targetted colour for the owner
 	int timeToDetonate;
 
 	MineType type;
@@ -62,24 +53,27 @@ public abstract class DemoMine extends EntityBuilding implements PreviewableBuil
 		return blockLoc.add(0.5d, topOfBlock, 0.5d);
 	}
 
-	public DemoMine(Player demo, Block block) {
-		super(demo, blockToLocation(block));
+	/**
+	 * Creates a new Demolition mine
+	 * @param player The demolition player
+	 * @param block The block the mine is sitting on
+	 */
+	public DemoMine(Player player, Block block) {
+		super(player, blockToLocation(block));
 		setName("Mine");
-		this.team = Main.getPlayerInfo(owner).team;
-
-		Location blockLoc = block.getLocation();
-		this.color = BlockUtils.getBlockBukkitColor(block);
-
-		double topOfBlock = BlockUtils.getBlockHeight(block);
-		this.offset = new Vector(0.5, topOfBlock, 0.5);
-		this.baseLoc = blockLoc.add(offset);
-
-		this.hitboxEntity = new PacketMineHitbox(baseLoc.clone().add(0, -0.20d, 0));
+		this.team = Main.getPlayerInfo(player).team;
 	}
 
 	@Override
 	public void onPlace() {
+		Block block = getLocation().getBlock().getRelative(0, -1, 0);
+		this.color = BlockUtils.getBlockBukkitColor(block);
+
+		double topOfBlock = BlockUtils.getBlockHeight(block);
+		this.baseLoc = block.getLocation().add(0.5, topOfBlock, 0.5);
+
 		this.creationTime = TeamArena.getGameTick();
+		this.hitboxEntity = new PacketMineHitbox(baseLoc.clone().add(0, -0.20d, 0));
 		this.hitboxEntity.respawn();
 	}
 
@@ -104,17 +98,49 @@ public abstract class DemoMine extends EntityBuilding implements PreviewableBuil
 		}
 		//if it hasn't been stepped on already check if anyone's standing on it
 		else if (!isTriggered()) {
+			BoundingBox box = hitboxEntity.getBoundingBox();
 			for (Player stepper : Main.getGame().getPlayers()) {
 				if (team.getPlayerMembers().contains(stepper))
 					continue;
 
-				PacketMineHitbox axolotl = hitboxEntity;
-				if (stepper.getBoundingBox().overlaps(axolotl.getBoundingBox())) {
+				if (stepper.getBoundingBox().overlaps(box)) {
 					//they stepped on mine, trigger explosion
 					trigger(stepper);
+					break;
 				}
 			}
+
+			tickViewers();
 		}
+	}
+
+	private final Set<Player> outlineViewers = new HashSet<>();
+	protected void tickViewers() {
+		Set<Player> canSee = Bukkit.getOnlinePlayers().stream()
+			.filter(player -> BuildingOutlineManager.shouldSeeOutline(this, player))
+			.collect(Collectors.toSet());
+		// remove invalid viewers
+		for (var iter = outlineViewers.iterator(); iter.hasNext();) {
+			Player player = iter.next();
+			if (!player.isOnline() || !canSee.contains(player)) {
+				hideOutline(player);
+				iter.remove();
+			}
+		}
+		// add new viewers
+		for (Player player : canSee) {
+			if (outlineViewers.add(player)) {
+				showOutline(player);
+			}
+		}
+	}
+
+	protected void hideOutline(Player player) {
+		GlowUtils.setGlowing(List.of(player), Arrays.asList(stands), false, null);
+	}
+
+	protected void showOutline(Player player) {
+		GlowUtils.setGlowing(List.of(player), Arrays.asList(stands), true, NamedTextColor.nearestTo(getOutlineColor()));
 	}
 
 	@Override
@@ -123,31 +149,21 @@ public abstract class DemoMine extends EntityBuilding implements PreviewableBuil
 
 		hitboxEntity.remove();
 
-		removeEntities();
+		outlineViewers.forEach(this::hideOutline);
+		for (ArmorStand stand : stands) {
+			stand.remove();
+		}
+		outlineViewers.clear();
+		hitboxEntity.remove();
 	}
 
 	@Override
 	public @NotNull Collection<? extends PacketEntity> getPacketEntities() {
-//		return List.of(hitboxEntity);
 		return List.of(); // hitbox entity shouldn't be visible
 	}
 
-	public void onTeamSwitch(TeamArenaTeam oldTeam, TeamArenaTeam newTeam) {
-
-	}
-
-	void removeEntities() {
-		for(ArmorStand stand : stands) {
-			for(Player viewer : this.team.getPlayerMembers()) {
-				Main.getPlayerInfo(viewer).getMetadataViewer().removeViewedValues(stand);
-			}
-			stand.remove();
-		}
-		hitboxEntity.remove();
-	}
-
 	/**
-	 * @return return true if mine extinguised/removed
+	 * Returns true if mine extinguished/removed
 	 */
 	boolean hurt() {
 		this.damage++;
@@ -216,12 +232,12 @@ public abstract class DemoMine extends EntityBuilding implements PreviewableBuil
 		Location eyeLocation = owner.getEyeLocation();
 		World world = owner.getWorld();
 		var result = world.rayTraceBlocks(eyeLocation, eyeLocation.getDirection(), 5, FluidCollisionMode.NEVER, true);
-		if (result == null || result.getHitBlock() == null)
+		if (result == null || result.getHitBlock() == null || result.getHitBlockFace() == null)
 			return null;
-		Block block = result.getHitBlock();
-		boolean canPlace = result.getHitBlockFace() == BlockFace.UP &&
-			BuildingManager.canPlaceAt(block.getRelative(BlockFace.UP)) &&
-			KitDemolitions.isValidMineBlock(block);
+		BlockFace face = result.getHitBlockFace();
+		Block block = result.getHitBlock().getRelative(face);
+		boolean canPlace = BuildingManager.canPlaceAt(block) &&
+			KitDemolitions.isValidMineBlock(block.getRelative(BlockFace.DOWN));
 		Location location = block.getLocation().add(0.5, BlockUtils.getBlockHeight(block), 0.5);
 		return new PreviewResult(canPlace, location);
 	}
