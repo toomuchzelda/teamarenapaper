@@ -4,6 +4,7 @@ import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.WrappedDataValue;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.GlowUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
@@ -45,6 +46,11 @@ public sealed class BuildingOutline extends PacketEntity {
 	protected final Location offset;
 
 	protected TextColor outlineColor;
+
+	protected boolean enlarged;
+	protected int interpolationStart;
+	protected int interpolationEnd;
+	protected static int INTERPOLATION_PERIOD = 5;
 
 	/**
 	 * Whether the outline moves with the player to ensure visibility
@@ -102,6 +108,14 @@ public sealed class BuildingOutline extends PacketEntity {
 		}
 	}
 
+	public void setEnlarged(boolean enlarged) {
+		if (this.enlarged != enlarged) {
+			this.enlarged = enlarged;
+			interpolationStart = TeamArena.getGameTick();
+			interpolationEnd = interpolationStart + INTERPOLATION_PERIOD;
+		}
+	}
+
 	protected void updateOutline() {
 		List<String> entries = new ArrayList<>();
 		appendScoreboardEntries(entries);
@@ -151,7 +165,6 @@ public sealed class BuildingOutline extends PacketEntity {
 		scoreboard.add(getUuid().toString());
 	}
 
-	public static final double MAX_DISTANCE = 16;
 
 	protected static Location addOffset(Location location, Location offset) {
 		location.add(offset);
@@ -166,11 +179,29 @@ public sealed class BuildingOutline extends PacketEntity {
 		return location;
 	}
 
+	public static final double MAX_DISTANCE = 16;
 	protected Location ensureOutlineVisible(Location eyeLocation, Location buildingLocation, Location offset) {
-		if (dynamicLocation && eyeLocation.distanceSquared(buildingLocation) > MAX_DISTANCE * MAX_DISTANCE) {
+		// TODO use BlockDisplay scale for 1.19.4
+		double distance;
+		int now = TeamArena.getGameTick();
+		if (now <= interpolationEnd) {
+			double scale;
+			if (enlarged) {
+				// 1 downto 0.75 (effective max dist: 16 -> 12)
+				scale = 1 - 0.25 * (double) (now - interpolationStart) / INTERPOLATION_PERIOD;
+			} else {
+				// 0.75 to 1 (effective max dist: 12 -> 16)
+				scale = 0.75 + 0.25 * (double) (now - interpolationStart) / INTERPOLATION_PERIOD;
+			}
+			distance = MAX_DISTANCE * scale;
+		} else {
+			distance = MAX_DISTANCE * (enlarged ? 0.75 : 1);
+		}
+
+		if (dynamicLocation && eyeLocation.distanceSquared(buildingLocation) > distance * distance) {
 			// move it closer
 			Vector direction = buildingLocation.clone().subtract(eyeLocation).toVector().normalize();
-			return addOffset(eyeLocation.clone().add(direction.multiply(MAX_DISTANCE)), offset);
+			return addOffset(eyeLocation.clone().add(direction.multiply(distance)), offset);
 		} else {
 			return addOffset(buildingLocation.clone(), offset);
 		}

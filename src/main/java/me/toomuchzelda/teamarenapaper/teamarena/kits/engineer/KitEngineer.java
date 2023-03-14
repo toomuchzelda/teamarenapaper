@@ -161,15 +161,18 @@ public class KitEngineer extends Kit {
 			Component.text(" | ", NamedTextColor.GRAY),
 			Component.text("Right click: manage buildings", TextUtils.RIGHT_CLICK_TO)
 		);
+
+		private static final Map<ItemStack, BuildingSelector.Action> SELECTOR_ACTION = Map.of(
+			DESTRUCTION_PDA, BuildingSelector.Action.selectBuilding(SELECTOR_MESSAGE),
+			SENTRY, BuildingSelector.Action.showEntityPreview(RCLICK_PLACE_SENTRY, Sentry.class, Sentry::new,
+				p -> !p.hasCooldown(SENTRY.getType())),
+			TP_CREATOR, BuildingSelector.Action.showEntityPreview(RCLICK_PLACE_TELEPORTER, Teleporter.class, Teleporter::new,
+				p -> BuildingManager.getPlayerBuildingCount(p, Teleporter.class) < 2)
+		);
+
 		@Override
 		protected void giveAbility(Player player) {
-			BuildingOutlineManager.registerSelector(player,
-				new BuildingSelector(Map.of(
-					DESTRUCTION_PDA, List.of(BuildingSelector.Action.selectBuilding(SELECTOR_MESSAGE)),
-					SENTRY, List.of(BuildingSelector.Action.showPreview(RCLICK_PLACE_SENTRY, Sentry.class, p -> new Sentry(p, p.getLocation()), p -> !p.hasCooldown(SENTRY.getType()))),
-					TP_CREATOR, List.of(BuildingSelector.Action.showPreview(RCLICK_PLACE_TELEPORTER, Teleporter.class, p -> new Teleporter(p, p.getLocation()),
-						p -> BuildingManager.getPlayerBuildingCount(p, Teleporter.class) < 2))
-				)));
+			BuildingOutlineManager.registerSelector(player, BuildingSelector.fromAction(SELECTOR_ACTION));
 		}
 
 		public void removeAbility(Player player) {

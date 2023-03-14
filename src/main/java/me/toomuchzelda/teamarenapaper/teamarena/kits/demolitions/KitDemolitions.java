@@ -4,7 +4,6 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
-import me.toomuchzelda.teamarenapaper.teamarena.building.Building;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingOutlineManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingSelector;
@@ -38,7 +37,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Predicate;
 
 
 public class KitDemolitions extends Kit
@@ -152,18 +150,17 @@ public class KitDemolitions extends Kit
 
 		private static final Component RCLICK_PLACE = Component.text("Right click: place mine", TextUtils.RIGHT_CLICK_TO);
 		private static final Component RCLICK_DETONATE = Component.text("Right click: detonate selected mine", TextUtils.RIGHT_CLICK_TO);
-		private static final Predicate<Building> BUILDING_FILTER =
-			building -> building instanceof DemoMine demoMine &&
-				demoMine.isArmed() && !demoMine.isTriggered();
+
+		private static final Map<ItemStack, BuildingSelector.Action> SELECTOR_ACTION = Map.of(
+			REMOTE_DETONATOR_ITEM, BuildingSelector.Action.selectBuilding(RCLICK_DETONATE, building -> building instanceof DemoMine demoMine &&
+				demoMine.isArmed() && !demoMine.isTriggered()),
+			TNT_MINE_ITEM, BuildingSelector.Action.showBlockPreview(RCLICK_PLACE, TNTMine.class, TNTMine::new, null),
+			PUSH_MINE_ITEM, BuildingSelector.Action.showBlockPreview(RCLICK_PLACE, PushMine.class, PushMine::new, null)
+		);
+
 		@Override
 		public void giveAbility(Player player) {
-			BuildingOutlineManager.registerSelector(player, new BuildingSelector(
-				Map.of(
-					REMOTE_DETONATOR_ITEM, List.of(BuildingSelector.Action.selectBuilding(RCLICK_DETONATE, BUILDING_FILTER, BUILDING_FILTER)),
-					TNT_MINE_ITEM, List.of(BuildingSelector.Action.showPreview(RCLICK_PLACE, TNTMine.class, p -> new TNTMine(p, p.getLocation().getBlock()), null)),
-					PUSH_MINE_ITEM, List.of(BuildingSelector.Action.showPreview(RCLICK_PLACE, PushMine.class, p -> new PushMine(p, p.getLocation().getBlock()), null))
-				)
-			));
+			BuildingOutlineManager.registerSelector(player, BuildingSelector.fromAction(SELECTOR_ACTION));
 		}
 
 		@Override
@@ -212,8 +209,7 @@ public class KitDemolitions extends Kit
 			event.setCancelled(true);
 			if (isValidMineBlock(base)) {
 				if (BuildingManager.getBuildingAt(block) == null) {
-					// pass in the block the mine will sit on
-					DemoMine mine = type.constructor.apply(event.getPlayer(), base);
+					DemoMine mine = type.constructor.apply(event.getPlayer(), block);
 					BuildingManager.placeBuilding(mine);
 
 					stack.subtract();

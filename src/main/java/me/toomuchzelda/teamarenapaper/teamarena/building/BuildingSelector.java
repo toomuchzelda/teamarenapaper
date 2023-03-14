@@ -6,6 +6,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Location;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -14,6 +15,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -26,10 +28,20 @@ import java.util.stream.Collectors;
  */
 public class BuildingSelector {
 
-	public BuildingSelector(Map<ItemStack, List<Action>> selectorItems) {
-		this.selectorItems = selectorItems.entrySet().stream()
+	private BuildingSelector(Map<ItemStack, List<Action>> selectorItems) {
+		this.selectorItems = selectorItems;
+	}
+
+	public static BuildingSelector fromAction(Map<ItemStack, Action> selectorItems) {
+		return new BuildingSelector(selectorItems.entrySet().stream()
+			.map(entry -> Map.entry(entry.getKey().clone(), List.of(entry.getValue())))
+			.collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue)));
+	}
+
+	public static BuildingSelector fromActions(Map<ItemStack, List<Action>> selectorItems) {
+		return new BuildingSelector(selectorItems.entrySet().stream()
 			.map(entry -> Map.entry(entry.getKey().clone(), List.copyOf(entry.getValue())))
-			.collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+			.collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue)));
 	}
 
 	/**
@@ -315,6 +327,7 @@ public class BuildingSelector {
 				} else {
 					outline.setOutlineColor(building.getOutlineColor());
 				}
+				outline.setEnlarged(isSelected);
 			}
 		}
 	}
@@ -335,7 +348,11 @@ public class BuildingSelector {
 			implements Action {}
 
 		static Action selectBuilding(@Nullable Component message) {
-			return selectBuilding(message, null, null);
+			return new SelectBuilding(message, null, null);
+		}
+
+		static Action selectBuilding(@Nullable Component message, @Nullable Predicate<Building> buildingFilter) {
+			return new SelectBuilding(message, buildingFilter, null);
 		}
 
 		static Action selectBuilding(@Nullable Component message, @Nullable Predicate<Building> buildingFilter, @Nullable Predicate<Building> selectableFilter) {
@@ -349,10 +366,23 @@ public class BuildingSelector {
 			implements Action {}
 
 		static <T extends Building & PreviewableBuilding> Action showPreview(@Nullable Component message,
-								  @NotNull Class<T> clazz,
-								  @NotNull Function<Player, T> buildingSupplier,
-								  @Nullable Predicate<Player> condition) {
+																			 @NotNull Class<T> clazz,
+																			 @NotNull Function<Player, T> buildingSupplier,
+																			 @Nullable Predicate<Player> condition) {
 			return new ShowPreview<>(message, clazz, buildingSupplier, condition);
+		}
+
+		static <T extends Building & PreviewableBuilding> Action showBlockPreview(@Nullable Component message,
+																			 @NotNull Class<T> clazz,
+																			 @NotNull BiFunction<Player, Block, T> constructor,
+																			 @Nullable Predicate<Player> condition) {
+			return new ShowPreview<>(message, clazz, p -> constructor.apply(p, p.getLocation().getBlock()), condition);
+		}
+		static <T extends Building & PreviewableBuilding> Action showEntityPreview(@Nullable Component message,
+																			 @NotNull Class<T> clazz,
+																			 @NotNull BiFunction<Player, Location, T> constructor,
+																			 @Nullable Predicate<Player> condition) {
+			return new ShowPreview<>(message, clazz, p -> constructor.apply(p, p.getLocation()), condition);
 		}
 	}
 }

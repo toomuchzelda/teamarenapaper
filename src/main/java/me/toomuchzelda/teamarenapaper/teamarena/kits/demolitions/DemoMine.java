@@ -56,21 +56,21 @@ public abstract class DemoMine extends EntityBuilding implements PreviewableBuil
 	/**
 	 * Creates a new Demolition mine
 	 * @param player The demolition player
-	 * @param block The block the mine is sitting on
+	 * @param block The block the mine occupies (not sitting on)
 	 */
 	public DemoMine(Player player, Block block) {
-		super(player, blockToLocation(block));
+		super(player, block.getLocation().add(0.5, 0, 0.5));
 		setName("Mine");
 		this.team = Main.getPlayerInfo(player).team;
 	}
 
 	@Override
 	public void onPlace() {
-		Block block = getLocation().getBlock().getRelative(0, -1, 0);
-		this.color = BlockUtils.getBlockBukkitColor(block);
+		Block base = getLocation().add(0, -1, 0).getBlock();
+		this.color = BlockUtils.getBlockBukkitColor(base);
 
-		double topOfBlock = BlockUtils.getBlockHeight(block);
-		this.baseLoc = block.getLocation().add(0.5, topOfBlock, 0.5);
+		double topOfBlock = BlockUtils.getBlockHeight(base);
+		this.baseLoc = base.getLocation().add(0.5, topOfBlock, 0.5);
 
 		this.creationTime = TeamArena.getGameTick();
 		this.hitboxEntity = new PacketMineHitbox(baseLoc.clone().add(0, -0.20d, 0));
@@ -236,9 +236,10 @@ public abstract class DemoMine extends EntityBuilding implements PreviewableBuil
 			return null;
 		BlockFace face = result.getHitBlockFace();
 		Block block = result.getHitBlock().getRelative(face);
+		Block base = block.getRelative(BlockFace.DOWN);
 		boolean canPlace = BuildingManager.canPlaceAt(block) &&
-			KitDemolitions.isValidMineBlock(block.getRelative(BlockFace.DOWN));
-		Location location = block.getLocation().add(0.5, BlockUtils.getBlockHeight(block), 0.5);
+			KitDemolitions.isValidMineBlock(base);
+		Location location = base.getLocation().add(0.5, BlockUtils.getBlockHeight(base), 0.5);
 		return new PreviewResult(canPlace, location);
 	}
 
