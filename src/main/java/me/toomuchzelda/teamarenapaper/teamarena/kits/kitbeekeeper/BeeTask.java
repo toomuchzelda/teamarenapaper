@@ -12,33 +12,23 @@ import java.util.List;
  */
 public abstract class BeeTask
 {
-	private final Bee beeEntity;
 	private final List<Goal<Bee>> mobGoals;
 
 	public BeeTask(Bee beeEntity, Goal<Bee>... beeAi) {
-		this.beeEntity = beeEntity;
 		this.mobGoals = Arrays.asList(beeAi);
+		boolean done = false;
 	}
 
 	public List<Goal<Bee>> getMobGoals() {
 		return this.mobGoals;
 	}
 
-	static class DefendPoint extends BeeTask { //TODO
-		public DefendPoint(Bee beeEntity, Goal<Bee> beeAi) {
-			super(beeEntity, beeAi);
+	public boolean isDone() {
+		boolean done = true;
+		for (Goal<Bee> goal : this.mobGoals) {
+			done = done && goal.shouldStayActive();
 		}
-	}
 
-	static class DeliverHoney extends BeeTask { // TODO
-		public DeliverHoney(Bee beeEntity, Goal<Bee> beeAi) {
-			super(beeEntity, beeAi);
-		}
-	}
-
-	static class PursueEnemy extends BeeTask { // TODO
-		public PursueEnemy(Bee beeEntity, Goal<Bee> beeAi) {
-			super(beeEntity, beeAi);
-		}
+		return done;
 	}
 }

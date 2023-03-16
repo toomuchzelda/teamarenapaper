@@ -7,8 +7,12 @@ import com.destroystokyo.paper.entity.ai.GoalType;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import net.kyori.adventure.util.TriState;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
+import org.bukkit.block.BlockFace;
+import org.bukkit.craftbukkit.v1_19_R2.entity.CraftBee;
 import org.bukkit.entity.Bee;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -49,7 +53,7 @@ public class FollowOwnerTask extends BeeTask
 
 		loc.add(direction);
 
-		if (!loc.getBlock().getType().isAir()) {
+		if (!loc.getBlock().getType().isAir() || !loc.getBlock().getRelative(BlockFace.UP).getType().isAir()) {
 			loc = beeOwner.getLocation();
 		}
 
@@ -59,12 +63,12 @@ public class FollowOwnerTask extends BeeTask
 	private static class FollowOwnerGoal implements Goal<Bee>
 	{
 		private static final EnumSet<GoalType> GOAL_TYPES = EnumSet.of(GoalType.MOVE);
-		private static final double SPEED_UP_DIST_SQR = 5 * 5;
-		private static final double TELEPORT_DIST_SQR = 15 * 15;
+		private static final GoalKey<Bee> KEY = GoalKey.of(Bee.class, new NamespacedKey(Main.getPlugin(), "beekeeper_follow_owner"));;
+		private static final double SPEED_UP_DIST_SQR = 15 * 15;
+		private static final double TELEPORT_DIST_SQR = 30 * 30;
 		private static final double SPEEDUP_MULT = 0.25d;
 		private static final int SPEEDUP_COOLDOWN = 20;
 
-		private final GoalKey<Bee> key;
 		private final Player owner;
 		private final Bee bee;
 		private final int spawnTime;
@@ -83,8 +87,6 @@ public class FollowOwnerTask extends BeeTask
 
 			this.lastAttackTime = 0;
 			this.lastSpeedPushTime = 0;
-
-			this.key = GoalKey.of(Bee.class, new NamespacedKey(Main.getPlugin(), "beekeeper_follow_owner"));
 		}
 
 		@Override
@@ -119,6 +121,12 @@ public class FollowOwnerTask extends BeeTask
 							lastAttackTime = currentTick;
 							this.bee.attack(potentialVictim);
 							this.bee.setHasStung(false);
+
+							// Play rolling animation
+							this.bee.setRollingOverride(TriState.TRUE);
+							Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
+								this.bee.setRollingOverride(TriState.NOT_SET);
+							}, 7);
 						}
 					}
 				}
@@ -164,7 +172,7 @@ public class FollowOwnerTask extends BeeTask
 
 		@Override
 		public @NotNull GoalKey<Bee> getKey() {
-			return this.key;
+			return KEY;
 		}
 
 		@Override

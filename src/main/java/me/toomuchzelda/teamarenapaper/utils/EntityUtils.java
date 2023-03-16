@@ -307,4 +307,15 @@ public class EntityUtils {
 	public static boolean isTrackingEntity(Player viewer, Entity viewedEntity) {
 		return getTrackedPlayers0(viewedEntity).contains(((CraftPlayer) viewer).getHandle().connection);
 	}
+
+	/**
+	 * Get the distance squared between two entities.
+	 * In addition to convenience, this method doesn't allocate two Location objects.
+	 */
+	public static double distanceSqr(Entity one, Entity two) {
+		Vec3 posOne = ((CraftEntity) one).getHandle().position();
+		Vec3 posTwo = ((CraftEntity) two).getHandle().position();
+
+		return posOne.distanceToSqr(posTwo);
+	}
 }
