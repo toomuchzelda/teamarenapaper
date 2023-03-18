@@ -45,6 +45,7 @@ import java.util.*;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class CommandDebug extends CustomCommand {
 
@@ -66,6 +67,27 @@ public class CommandDebug extends CustomCommand {
 
 	private static final Pattern MAP_COLOR = Pattern.compile("#([0-9A-Fa-f]{6})");
 
+	private static String namePlayers(Collection<Player> players) {
+		return players.stream()
+			.map(Player::getName)
+			.collect(Collectors.joining(", ", "[", "]"));
+	}
+
+	private void auditEvent(CommandSender initiator, String message, Object... args) {
+		Component broadcast = Component.textOfChildren(
+			Component.text("[DEBUG] "),
+			initiator instanceof Player player ? EntityUtils.getComponent(player) : initiator.name(),
+			Component.text(": "),
+			Component.text(args.length != 0 ? message.formatted(args) : message)
+		).color(NamedTextColor.BLUE);
+		Main.getPlayerInfoMap().forEach((player, info) -> {
+			if (info.permissionLevel.compareTo(PermissionLevel.MOD) >= 0) {
+				player.sendMessage(broadcast);
+			}
+		});
+		Main.componentLogger().info(broadcast);
+	}
+
 	public boolean runConsoleCommands(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
 		switch (args[0]) {
 			case "gui" -> {
@@ -78,21 +100,29 @@ public class CommandDebug extends CustomCommand {
 
 				if (args[1].equalsIgnoreCase("start")) {
 					ignoreWinConditions = true;
+					auditEvent(sender, "game ignoreWinConditions %s", true);
 					skipGameState(GameState.LIVE);
+					auditEvent(sender, "game start");
 				} else if (args[1].equals("ignorewinconditions")) {
 					ignoreWinConditions = args.length == 3 ? Boolean.parseBoolean(args[2]) : !ignoreWinConditions;
+					auditEvent(sender, "game ignoreWinConditions %s", ignoreWinConditions);
 					sender.sendMessage(Component.text("Set ignore win conditions to " + ignoreWinConditions, NamedTextColor.GREEN));
 				} else if (args[1].equals("sniperaccuracy")) {
 					sniperAccuracy = args.length == 3 ? Boolean.parseBoolean(args[2]) : !sniperAccuracy;
+					auditEvent(sender, "game sniperAccuracy %s", sniperAccuracy);
 					sender.sendMessage(Component.text("Set sniper accuracy debug to " + sniperAccuracy, NamedTextColor.GREEN));
 				} else if (args[1].equals("enablekitsniper")) {
 					kitSniper = args.length == 3 ? Boolean.parseBoolean(args[2]) : !kitSniper;
+					auditEvent(sender, "game kitSniper %s", kitSniper);
 					sender.sendMessage(Component.text("Set enable kit sniper to " + kitSniper, NamedTextColor.GREEN));
 				} else if (args[1].equals("kitfilter")) {
 					setKitRestrictions(sender, args);
 				}
 			}
-			case "draw" -> doDrawCommand(args);
+			case "draw" -> {
+				auditEvent(sender, "miniMapDraw", (Object[]) Arrays.copyOfRange(args, 1, args.length));
+				doDrawCommand(args);
+			}
 			case "votetest" -> CommandCallvote.instance.createVote(null, sender.name(),
 					Component.text("Next player to ban?"),
 					new CommandCallvote.TopicOptions(true, null, CommandCallvote.LE_FUNNY_VOTE,
@@ -103,7 +133,9 @@ public class CommandDebug extends CustomCommand {
 							)));
 			case "respawn" -> {
 				var game = Main.getGame();
-				selectPlayersOrThrow(sender, args, 2).forEach(game::respawnPlayer);
+				var toRespawn = selectPlayersOrThrow(sender, args, 2);
+				toRespawn.forEach(game::respawnPlayer);
+				auditEvent(sender, "game respawn %s", namePlayers(toRespawn));
 			}
 			case "setrank" -> {
 				if (args.length < 2)
@@ -113,6 +145,7 @@ public class CommandDebug extends CustomCommand {
 				Player target = getPlayerOrThrow(sender, args, 2);
 				PlayerInfo info = Main.getPlayerInfo(target);
 				info.permissionLevel = level;
+				auditEvent(sender, "game setRank %s %s", target.getName(), level.name());
 				target.updateCommands();
 				target.sendMessage(Component.text("Your rank has been updated to " + level.name(), NamedTextColor.GREEN));
 			}
@@ -133,6 +166,7 @@ public class CommandDebug extends CustomCommand {
 
 				var targetPlayers = selectPlayersOrThrow(sender, args, 2);
 				targetTeam.addMembers(targetPlayers.toArray(new Player[0]));
+				auditEvent(sender, "game setTeam %s %s", namePlayers(targetPlayers), targetTeam.getName());
 
 				var message = Component.textOfChildren(
 						Component.text("Your team has been updated to ", NamedTextColor.GREEN),
@@ -149,6 +183,7 @@ public class CommandDebug extends CustomCommand {
 					throw new CommandException("Invalid kit " + args[1]);
 				}
 				var targetPlayers = selectPlayersOrThrow(sender, args, 2);
+				auditEvent(sender, "game setKit %s %s", namePlayers(targetPlayers), kit.getName());
 				for (var target : targetPlayers) {
 					PlayerInfo info = Main.getPlayerInfo(target);
 
@@ -180,13 +215,16 @@ public class CommandDebug extends CustomCommand {
 				CustomExplosion explosion = new CustomExplosion(p.getLocation().add(0, 0.2, 0),
 						rad, guar, damage, minDamage, knockbackStrength, DamageType.EXPLOSION, p);
 				explosion.explode();
+				auditEvent(sender, "game explode %d %d %d %d %d", (Object[]) Arrays.copyOfRange(args, 1, args.length));
 			}
 			case "burst" -> {
 				KitBurst.BurstAbility.HIDE_SHOTGUN_ARROWS = !KitBurst.BurstAbility.HIDE_SHOTGUN_ARROWS;
+				auditEvent(sender, "game hideBurstShotgunArrows %s", KitBurst.BurstAbility.HIDE_SHOTGUN_ARROWS);
 				sender.sendMessage("Set burst show arrows to: " + KitBurst.BurstAbility.HIDE_SHOTGUN_ARROWS);
 			}
 			case "fakehitbox" -> {
 				boolean show = args.length == 2 ? Boolean.parseBoolean(args[1]) : !FakeHitboxManager.show;
+				auditEvent(sender, "game setFakeHitboxVisibility %s", show);
 				FakeHitboxManager.setVisibility(show);
 			}
 			case "testmotd" -> {
@@ -231,6 +269,7 @@ public class CommandDebug extends CustomCommand {
 		if (args[2].equalsIgnoreCase("clear")) {
 			kitPredicate = kit -> true;
 			sender.sendMessage(Component.text("Allowing all kits.", NamedTextColor.YELLOW));
+			auditEvent(sender, "game kitFilter clear");
 			return;
 		}
 
@@ -243,6 +282,7 @@ public class CommandDebug extends CustomCommand {
 		}
 		// XOR
 		kitPredicate = kit -> block != kitNames.contains(kit.getName().toLowerCase(Locale.ENGLISH));
+		auditEvent(sender, "game %s %s", args[2], kitNames);
 		sender.sendMessage(Component.text("Set kit restrictions to: " +
 				args[2] + " " + kitNames, NamedTextColor.GREEN));
 		Main.getGame().getKits().stream()
@@ -264,28 +304,28 @@ public class CommandDebug extends CustomCommand {
 				}), /* else */ () -> {
 					// cannot allow blocking all kits!
 					kitPredicate = kit -> true;
+					auditEvent(sender, "game kitFilter invalid");
 					sender.sendMessage(Component.text("Warning: no fallback kit found. Allowing all kits instead.", NamedTextColor.YELLOW));
 				});
 	}
 
-	private void doDrawCommand(@NotNull String @NotNull [] args) {
+	private void doDrawCommand(String[] args) {
 		if (args.length < 4)
 			throw throwUsage("/debug draw clear/<text/area> <x> <z> ...");
 
 		int x = Integer.parseInt(args[2]), z = Integer.parseInt(args[3]);
-		MiniMapManager.CanvasOperation operation;
 		if ("text".equalsIgnoreCase(args[1])) {
 			if (args.length < 5)
 				throw throwUsage("/debug draw text <x> <z> <text>");
 
 			// white by default
-			String text = "\u00A734;" + MAP_COLOR.matcher(
+			String text = "§34;" + MAP_COLOR.matcher(
 					String.join(" ", Arrays.copyOfRange(args, 4, args.length))
 							.replace('&', ChatColor.COLOR_CHAR)
 			).replaceAll(result -> {
 				int hex = Integer.parseInt(result.group(1), 16);
 				//noinspection deprecation
-				return "\u00A7" + MapPalette.matchColor(new java.awt.Color(hex)) + ";";
+				return "§" + MapPalette.matchColor(new java.awt.Color(hex)) + ";";
 			});
 			canvasOperations.add((viewer, ignored, canvas, renderer) ->
 					canvas.drawText((renderer.convertX(x) + 128) / 2, (renderer.convertZ(z) + 128) / 2,
@@ -394,6 +434,7 @@ public class CommandDebug extends CustomCommand {
 					.thenAccept(input -> player.sendMessage(Component.text("Got input: " + input)));
 			}
 			case "hide" -> {
+				auditEvent(player, "hideSelf");
 				for (Player viewer : Bukkit.getOnlinePlayers()) {
 					if (viewer.canSee(player)) {
 						viewer.hidePlayer(Main.getPlugin(), player);
