@@ -91,7 +91,7 @@ public class KitBeekeeper extends Kit
 	public static class BeekeeperAbility extends Ability {
 
 		static final int MAX_BEES = 3;
-		private static final float BEE_SPEED = 0.04f;
+		static final float BEE_SPEED = 0.12f;
 		private static final double ABSORPTION_AMOUNT = 2d;
 		private static final double HEAL_AMOUNT = 2d;
 
@@ -104,6 +104,7 @@ public class KitBeekeeper extends Kit
 			BeekeeperBee(Location loc, int beeNum) {
 				this.beeNum = beeNum;
 				// TODO metadataviewer
+				this.spawnBee(loc);
 			}
 
 			void spawnBee(Location loc) {
@@ -112,7 +113,7 @@ public class KitBeekeeper extends Kit
 				}
 
 				beeEntity = loc.getWorld().spawn(loc, Bee.class);
-				((CraftBee) beeEntity).getHandle().flyingSpeed = BEE_SPEED; // TODO test bee speed
+				((CraftBee) beeEntity).getHandle().flyingSpeed = BEE_SPEED;
 			}
 
 			void setTask(BeeTask task) {
@@ -251,8 +252,7 @@ public class KitBeekeeper extends Kit
 						if (!pair.beekeeperBee.isFollowingOwner()) {
 							Bee clickedBee = (Bee) clickedEntity;
 							pair.beekeeperBee.setTask(new FollowOwnerTask(clickedBee, TeamArena.getGameTick() - clickedBee.getTicksLived(), pair.beekeeperBee.beeNum, beekeeper));
-
-							beekeeper.sendMessage("following u");
+							//beekeeper.sendMessage("following u");
 						}
 					}
 					else {

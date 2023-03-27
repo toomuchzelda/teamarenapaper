@@ -7,6 +7,7 @@ import com.destroystokyo.paper.entity.ai.GoalType;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import net.kyori.adventure.util.TriState;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -48,7 +49,7 @@ public class FollowOwnerTask extends BeeTask
 		//loc.setPitch(0f);
 		loc.setYaw(offset);
 		Vector direction = loc.getDirection();
-		direction.setY(-direction.getY());
+		direction.setY(-direction.getY() / 2);
 		direction.multiply(beeOwner.getWidth() * 1.41);
 
 		loc.add(direction);
@@ -64,10 +65,9 @@ public class FollowOwnerTask extends BeeTask
 	{
 		private static final EnumSet<GoalType> GOAL_TYPES = EnumSet.of(GoalType.MOVE);
 		private static final GoalKey<Bee> KEY = GoalKey.of(Bee.class, new NamespacedKey(Main.getPlugin(), "beekeeper_follow_owner"));;
-		private static final double SPEED_UP_DIST_SQR = 15 * 15;
+		private static final double SPEED_UP_DIST_SQR = 10 * 10;
 		private static final double TELEPORT_DIST_SQR = 30 * 30;
-		private static final double SPEEDUP_MULT = 0.25d;
-		private static final int SPEEDUP_COOLDOWN = 20;
+		private static final float CLOSE_TO_OWNER_SPEED = 0.02f;
 
 		private final Player owner;
 		private final Bee bee;
@@ -75,7 +75,6 @@ public class FollowOwnerTask extends BeeTask
 		private final int beeNum;
 
 		private int lastAttackTime;
-		private int lastSpeedPushTime;
 
 		private static final int ATTACK_SPEED = 20; // once every second.
 
@@ -86,7 +85,6 @@ public class FollowOwnerTask extends BeeTask
 			this.beeNum = beeNum;
 
 			this.lastAttackTime = 0;
-			this.lastSpeedPushTime = 0;
 		}
 
 		@Override
@@ -137,8 +135,7 @@ public class FollowOwnerTask extends BeeTask
 
 		private void moveToPosition() {
 			final Location destination = calculateBeeLocation(owner, this.beeNum, this.spawnTime);
-			final Location beeLoc = this.bee.getLocation();
-			final double distSqr = beeLoc.distanceSquared(this.owner.getLocation());
+			final double distSqr = EntityUtils.distanceSqr(this.bee, this.owner);
 			// If too far teleport the bee or speed them up
 			if (distSqr >= TELEPORT_DIST_SQR) {
 				this.bee.teleport(destination);
@@ -146,26 +143,12 @@ public class FollowOwnerTask extends BeeTask
 			else {
 				this.bee.getPathfinder().moveTo(destination, 1);
 
-				final int currentTick = TeamArena.getGameTick();
-				if (currentTick - this.lastSpeedPushTime >= SPEEDUP_COOLDOWN) {
-					if (distSqr >= SPEED_UP_DIST_SQR) { // give a small speedup
-						// speed = 2; I've tried upping the speed argument on pathfinder.moveTo() but it doesn't seem
-						// to do anything for the bees so i'll try to do this manually.
-
-						// Get the next point in their pathfinder path and move them to it instantly.
-						Pathfinder.PathResult currentPath = this.bee.getPathfinder().getCurrentPath();
-						if (currentPath != null) {
-							Location nextStep = currentPath.getNextPoint();
-							if (nextStep != null) {
-								this.bee.teleport(nextStep); // TODO test
-								Vector vec = nextStep.subtract(beeLoc).toVector();
-								vec.multiply(SPEEDUP_MULT);
-								this.bee.setVelocity(vec);
-
-								this.lastSpeedPushTime = currentTick;
-							}
-						}
-					}
+				// When they're close to the owner, set them to normal speed. otherwise make them catch up.
+				if (distSqr >= SPEED_UP_DIST_SQR) {
+					((CraftBee) this.bee).getHandle().flyingSpeed = KitBeekeeper.BeekeeperAbility.BEE_SPEED;
+				}
+				else {
+					((CraftBee) this.bee).getHandle().flyingSpeed = CLOSE_TO_OWNER_SPEED;
 				}
 			}
 		}

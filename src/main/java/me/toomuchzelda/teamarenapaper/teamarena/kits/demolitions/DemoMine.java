@@ -110,8 +110,11 @@ public abstract class DemoMine
 	void removeEntities() {
 		glowingTeam.removeEntities(stands);
 		PlayerScoreboard.removeMembersAll(glowingTeam, stands);
-		if(glowing) {
+		if (!glowing) {
 			PlayerScoreboard.removeMembersAll(this.ownerGlowingTeam, stands);
+		}
+		else {
+			PlayerScoreboard.removeMembersAll(BLUE_GLOWING_TEAM, stands);
 		}
 
 		for(ArmorStand stand : stands) {

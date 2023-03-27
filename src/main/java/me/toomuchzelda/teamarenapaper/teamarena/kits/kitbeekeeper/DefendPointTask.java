@@ -56,6 +56,18 @@ public class DefendPointTask extends BeeTask
 		}
 
 		@Override
+		public boolean shouldStayActive() {
+			super.shouldStayActive();
+			return true;
+		}
+
+		@Override
+		public boolean shouldActivate() {
+			super.shouldActivate();
+			return true;
+		}
+
+		@Override
 		public @NotNull GoalKey<Mob> getKey() {
 			return KEY;
 		}

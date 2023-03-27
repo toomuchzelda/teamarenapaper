@@ -1773,11 +1773,9 @@ public abstract class TeamArena
 	}
 
 	private void informKillsDeaths(Player player, PlayerInfo pinfo) {
-		player.sendMessage(Component.textOfChildren(
-			Component.text("You got "),
-			Component.text(TextUtils.formatNumber(pinfo.totalKills, 2), NamedTextColor.YELLOW),
-			Component.text(" kills and died " + pinfo.deaths + " times this game.")
-		).color(NamedTextColor.DARK_GRAY));
+		player.sendMessage(Component.text("You got " +
+			TextUtils.formatNumber(pinfo.totalKills, 2) + " kills and died " + pinfo.deaths + " times this game.",
+			NamedTextColor.DARK_GRAY));
 	}
 
 	/**Sends a chat message to the player telling how long the game has gone on for.

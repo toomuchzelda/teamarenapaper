@@ -24,9 +24,9 @@ public abstract class BeeTask
 	}
 
 	public boolean isDone() {
-		boolean done = true;
+		boolean done = false;
 		for (Goal<Bee> goal : this.mobGoals) {
-			done = done && goal.shouldStayActive();
+			done = done || !goal.shouldStayActive();
 		}
 
 		return done;
