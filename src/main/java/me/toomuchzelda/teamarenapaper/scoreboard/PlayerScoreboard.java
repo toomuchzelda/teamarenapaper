@@ -6,6 +6,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.minecraft.server.ServerScoreboard;
 import net.minecraft.world.scores.PlayerTeam;
 import org.bukkit.Bukkit;
+import org.bukkit.craftbukkit.v1_19_R2.entity.CraftEntity;
 import org.bukkit.craftbukkit.v1_19_R2.scoreboard.CraftScoreboard;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -147,6 +148,12 @@ public class PlayerScoreboard
 		}
 	}
 
+	public static void removeMembersAll(Team bukkitTeam, Collection<? extends Entity> members) {
+		for(PlayerInfo pinfo : Main.getPlayerInfos()) {
+			pinfo.getScoreboard().removeMembers(bukkitTeam, members);
+		}
+	}
+
 	public static void removeEntriesAll(Team bukkitTeam, Collection<String> entries) {
 		for(PlayerInfo pinfo : Main.getPlayerInfos()) {
 			pinfo.getScoreboard().removeEntries(bukkitTeam, entries);
@@ -181,6 +188,17 @@ public class PlayerScoreboard
 		Team team = getLocalTeam(bukkitTeam);
 		if(team != null) {
 			team.removeEntities(members);
+		}
+		else {
+			Main.logger().warning(player.getName() + "'s scoreboard does not have team " + bukkitTeam.getName());
+			Thread.dumpStack();
+		}
+	}
+
+	public void removeMembers(Team bukkitTeam, Collection<? extends Entity> members) {
+		Team team = getLocalTeam(bukkitTeam);
+		if(team != null) {
+			team.removeEntries(members.stream().map(entity -> ((CraftEntity) entity).getHandle().getScoreboardName()).toList());
 		}
 		else {
 			Main.logger().warning(player.getName() + "'s scoreboard does not have team " + bukkitTeam.getName());

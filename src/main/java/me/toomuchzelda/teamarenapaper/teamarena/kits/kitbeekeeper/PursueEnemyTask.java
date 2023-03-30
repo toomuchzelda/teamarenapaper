@@ -4,6 +4,7 @@ import com.destroystokyo.paper.entity.ai.Goal;
 import com.destroystokyo.paper.entity.ai.GoalKey;
 import com.destroystokyo.paper.entity.ai.GoalType;
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Bee;
 import org.bukkit.entity.LivingEntity;
@@ -20,18 +21,22 @@ public class PursueEnemyTask extends BeeTask {
 	{
 		private static final EnumSet<GoalType> GOAL_TYPES = EnumSet.of(GoalType.TARGET);
 		private static final GoalKey<Bee> KEY = GoalKey.of(Bee.class, new NamespacedKey(Main.getPlugin(), "beekeeper_pursue_enemy"));
+		/** Amount of time the bee should pursue the target */
+		private static final int PURSUE_TIME = 15 * 20;
 
 		private final Bee bee;
 		private final LivingEntity target;
+		private final int startTime;
 
 		public PursueEnemyGoal(Bee bee, LivingEntity target) {
 			this.bee = bee;
 			this.target = target;
+			this.startTime = TeamArena.getGameTick();
 		}
 
 		@Override
 		public boolean shouldActivate() {
-			return !Main.getGame().isDead(this.target);
+			return TeamArena.getGameTick() - this.startTime < PURSUE_TIME && !Main.getGame().isDead(this.target);
 		}
 
 		@Override
@@ -50,7 +55,9 @@ public class PursueEnemyTask extends BeeTask {
 		}
 
 		@Override
-		public void tick() {}
+		public void tick() {
+			bee.setTarget(this.target);
+		}
 
 		@Override
 		public @NotNull GoalKey<Bee> getKey() {

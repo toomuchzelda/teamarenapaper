@@ -47,6 +47,7 @@ public class DamageEvent {
 	private double finalDamage;
 	private DamageType damageType;
 	private Entity damageTypeCause; // for %Cause% in DamageType deathmessages
+	private boolean broadcastsDeathMessage;
 
 	//null implies no knockback
 	// dont use 0,0,0 vector as that'll stop the player moving for a split moment
@@ -138,7 +139,8 @@ public class DamageEvent {
 	private DamageEvent(Entity victim, double damage) {
 		this.victim = victim;
 		this.rawDamage = damage;
-		cancelled = false;
+		this.cancelled = false;
+		this.broadcastsDeathMessage = true;
 	}
 
 	public static DamageEvent newDamageEvent(@NotNull Entity victim, double rawDamage, @NotNull DamageType damageType,
@@ -503,6 +505,10 @@ public class DamageEvent {
 					damageType.isProjectile() && ArrowImpaleStatus.isImpaling(aa)) {
 				living.setArrowsInBody(living.getArrowsInBody() + 1);
 			}
+			else if (attacker instanceof Bee && damageType.isMelee()) {
+				living.setBeeStingersInBody(living.getBeeStingersInBody() + 1);
+				Bukkit.broadcastMessage("Added bee stinger");
+			}
 
 			//need to send this packet for the hearts to flash white when lost, otherwise they just decrease with no
 			// effect
@@ -768,6 +774,14 @@ public class DamageEvent {
 
 	public Entity getDamageTypeCause() {
 		return this.damageTypeCause;
+	}
+
+	public boolean broadcastsDeathMessage() {
+		return this.broadcastsDeathMessage;
+	}
+
+	public void setBroadcastDeathMessage(boolean broadcastsDeathMessage) {
+		this.broadcastsDeathMessage = broadcastsDeathMessage;
 	}
 
 	public boolean isCancelled() {

@@ -1,6 +1,5 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.kitbeekeeper;
 
-import com.destroystokyo.paper.entity.Pathfinder;
 import com.destroystokyo.paper.entity.ai.Goal;
 import com.destroystokyo.paper.entity.ai.GoalKey;
 import com.destroystokyo.paper.entity.ai.GoalType;
@@ -13,7 +12,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.BlockFace;
-import org.bukkit.craftbukkit.v1_19_R2.entity.CraftBee;
 import org.bukkit.entity.Bee;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -65,9 +63,9 @@ public class FollowOwnerTask extends BeeTask
 	{
 		private static final EnumSet<GoalType> GOAL_TYPES = EnumSet.of(GoalType.MOVE);
 		private static final GoalKey<Bee> KEY = GoalKey.of(Bee.class, new NamespacedKey(Main.getPlugin(), "beekeeper_follow_owner"));;
-		private static final double SPEED_UP_DIST_SQR = 10 * 10;
-		private static final double TELEPORT_DIST_SQR = 30 * 30;
-		private static final float CLOSE_TO_OWNER_SPEED = 0.02f;
+		private static final double SPEED_UP_DIST_SQR = 5 * 5;
+		private static final double TELEPORT_DIST_SQR = 15 * 15;
+		private static final float CLOSE_TO_OWNER_SPEED = KitBeekeeper.BeekeeperAbility.BEE_VANILLA_SPEED;
 
 		private final Player owner;
 		private final Bee bee;
@@ -105,6 +103,7 @@ public class FollowOwnerTask extends BeeTask
 		@Override
 		public void stop() {
 			this.bee.getPathfinder().stopPathfinding();
+			EntityUtils.setFlySpeed(this.bee, KitBeekeeper.BeekeeperAbility.BEE_SPEED);
 		}
 
 		@Override
@@ -145,10 +144,12 @@ public class FollowOwnerTask extends BeeTask
 
 				// When they're close to the owner, set them to normal speed. otherwise make them catch up.
 				if (distSqr >= SPEED_UP_DIST_SQR) {
-					((CraftBee) this.bee).getHandle().flyingSpeed = KitBeekeeper.BeekeeperAbility.BEE_SPEED;
+					//((CraftBee) this.bee).getHandle().flyingSpeed = KitBeekeeper.BeekeeperAbility.BEE_SPEED;
+					EntityUtils.setFlySpeed(bee, KitBeekeeper.BeekeeperAbility.BEE_SPEED);
 				}
 				else {
-					((CraftBee) this.bee).getHandle().flyingSpeed = CLOSE_TO_OWNER_SPEED;
+					//((CraftBee) this.bee).getHandle().flyingSpeed = CLOSE_TO_OWNER_SPEED;
+					EntityUtils.setFlySpeed(bee, CLOSE_TO_OWNER_SPEED);
 				}
 			}
 		}

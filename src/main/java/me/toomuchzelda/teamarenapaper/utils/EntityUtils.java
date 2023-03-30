@@ -134,6 +134,10 @@ public class EntityUtils {
 		return new ClientboundRemoveEntitiesPacket(ints);
 	}
 
+	public static void setFlySpeed(LivingEntity living, float flySpeed) {
+		((CraftLivingEntity) living).getHandle().flyingSpeed = flySpeed;
+	}
+
 	/**
 	 * set velocity fields and send the packet immediately instead of waiting for next tick if it's a player
 	 */

@@ -712,6 +712,9 @@ public abstract class TeamArena
 					}
 				}
 			}
+			else if (event.getVictim() instanceof Bee) {
+				KitBeekeeper.BeekeeperAbility.handleBeeConfirmedDamage(event);
+			}
 		}
 	}
 
@@ -727,14 +730,15 @@ public abstract class TeamArena
 			return;
 		}
 
-		if(this.killStreakManager.isCrateFirework(event.getFinalAttacker())) {
+		final Entity finalAttacker = event.getFinalAttacker();
+		if(this.killStreakManager.isCrateFirework(finalAttacker)) {
 			event.setCancelled(true);
 			return;
 		}
 
 		if(event.hasKnockback()) {
 			//reduce knockback done by axes
-			if (event.getDamageType().isMelee() && event.getFinalAttacker() instanceof LivingEntity living) {
+			if (event.getDamageType().isMelee() && finalAttacker instanceof LivingEntity living) {
 				if (living.getEquipment() != null) {
 					ItemStack weapon = living.getEquipment().getItemInMainHand();
 					if (weapon.getType().toString().endsWith("AXE")) {
@@ -751,6 +755,7 @@ public abstract class TeamArena
 			}
 		}
 
+		// Handle entities that are part of some Ability
 		if(event.getVictim() instanceof Skeleton) {
 			KitEngineer.EngineerAbility.handleSentryAttemptDamage(event);
 		}
@@ -763,14 +768,21 @@ public abstract class TeamArena
 			}
 			IronGolemKillStreak.GolemAbility.handleIronGolemAttemptDamage(event);
 		}
+		else if (event.getVictim() instanceof Bee) {
+			KitBeekeeper.BeekeeperAbility.handleBeeAttemptDamage(event);
+		}
 
-		if(event.getFinalAttacker() instanceof IronGolem) {
+
+		if(finalAttacker instanceof IronGolem) {
 			// Replicate the vertical knockback iron golems do.
 			if(event.getDamageType().is(DamageType.MELEE) && event.getAttacker() instanceof IronGolem && event.hasKnockback()) {
 				double y = event.getKnockback().getY();
 				event.setKnockback(event.getKnockback().setY(y + 0.25d));
 			}
 			IronGolemKillStreak.GolemAbility.handleIronGolemAttemptAttack(event);
+		}
+		else if (finalAttacker instanceof Bee) {
+			KitBeekeeper.BeekeeperAbility.handleBeeAttemptAttack(event);
 		}
 	}
 
@@ -1181,7 +1193,7 @@ public abstract class TeamArena
 		damageQueue.clear();
 
 		setGameState(GameState.END);
-		Bukkit.broadcastMessage("Game end");
+		//Bukkit.broadcastMessage("Game end");
 	}
 
 
@@ -1472,9 +1484,11 @@ public abstract class TeamArena
 	}
 
 	public void handleDeath(DamageEvent event) {
-		Component deathMessage = event.getDamageType().getDeathMessage(event.getVictim(), event.getFinalAttacker(), event.getDamageTypeCause());
-		if(deathMessage != null) {
-			Bukkit.broadcast(deathMessage);
+		if (event.broadcastsDeathMessage()) {
+			Component deathMessage = event.getDamageType().getDeathMessage(event.getVictim(), event.getFinalAttacker(), event.getDamageTypeCause());
+			if (deathMessage != null) {
+				Bukkit.broadcast(deathMessage);
+			}
 		}
 		Entity victim = event.getVictim();
 		//if player make them a spectator and put them in queue to respawn if is a respawning game

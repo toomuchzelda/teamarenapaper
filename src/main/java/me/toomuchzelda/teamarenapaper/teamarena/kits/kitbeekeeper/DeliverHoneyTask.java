@@ -26,8 +26,8 @@ public class DeliverHoneyTask extends BeeTask
 
 		private static final float DELIVER_FLY_SPEED = 0.02f;
 		// Max distance from the target the bee can be to complete its delivery.
-		private static final double DIST_SQR_TO_TARGET = 0.6 * 0.6;
-		private static final int WAIT_AFTER_DONE_TIME = 40;
+		private static final double DIST_SQR_TO_TARGET = 0.9d * 0.9d;
+		private static final int WAIT_AFTER_DONE_TIME = 3 * 20;
 		private static final int NOT_DONE = -1;
 
 		private final Bee bee;
@@ -68,7 +68,7 @@ public class DeliverHoneyTask extends BeeTask
 
 		@Override
 		public void tick() {
-			if (this.doneTime != NOT_DONE) {
+			if (this.doneTime == NOT_DONE) {
 				if (EntityUtils.distanceSqr(this.bee, this.target) <= DIST_SQR_TO_TARGET) {
 					// Has reached the target successfully, give the honey and return
 					this.doneTime = TeamArena.getGameTick();
@@ -78,6 +78,7 @@ public class DeliverHoneyTask extends BeeTask
 					this.bee.getPathfinder().moveTo(this.target);
 				}
 			}
+			// else wait for WAIT_AFTER_DONE_TIME ticks
 		}
 
 		@Override

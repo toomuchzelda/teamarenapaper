@@ -217,6 +217,8 @@ public class DamageType {
 
 	public static final DamageType ENGINEER_SENTRY = new DamageType("Sentry arrow", "%Killed% was shot by %Killer%'s sentry").setProjectile().setNoKnockback();
 
+	public static final DamageType BEEKEEPER_BEE = new DamageType("Beekeeper's bee", "%Killed% was stung by %Killer%'s bee");
+
 	/*******************************************************************************************
 	 * 									GAMEMODE DAMAGETYPES
 	 ******************************************************************************************/
