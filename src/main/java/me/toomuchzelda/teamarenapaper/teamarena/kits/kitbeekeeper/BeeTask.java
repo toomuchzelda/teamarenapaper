@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.kitbeekeeper;
 
 import com.destroystokyo.paper.entity.ai.Goal;
+import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Bee;
 
 import java.util.Arrays;
@@ -16,7 +17,6 @@ public abstract class BeeTask
 
 	public BeeTask(Bee beeEntity, Goal<Bee>... beeAi) {
 		this.mobGoals = Arrays.asList(beeAi);
-		boolean done = false;
 	}
 
 	public List<Goal<Bee>> getMobGoals() {
@@ -31,4 +31,6 @@ public abstract class BeeTask
 
 		return done;
 	}
+
+	abstract Component getActionBarPart();
 }

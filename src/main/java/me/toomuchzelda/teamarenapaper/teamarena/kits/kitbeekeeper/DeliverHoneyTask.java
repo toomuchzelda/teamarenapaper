@@ -6,6 +6,8 @@ import com.destroystokyo.paper.entity.ai.GoalType;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.NamespacedKey;
 import org.bukkit.craftbukkit.v1_19_R2.entity.CraftBee;
 import org.bukkit.entity.Bee;
@@ -16,8 +18,15 @@ import java.util.EnumSet;
 
 public class DeliverHoneyTask extends BeeTask
 {
+	private static final Component ACTIONBAR_HEAL = Component.text("Heal", NamedTextColor.LIGHT_PURPLE);
+
 	public DeliverHoneyTask(Bee beeEntity, LivingEntity target) {
 		super(beeEntity, new DeliverHoneyGoal(beeEntity, target));
+	}
+
+	@Override
+	Component getActionBarPart() {
+		return ACTIONBAR_HEAL;
 	}
 
 	static class DeliverHoneyGoal implements Goal<Bee> {

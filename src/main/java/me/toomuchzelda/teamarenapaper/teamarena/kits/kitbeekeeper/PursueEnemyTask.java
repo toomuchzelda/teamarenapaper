@@ -5,6 +5,8 @@ import com.destroystokyo.paper.entity.ai.GoalKey;
 import com.destroystokyo.paper.entity.ai.GoalType;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Bee;
 import org.bukkit.entity.LivingEntity;
@@ -13,8 +15,25 @@ import org.jetbrains.annotations.NotNull;
 import java.util.EnumSet;
 
 public class PursueEnemyTask extends BeeTask {
-	public PursueEnemyTask(Bee beeEntity, LivingEntity target) {
-		super(beeEntity, new PursueEnemyGoal(beeEntity, target));
+	private PursueEnemyGoal goal;
+
+	private PursueEnemyTask(Bee beeEntity, PursueEnemyGoal goal) {
+		super(beeEntity, goal);
+	}
+
+	// Wrap the constructor so I can keep a reference to the PursueEnemyGoal here.
+	public static PursueEnemyTask newInstance(Bee beeEntity, LivingEntity target) {
+		PursueEnemyGoal goal = new PursueEnemyGoal(beeEntity, target);
+		PursueEnemyTask task = new PursueEnemyTask(beeEntity, goal);
+		task.goal = goal;
+
+		return task;
+	}
+
+	@Override
+	Component getActionBarPart() {
+		final int secondsLeft = (PursueEnemyGoal.PURSUE_TIME - (TeamArena.getGameTick() - this.goal.startTime)) / 20;
+		return Component.text("Pursue " + secondsLeft + "s", NamedTextColor.RED);
 	}
 
 	static class PursueEnemyGoal implements Goal<Bee>

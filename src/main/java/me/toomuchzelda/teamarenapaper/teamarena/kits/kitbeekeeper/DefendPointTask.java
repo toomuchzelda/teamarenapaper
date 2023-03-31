@@ -1,6 +1,5 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.kitbeekeeper;
 
-import com.destroystokyo.paper.entity.ai.Goal;
 import com.destroystokyo.paper.entity.ai.GoalKey;
 import com.destroystokyo.paper.entity.ai.GoalType;
 import me.toomuchzelda.teamarenapaper.Main;
@@ -8,9 +7,9 @@ import me.toomuchzelda.teamarenapaper.teamarena.GameState;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.trigger.KitTrigger;
 import me.toomuchzelda.teamarenapaper.teamarena.mobgoals.TargetEnemiesAtPointGoal;
-import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Bee;
@@ -27,9 +26,15 @@ public class DefendPointTask extends BeeTask
 	private static final double MAX_DISTANCE_SQR = 15 * 15;
 	private static final double MIN_DISTANCE_SQR = 0.5d * 0.5d;
 
+	private static final Component ACTIONBAR_DEFEND = Component.text("Defend", NamedTextColor.BLUE);
 
 	public DefendPointTask(Bee beeEntity, Player owner, Location loc) {
 		super(beeEntity, new DefendPointGoal(Main.getPlugin(), owner, loc, beeEntity, SWITCH_TARGET_CD, MAX_DISTANCE_SQR, MIN_DISTANCE_SQR));
+	}
+
+	@Override
+	Component getActionBarPart() {
+		return ACTIONBAR_DEFEND;
 	}
 
 	private static class DefendPointGoal extends TargetEnemiesAtPointGoal {

@@ -7,6 +7,8 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.util.TriState;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -22,6 +24,8 @@ import java.util.EnumSet;
 
 public class FollowOwnerTask extends BeeTask
 {
+	private static final Component ACTIONBAR_FOLLOW = Component.text("Follow", NamedTextColor.GREEN);
+
 	public FollowOwnerTask(Bee beeEntity, int spawnTime, int beeNum, Player owner) {
 		super(beeEntity, new FollowOwnerGoal(owner, beeEntity, spawnTime, beeNum));
 	}
@@ -57,6 +61,11 @@ public class FollowOwnerTask extends BeeTask
 		}
 
 		return loc; // TODO improve positioning for visual effect
+	}
+
+	@Override
+	Component getActionBarPart() {
+		return ACTIONBAR_FOLLOW;
 	}
 
 	private static class FollowOwnerGoal implements Goal<Bee>

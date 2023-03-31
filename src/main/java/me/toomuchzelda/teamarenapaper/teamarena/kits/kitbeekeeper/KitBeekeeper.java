@@ -17,6 +17,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -60,11 +61,12 @@ public class KitBeekeeper extends Kit
 	private static final ItemStack BEE_WAND;
 	private static final ItemStack REGROUP_ITEM;
 
+	private static final TextColor BEE_YELLOW = TextColor.color(255, 210, 81);
+
 	static {
 		List<Component> lore = new ArrayList<>(5);
-		TextColor color = TextColor.color(255, 210, 81);
-		lore.add(Component.text("Use this to command one bee at a time", color));
-		lore.add(Component.text("Right click a block to ", TextUtils.RIGHT_CLICK_TO).append(Component.text("defend", color)));
+		lore.add(Component.text("Use this to command one bee at a time", BEE_YELLOW));
+		lore.add(Component.text("Right click a block to ", TextUtils.RIGHT_CLICK_TO).append(Component.text("defend", BEE_YELLOW)));
 		lore.add(Component.text("Right click a teammate to ", TextUtils.RIGHT_CLICK_TO).append(Component.text("give honey", NamedTextColor.LIGHT_PURPLE)));
 		lore.add(Component.text("Right click an enemy to ", TextUtils.RIGHT_CLICK_TO).append(Component.text("pursue", NamedTextColor.RED)));
 		lore.add(Component.text("Click any bee to return to following you"));
@@ -75,7 +77,7 @@ public class KitBeekeeper extends Kit
 			.build();
 
 		REGROUP_ITEM = ItemBuilder.of(Material.BEEHIVE)
-			.displayName(Component.text("Return to hive (to yourself)", color))
+			.displayName(Component.text("Return to hive (to yourself)", BEE_YELLOW))
 			.lore(
 				List.of(Component.text("Click to regroup all bees", TextUtils.RIGHT_CLICK_TO))
 			)
@@ -91,8 +93,7 @@ public class KitBeekeeper extends Kit
 		boots.addEnchantment(Enchantment.PROTECTION_ENVIRONMENTAL, 1);
 
 		this.setArmor(helmet, new ItemStack(Material.GOLDEN_CHESTPLATE), new ItemStack(Material.GOLDEN_LEGGINGS), boots);
-		// TODO find the the name of that honey thing
-		ItemStack sword = ItemBuilder.of(Material.WOODEN_AXE).displayName(Component.text("Honey thing")).build();
+		ItemStack sword = ItemBuilder.of(Material.WOODEN_SWORD).displayName(Component.text("Honey dipper")).build();
 		this.setItems(sword, BEE_WAND, REGROUP_ITEM);
 
 		this.setAbilities(new BeekeeperAbility());
@@ -116,6 +117,8 @@ public class KitBeekeeper extends Kit
 			BeeName.create("Greenbee", NamedTextColor.GREEN),
 			BeeName.create("Richard", NamedTextColor.RED)
 		);
+
+		private static final Component ACTIONBAR_DEAD = Component.text("Dead", TextColors.ERROR_RED);
 
 		private record BeeName(Component displayName, NamedTextColor color, Team team) {
 			public static BeeName create(String name, NamedTextColor color) {
@@ -213,6 +216,20 @@ public class KitBeekeeper extends Kit
 				this.task = newTask;
 			}
 
+			private Component getTaskActionBar() {
+				var builder = Component.text();
+				builder.append(this.name.displayName());
+				builder.append(Component.space());
+				if (this.isDead()) {
+					builder.append(ACTIONBAR_DEAD);
+				}
+				else {
+					builder.append(this.task.getActionBarPart());
+				}
+
+				return builder.build();
+			}
+
 			/** Convenience method to set task to FollowOwnerTask */
 			void setFollowing() {
 				if (!this.isDead())
@@ -271,6 +288,20 @@ public class KitBeekeeper extends Kit
 
 				return null;
 			}
+
+			private static final Component SEPARATOR = Component.text(" | ");
+			private Component getActionBar() {
+				var builder = Component.text();
+				for (int i = 0; i < this.bees.length; i++) {
+					builder.append(this.bees[i].getTaskActionBar());
+
+					if (i != this.bees.length - 1) {
+						builder.append(SEPARATOR);
+					}
+				}
+
+				return builder.build();
+			}
 		}
 
 		private record BeePlayerPair(Player owner, BeekeeperBee beekeeperBee) {}
@@ -324,11 +355,14 @@ public class KitBeekeeper extends Kit
 
 		@Override
 		public void onTick() {
-			// Reset completed AI Goals to FollowOwner
+			final boolean tickActionBar = TeamArena.getGameTick() % 2 == 1;
 			for (var entry : BEEKEEPERS.entrySet()) {
 				for (BeekeeperBee beekeeperBee : entry.getValue().bees) {
 					beekeeperBee.tick();
 				}
+
+				if (tickActionBar)
+					entry.getKey().sendActionBar(entry.getValue().getActionBar());
 			}
 		}
 
@@ -419,7 +453,7 @@ public class KitBeekeeper extends Kit
 						// Clicked enemy or other entity: target them
 						BeekeeperBee freeBee = BEEKEEPERS.get(beekeeper).getNextAvailableBee();
 						if (freeBee != null) {
-							freeBee.setTask(new PursueEnemyTask(freeBee.beeEntity, clickedEntity));
+							freeBee.setTask(PursueEnemyTask.newInstance(freeBee.beeEntity, clickedEntity));
 						}
 					}
 				}
