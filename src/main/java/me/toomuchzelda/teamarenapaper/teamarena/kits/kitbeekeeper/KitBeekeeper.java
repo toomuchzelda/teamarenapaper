@@ -11,6 +11,7 @@ import me.toomuchzelda.teamarenapaper.metadata.SimpleMetadataValue;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
@@ -67,7 +68,9 @@ public class KitBeekeeper extends Kit
 		List<Component> lore = new ArrayList<>(5);
 		lore.add(Component.text("Use this to command one bee at a time", BEE_YELLOW));
 		lore.add(Component.text("Right click a block to ", TextUtils.RIGHT_CLICK_TO).append(Component.text("defend", BEE_YELLOW)));
-		lore.add(Component.text("Right click a teammate to ", TextUtils.RIGHT_CLICK_TO).append(Component.text("give honey", NamedTextColor.LIGHT_PURPLE)));
+		lore.add(Component.text("Right click a teammate to ", TextUtils.RIGHT_CLICK_TO)
+			.append(Component.text("give honey", NamedTextColor.LIGHT_PURPLE))
+			.append(Component.text(" (1❤)", NamedTextColor.YELLOW)));
 		lore.add(Component.text("Right click an enemy to ", TextUtils.RIGHT_CLICK_TO).append(Component.text("pursue", NamedTextColor.RED)));
 		lore.add(Component.text("Click any bee to return to following you"));
 
@@ -106,9 +109,8 @@ public class KitBeekeeper extends Kit
 		static final float BEE_VANILLA_SPEED = 0.02f;
 
 		private static final double ABSORPTION_AMOUNT = 2d;
-		private static final double HEAL_AMOUNT = 1d;
 		private static final double BEE_ATTACK = 4.5d; // Bee raw damage power for PursueOwnerGoal
-		private static final double BEE_HEALTH = 14d; // 7 hearts
+		private static final double BEE_HEALTH = 15d; // 7.5 hearts
 		private static final int RESPAWN_TIME = 10 * 20;
 
 		private static final List<Team> GLOWING_COLOUR_TEAMS = new ArrayList<>(MAX_BEES);
@@ -171,18 +173,30 @@ public class KitBeekeeper extends Kit
 				BEE_LOOKUP.put(this.beeEntity, new BeePlayerPair(this.owner, this));
 
 				final PlayerInfo pinfo = Main.getPlayerInfo(this.owner);
+				pinfo.team.addMembers(beeEntity);
 				// Put them on the team for the glowing colour, for the owner only
 				pinfo.getScoreboard().addMembers(GLOWING_COLOUR_TEAMS.get(this.beeNum), beeEntity);
 
-				// Only the beekeeper sees their bees' name and glowing
+				// Beekeeper sees their bees' name and glowing
+				// Teammates see the bees glowing
+				// Other players see the bee's name
+				beeEntity.customName(this.owner.displayName());
+
 				Optional<?> nameComponent = Optional.of(AdventureComponentConverter.fromComponent(
 					this.name.displayName()).getHandle());
 
 				MetadataViewer viewer = pinfo.getMetadataViewer();
 				viewer.setViewedValue(MetaIndex.BASE_BITFIELD_IDX, MetaIndex.GLOWING_METADATA_VALUE, beeEntity);
-				viewer.setViewedValue(MetaIndex.CUSTOM_NAME_VISIBLE_IDX, new SimpleMetadataValue<>(Boolean.TRUE), beeEntity);
+				//viewer.setViewedValue(MetaIndex.CUSTOM_NAME_VISIBLE_IDX, new SimpleMetadataValue<>(Boolean.TRUE), beeEntity);
 				viewer.setViewedValue(MetaIndex.CUSTOM_NAME_IDX, new SimpleMetadataValue<Object>(nameComponent), beeEntity);
 				viewer.refreshViewer(beeEntity);
+
+				// Make it glowing for all teammates.
+				// Team joins/leaves/changes are handled in teamSwitch(...)
+				for (Player teammate : pinfo.team.getPlayerMembers()) {
+					Main.getPlayerInfo(teammate).getMetadataViewer()
+						.setViewedValue(MetaIndex.BASE_BITFIELD_IDX, MetaIndex.GLOWING_METADATA_VALUE, beeEntity);
+				}
 			}
 
 			void tick() {
@@ -222,6 +236,7 @@ public class KitBeekeeper extends Kit
 				builder.append(Component.space());
 				if (this.isDead()) {
 					builder.append(ACTIONBAR_DEAD);
+					builder.append(Component.text(" " + this.getSecondsToRespawn(), TextColors.ERROR_RED));
 				}
 				else {
 					builder.append(this.task.getActionBarPart());
@@ -244,6 +259,11 @@ public class KitBeekeeper extends Kit
 				return TeamArena.getGameTick() - deathTime < RESPAWN_TIME;
 			}
 
+			/** Assumes bee is dead */
+			private int getSecondsToRespawn() {
+				return (RESPAWN_TIME - (TeamArena.getGameTick() - this.deathTime)) / 20;
+			}
+
 			private void setDead(boolean killEntity) {
 				if (killEntity)
 					this.beeEntity.remove();
@@ -252,6 +272,7 @@ public class KitBeekeeper extends Kit
 				this.task = null;
 
 				PlayerInfo pinfo = Main.getPlayerInfo(this.owner);
+				pinfo.team.removeMembers(this.beeEntity);
 				pinfo.getMetadataViewer().removeViewedValues(this.beeEntity);
 				pinfo.getScoreboard().removeMembers(GLOWING_COLOUR_TEAMS.get(this.beeNum), this.beeEntity);
 
@@ -306,7 +327,7 @@ public class KitBeekeeper extends Kit
 
 		private record BeePlayerPair(Player owner, BeekeeperBee beekeeperBee) {}
 
-		private final Map<Player, BeekeeperInfo> BEEKEEPERS = new LinkedHashMap<>();
+		private static final Map<Player, BeekeeperInfo> BEEKEEPERS = new LinkedHashMap<>();
 		private static final Map<Bee, BeePlayerPair> BEE_LOOKUP = new HashMap<>();
 
 		@Override
@@ -344,12 +365,21 @@ public class KitBeekeeper extends Kit
 
 		@Override
 		public void unregisterAbility() {
-			var iter = BEE_LOOKUP.entrySet().iterator();
-			while (iter.hasNext()) {
+			var iter = BEEKEEPERS.entrySet().iterator();
+			while(iter.hasNext()) {
 				var entry = iter.next();
-				PlayerScoreboard.removeMembersAll(GLOWING_COLOUR_TEAMS.get(entry.getValue().beekeeperBee().beeNum), entry.getKey());
+				for (BeekeeperBee beekeeperBee : entry.getValue().bees) {
+					PlayerScoreboard.removeMembersAll(GLOWING_COLOUR_TEAMS.get(beekeeperBee.beeNum), entry.getKey());
+					beekeeperBee.setDead(true);
+				}
+			}
+
+			// Should not be needed
+			var lookupIter = BEE_LOOKUP.entrySet().iterator();
+			while (lookupIter.hasNext()) {
+				var entry = lookupIter.next();
 				entry.getKey().remove();
-				iter.remove();
+				lookupIter.remove();
 			}
 		}
 
@@ -406,8 +436,6 @@ public class KitBeekeeper extends Kit
 
 		private void handleRegroupItemUse(Player beekeeper, Bee clickedBee) {
 			if (clickedBee != null) {
-				// TODO: handle from-afar clicked bees
-
 				BeePlayerPair pair = BEE_LOOKUP.get(clickedBee);
 				if (pair != null) {
 					pair.beekeeperBee().setFollowing();
@@ -431,11 +459,11 @@ public class KitBeekeeper extends Kit
 										   LivingEntity clickedEntity) {
 
 			if (clickedEntity != null) {
-				if (clickedEntity instanceof Player clickedPlayer && Main.getPlayerInfo(clickedPlayer).team.hasMember(beekeeper)) {
+				if (Main.getPlayerInfo(beekeeper).team.hasMember(clickedEntity)) {
 					// Clicked teammate: give honey
 					BeekeeperBee freeBee = BEEKEEPERS.get(beekeeper).getNextAvailableBee();
 					if (freeBee != null) {
-						freeBee.setTask(new DeliverHoneyTask(freeBee.beeEntity, clickedPlayer));
+						freeBee.setTask(new DeliverHoneyTask(freeBee.beeEntity, clickedEntity));
 					}
 				}
 				else {
@@ -464,7 +492,7 @@ public class KitBeekeeper extends Kit
 					// The point to defend will be the centre of the block + the vector of the clicked block face.
 					// So actually the block connected to the face of the clickedBlock
 					Location locToDefend = clickedBlock.getLocation().add(0.5d, 0.5d, 0.5d).add(clickedBlockFace.getDirection());
-					bee.setTask(new DefendPointTask(bee.beeEntity, beekeeper, locToDefend));
+					bee.setTask(DefendPointTask.newInstance(bee.beeEntity, beekeeper, locToDefend));
 				}
 			}
 		}
@@ -511,15 +539,6 @@ public class KitBeekeeper extends Kit
 		}
 
 		static void beeHeal(Bee bee, LivingEntity target) {
-			if (target instanceof Player playerTarget) {
-				PlayerUtils.heal(playerTarget, HEAL_AMOUNT, EntityRegainHealthEvent.RegainReason.CUSTOM);
-			}
-			else {
-				double newHealth = target.getHealth() + HEAL_AMOUNT;
-				newHealth = Math.min(newHealth, target.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
-				target.setHealth(newHealth);
-			}
-
 			// Don't heal beyond 2 absorption hearts
 			final double targetAbsorp = target.getAbsorptionAmount();
 			if (targetAbsorp < 4d) {
@@ -529,6 +548,33 @@ public class KitBeekeeper extends Kit
 			// Play visual and sound effects
 			bee.getWorld().spawnParticle(Particle.FALLING_HONEY, target.getLocation(), 3);
 			bee.getWorld().playSound(bee, Sound.ENTITY_BEE_POLLINATE, 1.1f, 1.1f);
+		}
+
+		public static void teamSwitch(Player player, TeamArenaTeam oldTeam, TeamArenaTeam newTeam) {
+			final PlayerInfo pinfo = Main.getPlayerInfo(player);
+			final MetadataViewer metadataViewer = pinfo.getMetadataViewer();
+			for (var entry : BEEKEEPERS.entrySet()) {
+				// First remove old team glowings
+				Player beekeeper = entry.getKey();
+				if (beekeeper != player && oldTeam.hasMember(beekeeper)) {
+					for (BeekeeperBee bee : entry.getValue().bees) {
+						if (bee.beeEntity != null) {
+							metadataViewer.removeViewedValues(bee.beeEntity);
+							metadataViewer.refreshViewer(bee.beeEntity);
+						}
+					}
+				}
+
+				if (newTeam.getPlayerMembers().contains(entry.getKey())) {
+					for (BeekeeperBee bee : entry.getValue().bees) {
+						if (!bee.isDead()) {
+							metadataViewer.setViewedValue(MetaIndex.BASE_BITFIELD_IDX, MetaIndex.GLOWING_METADATA_VALUE,
+								bee.beeEntity);
+							metadataViewer.refreshViewer(bee.beeEntity);
+						}
+					}
+				}
+			}
 		}
 	}
 }

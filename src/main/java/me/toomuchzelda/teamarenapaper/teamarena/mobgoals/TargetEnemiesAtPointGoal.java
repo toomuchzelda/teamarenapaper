@@ -63,6 +63,10 @@ public class TargetEnemiesAtPointGoal<T> implements Goal
 		this.walkToLoc = false;
 	}
 
+	public boolean hasTarget() {
+		return this.closestPlayer != null;
+	}
+
 	@Override
 	public boolean shouldActivate() {
 		Player closestCandidate = getClosestPlayer();

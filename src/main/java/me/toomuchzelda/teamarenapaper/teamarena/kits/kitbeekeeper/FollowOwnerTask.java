@@ -60,7 +60,7 @@ public class FollowOwnerTask extends BeeTask
 			loc = beeOwner.getLocation();
 		}
 
-		return loc; // TODO improve positioning for visual effect
+		return loc;
 	}
 
 	@Override
@@ -107,6 +107,7 @@ public class FollowOwnerTask extends BeeTask
 		@Override
 		public void start() {
 			moveToPosition();
+			this.bee.setAnger(0);
 		}
 
 		@Override

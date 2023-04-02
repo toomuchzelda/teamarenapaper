@@ -26,15 +26,32 @@ public class DefendPointTask extends BeeTask
 	private static final double MAX_DISTANCE_SQR = 15 * 15;
 	private static final double MIN_DISTANCE_SQR = 0.5d * 0.5d;
 
-	private static final Component ACTIONBAR_DEFEND = Component.text("Defend", NamedTextColor.BLUE);
+	private static final Component ACTIONBAR_DEFEND = Component.text("Defend", NamedTextColor.BLUE)
+		.append(Component.text("✔", NamedTextColor.GREEN));
 
-	public DefendPointTask(Bee beeEntity, Player owner, Location loc) {
-		super(beeEntity, new DefendPointGoal(Main.getPlugin(), owner, loc, beeEntity, SWITCH_TARGET_CD, MAX_DISTANCE_SQR, MIN_DISTANCE_SQR));
+	private static final Component ACTIONBAR_DEFEND_TARGET = Component.text("Defend", NamedTextColor.BLUE)
+		.append(Component.text("‼", NamedTextColor.RED));
+
+	private final DefendPointGoal goal;
+
+	private DefendPointTask(Bee beeEntity, DefendPointGoal goal) {
+		super(beeEntity, goal);
+		this.goal = goal;
+	}
+
+	public static DefendPointTask newInstance(Bee beeEntity, Player owner, Location loc) {
+		DefendPointGoal goal = new DefendPointGoal(Main.getPlugin(), owner, loc, beeEntity, SWITCH_TARGET_CD, MAX_DISTANCE_SQR, MIN_DISTANCE_SQR);
+		return new DefendPointTask(beeEntity, goal);
 	}
 
 	@Override
 	Component getActionBarPart() {
-		return ACTIONBAR_DEFEND;
+		if (goal.hasTarget()) {
+			return ACTIONBAR_DEFEND_TARGET;
+		}
+		else {
+			return ACTIONBAR_DEFEND;
+		}
 	}
 
 	private static class DefendPointGoal extends TargetEnemiesAtPointGoal {

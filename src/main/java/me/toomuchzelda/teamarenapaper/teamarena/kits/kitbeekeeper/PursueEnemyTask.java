@@ -15,19 +15,17 @@ import org.jetbrains.annotations.NotNull;
 import java.util.EnumSet;
 
 public class PursueEnemyTask extends BeeTask {
-	private PursueEnemyGoal goal;
+	private final PursueEnemyGoal goal;
 
 	private PursueEnemyTask(Bee beeEntity, PursueEnemyGoal goal) {
 		super(beeEntity, goal);
+		this.goal = goal;
 	}
 
 	// Wrap the constructor so I can keep a reference to the PursueEnemyGoal here.
 	public static PursueEnemyTask newInstance(Bee beeEntity, LivingEntity target) {
 		PursueEnemyGoal goal = new PursueEnemyGoal(beeEntity, target);
-		PursueEnemyTask task = new PursueEnemyTask(beeEntity, goal);
-		task.goal = goal;
-
-		return task;
+		return new PursueEnemyTask(beeEntity, goal);
 	}
 
 	@Override

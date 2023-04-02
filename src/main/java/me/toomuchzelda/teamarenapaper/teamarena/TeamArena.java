@@ -1389,6 +1389,7 @@ public abstract class TeamArena
 		}
 
 		KitDemolitions.DemolitionsAbility.teamSwitch(player, oldTeam, newTeam);
+		KitBeekeeper.BeekeeperAbility.teamSwitch(player, oldTeam, newTeam);
 	}
 
 	//switch a player between spectator and player
