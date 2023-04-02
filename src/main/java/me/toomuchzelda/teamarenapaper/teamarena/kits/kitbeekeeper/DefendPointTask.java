@@ -27,10 +27,10 @@ public class DefendPointTask extends BeeTask
 	private static final double MIN_DISTANCE_SQR = 0.5d * 0.5d;
 
 	private static final Component ACTIONBAR_DEFEND = Component.text("Defend", NamedTextColor.BLUE)
-		.append(Component.text("✔", NamedTextColor.GREEN));
+		.append(Component.text(" ✔", NamedTextColor.GREEN));
 
 	private static final Component ACTIONBAR_DEFEND_TARGET = Component.text("Defend", NamedTextColor.BLUE)
-		.append(Component.text("‼", NamedTextColor.RED));
+		.append(Component.text(" ‼", NamedTextColor.RED));
 
 	private final DefendPointGoal goal;
 

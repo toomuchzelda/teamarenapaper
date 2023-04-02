@@ -7,6 +7,7 @@ import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -207,7 +208,7 @@ public class MetadataViewer
 						if(!status.dirty) {
 							statusIter.remove();
 						}
-						else {
+						else if (!EntityUtils.isTrackingEntity(this.player, entry.getValue().entity())) {
 							Main.logger().warning("MetadataViewer cleanup found null MetadataValue in " +
 									"MetadataValueStatus that was dirty. viewer:" + this.player.getName() +
 									", index:" + statusEntry.getKey() + ", viewed entity:" +

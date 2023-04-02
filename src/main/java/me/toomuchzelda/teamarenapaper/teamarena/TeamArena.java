@@ -2030,7 +2030,7 @@ public abstract class TeamArena
 		if(medic == target)
 			return false;
 
-		if (target instanceof Player pTarget && !Main.getPlayerInfo(pTarget).team.getPlayerMembers().contains(medic)) {
+		if (!Main.getPlayerInfo(medic).team.hasMember(target)) {
 			return false;
 		}
 

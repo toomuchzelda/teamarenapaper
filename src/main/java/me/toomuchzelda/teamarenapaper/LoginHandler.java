@@ -88,7 +88,7 @@ public class LoginHandler
 				throw new IllegalStateException("DBGetPreferences returned null pref map.");
 			}
 		}
-		catch (SQLException | IllegalStateException e) {
+		catch (SQLException | IllegalStateException | IllegalArgumentException e) {
 			event.setLoginResult(AsyncPlayerPreLoginEvent.Result.KICK_OTHER);
 			event.kickMessage(Component.text("Could not retrieve preferences! Run for your life!!!", MathUtils.randomTextColor()));
 			if (e instanceof IllegalStateException) { // SQLException message and stack trace will be printed already by DBOperation

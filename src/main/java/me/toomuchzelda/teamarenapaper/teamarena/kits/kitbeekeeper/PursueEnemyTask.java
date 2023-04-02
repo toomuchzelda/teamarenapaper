@@ -5,11 +5,13 @@ import com.destroystokyo.paper.entity.ai.GoalKey;
 import com.destroystokyo.paper.entity.ai.GoalType;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Bee;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.EnumSet;
@@ -40,20 +42,33 @@ public class PursueEnemyTask extends BeeTask {
 		private static final GoalKey<Bee> KEY = GoalKey.of(Bee.class, new NamespacedKey(Main.getPlugin(), "beekeeper_pursue_enemy"));
 		/** Amount of time the bee should pursue the target */
 		private static final int PURSUE_TIME = 15 * 20;
+		/** Will only pursue ghosts for 2 seconds */
+		private static final int INVIS_PURSUE_TIME = 2 * 20;
 
 		private final Bee bee;
 		private final LivingEntity target;
 		private final int startTime;
+		private final int pursueTime;
 
 		public PursueEnemyGoal(Bee bee, LivingEntity target) {
 			this.bee = bee;
 			this.target = target;
 			this.startTime = TeamArena.getGameTick();
+
+			// Temp variable: use INVIS_PURSUE_TIME if target is invis kit.
+			int pTime = PURSUE_TIME;
+			if (this.target instanceof Player playerTarget && !Main.getGame().isDead(this.target)) {
+				Kit targetKit = Kit.getActiveKit(playerTarget);
+				if (targetKit.isInvisKit()) {
+					pTime = INVIS_PURSUE_TIME;
+				}
+			}
+			this.pursueTime = pTime;
 		}
 
 		@Override
 		public boolean shouldActivate() {
-			return TeamArena.getGameTick() - this.startTime < PURSUE_TIME && !Main.getGame().isDead(this.target);
+			return TeamArena.getGameTick() - this.startTime < this.pursueTime && !Main.getGame().isDead(this.target);
 		}
 
 		@Override
