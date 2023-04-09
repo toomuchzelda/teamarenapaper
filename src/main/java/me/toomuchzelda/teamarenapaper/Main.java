@@ -20,6 +20,7 @@ import org.bukkit.command.CommandMap;
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.spigotmc.SpigotConfig;
 
 import java.util.*;
 import java.util.logging.Logger;
@@ -45,6 +46,9 @@ public final class Main extends JavaPlugin
 		logger = this.getLogger();
 		componentLogger = this.getComponentLogger();
 		logger.info("Starting TMA");
+
+		SpigotConfig.logNamedDeaths = false;
+		SpigotConfig.logVillagerDeaths = false;
 
 		// load important classes
 		Preferences.registerPreferences();

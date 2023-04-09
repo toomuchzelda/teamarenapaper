@@ -134,6 +134,10 @@ public class EntityUtils {
 		return new ClientboundRemoveEntitiesPacket(ints);
 	}
 
+	public static void setFlySpeed(LivingEntity living, float flySpeed) {
+		((CraftLivingEntity) living).getHandle().flyingSpeed = flySpeed;
+	}
+
 	/**
 	 * set velocity fields and send the packet immediately instead of waiting for next tick if it's a player
 	 */
@@ -306,5 +310,16 @@ public class EntityUtils {
 
 	public static boolean isTrackingEntity(Player viewer, Entity viewedEntity) {
 		return getTrackedPlayers0(viewedEntity).contains(((CraftPlayer) viewer).getHandle().connection);
+	}
+
+	/**
+	 * Get the distance squared between two entities.
+	 * In addition to convenience, this method doesn't allocate two Location objects.
+	 */
+	public static double distanceSqr(Entity one, Entity two) {
+		Vec3 posOne = ((CraftEntity) one).getHandle().position();
+		Vec3 posTwo = ((CraftEntity) two).getHandle().position();
+
+		return posOne.distanceToSqr(posTwo);
 	}
 }

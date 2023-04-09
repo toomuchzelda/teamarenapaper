@@ -101,7 +101,10 @@ public class KitVenom extends Kit {
 		}
 
 		//When Poison is applied
-		public void applyPoison(LivingEntity victim, @Nullable Entity giver){
+		public void applyPoison(LivingEntity victim, Player giver){
+			if (Main.getPlayerInfo(giver).team.hasMember(victim)) // Don't poison allies.
+				return;
+
 			int poisonDuration = 0;
 			boolean hadPoison = false;
 
@@ -178,21 +181,22 @@ public class KitVenom extends Kit {
 										if (entity instanceof LivingEntity && !leapVictims.contains(entity) && !(entity.getType().equals(EntityType.ARMOR_STAND))) {
 											//Applying DMG + Sounds
 											LivingEntity victim = (LivingEntity) entity;
-											int newCooldown = player.getCooldown(Material.CHICKEN) - 6 * 20;
+											int newCooldown = player.getCooldown(Material.CHICKEN);
+											if (victim instanceof Player) {
+												newCooldown -= 6 * 20;
+											}
 											if (newCooldown <= 0) {
 												newCooldown = 0;
 												player.stopSound(Sound.BLOCK_CONDUIT_ACTIVATE);
 												player.playSound(player, Sound.BLOCK_CONDUIT_ACTIVATE, 1, 1.5f);
 											}
-											//victim.damage(2, player);
-											DamageEvent.newDamageEvent(victim ,2, DamageType.TOXIC_LEAP, player, false);
+											DamageEvent.newDamageEvent(victim , 2, DamageType.TOXIC_LEAP, player, false);
 
 											player.stopSound(Sound.ENTITY_ILLUSIONER_MIRROR_MOVE);
 											player.playSound(player, Sound.ENTITY_ILLUSIONER_MIRROR_MOVE, 1, 1.2f);
 											player.setCooldown(Material.CHICKEN, newCooldown);
 
 											player.setCooldown(Material.COOKED_CHICKEN, 0);
-
 
 											//Applying Poison, tracking the poisoned entity
 											applyPoison(victim, player);

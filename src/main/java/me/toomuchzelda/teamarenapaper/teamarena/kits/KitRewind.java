@@ -359,7 +359,7 @@ public class KitRewind extends Kit {
 				player.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 150, 1));
 			} else if (elapsedTick < 10 * 20) {
 				//Time Dilation: Gives nearby enemies Slow 3 + No Jump for 3 seconds
-				List<Entity> affectedEnemies = player.getNearbyEntities(6, 6, 6);
+				List<Entity> affectedEnemies = player.getNearbyEntities(4, 4, 4);
 				for (Entity entity : affectedEnemies) {
 					if (entity instanceof LivingEntity victim) {
 						if (victim instanceof ArmorStand stand && stand.isMarker()) continue;

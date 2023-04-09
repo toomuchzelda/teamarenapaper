@@ -110,8 +110,11 @@ public abstract class DemoMine
 	void removeEntities() {
 		glowingTeam.removeEntities(stands);
 		PlayerScoreboard.removeMembersAll(glowingTeam, stands);
-		if(glowing) {
+		if (!glowing) {
 			PlayerScoreboard.removeMembersAll(this.ownerGlowingTeam, stands);
+		}
+		else {
+			PlayerScoreboard.removeMembersAll(BLUE_GLOWING_TEAM, stands);
 		}
 
 		for(ArmorStand stand : stands) {
@@ -129,19 +132,20 @@ public abstract class DemoMine
 	boolean hurt() {
 		this.damage++;
 		World world = this.hitboxEntity.getWorld();
+		Location loc = hitboxEntity.getLocation();
 		for(int i = 0; i < 3; i++) {
-			world.playSound(hitboxEntity.getLocation(), Sound.BLOCK_GRASS_HIT, 1f, 0.5f);
-			world.spawnParticle(Particle.CLOUD, hitboxEntity.getLocation().add(0d, 0.2d, 0d), 1,
+			world.playSound(loc, Sound.BLOCK_GRASS_HIT, 1f, 0.5f);
+			world.spawnParticle(Particle.CLOUD, loc.clone().add(0d, 0.2d, 0d), 1,
 					0.2d, 0.2d, 0.2d, 0.02d);
 		}
 
 		if(this.damage >= type.damageToKill) {
 			// game command: /particle minecraft:cloud ~3 ~0.2 ~ 0.2 0.2 0.2 0.02 3 normal
-			world.spawnParticle(Particle.CLOUD, hitboxEntity.getLocation().add(0d, 0.2d, 0d), 3,
+			world.spawnParticle(Particle.CLOUD, loc.clone().add(0d, 0.2d, 0d), 3,
 					0.2d, 0.2d, 0.2d, 0.02d);
-			world.playSound(hitboxEntity.getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 1.5f, 1f);
-			world.playSound(hitboxEntity.getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 1.5f, 1.3f);
-			world.playSound(hitboxEntity.getLocation(), Sound.BLOCK_STONE_BREAK, 1.5f, 1f);
+			world.playSound(loc, Sound.BLOCK_FIRE_EXTINGUISH, 1.5f, 1f);
+			world.playSound(loc, Sound.BLOCK_FIRE_EXTINGUISH, 1.5f, 1.3f);
+			world.playSound(loc, Sound.BLOCK_STONE_BREAK, 1.5f, 1f);
 			this.removeNextTick = true;
 			return true;
 		}

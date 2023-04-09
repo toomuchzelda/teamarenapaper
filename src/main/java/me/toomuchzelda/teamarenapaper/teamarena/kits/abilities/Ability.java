@@ -106,7 +106,7 @@ public abstract class Ability {
 	public void onTick() {}
 
 	/**
-	 * when the player receieves a cooldown on any of their items (e.g enderpearl after throwing)
+	 * when the player receives a cooldown on any of their items (e.g enderpearl after throwing)
 	 */
 	public void onItemCooldown(PlayerItemCooldownEvent event) {}
 
