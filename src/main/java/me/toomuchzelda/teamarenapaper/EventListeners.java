@@ -175,7 +175,7 @@ public class EventListeners implements Listener
 		}
 
 		//every 2 minutes
-		int count = event.getTickNumber() % (2 * 60  *20);
+		int count = event.getTickNumber() % (2 * 60 * 20);
 		if(count == 0) {
 			for(PlayerInfo pinfo : Main.getPlayerInfos()) {
 				pinfo.getMetadataViewer().cleanUp();

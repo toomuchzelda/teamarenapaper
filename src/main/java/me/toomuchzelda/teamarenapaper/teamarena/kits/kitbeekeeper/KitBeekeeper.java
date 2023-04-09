@@ -15,6 +15,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
@@ -96,10 +97,12 @@ public class KitBeekeeper extends Kit
 		boots.addEnchantment(Enchantment.PROTECTION_ENVIRONMENTAL, 1);
 
 		this.setArmor(helmet, new ItemStack(Material.GOLDEN_CHESTPLATE), new ItemStack(Material.GOLDEN_LEGGINGS), boots);
-		ItemStack sword = ItemBuilder.of(Material.WOODEN_SWORD).displayName(Component.text("Honey dipper")).build();
+		ItemStack sword = ItemBuilder.of(Material.WOODEN_SHOVEL).displayName(Component.text("Honey dipper"))
+			.enchant(Enchantment.DAMAGE_ALL, 1).build();
 		this.setItems(sword, BEE_WAND, REGROUP_ITEM);
 
 		this.setAbilities(new BeekeeperAbility());
+		this.setCategory(KitCategory.UTILITY);
 	}
 
 	public static class BeekeeperAbility extends Ability {
@@ -556,7 +559,7 @@ public class KitBeekeeper extends Kit
 			for (var entry : BEEKEEPERS.entrySet()) {
 				// First remove old team glowings
 				Player beekeeper = entry.getKey();
-				if (beekeeper != player && oldTeam.hasMember(beekeeper)) {
+				if (beekeeper != player && oldTeam != null && oldTeam.hasMember(beekeeper)) {
 					for (BeekeeperBee bee : entry.getValue().bees) {
 						if (bee.beeEntity != null) {
 							metadataViewer.removeViewedValues(bee.beeEntity);

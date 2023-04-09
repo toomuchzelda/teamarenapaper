@@ -210,9 +210,10 @@ public class MetadataViewer
 						}
 						else if (!EntityUtils.isTrackingEntity(this.player, entry.getValue().entity())) {
 							Main.logger().warning("MetadataViewer cleanup found null MetadataValue in " +
-									"MetadataValueStatus that was dirty. viewer:" + this.player.getName() +
+									"MetadataValueStatus that was dirty, and viewed entity wasn't being tracked by viewer." +
+									" viewer:" + this.player.getName() +
 									", index:" + statusEntry.getKey() + ", viewed entity:" +
-									entry.getValue().entity().getName());
+									entry.getValue().entity().getType() + entry.getValue().entity().getName());
 						}
 					}
 				}
