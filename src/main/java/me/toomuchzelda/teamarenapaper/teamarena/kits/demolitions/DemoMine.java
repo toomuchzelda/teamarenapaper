@@ -47,6 +47,8 @@ public abstract class DemoMine extends EntityBuilding implements PreviewableBuil
 
 	MineType type;
 
+	private final Set<Player> outlineViewers = new HashSet<>();
+
 	private static Location blockToLocation(Block block) {
 		Location blockLoc = block.getLocation();
 		double topOfBlock = BlockUtils.getBlockHeight(block);
@@ -114,7 +116,6 @@ public abstract class DemoMine extends EntityBuilding implements PreviewableBuil
 		}
 	}
 
-	private final Set<Player> outlineViewers = new HashSet<>();
 	protected void tickViewers() {
 		Set<Player> canSee = Bukkit.getOnlinePlayers().stream()
 			.filter(player -> BuildingOutlineManager.shouldSeeOutline(this, player))
