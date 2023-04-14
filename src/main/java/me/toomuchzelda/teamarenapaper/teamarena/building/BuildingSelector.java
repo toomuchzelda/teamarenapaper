@@ -62,12 +62,6 @@ public class BuildingSelector {
 	public Predicate<Building> selectableFilter;
 
 	/**
-	 * The color of building outlines.
-	 */
-	@Nullable
-	@Deprecated
-	public NamedTextColor outlineColor = null;
-	/**
 	 * The color of the selected building's outline.
 	 */
 	@Nullable
@@ -213,10 +207,12 @@ public class BuildingSelector {
 			}
 		}
 
-
+		// not a valid item
 		if (actions == null) {
 			// despawn all outlines
 			buildingOutlines.values().forEach(BuildingOutline::despawn);
+			// properly clean up selected outline
+			cleanUpSelected();
 			// remove previews
 			for (var clazz : new ArrayList<>(buildingPreviews.keySet())) {
 				// noinspection rawtypes,unchecked
@@ -296,8 +292,8 @@ public class BuildingSelector {
 		}
 		// don't select when a preview is active
 		if (selectableBuildings.size() == 0 || buildingPreviews.size() != 0) {
-			selected = null;
-			lastSelected = null;
+			// properly clean up selected outline
+			cleanUpSelected();
 			return;
 		}
 		Vector playerDir = playerLoc.getDirection();
@@ -330,6 +326,14 @@ public class BuildingSelector {
 				outline.setEnlarged(isSelected);
 			}
 		}
+	}
+
+	private void cleanUpSelected() {
+		if (selected != null) {
+			buildingOutlines.get(selected).setOutlineColor(selected.getOutlineColor());
+		}
+		selected = null;
+		lastSelected = null;
 	}
 
 	public void cleanUp() {
