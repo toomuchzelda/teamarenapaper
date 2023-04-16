@@ -149,4 +149,8 @@ public class MathUtils
 
 		return vec;
 	}
+
+	public static float easeOutCubic(float t) {
+		return 1 - (float) Math.pow(1 - t, 3);
+	}
 }

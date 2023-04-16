@@ -6,6 +6,7 @@ import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.GlowUtils;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
@@ -66,14 +67,14 @@ public sealed class BuildingOutline extends PacketEntity {
 			Location eyeLocation = viewers.get(0).getEyeLocation();
 
 			// also updates the spawn packet
-			move(ensureOutlineVisible(eyeLocation, location, offset));
+			move(ensureOutlineVisible(eyeLocation, location, offset, 1));
 		}
 	}
 
 	private void initHolograms() {
 		var viewer = getRealViewers().iterator().next();
 		Location eyeLocation = viewer.getEyeLocation();
-		Location nameLoc = ensureTextVisible(eyeLocation, location, offset);
+		Location nameLoc = ensureTextVisible(eyeLocation, location, offset, enlarged ? 0.75f : 1);
 		nameHologram = new PacketHologram(nameLoc, viewers, null, Component.empty());
 		statusHologram = new PacketHologram(nameLoc.clone().subtract(NAME_OFFSET).add(STATUS_OFFSET), viewers, null, Component.empty());
 	}
@@ -117,6 +118,10 @@ public sealed class BuildingOutline extends PacketEntity {
 	}
 
 	protected void updateOutline() {
+		// the glowing packet is sent on spawn
+		// so don't send glowing packets when despawned
+		if (!isAlive())
+			return;
 		List<String> entries = new ArrayList<>();
 		appendScoreboardEntries(entries);
 		GlowUtils.setPacketGlowing(getRealViewers(), entries, outlineColor != null ? NamedTextColor.nearestTo(outlineColor) : null);
@@ -180,24 +185,10 @@ public sealed class BuildingOutline extends PacketEntity {
 	}
 
 	public static final double MAX_DISTANCE = 16;
-	protected Location ensureOutlineVisible(Location eyeLocation, Location buildingLocation, Location offset) {
-		// TODO use BlockDisplay scale for 1.19.4
-		double distance;
-		int now = TeamArena.getGameTick();
-		if (now <= interpolationEnd) {
-			double scale;
-			if (enlarged) {
-				// 1 downto 0.75 (effective max dist: 16 -> 12)
-				scale = 1 - 0.25 * (double) (now - interpolationStart) / INTERPOLATION_PERIOD;
-			} else {
-				// 0.75 to 1 (effective max dist: 12 -> 16)
-				scale = 0.75 + 0.25 * (double) (now - interpolationStart) / INTERPOLATION_PERIOD;
-			}
-			distance = MAX_DISTANCE * scale;
-		} else {
-			distance = MAX_DISTANCE * (enlarged ? 0.75 : 1);
-		}
 
+	protected Location ensureOutlineVisible(Location eyeLocation, Location buildingLocation, Location offset, float distanceScale) {
+		// TODO use BlockDisplay scale for 1.19.4
+		double distance = MAX_DISTANCE * distanceScale;
 		if (dynamicLocation && eyeLocation.distanceSquared(buildingLocation) > distance * distance) {
 			// move it closer
 			Vector direction = buildingLocation.clone().subtract(eyeLocation).toVector().normalize();
@@ -208,29 +199,43 @@ public sealed class BuildingOutline extends PacketEntity {
 	}
 
 	public static final double TEXT_MAX_DISTANCE = 6;
-	protected Location ensureTextVisible(Location eyeLocation, Location buildingLocation, Location offset) {
+	protected Location ensureTextVisible(Location eyeLocation, Location buildingLocation, Location offset, float distanceScale) {
 		if (!dynamicLocation)
 			return buildingLocation.clone().add(offset).add(NAME_OFFSET);
 		Vector textDirection = buildingLocation.clone().add(offset).add(NAME_OFFSET).subtract(eyeLocation)
 			.toVector().normalize();
 		World world = eyeLocation.getWorld();
-		var result = world.rayTraceBlocks(eyeLocation, textDirection, TEXT_MAX_DISTANCE, FluidCollisionMode.ALWAYS, false);
+		double maxDistance = TEXT_MAX_DISTANCE * distanceScale;
+		var result = world.rayTraceBlocks(eyeLocation, textDirection, maxDistance, FluidCollisionMode.ALWAYS, false);
 		Location hit;
 		if (result != null) {
 			hit = result.getHitPosition().subtract(textDirection).toLocation(world);
 		} else {
-			hit = eyeLocation.clone().add(textDirection.multiply(TEXT_MAX_DISTANCE));
+			hit = eyeLocation.clone().add(textDirection.multiply(maxDistance));
 		}
 		return hit;
 	}
 
 	public void update(Location eyeLocation, Location buildingLocation) {
+		float scale;
+		int now = TeamArena.getGameTick();
+		if (now <= interpolationEnd) {
+			float time = (float) (now - interpolationStart) / INTERPOLATION_PERIOD;
+			float size = MathUtils.easeOutCubic(time);
+			if (enlarged) { // 1 downto 0.75 (effective max dist: 16 -> 12)
+				scale = 1 - 0.25f * size;
+			} else { // 0.75 to 1 (effective max dist: 12 -> 16)
+				scale = 0.75f + 0.25f * size;
+			}
+		} else {
+			scale = (enlarged ? 0.75f : 1);
+		}
 		if (dynamicLocation)
-			move(ensureOutlineVisible(eyeLocation, buildingLocation, offset));
+			move(ensureOutlineVisible(eyeLocation, buildingLocation, offset, scale));
 		if (nameHologram == null || nameHologram.getText() == null)
 			return;
 		// ensure holograms are always visible
-		Location hit = ensureTextVisible(eyeLocation, buildingLocation, offset);
+		Location hit = ensureTextVisible(eyeLocation, buildingLocation, offset, scale);
 		nameHologram.move(hit);
 		statusHologram.move(hit.clone().subtract(NAME_OFFSET).add(STATUS_OFFSET));
 	}
