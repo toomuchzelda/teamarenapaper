@@ -1,7 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import org.bukkit.craftbukkit.v1_19_R2.entity.CraftArrow;
+import org.bukkit.craftbukkit.v1_19_R3.entity.CraftArrow;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.Entity;
 import org.bukkit.util.Vector;

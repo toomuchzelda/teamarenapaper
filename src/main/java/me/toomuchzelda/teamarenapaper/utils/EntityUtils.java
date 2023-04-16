@@ -23,11 +23,11 @@ import org.bukkit.SoundCategory;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
-import org.bukkit.craftbukkit.v1_19_R2.CraftSound;
-import org.bukkit.craftbukkit.v1_19_R2.entity.CraftEntity;
-import org.bukkit.craftbukkit.v1_19_R2.entity.CraftLivingEntity;
-import org.bukkit.craftbukkit.v1_19_R2.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_19_R2.util.CraftVector;
+import org.bukkit.craftbukkit.v1_19_R3.CraftSound;
+import org.bukkit.craftbukkit.v1_19_R3.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_19_R3.entity.CraftLivingEntity;
+import org.bukkit.craftbukkit.v1_19_R3.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_19_R3.util.CraftVector;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -40,7 +40,8 @@ import java.util.Iterator;
 import java.util.Set;
 
 public class EntityUtils {
-    public static final double VANILLA_PROJECTILE_SPRAY = 0.0075d;
+
+
 
     public static void cacheReflection() {
 	}
@@ -194,6 +195,7 @@ public class EntityUtils {
      */
     public static void playHurtAnimation(LivingEntity entity, DamageType damageType, boolean deathSound) {
         net.minecraft.world.entity.LivingEntity nmsLivingEntity = ((CraftLivingEntity) entity).getHandle();
+		// TODO this method may no longer be entirely needed.
         ClientboundAnimatePacket packet = new ClientboundAnimatePacket(nmsLivingEntity, ClientboundAnimatePacket.HURT);
 
         //get and construct sound
