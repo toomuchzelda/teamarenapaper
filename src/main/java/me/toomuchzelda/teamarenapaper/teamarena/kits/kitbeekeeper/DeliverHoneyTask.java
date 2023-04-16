@@ -9,6 +9,7 @@ import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.NamespacedKey;
+import org.bukkit.craftbukkit.v1_19_R3.entity.CraftBee;
 import org.bukkit.entity.Bee;
 import org.bukkit.entity.LivingEntity;
 import org.jetbrains.annotations.NotNull;
