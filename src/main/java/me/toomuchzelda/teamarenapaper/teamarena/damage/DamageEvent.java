@@ -7,13 +7,18 @@ import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import net.minecraft.network.protocol.game.ClientboundDamageEventPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
+import net.minecraft.server.network.ServerPlayerConnection;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.craftbukkit.v1_19_R3.CraftSound;
 import org.bukkit.craftbukkit.v1_19_R3.entity.CraftEntity;
 import org.bukkit.craftbukkit.v1_19_R3.entity.CraftLivingEntity;
 import org.bukkit.craftbukkit.v1_19_R3.entity.CraftPlayer;
@@ -379,7 +384,7 @@ public class DamageEvent {
 			LivingEntity living = (LivingEntity) victim;
 
 			net.minecraft.world.entity.LivingEntity nmsLiving = ((CraftLivingEntity) living).getHandle();
-			nmsLiving.animationSpeed = 1.5f;
+			nmsLiving.walkAnimation.setSpeed(1.5f);
 
 			DamageTimes.TrackedDamageTypes trackedType = damageType.getTrackedType();
 			DamageTimes.DamageTime dTimes = DamageTimes.getDamageTime(living, trackedType);
@@ -486,8 +491,10 @@ public class DamageEvent {
 				living.setLastDamage(finalDamage);
 
 				if(doHurtEffect) {
-					EntityUtils.playHurtAnimation(living, damageType, isDeath);
-					if (isDeath && living instanceof Player) { // Additional custom death sound for players
+					this.playHurtAnimation(isDeath);
+					// Additional custom death sound for players
+					// This should be in TeamArena.
+					if (isDeath && living instanceof Player) {
 						living.getWorld().playSound(living.getLocation(), Sound.ENTITY_RABBIT_DEATH, 0.9f, 1f);
 					}
 				}
@@ -508,12 +515,6 @@ public class DamageEvent {
 			else if (attacker instanceof Bee && damageType.isMelee()) {
 				living.setBeeStingersInBody(living.getBeeStingersInBody() + 1);
 				Bukkit.broadcastMessage("Added bee stinger");
-			}
-
-			//need to send this packet for the hearts to flash white when lost, otherwise they just decrease with no
-			// effect
-			if (victim instanceof Player player && Main.getPlayerInfo(player).getPreference(Preferences.HEARTS_FLASH_DAMAGE)) {
-				PlayerUtils.sendHealth(player);
 			}
 		}
 		net.minecraft.world.entity.Entity nmsEntity = ((CraftEntity) victim).getHandle();
@@ -614,6 +615,67 @@ public class DamageEvent {
 
 	private void updateNDT(DamageTimes.DamageTime dTime) {
 		dTime.update(getFinalAttacker(), dTime.getTimeGiven(), TeamArena.getGameTick(), this.finalDamage, this.damageType);
+	}
+
+	/**
+	 * Play entity hurt animation and sound.
+	 */
+	private void playHurtAnimation(final boolean isDeath) {
+		if (!(this.victim instanceof LivingEntity livingVictim))
+			return;
+
+		net.minecraft.world.entity.LivingEntity nmsVictim = ((CraftLivingEntity) this.victim).getHandle();
+		DamageSource source = this.damageType.getDamageSource();
+		ClientboundDamageEventPacket damageEventPacket = new ClientboundDamageEventPacket(nmsVictim, source);
+
+		Sound sound;
+		if (!livingVictim.isSilent()) {
+			if (isDeath)
+				sound = livingVictim.getDeathSound();
+			else {
+				SoundEvent nmsSound = nmsVictim.getHurtSound0(source);
+				sound = CraftSound.getBukkit(nmsSound);
+			}
+		}
+		else {
+			sound = null;
+		}
+
+		if (livingVictim instanceof Player playerVictim) { // send to self if player
+			// Update the player's damage tilt yaw first, and then send damage event packet.
+			DamageTiltType tiltType = Main.getPlayerInfo(playerVictim).getPreference(Preferences.DIRECTIONAL_DAMAGE_TILT);
+			if (tiltType != DamageTiltType.NONE && this.hasKnockback()) {
+				Vector kb = this.getKnockback().clone();
+				kb.setY(0).normalize();
+
+				((CraftPlayer) playerVictim).getHandle().indicateDamage(-kb.getX(), -kb.getZ());
+			}
+			else if (tiltType == DamageTiltType.ALL) {
+				PlayerUtils.syncHurtDirection(playerVictim);
+			}
+			// Need to send hurt direction to client else it will play with the same direction as last damage event
+			// Also covers preference changes
+			else if (playerVictim.getHurtDirection() != 0f) {
+				PlayerUtils.setAndSyncHurtDirection(playerVictim, 0f);
+			}
+
+			PlayerUtils.sendPacket(playerVictim, damageEventPacket);
+		}
+
+		for (ServerPlayerConnection connection : EntityUtils.getTrackedPlayers0(livingVictim)) {
+			connection.send(damageEventPacket);
+			// Other players also need to have the sound played to them
+			if (sound != null)
+				((Player) connection.getPlayer().getBukkitEntity()).playSound(victim, sound, nmsVictim.getSoundVolume(),
+					nmsVictim.getVoicePitch());
+		}
+	}
+
+	/** Whether a player receives the old or new kind of damage bob when taking damage */
+	public enum DamageTiltType {
+		ALL, // Receive new damage bob for all damage
+		DIRECTED, // new damage bob only for damage with direction i.e melee attacks
+		NONE // No new damage bob
 	}
 
 	public static Vector calculateKnockback(Entity victim, DamageType damageType, Entity attacker, boolean baseKnockback,

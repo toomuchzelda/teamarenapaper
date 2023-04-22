@@ -282,7 +282,7 @@ public class DamageType {
         _name = copyOf._name;
         _projectile = copyOf._projectile;
         nmsDamageSource = copyOf.nmsDamageSource;
-		applicableEnchantments = copyOf.applicableEnchantments;
+		applicableEnchantments = new ArrayList<>(copyOf.applicableEnchantments);
 		trackedType = copyOf.trackedType;
     }
 
@@ -430,6 +430,8 @@ public class DamageType {
 			case SONIC_BOOM:
 				return getSonicBoom(event);
             default:
+				Main.logger().warning("DamageType UNKNOWN returned for " + event.getEventName() + ", " + event.getCause() +
+					", " + event.getEntity());
                 return UNKNOWN;
         }
     }

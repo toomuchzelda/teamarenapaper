@@ -365,7 +365,8 @@ public class KitTrigger extends Kit
 		@Override
 		public void onReceiveDamage(DamageEvent event) {
 			TriggerInfo tinfo = TRIGGER_INFOS.get((Player) event.getVictim());
-			EntityUtils.playEffect(tinfo.enemyEntity, ClientboundAnimatePacket.HURT);
+			// TODO creeper hurt effect
+			EntityUtils.playEffect(tinfo.enemyEntity, ClientboundAnimatePacket.MAGIC_CRITICAL_HIT);
 		}
 	}
 }

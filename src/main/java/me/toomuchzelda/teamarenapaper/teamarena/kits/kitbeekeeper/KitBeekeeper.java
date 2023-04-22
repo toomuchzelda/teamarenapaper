@@ -17,13 +17,14 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 import org.bukkit.*;
@@ -37,7 +38,6 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.Action;
-import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
@@ -158,9 +158,11 @@ public class KitBeekeeper extends Kit
 					this.beeEntity.remove();
 				}
 
-				beeEntity = loc.getWorld().spawn(loc, Bee.class);
+				beeEntity = (Bee) EntityUtils.spawnCustomEntity(loc.getWorld(), loc, new CustomBee(EntityType.BEE, loc.getWorld()));
+				//beeEntity = loc.getWorld().spawn(loc, Bee.class);
 				beeEntity.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(BEE_HEALTH);
-				((CraftBee) beeEntity).getHandle().flyingSpeed = BEE_SPEED;
+				//((CraftBee) beeEntity).getHandle().flyingSpeed = BEE_SPEED;
+				CustomBee.setCustomBeeSpeed(beeEntity, BEE_SPEED);
 
 				MobGoals manager = Bukkit.getMobGoals();
 				manager.removeAllGoals(beeEntity);
@@ -170,7 +172,6 @@ public class KitBeekeeper extends Kit
 				// Should only activate if the bee has a target via setTarget(LivingEntity)
 				nmsBee.goalSelector.addGoal(8, new MeleeAttackGoal(nmsBee, 1.399999976158142d, true));
 
-				//this.setTask(new FollowOwnerTask(beeEntity, TeamArena.getGameTick(), this.beeNum, this.owner));
 				this.setFollowing();
 
 				BEE_LOOKUP.put(this.beeEntity, new BeePlayerPair(this.owner, this));
@@ -276,8 +277,9 @@ public class KitBeekeeper extends Kit
 
 				PlayerInfo pinfo = Main.getPlayerInfo(this.owner);
 				pinfo.team.removeMembers(this.beeEntity);
-				pinfo.getMetadataViewer().removeViewedValues(this.beeEntity);
 				pinfo.getScoreboard().removeMembers(GLOWING_COLOUR_TEAMS.get(this.beeNum), this.beeEntity);
+
+				MetadataViewer.removeAllValues(this.beeEntity);
 
 				BEE_LOOKUP.remove(this.beeEntity);
 
@@ -375,6 +377,7 @@ public class KitBeekeeper extends Kit
 					PlayerScoreboard.removeMembersAll(GLOWING_COLOUR_TEAMS.get(beekeeperBee.beeNum), entry.getKey());
 					beekeeperBee.setDead(true);
 				}
+				iter.remove();
 			}
 
 			// Should not be needed

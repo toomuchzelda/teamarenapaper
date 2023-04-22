@@ -1,15 +1,12 @@
 package me.toomuchzelda.teamarenapaper.teamarena.preferences;
 
-import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.SidebarManager;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import org.bukkit.Material;
 import org.bukkit.Registry;
 import org.bukkit.Sound;
-import org.bukkit.inventory.meta.PotionMeta;
-import org.bukkit.potion.PotionData;
-import org.bukkit.potion.PotionType;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -39,11 +36,15 @@ public class Preferences {
 		.setIcon(ItemUtils.createPlayerHead("f1266b748242115b303708d59ce9d5523b7d79c13f6db4ebc91dd47209eb759c"))
 		.setCategory(PreferenceCategory.CLIENTSIDE);
 
-	public static final Preference<Boolean> DAMAGE_TILT = SimplePreference.ofBoolean("damage_tilt",
-			"Whether your screen should tilt in pain when taking damage. Due to a limitation this will only work if HEARTS_FLASH_DAMAGE is also set to false.", true)
-		.setIcon(ItemBuilder.of(Material.POTION)
-			.meta(PotionMeta.class, potionMeta -> potionMeta.setBasePotionData(new PotionData(PotionType.INSTANT_DAMAGE)))
-			.build())
+	public static final Preference<DamageEvent.DamageTiltType> DIRECTIONAL_DAMAGE_TILT = SimplePreference.ofEnum(
+		"damage_view_bobbing", "Preference the new or older view-bobbing when taking damage",
+		DamageEvent.DamageTiltType.class, DamageEvent.DamageTiltType.DIRECTED)
+		.setIcon(Material.RED_STAINED_GLASS_PANE)
+		.setValueDescriptionStrings(Map.of(
+			DamageEvent.DamageTiltType.ALL, "New style bobbing for all damage",
+			DamageEvent.DamageTiltType.DIRECTED, "New style bobbing for directional attacks only i.e Melee attacks",
+			DamageEvent.DamageTiltType.NONE, "Only old style bobbing"
+		))
 		.setCategory(PreferenceCategory.CLIENTSIDE);
 
 	public static final Preference<Boolean> VIEW_HARBINGER_PARTICLES = SimplePreference.ofBoolean("harbinger_view_particles",
