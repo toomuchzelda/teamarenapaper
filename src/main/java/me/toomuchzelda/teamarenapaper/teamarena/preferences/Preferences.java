@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.preferences;
 import me.toomuchzelda.teamarenapaper.teamarena.SidebarManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import org.bukkit.Material;
