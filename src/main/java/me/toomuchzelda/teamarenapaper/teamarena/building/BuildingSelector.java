@@ -330,7 +330,9 @@ public class BuildingSelector {
 
 	private void cleanUpSelected() {
 		if (selected != null) {
-			buildingOutlines.get(selected).setOutlineColor(selected.getOutlineColor());
+			var outline = buildingOutlines.get(selected);
+			if (outline != null)
+				outline.setOutlineColor(selected.getOutlineColor());
 		}
 		selected = null;
 		lastSelected = null;
