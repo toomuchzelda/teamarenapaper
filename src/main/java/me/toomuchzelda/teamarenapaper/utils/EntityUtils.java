@@ -127,9 +127,10 @@ public class EntityUtils {
 		return new ClientboundRemoveEntitiesPacket(ints);
 	}
 
-	// TODO
 	public static Entity spawnCustomEntity(World world, Location loc, net.minecraft.world.entity.Entity nmsEntity) {
-		return ((CraftWorld) world).addEntity(nmsEntity, CreatureSpawnEvent.SpawnReason.CUSTOM);
+		Entity bukkitEnitity = ((CraftWorld) world).addEntity(nmsEntity, CreatureSpawnEvent.SpawnReason.CUSTOM);
+		bukkitEnitity.teleport(loc);
+		return bukkitEnitity;
 	}
 
 	/**

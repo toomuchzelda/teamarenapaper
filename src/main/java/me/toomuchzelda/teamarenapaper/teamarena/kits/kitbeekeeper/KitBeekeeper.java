@@ -159,9 +159,7 @@ public class KitBeekeeper extends Kit
 				}
 
 				beeEntity = (Bee) EntityUtils.spawnCustomEntity(loc.getWorld(), loc, new CustomBee(EntityType.BEE, loc.getWorld()));
-				//beeEntity = loc.getWorld().spawn(loc, Bee.class);
 				beeEntity.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(BEE_HEALTH);
-				//((CraftBee) beeEntity).getHandle().flyingSpeed = BEE_SPEED;
 				CustomBee.setCustomBeeSpeed(beeEntity, BEE_SPEED);
 
 				MobGoals manager = Bukkit.getMobGoals();
