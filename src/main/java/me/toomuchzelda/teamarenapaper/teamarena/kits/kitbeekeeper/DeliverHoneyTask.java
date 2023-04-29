@@ -9,7 +9,6 @@ import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.NamespacedKey;
-import org.bukkit.craftbukkit.v1_19_R2.entity.CraftBee;
 import org.bukkit.entity.Bee;
 import org.bukkit.entity.LivingEntity;
 import org.jetbrains.annotations.NotNull;
@@ -31,7 +30,7 @@ public class DeliverHoneyTask extends BeeTask
 
 	static class DeliverHoneyGoal implements Goal<Bee> {
 		private static final EnumSet<GoalType> GOAL_TYPES = EnumSet.of(GoalType.MOVE);
-		private static final GoalKey<Bee> KEY = GoalKey.of(Bee.class, new NamespacedKey(Main.getPlugin(), "beekeeper_deliver_honey"));;
+		private static final GoalKey<Bee> KEY = GoalKey.of(Bee.class, new NamespacedKey(Main.getPlugin(), "beekeeper_deliver_honey"));
 
 		private static final float DELIVER_FLY_SPEED = 0.02f;
 		// Max distance from the target the bee can be to complete its delivery.
@@ -48,7 +47,7 @@ public class DeliverHoneyTask extends BeeTask
 			this.bee = bee;
 			this.target = target;
 
-			this.originalFlyingSpeed = ((CraftBee) bee).getHandle().flyingSpeed;
+			this.originalFlyingSpeed = CustomBee.getCustomBeeSpeed(bee);
 			this.doneTime = NOT_DONE;
 		}
 
@@ -65,14 +64,14 @@ public class DeliverHoneyTask extends BeeTask
 
 		@Override
 		public void start() {
-			((CraftBee) bee).getHandle().flyingSpeed = DELIVER_FLY_SPEED;
+			CustomBee.setCustomBeeSpeed(this.bee, DELIVER_FLY_SPEED);
 			this.bee.getPathfinder().moveTo(this.target);
 		}
 
 		@Override
 		public void stop() {
 			this.bee.getPathfinder().stopPathfinding();
-			((CraftBee) bee).getHandle().flyingSpeed = this.originalFlyingSpeed;
+			CustomBee.setCustomBeeSpeed(this.bee, this.originalFlyingSpeed);
 		}
 
 		@Override

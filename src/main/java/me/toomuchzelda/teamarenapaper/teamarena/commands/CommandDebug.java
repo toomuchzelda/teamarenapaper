@@ -23,11 +23,13 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitBurst;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
+import net.minecraft.network.protocol.game.ClientboundHurtAnimationPacket;
 import org.bukkit.*;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.EntityType;
@@ -485,6 +487,14 @@ public class CommandDebug extends CustomCommand {
 					throw throwUsage("/debug graffititest <graffiti>");
 				NamespacedKey graffiti = NamespacedKey.fromString(args[1]);
 				Main.getGame().graffiti.spawnGraffiti(player, graffiti);
+			}
+			case "testyaw" -> {
+				if (args.length < 2)
+					throw throwUsage("testyaw float");
+
+				float yaw = Float.parseFloat(args[1]);
+				ClientboundHurtAnimationPacket hurtAnimationPacket = new ClientboundHurtAnimationPacket(player.getEntityId(), yaw);
+				PlayerUtils.sendPacket(player, hurtAnimationPacket);
 			}
 			default -> showUsage(sender);
 		}

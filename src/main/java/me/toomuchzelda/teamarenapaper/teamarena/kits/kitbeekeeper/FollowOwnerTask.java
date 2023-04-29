@@ -71,7 +71,7 @@ public class FollowOwnerTask extends BeeTask
 	private static class FollowOwnerGoal implements Goal<Bee>
 	{
 		private static final EnumSet<GoalType> GOAL_TYPES = EnumSet.of(GoalType.MOVE);
-		private static final GoalKey<Bee> KEY = GoalKey.of(Bee.class, new NamespacedKey(Main.getPlugin(), "beekeeper_follow_owner"));;
+		private static final GoalKey<Bee> KEY = GoalKey.of(Bee.class, new NamespacedKey(Main.getPlugin(), "beekeeper_follow_owner"));
 		private static final double SPEED_UP_DIST_SQR = 5 * 5;
 		private static final double TELEPORT_DIST_SQR = 15 * 15;
 		private static final float CLOSE_TO_OWNER_SPEED = KitBeekeeper.BeekeeperAbility.BEE_VANILLA_SPEED;
@@ -113,7 +113,8 @@ public class FollowOwnerTask extends BeeTask
 		@Override
 		public void stop() {
 			this.bee.getPathfinder().stopPathfinding();
-			EntityUtils.setFlySpeed(this.bee, KitBeekeeper.BeekeeperAbility.BEE_SPEED);
+			//EntityUtils.setFlySpeed(this.bee, KitBeekeeper.BeekeeperAbility.BEE_SPEED);
+			CustomBee.setCustomBeeSpeed(this.bee, KitBeekeeper.BeekeeperAbility.BEE_SPEED);
 		}
 
 		@Override
@@ -154,12 +155,12 @@ public class FollowOwnerTask extends BeeTask
 
 				// When they're close to the owner, set them to normal speed. otherwise make them catch up.
 				if (distSqr >= SPEED_UP_DIST_SQR) {
-					//((CraftBee) this.bee).getHandle().flyingSpeed = KitBeekeeper.BeekeeperAbility.BEE_SPEED;
-					EntityUtils.setFlySpeed(bee, KitBeekeeper.BeekeeperAbility.BEE_SPEED);
+					//EntityUtils.setFlySpeed(bee, KitBeekeeper.BeekeeperAbility.BEE_SPEED);
+					CustomBee.setCustomBeeSpeed(bee, KitBeekeeper.BeekeeperAbility.BEE_SPEED);
 				}
 				else {
-					//((CraftBee) this.bee).getHandle().flyingSpeed = CLOSE_TO_OWNER_SPEED;
-					EntityUtils.setFlySpeed(bee, CLOSE_TO_OWNER_SPEED);
+					//EntityUtils.setFlySpeed(bee, CLOSE_TO_OWNER_SPEED);
+					CustomBee.setCustomBeeSpeed(bee, CLOSE_TO_OWNER_SPEED);
 				}
 			}
 		}

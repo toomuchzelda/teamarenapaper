@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import net.kyori.adventure.text.Component;
@@ -10,8 +11,11 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageSources;
+import net.minecraft.world.level.Level;
 import org.bukkit.Material;
-import org.bukkit.craftbukkit.v1_19_R2.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_19_R3.CraftWorld;
+import org.bukkit.craftbukkit.v1_19_R3.entity.CraftEntity;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageByBlockEvent;
@@ -27,46 +31,41 @@ import java.util.regex.Pattern;
 // https://github.com/libraryaddict/RedWarfare/blob/master/redwarfare-core/src/me/libraryaddict/core/damage/AttackType.java
 public class DamageType {
 
-    /******************************************************************************************
+	/******************************************************************************************
      *                                  GENERAL DAMAGETYPES
      ******************************************************************************************/
 
-    public static final DamageType BERRY_BUSH = new DamageType("Berry Bush", "%Killed% ate one too many sweet berries").setNoKnockback()
-            .setDamageSource(DamageSource.SWEET_BERRY_BUSH);
+    public static final DamageType BERRY_BUSH = new DamageType("Berry Bush", "%Killed% ate one too many sweet berries").setNoKnockback();
 
-    public static final DamageType CACTUS = new DamageType("Cactus", "%Killed% hugged a cactus").setNoKnockback()
-            .setDamageSource(DamageSource.CACTUS);
+    public static final DamageType CACTUS = new DamageType("Cactus", "%Killed% hugged a cactus").setNoKnockback();
 
     public static final DamageType CRAMMING = new DamageType("Cramming", "%Killer% was crammed to death").setIgnoreArmor()
-            .setNoKnockback().setDamageSource(DamageSource.CRAMMING);
+            .setNoKnockback();
 
-    public static final DamageType CUSTOM = new DamageType("Custom", "%Killed% fell over and died").setNoKnockback()
-            .setDamageSource(DamageSource.GENERIC);
+    public static final DamageType CUSTOM = new DamageType("Custom", "%Killed% fell over and died").setNoKnockback();
 
     public static final DamageType DAMAGE_POTION = new DamageType("Damage Potion",
-            "%Killed% died to %Killer%'s damage potion which isn't part of the game?").setNoKnockback()
-            .setDamageSource(DamageSource.MAGIC);
+            "%Killed% died to %Killer%'s damage potion which isn't part of the game?").setNoKnockback();
 
     public static final DamageType DRAGON_BREATH = new DamageType("Dragon Breath", "%Killed% sucked a lungful of dragon's breath")
-            .setNoKnockback().setDamageSource(DamageSource.DRAGON_BREATH);
+            .setNoKnockback();
 
     public static final DamageType DROWNED = new DamageType("Drowned", "%Killed% is swimming with the fishes").setIgnoreArmor()
-            .setNoKnockback().setDamageSource(DamageSource.DROWN);
+            .setNoKnockback();
 
     public static final DamageType DRYOUT = new DamageType("Dryout", "%Killed% died of dehydration")
-            .setNoKnockback().setDamageSource(DamageSource.DRY_OUT);
+            .setNoKnockback();
 
     public static final DamageType EXPLOSION = new DamageType("Explosion", "%Killed% was caught in an explosion")
-			.setExplosion().setDamageSource(DamageSource.explosion(null, null));
+			.setExplosion();
 
-    public static final DamageType FALL = new DamageType("Fall", "%Killed% fell to their death").setFall().setNoKnockback()
-            .setDamageSource(DamageSource.FALL);
+    public static final DamageType FALL = new DamageType("Fall", "%Killed% fell to their death").setFall().setNoKnockback();
 
     public static final DamageType FALL_PUSHED = new DamageType("Pushed Fall", "%Killed% was pushed to their death by %Killer%")
-            .setFall().setNoKnockback().setDamageSource(DamageSource.FALL);
+            .setFall().setNoKnockback();
 
     public static final DamageType FALL_SHOT = new DamageType("Shot Fall", "%Killed% was shot by %Killer% and fell to their death")
-            .setFall().setNoKnockback().setDamageSource(DamageSource.FALL);
+            .setFall().setNoKnockback();
 
     public static final DamageType FALLING_BLOCK = new DamageType("Falling Block", "%Killed% was crushed beneath a falling block")
             .setNoKnockback();// DamageSource assigned in getAttack() //setDamageSource(DamageSource.fallingBlock(null));
@@ -78,36 +77,33 @@ public class DamageType {
      * Direct exposure to fire
      */
     public static final DamageType FIRE = new DamageType("Direct Fire", "%Killed% stood inside flames and laughed").setNoKnockback()
-            .setBurn().setDamageSource(DamageSource.IN_FIRE);
+            .setBurn();
 
     public static final DamageType FIRE_ASPECT = new DamageType("Fire Aspect", "%Killed% was charred to a crisp by %Killer%").setFire()
-            .setNoKnockback().setIgnoreArmor().setDamageSource(DamageSource.ON_FIRE);
+            .setNoKnockback().setIgnoreArmor();
 
     public static final DamageType FIRE_BOW = new DamageType("Fire Bow", "%Killed% charred to a crisp by %Killer%'s bow").setFire()
-            .setNoKnockback().setIgnoreArmor().setDamageSource(DamageSource.ON_FIRE);
+            .setNoKnockback().setIgnoreArmor();
 
     /**
      * Fire on the entity itself
      */
     public static final DamageType FIRE_TICK = new DamageType("Fire Tick", "%Killed% was burned alive").setNoKnockback().setFire()
-            .setIgnoreArmor().setDamageSource(DamageSource.ON_FIRE);
+            .setIgnoreArmor();
 
     public static final DamageType FISHING_HOOK = new DamageType("Fishing Hook", "%Killed% was killed by %Killer%'s... Fishing rod?");
 
     public static final DamageType FLY_INTO_WALL = new DamageType("Flew into Wall", "%Killed% still hadn't gotten the hang of flying")
-            .setNoKnockback().setDamageSource(DamageSource.FLY_INTO_WALL);
+            .setNoKnockback();
 
     public static final DamageType FREEZE = new DamageType("Freeze", "%Killed% froze to death")
-            .setIgnoreArmor().setDamageSource(DamageSource.FREEZE);
+            .setIgnoreArmor();
 
-    public static final DamageType LAVA = new DamageType("Lava", "%Killed% tried to swim in lava").setNoKnockback().setBurn()
-            .setDamageSource(DamageSource.LAVA);
+    public static final DamageType LAVA = new DamageType("Lava", "%Killed% tried to swim in lava").setNoKnockback().setBurn();
 
-    public static final DamageType LIGHTNING = new DamageType("Lightning", "%Killed% was electrified by lightning").setNoKnockback()
-            .setDamageSource(DamageSource.LIGHTNING_BOLT);
+    public static final DamageType LIGHTNING = new DamageType("Lightning", "%Killed% was electrified by lightning").setNoKnockback();
 
-    public static final DamageType MAGMA = new DamageType("Magma", "%Killed% took a rest on some hot magma").setNoKnockback().setBurn()
-            .setDamageSource(DamageSource.HOT_FLOOR);
+    public static final DamageType MAGMA = new DamageType("Magma", "%Killed% took a rest on some hot magma").setNoKnockback().setBurn();
 
     public static final DamageType MELEE = new DamageType("Melee", "%Killed% was murdered by %Killer%").setMelee();
 
@@ -124,10 +120,9 @@ public class DamageType {
 			.setIgnoreArmor().setIgnoreArmorEnchants();
 
     public static final DamageType STARVATION = new DamageType("Starvation", "%Killed% died from starvation").setIgnoreArmor()
-            .setNoKnockback().setDamageSource(DamageSource.STARVE);
+            .setNoKnockback();
 
-    public static final DamageType SUFFOCATION = new DamageType("Suffocation", "%Killed% choked on block").setNoKnockback()
-            .setDamageSource(DamageSource.IN_WALL);
+    public static final DamageType SUFFOCATION = new DamageType("Suffocation", "%Killed% choked on block").setNoKnockback();
 
     public static final DamageType SUICIDE = new DamageType("Suicide", "%Killed% died").setInstantDeath().setNoKnockback();
 
@@ -148,33 +143,32 @@ public class DamageType {
     public static final DamageType UNKNOWN = new DamageType("Unknown", "%Killed% died from unknown causes").setNoKnockback();
 
     public static final DamageType VOID = new DamageType("Void", "%Killed% fell into the void").setIgnoreArmor().setNoKnockback()
-            .setIgnoreRate().setDamageSource(DamageSource.OUT_OF_WORLD);
+            .setIgnoreRate();
 
     public static final DamageType VOID_PUSHED = new DamageType("Void Pushed", "%Killed% was knocked into the void by %Killer%")
-            .setIgnoreArmor().setNoKnockback().setIgnoreRate().setDamageSource(DamageSource.OUT_OF_WORLD);
+            .setIgnoreArmor().setNoKnockback().setIgnoreRate();
 
     public static final DamageType VOID_SHOT = new DamageType("Void Shot", "%Killed% was shot into the void by %Killer%")
-            .setIgnoreArmor().setNoKnockback().setIgnoreRate().setDamageSource(DamageSource.OUT_OF_WORLD);
+            .setIgnoreArmor().setNoKnockback().setIgnoreRate();
 
-    public static final DamageType WITHER_POISON = new DamageType("Wither Poison", "%Killed% drank a vial of wither poison")
-            .setNoKnockback().setDamageSource(DamageSource.WITHER);
+    public static final DamageType WITHER_POISON = new DamageType("Wither Poison", "%Killed% withered to death")
+            .setNoKnockback();
 
     /******************************************************************************************
      *                                  KIT BASE DAMAGETYPES
      ******************************************************************************************/
 
     public static final DamageType PYRO_MOLOTOV = new DamageType("Pyro Incendiary", "%Killed% was burned to death by %Killer%'s incendiary")
-            .setFire().setIgnoreArmor().setNoKnockback().setDamageSource(DamageSource.ON_FIRE);
+            .setFire().setIgnoreArmor().setNoKnockback();
 
 	public static final DamageType SNIPER_GRENADE_FAIL = new DamageType("Grenade Fail", "%Killed% forgot they pulled the pin.")
-			.setInstantDeath().setNoKnockback().setDamageSource(DamageSource.explosion(null, null));
+			.setInstantDeath().setNoKnockback();
 
 	public static final DamageType SNIPER_HEADSHOT = new DamageType("Headshot", "%Killed% was headshot by %Killer%")
 			.setProjectile();
 
     public static final DamageType DEMO_TNTMINE = new DamageType("Demolitions TNT Mine",
             "%Killed% stepped on %Killer%'s TNT Mine and blew up")
-            .setDamageSource(DamageSource.explosion(null, null))
             .setIgnoreRate().setExplosion();
 
 	public static final DamageType TOXIC_LEAP = new DamageType("Venom Leap", "%Killed% was killed by %Killer%'s Toxic Leap");
@@ -187,16 +181,16 @@ public class DamageType {
 			.setExplosion();
 
 	public static final DamageType BURST_FIREWORK = new DamageType("Burst Firework", "%Killed% was blown to shimmering, shining bits by %Killer%'s firework")
-			.setExplosion().setDamageSource(DamageSource.explosion(null, null));
+			.setExplosion();
 
 	public static final DamageType BURST_FIREWORK_SELF = new DamageType("Badly Aimed Firework", "%Killed% became a part of their firework show")
-			.setIgnoreRate().setExplosion().setDamageSource(DamageSource.explosion(null, null));
+			.setIgnoreRate().setExplosion();
 
 	public static final DamageType BURST_SHOTGUN = new DamageType("Burst Blast", "%Killed% was killed by %Killer%'s firework shrapnel")
 			.setIgnoreRate().setProjectile().setNoKnockback();
 
 	public static final DamageType BURST_SHOTGUN_SELF = new DamageType("Burst Blast Self Harm", "%Killed% went trigger happy and blew their fingers off")
-			.setIgnoreRate().setIgnoreArmor().setExplosion().setDamageSource(DamageSource.explosion(null, null));
+			.setIgnoreRate().setIgnoreArmor().setExplosion();
 
 	public static final DamageType EXPLOSIVE_RPG = new DamageType("Explosive RPG", "%Killed% was caught in %Killer%'s RPG")
 			.setExplosion();
@@ -226,7 +220,7 @@ public class DamageType {
 	public static final DamageType BOMB_EXPLODED = new DamageType("Team Bomb").setInstantDeath().setIgnoreRate();
 
 	public static final DamageType END_GAME_LIGHTNING = new DamageType("Herobrine", "%Killed% was killed by Herobrine")
-			.setIgnoreArmor().setIgnoreArmorEnchants().setNoKnockback().setIgnoreRate().setDamageSource(DamageSource.LIGHTNING_BOLT);
+			.setIgnoreArmor().setIgnoreArmorEnchants().setNoKnockback().setIgnoreRate();
 
 	/*******************************************************************************************
 	 * 									KILLSTREAK DAMAGETYPES
@@ -242,6 +236,7 @@ public class DamageType {
 
 
 	private static int idCounter = 0;
+	static DamageSources nmsDamageSources;
 
     //a constant identifier for same types, to compare for same types across separate instances of this class
     // without evaluating a String
@@ -287,7 +282,7 @@ public class DamageType {
         _name = copyOf._name;
         _projectile = copyOf._projectile;
         nmsDamageSource = copyOf.nmsDamageSource;
-		applicableEnchantments = copyOf.applicableEnchantments;
+		applicableEnchantments = new ArrayList<>(copyOf.applicableEnchantments);
 		trackedType = copyOf.trackedType;
     }
 
@@ -312,6 +307,59 @@ public class DamageType {
 
 	private static int nextId() {
 		return idCounter++;
+	}
+
+	public static void updateDamageSources(TeamArena game) {
+		Level nmsWorld = ((CraftWorld) game.getWorld()).getHandle();
+		nmsDamageSources = nmsWorld.damageSources();
+
+		BERRY_BUSH.setDamageSource(nmsDamageSources.sweetBerryBush());
+		CACTUS.setDamageSource(nmsDamageSources.cactus());
+		CRAMMING.setDamageSource(nmsDamageSources.cramming());
+		CUSTOM.setDamageSource(nmsDamageSources.generic());
+		DAMAGE_POTION.setDamageSource(nmsDamageSources.magic());
+		DRAGON_BREATH.setDamageSource(nmsDamageSources.dragonBreath());
+		DROWNED.setDamageSource(nmsDamageSources.drown());
+		DRYOUT.setDamageSource(nmsDamageSources.dryOut());
+		EXPLOSION.setDamageSource(nmsDamageSources.explosion(null, null)); // Should be handled per-event anyway
+		FALL.setDamageSource(nmsDamageSources.fall());
+		FALL_PUSHED.setDamageSource(nmsDamageSources.fall());
+		FALL_SHOT.setDamageSource(nmsDamageSources.fall());
+		//FALLING_BLOCK
+		//FALLING_STALACTITE Both should be handled from getAttack()
+		FIRE.setDamageSource(nmsDamageSources.inFire());
+		FIRE_ASPECT.setDamageSource(nmsDamageSources.onFire());
+		FIRE_BOW.setDamageSource(nmsDamageSources.onFire());
+		FIRE_TICK.setDamageSource(nmsDamageSources.onFire());
+		FLY_INTO_WALL.setDamageSource(nmsDamageSources.flyIntoWall());
+		FREEZE.setDamageSource(nmsDamageSources.freeze());
+		LAVA.setDamageSource(nmsDamageSources.lava());
+		LIGHTNING.setDamageSource(nmsDamageSources.lightningBolt());
+		MAGMA.setDamageSource(nmsDamageSources.hotFloor());
+		// MELEE Handled in getAttack
+		MELTING.setDamageSource(nmsDamageSources.melting);
+		POISON.setDamageSource(nmsDamageSources.poison);
+		// PROJECTILE handled in getAttack
+		// SONIC_BOOM
+		STARVATION.setDamageSource(nmsDamageSources.starve());
+		SUFFOCATION.setDamageSource(nmsDamageSources.inWall());
+		// SWEEP ATTACK
+		// THORNS
+		VOID.setDamageSource(nmsDamageSources.outOfWorld());
+		VOID_PUSHED.setDamageSource(nmsDamageSources.outOfWorld());
+		VOID_SHOT.setDamageSource(nmsDamageSources.outOfWorld());
+		WITHER_POISON.setDamageSource(nmsDamageSources.wither());
+
+		/* KITS */
+		PYRO_MOLOTOV.setDamageSource(nmsDamageSources.onFire());
+		SNIPER_GRENADE_FAIL.setDamageSource(nmsDamageSources.explosion(null, null)); // TODO handle source and attacker
+		// SNIPER_HEADSHOT TODO handle
+		DEMO_TNTMINE.setDamageSource(nmsDamageSources.explosion(null, null));
+		TOXIC_LEAP.setDamageSource(nmsDamageSources.poison);
+		// BURST_FIREWORK TODO nmsD.firework( ,)
+		// BURST_FIREWORK_SELF.setDamageSource()
+		// BURST_SHOTGUN_SELF
+
 	}
 
     public static DamageType getAttack(EntityDamageEvent event) {
@@ -382,6 +430,8 @@ public class DamageType {
 			case SONIC_BOOM:
 				return getSonicBoom(event);
             default:
+				Main.logger().warning("DamageType UNKNOWN returned for " + event.getEventName() + ", " + event.getCause() +
+					", " + event.getEntity());
                 return UNKNOWN;
         }
     }
@@ -455,13 +505,14 @@ public class DamageType {
 	public static DamageType getSonicBoom(EntityDamageEvent event) {
 		if (event instanceof EntityDamageByEntityEvent entityDamageByEntityEvent) {
 			return new DamageType(SONIC_BOOM).setDamageSource(
-					DamageSource.sonicBoom(((CraftEntity) entityDamageByEntityEvent.getDamager()).getHandle())
+					nmsDamageSources.sonicBoom(((CraftEntity) entityDamageByEntityEvent.getDamager()).getHandle())
 			);
 		}
 		return SONIC_BOOM;
 	}
 
 	private static DamageType getExplosion(DamageType type, EntityDamageEvent event) {
+		// TODO bukkit broadcast
 		if(event instanceof EntityDamageByEntityEvent dEvent) {
 			DamageSource source;
 			if(dEvent.getDamager() instanceof TNTPrimed tnt)
@@ -500,7 +551,7 @@ public class DamageType {
 
 	private static DamageType getThorns(EntityDamageEvent event) {
 		if(event instanceof EntityDamageByEntityEvent dEvent) {
-			return new DamageType(THORNS).setDamageSource(DamageSource.thorns(((CraftEntity) dEvent.getDamager()).getHandle()));
+			return new DamageType(THORNS).setDamageSource(nmsDamageSources.thorns(((CraftEntity) dEvent.getDamager()).getHandle()));
 		}
 
 		return THORNS;
@@ -693,7 +744,7 @@ public class DamageType {
     }
 
     public DamageSource getDamageSource() {
-        return this.nmsDamageSource != null ? this.nmsDamageSource : DamageSource.GENERIC;
+        return this.nmsDamageSource != null ? this.nmsDamageSource : nmsDamageSources.generic();
     }
 
     public String toString() {

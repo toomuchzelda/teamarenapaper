@@ -45,7 +45,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Sign;
 import org.bukkit.command.CommandSender;
-import org.bukkit.craftbukkit.v1_19_R2.CraftWorld;
+import org.bukkit.craftbukkit.v1_19_R3.CraftWorld;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.Action;
@@ -273,6 +273,7 @@ public abstract class TeamArena
 		registerKits();
 
 		DamageTimes.clear();
+		DamageType.updateDamageSources(this);
 
 		StatusBarManager.StatusBarHologram.updatePregameText();
 

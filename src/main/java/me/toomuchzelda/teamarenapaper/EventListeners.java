@@ -44,7 +44,7 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.block.BlockFace;
 import org.bukkit.command.Command;
-import org.bukkit.craftbukkit.v1_19_R2.CraftWorldBorder;
+import org.bukkit.craftbukkit.v1_19_R3.CraftWorldBorder;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;

@@ -14,6 +14,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientboundHurtAnimationPacket;
 import net.minecraft.network.protocol.game.ClientboundSetBorderWarningDistancePacket;
 import net.minecraft.network.protocol.game.ClientboundSetHealthPacket;
 import net.minecraft.network.protocol.game.ServerboundInteractPacket;
@@ -23,8 +24,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
-import org.bukkit.craftbukkit.v1_19_R2.CraftWorldBorder;
-import org.bukkit.craftbukkit.v1_19_R2.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_19_R3.CraftWorldBorder;
+import org.bukkit.craftbukkit.v1_19_R3.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.inventory.EntityEquipment;
@@ -38,7 +39,6 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 
 public class PlayerUtils {
@@ -145,8 +145,6 @@ public class PlayerUtils {
 
 	/**
 	 * untested
-	 * @param player
-	 * @return
 	 */
 	public static boolean isDrawingBow(Player player) {
 		if(player.getActiveItem() != null) {
@@ -166,9 +164,6 @@ public class PlayerUtils {
 	/**
 	 * use instead of player.setHealth() as that does not call the EntityRegainHealthEvent
 	 * We need to call this event for the player percent damage kill assist thing
-	 *
-	 * @param player
-	 * @param amount
 	 */
 	public static void heal(Player player, double amount, EntityRegainHealthEvent.RegainReason reason) {
 		double maxHealth = player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
@@ -204,6 +199,17 @@ public class PlayerUtils {
 		player.showTitle(TextUtils.createTitle(title, subtitle, fadeInTicks, stayTicks, fadeOutTicks));
 	}
 
+	public static void setAndSyncHurtDirection(Player player, float yaw) {
+		player.setHurtDirection(yaw);
+		final ClientboundHurtAnimationPacket sync = new ClientboundHurtAnimationPacket(((CraftPlayer) player).getHandle());
+		PlayerUtils.sendPacket(player, sync);
+	}
+
+	public static void syncHurtDirection(Player player) {
+		final ClientboundHurtAnimationPacket sync = new ClientboundHurtAnimationPacket(((CraftPlayer) player).getHandle());
+		PlayerUtils.sendPacket(player, sync);
+	}
+
 	public static void resetState(Player player) {
 		player.setArrowsInBody(0);
 		player.setFallDistance(0);
@@ -220,6 +226,7 @@ public class PlayerUtils {
 		player.setGlowing(false);
 		player.setInvisible(false);
 		player.setFireTicks(0);
+		player.setHurtDirection(0f);
 		for (PotionEffect effect : player.getActivePotionEffects()) {
 			player.removePotionEffect(effect.getType());
 		}

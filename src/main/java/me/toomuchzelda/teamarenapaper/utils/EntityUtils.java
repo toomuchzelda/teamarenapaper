@@ -4,9 +4,6 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
 import io.netty.buffer.Unpooled;
-import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
-import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -15,22 +12,20 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerPlayerConnection;
-import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.Location;
-import org.bukkit.Sound;
-import org.bukkit.SoundCategory;
+import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
-import org.bukkit.craftbukkit.v1_19_R2.CraftSound;
-import org.bukkit.craftbukkit.v1_19_R2.entity.CraftEntity;
-import org.bukkit.craftbukkit.v1_19_R2.entity.CraftLivingEntity;
-import org.bukkit.craftbukkit.v1_19_R2.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_19_R2.util.CraftVector;
+import org.bukkit.craftbukkit.v1_19_R3.CraftWorld;
+import org.bukkit.craftbukkit.v1_19_R3.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_19_R3.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_19_R3.util.CraftVector;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -40,8 +35,6 @@ import java.util.Iterator;
 import java.util.Set;
 
 public class EntityUtils {
-    public static final double VANILLA_PROJECTILE_SPRAY = 0.0075d;
-
     public static void cacheReflection() {
 	}
 
@@ -134,8 +127,10 @@ public class EntityUtils {
 		return new ClientboundRemoveEntitiesPacket(ints);
 	}
 
-	public static void setFlySpeed(LivingEntity living, float flySpeed) {
-		((CraftLivingEntity) living).getHandle().flyingSpeed = flySpeed;
+	public static Entity spawnCustomEntity(World world, Location loc, net.minecraft.world.entity.Entity nmsEntity) {
+		Entity bukkitEnitity = ((CraftWorld) world).addEntity(nmsEntity, CreatureSpawnEvent.SpawnReason.CUSTOM);
+		bukkitEnitity.teleport(loc);
+		return bukkitEnitity;
 	}
 
 	/**
@@ -186,55 +181,6 @@ public class EntityUtils {
 			iter.remove();
 		}
 	}
-
-    /**
-     * play entity hurt animation and sound
-     *
-     * @param entity LivingEntity being damaged
-     */
-    public static void playHurtAnimation(LivingEntity entity, DamageType damageType, boolean deathSound) {
-        net.minecraft.world.entity.LivingEntity nmsLivingEntity = ((CraftLivingEntity) entity).getHandle();
-        ClientboundAnimatePacket packet = new ClientboundAnimatePacket(nmsLivingEntity, ClientboundAnimatePacket.HURT);
-
-        //get and construct sound
-        float pitch = 0f;
-        float volume = 0f;
-        Sound sound = null;
-
-		final boolean isSilent = entity.isSilent();
-        if(!isSilent) {
-			if (deathSound) {
-				sound = entity.getDeathSound();
-			}
-			else {
-				SoundEvent nmsSound = nmsLivingEntity.getHurtSound0(damageType.getDamageSource());
-				sound = CraftSound.getBukkit(nmsSound);
-			}
-
-			pitch = nmsLivingEntity.getVoicePitch();
-			volume = nmsLivingEntity.getSoundVolume(); //(float) getSoundVolumeMethod.invoke(nmsLivingEntity);
-        }
-
-        //if a player send the packet to self as well
-        // and use player sound category for the sound
-        SoundCategory category = SoundCategory.NEUTRAL;
-        if (entity instanceof Player p) {
-            //optional tilt the screen
-            if (Main.getPlayerInfo(p).getPreference(Preferences.DAMAGE_TILT))
-                PlayerUtils.sendPacket(p, packet);
-
-            category = SoundCategory.PLAYERS;
-            if(!isSilent) {
-				p.playSound(entity, sound, category, volume, pitch);
-			}
-        }
-
-        for (Player p : entity.getTrackedPlayers()) {
-            PlayerUtils.sendPacket(p, packet);
-            if(!isSilent)
-                p.playSound(entity, sound, category, volume, pitch);
-        }
-    }
 
 	private static final double MAX_RELATIVE_DELTA = Short.MAX_VALUE / 4096d;
 	private static final double MIN_RELATIVE_DELTA = Short.MIN_VALUE / 4096d;
