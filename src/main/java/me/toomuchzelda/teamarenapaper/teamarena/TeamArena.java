@@ -765,11 +765,7 @@ public abstract class TeamArena
 		}
 
 		// Handle entities that are part of some Ability
-		if(event.getVictim() instanceof Skeleton) {
-			KitEngineer.EngineerAbility.handleSentryAttemptDamage(event);
-		}
-		else if(event.getVictim() instanceof Wolf) {
-		if (event.getVictim() instanceof Wolf) {
+		if(event.getVictim() instanceof Wolf) {
 			WolvesKillStreak.WolvesAbility.handleWolfAttemptDamage(event);
 		}
 		else if(event.getVictim() instanceof IronGolem) {
