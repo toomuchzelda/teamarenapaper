@@ -28,7 +28,6 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
 import org.bukkit.event.Event;
-import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.Nullable;
@@ -188,38 +187,36 @@ public class KitDemolitions extends Kit
 				if (mine != null && !mine.isTriggered()) {
 					mine.trigger(demo);
 				}
-			}
-		}
+			} else {
+				ItemStack stack = event.getItem();
+				Block base = event.getClickedBlock();
+				if (base == null || stack == null)
+					return;
+				Block block = base.getRelative(BlockFace.UP);
 
-		@Override
-		public void onPlaceBlock(BlockPlaceEvent event) {
-			ItemStack stack = event.getItemInHand();
-			Block block = event.getBlock();
-			Block base = block.getRelative(BlockFace.DOWN);
+				MineType type;
+				if (TNT_MINE_ITEM.getType() == mat)
+					type = MineType.TNTMINE;
+				else if (PUSH_MINE_ITEM.getType() == mat)
+					type = MineType.PUSHMINE;
+				else
+					return;
 
-			Material mat = stack.getType();
-			MineType type;
-			if (TNT_MINE_ITEM.getType() == mat)
-				type = MineType.TNTMINE;
-			else if (PUSH_MINE_ITEM.getType() == mat)
-				type = MineType.PUSHMINE;
-			else
-				return;
+				event.setCancelled(true);
+				if (isValidMineBlock(base)) {
+					if (BuildingManager.getBuildingAt(block) == null) {
+						DemoMine mine = type.constructor.apply(event.getPlayer(), block);
+						BuildingManager.placeBuilding(mine);
 
-			event.setCancelled(true);
-			if (isValidMineBlock(base)) {
-				if (BuildingManager.getBuildingAt(block) == null) {
-					DemoMine mine = type.constructor.apply(event.getPlayer(), block);
-					BuildingManager.placeBuilding(mine);
-
-					stack.subtract();
+						stack.subtract();
+					} else {
+						Component message = Component.text("This block is already occupied", TextColors.ERROR_RED);
+						PlayerUtils.sendKitMessage(event.getPlayer(), message, message);
+					}
 				} else {
-					Component message = Component.text("This block is already occupied", TextColors.ERROR_RED);
+					Component message = Component.text("You can't place a mine here", TextColors.ERROR_RED);
 					PlayerUtils.sendKitMessage(event.getPlayer(), message, message);
 				}
-			} else {
-				Component message = Component.text("You can't place a mine here", TextColors.ERROR_RED);
-				PlayerUtils.sendKitMessage(event.getPlayer(), message, message);
 			}
 		}
 
@@ -279,8 +276,7 @@ public class KitDemolitions extends Kit
 							ItemStack mineItem;
 							if (regMine.type() == MineType.TNTMINE) {
 								mineItem = TNT_MINE_ITEM;
-							}
-							else {
+							} else {
 								mineItem = PUSH_MINE_ITEM;
 							}
 

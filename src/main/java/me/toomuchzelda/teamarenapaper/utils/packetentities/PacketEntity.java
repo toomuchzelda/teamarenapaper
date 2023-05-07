@@ -422,7 +422,7 @@ public class PacketEntity
 			PlayerUtils.sendPacket(player, equipmentPacket);
 	}
 
-	private void despawn(Player player) {
+	protected void despawn(Player player) {
 		PlayerUtils.sendPacket(player, deletePacket);
 	}
 

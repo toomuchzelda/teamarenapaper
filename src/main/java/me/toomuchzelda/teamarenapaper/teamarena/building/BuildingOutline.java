@@ -3,6 +3,8 @@ package me.toomuchzelda.teamarenapaper.teamarena.building;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.WrappedDataValue;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
+import io.papermc.paper.entity.TeleportFlag;
+import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.GlowUtils;
@@ -13,19 +15,16 @@ import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
-import org.bukkit.FluidCollisionMode;
 import org.bukkit.Location;
-import org.bukkit.World;
 import org.bukkit.block.Block;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3f;
 
 import java.util.*;
 import java.util.function.Predicate;
@@ -35,8 +34,17 @@ import java.util.function.Predicate;
  */
 public sealed class BuildingOutline extends PacketEntity {
 	@Nullable
+	@Deprecated
 	private PacketHologram nameHologram;
+	@Deprecated
 	private PacketHologram statusHologram;
+
+	private TextDisplay hologram;
+	private ArmorStand hologramBase;
+	@Nullable
+	private Component nameLine;
+	@Nullable
+	private Component statusLine;
 
 	private static final Vector NAME_OFFSET = new Vector(0, 1.25, 0);
 	private static final Vector STATUS_OFFSET = new Vector(0, 1, 0);
@@ -71,35 +79,66 @@ public sealed class BuildingOutline extends PacketEntity {
 		}
 	}
 
+	private static final Main PLUGIN = Main.getPlugin();
 	private void initHolograms() {
+		if (getRealViewers().size() == 0)
+			return; // defer initialization
 		var viewer = getRealViewers().iterator().next();
 		Location eyeLocation = viewer.getEyeLocation();
-		Location nameLoc = ensureTextVisible(eyeLocation, location, offset, enlarged ? 0.75f : 1);
-		nameHologram = new PacketHologram(nameLoc, viewers, null, Component.empty());
-		statusHologram = new PacketHologram(nameLoc.clone().subtract(NAME_OFFSET).add(STATUS_OFFSET), viewers, null, Component.empty());
+		Location nameLoc = location.clone().add(offset).add(NAME_OFFSET);
+
+		hologram = viewer.getWorld().spawn(nameLoc, TextDisplay.class, hologram1 -> {
+			hologram1.setVisibleByDefault(false);
+			for (var player : getRealViewers()) {
+				player.showEntity(PLUGIN, hologram1);
+			}
+			hologram1.setAlignment(TextDisplay.TextAlignment.CENTER);
+			hologram1.setShadowed(false);
+			hologram1.setLineWidth(2000); // handle wrapping ourselves
+			hologram1.text(Component.empty());
+			hologram1.setBillboard(Display.Billboard.CENTER);
+			hologram1.setSeeThrough(true);
+			hologram1.setBrightness(new Display.Brightness(15, 15));
+		});
+		hologramBase = viewer.getWorld().spawn(nameLoc, ArmorStand.class, stand -> {
+			stand.setVisibleByDefault(false);
+			for (var player : getRealViewers()) {
+				player.showEntity(PLUGIN, stand);
+			}
+			stand.setCanTick(false);
+			stand.setMarker(true);
+			stand.setInvisible(true);
+			stand.setInvulnerable(true);
+			stand.addPassenger(hologram);
+		});
+	}
+
+	private void updateHologram() {
+		var builder = Component.text();
+		boolean appendNewline = false;
+		if (nameLine != null) {
+			builder.append(nameLine);
+			appendNewline = true;
+		}
+		if (statusLine != null) {
+			if (appendNewline)
+				builder.append(Component.newline());
+			builder.append(statusLine);
+		}
+		if (hologram == null)
+			initHolograms();
+		hologram.text(builder.build());
 	}
 
 	@Override
 	public void setText(@Nullable Component component, boolean sendPacket) {
-		if (nameHologram == null)
-			initHolograms();
-		if (component != null) {
-			nameHologram.respawn();
-		} else {
-			nameHologram.despawn();
-		}
-		nameHologram.setText(component, sendPacket);
+		nameLine = component == Component.empty() ? null : component;
+		updateHologram();
 	}
 
 	public void setStatus(@Nullable Component component, boolean sendPacket) {
-		if (statusHologram == null)
-			initHolograms();
-		if (component != null) {
-			statusHologram.respawn();
-		} else {
-			statusHologram.despawn();
-		}
-		statusHologram.setText(component, sendPacket);
+		statusLine = component == Component.empty() ? null : component;
+		updateHologram();
 	}
 
 	public void setOutlineColor(TextColor color) {
@@ -134,34 +173,27 @@ public sealed class BuildingOutline extends PacketEntity {
 		appendScoreboardEntries(entries);
 		GlowUtils.setPacketGlowing(List.of(player), entries, outlineColor != null ? NamedTextColor.nearestTo(outlineColor) : null);
 		super.spawn(player);
-	}
-
-	@Override
-	public void respawn() {
-		super.respawn();
-		if (nameHologram != null) {
-			if (nameHologram.getText() != null)
-				nameHologram.respawn();
-			if (statusHologram.getText() != null)
-				statusHologram.respawn();
+		if (hologram != null) {
+			player.showEntity(PLUGIN, hologramBase);
+			player.showEntity(PLUGIN, hologram);
 		}
 	}
 
 	@Override
-	public void despawn() {
-		super.despawn();
-		if (nameHologram != null) {
-			nameHologram.despawn();
-			statusHologram.despawn();
+	protected void despawn(Player player) {
+		super.despawn(player);
+		if (hologram != null) {
+			player.hideEntity(PLUGIN, hologram);
+			player.hideEntity(PLUGIN, hologramBase);
 		}
 	}
 
 	@Override
 	public void remove() {
 		super.remove();
-		if (nameHologram != null) {
-			nameHologram.remove();
-			statusHologram.remove();
+		if (hologram != null) {
+			hologram.remove();
+			hologramBase.remove();
 		}
 		setOutlineColor(null); // remove from scoreboard teams
 	}
@@ -200,20 +232,9 @@ public sealed class BuildingOutline extends PacketEntity {
 
 	public static final double TEXT_MAX_DISTANCE = 6;
 	protected Location ensureTextVisible(Location eyeLocation, Location buildingLocation, Location offset, float distanceScale) {
-		if (!dynamicLocation)
-			return buildingLocation.clone().add(offset).add(NAME_OFFSET);
 		Vector textDirection = buildingLocation.clone().add(offset).add(NAME_OFFSET).subtract(eyeLocation)
 			.toVector().normalize();
-		World world = eyeLocation.getWorld();
-		double maxDistance = TEXT_MAX_DISTANCE * distanceScale;
-		var result = world.rayTraceBlocks(eyeLocation, textDirection, maxDistance, FluidCollisionMode.ALWAYS, false);
-		Location hit;
-		if (result != null) {
-			hit = result.getHitPosition().subtract(textDirection).toLocation(world);
-		} else {
-			hit = eyeLocation.clone().add(textDirection.multiply(maxDistance));
-		}
-		return hit;
+		return eyeLocation.clone().add(textDirection.multiply(TEXT_MAX_DISTANCE));
 	}
 
 	public void update(Location eyeLocation, Location buildingLocation) {
@@ -230,14 +251,33 @@ public sealed class BuildingOutline extends PacketEntity {
 		} else {
 			scale = (enlarged ? 0.75f : 1);
 		}
-		if (dynamicLocation)
-			move(ensureOutlineVisible(eyeLocation, buildingLocation, offset, scale));
-		if (nameHologram == null || nameHologram.getText() == null)
+		if (dynamicLocation) {
+			Location newLocation = ensureOutlineVisible(eyeLocation, buildingLocation, offset, scale);
+			move(newLocation);
+		}
+		if (hologram == null)
 			return;
-		// ensure holograms are always visible
+		// ensure holograms are at the correct location
 		Location hit = ensureTextVisible(eyeLocation, buildingLocation, offset, scale);
-		nameHologram.move(hit);
-		statusHologram.move(hit.clone().subtract(NAME_OFFSET).add(STATUS_OFFSET));
+		// teleports are jittery but oh well
+		hologramBase.teleport(hit, TeleportFlag.EntityState.RETAIN_PASSENGERS);
+
+		// perform display transformations
+		var transformation = hologram.getTransformation();
+
+		var oldScale = transformation.getScale();
+		// check if the entity's scale is consistent with our current state
+		if (enlarged != (oldScale.x == 1.25f)) {
+			Vector3f newScale = new Vector3f(enlarged ? 1.25f : 1);
+			hologram.setTransformation(new Transformation(
+				transformation.getTranslation(),
+				transformation.getLeftRotation(),
+				newScale,
+				transformation.getRightRotation()
+			));
+			hologram.setInterpolationDuration(INTERPOLATION_PERIOD);
+			hologram.setInterpolationDelay(0);
+		}
 	}
 
 	public static BuildingOutline fromBuilding(Building building) {
