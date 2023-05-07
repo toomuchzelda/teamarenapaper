@@ -3,25 +3,33 @@ package me.toomuchzelda.teamarenapaper.utils.packetentities;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
-import com.comphenix.protocol.wrappers.AdventureComponentConverter;
-import com.comphenix.protocol.wrappers.WrappedDataValue;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
+import io.papermc.paper.adventure.PaperAdventure;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
-import org.bukkit.*;
+import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
+import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
+import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.craftbukkit.v1_19_R3.block.data.CraftBlockData;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import javax.annotation.Nullable;
 import java.util.*;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * "Fake" entity the internal server is not aware exists.
@@ -40,17 +48,23 @@ public class PacketEntity
 
 	private final int id;
 	private final UUID uuid;
+	private final EntityType entityType;
 
-	private PacketContainer spawnPacket;
-	private StructureModifier<Double> spawnPacketDoubles; //keep spawn location modifier
+	protected PacketContainer spawnPacket;
+	// StructureModifiers are already cached by ProtocolLib
+//	private StructureModifier<Double> spawnPacketDoubles; //keep spawn location modifier
 	private PacketContainer deletePacket;
 	protected PacketContainer metadataPacket;
-	private StructureModifier<List<WrappedDataValue>> dataValueCollectionModifier;
+//	private StructureModifier<List<WrappedDataValue>> dataValueCollectionModifier;
 	private PacketContainer teleportPacket;
 	private StructureModifier<Double> teleportPacketDoubles;
 	private StructureModifier<Byte> teleportPacketBytes;
-	private PacketContainer rotateHeadPacket;
+	protected PacketContainer rotateHeadPacket;
 	private StructureModifier<Byte> headPacketBytes;
+	@Nullable
+	protected EnumMap<EquipmentSlot, ItemStack> equipment;
+	@Nullable
+	protected PacketContainer equipmentPacket;
 
 	//entity's WrappedDataWatcher
 	private WrappedDataWatcher data;
@@ -88,6 +102,7 @@ public class PacketEntity
 			this.id = id;
 
 		this.uuid = UUID.randomUUID();
+		this.entityType = entityType;
 
 		this.location = location.clone();
 
@@ -142,11 +157,7 @@ public class PacketEntity
 		spawnPacket.getEntityTypeModifier().write(0, type);
 
 		//spawn location
-		StructureModifier<Double> doubles = spawnPacket.getDoubles();
-		doubles.write(0, location.getX());
-		doubles.write(1, location.getY());
-		doubles.write(2, location.getZ());
-		this.spawnPacketDoubles = doubles;
+		updateSpawnPacket(location);
 
 		spawnPacket.getUUIDs().write(0, this.uuid);
 	}
@@ -166,8 +177,8 @@ public class PacketEntity
 
 		//this.dataValueCollectionModifier = this.metadataPacket.getWatchableCollectionModifier();
 		//this.dataValueCollectionModifier.write(0, this.data.getWatchableObjects());
-		this.dataValueCollectionModifier = this.metadataPacket.getDataValueCollectionModifier();
-		this.dataValueCollectionModifier.write(0, MetaIndex.getFromWatchableObjectsList(this.data.getWatchableObjects()));
+		this.metadataPacket.getDataValueCollectionModifier()
+			.write(0, MetaIndex.getFromWatchableObjectsList(this.data.getWatchableObjects()));
 	}
 
 	public void setMetadata(WrappedDataWatcher.WrappedDataWatcherObject index, Object object) {
@@ -178,16 +189,82 @@ public class PacketEntity
 		return this.data.getObject(index);
 	}
 
-	public void setText(Component component, boolean sendPacket) {
-		Optional<?> nameComponent = Optional.of(AdventureComponentConverter.fromComponent(
-				component).getHandle());
+	public WrappedDataWatcher getDataWatcher() {
+		return this.data;
+	}
 
-		//this.data.setObject(MetaIndex.CUSTOM_NAME_OBJ, nameComponent);
-		this.setMetadata(MetaIndex.CUSTOM_NAME_OBJ, nameComponent);
+	public void setViewerRule(@Nullable Predicate<Player> rule) {
+		this.viewerRule = rule;
+	}
 
-		if(sendPacket) {
-			this.refreshViewerMetadata();
+	Component customName;
+	public void setText(@Nullable Component component, boolean sendPacket) {
+		if (!Objects.equals(customName, component)) {
+			customName = component;
+			Optional<?> nameComponent = Optional.ofNullable(PaperAdventure.asVanilla(component));
+			this.setMetadata(MetaIndex.CUSTOM_NAME_OBJ, nameComponent);
+
+			if (sendPacket) {
+				this.refreshViewerMetadata();
+			}
 		}
+	}
+
+	@Nullable
+	public Component getText() {
+		return customName;
+	}
+
+	public void setEquipment(EquipmentSlot slot, ItemStack stack) {
+		setEquipment(Map.of(slot, stack));
+	}
+
+	public void setEquipment(@NotNull Map<EquipmentSlot, @Nullable ItemStack> equipmentMap) {
+		if (equipment == null)
+			equipment = new EnumMap<>(EquipmentSlot.class);
+		Map<EquipmentSlot, ItemStack> changed = new EnumMap<>(EquipmentSlot.class);
+		for (var entry : equipmentMap.entrySet()) {
+			EquipmentSlot slot = entry.getKey();
+			ItemStack stack = entry.getValue();
+			ItemStack oldStack = stack == null ? equipment.remove(slot) : equipment.put(slot, stack);
+			if (!Objects.equals(stack, oldStack)) {
+				changed.put(slot, stack);
+			}
+		}
+		// update equipment packet for respawning, but send smaller change packet
+		updateEquipmentPacket();
+		if (isAlive() && changed.size() != 0) {
+			var equipmentDeltaPacket = new ClientboundSetEquipmentPacket(getId(), EntityUtils.getNMSEquipmentList(changed));
+			for (Player viewer : getRealViewers()) {
+				PlayerUtils.sendPacket(viewer, equipmentDeltaPacket);
+			}
+		}
+	}
+
+	@Nullable
+	public ItemStack getEquipment(EquipmentSlot slot) {
+		if (equipment == null)
+			return null;
+		ItemStack stack = equipment.get(slot);
+		return stack != null ? stack.clone() : null;
+	}
+
+	@NotNull
+	public Map<EquipmentSlot, ItemStack> getAllEquipment() {
+		if (equipment == null)
+			return Map.of();
+		// clone ItemStacks
+		return equipment.entrySet().stream()
+			.map(entry -> Map.entry(entry.getKey(), entry.getValue().clone()))
+			.collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+	}
+
+	private void updateEquipmentPacket() {
+		if (equipment == null || equipment.size() == 0) // ok
+			equipmentPacket = null;
+		else
+			equipmentPacket = new PacketContainer(PacketType.Play.Server.ENTITY_EQUIPMENT,
+				new ClientboundSetEquipmentPacket(getId(), EntityUtils.getNMSEquipmentList(equipment)));
 	}
 
 	private void createRotateHead() {
@@ -267,10 +344,15 @@ public class PacketEntity
 	}
 
 	protected void updateSpawnPacket(Location newLocation) {
-		StructureModifier<Double> doubles = this.spawnPacketDoubles;
-		doubles.write(0, newLocation.getX());
-		doubles.write(1, newLocation.getY());
-		doubles.write(2, newLocation.getZ());
+		this.spawnPacket.getDoubles()
+			.write(0, newLocation.getX())
+			.write(1, newLocation.getY())
+			.write(2, newLocation.getZ());
+		byte yaw = (byte) (newLocation.getYaw() * 256d / 360d);
+		spawnPacket.getBytes()
+			.write(0, (byte) (newLocation.getPitch() * 256d / 360d))
+			.write(1, yaw)
+			.write(2, yaw);
 	}
 
 
@@ -284,7 +366,8 @@ public class PacketEntity
 	 */
 	public void updateMetadataPacket() {
 		//this.dataValueCollectionModifier.write(0, this.data.getWatchableObjects());
-		this.dataValueCollectionModifier.write(0, MetaIndex.getFromWatchableObjectsList(this.data.getWatchableObjects()));
+		this.metadataPacket.getDataValueCollectionModifier()
+			.write(0, MetaIndex.getFromWatchableObjectsList(this.data.getWatchableObjects()));
 	}
 
 	/**
@@ -301,8 +384,10 @@ public class PacketEntity
 		this.move(newLocation, false);
 	}
 
+	private static final double EPSILON = Vector.getEpsilon();
 	protected void move(Location newLocation, boolean force) {
-		if(this.location.equals(newLocation) && !force)
+		if (!force && location.distance(newLocation) < EPSILON &&
+			location.getYaw() == newLocation.getYaw() && location.getPitch() == newLocation.getPitch())
 			return;
 
 		newLocation = newLocation.clone();
@@ -333,6 +418,8 @@ public class PacketEntity
 
 	protected void spawn(Player player) {
 		PlayerUtils.sendPacket(player, spawnPacket, metadataPacket);
+		if (equipmentPacket != null)
+			PlayerUtils.sendPacket(player, equipmentPacket);
 	}
 
 	private void despawn(Player player) {
@@ -571,5 +658,9 @@ public class PacketEntity
 
 	public UUID getUuid() {
 		return uuid;
+	}
+
+	public EntityType getEntityType() {
+		return entityType;
 	}
 }

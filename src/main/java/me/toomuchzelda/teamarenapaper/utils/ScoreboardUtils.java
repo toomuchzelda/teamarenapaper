@@ -21,7 +21,10 @@ import org.bukkit.scoreboard.DisplaySlot;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Constructor;
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 
 /**
  * @author jacky
@@ -101,17 +104,19 @@ public class ScoreboardUtils {
 	}
 
 	public static void sendTeamPacket(Player player, String name, boolean leave, org.bukkit.entity.Entity... entities) {
+		String[] names = new String[entities.length];
+		for (int i = 0; i < entities.length; i++) {
+			names[i] = ((CraftEntity) entities[i]).getHandle().getScoreboardName();
+		}
+		sendTeamPacket(player, name, leave, names);
+	}
+
+
+	public static void sendTeamPacket(Player player, String name, boolean leave, String... names) {
 		initTeamPacketConstructor();
 
 		try {
-			Collection<String> collection;
-			if (entities.length == 1) {
-				collection = Collections.singletonList(((CraftEntity) entities[0]).getHandle().getScoreboardName());
-			} else {
-				collection = Arrays.stream(entities)
-						.map(entity -> ((CraftEntity) entity).getHandle().getScoreboardName())
-						.toList();
-			}
+			Collection<String> collection = List.of(names);
 			var packet = TEAM_PACKET_CTOR.newInstance(name, leave ? 4 : 3, Optional.empty(), collection);
 			sendPacket(player, packet);
 		} catch (Exception e) {

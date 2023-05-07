@@ -2,20 +2,29 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.engineer;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.building.Building;
+import me.toomuchzelda.teamarenapaper.teamarena.building.EntityBuilding;
+import me.toomuchzelda.teamarenapaper.teamarena.building.PreviewableBuilding;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
+import org.bukkit.block.BlockFace;
 import org.bukkit.entity.*;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.List;
 
-public class Sentry extends Building {
+public class Sentry extends EntityBuilding implements PreviewableBuilding {
 	enum State {
 		STARTUP,
 		NEUTRAL,
@@ -43,14 +52,12 @@ public class Sentry extends Building {
 
 	private static final ItemStack ICON = new ItemStack(Material.BOW);
 
-	public Sentry(Player player, Skeleton sentry) {
-		super(player, sentry.getLocation());
+	public Sentry(Player player, Location sentryLocation) {
+		super(player, sentryLocation);
 		setName("Sentry");
 		setIcon(ICON);
 		this.currState = State.STARTUP;
-		this.sentry = sentry;
 		this.initYaw = this.location.getYaw();
-		this.initTick = TeamArena.getGameTick();
 		this.creationTick = TeamArena.getGameTick() + SENTRY_STARTUP_TIME;
 
 		var playerTeam = Main.getPlayerInfo(player).team;
@@ -60,15 +67,7 @@ public class Sentry extends Building {
 
 		//Changing properties from Projection state to Active state
 
-		sentry.setAI(false);
-		sentry.setRemoveWhenFarAway(false);
-		sentry.setShouldBurnInDay(false);
-		sentry.getEquipment().clear();
-		sentry.setCanPickupItems(false);
-		sentry.setInvisible(false);
-		sentry.setCollidable(true);
-		sentry.setSilent(false);
-		sentry.customName(player.playerListName().append(Component.text("'s Sentry", player.playerListName().style())));
+
 		this.armor = new ItemStack[4];
 		armor[3] = new ItemStack(Material.LEATHER_HELMET);
 		armor[2] = new ItemStack(Material.LEATHER_CHESTPLATE);
@@ -76,13 +75,16 @@ public class Sentry extends Building {
 		armor[0] = new ItemStack(Material.IRON_BOOTS);
 		ItemUtils.colourLeatherArmor(teamColor, armor[3]);
 		ItemUtils.colourLeatherArmor(teamColor, armor[2]);
-		//ItemUtils.colourLeatherArmor(teamColor, armor[1]);
-		//ItemUtils.colourLeatherArmor(teamColor, armor[0]);
+	}
 
-		ItemStack sentryBow = new ItemStack(Material.BOW);
-		sentry.getEquipment().setItemInMainHand(sentryBow, true);
+	@Override
+	public @NotNull Collection<? extends Entity> getEntities() {
+		return List.of(sentry);
+	}
 
-		//player.getWorld().playSound(sentry, Sound.BLOCK_ANVIL_USE, 1.0f, 0.8f);
+	@Override
+	public @NotNull Collection<? extends PacketEntity> getPacketEntities() {
+		return List.of();
 	}
 
 	@Override
@@ -254,12 +256,12 @@ public class Sentry extends Building {
 	}
 
 	public void shoot(Vector direction) {
-		AbstractArrow sentryFire = sentry.launchProjectile(Arrow.class);
-		sentryFire.setVelocity(direction.multiply(4.1));
-		sentryFire.setDamage(1.0);
-		sentryFire.setShooter(owner);
-		sentryFire.setCritical(false);
-		sentryFire.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
+		sentry.launchProjectile(Arrow.class, direction.multiply(4.1), arrow -> {
+			arrow.setDamage(1.0);
+			arrow.setShooter(owner);
+			arrow.setCritical(false);
+			arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
+		});
 
 		sentry.getWorld().playSound(sentry, Sound.ENTITY_FISHING_BOBBER_THROW, 1.5f, 0.8f);
 	}
@@ -281,6 +283,26 @@ public class Sentry extends Building {
 			sentryLoc.add(inc);
 			sentry.getWorld().spawnParticle(Particle.REDSTONE, sentryLoc, 1, 0, 0, 0, data);
 		}
+	}
+
+	@Override
+	public void onPlace() {
+		super.onPlace();
+		this.sentry = location.getWorld().spawn(location, Skeleton.class, skeleton -> {
+			skeleton.setAI(false);
+			skeleton.setRemoveWhenFarAway(false);
+			skeleton.setShouldBurnInDay(false);
+			skeleton.getEquipment().clear();
+			skeleton.setCanPickupItems(false);
+			skeleton.setInvisible(false);
+			skeleton.setCollidable(true);
+			skeleton.setSilent(false);
+			skeleton.customName(owner.playerListName().append(Component.text("'s Sentry", owner.playerListName().style())));
+			ItemStack sentryBow = new ItemStack(Material.BOW);
+			skeleton.getEquipment().setItemInMainHand(sentryBow, true);
+		});
+		this.currState = State.STARTUP;
+		this.initTick = TeamArena.getGameTick();
 	}
 
 	@Override
@@ -320,6 +342,8 @@ public class Sentry extends Building {
 			}
 		} else if (this.currState == State.WRANGLED) {
 			wranglerParticleBeam();
+			Location ownerLoc = owner.getLocation();
+			sentry.setRotation(ownerLoc.getYaw(), ownerLoc.getPitch());
 			//If engineer leaves mount, return to NEUTRAL
 			if(sentry.getPassengers().isEmpty()){
 				this.currState = State.NEUTRAL;
@@ -331,5 +355,71 @@ public class Sentry extends Building {
 	public void onDestroy() {
 		super.onDestroy();
 		sentry.remove();
+	}
+
+	@Override
+	public boolean onDamage(DamageEvent e) {
+		if (e.getAttacker() instanceof Player attacker && !Main.getGame().canAttack(attacker, owner))
+			e.setCancelled(true); // ally damage
+		return false; // continue handling
+	}
+
+	@Override
+	public void onInteract(PlayerInteractEntityEvent e) {
+		Player rider = e.getPlayer();
+		if (owner.equals(rider) && currState != Sentry.State.STARTUP) {
+			sentry.addPassenger(rider);
+			currState = State.WRANGLED;
+		}
+	}
+
+
+	public static final int SENTRY_PLACEMENT_RANGE = 3;
+	@Override
+	public @Nullable PreviewResult doRayTrace() {
+		Location eyeLocation = owner.getEyeLocation().clone().add(0, -0.8, 0);
+		Vector direction = eyeLocation.getDirection();
+		var result = owner.getWorld().rayTraceBlocks(eyeLocation, direction, SENTRY_PLACEMENT_RANGE,
+			FluidCollisionMode.NEVER, true);
+		Location blockLoc;
+		if (result != null) {
+			BlockFace face = result.getHitBlockFace();
+			blockLoc = result.getHitPosition().toLocation(owner.getWorld());
+			blockLoc.setYaw(eyeLocation.getYaw());
+			blockLoc.setPitch(eyeLocation.getPitch());
+			if (face != null && face != BlockFace.UP) {
+				blockLoc.add(face.getModX() * 0.5, face.getModY() * 2, face.getModZ() * 0.5);
+			}
+		} else {
+			blockLoc = eyeLocation.add(direction.multiply(SENTRY_PLACEMENT_RANGE));
+		}
+		var gravityResult = owner.getWorld().rayTraceBlocks(blockLoc, new Vector(0, -1, 0), 1);
+		if (gravityResult != null) {
+			blockLoc.setY(gravityResult.getHitPosition().getY());
+			return PreviewResult.validate(blockLoc, Sentry::isValidLocation);
+		} else {
+			return PreviewResult.deny(blockLoc);
+		}
+	}
+
+	private static boolean isValidLocation(Location location) {
+		BoundingBox aabb = BoundingBox.of(location.clone().add(0, 1.05, 0), 0.3, 1, 0.3);
+		return !location.getWorld().hasCollisionsIn(aabb);
+	}
+
+	private static List<PreviewEntity> PREVIEW;
+	@Override
+	public @NotNull List<PreviewEntity> getPreviewEntity(Location location) {
+		if (PREVIEW == null) {
+			PREVIEW = List.of(new PreviewEntity(new PacketEntity(PacketEntity.NEW_ID, EntityType.SKELETON, location, List.of(), null)));
+		}
+		return PREVIEW;
+	}
+
+	@Override
+	public void setLocation(Location newLoc) {
+		super.setLocation(newLoc);
+		if (sentry != null)
+			sentry.teleport(newLoc);
 	}
 }

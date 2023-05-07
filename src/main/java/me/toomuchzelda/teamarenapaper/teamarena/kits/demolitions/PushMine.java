@@ -1,20 +1,26 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions;
 
-import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
-import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
-import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Collection;
+import java.util.List;
 
 public class PushMine extends DemoMine
 {
@@ -24,19 +30,29 @@ public class PushMine extends DemoMine
 
 	private int triggerTime;
 
-	public PushMine(Player demo, Block block) {
-		super(demo, block);
+	/**
+	 * Creates a new push mine
+	 * @param player The demolition player
+	 * @param block The block the mine is sitting on
+	 */
+	public PushMine(Player player, Block block) {
+		super(player, block);
 
 		this.type = MineType.PUSHMINE;
+		setName(type.name);
+		setOutlineColor(NamedTextColor.DARK_GREEN);
+	}
+
+	@Override
+	public void onPlace() {
+		super.onPlace();
 
 		//put downwards slightly so rotated legs lay flat on ground and boots partially in ground
 		Location spawnLoc = baseLoc.clone().add(0, -1.8, 0);
 
 		World world = baseLoc.getWorld();
-		this.armorSlot = EquipmentSlot.HEAD;
 		ItemStack leatherHelmet = new ItemStack(Material.LEATHER_HELMET);
 		ItemUtils.colourLeatherArmor(color, leatherHelmet);
-		stands = new ArmorStand[1];
 
 		org.bukkit.util.Consumer<ArmorStand> propApplier = stand -> {
 			stand.setGlowing(false);
@@ -48,24 +64,13 @@ public class PushMine extends DemoMine
 			stand.setBasePlate(false);
 			stand.setInvisible(true);
 			stand.getEquipment().setHelmet(leatherHelmet, true);
-
-			for(Player viewer : this.team.getPlayerMembers()) {
-				MetadataViewer metaViewer = Main.getPlayerInfo(viewer).getMetadataViewer();
-				metaViewer.setViewedValue(MetaIndex.BASE_BITFIELD_IDX,
-						MetaIndex.GLOWING_METADATA_VALUE, stand.getEntityId(), stand);
-
-				//Don't need to refresh metaViewer as this has been put in before the metadata packet is sent
-			}
 		};
-		stands[0] = world.spawn(spawnLoc, ArmorStand.class, propApplier);
+		stands = new ArmorStand[] {world.spawn(spawnLoc, ArmorStand.class, propApplier)};
+	}
 
-		this.glowingTeam = DARK_GREEN_GLOWING_TEAM;
-		this.ownerGlowingTeam = GREEN_GLOWING_TEAM;
-		glowingTeam.addEntities(stands);
-		PlayerScoreboard.addMembersAll(glowingTeam, stands);
-
-		//owner demo should see it as lighter colour
-		Main.getPlayerInfo(owner).getScoreboard().addMembers(GREEN_GLOWING_TEAM, stands);
+	@Override
+	public @NotNull Collection<? extends Entity> getEntities() {
+		return List.of(stands);
 	}
 
 	@Override
@@ -80,7 +85,8 @@ public class PushMine extends DemoMine
 	}
 
 	@Override
-	void tick() {
+	public void onTick() {
+		super.onTick();
 		if(isTriggered()) {
 			if(TeamArena.getGameTick() - triggerTime == this.timeToDetonate) {
 				Location explodeLoc = baseLoc.clone().add(0, 0.1, 0);
@@ -90,7 +96,7 @@ public class PushMine extends DemoMine
 						BLAST_STRENGTH, DamageType.DEMO_PUSHMINE, this.owner);
 				explosion.explode();
 
-				this.removeEntities();
+				markInvalid();
 			}
 		}
 	}
@@ -98,5 +104,18 @@ public class PushMine extends DemoMine
 	@Override
 	boolean isDone() {
 		return !this.stands[0].isValid();
+	}
+
+	private static List<PreviewEntity> PREVIEW;
+	@Override
+	public @NotNull List<PreviewEntity> getPreviewEntity(Location location) {
+		if (PREVIEW == null) {
+			var outline = new PacketEntity(PacketEntity.NEW_ID, EntityType.ARMOR_STAND, location, List.of(), null);
+			outline.setEquipment(EquipmentSlot.HEAD, new ItemStack(Material.LEATHER_HELMET));
+			outline.setMetadata(MetaIndex.ARMOR_STAND_BITFIELD_OBJ, MetaIndex.ARMOR_STAND_MARKER_MASK);
+			outline.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK);
+			PREVIEW = List.of(new PreviewEntity(outline, new Vector(0, -1.8, 0)));
+		}
+		return PREVIEW;
 	}
 }

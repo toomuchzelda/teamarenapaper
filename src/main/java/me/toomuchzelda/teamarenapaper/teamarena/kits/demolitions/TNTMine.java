@@ -1,27 +1,27 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions;
 
-import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.explosions.CustomExplosionInfo;
 import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
-import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
-import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaExplosion;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.minecraft.core.Rotations;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
-import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.TNTPrimed;
+import org.bukkit.entity.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.EulerAngle;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 
+import java.util.Collection;
 import java.util.List;
 
 public class TNTMine extends DemoMine
@@ -30,11 +30,22 @@ public class TNTMine extends DemoMine
 
 	TNTPrimed tnt;
 
-	public TNTMine(Player demo, Block block) {
-		super(demo, block);
+	/**
+	 * Creates a new TNT mine
+	 * @param player The demolition player
+	 * @param block The block the mine is sitting on
+	 */
+	public TNTMine(Player player, Block block) {
+		super(player, block);
 
 		this.type = MineType.TNTMINE;
+		setName(type.name);
+		setOutlineColor(NamedTextColor.RED);
+	}
 
+	@Override
+	public void onPlace() {
+		super.onPlace();
 		Location standBaseLoc = baseLoc.clone().add(0d, -0.85d, 0d);
 
 		Location spawnLoc1 = standBaseLoc.clone().add(0, 0, 0.5d);
@@ -43,10 +54,8 @@ public class TNTMine extends DemoMine
 		spawnLoc2.setYaw(180f);
 
 		World world = baseLoc.getWorld();
-		this.armorSlot = EquipmentSlot.FEET;
 		ItemStack leatherBoots = new ItemStack(Material.LEATHER_BOOTS);
 		ItemUtils.colourLeatherArmor(color, leatherBoots);
-		stands = new ArmorStand[2];
 		org.bukkit.util.Consumer<ArmorStand> propApplier = stand -> {
 			stand.setGlowing(false);
 			stand.setSilent(true);
@@ -59,32 +68,29 @@ public class TNTMine extends DemoMine
 			stand.setLeftLegPose(LEG_ANGLE);
 			stand.setRightLegPose(LEG_ANGLE);
 			stand.getEquipment().setBoots(leatherBoots, true);
-
-			for(Player viewer : this.team.getPlayerMembers()) {
-				MetadataViewer metaViewer = Main.getPlayerInfo(viewer).getMetadataViewer();
-				metaViewer.setViewedValue(MetaIndex.BASE_BITFIELD_IDX,
-						MetaIndex.GLOWING_METADATA_VALUE, stand.getEntityId(), stand);
-
-				//Don't need to refresh metaViewer as this has been put in before the metadata packet is sent
-			}
 		};
-		stands[0] = world.spawn(spawnLoc1, ArmorStand.class, propApplier);
-		stands[1] = world.spawn(spawnLoc2, ArmorStand.class, propApplier);
+		stands = new ArmorStand[] {
+			world.spawn(spawnLoc1, ArmorStand.class, propApplier),
+			world.spawn(spawnLoc2, ArmorStand.class, propApplier)
+		};
+	}
 
-		this.glowingTeam = DemoMine.RED_GLOWING_TEAM;
-		this.ownerGlowingTeam = DemoMine.GOLD_GLOWING_TEAM;
-		glowingTeam.addEntities(stands);
-		PlayerScoreboard.addMembersAll(glowingTeam, stands);
+	@Override
+	public void onDestroy() {
+		super.onDestroy();
 
-		//owner demo should see it as lighter colour
-		Main.getPlayerInfo(owner).getScoreboard().addMembers(GOLD_GLOWING_TEAM, stands);
+	}
+
+	@Override
+	public @NotNull Collection<? extends Entity> getEntities() {
+		return List.of(stands);
 	}
 
 	@Override
 	public void trigger(Player triggerer) {
 		super.trigger(triggerer);
 
-		removeEntities(); //won't remove the tnt as it's still null as of now
+		markInvalid();
 
 		TNTPrimed tnt = (TNTPrimed) baseLoc.getWorld().spawnEntity(hitboxEntity.getLocation().subtract(0d, 0.35d, 0d),
 				EntityType.PRIMED_TNT);
@@ -104,26 +110,39 @@ public class TNTMine extends DemoMine
 		return this.type == MineType.TNTMINE && this.tnt != null && !this.tnt.isValid();
 	}
 
-	@Override
-	void removeEntities() {
-		super.removeEntities();
-		if(this.tnt != null)
-			tnt.remove();
-	}
-
 	public static TNTMine getByTNT(Player player, TNTPrimed tnt) {
-		List<DemoMine> list = KitDemolitions.DemolitionsAbility.PLAYER_MINES.get(player);
-		TNTMine lex_mine = null;
-		if(list != null) {
-			for(DemoMine mine : list) {
-				if(mine instanceof TNTMine tntmine) {
-					if (tntmine.tnt == tnt) {
-						lex_mine = tntmine;
-						break;
-					}
-				}
+		List<TNTMine> list = BuildingManager.getPlayerBuildings(player, TNTMine.class);
+		for (TNTMine mine : list) {
+			if (mine.tnt == tnt) {
+				return mine;
 			}
 		}
-		return lex_mine;
+		return null;
+	}
+
+	private static List<PreviewEntity> PREVIEW;
+	@Override
+	public @NotNull List<PreviewEntity> getPreviewEntity(Location location) {
+		if (PREVIEW == null) {
+			var rotations = new Rotations(
+				(float) Math.toDegrees(LEG_ANGLE.getX()),
+				(float) Math.toDegrees(LEG_ANGLE.getY()),
+				(float) Math.toDegrees(LEG_ANGLE.getZ())
+			);
+			PacketEntity outline1 = new PacketEntity(PacketEntity.NEW_ID, EntityType.ARMOR_STAND, location, List.of(), null);
+			PacketEntity outline2 = new PacketEntity(PacketEntity.NEW_ID, EntityType.ARMOR_STAND, location, List.of(), null);
+
+			PREVIEW = List.of(new PreviewEntity(outline2, new Vector(0, -0.855, -0.5), 180, 0),
+				new PreviewEntity(outline1, new Vector(0, -0.85, 0.5)));
+			for (var preview : PREVIEW) {
+				var outline = preview.packetEntity();
+				outline.setEquipment(EquipmentSlot.FEET, new ItemStack(Material.LEATHER_BOOTS));
+				outline.setMetadata(MetaIndex.ARMOR_STAND_BITFIELD_OBJ, MetaIndex.ARMOR_STAND_MARKER_MASK);
+				outline.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK);
+				outline.setMetadata(MetaIndex.ARMOR_STAND_LEFT_LEG_POSE, rotations);
+				outline.setMetadata(MetaIndex.ARMOR_STAND_RIGHT_LEG_POSE, rotations);
+			}
+		}
+		return PREVIEW;
 	}
 }

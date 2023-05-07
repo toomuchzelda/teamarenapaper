@@ -2,14 +2,12 @@ package me.toomuchzelda.teamarenapaper.teamarena.building;
 
 import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.Consumer;
 
 /**
  * @author jacky
@@ -21,6 +19,7 @@ public final class BuildingManager {
 	}
 
 	private static final Map<BlockCoords, Building> buildings = new LinkedHashMap<>();
+	private static final Map<Entity, EntityBuilding> entityBuildings = new HashMap<>();
 	private static final Map<Player, Map<Class<? extends Building>, List<Building>>> playerBuildings = new HashMap<>();
 
 	public static void init() {
@@ -41,13 +40,23 @@ public final class BuildingManager {
 	public static void cleanUp() {
 		buildings.values().forEach(Building::onDestroy);
 		buildings.clear();
+		entityBuildings.clear();
 		playerBuildings.clear();
-		blockBreakCallbacks.clear();
 	}
 
 	@Nullable
 	public static Building getBuildingAt(@NotNull Block block) {
-		return buildings.get(new BlockCoords(block));
+		return getBuildingAt(new BlockCoords(block));
+	}
+
+	@Nullable
+	public static Building getBuildingAt(@NotNull BlockCoords block) {
+		return buildings.get(block);
+	}
+
+	@Nullable
+	public static EntityBuilding getBuilding(@NotNull Entity entity) {
+		return entityBuildings.get(entity);
 	}
 
 	public static boolean isLocationValid(@NotNull Block block) {
@@ -59,18 +68,28 @@ public final class BuildingManager {
 	}
 
 	public static void placeBuilding(@NotNull Building building) {
+		building.onPlace();
+
 		buildings.put(new BlockCoords(building.getLocation()), building);
+		if (building instanceof EntityBuilding entityBuilding) {
+			entityBuilding.getEntities().forEach(entity -> entityBuildings.put(entity, entityBuilding));
+		}
+
 		playerBuildings.computeIfAbsent(building.owner, ignored -> new HashMap<>())
 				.computeIfAbsent(building.getClass(), ignored -> new ArrayList<>())
 				.add(building);
 
-		building.onPlace();
 	}
 
 	public static void destroyBuilding(@NotNull Building building) {
 		building.onDestroy();
+		building.markInvalid(); // ensure that it is invalid
 
 		buildings.remove(new BlockCoords(building.getLocation()));
+		if (building instanceof EntityBuilding entityBuilding) {
+			entityBuilding.getEntities().forEach(entityBuildings::remove);
+		}
+
 		var buildingsByClass = playerBuildings.get(building.owner);
 		var buildingsList = buildingsByClass.get(building.getClass());
 		buildingsList.remove(building);
@@ -125,43 +144,25 @@ public final class BuildingManager {
 		}
 	}
 
-	// temporary API
-	@Deprecated
-	public static void registerBlockBreakCallback(Block block, Building building, Consumer<BlockBreakEvent> handler) {
-		blockBreakCallbacks.computeIfAbsent(block, ignored -> new WeakHashMap<>()).put(building, handler);
+	/**
+	 * Returns the number of buildings owned by {@code player}.
+	 * @param player The player.
+	 * @param clazz The type of building.
+	 * @return The number of the specific type of building placed by the player
+	 */
+	public static int getPlayerBuildingCount(@NotNull Player player, @NotNull Class<? extends Building> clazz) {
+		if (clazz == Building.class)
+			throw new IllegalArgumentException("Not a concrete building type");
+		var playerBuildingsByType = playerBuildings.getOrDefault(player, Collections.emptyMap());
+		var buildings = playerBuildingsByType.get(clazz);
+		if (buildings != null) {
+			return buildings.size();
+		} else {
+			return 0;
+		}
 	}
 
-	private static final Map<Block, WeakHashMap<Building, Consumer<BlockBreakEvent>>> blockBreakCallbacks = new HashMap<>();
-
-	// (unfortunately) delegated to EventListeners
-	public static final class EventListener {
-		public static void onPlayerQuit(PlayerQuitEvent event) {
-			getAllPlayerBuildings(event.getPlayer()).forEach(BuildingManager::destroyBuilding);
-		}
-
-		// temporary API
-		public static boolean onBlockBreak(BlockBreakEvent event) {
-			var block = event.getBlock();
-			Map<Building, Consumer<BlockBreakEvent>> handlers = blockBreakCallbacks.get(block);
-			if (handlers != null) {
-				boolean handled = false;
-				for (var iter = handlers.entrySet().iterator(); iter.hasNext();) {
-					var registeredHandler = iter.next();
-					var building = registeredHandler.getKey();
-					if (building.invalid) {
-						iter.remove();
-						continue;
-					}
-					var handler = registeredHandler.getValue();
-					handler.accept(event);
-					handled = true;
-				}
-				if (!event.isCancelled()) {
-					blockBreakCallbacks.remove(block);
-				}
-				return handled;
-			}
-			return false;
-		}
+	public enum AllyVisibility {
+		ALWAYS, NEARBY, NEVER
 	}
 }

@@ -20,7 +20,7 @@ import me.toomuchzelda.teamarenapaper.sql.DBSetPreferences;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.ChatAnnouncerManager;
-import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingListeners;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
@@ -33,12 +33,12 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.KitReach;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitVenom;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.*;
+import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
@@ -263,7 +263,7 @@ public class EventListeners implements Listener
 		event.quitMessage(null);
 		Player leaver = event.getPlayer();
 		Main.getGame().leavingPlayer(leaver);
-		BuildingManager.EventListener.onPlayerQuit(event);
+		BuildingListeners.onPlayerQuit(event);
 		//Main.getPlayerInfo(event.getPlayer()).nametag.remove();
 		FakeHitboxManager.removeFakeHitbox(leaver);
 		PlayerInfo pinfo = Main.removePlayerInfo(leaver);
@@ -389,7 +389,7 @@ public class EventListeners implements Listener
 						return;
 					}
 					// not handled by BuildingManager and not breakable
-					if (!BuildingManager.EventListener.onBlockBreak(event) && !isBlockBreakable(event.getBlock().getType()))
+					if (!BuildingListeners.onBlockBroken(event) && !isBlockBreakable(event.getBlock().getType()))
 						event.setCancelled(true);
 				}
 			}
@@ -803,6 +803,9 @@ public class EventListeners implements Listener
 		if(Main.getGame() != null) {
 			Main.getGame().onInteract(event);
 
+			if (BuildingListeners.onInteract(event))
+				return; // handled by buildings
+
 			if(Main.getGame().getGameState() == LIVE) {
 				for (Ability a : Kit.getAbilities(event.getPlayer())) {
 					a.onInteract(event);
@@ -815,6 +818,9 @@ public class EventListeners implements Listener
 	public void playerInteractEntity(PlayerInteractEntityEvent event) {
 		if(Main.getGame() != null) {
 			Main.getGame().onInteractEntity(event);
+
+			if (BuildingListeners.onEntityInteract(event))
+				return; // handled by buildings
 
 			if(Main.getGame().getGameState() == LIVE) {
 				for (Ability a : Kit.getAbilities(event.getPlayer())) {

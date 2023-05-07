@@ -2,18 +2,26 @@ package me.toomuchzelda.teamarenapaper.teamarena.building;
 
 import me.toomuchzelda.teamarenapaper.utils.RealHologram;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
-public abstract class Building {
+/**
+ * Represents a building in the world.
+ * Note that the building will not be in the world before {@link Building#onPlace()} is called.
+ * As such, in-world side effects before then are discouraged.
+ */
+public abstract sealed class Building permits BlockBuilding, EntityBuilding {
 	public final Player owner;
 	protected Location location;
 	private RealHologram hologram;
 	String name;
 	private ItemStack icon = NO_ICON;
+	private NamedTextColor outlineColor = NamedTextColor.WHITE;
 	boolean invalid;
 
 	public Building(Player player, Location loc) {
@@ -61,6 +69,14 @@ public abstract class Building {
 
 	public void setIcon(ItemStack icon) {
 		this.icon = icon.clone();
+	}
+
+	public TextColor getOutlineColor() {
+		return outlineColor;
+	}
+
+	public void setOutlineColor(TextColor color) {
+		this.outlineColor = NamedTextColor.nearestTo(color);
 	}
 
 	public void onPlace() {

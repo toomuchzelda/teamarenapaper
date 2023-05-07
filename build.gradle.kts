@@ -1,6 +1,6 @@
 plugins {
     id("java")
-    id("io.papermc.paperweight.userdev") version "1.5.4"
+    id("io.papermc.paperweight.userdev") version "1.5.5"
 }
 
 repositories {
@@ -23,11 +23,16 @@ dependencies {
     compileOnly("com.comphenix.protocol:ProtocolLib:5.0.0-SNAPSHOT")
 }
 
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(17))
+    }
+}
+
 group = "me.toomuchzelda"
 version = "1.0-FOREVER"
 description = "TeamArenaPaper"
 java.sourceCompatibility = JavaVersion.VERSION_17
-
 
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"

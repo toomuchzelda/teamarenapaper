@@ -1,33 +1,45 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.engineer;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.building.Building;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BlockBuilding;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingOutlineManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
+import me.toomuchzelda.teamarenapaper.teamarena.building.PreviewableBuilding;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
+import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
+import org.bukkit.FluidCollisionMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.BoundingBox;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 
-public class Teleporter extends Building {
+
+public class Teleporter extends BlockBuilding implements PreviewableBuilding {
 	public static final int TELEPORT_COOLDOWN = 30;
 
 	int lastUsedTick;
 	@Nullable
-	Block linkedTeleporter;
+	BlockCoords linkedTeleporter;
 	BlockState originalBlockState;
 	BoundingBox hitBox;
 	TextColor teamColor;
@@ -38,14 +50,13 @@ public class Teleporter extends Building {
 		super(player, loc);
 		setName("Teleporter");
 		setIcon(ICON);
+		setOutlineColor(NamedTextColor.AQUA);
 		teamColor = Main.getPlayerInfo(player).team.getRGBTextColor();
-		Block block = loc.getBlock();
-		hitBox = BoundingBox.of(block.getRelative(-1, 1, -1), block.getRelative(1, 2, 1));
 	}
 
 	@Override
 	protected Location getHologramLocation() {
-		return getLocation().add(0.5, 1.5, 0.5);
+		return getLocation().add(0, 1, 0);
 	}
 
 	public int getLastUsedTick() {
@@ -56,7 +67,7 @@ public class Teleporter extends Building {
 		this.lastUsedTick = newTick;
 	}
 
-	public int getRemainingCD() {
+	public int getTimeElapsed() {
 		return TeamArena.getGameTick() - lastUsedTick;
 	}
 
@@ -65,11 +76,11 @@ public class Teleporter extends Building {
 	}
 
 	@Nullable
-	public Block getLinkedTeleporter() {
+	public BlockCoords getLinkedTeleporter() {
 		return linkedTeleporter;
 	}
 
-	public void setLinkedTeleporter(Block block) {
+	public void setLinkedTeleporter(BlockCoords block) {
 		this.linkedTeleporter = block;
 		setLastUsedTick(TeamArena.getGameTick());
 	}
@@ -79,29 +90,30 @@ public class Teleporter extends Building {
 		super.onPlace();
 
 		Block block = getLocation().getBlock();
+		hitBox = BoundingBox.of(block.getRelative(-1, 1, -1), block.getRelative(1, 2, 1));
 		this.originalBlockState = block.getState();
 		block.setType(Material.HONEYCOMB_BLOCK, false);
-
-		// restore original block
-		BuildingManager.registerBlockBreakCallback(block, this, this::onBlockBroken);
 
 		this.lastUsedTick = TeamArena.getGameTick();
 
 		var otherTeleporters = BuildingManager.getPlayerBuildings(owner, Teleporter.class);
-		if (otherTeleporters.size() >= 2) {
-			Teleporter toLink = otherTeleporters.get(otherTeleporters.size() - 2);
-			setLinkedTeleporter(toLink.location.getBlock());
-			toLink.setLinkedTeleporter(location.getBlock());
+		if (otherTeleporters.size() > 0) {
+			Teleporter toLink = otherTeleporters.get(otherTeleporters.size() - 1);
+			setLinkedTeleporter(new BlockCoords(toLink.location));
+			toLink.setLinkedTeleporter(new BlockCoords(location));
 
 			owner.sendMessage(Component.text("A link to the teleporter at (%d, %d, %d) has been established."
-							.formatted(linkedTeleporter.getX(), linkedTeleporter.getY(), linkedTeleporter.getZ()),
+							.formatted(linkedTeleporter.x(), linkedTeleporter.y(), linkedTeleporter.z()),
 					NamedTextColor.YELLOW));
 		}
+
+		BuildingOutlineManager.registerBuilding(this);
 	}
 
-	public void onBlockBroken(BlockBreakEvent event) {
+	@Override
+	public boolean onBreak(BlockBreakEvent event) {
 		if (event.isCancelled())
-			return;
+			return false;
 		event.setCancelled(true);
 
 		var player = event.getPlayer();
@@ -127,6 +139,7 @@ public class Teleporter extends Building {
 					Component.text(".", NamedTextColor.BLUE)
 			));
 		}
+		return true;
 	}
 
 	boolean checkCanTeleport(Entity entity) {
@@ -139,7 +152,7 @@ public class Teleporter extends Building {
 
 		//Allies and spies disguised as allies can use
 		//User must be sneaking and be on top of the teleporter block
-		return player.isSneaking() && player.getLocation().getY() - 1 == location.getY() &&
+		return player.isSneaking() && player.getLocation().getY() - 1 == (int)location.getY() &&
 			(!Main.getGame().canAttack(owner, player) || PlayerUtils.isDisguisedAsAlly(owner, player));
 	}
 
@@ -163,8 +176,10 @@ public class Teleporter extends Building {
 				if (nearbyEntities.size() != 0)
 					teleport((Player) nearbyEntities.iterator().next(), other);
 			} else {
-				long percCD = Math.round(100d * (double) other.getRemainingCD() / TELEPORT_COOLDOWN);
-				hologramText = Component.text("Recharging... " + percCD + "%", teamColor);
+				double progress = Math.min(1, (double) other.getTimeElapsed() / TELEPORT_COOLDOWN);
+				int percentage = (int) Math.round(100d * progress);
+				hologramText = TextUtils.getProgressText("Recharging... " + percentage + "%",
+					NamedTextColor.GRAY, teamColor, teamColor, progress);
 			}
 		} else {
 			hologramText = NOT_CONNECTED;
@@ -191,5 +206,30 @@ public class Teleporter extends Building {
 		super.onDestroy();
 		// reset the block
 		originalBlockState.update(true, false);
+	}
+
+	@Override
+	public @Nullable PreviewResult doRayTrace() {
+		Location eyeLocation = owner.getEyeLocation();
+		var result = owner.getWorld().rayTraceBlocks(eyeLocation, eyeLocation.getDirection(), 4,
+			FluidCollisionMode.NEVER, false);
+		if (result != null) {
+			// only accept blockFace = UP
+			return new PreviewResult(result.getHitBlockFace() == BlockFace.UP,
+				result.getHitBlock().getLocation().add(0.5, 0.01, 0.5));
+		}
+		return null;
+	}
+
+	private static List<PreviewEntity> PREVIEW;
+	@Override
+	public @NotNull List<PreviewEntity> getPreviewEntity(Location location) {
+		if (PREVIEW == null) {
+			var block = new PacketEntity(PacketEntity.NEW_ID, EntityType.FALLING_BLOCK, location, List.of(), null);
+			block.setBlockType(Material.HONEYCOMB_BLOCK.createBlockData());
+			block.setMetadata(MetaIndex.NO_GRAVITY_OBJ, true);
+			PREVIEW = List.of(new PreviewEntity(block));
+		}
+		return PREVIEW;
 	}
 }

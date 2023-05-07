@@ -9,6 +9,8 @@ import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerSound;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.ChatAnnouncerManager;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingOutlineManager;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingListeners;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandTeamChat;
@@ -526,6 +528,7 @@ public abstract class TeamArena
 
 	public void liveTick() {
 		BuildingManager.tick();
+		BuildingOutlineManager.tick();
 
 		//checking team states (win/lose) done in liveTick() per-game
 
@@ -702,7 +705,8 @@ public abstract class TeamArena
 					Component damageText = Component.text(MathUtils.round(event.getFinalDamage() / 2, 2), NamedTextColor.YELLOW, TextDecoration.BOLD);
 					Location spawnLoc = p.getLocation();
 					spawnLoc.add(0, MathUtils.randomRange(1.4, 2), 0);
-					new DamageIndicatorHologram(spawnLoc, PlayerUtils.getDamageIndicatorViewers(p, playerCause), damageText);
+					var hologram = new DamageIndicatorHologram(spawnLoc, PlayerUtils.getDamageIndicatorViewers(p, playerCause), damageText);
+					hologram.respawn();
 
 					//add to their damage log
 					pinfo.logDamageReceived(p, event.getDamageType(), event.getFinalDamage(), event.getFinalAttacker(), gameTick);
@@ -731,6 +735,10 @@ public abstract class TeamArena
 			return;
 		}
 
+		// let buildings handle events first
+		if (BuildingListeners.onEntityAttack(event))
+			return;
+
 		final Entity finalAttacker = event.getFinalAttacker();
 		if(this.killStreakManager.isCrateFirework(finalAttacker)) {
 			event.setCancelled(true);
@@ -757,10 +765,7 @@ public abstract class TeamArena
 		}
 
 		// Handle entities that are part of some Ability
-		if(event.getVictim() instanceof Skeleton) {
-			KitEngineer.EngineerAbility.handleSentryAttemptDamage(event);
-		}
-		else if(event.getVictim() instanceof Wolf) {
+		if(event.getVictim() instanceof Wolf) {
 			WolvesKillStreak.WolvesAbility.handleWolfAttemptDamage(event);
 		}
 		else if(event.getVictim() instanceof IronGolem) {
@@ -1224,6 +1229,7 @@ public abstract class TeamArena
 		this.killStreakManager.unregister();
 
 		BuildingManager.cleanUp();
+		BuildingOutlineManager.cleanUp();
 
 		setGameState(GameState.DEAD);
 	}
@@ -1389,7 +1395,6 @@ public abstract class TeamArena
 			ability.onTeamSwitch(player, oldTeam, newTeam);
 		}
 
-		KitDemolitions.DemolitionsAbility.teamSwitch(player, oldTeam, newTeam);
 		KitBeekeeper.BeekeeperAbility.teamSwitch(player, oldTeam, newTeam);
 	}
 
@@ -1789,9 +1794,11 @@ public abstract class TeamArena
 	}
 
 	private void informKillsDeaths(Player player, PlayerInfo pinfo) {
-		player.sendMessage(Component.text("You got " +
-			TextUtils.formatNumber(pinfo.totalKills, 2) + " kills and died " + pinfo.deaths + " times this game.",
-			NamedTextColor.DARK_GRAY));
+		player.sendMessage(Component.textOfChildren(
+			Component.text("You got "),
+			Component.text(TextUtils.formatNumber(pinfo.totalKills, 2), NamedTextColor.YELLOW),
+			Component.text(" kills and died " + pinfo.deaths + " times this game.")
+		).color(NamedTextColor.DARK_GRAY));
 	}
 
 	/**Sends a chat message to the player telling how long the game has gone on for.

@@ -1,6 +1,8 @@
 package me.toomuchzelda.teamarenapaper.teamarena.preferences;
 
 import me.toomuchzelda.teamarenapaper.teamarena.SidebarManager;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
@@ -134,6 +136,16 @@ public class Preferences {
 			"Whether your chat messages should go to team chat instead of all chat by default.\n" +
 				"(Use /t to talk in the opposite chat)", false)
 		.setIcon(Material.GOAT_HORN)
+		.setCategory(PreferenceCategory.GAMEPLAY);
+
+	public static final Preference<BuildingManager.AllyVisibility> ALLY_BUILDING_OUTLINE = SimplePreference.ofEnum("ally_building_outline",
+		"Appearance of ally buildings.", BuildingManager.AllyVisibility.class, BuildingManager.AllyVisibility.NEARBY)
+		.setIcon(Material.SMITHING_TABLE)
+		.setValueDescriptionStrings(Map.of(
+			BuildingManager.AllyVisibility.ALWAYS, "Always show ally building outlines.",
+			BuildingManager.AllyVisibility.NEARBY, "Show outlines of ally buildings if nearby.",
+			BuildingManager.AllyVisibility.NEVER, "Never see ally building outlines."
+		))
 		.setCategory(PreferenceCategory.GAMEPLAY);
 
 	// Announcer

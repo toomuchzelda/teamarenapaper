@@ -1,40 +1,33 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.engineer;
 
-import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
-import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
-import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingInventory;
-import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
+import me.toomuchzelda.teamarenapaper.teamarena.building.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import org.bukkit.FluidCollisionMode;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Arrow;
-import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Skeleton;
 import org.bukkit.event.Event;
-import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.scoreboard.Team;
 import org.bukkit.util.RayTraceResult;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -77,9 +70,6 @@ import static me.toomuchzelda.teamarenapaper.teamarena.kits.engineer.KitEngineer
  * @author onett425
  */
 public class KitEngineer extends Kit {
-	static final Team[] COLOUR_TEAMS;
-	static final Team RED_GLOWING_TEAM;
-	static final Team GREEN_GLOWING_TEAM;
 	private static final String PROJECTION_STATUS = "ProjectionStatus";
 
 	public static final ItemStack WRENCH = ItemBuilder.of(Material.IRON_SHOVEL)
@@ -132,26 +122,6 @@ public class KitEngineer extends Kit {
 			.lore(Component.text("Right click to manage active buildings!", TextColors.LIGHT_YELLOW))
 			.build();
 
-	static {
-		//Stolen from toomuchzelda
-		//Sentry Projection changes color based on whether it is a valid spot or not
-		COLOUR_TEAMS = new Team[2];
-
-		NamedTextColor[] matchingColours = new NamedTextColor[]{NamedTextColor.RED, NamedTextColor.GREEN};
-
-		for (int i = 0; i < 2; i++) {
-			COLOUR_TEAMS[i] = PlayerScoreboard.SCOREBOARD.registerNewTeam(PROJECTION_STATUS + matchingColours[i].value());
-			COLOUR_TEAMS[i].color(matchingColours[i]);
-			COLOUR_TEAMS[i].setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
-
-			PlayerScoreboard.addGlobalTeam(COLOUR_TEAMS[i]);
-		}
-
-		//Red = Invalid, Green = Valid
-		RED_GLOWING_TEAM = COLOUR_TEAMS[0];
-		GREEN_GLOWING_TEAM = COLOUR_TEAMS[1];
-	}
-
 	public KitEngineer() {
 		super("Engineer", "A utility kit that uses its buildings to support its team. " +
 				"Gun down enemies with your automatic sentry and set up teleporters to " +
@@ -172,33 +142,41 @@ public class KitEngineer extends Kit {
 
 	public static class EngineerAbility extends Ability {
 
-		private static final Map<Player, SentryProjection> activePlayerProjections = new HashMap<>();
-		@Deprecated // temporary API
-		private static final Map<Skeleton, Sentry> sentryEntityToSentryMap = new HashMap<>();
 		//SENTRY_CD should be 300, it may be altered for testing purposes
 		public static final int SENTRY_CD = 300;
 		public static final int SENTRY_PLACEMENT_RANGE = 3;
 
 		@Override
 		public void registerAbility() {
-			//Cleaning up is done in registerAbility so structures remain after game ends
-			activePlayerProjections.clear();
-			sentryEntityToSentryMap.clear();
 		}
 
 		@Override
 		public void unregisterAbility() {
-			//Cleaning up display of sentry projection color
-			for (Team team : COLOUR_TEAMS) {
-				PlayerScoreboard.removeEntriesAll(team, team.getEntries());
-				team.removeEntries(team.getEntries());
-			}
+		}
+
+		private static final Component RCLICK_PLACE_SENTRY = Component.text("Right click: place sentry", TextUtils.RIGHT_CLICK_TO);
+		private static final Component RCLICK_PLACE_TELEPORTER = Component.text("Right click: place teleporter", TextUtils.RIGHT_CLICK_TO);
+		private static final Component SELECTOR_MESSAGE = Component.textOfChildren(
+			Component.text("Left click: remove selected", TextUtils.LEFT_CLICK_TO),
+			Component.text(" | ", NamedTextColor.GRAY),
+			Component.text("Right click: manage buildings", TextUtils.RIGHT_CLICK_TO)
+		);
+
+		private static final Map<ItemStack, BuildingSelector.Action> SELECTOR_ACTION = Map.of(
+			DESTRUCTION_PDA, BuildingSelector.Action.selectBuilding(SELECTOR_MESSAGE),
+			SENTRY, BuildingSelector.Action.showEntityPreview(RCLICK_PLACE_SENTRY, Sentry.class, Sentry::new,
+				p -> !p.hasCooldown(SENTRY.getType())),
+			TP_CREATOR, BuildingSelector.Action.showEntityPreview(RCLICK_PLACE_TELEPORTER, Teleporter.class, Teleporter::new,
+				p -> BuildingManager.getPlayerBuildingCount(p, Teleporter.class) < 2)
+		);
+
+		@Override
+		protected void giveAbility(Player player) {
+			BuildingOutlineManager.registerSelector(player, BuildingSelector.fromAction(SELECTOR_ACTION));
 		}
 
 		public void removeAbility(Player player) {
-			if (activePlayerProjections.containsKey(player)) {
-				destroyProjection(player);
-			}
+			BuildingOutlineManager.unregisterSelector(player);
 			Inventories.closeInventory(player, BuildingInventory.class);
 			// remove all player buildings
 			BuildingManager.getAllPlayerBuildings(player).forEach(BuildingManager::destroyBuilding);
@@ -218,12 +196,13 @@ public class KitEngineer extends Kit {
 
 		@Override
 		public void onInteract(PlayerInteractEvent event) {
-			if (!event.getAction().isRightClick())
-				return;
 			if (event.useItemInHand() == Event.Result.DENY)
 				return;
 
+			boolean rightClick = event.getAction().isRightClick();
+
 			Player player = event.getPlayer();
+			BuildingSelector selector = BuildingOutlineManager.getSelector(player);
 			Material mat = event.getMaterial();
 			Block block = event.getClickedBlock();
 			BlockFace blockFace = event.getBlockFace();
@@ -236,14 +215,13 @@ public class KitEngineer extends Kit {
 			if(mat == Material.IRON_SHOVEL &&
 					!player.hasCooldown(Material.IRON_SHOVEL) &&
 					player.getVehicle() instanceof Skeleton skeleton &&
-					sentryEntityToSentryMap.get(skeleton) != null){
-				Sentry sentry = sentryEntityToSentryMap.get(skeleton);
+					BuildingManager.getBuilding(skeleton) instanceof Sentry sentry) {
 				sentry.forceFire();
 				//a mounted sentry has slightly faster fire rate
 				player.setCooldown(Material.IRON_SHOVEL, Sentry.SENTRY_FIRE_RATE * 3 / 4);
 			}
 
-			if (mat == Material.QUARTZ) {
+			if (rightClick && mat == Material.QUARTZ) {
 				// Creating / Destroying Teleporters
 				// validate placement first
 				if (block == null || blockFace != BlockFace.UP || !BuildingManager.isLocationValid(block.getRelative(BlockFace.UP))) {
@@ -259,37 +237,36 @@ public class KitEngineer extends Kit {
 						BuildingManager.destroyBuilding(teleporter);
 						message = Component.text("You removed your teleporter.", NamedTextColor.BLUE);
 					} else {
-						message = Component.text("Another teleporter already exists as this spot.", TextColors.ERROR_RED);
+						message = Component.text("Another building already exists as this spot.", TextColors.ERROR_RED);
 					}
 				} else {
-					var playerTeleporters = BuildingManager.getPlayerBuildings(player, Teleporter.class);
 					//Creating TP
-					if (playerTeleporters.size() >= 2) {
+					if (BuildingManager.getPlayerBuildingCount(player, Teleporter.class) >= 2) {
 						//Failure: 2 TPs already exist
 						message = Component.text("Two teleporters are already active! Destroy one with your Destruction PDA!", TextColors.ERROR_RED);
 					} else {
 						//Success: TP is created
-						var teleporter = new Teleporter(player, block.getLocation());
-						BuildingManager.placeBuilding(teleporter);
-						if (playerTeleporters.size() == 1) {
-							//Syncing the Cooldowns for the newly created TP.
-							int lastUsedTick = teleporter.getLastUsedTick();
-							playerTeleporters.get(0).setLastUsedTick(lastUsedTick);
-						}
+						selector.placePreview(Teleporter.class);
 						message = Component.text("Successfully placed your teleporter.", NamedTextColor.GREEN);
 					}
 				}
 				player.sendMessage(message);
-			} else if (mat == Material.CHEST_MINECART) {
-				//Initializing Sentry Build
-				if (activePlayerProjections.containsKey(player) &&
-						isValidProjection(activePlayerProjections.get(player).getLocation()) &&
-						!player.hasCooldown(Material.CHEST_MINECART)) {
-					createSentry(player);
+			} else if (rightClick && mat == Material.CHEST_MINECART) {
+				if (!player.hasCooldown(Material.CHEST_MINECART)) {
+					Sentry sentry = selector.placePreview(Sentry.class);
+					if (sentry != null && player.getGameMode() != GameMode.CREATIVE) {
+						player.setCooldown(Material.CHEST_MINECART, SENTRY_CD);
+					}
 				}
 			} else if (mat == Material.BOOK) {
 				// Destruction PDA
-				Inventories.openInventory(player, new BuildingInventory());
+				if (rightClick) {
+					Inventories.openInventory(player, new BuildingInventory());
+				} else {
+					Building selected = selector.getSelected();
+					if (selected != null)
+						BuildingManager.destroyBuilding(selected);
+				}
 			} else {
 				// undo cancelling if not handled
 				event.setUseItemInHand(Event.Result.DEFAULT);
@@ -298,83 +275,16 @@ public class KitEngineer extends Kit {
 
 		}
 
-		//Converts the Projection into a Sentry + Handles static hashmaps + Inventory
-		public void createSentry(Player player) {
-			SentryProjection projection = activePlayerProjections.remove(player);
-			Skeleton skeleton = player.getWorld().spawn(projection.getLocation(), Skeleton.class);
-			Sentry sentry = new Sentry(player, skeleton);
-			projection.remove(); //destroy the old projection so it doesn't linger
-
-			BuildingManager.placeBuilding(sentry);
-
-			sentryEntityToSentryMap.put(skeleton, sentry);
-			player.setCooldown(Material.CHEST_MINECART, SENTRY_CD);
-		}
-
-		//Destroys sentry + Handles static hashmaps + Inventory
-		public void destroySentry(Player player, Sentry sentry) {
-			BuildingManager.destroyBuilding(sentry);
-			sentryEntityToSentryMap.remove(sentry.sentry);
-		}
-
 		@Override
 		public void onPlayerTick(Player player) {
-			//Initializing Sentry Projection
-			if (PlayerUtils.isHolding(player, SENTRY) &&
-					!activePlayerProjections.containsKey(player) &&
-					!player.hasCooldown(Material.CHEST_MINECART)) {
-				createProjection(player);
-			}
+			BuildingSelector selector = BuildingOutlineManager.getSelector(player);
 
-			//Cancel Sentry Projection
-			if ((!PlayerUtils.isHolding(player, SENTRY) ||
-					player.hasCooldown(Material.CHEST_MINECART)) &&
-					activePlayerProjections.containsKey(player)) {
-				destroyProjection(player);
-			}
-
-			//Controlling position of Sentry Projection
-			if (activePlayerProjections.containsKey(player) &&
-					!player.hasCooldown(Material.CHEST_MINECART)) {
-				SentryProjection projection = activePlayerProjections.get(player);
-				//Y Coordinate is lowered so the projection doesn't obstruct the Engineer's view
-				Location playerLoc = player.getEyeLocation().add(0, -0.8, 0);
-				Location projPos = projectSentry(playerLoc);
-				projection.move(projPos);
-
-				//Handling color display that indicates validity of current sentry location
-				if (isValidProjection(projPos)) {
-					Main.getPlayerInfo(player).getScoreboard().addMembers(GREEN_GLOWING_TEAM, projection.getUuid().toString());
-				} else {
-					Main.getPlayerInfo(player).getScoreboard().addMembers(RED_GLOWING_TEAM, projection.getUuid().toString());
-				}
-			}
+			selector.tick(player);
 
 			//If player is riding skeleton (sentry), wrangle it
-			if(player.getVehicle() instanceof Skeleton skeleton){
-				Sentry sentry = sentryEntityToSentryMap.get(skeleton);
-				if(sentry != null){
-					sentry.currState = Sentry.State.WRANGLED;
-				}
-			}
+			// now wrangled when mounted
 
 		}
-
-		//Allowing engineers to ride their own sentries and manually aim + fire
-		@Override
-		public void onInteractEntity(PlayerInteractEntityEvent event) {
-			Player rider = event.getPlayer();
-			//If the right-clicked mob is a skeleton
-			//Check all sentries made by that player but also make sure it is not in STARTUP
-			if(event.getRightClicked() instanceof Skeleton skeleton){
-				Sentry sentry = sentryEntityToSentryMap.get(skeleton);
-				if(sentry != null && sentry.owner.equals(rider) &&
-						sentry.currState != Sentry.State.STARTUP){
-					skeleton.addPassenger(rider);
-				}
-			}
-		}
-
 
 		public boolean isValidProjection(Location projLoc) {
 			projLoc = projLoc.clone();
@@ -416,18 +326,6 @@ public class KitEngineer extends Kit {
 			}
 		}
 
-		public void createProjection(Player player) {
-			Location loc = projectSentry(player.getEyeLocation().clone().add(0, -.8, 0));
-			SentryProjection projection = new SentryProjection(loc, player);
-			projection.respawn();
-			activePlayerProjections.put(player, projection);
-		}
-
-		public void destroyProjection(Player player) {
-			SentryProjection projection = activePlayerProjections.remove(player);
-			projection.remove();
-		}
-
 		//From entity's eyes, find the location in their line of sight that is within range
 		public static Location findBlock(Location loc, double range) {
 			var world = loc.getWorld();
@@ -448,23 +346,10 @@ public class KitEngineer extends Kit {
 			return distance;
 		}
 
-		//Cancel damage events where the attacker is an ally of the engineer
-		public static void handleSentryAttemptDamage(DamageEvent event) {
-			Skeleton skele = (Skeleton) event.getVictim();
-			Sentry sentry = sentryEntityToSentryMap.get(skele);
-			if (sentry != null) {
-				if (event.getFinalAttacker() instanceof Player attacker &&
-						!Main.getGame().canAttack(attacker, sentry.owner)) {
-					event.setCancelled(true);
-				}
-			}
-		}
-
 		public static Player getOwnerBySkeleton(Skeleton skeleton) {
-			Sentry sentry = sentryEntityToSentryMap.get(skeleton);
-			if (sentry != null) {
+			Building building = BuildingManager.getBuilding(skeleton);
+			if (building instanceof Sentry sentry)
 				return sentry.owner;
-			}
 
 			return null;
 		}
