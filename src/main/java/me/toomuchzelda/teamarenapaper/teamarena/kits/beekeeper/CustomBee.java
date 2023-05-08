@@ -1,4 +1,4 @@
-package me.toomuchzelda.teamarenapaper.teamarena.kits.kitbeekeeper;
+package me.toomuchzelda.teamarenapaper.teamarena.kits.beekeeper;
 
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.animal.Bee;

@@ -1,4 +1,4 @@
-package me.toomuchzelda.teamarenapaper.teamarena.kits.kitbeekeeper;
+package me.toomuchzelda.teamarenapaper.teamarena.kits.beekeeper;
 
 import com.comphenix.protocol.wrappers.AdventureComponentConverter;
 import com.destroystokyo.paper.entity.ai.Goal;
@@ -112,9 +112,9 @@ public class KitBeekeeper extends Kit
 		static final float BEE_VANILLA_SPEED = 0.02f;
 
 		private static final double ABSORPTION_AMOUNT = 2d;
-		private static final double BEE_ATTACK = 4.5d; // Bee raw damage power for PursueOwnerGoal
+		private static final double BEE_ATTACK = 4d; // Bee raw damage power for PursueOwnerGoal
 		private static final double BEE_HEALTH = 15d; // 7.5 hearts
-		private static final int RESPAWN_TIME = 10 * 20;
+		private static final int RESPAWN_TIME = 13 * 20;
 
 		private static final List<Team> GLOWING_COLOUR_TEAMS = new ArrayList<>(MAX_BEES);
 		private static final List<BeeName> BEE_NAMES = List.of(

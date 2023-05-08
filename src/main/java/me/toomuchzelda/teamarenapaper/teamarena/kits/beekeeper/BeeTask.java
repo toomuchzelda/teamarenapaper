@@ -1,4 +1,4 @@
-package me.toomuchzelda.teamarenapaper.teamarena.kits.kitbeekeeper;
+package me.toomuchzelda.teamarenapaper.teamarena.kits.beekeeper;
 
 import com.destroystokyo.paper.entity.ai.Goal;
 import net.kyori.adventure.text.Component;

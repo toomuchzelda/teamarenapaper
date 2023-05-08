@@ -514,7 +514,6 @@ public class DamageEvent {
 			}
 			else if (attacker instanceof Bee && damageType.isMelee()) {
 				living.setBeeStingersInBody(living.getBeeStingersInBody() + 1);
-				Bukkit.broadcastMessage("Added bee stinger");
 			}
 		}
 		net.minecraft.world.entity.Entity nmsEntity = ((CraftEntity) victim).getHandle();

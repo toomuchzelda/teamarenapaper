@@ -1,4 +1,4 @@
-package me.toomuchzelda.teamarenapaper.teamarena.kits.kitbeekeeper;
+package me.toomuchzelda.teamarenapaper.teamarena.kits.beekeeper;
 
 import com.destroystokyo.paper.entity.ai.GoalKey;
 import com.destroystokyo.paper.entity.ai.GoalType;
