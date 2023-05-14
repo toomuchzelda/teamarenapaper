@@ -311,7 +311,8 @@ public class PacketListeners
 							PlayerInfoData replacementData = new PlayerInfoData(
 								disguise.disguisedGameProfile.getId(), entry.latency(), false,
 								nativeGameMode, WrappedGameProfile.fromHandle(disguise.disguisedGameProfile),
-								WrappedChatComponent.fromHandle(entry.displayName()), null);
+								WrappedChatComponent.fromHandle(entry.displayName()),
+								(WrappedProfilePublicKey.WrappedProfileKeyData) null);
 
 							newList.set(originalIndex, replacementData);
 
@@ -324,7 +325,8 @@ public class PacketListeners
 						GameProfile tabListProfile = disguise.tabListGameProfile;
 						PlayerInfoData tabListData = new PlayerInfoData(tabListProfile.getId(), entry.latency(),
 								entry.listed(), nativeGameMode, WrappedGameProfile.fromHandle(tabListProfile),
-								wrappedDisplayName, null);
+								wrappedDisplayName,
+								(WrappedProfilePublicKey.WrappedProfileKeyData) null);
 
 						newList.add(tabListData);
 					}

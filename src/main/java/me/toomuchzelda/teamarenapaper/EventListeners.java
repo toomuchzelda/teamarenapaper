@@ -1,6 +1,5 @@
 package me.toomuchzelda.teamarenapaper;
 
-import com.destroystokyo.paper.event.block.TNTPrimeEvent;
 import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import com.destroystokyo.paper.event.player.PlayerAdvancementCriterionGrantEvent;
@@ -49,10 +48,7 @@ import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.Action;
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockExplodeEvent;
-import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.block.*;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.*;
@@ -439,7 +435,7 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void tntPrime(TNTPrimeEvent event) {
-		if(event.getReason() == TNTPrimeEvent.PrimeReason.PROJECTILE) {
+		if (event.getCause() == org.bukkit.event.block.TNTPrimeEvent.PrimeCause.PROJECTILE) {
 			event.setCancelled(true);
 		}
 	}

@@ -92,7 +92,8 @@ public class FakeHitbox
 
 			// Unlisted playerinfo entry.
 			PlayerInfoData wrappedEntry = new PlayerInfoData(fPlayer.uuid, 1, false, EnumWrappers.NativeGameMode.SURVIVAL,
-				WrappedGameProfile.fromHandle(authLibProfile), WrappedChatComponent.fromHandle(nmsComponent), null);
+				WrappedGameProfile.fromHandle(authLibProfile), WrappedChatComponent.fromHandle(nmsComponent),
+				(WrappedProfilePublicKey.WrappedProfileKeyData) null);
 
 			playerUpdates.add(wrappedEntry);
 
