@@ -114,7 +114,7 @@ public class DamageType {
 
     public static final DamageType PROJECTILE = new DamageType("Projectile", "%Killed% was shot by %Killer%").setProjectile();
 
-    public static final DamageType QUIT = new DamageType("Quit", "%Killed% has left the game").setInstantDeath().setNoKnockback();
+    public static final DamageType QUIT = new DamageType("Quit"/*, "%Killed% has left the game"*/).setInstantDeath().setNoKnockback();
 
 	public static final DamageType SONIC_BOOM = new DamageType("Sonic Boom", "%Killed% was killed by %Killer%'s sonic boom")
 			.setIgnoreArmor().setIgnoreArmorEnchants();

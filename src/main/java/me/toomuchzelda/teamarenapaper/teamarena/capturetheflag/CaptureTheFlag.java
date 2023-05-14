@@ -117,12 +117,15 @@ public class CaptureTheFlag extends TeamArena
 		flags.remove(flag);
 
 		Entity flagSittingOn = flag.getArmorStand().getVehicle(); //entity this Flag is sitting on
-		flagSittingOn.eject();
+		if (flagSittingOn != null)
+			flagSittingOn.eject();
 
 		List<Entity> flagsPassengers = flag.getArmorStand().getPassengers();
 		if(flagsPassengers.size() > 0) {
 			flag.getArmorStand().eject(); //eject stands sitting on the flag
-			flagSittingOn.addPassenger(flagsPassengers.get(0));
+
+			if (flagSittingOn != null) // and them move them down to next vehicle.
+				flagSittingOn.addPassenger(flagsPassengers.get(0));
 		}
 
 		if(flags.size() == 0)
@@ -530,7 +533,7 @@ public class CaptureTheFlag extends TeamArena
 	public void dropFlags(Player player) {
 		Set<Flag> mapFlags = flagHolders.get(player);
 		if(mapFlags != null) {
-			Set<Flag> flags = new HashSet<>(flagHolders.get(player)); //avoid concurrentmodification
+			Set<Flag> flags = new HashSet<>(mapFlags); //avoid concurrentmodification
 			for (Flag flag : flags) {
 				dropFlag(player, flag, true);
 			}
@@ -568,6 +571,7 @@ public class CaptureTheFlag extends TeamArena
 
 			Component titleText = DROP_TITLE.replaceText(playerConfig).replaceText(teamConfig);
 			Component chatText = DROP_MESSAGE.replaceText(playerConfig).replaceText(teamConfig);
+			Bukkit.broadcast(chatText);
 
 			Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
 			while (iter.hasNext()) {
@@ -584,7 +588,6 @@ public class CaptureTheFlag extends TeamArena
 				}
 			}
 			AnnouncerManager.playSound(player, AnnouncerSound.GAME_FLAG_YOU_LOST_THE);
-			Bukkit.broadcast(chatText);
 		}
 	}
 
@@ -603,6 +606,7 @@ public class CaptureTheFlag extends TeamArena
 
 		Component chatText = RETURNED_MESSAGE.replaceText(returnConfig);
 		Component titleText = RETURNED_TITLE.replaceText(returnConfig);
+		Bukkit.broadcast(chatText);
 
 		var iter = Main.getPlayersIter();
 		while(iter.hasNext()) {
@@ -615,9 +619,7 @@ public class CaptureTheFlag extends TeamArena
 
 			p.playSound(p.getLocation(), Sound.BLOCK_LARGE_AMETHYST_BUD_PLACE, SoundCategory.AMBIENT, 2, 1);
 		}
-
 		AnnouncerManager.broadcastSound(AnnouncerSound.GAME_FLAG_RECOVERED);
-		Bukkit.broadcast(chatText);
 	}
 
 	public void captureTheFlag(Player player, TeamArenaTeam capturingTeam, Flag capturedFlag) {
@@ -639,6 +641,7 @@ public class CaptureTheFlag extends TeamArena
 		Component chatText = CAPTURED_MESSAGE.replaceText(holdingConfig).replaceText(victimConfig);
 		Component titleText = CAPTURED_TITLE.replaceText(holdingConfig).replaceText(victimConfig);
 
+		Bukkit.broadcast(chatText);
 		var iter = Main.getPlayersIter();
 		while(iter.hasNext()) {
 			Map.Entry<Player, PlayerInfo> entry = iter.next();
@@ -650,8 +653,6 @@ public class CaptureTheFlag extends TeamArena
 
 			p.playSound(p.getLocation(), Sound.BLOCK_LARGE_AMETHYST_BUD_BREAK, SoundCategory.AMBIENT, 2f, 1f);
 		}
-
-		Bukkit.broadcast(chatText);
 		AnnouncerManager.broadcastSound(AnnouncerSound.GAME_FLAG_CAPTURED);
 
 		if(this.timeToSpeed <= 0) {

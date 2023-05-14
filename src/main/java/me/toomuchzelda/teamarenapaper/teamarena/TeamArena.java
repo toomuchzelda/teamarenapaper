@@ -1760,12 +1760,17 @@ public abstract class TeamArena
 	}
 
 	public void leavingPlayer(Player player) {
+		// Kill the player
+		DamageEvent killEvent = DamageEvent.newDamageEvent(player, 9999999d, DamageType.QUIT, null, false);
+		// Normally are queued for later but we must process this event now.
+		this.processDamageEvent(killEvent);
+
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
 		pinfo.team.removeMembers(player);
-		// If they were a player and left during game then broadcast their quit.
-		if(pinfo.activeKit != null) {
+
+		/*if(pinfo.activeKit != null) {
 			pinfo.activeKit.removeKit(player, pinfo);
-		}
+		}*/
 
 		StatusBarManager.hideStatusBar(player, pinfo);
 
@@ -1776,6 +1781,7 @@ public abstract class TeamArena
 		balancePlayerLeave();
 		PlayerListScoreManager.removeScore(player);
 
+		// If they were a player and left during game then broadcast their quit.
 		if(this.gameState == GameState.LIVE) {
 			Bukkit.broadcast(player.playerListName().append(Component.text(" left the game", NamedTextColor.YELLOW)));
 		}
