@@ -1760,17 +1760,22 @@ public abstract class TeamArena
 	}
 
 	public void leavingPlayer(Player player) {
-		// Kill the player
-		DamageEvent killEvent = DamageEvent.newDamageEvent(player, 9999999d, DamageType.QUIT, null, false);
-		// Normally are queued for later but we must process this event now.
-		this.processDamageEvent(killEvent);
-
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
-		pinfo.team.removeMembers(player);
+		// Kill the player
+		if (this.gameState == GameState.LIVE && !this.isDead(player)) {
+			DamageEvent killEvent = DamageEvent.newDamageEvent(player, 9999999d, DamageType.QUIT, null, false);
+			// Normally are queued for later but we must process this event now.
+			this.processDamageEvent(killEvent);
+		}
+		else {
+			if(pinfo.activeKit != null) {
+				Main.logger().warning("TeamArena.leavingPlayer removed activeKit. This code shouldn't run");
+				Thread.dumpStack();
+				pinfo.activeKit.removeKit(player, pinfo);
+			}
+		}
 
-		/*if(pinfo.activeKit != null) {
-			pinfo.activeKit.removeKit(player, pinfo);
-		}*/
+		pinfo.team.removeMembers(player);
 
 		StatusBarManager.hideStatusBar(player, pinfo);
 
