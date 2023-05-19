@@ -73,7 +73,7 @@ public class TabBar<T> {
 	}
 
 
-	private static final ClickableItem BORDER_ITEM = ClickableItem.empty(InventoryItems.BORDER);
+	private static final ClickableItem BORDER_ITEM = ClickableItem.empty(MenuItems.BORDER);
 
 	private static final ItemStack PREVIOUS_PAGE = ItemBuilder.of(Material.ARROW)
 			.displayName(Component.text("Previous tabs", NamedTextColor.YELLOW))

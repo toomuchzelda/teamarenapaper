@@ -37,12 +37,11 @@ public class GameMenu implements InventoryProvider {
 
 	public static final ClickableItem CHANGELOGS_ITEM = ItemBuilder.of(Material.LECTERN)
 		.displayName(Component.text("See changelogs", NamedTextColor.YELLOW))
-		.toEmptyClickableItem();
-//		.toClickableItem(openInventory(() -> null));
+		.toClickableItem(openInventory(ChangelogMenu::new));
 
 	@Override
 	public void init(Player player, InventoryAccessor inventory) {
-		inventory.fill(InventoryItems.BORDER);
+		inventory.fill(MenuItems.BORDER);
 		inventory.set(9 + 2, PREFERENCES_ITEM);
 		inventory.set(9 + 4, COSMETICS_ITEM);
 		inventory.set(9 + 6, CHANGELOGS_ITEM);

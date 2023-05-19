@@ -93,7 +93,7 @@ public class SpectateInventory implements InventoryProvider {
 		if (teamFilter != null) {
 			inventory.set(0, teamToItem(teamFilter, true));
 			for (int i = 1; i < end; i++) {
-				inventory.set(i, InventoryItems.BORDER);
+				inventory.set(i, MenuItems.BORDER);
 			}
 		} else {
 			teamFilterTab.showTabs(inventory, getTeams(playerTeam),

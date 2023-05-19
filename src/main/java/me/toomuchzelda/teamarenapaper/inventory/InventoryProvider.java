@@ -1,7 +1,6 @@
 package me.toomuchzelda.teamarenapaper.inventory;
 
 import net.kyori.adventure.text.Component;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
@@ -43,6 +42,14 @@ public interface InventoryProvider {
             else
                 set(slot, null, null);
         }
+
+		default void set(int row, int col, @Nullable ClickableItem item) {
+			set(row * 9 + col, item);
+		}
+
+		default void set(int row, int col, @Nullable ItemStack stack) {
+			set(row * 9 + col, stack);
+		}
 
 		void fill(@Nullable ClickableItem item);
 

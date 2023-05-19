@@ -296,8 +296,8 @@ public class PreferencesInventory implements InventoryProvider {
 		@Override
 		public void init(Player player, InventoryAccessor inventory) {
 			for (int i = 0; i < 9; i++) {
-				inventory.set(i, InventoryItems.BORDER);
-				inventory.set(i + 5 * 9, InventoryItems.BORDER);
+				inventory.set(i, MenuItems.BORDER);
+				inventory.set(i + 5 * 9, MenuItems.BORDER);
 			}
 			T currentValue = Main.getPlayerInfo(player).getPreference(preference);
 			T defaultValue = preference.getDefaultValue();

@@ -173,7 +173,7 @@ public class KitInventory implements InventoryProvider {
 						Placeholder.unparsed("default_kit", playerInfo.defaultKit)))
 					.toClickableItem(KitInventory::saveDefaultKit));
 			else
-				inventory.set(i, InventoryItems.BORDER);
+				inventory.set(i, MenuItems.BORDER);
 		}
 
 		Kit selected = playerInfo.kit;
