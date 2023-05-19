@@ -48,11 +48,10 @@ public class PreferencesInventory implements InventoryProvider {
 	}
 
 	// https://minecraft-heads.com/custom-heads/miscellaneous/27523-settings
-	public static final ItemStack PREFERENCE = ItemBuilder.from(ItemUtils.createPlayerHead("e4d49bae95c790c3b1ff5b2f01052a714d6185481d5b1c85930b3f99d2321674"))
+	public static final ItemStack PREFERENCE = ItemBuilder.of(Material.COMPARATOR)
 		.displayName(text("Preferences", NamedTextColor.WHITE))
+		.customModelData(1)
 		.build();
-
-	private static final ItemStack BORDER = ItemBuilder.of(Material.BLACK_STAINED_GLASS_PANE).displayName(Component.empty()).build();
 
 	TabBar<PreferenceCategory> categoryTab = new TabBar<>(null);
 	Pagination pagination = new Pagination();
@@ -142,12 +141,21 @@ public class PreferencesInventory implements InventoryProvider {
 	private static final Component RCLICK_RESET = textOfChildren(
 		text("Right click", TextUtils.RIGHT_CLICK_TO), text(" to ", GRAY), text("reset", RED)
 	);
+
+	private static final int MODEL_DATA_MAX = 1 << 24; // precision loss beyond 16 million
+	private static int prefToModelData(Preference<?> preference) {
+		return Math.floorMod(preference.hashCode(), MODEL_DATA_MAX); // model data cannot be negative
+	}
+
 	private static <T> ClickableItem prefToItem(@Nullable InventoryProvider parent, @Nullable InventoryAccessor inventory,
 												Preference<T> preference, T current) {
+		int customModelData = prefToModelData(preference);
 		var builder = ItemBuilder.from(preference.getIcon().clone())
 			.displayName(preference.getDisplayName())
-			.lore(TextUtils.wrapString(preference.getDescription(), Style.style(YELLOW),
+			.lore(text("ID: " + preference.getName() + " (" + customModelData + ")", DARK_GRAY))
+			.addLore(TextUtils.wrapString(preference.getDescription(), Style.style(YELLOW),
 				TextUtils.DEFAULT_WIDTH, true))
+			.customModelData(customModelData)
 			.hideAll();
 		// inventory can be null to only show the icon
 		if (inventory == null) {
@@ -177,7 +185,6 @@ public class PreferencesInventory implements InventoryProvider {
 
 		lore.add(LCLICK_EDIT);
 		lore.add(RCLICK_RESET);
-		lore.add(text("ID: " + preference.getName(), DARK_GRAY));
 
 		builder.addLore(lore);
 
@@ -225,7 +232,6 @@ public class PreferencesInventory implements InventoryProvider {
 
 		lore.add(current ? LCLICK_SET_FALSE : LCLICK_SET_TRUE);
 		lore.add(RCLICK_RESET);
-		lore.add(text("ID: " + preference.getName(), DARK_GRAY));
 
 		builder.addLore(lore);
 		return builder.toClickableItem(e -> {
@@ -290,8 +296,8 @@ public class PreferencesInventory implements InventoryProvider {
 		@Override
 		public void init(Player player, InventoryAccessor inventory) {
 			for (int i = 0; i < 9; i++) {
-				inventory.set(i, BORDER);
-				inventory.set(i + 5 * 9, BORDER);
+				inventory.set(i, InventoryItems.BORDER);
+				inventory.set(i + 5 * 9, InventoryItems.BORDER);
 			}
 			T currentValue = Main.getPlayerInfo(player).getPreference(preference);
 			T defaultValue = preference.getDefaultValue();

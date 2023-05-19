@@ -287,7 +287,20 @@ public final class Inventories implements Listener {
             eventHandlers.set(slot, eventHandler);
         }
 
-        @Override
+		@Override
+		public void fill(@Nullable ClickableItem item) {
+			if (item == null) {
+				inv.clear();
+				Collections.fill(eventHandlers, null);
+			} else {
+				for (int i = 0; i < inv.getSize(); i++) {
+					inv.setItem(i, item.stack());
+				}
+				Collections.fill(eventHandlers, item.eventHandler());
+			}
+		}
+
+		@Override
         public ClickableItem get(int slot) {
             return new ClickableItem(inv.getItem(slot), eventHandlers.get(slot));
         }

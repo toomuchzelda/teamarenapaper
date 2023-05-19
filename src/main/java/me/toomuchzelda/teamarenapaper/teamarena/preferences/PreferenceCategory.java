@@ -11,6 +11,7 @@ public enum PreferenceCategory {
 	ANNOUNCER("Announcer", ItemBuilder.of(Material.GOAT_HORN)
 		.displayName(text("Announcer", RED))
 		.lore(text("Announcer-related preferences", GRAY))
+		.hideAll()
 		.build()),
 	CLIENTSIDE("Visual Effects", ItemBuilder.of(Material.SPYGLASS)
 		.displayName(text("Visual Effects", YELLOW))
