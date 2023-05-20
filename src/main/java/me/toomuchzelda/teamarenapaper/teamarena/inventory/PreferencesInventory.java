@@ -278,9 +278,8 @@ public class PreferencesInventory implements InventoryProvider {
 
 		@Override
 		public @NotNull Component getTitle(Player player) {
-			return textOfChildren(text("Edit preference "),
-				preference.getDisplayName().style(style ->
-					style.colorIfAbsent(BLACK).decorationIfAbsent(TextDecoration.UNDERLINED, TextDecoration.State.TRUE)));
+			return textOfChildren(text("Edit "),
+				preference.getDisplayName().color(BLACK).decorate(TextDecoration.UNDERLINED));
 		}
 
 		@Override

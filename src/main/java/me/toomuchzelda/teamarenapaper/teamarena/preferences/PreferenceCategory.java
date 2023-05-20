@@ -13,9 +13,13 @@ public enum PreferenceCategory {
 		.lore(text("Announcer-related preferences", GRAY))
 		.hideAll()
 		.build()),
-	CLIENTSIDE("Visual Effects", ItemBuilder.of(Material.SPYGLASS)
+	VISUAL_EFFECTS("Visual Effects", ItemBuilder.of(Material.SPYGLASS)
 		.displayName(text("Visual Effects", YELLOW))
 		.lore(text("Visual effects that don't affect gameplay", GRAY))
+		.build()),
+	SOUND_EFFECTS("Sound Effects", ItemBuilder.of(Material.BELL)
+		.displayName(text("Sound Effects", AQUA))
+		.lore(text("Sound effects that don't affect gameplay", GRAY))
 		.build()),
 	GAMEPLAY("Gameplay", ItemBuilder.of(Material.COMMAND_BLOCK)
 		.displayName(text("Gameplay", GREEN))
