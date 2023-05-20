@@ -44,7 +44,7 @@ public class CosmeticsManager {
 			NamespacedKey key = new NamespacedKey(namespace, prefix + fileName.substring(0, fileName.indexOf('.')));
 			try {
 				YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
-				CosmeticItem loaded = type.loader.load(file, yaml);
+				CosmeticItem loaded = type.loader.load(key, file, yaml);
 				loadedCosmetics.computeIfAbsent(type, ignored -> new LinkedHashMap<>()).put(key, loaded);
 			} catch (Exception ex) {
 				new RuntimeException("Loading cosmetic " + key + " at " + file.getPath()).printStackTrace();

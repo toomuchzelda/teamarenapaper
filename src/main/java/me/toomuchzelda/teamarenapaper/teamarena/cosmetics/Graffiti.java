@@ -6,6 +6,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -26,8 +27,8 @@ import java.io.UncheckedIOException;
 public class Graffiti extends CosmeticItem {
 
 	public final BufferedImage image;
-	public Graffiti(File file, YamlConfiguration info) {
-		super(file, info);
+	public Graffiti(NamespacedKey key, File file, YamlConfiguration info) {
+		super(key, file, info);
 		File imageFile = new File(file.getParent(), file.getName().substring(0, file.getName().lastIndexOf('.')));
 		try {
 			BufferedImage image = ImageIO.read(imageFile);

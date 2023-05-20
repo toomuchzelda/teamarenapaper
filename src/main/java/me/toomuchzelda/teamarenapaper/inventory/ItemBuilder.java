@@ -126,7 +126,7 @@ public final class ItemBuilder {
 
 	public ItemBuilder customModelData(@Nullable String data) {
 		if (data != null)
-			meta.setCustomModelData(data.hashCode());
+			meta.setCustomModelData(ItemUtils.getCustomModelData(data));
 		else
 			meta.setCustomModelData(null);
 		return this;

@@ -12,6 +12,7 @@ import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -50,7 +51,7 @@ public class PreferencesInventory implements InventoryProvider {
 	// https://minecraft-heads.com/custom-heads/miscellaneous/27523-settings
 	public static final ItemStack PREFERENCE = ItemBuilder.of(Material.COMPARATOR)
 		.displayName(text("Preferences", NamedTextColor.WHITE))
-		.customModelData(1)
+		.customModelData("preferences")
 		.build();
 
 	TabBar<PreferenceCategory> categoryTab = new TabBar<>(null);
@@ -141,18 +142,13 @@ public class PreferencesInventory implements InventoryProvider {
 	private static final Component RCLICK_RESET = textOfChildren(
 		text("Right click", TextUtils.RIGHT_CLICK_TO), text(" to ", GRAY), text("reset", RED)
 	);
-
-	private static final int MODEL_DATA_MAX = 1 << 24; // precision loss beyond 16 million
-	private static int prefToModelData(Preference<?> preference) {
-		return Math.floorMod(preference.hashCode(), MODEL_DATA_MAX); // model data cannot be negative
-	}
-
 	private static <T> ClickableItem prefToItem(@Nullable InventoryProvider parent, @Nullable InventoryAccessor inventory,
 												Preference<T> preference, T current) {
-		int customModelData = prefToModelData(preference);
+		Integer customModelData = ItemUtils.getCustomModelData("preferences/" + preference.getName());
+
 		var builder = ItemBuilder.from(preference.getIcon().clone())
 			.displayName(preference.getDisplayName())
-			.lore(text("ID: " + preference.getName() + " (" + customModelData + ")", DARK_GRAY))
+			.lore(text("ID: " + preference.getName(), DARK_GRAY))
 			.addLore(TextUtils.wrapString(preference.getDescription(), Style.style(YELLOW),
 				TextUtils.DEFAULT_WIDTH, true))
 			.customModelData(customModelData)
@@ -282,7 +278,9 @@ public class PreferencesInventory implements InventoryProvider {
 
 		@Override
 		public @NotNull Component getTitle(Player player) {
-			return text("Edit preference " + preference.getName(), NamedTextColor.BLACK);
+			return textOfChildren(text("Edit preference "),
+				preference.getDisplayName().style(style ->
+					style.colorIfAbsent(BLACK).decorationIfAbsent(TextDecoration.UNDERLINED, TextDecoration.State.TRUE)));
 		}
 
 		@Override

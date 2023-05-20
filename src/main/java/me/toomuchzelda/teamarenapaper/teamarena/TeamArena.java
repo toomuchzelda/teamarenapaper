@@ -1301,9 +1301,7 @@ public abstract class TeamArena
 	public void giveLobbyItems(Player player) {
 		PlayerInventory inventory = player.getInventory();
 		inventory.setItem(0, kitMenuItem.clone());
-		inventory.setItem(5, gameMenuItem.clone());
-//		inventory.setItem(5, PreferencesInventory.PREFERENCE.clone());
-//		inventory.setItem(6, cosmeticMenuItem.clone());
+		inventory.setItem(4, gameMenuItem.clone());
 		inventory.setItem(8, miniMap.getMapItem());
 	}
 

@@ -3,8 +3,10 @@ package me.toomuchzelda.teamarenapaper.teamarena.inventory;
 import com.google.gson.Gson;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.*;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import net.kyori.adventure.inventory.Book;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -35,38 +37,61 @@ public class ChangelogMenu implements InventoryProvider {
 		return 3;
 	}
 
-	static final ItemStack FETCHING = ItemBuilder.of(Material.CLOCK)
-		.displayName(Component.text("Fetching the latest news for you!!", NamedTextColor.YELLOW))
+	static final ItemStack FETCHING = ItemBuilder.of(Material.LIME_STAINED_GLASS_PANE)
+		.displayName(Component.text("Fetching updates...", NamedTextColor.YELLOW))
 		.build();
-	static final ClickableItem CLOSE = ItemBuilder.of(Material.BARRIER)
-		.displayName(Component.text("Close", NamedTextColor.RED))
-		.toClickableItem(e -> Inventories.closeInventory((Player) e.getWhoClicked()));
+	static final ItemStack FETCHING_2 = ItemBuilder.of(Material.YELLOW_STAINED_GLASS_PANE)
+		.displayName(Component.text("Fetching updates...", NamedTextColor.YELLOW))
+		.build();
 
-	boolean shouldCheckStatus;
+	boolean waiting;
+	int animationTick;
 	@Override
 	public void init(Player player, InventoryAccessor inventory) {
 		inventory.fill(MenuItems.BORDER);
 		if (shouldFetch()) {
 			inventory.set(1, 4, FETCHING);
-			shouldCheckStatus = true;
+			waiting = true;
+			animationTick = TeamArena.getGameTick();
 			fetch();
 		} else {
 			populate(player, inventory);
 		}
-		inventory.set(2, 4, CLOSE);
+		inventory.set(2, 4, MenuItems.CLOSE);
 		if (Main.getPlayerInfo(player).permissionLevel == CustomCommand.PermissionLevel.OWNER) {
 			inventory.set(2, 5, ItemBuilder.of(Material.BEDROCK)
 				.displayName(Component.text("Force refetch (ADMIN)"))
-				.toClickableItem(e -> LAST_FETCH = null));
+				.toClickableItem(e -> {
+					LAST_FETCH = null;
+					Player clicker = (Player) e.getWhoClicked();
+					Inventories.openInventory(clicker, this);
+				}));
 		}
 	}
 
 	@Override
 	public void update(Player player, InventoryAccessor inventory) {
-		if (!shouldFetch()) // finished fetching
-			populate(player, inventory);
+		if (waiting) {
+			if (!shouldFetch()) { // finished fetching
+				populate(player, inventory);
+				waiting = false;
+			} else { // animation
+				// 6 phases
+				int phase = (TeamArena.getGameTick() - animationTick) / 2 % 6;
+				if (phase >= 4) phase = 6 - phase;
+				for (int i = 0; i < 4; i++) {
+					ItemStack stack = i == phase ? FETCHING : FETCHING_2;
+					inventory.set(13 + i, stack);
+					inventory.set(13 - i, stack);
+				}
+			}
+		}
 	}
 
+	static final Component LINK_COMPONENT = Component.textOfChildren(
+		Component.text("Click here", Style.style(NamedTextColor.DARK_GREEN, TextDecoration.UNDERLINED)),
+		Component.text(" to see the full changelog!", NamedTextColor.GOLD)
+	);
 	void populate(Player player, InventoryAccessor inventory) {
 		if (changelogs == null)
 			return;
@@ -78,12 +103,12 @@ public class ChangelogMenu implements InventoryProvider {
 				Changelog changelog = changelogs.get(i);
 				item = ItemBuilder.of(Material.BOOK)
 					.displayName(Component.text(changelog.title, Style.style(NamedTextColor.GOLD, TextDecoration.BOLD)))
-					.lore(TextUtils.wrapString(changelog.desc, Style.empty(), TextUtils.DEFAULT_WIDTH, true))
-					.addLore(Component.empty(), Component.text("Click to read more!"))
+					.lore(TextUtils.wrapString(changelog.desc, Style.style(NamedTextColor.YELLOW), TextUtils.DEFAULT_WIDTH, true))
+					.addLore(Component.empty(), Component.text("Click to read more!", NamedTextColor.WHITE))
 					.toClickableItem(e -> {
 						Player clicker = (Player) e.getWhoClicked();
-						clicker.sendMessage(Component.text(changelog.url)
-							.clickEvent(ClickEvent.openUrl(changelog.url)));
+						clicker.openBook(Book.book(Component.empty(), Component.empty(),
+							LINK_COMPONENT.clickEvent(ClickEvent.openUrl(changelog.url))));
 					});
 			}
 
@@ -116,7 +141,7 @@ public class ChangelogMenu implements InventoryProvider {
 		client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
 			.thenApply(HttpResponse::body)
 			.thenAccept(str -> {
-				Main.logger().info("Got response " + str);
+				Main.logger().info("Fetched latest changelog");
 				ChangelogResponse response = new Gson().fromJson(str, ChangelogResponse.class);
 				changelogs = List.copyOf(response.posts);
 

@@ -8,6 +8,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
@@ -18,7 +19,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public abstract class CosmeticItem {
-
+	@NotNull
+	public final NamespacedKey key;
 	@NotNull
 	public final String name;
 	@Nullable
@@ -27,7 +29,8 @@ public abstract class CosmeticItem {
 	public final String desc;
 
 	private final ItemStack display;
-	protected CosmeticItem(@NotNull File file, @NotNull YamlConfiguration info) {
+	protected CosmeticItem(@NotNull NamespacedKey key, @NotNull File file, @NotNull YamlConfiguration info) {
+		this.key = key;
 		var name = info.getString("name");
 		if (name == null) {
 			name = file.getName().substring(0, file.getName().indexOf('.'));
@@ -86,6 +89,7 @@ public abstract class CosmeticItem {
 	public ItemStack getDisplay(boolean complex) {
 		return ItemBuilder.from(display.clone())
 			.displayName(Component.text(this.name, NamedTextColor.YELLOW))
+			.customModelData("cosmetics/" + key)
 			.lore(getExtraInfo())
 			.hideAll()
 			.build();
