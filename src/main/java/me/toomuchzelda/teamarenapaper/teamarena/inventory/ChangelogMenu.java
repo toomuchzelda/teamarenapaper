@@ -128,7 +128,7 @@ public class ChangelogMenu implements InventoryProvider {
 	}
 
 	static HttpClient client = HttpClient.newHttpClient();
-	static void fetch() {
+	public static void fetch() {
 		if (fetching) // Don't fetch twice
 			return;
 		fetching = true;

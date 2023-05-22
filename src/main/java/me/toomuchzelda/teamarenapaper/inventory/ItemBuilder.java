@@ -124,6 +124,8 @@ public final class ItemBuilder {
 		return this;
 	}
 
+
+	@Deprecated
 	public ItemBuilder customModelData(@Nullable String data) {
 		if (data != null)
 			meta.setCustomModelData(ItemUtils.getCustomModelData(data));

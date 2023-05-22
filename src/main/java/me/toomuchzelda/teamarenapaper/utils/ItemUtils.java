@@ -226,6 +226,7 @@ public class ItemUtils {
 
 	private static final int MODEL_DATA_MAX = 1 << 24; // precision loss beyond 16 million
 	public static final boolean SEND_CUSTOM_MODEL_DATA = false;
+	@Deprecated
 	public static Integer getCustomModelData(@NotNull String string) {
 		if (!SEND_CUSTOM_MODEL_DATA)
 			return null;

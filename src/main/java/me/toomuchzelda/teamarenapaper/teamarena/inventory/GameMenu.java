@@ -35,15 +35,21 @@ public class GameMenu implements InventoryProvider {
 		.displayName(Component.text("Manage cosmetics", NamedTextColor.LIGHT_PURPLE))
 		.toClickableItem(openInventory(() -> new CosmeticsInventory(CosmeticType.GRAFFITI)));
 
-	public static final ClickableItem CHANGELOGS_ITEM = ItemBuilder.of(Material.LECTERN)
-		.displayName(Component.text("See changelogs", NamedTextColor.YELLOW))
-		.toClickableItem(openInventory(ChangelogMenu::new));
-
 	@Override
 	public void init(Player player, InventoryAccessor inventory) {
 		inventory.fill(MenuItems.BORDER);
 		inventory.set(9 + 2, PREFERENCES_ITEM);
 		inventory.set(9 + 4, COSMETICS_ITEM);
-		inventory.set(9 + 6, CHANGELOGS_ITEM);
+		// show name of latest update
+		var builder = ItemBuilder.of(Material.LECTERN)
+			.displayName(Component.text("See what's new", NamedTextColor.GREEN));
+		if (ChangelogMenu.changelogs != null && ChangelogMenu.changelogs.size() != 0) {
+			ChangelogMenu.Changelog latestUpdate = ChangelogMenu.changelogs.get(0);
+			builder.lore(Component.textOfChildren(
+				Component.text("Latest update: ", NamedTextColor.GRAY),
+				Component.text(latestUpdate.title(), NamedTextColor.GOLD)
+			));
+		}
+		inventory.set(9 + 6, builder.toClickableItem(openInventory(ChangelogMenu::new)));
 	}
 }

@@ -845,7 +845,7 @@ public abstract class TeamArena
 			if (gameState != GameState.PREGAME && miniMap.isMapItem(item)) {
 				event.setUseItemInHand(Event.Result.DENY);
 				event.setUseInteractedBlock(Event.Result.DENY);
-				TeamArenaTeam teamFilter = isPermanentlyDead(player) ? null : team;
+				TeamArenaTeam teamFilter = isPermanentlyDead(player) || isSpectator(player) ? null : team;
 				Inventories.openInventory(player, new SpectateInventory(teamFilter, this.gameState.teamsChosen()));
 			}
 			else if (gameState == GameState.LIVE) {
