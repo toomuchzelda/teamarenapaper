@@ -65,8 +65,10 @@ public final class ItemBuilder {
 		return meta.displayName();
 	}
 
-    public ItemBuilder displayName(ComponentLike component) {
-        meta.displayName(component.asComponent().decorationIfAbsent(TextDecoration.ITALIC, TextDecoration.State.FALSE));
+    public ItemBuilder displayName(@Nullable ComponentLike component) {
+        meta.displayName(component != null ?
+			component.asComponent().decorationIfAbsent(TextDecoration.ITALIC, TextDecoration.State.FALSE) :
+			null);
         return this;
     }
 
@@ -112,10 +114,25 @@ public final class ItemBuilder {
         return this;
     }
 
-    public ItemBuilder color(Color color) {
+    public ItemBuilder color(@Nullable Color color) {
         meta(LeatherArmorMeta.class, armorMeta -> armorMeta.setColor(color));
         return this;
     }
+
+	public ItemBuilder customModelData(@Nullable Integer data) {
+		meta.setCustomModelData(data);
+		return this;
+	}
+
+
+	@Deprecated
+	public ItemBuilder customModelData(@Nullable String data) {
+		if (data != null)
+			meta.setCustomModelData(ItemUtils.getCustomModelData(data));
+		else
+			meta.setCustomModelData(null);
+		return this;
+	}
 
     public ItemBuilder hide(ItemFlag... flags) {
         meta.addItemFlags(flags);

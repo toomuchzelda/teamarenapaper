@@ -9,28 +9,26 @@ import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerSound;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.ChatAnnouncerManager;
-import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingOutlineManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingListeners;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingOutlineManager;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandTeamChat;
-import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.GraffitiManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
-import me.toomuchzelda.teamarenapaper.teamarena.inventory.CosmeticsInventory;
+import me.toomuchzelda.teamarenapaper.teamarena.inventory.GameMenu;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.KitInventory;
-import me.toomuchzelda.teamarenapaper.teamarena.inventory.PreferencesInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.IronGolemKillStreak;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.KillStreakManager;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.WolvesKillStreak;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.*;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.beekeeper.KitBeekeeper;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.KitDemolitions;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.engineer.KitEngineer;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.explosive.KitExplosive;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.beekeeper.KitBeekeeper;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.medic.KitMedic;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.trigger.KitTrigger;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
@@ -41,6 +39,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
@@ -125,12 +124,12 @@ public abstract class TeamArena
 	protected final List<Kit> defaultKits;
 
 	protected Map<String, Kit> kits = new LinkedHashMap<>();
-	protected static ItemStack kitMenuItem = ItemBuilder.of(Material.FEATHER)
+	protected static ItemStack kitMenuItem = ItemBuilder.of(Material.IRON_CHESTPLATE)
 		.displayName(Component.text("Select a Kit", NamedTextColor.BLUE))
 		.build();
 
-	protected static ItemStack cosmeticMenuItem = ItemBuilder.of(Material.ARMOR_STAND)
-		.displayName(Component.text("Cosmetics", NamedTextColor.LIGHT_PURPLE))
+	protected static ItemStack gameMenuItem = ItemBuilder.of(Material.CHEST)
+		.displayName(Component.text("Game menu", NamedTextColor.LIGHT_PURPLE))
 		.build();
 
 	public static final Component OWN_TEAM_PREFIX = Component.text("▶ ");
@@ -835,12 +834,9 @@ public abstract class TeamArena
 		} else if (kitMenuItem.isSimilar(item)) {
 			event.setUseItemInHand(Event.Result.DENY);
 			Inventories.openInventory(player, new KitInventory());
-		} else if (PreferencesInventory.PREFERENCE.isSimilar(item)) {
+		} else if (gameMenuItem.isSimilar(item)) {
 			event.setUseItemInHand(Event.Result.DENY);
-			Inventories.openInventory(player, new PreferencesInventory());
-		} else if (cosmeticMenuItem.isSimilar(item)) {
-			event.setUseItemInHand(Event.Result.DENY);
-			Inventories.openInventory(player, new CosmeticsInventory(CosmeticType.GRAFFITI));
+			Inventories.openInventory(player, new GameMenu());
 		}
 		else {
 			PlayerInfo pinfo = Main.getPlayerInfo(player);
@@ -849,8 +845,7 @@ public abstract class TeamArena
 			if (gameState != GameState.PREGAME && miniMap.isMapItem(item)) {
 				event.setUseItemInHand(Event.Result.DENY);
 				event.setUseInteractedBlock(Event.Result.DENY);
-				// TODO fix respawning players being able to see other teams
-				TeamArenaTeam teamFilter = isPermanentlyDead(player) ? null : team;
+				TeamArenaTeam teamFilter = isPermanentlyDead(player) || isSpectator(player) ? null : team;
 				Inventories.openInventory(player, new SpectateInventory(teamFilter, this.gameState.teamsChosen()));
 			}
 			else if (gameState == GameState.LIVE) {
@@ -896,9 +891,8 @@ public abstract class TeamArena
 	}
 
 	private static boolean isOldBuySign(BlockState blockState) {
-		if (blockState.getType().name().endsWith("SIGN")) {
-			final Sign signState = (Sign) blockState;
-			final String asString = ((TextComponent) signState.lines().get(0)).content();
+		if (blockState instanceof Sign signState) {
+			final String asString = PlainTextComponentSerializer.plainText().serialize(signState.lines().get(0));
 
 			if (asString.equals("§4[Buy]")) {
 				return true;
@@ -1307,8 +1301,7 @@ public abstract class TeamArena
 	public void giveLobbyItems(Player player) {
 		PlayerInventory inventory = player.getInventory();
 		inventory.setItem(0, kitMenuItem.clone());
-		inventory.setItem(5, PreferencesInventory.PREFERENCE.clone());
-		inventory.setItem(6, cosmeticMenuItem.clone());
+		inventory.setItem(4, gameMenuItem.clone());
 		inventory.setItem(8, miniMap.getMapItem());
 	}
 

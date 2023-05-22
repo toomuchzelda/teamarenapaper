@@ -17,6 +17,7 @@ import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -41,7 +42,6 @@ public class KitInventory implements InventoryProvider {
 	private final Pagination pagination = new Pagination();
 
 	public KitInventory(Collection<? extends Kit> kits) {
-
 		var temp = kits.toArray(new Kit[0]);
 		Arrays.sort(temp, Kit.COMPARATOR);
 		this.kits = List.of(temp);
@@ -109,8 +109,6 @@ public class KitInventory implements InventoryProvider {
 	}
 
 
-	private static final ItemStack BORDER = ItemBuilder.of(Material.BLACK_STAINED_GLASS_PANE).displayName(Component.empty()).build();
-
 	private static final ItemStack TEAM_COMPOSITION_UNAVAILABLE = ItemBuilder.of(Material.LEATHER_CHESTPLATE)
 		.displayName(Component.text("Team composition", NamedTextColor.WHITE))
 		.lore(TextUtils.wrapString("You can see your team's kit composition here " +
@@ -133,16 +131,17 @@ public class KitInventory implements InventoryProvider {
 		var game = Main.getGame();
 		PlayerInfo playerInfo = Main.getPlayerInfo(player);
 		TeamArenaTeam team = playerInfo.team;
+		ItemStack teamCompositionItem;
 		if ((game.getGameState().teamsChosen() || game.getGameState() == GameState.LIVE) &&
 			team != null && team != game.getSpectatorTeam() && team.isAlive()) {
-			inventory.set(8, ItemBuilder.of(Material.LEATHER_CHESTPLATE)
+			teamCompositionItem = ItemBuilder.of(Material.LEATHER_CHESTPLATE)
 				.displayName(team.colourWord("Team composition"))
 				.lore(calculateTeamKitComposition(team, playerInfo.getEffectiveKit().getCategory()))
 				.color(team.getColour())
 				.hideAll() // I hate attributes
-				.build());
+				.build();
 		} else {
-			inventory.set(8, TEAM_COMPOSITION_UNAVAILABLE);
+			teamCompositionItem = TEAM_COMPOSITION_UNAVAILABLE;
 		}
 
 
@@ -154,12 +153,27 @@ public class KitInventory implements InventoryProvider {
 				inventory.set(i, pagination.getPreviousPageItem(inventory));
 			else if (i == 46 && showPageItems)
 				inventory.set(i, pagination.getNextPageItem(inventory));
+			else if (i == 51)
+				inventory.set(i, teamCompositionItem);
 			else if (i == 53)
 				inventory.set(i, ItemBuilder.of(Material.ENDER_CHEST)
-					.displayName(Component.text("Save as default kit", NamedTextColor.YELLOW))
+					.displayName(
+						Component.textOfChildren(
+							Component.text("Save "),
+							playerInfo.kit.getDisplayName(),
+							Component.text(" as your default kit")
+						).color(NamedTextColor.GOLD)
+					)
+					.lore(TextUtils.toLoreList("""
+							Your current default kit: <yellow><default_kit></yellow>
+							Your default kit will be selected when:
+							* This game ends
+							* You rejoin the server
+							""", Style.style(NamedTextColor.GRAY),
+						Placeholder.unparsed("default_kit", playerInfo.defaultKit)))
 					.toClickableItem(KitInventory::saveDefaultKit));
 			else
-				inventory.set(i, BORDER);
+				inventory.set(i, MenuItems.BORDER);
 		}
 
 		Kit selected = playerInfo.kit;
@@ -233,6 +247,9 @@ public class KitInventory implements InventoryProvider {
 				).color(NamedTextColor.GREEN));
 			} catch (SQLException ex) {
 				clicker.sendMessage(Component.text("Failed to save kit", TextColors.ERROR_RED));
+				if (Inventories.debug) {
+					ex.printStackTrace();
+				}
 			}
 		});
 

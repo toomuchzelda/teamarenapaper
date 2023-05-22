@@ -43,6 +43,32 @@ public interface InventoryProvider {
                 set(slot, null, null);
         }
 
+		default void set(int row, int col, @Nullable ClickableItem item) {
+			set(row * 9 + col, item);
+		}
+
+		default void set(int row, int col, @Nullable ItemStack stack) {
+			set(row * 9 + col, stack);
+		}
+
+		void fill(@Nullable ClickableItem item);
+
+		default void fill(@Nullable ItemStack stack) {
+			fill(ClickableItem.empty(stack));
+		}
+
+		default void fillRow(int row, @Nullable ClickableItem item) {
+			for (int i = 0; i < 9; i++) {
+				set(row * 9 + i, item);
+			}
+		}
+
+		default void fillRow(int row, @Nullable ItemStack stack) {
+			for (int i = 0; i < 9; i++) {
+				set(row * 9 + i, stack);
+			}
+		}
+
         @Nullable
         ClickableItem get(int slot);
 

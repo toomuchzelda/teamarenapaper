@@ -144,6 +144,7 @@ public class MiniMapManager {
                     }
                 })
 				.lore(ITEM_LORE)
+				.hideAll()
                 .build();
     }
 

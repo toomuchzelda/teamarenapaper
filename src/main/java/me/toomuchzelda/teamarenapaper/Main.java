@@ -11,6 +11,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.commands.*;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
+import me.toomuchzelda.teamarenapaper.teamarena.inventory.ChangelogMenu;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.FileUtils;
@@ -81,6 +82,9 @@ public final class Main extends JavaPlugin
 		DamageType.checkDamageTypes();
 
 		registerCommands();
+
+		// fetch latest update
+		Bukkit.getScheduler().runTask(this, ChangelogMenu::fetch);
 	}
 
 	@Override
@@ -136,6 +140,7 @@ public final class Main extends JavaPlugin
 		commandMap.register(fallbackPrefix, new CommandMessage());
 		commandMap.register(fallbackPrefix, new CommandEventTime());
 		commandMap.register(fallbackPrefix, new CommandTime());
+		commandMap.register(fallbackPrefix, new CommandMenu());
 	}
 
 	public static PlayerInfo getPlayerInfo(Player player) {

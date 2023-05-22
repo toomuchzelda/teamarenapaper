@@ -50,17 +50,13 @@ public class CosmeticsInventory implements InventoryProvider {
 			.build()
 	);
 
-	private static final ItemStack BORDER = ItemBuilder.of(Material.BLACK_STAINED_GLASS_PANE)
-		.displayName(Component.empty())
-		.build();
-
 	private final TabBar<CosmeticType> tabBar;
 	private final Pagination pagination = new Pagination();
 
 	@Override
 	public void init(Player player, InventoryAccessor inventory) {
 		for (int i = 0; i < 8; i++) {
-			inventory.set(i, BORDER);
+			inventory.set(i, MenuItems.BORDER);
 		}
 		tabBar.showTabs(inventory, Arrays.asList(CosmeticType.values()),
 			TabBar.highlightWhenSelected(this::tabToItem), 0, 8, true);
@@ -102,7 +98,7 @@ public class CosmeticsInventory implements InventoryProvider {
 	private ClickableItem keyToItem(CosmeticType cosmeticType, NamespacedKey key, NamespacedKey selected, InventoryAccessor inventory, Player player) {
 		CosmeticItem cosmeticItem = CosmeticsManager.getCosmetic(cosmeticType, key);
 		if (cosmeticItem == null)
-			return ClickableItem.empty(BORDER);
+			return ClickableItem.empty(MenuItems.BORDER);
 		ItemStack item = ItemUtils.highlightIfSelected(cosmeticItem.getDisplay(showInfoButton.getState()), key.equals(selected));
 		if (item.getItemMeta() instanceof MapMeta mapMeta && mapMeta.getMapView() != null) {
 			player.sendMap(mapMeta.getMapView());

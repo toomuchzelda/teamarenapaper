@@ -12,6 +12,7 @@ import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -48,11 +49,10 @@ public class PreferencesInventory implements InventoryProvider {
 	}
 
 	// https://minecraft-heads.com/custom-heads/miscellaneous/27523-settings
-	public static final ItemStack PREFERENCE = ItemBuilder.from(ItemUtils.createPlayerHead("e4d49bae95c790c3b1ff5b2f01052a714d6185481d5b1c85930b3f99d2321674"))
+	public static final ItemStack PREFERENCE = ItemBuilder.of(Material.COMPARATOR)
 		.displayName(text("Preferences", NamedTextColor.WHITE))
+		.customModelData("preferences")
 		.build();
-
-	private static final ItemStack BORDER = ItemBuilder.of(Material.BLACK_STAINED_GLASS_PANE).displayName(Component.empty()).build();
 
 	TabBar<PreferenceCategory> categoryTab = new TabBar<>(null);
 	Pagination pagination = new Pagination();
@@ -144,10 +144,14 @@ public class PreferencesInventory implements InventoryProvider {
 	);
 	private static <T> ClickableItem prefToItem(@Nullable InventoryProvider parent, @Nullable InventoryAccessor inventory,
 												Preference<T> preference, T current) {
+		Integer customModelData = ItemUtils.getCustomModelData("preferences/" + preference.getName());
+
 		var builder = ItemBuilder.from(preference.getIcon().clone())
 			.displayName(preference.getDisplayName())
-			.lore(TextUtils.wrapString(preference.getDescription(), Style.style(YELLOW),
+			.lore(text("ID: " + preference.getName(), DARK_GRAY))
+			.addLore(TextUtils.wrapString(preference.getDescription(), Style.style(YELLOW),
 				TextUtils.DEFAULT_WIDTH, true))
+			.customModelData(customModelData)
 			.hideAll();
 		// inventory can be null to only show the icon
 		if (inventory == null) {
@@ -177,7 +181,6 @@ public class PreferencesInventory implements InventoryProvider {
 
 		lore.add(LCLICK_EDIT);
 		lore.add(RCLICK_RESET);
-		lore.add(text("ID: " + preference.getName(), DARK_GRAY));
 
 		builder.addLore(lore);
 
@@ -225,7 +228,6 @@ public class PreferencesInventory implements InventoryProvider {
 
 		lore.add(current ? LCLICK_SET_FALSE : LCLICK_SET_TRUE);
 		lore.add(RCLICK_RESET);
-		lore.add(text("ID: " + preference.getName(), DARK_GRAY));
 
 		builder.addLore(lore);
 		return builder.toClickableItem(e -> {
@@ -276,7 +278,8 @@ public class PreferencesInventory implements InventoryProvider {
 
 		@Override
 		public @NotNull Component getTitle(Player player) {
-			return text("Edit preference " + preference.getName(), NamedTextColor.BLACK);
+			return textOfChildren(text("Edit "),
+				preference.getDisplayName().color(BLACK).decorate(TextDecoration.UNDERLINED));
 		}
 
 		@Override
@@ -290,8 +293,8 @@ public class PreferencesInventory implements InventoryProvider {
 		@Override
 		public void init(Player player, InventoryAccessor inventory) {
 			for (int i = 0; i < 9; i++) {
-				inventory.set(i, BORDER);
-				inventory.set(i + 5 * 9, BORDER);
+				inventory.set(i, MenuItems.BORDER);
+				inventory.set(i + 5 * 9, MenuItems.BORDER);
 			}
 			T currentValue = Main.getPlayerInfo(player).getPreference(preference);
 			T defaultValue = preference.getDefaultValue();

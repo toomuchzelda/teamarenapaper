@@ -51,10 +51,6 @@ public class SpectateInventory implements InventoryProvider {
 		return 6;
 	}
 
-	protected static final ItemStack BORDER = ItemBuilder.of(Material.BLACK_STAINED_GLASS_PANE)
-		.displayName(Component.empty())
-		.build();
-
 	// advanced options
 	protected SwitchItem<Boolean> showOptionsButton = SwitchItem.ofBoolean(false,
 		ItemBuilder.of(Material.CHAIN_COMMAND_BLOCK)
@@ -97,7 +93,7 @@ public class SpectateInventory implements InventoryProvider {
 		if (teamFilter != null) {
 			inventory.set(0, teamToItem(teamFilter, true));
 			for (int i = 1; i < end; i++) {
-				inventory.set(i, BORDER);
+				inventory.set(i, MenuItems.BORDER);
 			}
 		} else {
 			teamFilterTab.showTabs(inventory, getTeams(playerTeam),
