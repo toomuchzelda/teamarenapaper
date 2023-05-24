@@ -165,7 +165,7 @@ public class DamageType {
 			.setInstantDeath().setNoKnockback();
 
 	public static final DamageType SNIPER_HEADSHOT = new DamageType("Headshot", "%Killed% was headshot by %Killer%")
-			.setProjectile();
+			.setProjectile().setInstantDeath();
 
     public static final DamageType DEMO_TNTMINE = new DamageType("Demolitions TNT Mine",
             "%Killed% stepped on %Killer%'s TNT Mine and blew up")

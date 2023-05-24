@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits;
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
+import me.toomuchzelda.teamarenapaper.teamarena.GameState;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
@@ -12,6 +13,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
@@ -28,6 +30,7 @@ import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
 import java.util.*;
@@ -185,27 +188,38 @@ public class KitSniper extends Kit {
 			}
 		}
 
+		public static int debugInt = 0;
 		//Headshot
 		@Override
 		public void onProjectileHitEntity(ProjectileCollideEvent event) {
-			Projectile projectile = event.getEntity();
-			if (!(projectile instanceof Arrow arrow))
+			final Projectile projectile = event.getEntity();
+			if (!(projectile instanceof Arrow))
 				return;
-			Entity victim = event.getCollidedWith();
-			Player shooter = (Player) projectile.getShooter();
-			Location projLoc = projectile.getLocation().clone();
-			if (victim instanceof Player player) {
-				double headLocation = player.getLocation().getY();
-				double projectileHitY = projectile.getLocation().getY();
+
+			final Player shooter = (Player) projectile.getShooter();
+			if (event.getCollidedWith() instanceof Player playerVictim) {
+				final Location victimLoc = playerVictim.getLocation();
+				final Location projectileLoc = projectile.getLocation();
+
+				double headLocation = victimLoc.getY();
+				double projectileHitY = projectileLoc.getY();
 				//Must consider when player is below the other player, which makes getting headshots much harder.
 				double headshotThresh = 1.35d;
-				double heightDiff = victim.getLocation().getBlockY() - shooter.getLocation().getBlockY();
+				double heightDiff = victimLoc.getBlockY() - shooter.getLocation().getBlockY();
 				if (heightDiff > 0) {
 					headshotThresh -= Math.min(0.35, (heightDiff / 10));
 				}
+
+				PacketHologram hitHolo = new PacketHologram(projectileLoc, null, player -> true, Component.text("" + debugInt++));
+				hitHolo.respawn();
+
+				// TODO raytrace or sth
+				// arrow.getLocation() only gets position before this event so not actually where the thing hit.
 				//Disabled headshot if you are too close since it was buggy
-				if (projectileHitY - headLocation > headshotThresh && projectile.getOrigin().distance(projectile.getLocation()) > 10) {
-					DamageEvent dEvent = DamageEvent.newDamageEvent(player, 999d, DamageType.SNIPER_HEADSHOT, shooter, false);
+				if (projectileHitY - headLocation > headshotThresh
+					&& projectile.getOrigin().distanceSquared(projectileLoc) > 10 * 10) {
+
+					DamageEvent dEvent = DamageEvent.newDamageEvent(playerVictim, 999d, DamageType.SNIPER_HEADSHOT, shooter, false);
 					Main.getGame().queueDamage(dEvent);
 
 					//Hitmarker Sound effect

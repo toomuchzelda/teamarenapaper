@@ -19,7 +19,7 @@ public class SoundUtils {
                 OBNOXIOUS_SOUNDS.add(sound);
             } else if (name.startsWith("ENTITY_GHAST") || name.startsWith("ENTITY_GOAT") || name.startsWith("ENTITY_HORSE")) {
                 OBNOXIOUS_SOUNDS.add(sound);
-            } else if (name.contains("EXPLODE") || name.contains("DEATH")) {
+            } else if (name.contains("EXPLODE") || name.contains("DEATH") || name.contains("HORN")) {
                 OBNOXIOUS_SOUNDS.add(sound);
             }
         }
