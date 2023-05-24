@@ -124,7 +124,7 @@ public abstract class TeamArena
 	protected final List<Kit> defaultKits;
 
 	protected Map<String, Kit> kits = new LinkedHashMap<>();
-	protected static ItemStack kitMenuItem = ItemBuilder.of(Material.IRON_CHESTPLATE)
+	protected static ItemStack kitMenuItem = ItemBuilder.of(Material.FEATHER)
 		.displayName(Component.text("Select a Kit", NamedTextColor.BLUE))
 		.build();
 
