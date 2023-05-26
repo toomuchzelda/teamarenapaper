@@ -4,7 +4,6 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
-import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingOutlineManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.EntityBuilding;
 import me.toomuchzelda.teamarenapaper.teamarena.building.PreviewableBuilding;
@@ -236,11 +235,14 @@ public abstract class DemoMine extends EntityBuilding implements PreviewableBuil
 		if (result == null || result.getHitBlock() == null || result.getHitBlockFace() == null)
 			return null;
 		BlockFace face = result.getHitBlockFace();
-		Block block = result.getHitBlock().getRelative(face);
-		Block base = block.getRelative(BlockFace.DOWN);
-		boolean canPlace = BuildingManager.canPlaceAt(block) &&
-			KitDemolitions.isValidMineBlock(base);
-		Location location = base.getLocation().add(0.5, BlockUtils.getBlockHeight(base), 0.5);
+		Block block = result.getHitBlock();
+		Block base = KitDemolitions.getMineBaseBlock(block, face);
+		boolean canPlace = KitDemolitions.checkMineLocation(base);
+
+		double height = BlockUtils.getBlockHeight(base);
+		if (height == 0)
+			height = 1;
+		Location location = base.getLocation().add(0.5, height, 0.5);
 		return new PreviewResult(canPlace, location);
 	}
 
@@ -285,16 +287,23 @@ public abstract class DemoMine extends EntityBuilding implements PreviewableBuil
 					if (mine.hurt()) {
 						Component message;
 						if (player != mine.owner) {
-							message = Component.text("You've broken one of ", NamedTextColor.AQUA).append(
-								mine.owner.playerListName()).append(Component.text("'s " + mine.type.name + "s!",
-								NamedTextColor.AQUA));
+							message = Component.textOfChildren(
+								Component.text("You've broken one of "),
+								mine.owner.playerListName(),
+								Component.text("'s "),
+								mine.type.displayName(),
+								Component.text("s!")
+							).color(NamedTextColor.AQUA);
 
-							Component ownerMessage = Component.text("Someone broke one of your " + mine.type.name + "s!",
-								NamedTextColor.AQUA);
+							Component ownerMessage = Component.textOfChildren(
+								Component.text("Someone broke one of your "),
+								mine.type.displayName(),
+								Component.text("s!")
+							).color(NamedTextColor.AQUA);
 
 							PlayerUtils.sendKitMessage(mine.owner, ownerMessage, ownerMessage);
 						} else {
-							message = Component.text("Broke your " + mine.type.name).color(NamedTextColor.AQUA);
+							message = Component.text("Broke your ", NamedTextColor.AQUA).append(mine.type.displayName());
 						}
 						player.sendMessage(message);
 					}

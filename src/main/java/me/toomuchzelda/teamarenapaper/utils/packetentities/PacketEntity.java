@@ -385,9 +385,11 @@ public class PacketEntity
 	}
 
 	private static final double EPSILON = Vector.getEpsilon();
+	private static final double ANGLE_EPSILON = 0.01;
 	protected void move(Location newLocation, boolean force) {
 		if (!force && location.distance(newLocation) < EPSILON &&
-			location.getYaw() == newLocation.getYaw() && location.getPitch() == newLocation.getPitch())
+			location.getYaw() - newLocation.getYaw() < ANGLE_EPSILON &&
+			location.getPitch() - newLocation.getPitch() < ANGLE_EPSILON)
 			return;
 
 		newLocation = newLocation.clone();
@@ -662,5 +664,10 @@ public class PacketEntity
 
 	public EntityType getEntityType() {
 		return entityType;
+	}
+
+	@Override
+	public String toString() {
+		return "PacketEntity{id=" + id + ",type=" + entityType + ",uuid=" + uuid + "}";
 	}
 }

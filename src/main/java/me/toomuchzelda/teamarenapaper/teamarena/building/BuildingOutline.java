@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.building;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.WrappedDataValue;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
+import io.papermc.paper.adventure.PaperAdventure;
 import io.papermc.paper.entity.TeleportFlag;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
@@ -45,6 +46,7 @@ public sealed class BuildingOutline extends PacketEntity {
 	private Component nameLine;
 	@Nullable
 	private Component statusLine;
+	private Component hologramText = Component.empty();
 
 	private static final Vector NAME_OFFSET = new Vector(0, 1.25, 0);
 	private static final Vector STATUS_OFFSET = new Vector(0, 1, 0);
@@ -114,20 +116,29 @@ public sealed class BuildingOutline extends PacketEntity {
 	}
 
 	private void updateHologram() {
-		var builder = Component.text();
-		boolean appendNewline = false;
-		if (nameLine != null) {
-			builder.append(nameLine);
-			appendNewline = true;
-		}
-		if (statusLine != null) {
-			if (appendNewline)
-				builder.append(Component.newline());
-			builder.append(statusLine);
+		Component newText;
+		if (nameLine == null && statusLine == null) {
+			newText = Component.empty();
+		} else {
+			var builder = Component.text();
+			boolean appendNewline = false;
+			if (nameLine != null) {
+				builder.append(nameLine);
+				appendNewline = true;
+			}
+			if (statusLine != null) {
+				if (appendNewline)
+					builder.append(Component.newline());
+				builder.append(statusLine);
+			}
+			newText = builder.build();
 		}
 		if (hologram == null)
 			initHolograms();
-		hologram.text(builder.build());
+		if (!hologramText.equals(newText)) {
+			hologramText = newText;
+			hologram.text(newText);
+		}
 	}
 
 	@Override
@@ -138,6 +149,12 @@ public sealed class BuildingOutline extends PacketEntity {
 
 	public void setStatus(@Nullable Component component, boolean sendPacket) {
 		statusLine = component == Component.empty() ? null : component;
+		updateHologram();
+	}
+
+	public void setText(@Nullable Component name, @Nullable Component status) {
+		nameLine = name == Component.empty() ? null : name;
+		statusLine = status == Component.empty() ? null : status;
 		updateHologram();
 	}
 
@@ -237,6 +254,7 @@ public sealed class BuildingOutline extends PacketEntity {
 		return eyeLocation.clone().add(textDirection.multiply(TEXT_MAX_DISTANCE));
 	}
 
+	private static final double EPSILON = Vector.getEpsilon() * Vector.getEpsilon();
 	public void update(Location eyeLocation, Location buildingLocation) {
 		float scale;
 		int now = TeamArena.getGameTick();
@@ -255,12 +273,12 @@ public sealed class BuildingOutline extends PacketEntity {
 			Location newLocation = ensureOutlineVisible(eyeLocation, buildingLocation, offset, scale);
 			move(newLocation);
 		}
-		if (hologram == null)
+		if (hologram == null || (nameLine == null && statusLine == null))
 			return;
 		// ensure holograms are at the correct location
 		Location hit = ensureTextVisible(eyeLocation, buildingLocation, offset, scale);
-		// teleports are jittery but oh well
-		hologramBase.teleport(hit, TeleportFlag.EntityState.RETAIN_PASSENGERS);
+		if (hologramBase.getLocation().distanceSquared(hit) > EPSILON)
+			hologramBase.teleport(hit, TeleportFlag.EntityState.RETAIN_PASSENGERS);
 
 		// perform display transformations
 		var transformation = hologram.getTransformation();
@@ -334,12 +352,15 @@ public sealed class BuildingOutline extends PacketEntity {
 		private Entity entity;
 		private PacketEntity packetEntity;
 		boolean useEntityRotation = true;
+		boolean monitorEntityData = false;
+		boolean entityDataLoaded = false;
 		public EntityOutline(List<Player> viewers, Entity entity, Location offset, List<EntityOutline> additional, Location location) {
 			super(NEW_ID, entity.getType(), viewers.size() == 1, location, offset, viewers);
 			this.additionalOutlines = List.copyOf(additional);
 
 			this.entity = entity;
 			updateMetadata();
+			entityDataLoaded = true;
 		}
 
 		public EntityOutline(List<Player> viewers, PacketEntity packetEntity, Location offset, List<EntityOutline> additional, Location location) {
@@ -356,6 +377,7 @@ public sealed class BuildingOutline extends PacketEntity {
 
 			this.packetEntity = packetEntity;
 			updateMetadata();
+			entityDataLoaded = true;
 		}
 
 		private static EntityOutline fromEntityLike(List<Player> viewers, Object entityLike, Location baseLocation, List<EntityOutline> additional) {
@@ -471,12 +493,14 @@ public sealed class BuildingOutline extends PacketEntity {
 		private void updateMetadata() {
 			List<PacketContainer> packets = new ArrayList<>();
 			if (entity != null) {
-				// copy entity metadata
-				WrappedDataWatcher entityData = WrappedDataWatcher.getEntityWatcher(entity);
-				if (!Objects.equals(entityData, oldWatcher)) {
-					oldWatcher = entityData.deepClone();
-					metadataPacket.getDataValueCollectionModifier().write(0, copyEntityData(entityData));
-					packets.add(metadataPacket);
+				if (monitorEntityData || !entityDataLoaded) {
+					// copy entity metadata
+					WrappedDataWatcher entityData = WrappedDataWatcher.getEntityWatcher(entity);
+					if (!Objects.equals(entityData, oldWatcher)) {
+						oldWatcher = entityData.deepClone();
+						metadataPacket.getDataValueCollectionModifier().write(0, copyEntityData(entityData));
+						packets.add(metadataPacket);
+					}
 				}
 				// copy entity armor
 				if (entity instanceof LivingEntity livingEntity) {
@@ -490,11 +514,13 @@ public sealed class BuildingOutline extends PacketEntity {
 					}
 				}
 			} else {
-				WrappedDataWatcher entityData = packetEntity.getDataWatcher();
-				if (!Objects.equals(entityData, oldWatcher)) {
-					oldWatcher = entityData.deepClone();
-					metadataPacket.getDataValueCollectionModifier().write(0, copyEntityData(entityData));
-					packets.add(metadataPacket);
+				if (monitorEntityData || !entityDataLoaded) {
+					WrappedDataWatcher entityData = packetEntity.getDataWatcher();
+					if (!Objects.equals(entityData, oldWatcher)) {
+						oldWatcher = entityData.deepClone();
+						metadataPacket.getDataValueCollectionModifier().write(0, copyEntityData(entityData));
+						packets.add(metadataPacket);
+					}
 				}
 				// copy equipment
 				setEquipment(packetEntity.getAllEquipment());
@@ -511,13 +537,15 @@ public sealed class BuildingOutline extends PacketEntity {
 			}
 		}
 
-		private static List<WrappedDataValue> copyEntityData(WrappedDataWatcher dataWatcher) {
+		private List<WrappedDataValue> copyEntityData(WrappedDataWatcher dataWatcher) {
 			WrappedDataWatcher clonedEntityData = new WrappedDataWatcher(dataWatcher.getWatchableObjects());
 			// make outline invisible and glowing
 			Byte baseBitfield = (Byte) clonedEntityData.getObject(MetaIndex.BASE_BITFIELD_OBJ);
 			clonedEntityData.setObject(MetaIndex.BASE_BITFIELD_OBJ,
 				(byte) ((baseBitfield != null ? baseBitfield : 0) | BITFIELD_MASK));
-			clonedEntityData.setObject(MetaIndex.CUSTOM_NAME_OBJ, Optional.empty());
+			clonedEntityData.setObject(MetaIndex.CUSTOM_NAME_OBJ,
+				Optional.of(PaperAdventure.asVanilla(Component.text("Outline for " +
+					(entity != null ? entity : packetEntity)))));
 			clonedEntityData.setObject(MetaIndex.CUSTOM_NAME_VISIBLE_OBJ, false);
 			clonedEntityData.setObject(MetaIndex.NO_GRAVITY_OBJ, true);
 

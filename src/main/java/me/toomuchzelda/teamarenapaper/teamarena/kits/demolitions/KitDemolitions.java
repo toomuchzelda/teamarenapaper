@@ -20,7 +20,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -29,23 +28,28 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
 import org.bukkit.event.Event;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 
 public class KitDemolitions extends Kit
 {
 	public static final int TNT_MINE_COUNT = 2;
 	public static final int PUSH_MINE_COUNT = 1;
-	public static final TextColor TNT_COLOR = TextColor.color(187, 60, 23);
+	public static final TextColor TNT_COLOR = TextColor.color(0xd82e1a);
 	public static final ItemStack TNT_MINE_ITEM;
 	public static final ItemStack PUSH_MINE_ITEM;
-	public static final ItemStack REMOTE_DETONATOR_ITEM;
+	public static final ItemStack TNT_MINE_DEPLETED;
+	public static final ItemStack PUSH_MINE_DEPLETED;
+	public static final ItemStack REMOTE_DETONATOR_ITEM = ItemBuilder.of(Material.FLINT_AND_STEEL)
+		.displayName(Component.text("Remote Trigger", NamedTextColor.BLUE))
+		.lore(TextUtils.wrapString("Point at any of your mines from any distance to select one. " +
+			"Once selected, it will turn blue. Right click and boom!", Style.style(TextUtils.RIGHT_CLICK_TO), 200))
+		.build();
 
 	//valid blocks for mines to be placed on
 	private static final boolean[] VALID_MINE_BLOCKS;
@@ -68,31 +72,38 @@ public class KitDemolitions extends Kit
 			}
 		}
 		setValidMineBlock(Material.DIRT_PATH);
+		setValidMineBlock(Material.FARMLAND);
 
-		List<Component> usage = TextUtils.wrapString("Right click the top of a block to place the trap down. " +
+		List<Component> usage = TextUtils.wrapString("Right click to place the mine. " +
 				"It will be triggered by your remote detonator or when enemies step on it.",
-			Style.style(TextUtils.RIGHT_CLICK_TO), 200);
+			Style.style(TextUtils.RIGHT_CLICK_TO));
 
+		List<Component> tntMineLore = TextUtils.wrapString("A TNT landmine trap that blows enemies to smithereens",
+			Style.style(TNT_COLOR));
 		TNT_MINE_ITEM = ItemBuilder.of(Material.TNT)
 			.amount(TNT_MINE_COUNT)
 			.displayName(Component.text("TNT Mine", TNT_COLOR))
-			.lore(TextUtils.wrapString("A TNT landmine trap that blows enemies to smithereens",
-				Style.style(TNT_COLOR), 200))
+			.lore(tntMineLore)
 			.addLore(usage)
 			.build();
 
+		TNT_MINE_DEPLETED = ItemBuilder.of(Material.COAL_BLOCK)
+			.displayName(Component.text("TNT Mine (Depleted)", TNT_COLOR))
+			.lore(tntMineLore)
+			.build();
+
+		List<Component> pushMineLore = TextUtils.wrapString("A trap that creates an explosive gust of air, pushing away all enemies near it",
+			Style.style(NamedTextColor.WHITE));
 		PUSH_MINE_ITEM = ItemBuilder.of(Material.WHITE_WOOL)
 			.amount(PUSH_MINE_COUNT)
-			.displayName(Component.text("Push Mine"))
-			.lore(TextUtils.wrapString("A trap that creates an explosive gust of air, pushing away all enemies near it",
-				Style.empty().decoration(TextDecoration.ITALIC, false), 200))
+			.displayName(Component.text("Push Mine", NamedTextColor.WHITE))
+			.lore(pushMineLore)
 			.addLore(usage)
 			.build();
 
-		REMOTE_DETONATOR_ITEM = ItemBuilder.of(Material.FLINT_AND_STEEL)
-			.displayName(Component.text("Remote Trigger", NamedTextColor.BLUE))
-			.lore(TextUtils.wrapString("Point at any of your mines from any distance to select one. " +
-				"Once selected, it will turn blue. Right click and boom!", Style.style(TextUtils.RIGHT_CLICK_TO), 200))
+		PUSH_MINE_DEPLETED = ItemBuilder.of(Material.GRAY_WOOL)
+			.displayName(Component.text("Push Mine (Depleted)", NamedTextColor.WHITE))
+			.lore(pushMineLore)
 			.build();
 	}
 
@@ -129,11 +140,27 @@ public class KitDemolitions extends Kit
 		return VALID_MINE_BLOCKS[block.getType().ordinal()];
 	}
 
+	public static Block getMineBaseBlock(Block lookingAt, BlockFace lookingAtSide) {
+		if (!lookingAt.isBuildable()) { // use base block if replaceable
+			lookingAt = lookingAt.getRelative(BlockFace.DOWN);
+		}
+
+		Block block = lookingAt.getRelative(lookingAtSide);
+		return block.getRelative(BlockFace.DOWN);
+	}
+
+	public static boolean checkMineLocation(Block base) {
+		if (!isValidMineBlock(base))
+			return false;
+		Block mine = base.getRelative(BlockFace.UP);
+		return (mine.getType() == Material.AIR || mine.isReplaceable()) && BuildingManager.getBuildingAt(mine) == null;
+	}
+
 	public record RegeneratingMine(MineType type, int removedTime) {}
 
 	public static class DemolitionsAbility extends Ability
 	{
-		public static final Map<Player, List<RegeneratingMine>> REGENERATING_MINES = new LinkedHashMap<>();
+		public static final Map<Player, List<RegeneratingMine>> regeneratingMines = new LinkedHashMap<>();
 
 		public static final DamageType DEMO_TNTMINE_BYSTANDER = new DamageType(DamageType.DEMO_TNTMINE,
 				"%Killed% was blown up by %Killer%'s TNT Mine because %Cause% stepped on it. Thanks a lot!");
@@ -144,7 +171,7 @@ public class KitDemolitions extends Kit
 
 		@Override
 		public void unregisterAbility() {
-			REGENERATING_MINES.clear();
+			regeneratingMines.clear();
 		}
 
 		private static final Component RCLICK_PLACE = Component.text("Right click: place mine", TextUtils.RIGHT_CLICK_TO);
@@ -154,7 +181,9 @@ public class KitDemolitions extends Kit
 			REMOTE_DETONATOR_ITEM, BuildingSelector.Action.selectBuilding(RCLICK_DETONATE, building -> building instanceof DemoMine demoMine &&
 				demoMine.isArmed() && !demoMine.isTriggered()),
 			TNT_MINE_ITEM, BuildingSelector.Action.showBlockPreview(RCLICK_PLACE, TNTMine.class, TNTMine::new, null),
-			PUSH_MINE_ITEM, BuildingSelector.Action.showBlockPreview(RCLICK_PLACE, PushMine.class, PushMine::new, null)
+			PUSH_MINE_ITEM, BuildingSelector.Action.showBlockPreview(RCLICK_PLACE, PushMine.class, PushMine::new, null),
+			TNT_MINE_DEPLETED, BuildingSelector.Action.filterBuilding(building -> building instanceof TNTMine),
+			PUSH_MINE_DEPLETED, BuildingSelector.Action.filterBuilding(building -> building instanceof PushMine)
 		);
 
 		@Override
@@ -170,7 +199,24 @@ public class KitDemolitions extends Kit
 					BuildingManager.destroyBuilding(building);
 				}
 			});
-			REGENERATING_MINES.remove(player);
+			regeneratingMines.remove(player);
+
+			player.setCooldown(TNT_MINE_DEPLETED.getType(), 0);
+			player.setCooldown(PUSH_MINE_DEPLETED.getType(), 0);
+		}
+
+		private void subtractItem(MineType type, Player player, EquipmentSlot hand) {
+			PlayerInventory inventory = player.getInventory();
+			ItemStack stack = inventory.getItem(hand);
+			if (stack.getAmount() == 1) {
+				// replace with corresponding depleted item
+				stack = type.itemDepleted.clone();
+				if (!player.hasCooldown(stack.getType()))
+					player.setCooldown(stack.getType(), 1_000_000);
+			} else {
+				stack.subtract();
+			}
+			player.getInventory().setItem(hand, stack);
 		}
 
 		@Override
@@ -189,32 +235,29 @@ public class KitDemolitions extends Kit
 				}
 			} else {
 				ItemStack stack = event.getItem();
-				Block base = event.getClickedBlock();
-				if (base == null || stack == null)
+				Block clicked = event.getClickedBlock();
+				if (clicked == null || stack == null)
 					return;
+				Block base = getMineBaseBlock(clicked, event.getBlockFace());
 				Block block = base.getRelative(BlockFace.UP);
 
-				MineType type;
-				if (TNT_MINE_ITEM.getType() == mat)
-					type = MineType.TNTMINE;
-				else if (PUSH_MINE_ITEM.getType() == mat)
-					type = MineType.PUSHMINE;
-				else
+				MineType type = MineType.getFromMaterial(stack.getType());
+				if (type == null) // not valid mine
 					return;
 
 				event.setCancelled(true);
-				if (isValidMineBlock(base)) {
+				if (checkMineLocation(base)) {
 					if (BuildingManager.getBuildingAt(block) == null) {
 						DemoMine mine = type.constructor.apply(event.getPlayer(), block);
 						BuildingManager.placeBuilding(mine);
 
-						stack.subtract();
+						subtractItem(type, event.getPlayer(), event.getHand());
 					} else {
 						Component message = Component.text("This block is already occupied", TextColors.ERROR_RED);
 						PlayerUtils.sendKitMessage(event.getPlayer(), message, message);
 					}
 				} else {
-					Component message = Component.text("You can't place a mine here", TextColors.ERROR_RED);
+					Component message = Component.text("You can't place a mine here!", TextColors.ERROR_RED);
 					PlayerUtils.sendKitMessage(event.getPlayer(), message, message);
 				}
 			}
@@ -258,38 +301,44 @@ public class KitDemolitions extends Kit
 
 		@Override
 		public void onTick() {
-			final int gameTick = TeamArena.getGameTick();
+			int now = TeamArena.getGameTick();
 
-			//tick regenerating mines
-			{
-				var regPlayersIter = REGENERATING_MINES.entrySet().iterator();
-				while (regPlayersIter.hasNext()) {
-					var entry = regPlayersIter.next();
+			// tick regenerating mines
+			regeneratingMines.entrySet().removeIf(entry -> {
+				Player player = entry.getKey();
+				PlayerInventory inventory = player.getInventory();
+				List<RegeneratingMine> regeneratingMines = entry.getValue();
+				EnumMap<MineType, Integer> nextRegen = new EnumMap<>(MineType.class);
 
-					var regMinesIter = entry.getValue().iterator();
-					while (regMinesIter.hasNext()) {
-						RegeneratingMine regMine = regMinesIter.next();
-
-						//check if time up and give back one mine here
-						if (gameTick - regMine.removedTime() >= regMine.type().timeToRegen) {
-							Player owner = entry.getKey();
-							ItemStack mineItem;
-							if (regMine.type() == MineType.TNTMINE) {
-								mineItem = TNT_MINE_ITEM;
-							} else {
-								mineItem = PUSH_MINE_ITEM;
-							}
-
-							owner.getInventory().addItem(mineItem.asOne());
-
-							regMinesIter.remove();
+				regeneratingMines.removeIf(mine -> {
+					if (now - mine.removedTime >= mine.type.timeToRegen) {
+						// replace depleted item with stack
+						int slot = inventory.first(mine.type.itemDepleted.getType());
+						ItemStack toGive = mine.type.item();
+						if (slot != -1) {
+							inventory.setItem(slot, toGive);
+						} else {
+							inventory.addItem(toGive);
 						}
+						return true;
+					} else {
+						int secsRemaining = (mine.type.timeToRegen - (now - mine.removedTime)) / 20;
+						// only display the mine that regenerates the soonest
+						nextRegen.merge(mine.type, secsRemaining, Math::min);
 					}
 
-					if (entry.getValue().size() == 0)
-						regPlayersIter.remove();
-				}
-			}
+					return false;
+				});
+
+				// update depleted items
+				nextRegen.forEach((type, secs) -> {
+					int slot = inventory.first(type.itemDepleted.getType());
+					if (slot != -1)
+						inventory.setItem(slot, type.itemDepleted.asQuantity(secs + 1));
+				});
+
+				return regeneratingMines.size() == 0;
+			});
 		}
 
 		@Override
@@ -297,15 +346,23 @@ public class KitDemolitions extends Kit
 
 		}
 		public static void addRegeneratingMine(Player player, MineType type, int startTime) {
-			List<RegeneratingMine> regenningMines = REGENERATING_MINES.computeIfAbsent(player,
+			List<RegeneratingMine> playerRegeneratingMines = regeneratingMines.computeIfAbsent(player,
 					player1 -> new ArrayList<>(TNT_MINE_COUNT + PUSH_MINE_COUNT));
 
-			regenningMines.add(new RegeneratingMine(type, startTime));
+			playerRegeneratingMines.add(new RegeneratingMine(type, startTime));
 
-			final Component message = Component.text("You'll get " + type.name + " back in " + (type.timeToRegen / 20) + " seconds",
-					NamedTextColor.AQUA);
+			Component message = Component.textOfChildren(
+				Component.text("You'll get your "),
+				type.displayName(),
+				Component.text(" back in " + (type.timeToRegen / 20) + " seconds")
+			).color(NamedTextColor.AQUA);
 
 			PlayerUtils.sendKitMessage(player, message, message);
+
+			Material depletedItem = type.itemDepleted.getType();
+			if (!player.hasCooldown(depletedItem) || player.getCooldown(depletedItem) > type.timeToRegen) {
+				player.setCooldown(depletedItem, type.timeToRegen);
+			}
 		}
 	}
 }

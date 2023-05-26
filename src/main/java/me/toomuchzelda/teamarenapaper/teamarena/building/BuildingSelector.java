@@ -187,6 +187,7 @@ public class BuildingSelector {
 	}
 
 	private List<Action> actions;
+	private boolean wasActive = false;
 	public boolean isActive(Player player) {
 		return actions != null;
 	}
@@ -218,11 +219,19 @@ public class BuildingSelector {
 				// noinspection rawtypes,unchecked
 				removePreview((Class) clazz);
 			}
+			// remove action bar message if was active
+			if (wasActive) {
+				wasActive = false;
+				player.sendActionBar(Component.empty());
+			}
 			return;
 		}
+
+		wasActive = true;
 		Class<?> previewClazz = null;
 		for (Action action : actions) {
 			if (action instanceof Action.FilterBuilding filter) {
+				message = null;
 				buildingFilter = filter.buildingFilter;
 				selectableFilter = filter.selectableFilter;
 			} else if (action instanceof Action.SelectBuilding selectBuilding) {
@@ -244,21 +253,20 @@ public class BuildingSelector {
 			}
 		}
 		// hide other previews
-		for (var clazz : new ArrayList<>(buildingPreviews.keySet())) {
+		for (/*Class*/var clazz : buildingPreviews.keySet().toArray()) {
 			if (clazz != previewClazz) {
 				// noinspection rawtypes,unchecked
 				removePreview((Class) clazz);
 			}
 		}
 
-		if (message != null)
-			player.sendActionBar(message);
+		player.sendActionBar(message != null ? message : Component.empty());
 
 		List<Building> buildings = BuildingManager.getAllPlayerBuildings(player);
 		List<Building> selectableBuildings = new ArrayList<>(buildings.size());
 		Location playerLoc = player.getLocation();
 		Location eyeLocation = player.getEyeLocation();
-		boolean shouldUpdateLocation = TeamArena.getGameTick() % 2 == 0;
+		boolean shouldUpdate = TeamArena.getGameTick() % 2 == 0;
 
 		for (Building building : buildings) {
 			if (buildingFilter != null && !buildingFilter.test(building)) {
@@ -270,21 +278,20 @@ public class BuildingSelector {
 			}
 
 			Location location = building.getLocation();
-			double distance = location.distance(playerLoc);
 			var outline = buildingOutlines.computeIfAbsent(building, BuildingOutline::fromBuilding);
-			// hide text if nearby
-			if (distance > 5) {
-				Component nameDisplay = Component.text(building.getName(), building == selected ? selectedOutlineColor : building.getOutlineColor());
-				Component distanceDisplay = Component.text(TextUtils.formatNumber(distance) + "m", NamedTextColor.YELLOW);
+			if (shouldUpdate) {
+				double distance = location.distance(playerLoc);
+				// hide text if nearby
+				if (distance > 5) {
+					Component nameDisplay = Component.text(building.getName(), building == selected ? selectedOutlineColor : building.getOutlineColor());
+					Component distanceDisplay = Component.text(TextUtils.formatNumber(distance) + "m", NamedTextColor.YELLOW);
 
-				outline.setText(nameDisplay, true);
-				outline.setStatus(distanceDisplay, true);
-			} else {
-				outline.setText(null, true);
-				outline.setStatus(null, true);
-			}
-			if (shouldUpdateLocation)
+					outline.setText(nameDisplay, distanceDisplay);
+				} else {
+					outline.setText(null, null);
+				}
 				outline.update(eyeLocation, location);
+			}
 			outline.respawn();
 
 			if (selectableFilter == null || selectableFilter.test(building))
@@ -299,7 +306,7 @@ public class BuildingSelector {
 		Vector playerDir = playerLoc.getDirection();
 		double closestAngle = Double.MAX_VALUE;
 		Building closest = null;
-		for (var building : selectableBuildings) {
+		for (Building building : selectableBuildings) {
 			Vector direction = building.getLocation().subtract(eyeLocation).toVector();
 			double angle = direction.angle(playerDir);
 			if (angle < VIEWING_ANGLE && angle < closestAngle) {
@@ -311,7 +318,6 @@ public class BuildingSelector {
 
 		// highlight selected
 		if (lastSelected != selected) {
-			lastSelected = selected;
 			for (Building building : buildings) {
 				if (buildingFilter != null && !buildingFilter.test(building))
 					continue;
@@ -320,11 +326,12 @@ public class BuildingSelector {
 				var outline = buildingOutlines.get(building);
 				if (isSelected) {
 					outline.setOutlineColor(selectedOutlineColor);
-				} else {
+				} else if (lastSelected == building) {
 					outline.setOutlineColor(building.getOutlineColor());
 				}
 				outline.setEnlarged(isSelected);
 			}
+			lastSelected = selected;
 		}
 	}
 
@@ -352,6 +359,10 @@ public class BuildingSelector {
 
 		record SelectBuilding(@Nullable Component message, @Nullable Predicate<Building> buildingFilter, @Nullable Predicate<Building> selectableFilter)
 			implements Action {}
+
+		static Action filterBuilding(@Nullable Predicate<Building> buildingFilter) {
+			return new FilterBuilding(buildingFilter, null);
+		}
 
 		static Action selectBuilding(@Nullable Component message) {
 			return new SelectBuilding(message, null, null);
