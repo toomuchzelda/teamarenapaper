@@ -13,6 +13,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
@@ -31,6 +32,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.BoundingBox;
+import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
 import java.util.*;
@@ -85,6 +87,8 @@ public class KitSniper extends Kit {
 		private final Set<UUID> RECEIVED_GRENADE_CHAT_MESSAGE = new HashSet<>();
 		public static final TextColor SNIPER_MSG_COLOR = TextColor.color(89, 237, 76);
 		public static final TextColor GRENADE_MSG_COLOR = TextColor.color(66, 245, 158);
+
+		private static final double MIN_HEIGHT_FOR_HEADHSHOT = 1.5d;
 
 		final List<BukkitTask> GRENADE_TASKS = new ArrayList<>();
 		final Random gunInaccuracy = new Random();
@@ -188,7 +192,6 @@ public class KitSniper extends Kit {
 			}
 		}
 
-		public static int debugInt = 0;
 		//Headshot
 		@Override
 		public void onProjectileHitEntity(ProjectileCollideEvent event) {
@@ -199,31 +202,25 @@ public class KitSniper extends Kit {
 			final Player shooter = (Player) projectile.getShooter();
 			if (event.getCollidedWith() instanceof Player playerVictim) {
 				final Location victimLoc = playerVictim.getLocation();
-				final Location projectileLoc = projectile.getLocation();
+				final double minYForHeadshot = victimLoc.getY() + MIN_HEIGHT_FOR_HEADHSHOT;
 
-				double headLocation = victimLoc.getY();
-				double projectileHitY = projectileLoc.getY();
-				//Must consider when player is below the other player, which makes getting headshots much harder.
-				double headshotThresh = 1.35d;
-				double heightDiff = victimLoc.getBlockY() - shooter.getLocation().getBlockY();
-				if (heightDiff > 0) {
-					headshotThresh -= Math.min(0.35, (heightDiff / 10));
-				}
+				final Location projectileCentreLoc = projectile.getLocation().add(0, projectile.getHeight() / 2d, 0);
 
-				PacketHologram hitHolo = new PacketHologram(projectileLoc, null, player -> true, Component.text("" + debugInt++));
-				hitHolo.respawn();
+				final Vector projVelocity = projectile.getVelocity();
+				final double speed = projVelocity.length(); // Distance it will travel in the next tick
 
-				// TODO raytrace or sth
-				// arrow.getLocation() only gets position before this event so not actually where the thing hit.
-				//Disabled headshot if you are too close since it was buggy
-				if (projectileHitY - headLocation > headshotThresh
-					&& projectile.getOrigin().distanceSquared(projectileLoc) > 10 * 10) {
+				final RayTraceResult rayTrace = projectile.getWorld().rayTrace(projectileCentreLoc, projVelocity, speed,
+					FluidCollisionMode.NEVER, true, projectile.getWidth(), entity -> entity != shooter && entity != projectile);
+
+				if (rayTrace != null && rayTrace.getHitEntity() != null &&
+					rayTrace.getHitPosition().getY() > minYForHeadshot &&
+					projectile.getOrigin().distanceSquared(projectileCentreLoc) > 5 * 5) { // Min 6 blocks away to headshot
 
 					DamageEvent dEvent = DamageEvent.newDamageEvent(playerVictim, 999d, DamageType.SNIPER_HEADSHOT, shooter, false);
 					Main.getGame().queueDamage(dEvent);
 
 					//Hitmarker Sound effect
-					//shooter.playSound(shooter.getLocation(), Sound.ENTITY_ITEM_FRAME_PLACE, 2f, 2.0f);
+					shooter.playSound(shooter.getLocation(), Sound.ENTITY_ITEM_FRAME_PLACE, 2f, 2.0f);
 				}
 			}
 		}
@@ -238,8 +235,8 @@ public class KitSniper extends Kit {
 				//player.getVelocity() sux so i will base movement on the player's state
 				Location loc = player.getLocation();
 				double inaccuracy = 0;
-				if (player.isSprinting() || player.isGliding() || player.isJumping() ||
-						loc.subtract(0,0.5,0).getBlock().getType() == Material.AIR ||
+				if (player.isSprinting() || player.isGliding() || player.isJumping() || !player.isOnGround() ||
+						loc.subtract(0,0.2,0).getBlock().getType() == Material.AIR ||
 						player.getVelocity().lengthSquared() > 1) {
 					inaccuracy = 0.2;
 				} else if (player.isInWater() || player.isSwimming()) {
@@ -289,8 +286,8 @@ public class KitSniper extends Kit {
 
 			//Sniper Information message
 			if (inventory.getItemInMainHand().getType() == Material.SPYGLASS) {
-				Component actionBar = Component.text("Drop Spyglass in hand to shoot").color(SNIPER_MSG_COLOR);
-				Component text = Component.text("Drop Spyglass in your main hand to shoot").color(SNIPER_MSG_COLOR);
+				Component actionBar = Component.text("Drop Spyglass in hand to shoot", SNIPER_MSG_COLOR);
+				Component text = Component.text("Drop Spyglass in your main hand to shoot", SNIPER_MSG_COLOR);
 				PlayerInfo pinfo = Main.getPlayerInfo(player);
 				if (pinfo.getPreference(Preferences.KIT_ACTION_BAR)) {
 					player.sendActionBar(actionBar);
@@ -304,8 +301,8 @@ public class KitSniper extends Kit {
 			//Grenade Information message
 			if (inventory.getItemInMainHand().getType() == Material.TURTLE_HELMET && player.getExp() == 0.999f) {
 
-				Component actionBar = Component.text("Left/Right Click to Arm").color(GRENADE_MSG_COLOR);
-				Component text = Component.text("Click to arm the grenade").color(GRENADE_MSG_COLOR);
+				Component actionBar = Component.text("Left/Right Click to Arm", GRENADE_MSG_COLOR);
+				Component text = Component.text("Click to arm the grenade", GRENADE_MSG_COLOR);
 				PlayerInfo pinfo = Main.getPlayerInfo(player);
 				if (pinfo.getPreference(Preferences.KIT_ACTION_BAR)) {
 					player.sendActionBar(actionBar);
