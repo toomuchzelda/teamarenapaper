@@ -560,16 +560,18 @@ public class KitBeekeeper extends Kit
 			for (var entry : BEEKEEPERS.entrySet()) {
 				// First remove old team glowings
 				Player beekeeper = entry.getKey();
-				if (beekeeper != player && oldTeam != null && oldTeam.hasMember(beekeeper)) {
-					for (BeekeeperBee bee : entry.getValue().bees) {
-						if (bee.beeEntity != null) {
-							metadataViewer.removeViewedValues(bee.beeEntity);
-							metadataViewer.refreshViewer(bee.beeEntity);
+				if (oldTeam != null) {
+					if (beekeeper != player && oldTeam.hasMember(beekeeper)) {
+						for (BeekeeperBee bee : entry.getValue().bees) {
+							if (bee.beeEntity != null) {
+								metadataViewer.removeViewedValues(bee.beeEntity);
+								metadataViewer.refreshViewer(bee.beeEntity);
+							}
 						}
 					}
 				}
 
-				if (newTeam.getPlayerMembers().contains(entry.getKey())) {
+				if (newTeam != null && newTeam.getPlayerMembers().contains(entry.getKey())) {
 					for (BeekeeperBee bee : entry.getValue().bees) {
 						if (!bee.isDead()) {
 							metadataViewer.setViewedValue(MetaIndex.BASE_BITFIELD_IDX, MetaIndex.GLOWING_METADATA_VALUE,
