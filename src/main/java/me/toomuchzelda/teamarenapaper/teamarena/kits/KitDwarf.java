@@ -59,7 +59,7 @@ public class KitDwarf extends Kit
 		armour[3] = new ItemStack(Material.LEATHER_HELMET);
 		armour[2] = new ItemStack(Material.LEATHER_CHESTPLATE);
 		armour[1] = new ItemStack(Material.LEATHER_LEGGINGS);
-		armour[0] = new ItemStack(Material.LEATHER_BOOTS);
+		armour[0] = new ItemStack(Material.NETHERITE_BOOTS);
 
 		for(ItemStack armorPiece : armour) {
 			LeatherArmorMeta meta = (LeatherArmorMeta) armorPiece.getItemMeta();
