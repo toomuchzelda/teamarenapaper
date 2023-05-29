@@ -353,15 +353,15 @@ public class BuildingSelector {
 					// try to merge into the next yaw/pitch group
 					// cannot merge into previous groups as they won't be recalculated
 					Building building = groupedBuildings.get(0);
-					var nextPitchGroup = pitchGroups.get(pitchGroup + 1);
+					var nextPitchGroup = pitchGroups.get((pitchGroup + 1) % MERGE_PITCH_GROUPS);
 					if (nextPitchGroup != null) {
 						nextPitchGroup.add(building);
 						continue;
 					}
-					var nextYawGroup = yawGroups.get(yawGroup + 1);
+					var nextYawGroup = yawGroups.get((yawGroup + 1) % MERGE_YAW_GROUPS);
 					if (nextYawGroup != null) {
 						for (int i : new int[]{0, 1, -1}) {
-							nextPitchGroup = nextYawGroup.get(pitchGroup + i);
+							nextPitchGroup = nextYawGroup.get((pitchGroup + i) % MERGE_PITCH_GROUPS);
 							if (nextPitchGroup != null) {
 								nextPitchGroup.add(building);
 								continue pitch;

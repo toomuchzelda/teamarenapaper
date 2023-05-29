@@ -32,6 +32,8 @@ public class GraffitiManager {
 	final Map<BlockCoords, ItemFrame> spawnedMaps = new LinkedHashMap<>();
 	final Map<UUID, ItemFrame> playerPlacedMaps = new HashMap<>();
 
+	final Map<ItemFrame, Graffiti> animatedGraffiti = new LinkedHashMap<>();
+
 	public GraffitiManager(TeamArena game) {
 	}
 
@@ -73,6 +75,12 @@ public class GraffitiManager {
 				// player owns the graffiti, replace it with new art
 				old.setItem(stack, false);
 				world.playSound(old, Sound.ENTITY_SILVERFISH_HURT, 0.2f, 1);
+				if (graffiti.isAnimated()) {
+					graffiti.sendMapView();
+					animatedGraffiti.put(old, graffiti);
+				} else {
+					animatedGraffiti.remove(old);
+				}
 				return true;
 			} else {
 				return false; // prevent Z-fighting
@@ -80,6 +88,7 @@ public class GraffitiManager {
 		} else if (old != null) {
 			spawnedMaps.remove(new BlockCoords(old.getLocation()));
 			old.remove();
+			animatedGraffiti.remove(old);
 		}
 
 		var itemFrame = world.spawn(location, ItemFrame.class, frame -> {
@@ -96,10 +105,15 @@ public class GraffitiManager {
 		world.playSound(itemFrame, Sound.ENTITY_SILVERFISH_HURT, 0.2f, 1);
 		spawnedMaps.put(coords, itemFrame);
 		playerPlacedMaps.put(owner, itemFrame);
+		if (graffiti.isAnimated()) {
+			graffiti.sendMapView();
+			animatedGraffiti.put(itemFrame, graffiti);
+		}
 		return true;
 	}
 
 	public void tick() {
+		animatedGraffiti.forEach((frame, graffiti) -> frame.setItem(graffiti.getMapItem(), false));
 //		spawnedMaps.values().removeIf(itemFrame -> {
 //			if (itemFrame.getTicksLived() >= GRAFFITI_DURATION) {
 //				itemFrame.setItem(null, false);
@@ -117,6 +131,7 @@ public class GraffitiManager {
 		});
 		spawnedMaps.clear();
 		playerPlacedMaps.clear();
+		animatedGraffiti.clear();
 	}
 
 	private static final Map<UUID, Integer> itemSwapTimes = new HashMap<>();
