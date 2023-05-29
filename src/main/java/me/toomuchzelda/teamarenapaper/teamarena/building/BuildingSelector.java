@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.building;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Location;
@@ -20,6 +21,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+
+import static net.kyori.adventure.text.Component.*;
 
 /**
  * Represents a building selector, usually bound to a player.
@@ -193,80 +196,54 @@ public class BuildingSelector {
 	}
 
 	private static final double VIEWING_ANGLE = Math.PI / 6d; // 30 degrees
+	private static final int MERGE_YAW_MIN = 15;
+	private static final int MERGE_YAW_GROUPS = 360 / MERGE_YAW_MIN;
+	private static final int MERGE_PITCH_MIN = 30;
+	private static final int MERGE_PITCH_GROUPS = 180 / MERGE_PITCH_MIN;
+
+	// Calculates the yaw and pitch groups buildings belong to
+	static int calcYawGroup(double yaw) { // yaw = 0 - 360
+		return ((int) yaw + MERGE_YAW_MIN / 2) / MERGE_YAW_MIN % MERGE_YAW_GROUPS;
+	}
+
+
+	static int calcPitchGroup(double pitch) { // pitch = -90 - 90
+		return (90 + (int) pitch + MERGE_PITCH_MIN / 2) / MERGE_PITCH_MIN % MERGE_PITCH_GROUPS;
+	}
+
+	// Calculates a building's distance to the center of a yaw/pitch group
+	static double calcYawGroupDistance(double yaw) {
+		return Math.abs(((int) yaw + MERGE_YAW_MIN / 2f) % MERGE_YAW_MIN - MERGE_YAW_MIN / 2f);
+	}
+
+	static double calcPitchGroupDistance(double pitch) {
+		return Math.abs(((int) pitch + MERGE_PITCH_MIN / 2f) % MERGE_PITCH_MIN - MERGE_PITCH_MIN / 2f);
+	}
+
 	public void tick(Player player) {
 		// remove invalid buildings first
 		tickOutlines(player);
 
-		actions = null;
-		PlayerInventory inventory = player.getInventory();
-		ItemStack mainhand = inventory.getItemInMainHand(), offhand = inventory.getItemInOffHand();
-		for (var entry : selectorItems.entrySet()) {
-			var stack = entry.getKey();
-			if (mainhand.isSimilar(stack) || offhand.isSimilar(stack)) {
-				actions = entry.getValue();
-				break;
-			}
-		}
-
-		// not a valid item
-		if (actions == null) {
-			// despawn all outlines
-			buildingOutlines.values().forEach(BuildingOutline::despawn);
-			// properly clean up selected outline
-			cleanUpSelected();
-			// remove previews
-			for (var clazz : new ArrayList<>(buildingPreviews.keySet())) {
-				// noinspection rawtypes,unchecked
-				removePreview((Class) clazz);
-			}
-			// remove action bar message if was active
-			if (wasActive) {
-				wasActive = false;
-				player.sendActionBar(Component.empty());
-			}
+		if (processActions(player))
 			return;
-		}
-
-		wasActive = true;
-		Class<?> previewClazz = null;
-		for (Action action : actions) {
-			if (action instanceof Action.FilterBuilding filter) {
-				message = null;
-				buildingFilter = filter.buildingFilter;
-				selectableFilter = filter.selectableFilter;
-			} else if (action instanceof Action.SelectBuilding selectBuilding) {
-				message = selectBuilding.message;
-				buildingFilter = selectBuilding.buildingFilter;
-				selectableFilter = selectBuilding.selectableFilter;
-			} else if (action instanceof Action.ShowPreview<?> showPreview) {
-				message = showPreview.message;
-				buildingFilter = showPreview.clazz::isInstance;
-				previewClazz = showPreview.clazz;
-
-				if (showPreview.condition == null || showPreview.condition.test(player)) {
-					// thank you Java, very cool
-					// noinspection rawtypes,unchecked
-					addPreviewIfAbsent((Class) showPreview.clazz, () -> showPreview.buildingSupplier.apply(player));
-				} else {
-					removePreview(showPreview.clazz);
-				}
-			}
-		}
-		// hide other previews
-		for (/*Class*/var clazz : buildingPreviews.keySet().toArray()) {
-			if (clazz != previewClazz) {
-				// noinspection rawtypes,unchecked
-				removePreview((Class) clazz);
-			}
-		}
-
-		player.sendActionBar(message != null ? message : Component.empty());
 
 		List<Building> buildings = BuildingManager.getAllPlayerBuildings(player);
 		List<Building> selectableBuildings = new ArrayList<>(buildings.size());
 		Location playerLoc = player.getLocation();
 		Location eyeLocation = player.getEyeLocation();
+		Vector eyeVector = eyeLocation.toVector();
 		boolean shouldUpdate = TeamArena.getGameTick() % 2 == 0;
+
+		/*
+		Group buildings according to how they appear spatially to the player,
+		and merge the holograms of close-by buildings.
+
+		The buildings are first grouped by yaw, then by pitch.
+		 */
+		List<List<List<Building>>> yawGroups = new ArrayList<>(Collections.nCopies(MERGE_YAW_GROUPS, null));
+		Location temp = playerLoc.clone();
+
+		Map<Building, Double> buildingGroupDistances = new HashMap<>((int) (buildings.size() / 0.75f) + 1); // presize
 
 		for (Building building : buildings) {
 			if (buildingFilter != null && !buildingFilter.test(building)) {
@@ -279,24 +256,46 @@ public class BuildingSelector {
 
 			Location location = building.getLocation();
 			var outline = buildingOutlines.computeIfAbsent(building, BuildingOutline::fromBuilding);
-			if (shouldUpdate) {
-				double distance = location.distance(playerLoc);
-				// hide text if nearby
-				if (distance > 5) {
-					Component nameDisplay = Component.text(building.getName(), building == selected ? selectedOutlineColor : building.getOutlineColor());
-					Component distanceDisplay = Component.text(TextUtils.formatNumber(distance) + "m", NamedTextColor.YELLOW);
-
-					outline.setText(nameDisplay, distanceDisplay);
-				} else {
-					outline.setText(null, null);
-				}
-				outline.update(eyeLocation, location);
-			}
 			outline.respawn();
+			if (shouldUpdate)
+				outline.update(eyeLocation, location);
+
+			// calculate the building's location in player's perspective
+			Vector direction = location.toVector().subtract(eyeVector);
+			temp.setDirection(direction);
+			double yaw = temp.getYaw();
+			double pitch = temp.getPitch();
+			int yawGroup = calcYawGroup(yaw);
+			double yawGroupDistance = calcYawGroupDistance(yaw);
+			int pitchGroup = calcPitchGroup(pitch);
+			double pitchGroupDistance = calcPitchGroupDistance(pitch);
+
+			buildingGroupDistances.put(building, yawGroupDistance + pitchGroupDistance);
+
+			List<List<Building>> pitchGroups = yawGroups.get(yawGroup);
+			if (pitchGroups == null) {
+				pitchGroups = new ArrayList<>(Collections.nCopies(MERGE_PITCH_GROUPS, null));
+				yawGroups.set(yawGroup, pitchGroups);
+			}
+
+			List<Building> groupedBuildings = pitchGroups.get(pitchGroup);
+			if (groupedBuildings == null) {
+				groupedBuildings = new ArrayList<>();
+				pitchGroups.set(pitchGroup, groupedBuildings);
+			}
+
+			groupedBuildings.add(building);
 
 			if (selectableFilter == null || selectableFilter.test(building))
 				selectableBuildings.add(building);
 		}
+
+		// show grouped buildings
+		if (shouldUpdate) {
+			showGroups(playerLoc, yawGroups, buildingGroupDistances);
+		}
+
+
 		// don't select when a preview is active
 		if (selectableBuildings.size() == 0 || buildingPreviews.size() != 0) {
 			// properly clean up selected outline
@@ -333,6 +332,189 @@ public class BuildingSelector {
 			}
 			lastSelected = selected;
 		}
+	}
+
+	private void showGroups(Location playerLoc, List<List<List<Building>>> yawGroups, Map<Building, Double> buildingGroupDistances) {
+		Location temp = playerLoc.clone();
+
+		for (var yawIter = yawGroups.listIterator(); yawIter.hasNext();) {
+			int yawGroup = yawIter.nextIndex();
+			List<List<Building>> pitchGroups = yawIter.next();
+			if (pitchGroups == null)
+				continue;
+			pitch:
+			for (var pitchIter = pitchGroups.listIterator(); pitchIter.hasNext();) {
+				int pitchGroup = pitchIter.nextIndex();
+				List<Building> groupedBuildings = pitchIter.next();
+				if (groupedBuildings == null)
+					continue;
+
+				if (groupedBuildings.size() == 1) {
+					// try to merge into the next yaw/pitch group
+					// cannot merge into previous groups as they won't be recalculated
+					Building building = groupedBuildings.get(0);
+					var nextPitchGroup = pitchGroups.get(pitchGroup + 1);
+					if (nextPitchGroup != null) {
+						nextPitchGroup.add(building);
+						continue;
+					}
+					var nextYawGroup = yawGroups.get(yawGroup + 1);
+					if (nextYawGroup != null) {
+						for (int i : new int[]{0, 1, -1}) {
+							nextPitchGroup = nextYawGroup.get(pitchGroup + i);
+							if (nextPitchGroup != null) {
+								nextPitchGroup.add(building);
+								continue pitch;
+							}
+						}
+					}
+					// no candidate found, don't merge
+				}
+
+				// only display the hologram on the building closest to the center of the group
+				Building outlineBuilding = Collections.min(groupedBuildings, Comparator.comparingDouble(buildingGroupDistances::get));
+				Location location = outlineBuilding.getLocation();
+
+				double outlineDistance = location.distance(playerLoc);
+				if (outlineDistance <= 5) { // hide all text if nearby
+					for (Building inner : groupedBuildings) {
+						var outline = buildingOutlines.get(inner);
+						if (outline != null)
+							outline.setDisplay(null);
+					}
+					continue;
+				}
+
+				BuildingOutline outline = buildingOutlines.computeIfAbsent(outlineBuilding, BuildingOutline::fromBuilding);
+				if (groupedBuildings.size() == 1) {
+					outline.setDisplay(textOfChildren(
+						text(outlineBuilding.getName(), outlineBuilding == selected ? selectedOutlineColor : outlineBuilding.getOutlineColor()),
+						text("\n" + TextUtils.formatNumber(outlineDistance) + "m", NamedTextColor.YELLOW),
+						// debug: show yaw/pitch groups
+						text("\n" + yawGroup + "/" + pitchGroup, NamedTextColor.YELLOW)
+					));
+					continue;
+				}
+
+				// hologram lines
+				List<Component> lines = new ArrayList<>();
+
+				Map<Component, Integer> names = new HashMap<>();
+				double distanceSum = 0;
+				boolean hasSelected = false;
+				for (Building inner : groupedBuildings) {
+					// calculate aggregated properties
+					double distance = inner.getLocation().distance(playerLoc);
+					String name = inner.getName();
+					if (inner == selected) {
+						hasSelected = true;
+						lines.add(textOfChildren(
+							text(name, selectedOutlineColor),
+							space(),
+							text("(" + TextUtils.formatNumber(distance) + "m)", NamedTextColor.YELLOW)
+						));
+					} else {
+						names.merge(text(name, inner.getOutlineColor()), 1, Integer::sum);
+						distanceSum += distance;
+					}
+
+					// hide others' text
+					if (inner != outlineBuilding) {
+						BuildingOutline outline1 = buildingOutlines.get(inner);
+						if (outline1 != null) {
+							outline1.setDisplay(null);
+						}
+					}
+				}
+				// BuildingA x10, BuildingB, BuildingC x3
+				for (var entry : names.entrySet()) {
+					Component name = entry.getKey();
+					int count = entry.getValue();
+					if (count == 1)
+						lines.add(name);
+					else
+						lines.add(textOfChildren(name, text(" x" + count, NamedTextColor.YELLOW)));
+				}
+				// 5.1m (avg)
+				double avgDist = distanceSum / groupedBuildings.size();
+				// only show (avg) when there are at least 2 unselected buildings
+				lines.add(text(TextUtils.formatNumber(avgDist) + "m" +
+						(groupedBuildings.size() - (hasSelected ? 1 : 0) != 1 ? " (avg)" : ""),
+					NamedTextColor.YELLOW));
+				// debug: show groups
+				lines.add(text(yawGroup + "/" + pitchGroup));
+				outline.setDisplay(Component.join(JoinConfiguration.newlines(), lines));
+				outline.setTextEnlarged(hasSelected);
+			}
+		}
+	}
+
+	private boolean processActions(Player player) {
+		actions = null;
+		PlayerInventory inventory = player.getInventory();
+		ItemStack mainhand = inventory.getItemInMainHand(), offhand = inventory.getItemInOffHand();
+		for (var entry : selectorItems.entrySet()) {
+			var stack = entry.getKey();
+			if (mainhand.isSimilar(stack) || offhand.isSimilar(stack)) {
+				actions = entry.getValue();
+				break;
+			}
+		}
+
+		// not a valid item
+		if (actions == null) {
+			// despawn all outlines
+			buildingOutlines.values().forEach(BuildingOutline::despawn);
+			// properly clean up selected outline
+			cleanUpSelected();
+			// remove previews
+			for (var clazz : new ArrayList<>(buildingPreviews.keySet())) {
+				// noinspection rawtypes,unchecked
+				removePreview((Class) clazz);
+			}
+			// remove action bar message if was active
+			if (wasActive) {
+				wasActive = false;
+				player.sendActionBar(Component.empty());
+			}
+			return true; // end tick
+		}
+
+		wasActive = true;
+		Class<?> previewClazz = null;
+		for (Action action : actions) {
+			if (action instanceof Action.FilterBuilding filter) {
+				message = null;
+				buildingFilter = filter.buildingFilter;
+				selectableFilter = filter.selectableFilter;
+			} else if (action instanceof Action.SelectBuilding selectBuilding) {
+				message = selectBuilding.message;
+				buildingFilter = selectBuilding.buildingFilter;
+				selectableFilter = selectBuilding.selectableFilter;
+			} else if (action instanceof Action.ShowPreview<?> showPreview) {
+				message = showPreview.message;
+				buildingFilter = showPreview.clazz::isInstance;
+				previewClazz = showPreview.clazz;
+
+				if (showPreview.condition == null || showPreview.condition.test(player)) {
+					// thank you Java, very cool
+					// noinspection rawtypes,unchecked
+					addPreviewIfAbsent((Class) showPreview.clazz, () -> showPreview.buildingSupplier.apply(player));
+				} else {
+					removePreview(showPreview.clazz);
+				}
+			}
+		}
+		// hide other previews
+		for (/*Class*/var clazz : buildingPreviews.keySet().toArray()) {
+			if (clazz != previewClazz) {
+				// noinspection rawtypes,unchecked
+				removePreview((Class) clazz);
+			}
+		}
+
+		player.sendActionBar(message != null ? message : Component.empty());
+		return false;
 	}
 
 	private void cleanUpSelected() {

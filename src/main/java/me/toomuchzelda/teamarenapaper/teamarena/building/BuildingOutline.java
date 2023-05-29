@@ -43,9 +43,7 @@ public sealed class BuildingOutline extends PacketEntity {
 	private TextDisplay hologram;
 	private ArmorStand hologramBase;
 	@Nullable
-	private Component nameLine;
-	@Nullable
-	private Component statusLine;
+	private Component lines;
 	private Component hologramText = Component.empty();
 
 	private static final Vector NAME_OFFSET = new Vector(0, 1.25, 0);
@@ -58,7 +56,7 @@ public sealed class BuildingOutline extends PacketEntity {
 
 	protected TextColor outlineColor;
 
-	protected boolean enlarged;
+	protected boolean enlarged, textEnlarged;
 	protected int interpolationStart;
 	protected int interpolationEnd;
 	protected static int INTERPOLATION_PERIOD = 5;
@@ -86,8 +84,7 @@ public sealed class BuildingOutline extends PacketEntity {
 		if (getRealViewers().size() == 0)
 			return; // defer initialization
 		var viewer = getRealViewers().iterator().next();
-		Location eyeLocation = viewer.getEyeLocation();
-		Location nameLoc = location.clone().add(offset).add(NAME_OFFSET);
+		Location nameLoc = ensureTextVisible(viewer.getEyeLocation(), location, offset);
 
 		hologram = viewer.getWorld().spawn(nameLoc, TextDisplay.class, hologram1 -> {
 			hologram1.setVisibleByDefault(false);
@@ -115,46 +112,8 @@ public sealed class BuildingOutline extends PacketEntity {
 		});
 	}
 
-	private void updateHologram() {
-		Component newText;
-		if (nameLine == null && statusLine == null) {
-			newText = Component.empty();
-		} else {
-			var builder = Component.text();
-			boolean appendNewline = false;
-			if (nameLine != null) {
-				builder.append(nameLine);
-				appendNewline = true;
-			}
-			if (statusLine != null) {
-				if (appendNewline)
-					builder.append(Component.newline());
-				builder.append(statusLine);
-			}
-			newText = builder.build();
-		}
-		if (hologram == null)
-			initHolograms();
-		if (!hologramText.equals(newText)) {
-			hologramText = newText;
-			hologram.text(newText);
-		}
-	}
-
-	@Override
-	public void setText(@Nullable Component component, boolean sendPacket) {
-		nameLine = component == Component.empty() ? null : component;
-		updateHologram();
-	}
-
-	public void setStatus(@Nullable Component component, boolean sendPacket) {
-		statusLine = component == Component.empty() ? null : component;
-		updateHologram();
-	}
-
-	public void setText(@Nullable Component name, @Nullable Component status) {
-		nameLine = name == Component.empty() ? null : name;
-		statusLine = status == Component.empty() ? null : status;
+	public void setDisplay(@Nullable Component lines) {
+		this.lines = lines != Component.empty() ? lines : null;
 		updateHologram();
 	}
 
@@ -173,14 +132,8 @@ public sealed class BuildingOutline extends PacketEntity {
 		}
 	}
 
-	protected void updateOutline() {
-		// the glowing packet is sent on spawn
-		// so don't send glowing packets when despawned
-		if (!isAlive())
-			return;
-		List<String> entries = new ArrayList<>();
-		appendScoreboardEntries(entries);
-		GlowUtils.setPacketGlowing(getRealViewers(), entries, outlineColor != null ? NamedTextColor.nearestTo(outlineColor) : null);
+	public void setTextEnlarged(boolean enlarged) {
+		this.textEnlarged = enlarged;
 	}
 
 	@Override
@@ -248,14 +201,13 @@ public sealed class BuildingOutline extends PacketEntity {
 	}
 
 	public static final double TEXT_MAX_DISTANCE = 6;
-	protected Location ensureTextVisible(Location eyeLocation, Location buildingLocation, Location offset, float distanceScale) {
+	protected Location ensureTextVisible(Location eyeLocation, Location buildingLocation, Location offset) {
 		Vector textDirection = buildingLocation.clone().add(offset).add(NAME_OFFSET).subtract(eyeLocation)
 			.toVector().normalize();
 		return eyeLocation.clone().add(textDirection.multiply(TEXT_MAX_DISTANCE));
 	}
 
-	private static final double EPSILON = Vector.getEpsilon() * Vector.getEpsilon();
-	public void update(Location eyeLocation, Location buildingLocation) {
+	private float calcScale(boolean enlarged) {
 		float scale;
 		int now = TeamArena.getGameTick();
 		if (now <= interpolationEnd) {
@@ -269,14 +221,35 @@ public sealed class BuildingOutline extends PacketEntity {
 		} else {
 			scale = (enlarged ? 0.75f : 1);
 		}
+		return scale;
+	}
+
+	private static final double EPSILON = Vector.getEpsilon() * Vector.getEpsilon();
+	public void update(Location eyeLocation, Location buildingLocation) {
 		if (dynamicLocation) {
-			Location newLocation = ensureOutlineVisible(eyeLocation, buildingLocation, offset, scale);
+			Location newLocation = ensureOutlineVisible(eyeLocation, buildingLocation, offset, calcScale(enlarged));
 			move(newLocation);
 		}
-		if (hologram == null || (nameLine == null && statusLine == null))
+		// holograms are updated at updateHologram
+	}
+
+	protected void updateOutline() {
+		// the glowing packet is sent on spawn
+		// so don't send glowing packets when despawned
+		if (!isAlive())
 			return;
+		List<String> entries = new ArrayList<>();
+		appendScoreboardEntries(entries);
+		GlowUtils.setPacketGlowing(getRealViewers(), entries, outlineColor != null ? NamedTextColor.nearestTo(outlineColor) : null);
+	}
+
+	private void updateHologram() {
+		Component newText = lines != null ? lines : Component.empty();
+		if (hologram == null)
+			initHolograms();
 		// ensure holograms are at the correct location
-		Location hit = ensureTextVisible(eyeLocation, buildingLocation, offset, scale);
+		var viewer = getRealViewers().iterator().next();
+		Location hit = ensureTextVisible(viewer.getEyeLocation(), location, offset);
 		if (hologramBase.getLocation().distanceSquared(hit) > EPSILON)
 			hologramBase.teleport(hit, TeleportFlag.EntityState.RETAIN_PASSENGERS);
 
@@ -285,8 +258,9 @@ public sealed class BuildingOutline extends PacketEntity {
 
 		var oldScale = transformation.getScale();
 		// check if the entity's scale is consistent with our current state
-		if (enlarged != (oldScale.x == 1.25f)) {
-			Vector3f newScale = new Vector3f(enlarged ? 1.25f : 1);
+		boolean textEnlarged = this.enlarged || this.textEnlarged;
+		if (textEnlarged != (oldScale.x == 1.25f)) {
+			Vector3f newScale = new Vector3f(textEnlarged ? 1.25f : 1);
 			hologram.setTransformation(new Transformation(
 				transformation.getTranslation(),
 				transformation.getLeftRotation(),
@@ -296,7 +270,14 @@ public sealed class BuildingOutline extends PacketEntity {
 			hologram.setInterpolationDuration(INTERPOLATION_PERIOD);
 			hologram.setInterpolationDelay(0);
 		}
+
+		if (!hologramText.equals(newText)) {
+			hologramText = newText;
+			hologram.text(newText);
+		}
 	}
+
+	// factory methods
 
 	public static BuildingOutline fromBuilding(Building building) {
 		if (building instanceof BlockBuilding blockBuilding) {
