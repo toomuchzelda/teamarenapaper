@@ -277,10 +277,6 @@ public class KitEngineer extends Kit {
 
 		@Override
 		public void onPlayerTick(Player player) {
-			BuildingSelector selector = BuildingOutlineManager.getSelector(player);
-
-			selector.tick(player);
-
 			//If player is riding skeleton (sentry), wrangle it
 			// now wrangled when mounted
 

@@ -894,9 +894,7 @@ public abstract class TeamArena
 		if (blockState instanceof Sign signState) {
 			final String asString = PlainTextComponentSerializer.plainText().serialize(signState.lines().get(0));
 
-			if (asString.equals("§4[Buy]")) {
-				return true;
-			}
+			return asString.contains("[Buy]");
 		}
 
 		return false;

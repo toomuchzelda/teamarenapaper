@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.cosmetics;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
@@ -11,6 +12,7 @@ import org.bukkit.World;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.MapMeta;
 import org.bukkit.map.MapCanvas;
 import org.bukkit.map.MapRenderer;
@@ -18,26 +20,31 @@ import org.bukkit.map.MapView;
 import org.jetbrains.annotations.NotNull;
 
 import javax.imageio.ImageIO;
-import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 
 public class Graffiti extends CosmeticItem {
-
-	public final BufferedImage image;
+	BufferedImage[] frames;
+	int frameTime;
 	public Graffiti(NamespacedKey key, File file, YamlConfiguration info) {
 		super(key, file, info);
+		frameTime = info.getInt("frame-time", 1);
+
 		File imageFile = new File(file.getParent(), file.getName().substring(0, file.getName().lastIndexOf('.')));
 		try {
 			BufferedImage image = ImageIO.read(imageFile);
 
-			if (image.getWidth() != 128 || image.getHeight() != 128) {
-				Main.logger().warning("File " + imageFile.getName() + " is not 128*128, resizing automatically");
-				image = resizeImage(image);
+			if (image.getWidth() != 128 || image.getHeight() % 128 != 0) {
+				throw new IllegalArgumentException("File " + imageFile.getName() + " is not in a valid format (W: 128, H: multiple of 128)");
 			}
-			this.image = image;
+			int frameCount = image.getHeight() / 128;
+			this.frames = new BufferedImage[frameCount];
+
+			for (int i = 0; i < frameCount; i++) {
+				frames[i] = image.getSubimage(0, i * 128, 128, 128);
+			}
 		} catch (IOException ex) {
 			throw new UncheckedIOException("Failed to read image " + imageFile.getPath(), ex);
 		}
@@ -50,25 +57,18 @@ public class Graffiti extends CosmeticItem {
 
 	@Override
 	public void unload() {
-		if (cachedMapView != null) {
-			cachedMapView.getRenderers().forEach(cachedMapView::removeRenderer);
+		if (cachedMapViews != null) {
+			for (var view : cachedMapViews)
+				view.getRenderers().forEach(view::removeRenderer);
 		}
 	}
 
-	private static BufferedImage resizeImage(BufferedImage original) {
-		Image scaled = original.getScaledInstance(128, 128, Image.SCALE_FAST);
-		BufferedImage ret = new BufferedImage(128, 128, BufferedImage.TYPE_INT_RGB);
-
-		var graphics = ret.createGraphics();
-		graphics.drawImage(scaled, 0, 0, null);
-		graphics.dispose();
-
-		return ret;
+	public boolean isAnimated() {
+		return frames.length != 1;
 	}
 
-
 	private static final World dummyWorld = Bukkit.getWorlds().get(0);
-	private static MapView getNextMapView() {
+	protected static MapView getNextMapView() {
 		MapView view = Bukkit.createMap(dummyWorld);
 		view.removeRenderer(view.getRenderers().get(0));
 
@@ -79,22 +79,65 @@ public class Graffiti extends CosmeticItem {
 		return view;
 	}
 
-	MapView cachedMapView = null;
-	public MapView getMapView() {
-		if (cachedMapView == null) {
-			cachedMapView = getNextMapView();
-			cachedMapView.addRenderer(new MapRenderer() {
+	MapView[] cachedMapViews;
+	ItemStack[] cachedMaps;
+	protected void createMapView() {
+		cachedMapViews = new MapView[frames.length];
+		cachedMaps = new ItemStack[frames.length];
+		for (int i = 0; i < frames.length; i++) {
+			var mapView = getNextMapView();
+
+			BufferedImage frame = frames[i];
+			mapView.addRenderer(new MapRenderer() {
 				boolean drawn = false;
 				@Override
 				public void render(@NotNull MapView map, @NotNull MapCanvas canvas, @NotNull Player player) {
 					if (drawn)
 						return;
 					drawn = true;
-					canvas.drawImage(0, 0, image);
+					canvas.drawImage(0, 0, frame);
 				}
 			});
+
+			cachedMapViews[i] = mapView;
+			ItemStack stack = cachedMaps[i] = new ItemStack(Material.FILLED_MAP);
+			ItemMeta meta = stack.getItemMeta();
+			((MapMeta) meta).setMapView(mapView);
+			stack.setItemMeta(meta);
 		}
-		return cachedMapView;
+
+		sendMapView();
+	}
+
+	public void sendMapView() {
+		// send players the map
+		Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
+			for (Player player : Bukkit.getOnlinePlayers()) {
+				for (int i = 0; i < frames.length; i++) {
+					player.sendMap(cachedMapViews[i]);
+				}
+			}
+		});
+	}
+
+	public MapView getMapView() {
+		if (cachedMapViews == null) {
+			createMapView();
+		}
+		if (frames.length == 1)
+			return cachedMapViews[0];
+		int now = TeamArena.getGameTick();
+		return cachedMapViews[now / frameTime % frames.length];
+	}
+
+	public ItemStack getMapItem() {
+		if (cachedMaps == null) {
+			createMapView();
+		}
+		if (frames.length == 1)
+			return cachedMaps[0];
+		int now = TeamArena.getGameTick();
+		return cachedMaps[now / frameTime % frames.length];
 	}
 
 	@Override

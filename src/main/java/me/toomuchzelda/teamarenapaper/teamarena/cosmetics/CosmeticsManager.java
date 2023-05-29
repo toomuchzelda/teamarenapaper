@@ -47,7 +47,7 @@ public class CosmeticsManager {
 				CosmeticItem loaded = type.loader.load(key, file, yaml);
 				loadedCosmetics.computeIfAbsent(type, ignored -> new LinkedHashMap<>()).put(key, loaded);
 			} catch (Exception ex) {
-				new RuntimeException("Loading cosmetic " + key + " at " + file.getPath()).printStackTrace();
+				new RuntimeException("Loading cosmetic " + key + " at " + file.getPath(), ex).printStackTrace();
 			}
 		}
 	}
