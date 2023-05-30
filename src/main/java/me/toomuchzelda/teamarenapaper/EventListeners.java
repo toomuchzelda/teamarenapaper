@@ -73,32 +73,6 @@ import static me.toomuchzelda.teamarenapaper.teamarena.GameState.LIVE;
 
 public class EventListeners implements Listener
 {
-	private static final boolean[] BREAKABLE_BLOCKS;
-
-	static {
-		BREAKABLE_BLOCKS = new boolean[Material.values().length];
-		Arrays.fill(BREAKABLE_BLOCKS, false);
-
-		for(Material mat : Material.values()) {
-			if(mat.isBlock() && !mat.isCollidable() && !mat.name().endsWith("SIGN") && !mat.name().endsWith("TORCH") &&
-				!mat.name().endsWith("BANNER")) {
-				setBlockBreakable(mat, true);
-			}
-
-			//don't break big dripleaf as may be part of map path
-			setBlockBreakable(Material.BIG_DRIPLEAF_STEM, false);
-			setBlockBreakable(Material.BIG_DRIPLEAF, false);
-		}
-	}
-
-	private static void setBlockBreakable(Material mat, boolean breakable) {
-		BREAKABLE_BLOCKS[mat.ordinal()] = breakable;
-	}
-
-	private static boolean isBlockBreakable(Material mat) {
-		return BREAKABLE_BLOCKS[mat.ordinal()];
-	}
-
 	public EventListeners(Plugin plugin) {
 		Bukkit.getServer().getPluginManager().registerEvents(this,plugin);
 	}
@@ -375,36 +349,26 @@ public class EventListeners implements Listener
 		//Handling breaking blocks
 		TeamArena game = Main.getGame();
 		if(game != null) {
-			GameState state = Main.getGame().getGameState();
-			if (state == LIVE || state == GameState.END) {
-				Player player = event.getPlayer();
-				// Players in creative can break any blocks
-				if (player.getGameMode() != GameMode.CREATIVE) {
-					if (game.isDead(player)) {
-						event.setCancelled(true);
-						return;
-					}
-					// not handled by BuildingManager and not breakable
-					if (!BuildingListeners.onBlockBroken(event) && !isBlockBreakable(event.getBlock().getType()))
-						event.setCancelled(true);
-				}
-			}
-			else {
-				event.setCancelled(true);
-			}
+			game.onBreakBlock(event);
+		}
+
+		// Creative mode players can break anything
+		if (event.getPlayer().getGameMode() == GameMode.CREATIVE) {
+			event.setCancelled(false);
 		}
 	}
 
 	@EventHandler
 	public void blockPlace(BlockPlaceEvent event) {
-		if(event.getPlayer().getGameMode() != GameMode.CREATIVE) {
-			event.setCancelled(true);
-		}
-
 		Main.getGame().onPlaceBlock(event);
 
 		for(Ability ability : Kit.getAbilities(event.getPlayer())) {
 			ability.onPlaceBlock(event);
+		}
+
+		// Creative can build anywhere
+		if (event.getPlayer().getGameMode() == GameMode.CREATIVE) {
+			event.setCancelled(false);
 		}
 	}
 

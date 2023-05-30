@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.gamescheduler;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.GameType;
+import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
 import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import net.kyori.adventure.text.Component;
@@ -10,7 +11,9 @@ import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import org.bukkit.Material;
 import org.bukkit.util.BlockVector;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.yaml.snakeyaml.Yaml;
 
@@ -38,6 +41,11 @@ public class TeamArenaMap
 
 	public record SNDInfo(boolean randomBases, Map<String, List<BlockVector>> teamBombs) {}
 
+	/** Info per team for dnb */
+	private record DNBTeamInfo(BlockCoords oreCoords, double protectionRadius) {}
+	public record DNBInfo(Vector middle, Material oreType, List<Material> tools, List<BoundingBox> noBuildZones,
+						  Map<String, DNBTeamInfo> teams) {}
+
 	private final String name;
 	private final String authors;
 	private final String description;
@@ -60,6 +68,7 @@ public class TeamArenaMap
 	private final KOTHInfo kothInfo;
 	private final CTFInfo ctfInfo;
 	private final SNDInfo sndInfo;
+	private final DNBInfo dnbInfo;
 
 	private final File file;
 	//info about the map that gets sent to players when they join / map loads
@@ -79,7 +88,8 @@ public class TeamArenaMap
 				+ ", teamSpawns keys: " + teamSpawns.keySet().toString()
 				+ ", kothInfo: " + (kothInfo != null ? kothInfo.toString() : "null")
 				+ ", ctfInfo: " + (ctfInfo != null ? ctfInfo.toString() : "null")
-				+ ", sndInfo: " + (sndInfo != null ? sndInfo.toString() : "null");
+				+ ", sndInfo: " + (sndInfo != null ? sndInfo.toString() : "null")
+				+ ", dnbInfo: " + (dnbInfo != null ? dnbInfo.toString() : "null");
 	}
 
 	TeamArenaMap(File worldFolder) throws IOException {
@@ -309,6 +319,100 @@ public class TeamArenaMap
 		this.sndInfo = sndInfo;
 		if(sndInfo != null)
 			this.gameTypes.add(GameType.SND);
+
+		File dnbFile = new File(worldFolder, "DNBConfig.yml");
+		DNBInfo dnbInfo = null;
+		if (dnbFile.exists() && dnbFile.isFile()) {
+			try (FileInputStream dnbInput = new FileInputStream(dnbFile)) {
+				Map<String, Object> dnbMap = yaml.load(dnbInput);
+
+				Vector middle;
+				try {
+					middle = BlockUtils.parseCoordsToVec((String) dnbMap.get("Middle"), 0.5, 0.5, 0.5);
+				}
+				catch (NullPointerException | ClassCastException e) {
+					Main.logger().warning("Invalid Middle value in DNB config for " + worldFolder.getName() + ". " + e.getMessage());
+					throw e;
+				}
+
+				Material oreType;
+				try {
+					String oreTypeStr = (String) dnbMap.get("OreType");
+					oreType = Material.valueOf(oreTypeStr);
+				}
+				catch (ClassCastException | NullPointerException e) {
+					Main.logger().warning("Invalid OreType value in DNB config for " + worldFolder.getName() + ". " + e.getMessage());
+					throw e;
+				}
+
+				List<Material> tools;
+				try {
+					List<String> toolsStrList = (List<String>) dnbMap.get("Tools");
+					tools = new ArrayList<>(toolsStrList.size());
+					for (String s : toolsStrList) {
+						tools.add(Material.valueOf(s));
+					}
+				}
+				catch (ClassCastException | NullPointerException e) {
+					Main.logger().warning("Invalid Tools value in DNB config for " + worldFolder.getName() + ". " + e.getMessage());
+					tools = new ArrayList<>(0); // Default to no tools
+				}
+
+				List<BoundingBox> noBuildZones;
+				try {
+					List<List<String>> cornersList = (List<List<String>>) dnbMap.get("NoBuildZones");
+					noBuildZones = new ArrayList<>(cornersList.size());
+					for (List<String> corners : cornersList) {
+						if (corners.size() != 2) {
+							Main.logger().warning("Bad NoBuildZone entry on DNBConfig of " + worldFolder.getName()
+								+ ". Found not 2 corners in an entry of the NoBuildZones");
+							continue;
+						}
+
+						Vector cornerOne = BlockUtils.parseCoordsToVec(corners.get(0), 0, 0 ,0);
+						Vector cornerTwo = BlockUtils.parseCoordsToVec(corners.get(1), 0, 0, 0);
+						// Just use this to easily find max/min corners of the two
+						BoundingBox box = BoundingBox.of(cornerOne, cornerTwo);
+						noBuildZones.add(box);
+					}
+				}
+				catch (ClassCastException | NullPointerException e) {
+					Main.logger().warning("Invalid value for NoBuildZones in DNBConfig of " + worldFolder.getName() + ". Defaulting to no no-build-zones."
+						+ e.getMessage());
+					noBuildZones = new ArrayList<>();
+				}
+
+				Map<String, DNBTeamInfo> teamInfo;
+				try {
+					Map<String, Map<String, Object>> teamConfigs = (Map<String, Map<String, Object>>) dnbMap.get("Teams");
+					teamInfo = new HashMap<>();
+					for (var entry : teamConfigs.entrySet()) {
+						if (this.teamSpawns.containsKey(entry.getKey())) {
+							BlockCoords oreCoords = BlockUtils.parseCoordsToBlockCoords((String) entry.getValue().get("Ore"));
+							double radius = (double) entry.getValue().get("Radius");
+
+							DNBTeamInfo tinfo = new DNBTeamInfo(oreCoords, radius);
+							teamInfo.put(entry.getKey(), tinfo);
+						}
+						else {
+							Main.logger().warning("Unknown team " + entry.getKey() + " in DNBConfig of " + worldFolder.getName() + ". Team is not declared in MainConfig");
+						}
+					}
+				}
+				catch (NullPointerException | ClassCastException e) {
+					Main.logger().warning("Invalid Teams value in DNB config of " + worldFolder.getName() + ". " + e.getMessage());
+					throw e;
+				}
+
+				dnbInfo = new DNBInfo(middle, oreType, tools, noBuildZones, teamInfo);
+			}
+			catch (Exception e) {
+				Main.logger().warning("Error when parsing DNB config for " + worldFolder.getName());
+			}
+		}
+		this.dnbInfo = dnbInfo;
+		if(dnbInfo != null)
+			this.gameTypes.add(GameType.DNB);
 	}
 
 	public Component getMapInfoComponent() {

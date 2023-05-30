@@ -50,6 +50,7 @@ import org.bukkit.craftbukkit.v1_19_R3.CraftWorld;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
@@ -931,6 +932,22 @@ public abstract class TeamArena
 	public void onInteractEntity(PlayerInteractEntityEvent event) {
 		if (isDead(event.getPlayer())) { // Prevent spectators from using entities like boats.
 			event.setCancelled(true);
+		}
+	}
+
+	public void onBreakBlock(BlockBreakEvent event) {
+		if (this.gameState == GameState.LIVE || this.gameState == GameState.END) {
+			if (this.isDead(event.getPlayer())) {
+				event.setCancelled(true);
+				return;
+			}
+
+			// Not handled by buildingmanager and not breakable
+			if (!BuildingListeners.onBlockBroken(event) &&
+				!BreakableBlocks.isBlockBreakable(event.getBlock().getType())) {
+
+				event.setCancelled(true);
+			}
 		}
 	}
 
@@ -1928,7 +1945,7 @@ public abstract class TeamArena
 		player.sendMessage(gameAndMapMessage);
 	}
 
-	public void loadConfig(TeamArenaMap map) {
+	protected void loadConfig(TeamArenaMap map) {
 		Main.logger().info("Loading map config data");
 		Main.logger().info(map.toString());
 

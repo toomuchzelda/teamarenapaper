@@ -113,7 +113,7 @@ public class SearchAndDestroy extends TeamArena
 
 	public static final Component POISON_NOW_TITLE;
 	public static final Component POISON_NOW_MESSAGE;
-	//===========MESSAGE STUFF
+	//===========END MESSAGE STUFF
 
 	static {
 		FUSE_LORE = new ArrayList<>(2);
@@ -854,7 +854,7 @@ public class SearchAndDestroy extends TeamArena
 	}
 
 	@Override
-	public void loadConfig(TeamArenaMap map) {
+	protected void loadConfig(TeamArenaMap map) {
 		super.loadConfig(map);
 
 		TeamArenaMap.SNDInfo sndConfig = map.getSndInfo();

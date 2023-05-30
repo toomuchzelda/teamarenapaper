@@ -4,6 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.GameType;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
+import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.DigAndBuild;
 import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
 import me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy.SearchAndDestroy;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
@@ -93,6 +94,7 @@ public class GameScheduler
 		GAMETYPE_MAPS.put(GameType.KOTH, new ArrayList<>(oneThird));
 		GAMETYPE_MAPS.put(GameType.CTF, new ArrayList<>(oneThird));
 		GAMETYPE_MAPS.put(GameType.SND, new ArrayList<>(oneThird));
+		GAMETYPE_MAPS.put(GameType.DNB, new ArrayList<>(oneThird));
 
 		for(File mapFolder : maps) {
 			if (mapFolder.isDirectory()) {
@@ -121,6 +123,7 @@ public class GameScheduler
 		GAME_TYPE_MAP_QUEUE.put(GameType.CTF, new MapQueue(GAMETYPE_MAPS.get(GameType.CTF)));
 		GAME_TYPE_MAP_QUEUE.put(GameType.KOTH, new MapQueue(GAMETYPE_MAPS.get(GameType.KOTH)));
 		GAME_TYPE_MAP_QUEUE.put(GameType.SND, new MapQueue(GAMETYPE_MAPS.get(GameType.SND)));
+		GAME_TYPE_MAP_QUEUE.put(GameType.DNB, new MapQueue(GAMETYPE_MAPS.get(GameType.DNB)));
 
 		nextGameType = null;
 		nextMap = null;
@@ -176,8 +179,10 @@ public class GameScheduler
 			newGame = new KingOfTheHill(map);
 		else if(gameType == GameType.CTF)
 			newGame = new CaptureTheFlag(map);
-		else
+		else if (gameType == GameType.SND)
 			newGame = new SearchAndDestroy(map);
+		else
+			newGame = new DigAndBuild(map);
 
 		return newGame;
 	}

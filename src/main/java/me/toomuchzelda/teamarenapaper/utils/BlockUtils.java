@@ -53,6 +53,14 @@ public class BlockUtils
 		return new Vector(x, y, z);
 	}
 
+	public static BlockCoords parseCoordsToBlockCoords(String string) {
+		String[] split = string.split(",");
+		int x = Integer.parseInt(split[0]);
+		int y = Integer.parseInt(split[1]);
+		int z = Integer.parseInt(split[2]);
+		return new BlockCoords(x, y, z);
+	}
+
 	//find the first non-air block below any coordinate
 	// returns null if none
 	public static Location getFloor(Location pos) {

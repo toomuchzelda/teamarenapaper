@@ -214,7 +214,7 @@ public class KitSniper extends Kit {
 
 				if (rayTrace != null && rayTrace.getHitEntity() != null &&
 					rayTrace.getHitPosition().getY() > minYForHeadshot &&
-					projectile.getOrigin().distanceSquared(projectileCentreLoc) > 5 * 5) { // Min 6 blocks away to headshot
+					projectile.getOrigin().distanceSquared(projectileCentreLoc) > 5 * 5) { // Min 5 blocks away to headshot
 
 					DamageEvent dEvent = DamageEvent.newDamageEvent(playerVictim, 999d, DamageType.SNIPER_HEADSHOT, shooter, false);
 					Main.getGame().queueDamage(dEvent);
