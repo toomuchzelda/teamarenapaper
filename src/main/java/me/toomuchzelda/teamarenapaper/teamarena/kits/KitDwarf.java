@@ -62,9 +62,11 @@ public class KitDwarf extends Kit
 		armour[0] = new ItemStack(Material.NETHERITE_BOOTS);
 
 		for(ItemStack armorPiece : armour) {
-			LeatherArmorMeta meta = (LeatherArmorMeta) armorPiece.getItemMeta();
-			meta.setColor(Color.BLUE);
-			armorPiece.setItemMeta(meta);
+			ItemMeta meta = armorPiece.getItemMeta();
+			if (meta instanceof LeatherArmorMeta leatherMeta) {
+				leatherMeta.setColor(Color.BLUE);
+				armorPiece.setItemMeta(leatherMeta);
+			}
 		}
 		this.setArmour(armour);
 
