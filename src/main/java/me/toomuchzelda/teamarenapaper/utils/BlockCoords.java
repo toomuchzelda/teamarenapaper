@@ -57,6 +57,42 @@ public record BlockCoords(int x, int y, int z) {
 		return add(face.getModX() * distance, face.getModY() * distance, face.getModZ());
 	}
 
+	public static BlockCoords getMin(BlockCoords one, BlockCoords two) {
+		int minX = two.x();
+		int minY = two.y();
+		int minZ = two.z();
+
+		if (one.x() < minX) {
+			minX = one.x();
+		}
+		if (one.y() < minY) {
+			minY = one.y();
+		}
+		if (one.z() < minZ) {
+			minZ = one.z();
+		}
+
+		return new BlockCoords(minX, minY, minZ);
+	}
+
+	public static BlockCoords getMax(BlockCoords one, BlockCoords two) {
+		int maxX = two.x();
+		int maxY = two.y();
+		int maxZ = two.z();
+
+		if (one.x() > maxX) {
+			maxX = one.x();
+		}
+		if (one.y() > maxY) {
+			maxY = one.y();
+		}
+		if (one.z() > maxZ) {
+			maxZ = one.z();
+		}
+
+		return new BlockCoords(maxX, maxY, maxZ);
+	}
+
 	/**
 	 * @see BlockVector#hashCode()
 	 */

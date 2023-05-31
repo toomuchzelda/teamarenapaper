@@ -4,6 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.GameType;
 import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
 import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
+import me.toomuchzelda.teamarenapaper.utils.IntBoundingBox;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.ComponentBuilder;
@@ -13,7 +14,6 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
 import org.bukkit.util.BlockVector;
-import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.yaml.snakeyaml.Yaml;
 
@@ -42,8 +42,8 @@ public class TeamArenaMap
 	public record SNDInfo(boolean randomBases, Map<String, List<BlockVector>> teamBombs) {}
 
 	/** Info per team for dnb */
-	private record DNBTeamInfo(BlockCoords oreCoords, double protectionRadius) {}
-	public record DNBInfo(Vector middle, Material oreType, List<Material> tools, List<BoundingBox> noBuildZones,
+	public record DNBTeamInfo(BlockCoords oreCoords, double protectionRadius) {}
+	public record DNBInfo(Vector middle, Material oreType, List<Material> tools, List<IntBoundingBox> noBuildZones,
 						  Map<String, DNBTeamInfo> teams) {}
 
 	private final String name;
@@ -358,7 +358,7 @@ public class TeamArenaMap
 					tools = new ArrayList<>(0); // Default to no tools
 				}
 
-				List<BoundingBox> noBuildZones;
+				List<IntBoundingBox> noBuildZones;
 				try {
 					List<List<String>> cornersList = (List<List<String>>) dnbMap.get("NoBuildZones");
 					noBuildZones = new ArrayList<>(cornersList.size());
@@ -369,11 +369,10 @@ public class TeamArenaMap
 							continue;
 						}
 
-						Vector cornerOne = BlockUtils.parseCoordsToVec(corners.get(0), 0, 0 ,0);
-						Vector cornerTwo = BlockUtils.parseCoordsToVec(corners.get(1), 0, 0, 0);
-						// Just use this to easily find max/min corners of the two
-						BoundingBox box = BoundingBox.of(cornerOne, cornerTwo);
-						noBuildZones.add(box);
+						BlockCoords cornerOne = BlockUtils.parseCoordsToBlockCoords(corners.get(0));
+						BlockCoords cornerTwo = BlockUtils.parseCoordsToBlockCoords(corners.get(1));
+
+						noBuildZones.add(new IntBoundingBox(cornerOne, cornerTwo));
 					}
 				}
 				catch (ClassCastException | NullPointerException e) {
@@ -503,6 +502,10 @@ public class TeamArenaMap
 
 	public SNDInfo getSndInfo() {
 		return this.sndInfo;
+	}
+
+	public DNBInfo getDnbInfo() {
+		return this.dnbInfo;
 	}
 
 	public File getFile() {

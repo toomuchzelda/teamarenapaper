@@ -1,18 +1,35 @@
 package me.toomuchzelda.teamarenapaper.teamarena.digandbuild;
 
-import me.toomuchzelda.teamarenapaper.teamarena.GameState;
-import me.toomuchzelda.teamarenapaper.teamarena.SidebarManager;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
+import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
+import me.toomuchzelda.teamarenapaper.utils.IntBoundingBox;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.inventory.ItemStack;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class DigAndBuild extends TeamArena
 {
 	private static final Component GAME_NAME = Component.text("Dig and Build", NamedTextColor.DARK_GREEN);
 	private static final Component HOW_TO_PLAY = Component.text("Dig your way around the map and break the enemies' " +
 		"Life Ore!!", NamedTextColor.DARK_GREEN);
+
+	private ItemStack[] tools;
+	private List<IntBoundingBox> noBuildZones;
+
+	private Map<TeamArenaTeam, LifeOre> teamOres;
+	private Map<BlockCoords, LifeOre> oreLookup;
+
 	public DigAndBuild(TeamArenaMap map) {
 		super(map);
 	}
@@ -26,7 +43,94 @@ public class DigAndBuild extends TeamArena
 	protected void loadConfig(TeamArenaMap map) {
 		super.loadConfig(map);
 
+		TeamArenaMap.DNBInfo mapInfo = map.getDnbInfo();
 
+		this.spawnPos = mapInfo.middle().toLocation(this.gameWorld);
+
+		this.tools = new ItemStack[mapInfo.tools().size()];
+		int i = 0;
+		for (Material mat : mapInfo.tools()) {
+			this.tools[i++] = new ItemStack(mat);
+		}
+
+		// Make a copy of bounding boxes. May be able to use the provided list as-is instead.
+		this.noBuildZones = new ArrayList<>(mapInfo.noBuildZones().size());
+		//int i = 0;
+		for (IntBoundingBox noBuildZone : mapInfo.noBuildZones()) {
+			this.noBuildZones.add(new IntBoundingBox(noBuildZone));
+
+			//RealHologram hol1 = new RealHologram(noBuildZone.getMax().toLocation(this.gameWorld), RealHologram.Alignment.TOP, Component.text("one"+i));
+			//RealHologram hol2 = new RealHologram(noBuildZone.getMin().toLocation(this.gameWorld), RealHologram.Alignment.TOP, Component.text("two"+i));
+			//i++;
+		}
+
+		this.teamOres = new HashMap<>();
+		this.oreLookup = new HashMap<>();
+		for (var entry : mapInfo.teams().entrySet()) {
+			TeamArenaTeam team = this.getTeamByLegacyConfigName(entry.getKey());
+			final TeamArenaMap.DNBTeamInfo tinfo = entry.getValue();
+
+			LifeOre lifeOre = new LifeOre(team, mapInfo.oreType(), tinfo.oreCoords(), tinfo.protectionRadius(),
+				this.gameWorld);
+
+			this.teamOres.put(team, lifeOre);
+			this.oreLookup.put(tinfo.oreCoords(), lifeOre);
+		}
+	}
+
+	@Override
+	protected boolean onBreakBlockSub(BlockBreakEvent event) {
+		BlockCoords coords = new BlockCoords(event.getBlock());
+
+		if (oreLookup.containsKey(coords)) {
+			event.getPlayer().sendMessage("Hit ore");
+			event.setCancelled(true);
+			return true;
+		}
+
+		for (IntBoundingBox noBuildZone : this.noBuildZones) {
+			if (noBuildZone.contains(coords)) {
+				event.getPlayer().sendMessage("no buildzone");
+				event.setCancelled(true);
+				return true;
+			}
+		}
+
+		LifeOre oreInRange = isWithinOreRadius(event.getBlock().getLocation());
+		if (oreInRange != null) {
+			event.getPlayer().sendMessage("You are building in " + oreInRange.owningTeam.getName() + "'s Life ore");
+			event.setCancelled(true);
+		}
+
+		return true;
+	}
+
+	@Override
+	public void onPlaceBlock(BlockPlaceEvent event) {
+		super.onPlaceBlock(event);
+	}
+
+	/**
+	 * @return The LifeOre that loc is in range of, or null if none.
+	 */
+	private LifeOre isWithinOreRadius(Location loc) {
+		for (var entry : this.teamOres.entrySet()) {
+			final LifeOre ore = entry.getValue();
+			final double distanceSqr = loc.distanceSquared(ore.coordsAsLoc);
+
+			if (distanceSqr <= ore.protectionRadiusSqr) {
+				return ore;
+			}
+		}
+
+		return null;
+	}
+
+	@Override
+	public void givePlayerItems(Player player, PlayerInfo pinfo, boolean clear) {
+		super.givePlayerItems(player, pinfo, true);
+
+		player.getInventory().addItem(this.tools);
 	}
 
 	@Override

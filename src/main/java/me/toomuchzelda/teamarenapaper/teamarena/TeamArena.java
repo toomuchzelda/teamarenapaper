@@ -935,20 +935,33 @@ public abstract class TeamArena
 		}
 	}
 
-	public void onBreakBlock(BlockBreakEvent event) {
+	public final void onBreakBlock(BlockBreakEvent event) {
 		if (this.gameState == GameState.LIVE || this.gameState == GameState.END) {
 			if (this.isDead(event.getPlayer())) {
 				event.setCancelled(true);
 				return;
 			}
 
-			// Not handled by buildingmanager and not breakable
-			if (!BuildingListeners.onBlockBroken(event) &&
-				!BreakableBlocks.isBlockBreakable(event.getBlock().getType())) {
+			if (BuildingListeners.onBlockBroken(event)) {
+				event.setCancelled(true);
+			}
 
+			if (onBreakBlockSub(event)) { // if true, the implementor would have handled it so return
+				return;
+			}
+
+			if (!BreakableBlocks.isBlockBreakable(event.getBlock().getType())) {
 				event.setCancelled(true);
 			}
 		}
+		else {
+			event.setCancelled(true);
+		}
+	}
+
+	/** @return true if the block breaking is being handled by the implementor */
+	protected boolean onBreakBlockSub(BlockBreakEvent event) {
+		return false;
 	}
 
 	public void onPlaceBlock(BlockPlaceEvent event) {}
