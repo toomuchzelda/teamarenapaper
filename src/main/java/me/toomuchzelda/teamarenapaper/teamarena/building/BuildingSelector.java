@@ -353,15 +353,15 @@ public class BuildingSelector {
 					// try to merge into the next yaw/pitch group
 					// cannot merge into previous groups as they won't be recalculated
 					Building building = groupedBuildings.get(0);
-					var nextPitchGroup = pitchGroups.get((pitchGroup + 1) % MERGE_PITCH_GROUPS);
+					var nextPitchGroup = pitchGroups.get(Math.floorMod(pitchGroup + 1, MERGE_PITCH_GROUPS));
 					if (nextPitchGroup != null) {
 						nextPitchGroup.add(building);
 						continue;
 					}
-					var nextYawGroup = yawGroups.get((yawGroup + 1) % MERGE_YAW_GROUPS);
+					var nextYawGroup = yawGroups.get(Math.floorMod(yawGroup + 1, MERGE_YAW_GROUPS));
 					if (nextYawGroup != null) {
 						for (int i : new int[]{0, 1, -1}) {
-							nextPitchGroup = nextYawGroup.get((pitchGroup + i) % MERGE_PITCH_GROUPS);
+							nextPitchGroup = nextYawGroup.get(Math.floorMod(pitchGroup + i, MERGE_PITCH_GROUPS));
 							if (nextPitchGroup != null) {
 								nextPitchGroup.add(building);
 								continue pitch;
@@ -389,9 +389,7 @@ public class BuildingSelector {
 				if (groupedBuildings.size() == 1) {
 					outline.setDisplay(textOfChildren(
 						text(outlineBuilding.getName(), outlineBuilding == selected ? selectedOutlineColor : outlineBuilding.getOutlineColor()),
-						text("\n" + TextUtils.formatNumber(outlineDistance) + "m", NamedTextColor.YELLOW),
-						// debug: show yaw/pitch groups
-						text("\n" + yawGroup + "/" + pitchGroup, NamedTextColor.YELLOW)
+						text("\n" + TextUtils.formatNumber(outlineDistance) + "m", NamedTextColor.YELLOW)
 					));
 					continue;
 				}
@@ -441,8 +439,6 @@ public class BuildingSelector {
 				lines.add(text(TextUtils.formatNumber(avgDist) + "m" +
 						(groupedBuildings.size() - (hasSelected ? 1 : 0) != 1 ? " (avg)" : ""),
 					NamedTextColor.YELLOW));
-				// debug: show groups
-				lines.add(text(yawGroup + "/" + pitchGroup));
 				outline.setDisplay(Component.join(JoinConfiguration.newlines(), lines));
 				outline.setTextEnlarged(hasSelected);
 			}

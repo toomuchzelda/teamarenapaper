@@ -283,4 +283,10 @@ public class EntityUtils {
 		}
 		return list;
 	}
+
+	public static boolean isOnGround(Player player) {
+		var nmsPlayer = ((CraftPlayer) player).getHandle();
+		var boundingBox = nmsPlayer.getBoundingBox().move(0, -0.1, 0);
+		return !nmsPlayer.level.noCollision(nmsPlayer, boundingBox);
+	}
 }
