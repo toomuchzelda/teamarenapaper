@@ -750,7 +750,7 @@ public abstract class TeamArena
 			if (event.getDamageType().isMelee() && finalAttacker instanceof LivingEntity living) {
 				if (living.getEquipment() != null) {
 					ItemStack weapon = living.getEquipment().getItemInMainHand();
-					if (weapon.getType().toString().endsWith("AXE")) {
+					if (weapon.getType().toString().endsWith("_AXE")) {
 						event.getKnockback().multiply(0.8);
 						//Bukkit.broadcastMessage("Reduced axe knockback");
 					}
@@ -944,6 +944,13 @@ public abstract class TeamArena
 
 			if (BuildingListeners.onBlockBroken(event)) {
 				event.setCancelled(true);
+			}
+
+			// Can't break blocks outside the border
+			if (!this.border.contains(event.getBlock().getLocation().add(0.5, 0.5, 0.5).toVector())) {
+				event.setCancelled(true);
+				event.getPlayer().sendMessage(Component.text("You've hit the border", TextColors.ERROR_RED));
+				return;
 			}
 
 			if (onBreakBlockSub(event)) { // if true, the implementor would have handled it so return

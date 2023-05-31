@@ -43,8 +43,8 @@ public class TeamArenaMap
 
 	/** Info per team for dnb */
 	public record DNBTeamInfo(BlockCoords oreCoords, double protectionRadius) {}
-	public record DNBInfo(Vector middle, Material oreType, List<Material> tools, List<IntBoundingBox> noBuildZones,
-						  Map<String, DNBTeamInfo> teams) {}
+	public record DNBInfo(Vector middle, Material oreType, List<Material> tools, List<Material> blocks,
+						  List<IntBoundingBox> noBuildZones, Map<String, DNBTeamInfo> teams) {}
 
 	private final String name;
 	private final String authors;
@@ -358,6 +358,19 @@ public class TeamArenaMap
 					tools = new ArrayList<>(0); // Default to no tools
 				}
 
+				List<Material> blocks;
+				try {
+					List<String> blocksStrList = (List<String>) dnbMap.get("Blocks");
+					blocks = new ArrayList<>(blocksStrList.size());
+					for (String s : blocksStrList) {
+						blocks.add(Material.valueOf(s));
+					}
+				}
+				catch (ClassCastException | NullPointerException e) {
+					Main.logger().warning("Invalid Blocks value in DNB config for " + worldFolder.getName() + ". " + e.getMessage());
+					blocks = new ArrayList<>(0); // Default to no tools
+				}
+
 				List<IntBoundingBox> noBuildZones;
 				try {
 					List<List<String>> cornersList = (List<List<String>>) dnbMap.get("NoBuildZones");
@@ -403,7 +416,7 @@ public class TeamArenaMap
 					throw e;
 				}
 
-				dnbInfo = new DNBInfo(middle, oreType, tools, noBuildZones, teamInfo);
+				dnbInfo = new DNBInfo(middle, oreType, tools, blocks, noBuildZones, teamInfo);
 			}
 			catch (Exception e) {
 				Main.logger().warning("Error when parsing DNB config for " + worldFolder.getName());

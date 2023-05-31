@@ -4,10 +4,11 @@ import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
 import me.toomuchzelda.teamarenapaper.utils.IntBoundingBox;
+import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.Location;
-import org.bukkit.Material;
+import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
@@ -24,7 +25,12 @@ public class DigAndBuild extends TeamArena
 	private static final Component HOW_TO_PLAY = Component.text("Dig your way around the map and break the enemies' " +
 		"Life Ore!!", NamedTextColor.DARK_GREEN);
 
+	// MESSAGES
+	private static final Component CANT_BUILD_HERE = Component.text("You can't build here", TextColors.ERROR_RED);
+	// END MESSAGES
+
 	private ItemStack[] tools;
+	private ItemStack[] blocks;
 	private List<IntBoundingBox> noBuildZones;
 
 	private Map<TeamArenaTeam, LifeOre> teamOres;
@@ -47,10 +53,18 @@ public class DigAndBuild extends TeamArena
 
 		this.spawnPos = mapInfo.middle().toLocation(this.gameWorld);
 
+		//TOOLS
 		this.tools = new ItemStack[mapInfo.tools().size()];
 		int i = 0;
 		for (Material mat : mapInfo.tools()) {
 			this.tools[i++] = new ItemStack(mat);
+		}
+
+		//BLOCKS
+		this.blocks = new ItemStack[mapInfo.blocks().size()];
+		i = 0;
+		for (Material mat : mapInfo.blocks()) {
+			this.blocks[i++] = new ItemStack(mat, 32);
 		}
 
 		// Make a copy of bounding boxes. May be able to use the provided list as-is instead.
@@ -78,36 +92,74 @@ public class DigAndBuild extends TeamArena
 		}
 	}
 
+	/**
+	 * Handle block breaking.
+	 * Prevent breaking blocks in no-build-zones and near the life ores. Also handle breaking the life ore block.
+	 */
 	@Override
 	protected boolean onBreakBlockSub(BlockBreakEvent event) {
-		BlockCoords coords = new BlockCoords(event.getBlock());
+		if (event.isCancelled())
+			return true;
+
+		final Block block = event.getBlock();
+		BlockCoords coords = new BlockCoords(block);
 
 		if (oreLookup.containsKey(coords)) {
-			event.getPlayer().sendMessage("Hit ore");
+			//event.getPlayer().sendMessage("Hit ore");
 			event.setCancelled(true);
 			return true;
 		}
 
 		for (IntBoundingBox noBuildZone : this.noBuildZones) {
 			if (noBuildZone.contains(coords)) {
-				event.getPlayer().sendMessage("no buildzone");
 				event.setCancelled(true);
+				playNoBuildEffect(block, event.getPlayer());
 				return true;
 			}
 		}
 
-		LifeOre oreInRange = isWithinOreRadius(event.getBlock().getLocation());
+		LifeOre oreInRange = isWithinOreRadius(block.getLocation());
 		if (oreInRange != null) {
-			event.getPlayer().sendMessage("You are building in " + oreInRange.owningTeam.getName() + "'s Life ore");
 			event.setCancelled(true);
+			playNoBuildEffect(block, event.getPlayer());
 		}
 
 		return true;
 	}
 
+	/**
+	 * Handle block placement. Don't place blocks in no build zones, near life ores.
+	 */
 	@Override
 	public void onPlaceBlock(BlockPlaceEvent event) {
 		super.onPlaceBlock(event);
+
+		if (event.isCancelled())
+			return;
+
+		final Block block = event.getBlock();
+		BlockCoords coords = new BlockCoords(block);
+		for (IntBoundingBox noBuildZone : this.noBuildZones) {
+			if (noBuildZone.contains(coords)) {
+				event.setCancelled(true);
+				playNoBuildEffect(block, event.getPlayer());
+				return;
+			}
+		}
+
+		LifeOre oreInRange = isWithinOreRadius(block.getLocation());
+		if (oreInRange != null) {
+			event.setCancelled(true);
+			playNoBuildEffect(block, event.getPlayer());
+		}
+	}
+
+	private void playNoBuildEffect(Block block, Player player) {
+		Location loc = block.getLocation().add(0.5d, 0.5d, 0.5d);
+		player.spawnParticle(Particle.VILLAGER_ANGRY, loc, 2);
+		player.playSound(loc, Sound.ENTITY_ITEM_BREAK, SoundCategory.BLOCKS, 0.5f, 2f);
+
+		player.sendMessage(CANT_BUILD_HERE);
 	}
 
 	/**
@@ -131,6 +183,7 @@ public class DigAndBuild extends TeamArena
 		super.givePlayerItems(player, pinfo, true);
 
 		player.getInventory().addItem(this.tools);
+		player.getInventory().addItem(this.blocks);
 	}
 
 	@Override
