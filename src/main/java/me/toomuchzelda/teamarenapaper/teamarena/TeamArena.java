@@ -49,9 +49,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.craftbukkit.v1_19_R3.CraftWorld;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
-import org.bukkit.event.block.Action;
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.block.*;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -630,7 +628,14 @@ public abstract class TeamArena
 		}
 	}
 
+	/** If a player can join during the game. Made so subclasses can override */
+	protected boolean canJoinMidGame() {
+		return true; // can join if also a respawning game
+	}
+
 	public void handlePlayerJoinMidGame(Player player) {
+		if (!this.canJoinMidGame()) return;
+
 		TeamArenaTeam team = addToLowestTeam(player, false);
 		//if team was dead before, now becoming alive, show their bossbar
 		// - not anymore
@@ -642,8 +647,10 @@ public abstract class TeamArena
 		team.addMembers(player);
 
 		informOfTeam(player);
-
 		Bukkit.broadcast(player.playerListName().append(Component.text(" joined ", NamedTextColor.YELLOW)).append(team.getComponentName()));
+
+		respawnTimers.put(player, new RespawnInfo(gameTick));
+		giveLobbyItems(player);
 	}
 
 	public void damageTick() {
@@ -972,6 +979,10 @@ public abstract class TeamArena
 	}
 
 	public void onPlaceBlock(BlockPlaceEvent event) {}
+
+	public void onBlockDig(BlockDamageEvent event) {}
+
+	public void onBlockStopDig(BlockDamageAbortEvent event) {}
 
 	public void onChat(AsyncChatEvent event) {
 		event.setCancelled(true);
@@ -1773,8 +1784,6 @@ public abstract class TeamArena
 			//if it's a respawning game put them on a team and in the respawn queue
 			if (this.isRespawningGame() && Main.getPlayerInfo(player).team == spectatorTeam) {
 				handlePlayerJoinMidGame(player);
-				respawnTimers.put(player, new RespawnInfo(gameTick));
-				giveLobbyItems(player);
 			}
 
 			// Apply the spectator effects

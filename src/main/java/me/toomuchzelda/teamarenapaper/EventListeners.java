@@ -373,6 +373,16 @@ public class EventListeners implements Listener
 	}
 
 	@EventHandler
+	public void blockDamage(BlockDamageEvent event) {
+		Main.getGame().onBlockDig(event);
+	}
+
+	@EventHandler
+	public void blockDamageAbort(BlockDamageAbortEvent event) {
+		Main.getGame().onBlockStopDig(event);
+	}
+
+	@EventHandler
 	public void explosionPrime(ExplosionPrimeEvent event) {
 		//if there is an EntityExplosionInfo use that to handle it
 		EntityExplosionInfo exInfo = ExplosionManager.getEntityInfo(event.getEntity());

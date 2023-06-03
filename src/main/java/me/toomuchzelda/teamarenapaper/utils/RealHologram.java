@@ -114,7 +114,8 @@ public class RealHologram {
         }
 
         public void setText(Component text) {
-            bukkitStand.customName(text);
+			if (!Objects.equals(bukkitStand.customName(), text))
+            	bukkitStand.customName(text);
         }
 
 		public void moveTo(Location location) {
