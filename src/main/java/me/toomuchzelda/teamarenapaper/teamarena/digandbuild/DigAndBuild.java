@@ -20,6 +20,7 @@ import org.bukkit.event.block.BlockDamageAbortEvent;
 import org.bukkit.event.block.BlockDamageEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.Vector;
 import org.intellij.lang.annotations.RegExp;
 
 import java.util.ArrayList;
@@ -54,6 +55,9 @@ public class DigAndBuild extends TeamArena
 	private static final Component YOU_WONT_RESPAWN = Component.text("You will no longer respawn!", TextColors.ERROR_RED);
 	// END MESSAGES
 
+	private Vector middle;
+	private PointMarker midMarker;
+
 	private ItemStack[] tools;
 	private ItemStack[] blocks;
 	private List<IntBoundingBox> noBuildZones;
@@ -67,11 +71,14 @@ public class DigAndBuild extends TeamArena
 
 	public DigAndBuild(TeamArenaMap map) {
 		super(map);
+
+		this.midMarker = new PointMarker(middle.toLocation(this.gameWorld), Component.text("Middle"), Color.WHITE,
+			Material.LIGHTNING_ROD);
 	}
 
 	@Override
 	public void updateSidebar(Player player, SidebarManager sidebar) {
-
+		// TODO
 	}
 
 	@Override
@@ -80,6 +87,7 @@ public class DigAndBuild extends TeamArena
 
 		TeamArenaMap.DNBInfo mapInfo = map.getDnbInfo();
 
+		this.middle = mapInfo.middle();
 		this.spawnPos = mapInfo.middle().toLocation(this.gameWorld);
 
 		//TOOLS

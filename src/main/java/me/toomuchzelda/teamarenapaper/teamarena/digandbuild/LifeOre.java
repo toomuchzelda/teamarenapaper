@@ -37,8 +37,7 @@ public class LifeOre
 
 	private final Component[] healthComponents; // Pre generated components of the ore's health.
 
-	private final Component[] hologramLines;
-	private final RealHologram hologram;
+	private final PointMarker hologram;
 
 	private final Set<Player> currentMiners;
 
@@ -58,13 +57,10 @@ public class LifeOre
 			this.healthComponents[i] = createHealthComponent(i);
 		}
 
-		this.hologramLines = new Component[2];
-		hologramLines[0] = owningTeam.getComponentName().append(Component.text("'s Life Ore", owningTeam.getRGBTextColor()));
-		hologramLines[1] = this.healthComponents[this.health];
+		Component displayText = getTextDisplayComponent();
 
-
-		this.hologram = new RealHologram(coords.toLocation(world).add(0.5d, 1d, 0.5d),
-			RealHologram.Alignment.BOTTOM, hologramLines);
+		this.hologram = new PointMarker(this.coordsAsLoc.clone().add(0.5d, 1.5d, 0.5d), displayText,
+			this.owningTeam.getColour(), Material.ALLAY_SPAWN_EGG);
 
 		world.setBlockData(coords.x(), coords.y(), coords.z(), mat.createBlockData());
 
@@ -129,13 +125,27 @@ public class LifeOre
 		}
 	}
 
+	private Component getTextDisplayComponent() {
+		return Component.textOfChildren(
+			owningTeam.getComponentName().append(Component.text("'s Life Ore", owningTeam.getRGBTextColor())),
+			Component.newline(),
+			this.healthComponents[this.health]
+		);
+	}
+
 	OreBreakResult onBreak(Player breaker) {
 		final PlayerInfo pinfo = Main.getPlayerInfo(breaker);
 		if (pinfo.team != this.owningTeam) {
 			this.health = Math.max(0, this.health - 1);
 			// Update the hologram
-			this.hologramLines[1] = this.healthComponents[this.health];
-			this.hologram.setText(this.hologramLines);
+			//this.hologramLines[1] = this.healthComponents[this.health];
+			//this.hologram.setText(this.hologramLines);
+			this.hologram.setText(this.getTextDisplayComponent());
+
+			// Issue where after breaking, but the player continues mining, the BlockDamageEvent isn't re-called
+			// So the player isn't in currentMiners anymore.
+			// Band aid: add the breaker to currentMiners
+			this.currentMiners.add(breaker);
 
 			if (this.health == 0) {
 				return OreBreakResult.KILLED;
