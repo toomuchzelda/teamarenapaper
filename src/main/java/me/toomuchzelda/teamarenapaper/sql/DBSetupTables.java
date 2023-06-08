@@ -58,6 +58,27 @@ public class DBSetupTables extends DBOperation<Void>
 					);
 					""";
 
+			final String createSelectedCosmetics = """
+				CREATE TABLE IF NOT EXISTS SelectedCosmetics (
+					uuid CHAR(36) NOT NULL,
+					cosmetic_type CHAR(20) NOT NULL,
+					key CHAR(128) NOT NULL,
+
+					PRIMARY KEY (uuid, cosmetic_type)
+				);
+				CREATE INDEX IF NOT EXISTS cosmetic_type ON SelectedCosmetics(uuid, cosmetic_type);
+				""";
+			final String createOwnedCosmetics = """
+				CREATE TABLE IF NOT EXISTS OwnedCosmetics (
+					uuid CHAR(36) NOT NULL,
+					cosmetic_type CHAR(20) NOT NULL,
+					key CHAR(128) NOT NULL,
+
+					PRIMARY KEY (uuid, cosmetic_type)
+				);
+				CREATE INDEX IF NOT EXISTS uuid ON OwnedCosmetics(uuid);
+				""";
+
 			// Removed in 1.19.4 update as 1.19.4 has disable damage tilt as a client option.
 			final String deleteDamageTilt =
     			"""
@@ -68,6 +89,8 @@ public class DBSetupTables extends DBOperation<Void>
 			stmt.execute(createDefaultKits);
 			stmt.execute(createPreferences);
 			stmt.execute(createPermissionLevel);
+			stmt.execute(createSelectedCosmetics);
+			stmt.execute(createOwnedCosmetics);
 			stmt.execute(deleteDamageTilt);
 		}
 

@@ -28,6 +28,8 @@ public abstract class CosmeticItem {
 	@Nullable
 	public final String desc;
 
+	public boolean isDefault = true;
+
 	private final ItemStack display;
 	protected CosmeticItem(@NotNull NamespacedKey key, @NotNull File file, @NotNull YamlConfiguration info) {
 		this.key = key;
@@ -44,6 +46,7 @@ public abstract class CosmeticItem {
 		} else {
 			display = Bukkit.getItemFactory().createItemStack(displayString);
 		}
+		this.isDefault = info.getBoolean("default", true);
 	}
 
 	public abstract CosmeticType getCosmeticType();

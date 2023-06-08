@@ -58,11 +58,11 @@ public class CommandCosmetics extends CustomCommand {
 					}
 				}
 			}
-			case "set" -> {
+			case "select", "unselect" -> {
 				if (!(sender instanceof Player player))
 					throw new CommandException(PLAYER_ONLY);
 				if (args.length < 3)
-					throw throwUsage("/cosmetics set <cosmeticType> <id>");
+					throw throwUsage("/cosmetics select/unselect <cosmeticType> [id]");
 
 				CosmeticType type = CosmeticType.valueOf(args[1].toUpperCase(Locale.ENGLISH));
 				NamespacedKey key = NamespacedKey.fromString(args[2]);
@@ -79,7 +79,7 @@ public class CommandCosmetics extends CustomCommand {
 			}
 			case "info" -> {
 				if (args.length < 3)
-					throw throwUsage("/cosmetics set <cosmeticType> <id>");
+					throw throwUsage("/cosmetics info <cosmeticType> <id>");
 
 				CosmeticType type = CosmeticType.valueOf(args[1].toUpperCase(Locale.ENGLISH));
 				NamespacedKey key = NamespacedKey.fromString(args[2]);

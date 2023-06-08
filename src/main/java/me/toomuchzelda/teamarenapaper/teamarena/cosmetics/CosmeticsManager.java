@@ -73,4 +73,8 @@ public class CosmeticsManager {
 		return cosmetic;
 	}
 
+	public static Set<NamespacedKey> getDefaultCosmetics(CosmeticType cosmeticType) {
+		return Collections.unmodifiableSet(loadedCosmetics.getOrDefault(cosmeticType, Map.of()).keySet());
+	}
+
 }

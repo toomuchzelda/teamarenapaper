@@ -6,6 +6,7 @@ import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
+import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.PlayerCosmetics;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.KillAssistTracker;
@@ -44,7 +45,7 @@ public class PlayerInfo
 
 	private Map<Preference<?>, Object> preferences = new HashMap<>();
 
-	private Map<CosmeticType, NamespacedKey> selectedCosmetic = new EnumMap<>(CosmeticType.class);
+	private PlayerCosmetics cosmetics;
 
 	private final Map<String, Integer> messageCooldowns = new HashMap<>();
 	private final LinkedList<DamageLogEntry> damageReceivedLog;
@@ -98,6 +99,8 @@ public class PlayerInfo
 
 		this.scoreboard = new PlayerScoreboard(player);
 		this.metadataViewer = new MetadataViewer(player);
+		cosmetics = new PlayerCosmetics(playerUuid);
+		Bukkit.getScheduler().runTaskAsynchronously(Main.getPlugin(), cosmetics::fetch);
 	}
 
 	/**
@@ -145,12 +148,12 @@ public class PlayerInfo
 		return Collections.unmodifiableMap(preferences);
 	}
 
-	public boolean hasCosmeticItem(NamespacedKey key) {
-		return true;
+	public PlayerCosmetics getCosmeticsManager() {
+		return cosmetics;
 	}
 
 	public Set<NamespacedKey> getCosmeticItems(CosmeticType type) {
-		return CosmeticsManager.getLoadedCosmetics(type);
+		return cosmetics.getCosmeticItems(type);
 	}
 
 	public Optional<NamespacedKey> getSelectedCosmetic(CosmeticType type) {
