@@ -4,8 +4,6 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
-import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
-import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.PlayerCosmetics;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
@@ -17,11 +15,9 @@ import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Damageable;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
-import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -99,7 +95,7 @@ public class PlayerInfo
 
 		this.scoreboard = new PlayerScoreboard(player);
 		this.metadataViewer = new MetadataViewer(player);
-		cosmetics = new PlayerCosmetics(playerUuid);
+		cosmetics = new PlayerCosmetics(playerUuid, permissionLevel);
 		Bukkit.getScheduler().runTaskAsynchronously(Main.getPlugin(), cosmetics::fetch);
 	}
 
@@ -148,27 +144,8 @@ public class PlayerInfo
 		return Collections.unmodifiableMap(preferences);
 	}
 
-	public PlayerCosmetics getCosmeticsManager() {
+	public PlayerCosmetics getCosmetics() {
 		return cosmetics;
-	}
-
-	public Set<NamespacedKey> getCosmeticItems(CosmeticType type) {
-		return cosmetics.getCosmeticItems(type);
-	}
-
-	public Optional<NamespacedKey> getSelectedCosmetic(CosmeticType type) {
-		return Optional.ofNullable(selectedCosmetic.get(type));
-	}
-
-	public void setSelectedCosmetic(@NotNull CosmeticType type, @Nullable NamespacedKey key) {
-		if (key != null) {
-			if (!type.checkKey(key)) {
-				throw new IllegalArgumentException("key incompatible with type");
-			}
-			selectedCosmetic.put(type, key);
-		} else {
-			selectedCosmetic.remove(type);
-		}
 	}
 
 	/**

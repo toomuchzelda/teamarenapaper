@@ -26,8 +26,8 @@ public class DBSetSelectedCosmetics extends DBOperation<Void> {
 		try (var deleteStmt = connection.prepareStatement(
 			"DELETE FROM selectedcosmetics WHERE uuid = ? AND cosmetic_type = ?"
 		)) {
-			deleteStmt.setString(0, uuid.toString());
-			deleteStmt.setString(1, cosmeticType.name());
+			deleteStmt.setString(1, uuid.toString());
+			deleteStmt.setString(2, cosmeticType.name());
 
 			deleteStmt.executeUpdate();
 		}
@@ -36,9 +36,9 @@ public class DBSetSelectedCosmetics extends DBOperation<Void> {
 				"INSERT INTO selectedcosmetics(uuid, cosmetic_type, key) VALUES (?, ?, ?)"
 			)) {
 				for (NamespacedKey key : keys) {
-					insertStmt.setString(0, uuid.toString());
-					insertStmt.setString(1, cosmeticType.name());
-					insertStmt.setString(2, key.toString());
+					insertStmt.setString(1, uuid.toString());
+					insertStmt.setString(2, cosmeticType.name());
+					insertStmt.setString(3, key.toString());
 					insertStmt.addBatch();
 				}
 				insertStmt.executeBatch();

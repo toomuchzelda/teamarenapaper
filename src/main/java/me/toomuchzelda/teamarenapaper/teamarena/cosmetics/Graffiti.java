@@ -113,8 +113,9 @@ public class Graffiti extends CosmeticItem {
 		// send players the map
 		Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
 			for (Player player : Bukkit.getOnlinePlayers()) {
+				PlayerCosmetics cosmetics = Main.getPlayerInfo(player).getCosmetics();
 				for (int i = 0; i < frames.length; i++) {
-					player.sendMap(cachedMapViews[i]);
+					cosmetics.sendMapView(cachedMapViews[i]);
 				}
 			}
 		});

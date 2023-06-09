@@ -23,8 +23,8 @@ public class DBGetSelectedCosmetics extends DBOperation<Set<NamespacedKey>> {
 	@Override
 	protected Set<NamespacedKey> execute(Connection connection) throws SQLException {
 		try (var stmt = connection.prepareStatement("SELECT key FROM selectedcosmetics WHERE uuid = ? AND cosmetic_type = ?")) {
-			stmt.setString(0, uuid.toString());
-			stmt.setString(1, cosmeticType.name());
+			stmt.setString(1, uuid.toString());
+			stmt.setString(2, cosmeticType.name());
 
 			ResultSet result = stmt.executeQuery();
 			Set<NamespacedKey> selected = new HashSet<>();

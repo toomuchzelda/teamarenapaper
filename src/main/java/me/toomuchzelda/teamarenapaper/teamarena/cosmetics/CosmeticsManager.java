@@ -9,6 +9,7 @@ import java.util.*;
 
 public class CosmeticsManager {
 	private static final Map<CosmeticType, Map<NamespacedKey, CosmeticItem>> loadedCosmetics = new EnumMap<>(CosmeticType.class);
+	private static final Map<CosmeticType, Set<NamespacedKey>> defaultCosmetics = new EnumMap<>(CosmeticType.class);
 
 	public static void reloadCosmetics() {
 		cleanUp();
@@ -26,6 +27,7 @@ public class CosmeticsManager {
 	public static void cleanUp() {
 		loadedCosmetics.values().forEach(map -> map.values().forEach(CosmeticItem::unload));
 		loadedCosmetics.clear();
+		defaultCosmetics.clear();
 	}
 
 	private static void loadCosmetic(CosmeticType type, String namespace, String prefix, File directory) {
@@ -46,6 +48,9 @@ public class CosmeticsManager {
 				YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
 				CosmeticItem loaded = type.loader.load(key, file, yaml);
 				loadedCosmetics.computeIfAbsent(type, ignored -> new LinkedHashMap<>()).put(key, loaded);
+				if (loaded.isDefault) {
+					defaultCosmetics.computeIfAbsent(type, ignored -> new HashSet<>()).add(key);
+				}
 			} catch (Exception ex) {
 				new RuntimeException("Loading cosmetic " + key + " at " + file.getPath(), ex).printStackTrace();
 			}
@@ -74,7 +79,7 @@ public class CosmeticsManager {
 	}
 
 	public static Set<NamespacedKey> getDefaultCosmetics(CosmeticType cosmeticType) {
-		return Collections.unmodifiableSet(loadedCosmetics.getOrDefault(cosmeticType, Map.of()).keySet());
+		return Collections.unmodifiableSet(defaultCosmetics.getOrDefault(cosmeticType, Set.of()));
 	}
 
 }

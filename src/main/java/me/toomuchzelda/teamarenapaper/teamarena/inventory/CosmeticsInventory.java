@@ -6,6 +6,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticItem;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
+import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.PlayerCosmetics;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -18,10 +19,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.MapMeta;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 public class CosmeticsInventory implements InventoryProvider {
 
@@ -64,26 +62,41 @@ public class CosmeticsInventory implements InventoryProvider {
 		inventory.set(8, showInfoButton.getItem(inventory));
 
 		PlayerInfo info = Main.getPlayerInfo(player);
+		PlayerCosmetics cosmetics = info.getCosmetics();
 		CosmeticType cosmeticType = tabBar.getCurrentTab();
 
-		List<NamespacedKey> itemKeys = new ArrayList<>(info.getCosmeticItems(cosmeticType));
+		List<NamespacedKey> itemKeys = new ArrayList<>(cosmetics.getAllCosmeticItems(cosmeticType));
 		itemKeys.sort(Comparator.comparing(NamespacedKey::toString));
-		NamespacedKey selectedKey = info.getSelectedCosmetic(cosmeticType).orElse(null);
+		Set<NamespacedKey> selected = info.getCosmetics().getSelectedCosmetic(cosmeticType);
 
 
-		inventory.set(9, ClickableItem.of(
-			ItemUtils.highlightIfSelected(ItemBuilder.of(Material.BARRIER)
-				.displayName(Component.text("Disable cosmetics", NamedTextColor.RED))
-				.build(), selectedKey == null),
-			e -> {
-				info.setSelectedCosmetic(cosmeticType, null);
-				player.playSound(player, Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.BLOCKS, 0.5f, 1);
-				inventory.invalidate();
-			}
-		));
+		if (pagination.getPage() == 1) {
+			// only show special items on the first page
+			inventory.set(9, ClickableItem.of(
+				ItemUtils.highlightIfSelected(ItemBuilder.of(Material.BARRIER)
+					.displayName(Component.text("Disable cosmetics", NamedTextColor.RED))
+					.build(), selected != null && selected.size() == 0),
+				e -> {
+					cosmetics.setSelectedCosmetic(cosmeticType, Set.of());
+					player.playSound(player, Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.BLOCKS, 0.5f, 1);
+					inventory.invalidate();
+				}
+			));
+			inventory.set(10, ClickableItem.of(
+				ItemUtils.highlightIfSelected(ItemBuilder.of(Material.STRUCTURE_VOID)
+					.displayName(Component.text("Use default cosmetics", NamedTextColor.AQUA))
+					.build(), selected == null),
+				e -> {
+					cosmetics.setSelectedCosmetic(cosmeticType, null);
+					player.playSound(player, Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.BLOCKS, 0.5f, 1);
+					inventory.invalidate();
+				}
+			));
+		}
 
-		pagination.showPageItems(inventory, itemKeys, key -> keyToItem(cosmeticType, key, selectedKey, inventory, player),
-			10, 45, true);
+		Set<NamespacedKey> selectedOrEmpty = selected != null ? selected : Set.of();
+		pagination.showPageItems(inventory, itemKeys, key -> keyToItem(cosmeticType, key, selectedOrEmpty, inventory, cosmetics),
+			9, 45, false);
 		if (itemKeys.size() > 9 * 4) { // max 4 rows
 			// set page items
 			inventory.set(45, pagination.getPreviousPageItem(inventory));
@@ -95,19 +108,18 @@ public class CosmeticsInventory implements InventoryProvider {
 		return type.getDisplay();
 	}
 
-	private ClickableItem keyToItem(CosmeticType cosmeticType, NamespacedKey key, NamespacedKey selected, InventoryAccessor inventory, Player player) {
+	private ClickableItem keyToItem(CosmeticType cosmeticType, NamespacedKey key, Set<NamespacedKey> selected, InventoryAccessor inventory, PlayerCosmetics cosmetics) {
 		CosmeticItem cosmeticItem = CosmeticsManager.getCosmetic(cosmeticType, key);
 		if (cosmeticItem == null)
 			return ClickableItem.empty(MenuItems.BORDER);
-		ItemStack item = ItemUtils.highlightIfSelected(cosmeticItem.getDisplay(showInfoButton.getState()), key.equals(selected));
+		ItemStack item = ItemUtils.highlightIfSelected(cosmeticItem.getDisplay(showInfoButton.getState()), selected.contains(key));
 		if (item.getItemMeta() instanceof MapMeta mapMeta && mapMeta.getMapView() != null) {
-			player.sendMap(mapMeta.getMapView());
+			cosmetics.sendMapView(mapMeta.getMapView());
 		}
 		return ClickableItem.of(item, e -> {
-			Player clicked = (Player) e.getWhoClicked();
-			PlayerInfo info = Main.getPlayerInfo(clicked);
-			info.setSelectedCosmetic(cosmeticType, key);
+			cosmetics.selectCosmetic(cosmeticType, key);
 
+			Player clicked = (Player) e.getWhoClicked();
 			clicked.playSound(clicked, Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.BLOCKS, 0.5f, 1);
 			inventory.invalidate();
 		});

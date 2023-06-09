@@ -250,7 +250,7 @@ public final class Inventories implements Listener {
             } catch (Exception ex) {
                 new RuntimeException("Handling slot %d %s click (%s) for %s in %s".formatted(
 					e.getSlot(), e.getClick(), e.getAction(), e.getWhoClicked().getName(), data.provider
-				)).printStackTrace();
+				), ex).printStackTrace();
             }
         }
     }

@@ -9,10 +9,7 @@ import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.Style;
-import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -154,26 +151,26 @@ public class GraffitiManager {
 		}
 		itemSwapTimes.put(uuid, 0); // reset swap time to avoid consecutive triggers
 		PlayerInfo playerInfo = Main.getPlayerInfo(player);
-		Optional<NamespacedKey> optionalGraffiti = playerInfo.getSelectedCosmetic(CosmeticType.GRAFFITI);
-		NamespacedKey graffiti = optionalGraffiti.orElseGet(() -> {
+		PlayerCosmetics cosmetics = playerInfo.getCosmetics();
+		Set<NamespacedKey> selected = cosmetics.getSelectedCosmetic(CosmeticType.GRAFFITI);
+		NamespacedKey graffiti;
+		if (selected == null) {
 			// randomly pick an owned graffiti
-			var owned = playerInfo.getCosmeticItems(CosmeticType.GRAFFITI);
+			cosmetics.remindGraffiti();
+
+			Set<NamespacedKey> owned = cosmetics.getAllCosmeticItems(CosmeticType.GRAFFITI);
 			if (owned.size() == 0)
-				return null;
-			if (setCosmeticReminder.add(uuid)) {
-				player.sendMessage(Component.textOfChildren(
-					Component.text("You can pick a graffiti you like "),
-					Component.text("here", Style.style(TextDecoration.UNDERLINED))
-						.clickEvent(ClickEvent.runCommand("/cosmetics gui"))
-						.hoverEvent(Component.text("Click to run /cosmetics gui", NamedTextColor.YELLOW).asHoverEvent()),
-					Component.text("!")
-				).color(NamedTextColor.AQUA));
-			}
+				return;
 			var arr = owned.toArray(new NamespacedKey[0]);
-			return arr[MathUtils.random.nextInt(arr.length)];
-		});
-		if (graffiti == null) // fail-fast
+			graffiti = arr[MathUtils.random.nextInt(arr.length)];
+		} else if (selected.size() == 0) {
+			// graffiti disabled
 			return;
+		} else {
+			var arr = selected.toArray(new NamespacedKey[0]);
+			graffiti = arr[MathUtils.random.nextInt(arr.length)];
+		}
+
 		int lastGraffiti = graffitiCooldown.getOrDefault(uuid, 0);
 		int ticksElapsed = now - lastGraffiti;
 		if (ticksElapsed >= GRAFFITI_COOLDOWN || playerInfo.permissionLevel == CustomCommand.PermissionLevel.OWNER) {
