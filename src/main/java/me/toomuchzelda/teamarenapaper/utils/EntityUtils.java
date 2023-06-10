@@ -28,9 +28,9 @@ import org.bukkit.craftbukkit.v1_19_R3.util.CraftVector;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -270,6 +270,15 @@ public class EntityUtils {
 		Vec3 posTwo = ((CraftEntity) two).getHandle().position();
 
 		return posOne.distanceToSqr(posTwo);
+	}
+
+	public static double distanceSqr(Entity entity, Location loc) {
+		Vec3 posOne = ((CraftEntity) entity).getHandle().position();
+
+		double x = posOne.x() - loc.getX();
+		double y = posOne.y() - loc.getY();
+		double z = posOne.z() - loc.getZ();
+		return (x * x) + (y * y) + (z * z);
 	}
 
 	public static List<Pair<net.minecraft.world.entity.EquipmentSlot, net.minecraft.world.item.ItemStack>>

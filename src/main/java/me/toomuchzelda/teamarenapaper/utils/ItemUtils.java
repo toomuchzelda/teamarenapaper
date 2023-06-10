@@ -5,7 +5,10 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
+import org.bukkit.block.BlockState;
+import org.bukkit.block.Sign;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -18,6 +21,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Predicate;
 
@@ -163,6 +167,19 @@ public class ItemUtils {
 		return armorPiece;
     }
 
+	/**
+	 * Apply a map of Enchantments and levels to an ItemStack, ignoring incompatible enchantments
+	 * without throwing an exception.
+	 */
+	public static void applyEnchantments(ItemStack item, Map<Enchantment, Integer> enchantmentsAndLevels) {
+		for (var entry : enchantmentsAndLevels.entrySet()) {
+			final Enchantment ench = entry.getKey();
+			if (ench.canEnchantItem(item)) {
+				item.addEnchantment(ench, entry.getValue());
+			}
+		}
+	}
+
     /**
      * return a bunch of color chars to append to the end of item name/lore to make it unique?
      * used to stop stacking of otherwise identical items.
@@ -231,5 +248,15 @@ public class ItemUtils {
 		if (!SEND_CUSTOM_MODEL_DATA)
 			return null;
 		return Math.floorMod(string.hashCode(), MODEL_DATA_MAX); // model data cannot be negative
+	}
+
+	public static boolean isOldBuySign(BlockState blockState) {
+		if (blockState instanceof Sign signState) {
+			final String asString = PlainTextComponentSerializer.plainText().serialize(signState.lines().get(0));
+
+			return asString.contains("[Buy]");
+		}
+
+		return false;
 	}
 }

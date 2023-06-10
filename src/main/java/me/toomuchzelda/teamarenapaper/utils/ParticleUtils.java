@@ -3,9 +3,8 @@ package me.toomuchzelda.teamarenapaper.utils;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket;
-import org.bukkit.Color;
-import org.bukkit.Location;
-import org.bukkit.Particle;
+import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 
 public class ParticleUtils {
@@ -22,5 +21,11 @@ public class ParticleUtils {
 		for(Player p : location.getWorld().getPlayers()) {
 			PlayerUtils.sendPacket(p, packet);
 		}
+	}
+
+	/** Play the block destruction effect that happens when a player breaks a block */
+	public static void blockBreakEffect(Player player, Block block) {
+		Location loc = block.getLocation();
+		player.playEffect(loc, Effect.STEP_SOUND, block.getType());
 	}
 }

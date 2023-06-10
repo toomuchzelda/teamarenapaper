@@ -359,7 +359,7 @@ public class SearchAndDestroy extends TeamArena
 				// announce the last man standing.
 				if(aliveTeamMemberCount == 1 && team.score != TEAM_LASTMAN_SCORE) {
 					team.score = TEAM_LASTMAN_SCORE; // Use this to ensure this code block only runs once
-					announceLastManStanding(lastMan, team);
+					announceLastManStanding(lastMan, team, this.spawnPos);
 					administerInstantFuse(lastMan, true);
 				}
 			}
@@ -372,14 +372,14 @@ public class SearchAndDestroy extends TeamArena
 		}
 	}
 
-	private void announceLastManStanding(final Player lastMan, final TeamArenaTeam team) {
+	public static void announceLastManStanding(final Player lastMan, final TeamArenaTeam team, Location spawnPos) {
 		final Component lastStanding = Component.text(" is last standing!", team.getRGBTextColor());
 		final Component message = lastMan.playerListName().append(lastStanding);
 
 		Bukkit.broadcast(message);
 		PlayerUtils.sendOptionalTitle(Component.empty(), message, 10, 20, 10);
 
-		lastMan.getWorld().playSound(this.spawnPos, Sound.ENTITY_ENDER_DRAGON_HURT, 99999f, 1f);
+		lastMan.getWorld().playSound(spawnPos, Sound.ENTITY_ENDER_DRAGON_HURT, 99999f, 1f);
 		AnnouncerManager.playSound(lastMan, AnnouncerSound.GAME_LAST_MAN_STANDING);
 	}
 

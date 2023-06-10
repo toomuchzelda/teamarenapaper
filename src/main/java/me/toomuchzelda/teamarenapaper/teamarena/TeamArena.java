@@ -39,12 +39,10 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
-import org.bukkit.block.Sign;
 import org.bukkit.command.CommandSender;
 import org.bukkit.craftbukkit.v1_19_R3.CraftWorld;
 import org.bukkit.entity.*;
@@ -228,7 +226,7 @@ public abstract class TeamArena
 					chunk.setForceLoaded(true);
 
 					// Remove almost all of the old Buy signs if any - leave a few at random for easter egg
-					Collection<BlockState> signs = chunk.getTileEntities(block -> isOldBuySign(block.getState()), false);
+					Collection<BlockState> signs = chunk.getTileEntities(block -> ItemUtils.isOldBuySign(block.getState()), false);
 					for (BlockState state : signs) {
 						if (MathUtils.random.nextDouble() < 0.95d) {
 							state.getBlock().setType(Material.AIR);
@@ -886,7 +884,7 @@ public abstract class TeamArena
 		// Destroy old buy signs when they are clicked
 		if (event.getAction() == Action.RIGHT_CLICK_BLOCK && event.useInteractedBlock() != Event.Result.DENY) {
 			final Block clickedBlock = event.getClickedBlock();
-			if (isOldBuySign(clickedBlock.getState())) {
+			if (ItemUtils.isOldBuySign(clickedBlock.getState())) {
 				event.setUseInteractedBlock(Event.Result.DENY);
 				clickedBlock.breakNaturally(true);
 
@@ -896,16 +894,6 @@ public abstract class TeamArena
 				}
 			}
 		}
-	}
-
-	private static boolean isOldBuySign(BlockState blockState) {
-		if (blockState instanceof Sign signState) {
-			final String asString = PlainTextComponentSerializer.plainText().serialize(signState.lines().get(0));
-
-			return asString.contains("[Buy]");
-		}
-
-		return false;
 	}
 
 	public void setViewingGlowingTeammates(PlayerInfo pinfo, boolean glow, boolean message) {

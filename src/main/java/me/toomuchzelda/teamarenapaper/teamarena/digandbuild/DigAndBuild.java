@@ -1,19 +1,20 @@
 package me.toomuchzelda.teamarenapaper.teamarena.digandbuild;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
-import me.toomuchzelda.teamarenapaper.utils.IntBoundingBox;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
-import me.toomuchzelda.teamarenapaper.utils.TextColors;
+import me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy.SearchAndDestroy;
+import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockDamageAbortEvent;
@@ -23,10 +24,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 import org.intellij.lang.annotations.RegExp;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class DigAndBuild extends TeamArena
 {
@@ -52,8 +50,26 @@ public class DigAndBuild extends TeamArena
 	private static final Component TEAMS_ORE_DESTROYED_CHAT = Component.text(TEAM_KEY + "'s ore has been destroyed by " + MINER_KEY +
 		"! They will no longer respawn!", NamedTextColor.GOLD);
 
+	private static final Component TEAM_DEFEATED = Component.text(TEAM_KEY + " has been defeated!", NamedTextColor.GOLD);
+
 	private static final Component YOU_WONT_RESPAWN = Component.text("You will no longer respawn!", TextColors.ERROR_RED);
+
+	private static final Component FASTER_TOOLS_CHAT = Component.text("You're taking too long! Everyone gets faster tools", TextColors.ERROR_RED);
+	private static final Component FASTER_TOOLS_TITLE = Component.text("Everyone gets faster tools!", TextColors.ERROR_RED);
 	// END MESSAGES
+
+	private static final int EFF_TIME = 3 * 60 * 20; // Time until enchantments are given. Anti stall measure.
+	private static final int EFF_ACTIVE = 0;
+	private static final Map<Enchantment, Integer> DEFAULT_EFF_ENCHANTS = Map.of(
+		Enchantment.DIG_SPEED, 2
+	);
+
+	private static final int TICKS_PER_BLOCK = 20;
+	private static final int MAX_BLOCK_COUNT = 16;
+
+	private static final int TEAM_DEAD_SCORE = 1;
+	private static final int TEAM_LASTMAN_SCORE = 2;
+
 
 	private Vector middle;
 	private PointMarker midMarker;
@@ -68,6 +84,29 @@ public class DigAndBuild extends TeamArena
 	/** If players can join after the game has started.
 	 *  Players won't be allowed to join after an Ore has been broken */
 	private boolean canJoinMidGame = true;
+
+	private int effTime; // Game timestamp of when eff2 will be given
+
+	// Keep track of chunks loaded by players for sending block change packets
+	private final Map<Player, Set<Chunk>> loadedChunks = new HashMap<>();
+
+	public void addTrackedChunk(Player tracker, Chunk chunk) {
+		Set<Chunk> chunks = this.loadedChunks.computeIfAbsent(tracker, player -> new HashSet<>(100));
+		chunks.add(chunk);
+	}
+
+	public void removeTrackedChunk(Player tracker, Chunk chunk) {
+		Set<Chunk> chunks = this.loadedChunks.get(tracker);
+		if (chunks != null) chunks.remove(chunk);
+	}
+
+	public void removeTrackedChunks(Player tracker) {
+		this.loadedChunks.remove(tracker);
+	}
+
+	public void clearTrackedChunks() {
+		this.loadedChunks.clear();
+	}
 
 	public DigAndBuild(TeamArenaMap map) {
 		super(map);
@@ -94,14 +133,14 @@ public class DigAndBuild extends TeamArena
 		this.tools = new ItemStack[mapInfo.tools().size()];
 		int i = 0;
 		for (Material mat : mapInfo.tools()) {
-			this.tools[i++] = new ItemStack(mat);
+			this.tools[i++] = ItemBuilder.of(mat).lore(Component.text("Get digging!")).build();
 		}
 
 		//BLOCKS
 		this.blocks = new ItemStack[mapInfo.blocks().size()];
 		i = 0;
 		for (Material mat : mapInfo.blocks()) {
-			this.blocks[i++] = new ItemStack(mat, 32);
+			this.blocks[i++] = ItemBuilder.of(mat).lore(Component.text("Get building!")).amount(MAX_BLOCK_COUNT).build();
 		}
 
 		// Make a copy of bounding boxes. May be able to use the provided list as-is instead.
@@ -129,11 +168,6 @@ public class DigAndBuild extends TeamArena
 		}
 	}
 
-	@Override
-	public void liveTick() {
-		super.liveTick();
-	}
-
 	/**
 	 * Handle block breaking.
 	 * Prevent breaking blocks in no-build-zones and near the life ores. Also handle breaking the life ore block.
@@ -157,6 +191,15 @@ public class DigAndBuild extends TeamArena
 			}
 			else  {
 				if (result == LifeOre.OreBreakResult.BROKEN_BY_ENEMY) {
+					// Need to manually play block break effect since event was cancelled.
+					// For everyone except the breaker.
+					Location loc = block.getLocation();
+					for (Player p : Bukkit.getOnlinePlayers()) {
+						if (p != breaker && EntityUtils.distanceSqr(p, loc) <= 30d * 30d) {
+							ParticleUtils.blockBreakEffect(p, block);
+						}
+					}
+
 					this.announceOreDamaged(ore);
 				}
 				else { // KILLED
@@ -173,6 +216,9 @@ public class DigAndBuild extends TeamArena
 				}
 				// Bit messy to do here, need to clear current miners manually after successfully damaged
 				ore.clearMiners();
+
+				if (this.effTime != EFF_ACTIVE)
+					this.effTime += 7 * 20; // Delay time until anti stall
 			}
 
 			return true;
@@ -219,7 +265,11 @@ public class DigAndBuild extends TeamArena
 		if (oreInRange != null) {
 			event.setCancelled(true);
 			playNoBuildEffect(block, event.getPlayer(), false);
+			return;
 		}
+
+		// Event not cancelled if reached here
+
 	}
 
 	/** Broadcast ore damage */
@@ -342,11 +392,10 @@ public class DigAndBuild extends TeamArena
 					// Spawn the angel before calling super, so the angel spawned by super has no effect.
 					// We want an angle that doesn't lock the player's position.
 					SpectatorAngelManager.spawnAngel(playerVictim, false);
-
 					super.handleDeath(event);
-
 					this.respawnTimers.remove(playerVictim); // Also don't respawn them
 
+					this.checkWinner();
 					return; // Don't call super again
 				}
 			}
@@ -357,6 +406,120 @@ public class DigAndBuild extends TeamArena
 		}
 
 		super.handleDeath(event);
+	}
+
+	@Override
+	public void prepLive() {
+		super.prepLive();
+		this.effTime = TeamArena.getGameTick() + EFF_TIME;
+	}
+
+	@Override
+	public void liveTick() {
+		super.liveTick();
+
+		// Anti stall
+		if (this.effTime != EFF_ACTIVE && TeamArena.getGameTick() - this.effTime >= 0) { // Activate
+			this.effTime = EFF_ACTIVE;
+
+			this.upgradeTools(DEFAULT_EFF_ENCHANTS);
+
+			Bukkit.broadcast(FASTER_TOOLS_CHAT);
+			PlayerUtils.sendOptionalTitle(Component.empty(), FASTER_TOOLS_TITLE, 1, 20, 10);
+			for (Player p : Bukkit.getOnlinePlayers()) {
+				p.playSound(p, Sound.ENTITY_CAT_PURREOW, SoundCategory.AMBIENT, 1f, 2f);
+			}
+		}
+
+		// Check if game should be over
+		this.checkWinner();
+
+		if (this.winningTeam != null) {
+			this.prepEnd();
+		}
+	}
+
+	@Override
+	public void prepEnd() {
+		super.prepEnd();
+		this.clearTrackedChunks();
+	}
+
+	/** Apply enchantments to all the default tools to be given to players */
+	private void upgradeTools(final Map<Enchantment, Integer> enchantmentsAndLevels) {
+		// Apply the upgrades to the tools living players have right now.
+		// Do this before mutating this.tools
+		for (Player p : Bukkit.getOnlinePlayers()) {
+			if (this.isDead(p)) continue;
+
+			for (int i = 0; i < this.tools.length; i++) {
+				final int index = i; // epic java
+				List<ItemStack> tool = ItemUtils.getItemsInInventory(
+					itemStack -> this.tools[index].isSimilar(itemStack),
+					p.getInventory());
+
+				tool.forEach(toolStack -> {
+					ItemUtils.applyEnchantments(toolStack, enchantmentsAndLevels);
+				});
+			}
+		}
+
+		// Apply to this.tools so the new tools are given to respawning players.
+		for (ItemStack item : this.tools) {
+			ItemUtils.applyEnchantments(item, enchantmentsAndLevels);
+		}
+	}
+
+	/**
+	 * Check if there is one team left alive and end the game
+	 */
+	public void checkWinner() {
+		TeamArenaTeam winnerTeam = null;
+		int aliveTeamCount = 0;
+		for (TeamArenaTeam team : this.teams) {
+			if (!team.isAlive()) continue;
+			if (team.score == TEAM_DEAD_SCORE)
+				continue;
+
+			LifeOre ore = this.teamOres.get(team);
+			if (!ore.isDead()) {
+				winnerTeam = team;
+				aliveTeamCount++;
+			}
+			else {
+				int aliveTeamMemberCount = 0;
+				Player lastMan = null;
+				for (Player teamMember : team.getPlayerMembers()) {
+					if (!this.isDead(teamMember)) {
+						aliveTeamMemberCount++;
+						lastMan = teamMember;
+					}
+				}
+
+				if (aliveTeamMemberCount >= 1) {
+					aliveTeamCount++;
+				}
+
+				if (aliveTeamMemberCount == 1 && team.score != TEAM_LASTMAN_SCORE) {
+					team.score = TEAM_LASTMAN_SCORE;
+					SearchAndDestroy.announceLastManStanding(lastMan, team, this.middle.toLocation(this.gameWorld));
+				}
+				else if (aliveTeamMemberCount == 0) {
+					team.score = TEAM_DEAD_SCORE;
+
+					TextReplacementConfig config = TextReplacementConfig.builder().match(TEAM_KEY).replacement(team.getComponentName()).build();
+					Component message = TEAM_DEFEATED.replaceText(config);
+					Bukkit.broadcast(message);
+					PlayerUtils.sendOptionalTitle(Component.empty(), message, 1, 20, 10);
+				}
+			}
+		}
+
+		if (!CommandDebug.ignoreWinConditions && aliveTeamCount == 1) {
+			//this method may be called during a damage tick, so signal to end game later instead by assigning
+			// winningTeam
+			this.winningTeam = winnerTeam;
+		}
 	}
 
 	@Override
@@ -386,6 +549,13 @@ public class DigAndBuild extends TeamArena
 
 		player.getInventory().addItem(this.tools);
 		player.getInventory().addItem(this.blocks);
+	}
+
+	@Override
+	public void leavingPlayer(Player player) {
+		super.leavingPlayer(player);
+
+		this.removeTrackedChunks(player);
 	}
 
 	@Override
