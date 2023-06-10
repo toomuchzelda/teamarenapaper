@@ -9,6 +9,8 @@ import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
+import io.papermc.paper.event.packet.PlayerChunkLoadEvent;
+import io.papermc.paper.event.packet.PlayerChunkUnloadEvent;
 import io.papermc.paper.event.player.*;
 import me.toomuchzelda.teamarenapaper.explosions.EntityExplosionInfo;
 import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
@@ -52,6 +54,7 @@ import org.bukkit.event.block.*;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.*;
+import org.bukkit.event.world.WorldUnloadEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
@@ -62,7 +65,6 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
@@ -231,11 +233,12 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void playerQuit(PlayerQuitEvent event) {
 		event.quitMessage(null);
-		Player leaver = event.getPlayer();
+		final Player leaver = event.getPlayer();
 		Main.getGame().leavingPlayer(leaver);
 		BuildingListeners.onPlayerQuit(event);
 		//Main.getPlayerInfo(event.getPlayer()).nametag.remove();
 		FakeHitboxManager.removeFakeHitbox(leaver);
+		LoadedChunkTracker.removeTrackedChunks(leaver);
 		PlayerInfo pinfo = Main.removePlayerInfo(leaver);
 
 		//save preferences when leaving
@@ -867,6 +870,26 @@ public class EventListeners implements Listener
 			MetadataViewer metadataViewer = pinfo.getMetadataViewer();
 			metadataViewer.setAllDirty(event.getEntity());
 		}
+	}
+
+	@EventHandler
+	public void playerChunkLoad(PlayerChunkLoadEvent event) {
+		LoadedChunkTracker.addTrackedChunk(event.getPlayer(), event.getChunk());
+	}
+
+	@EventHandler
+	public void playerChunkUnload(PlayerChunkUnloadEvent event) {
+		LoadedChunkTracker.removeTrackedChunk(event.getPlayer(), event.getChunk());
+	}
+
+	@EventHandler
+	public void playerChangedWorldEvent(PlayerChangedWorldEvent event) {
+		LoadedChunkTracker.removeTrackedChunks(event.getPlayer(), event.getFrom());
+	}
+
+	@EventHandler
+	public void worldUnload(WorldUnloadEvent event) {
+		LoadedChunkTracker.removeTrackedChunks(event.getWorld());
 	}
 
 	@EventHandler

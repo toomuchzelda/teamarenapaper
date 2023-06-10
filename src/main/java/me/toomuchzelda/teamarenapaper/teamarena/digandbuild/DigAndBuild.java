@@ -24,7 +24,10 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 import org.intellij.lang.annotations.RegExp;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class DigAndBuild extends TeamArena
 {
@@ -70,7 +73,6 @@ public class DigAndBuild extends TeamArena
 	private static final int TEAM_DEAD_SCORE = 1;
 	private static final int TEAM_LASTMAN_SCORE = 2;
 
-
 	private Vector middle;
 	private PointMarker midMarker;
 
@@ -86,27 +88,6 @@ public class DigAndBuild extends TeamArena
 	private boolean canJoinMidGame = true;
 
 	private int effTime; // Game timestamp of when eff2 will be given
-
-	// Keep track of chunks loaded by players for sending block change packets
-	private final Map<Player, Set<Chunk>> loadedChunks = new HashMap<>();
-
-	public void addTrackedChunk(Player tracker, Chunk chunk) {
-		Set<Chunk> chunks = this.loadedChunks.computeIfAbsent(tracker, player -> new HashSet<>(100));
-		chunks.add(chunk);
-	}
-
-	public void removeTrackedChunk(Player tracker, Chunk chunk) {
-		Set<Chunk> chunks = this.loadedChunks.get(tracker);
-		if (chunks != null) chunks.remove(chunk);
-	}
-
-	public void removeTrackedChunks(Player tracker) {
-		this.loadedChunks.remove(tracker);
-	}
-
-	public void clearTrackedChunks() {
-		this.loadedChunks.clear();
-	}
 
 	public DigAndBuild(TeamArenaMap map) {
 		super(map);
@@ -442,7 +423,7 @@ public class DigAndBuild extends TeamArena
 	@Override
 	public void prepEnd() {
 		super.prepEnd();
-		this.clearTrackedChunks();
+		//LoadedChunkTracker.clearTrackedChunks();
 	}
 
 	/** Apply enchantments to all the default tools to be given to players */
@@ -555,7 +536,7 @@ public class DigAndBuild extends TeamArena
 	public void leavingPlayer(Player player) {
 		super.leavingPlayer(player);
 
-		this.removeTrackedChunks(player);
+		//LoadedChunkTracker.removeTrackedChunks(player);
 	}
 
 	@Override

@@ -11,10 +11,7 @@ import me.toomuchzelda.teamarenapaper.inventory.InventoryProvider;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.inventory.TabBar;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
-import me.toomuchzelda.teamarenapaper.teamarena.GameState;
-import me.toomuchzelda.teamarenapaper.teamarena.MiniMapManager;
-import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
@@ -495,6 +492,19 @@ public class CommandDebug extends CustomCommand {
 				float yaw = Float.parseFloat(args[1]);
 				ClientboundHurtAnimationPacket hurtAnimationPacket = new ClientboundHurtAnimationPacket(player.getEntityId(), yaw);
 				PlayerUtils.sendPacket(player, hurtAnimationPacket);
+			}
+			case "chunktracker" -> {
+				player.sendMessage(LoadedChunkTracker.getStatus());
+
+				if (args.length >= 2) {
+					if (args[1].equalsIgnoreCase("refresh")) {
+						LoadedChunkTracker.cleanup();
+						Bukkit.broadcastMessage("refreshed");
+					}
+					else {
+						throw throwUsage("chunktracker refresh");
+					}
+				}
 			}
 			default -> showUsage(sender);
 		}
