@@ -92,7 +92,6 @@ public abstract class CosmeticItem {
 	public ItemStack getDisplay(boolean complex) {
 		return ItemBuilder.from(display.clone())
 			.displayName(Component.text(this.name, NamedTextColor.YELLOW))
-			.customModelData("cosmetics/" + key)
 			.lore(getExtraInfo())
 			.hideAll()
 			.build();

@@ -114,7 +114,7 @@ public class CosmeticsInventory implements InventoryProvider {
 			return ClickableItem.empty(MenuItems.BORDER);
 		ItemStack item = ItemUtils.highlightIfSelected(cosmeticItem.getDisplay(showInfoButton.getState()), selected.contains(key));
 		if (item.getItemMeta() instanceof MapMeta mapMeta && mapMeta.getMapView() != null) {
-			cosmetics.sendMapView(mapMeta.getMapView());
+			cosmetics.sendMapView(cosmetics.getPlayer(), mapMeta.getMapView());
 		}
 		return ClickableItem.of(item, e -> {
 			cosmetics.selectCosmetic(cosmeticType, key);

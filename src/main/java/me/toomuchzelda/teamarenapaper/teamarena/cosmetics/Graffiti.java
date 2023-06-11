@@ -5,6 +5,7 @@ import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -106,19 +107,23 @@ public class Graffiti extends CosmeticItem {
 			stack.setItemMeta(meta);
 		}
 
-		sendMapView();
+		scheduleSendMapView();
 	}
 
-	public void sendMapView() {
+	public void scheduleSendMapView() {
 		// send players the map
 		Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
 			for (Player player : Bukkit.getOnlinePlayers()) {
-				PlayerCosmetics cosmetics = Main.getPlayerInfo(player).getCosmetics();
-				for (int i = 0; i < frames.length; i++) {
-					cosmetics.sendMapView(cachedMapViews[i]);
-				}
+				sendMapView(player);
 			}
 		});
+	}
+
+	public void sendMapView(Player player) {
+		PlayerCosmetics cosmetics = Main.getPlayerInfo(player).getCosmetics();
+		for (int i = 0; i < frames.length; i++) {
+			cosmetics.sendMapView(player, cachedMapViews[i]);
+		}
 	}
 
 	public MapView getMapView() {
@@ -143,8 +148,15 @@ public class Graffiti extends CosmeticItem {
 
 	@Override
 	public @NotNull ItemStack getDisplay(boolean complex) {
-		if (!complex)
-			return super.getDisplay(false);
+		if (!complex) {
+			var stack = super.getDisplay(false);
+			if (isAnimated()) {
+				return ItemBuilder.from(stack)
+					.addLore(Component.text("Animated!", NamedTextColor.GOLD, TextDecoration.BOLD))
+					.build();
+			}
+			return stack;
+		}
 		return ItemBuilder.of(Material.FILLED_MAP)
 			.displayName(Component.text(name, NamedTextColor.GOLD))
 			.lore(getExtraInfo())

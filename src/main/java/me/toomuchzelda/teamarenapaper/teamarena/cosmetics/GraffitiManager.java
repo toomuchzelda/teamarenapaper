@@ -34,6 +34,13 @@ public class GraffitiManager {
 	public GraffitiManager(TeamArena game) {
 	}
 
+	public void sendAllGraffiti(Player player) {
+		PlayerCosmetics cosmetics = Main.getPlayerInfo(player).getCosmetics();
+		for (var graffiti : animatedGraffiti.values()) {
+			graffiti.scheduleSendMapView();
+		}
+	}
+
 	public boolean spawnGraffiti(Player player, NamespacedKey graffiti) {
 		var eyeLocation = player.getEyeLocation();
 		RayTraceResult result = player.getWorld().rayTrace(eyeLocation, eyeLocation.getDirection(), 5,
@@ -73,7 +80,7 @@ public class GraffitiManager {
 				old.setItem(stack, false);
 				world.playSound(old, Sound.ENTITY_SILVERFISH_HURT, 0.2f, 1);
 				if (graffiti.isAnimated()) {
-					graffiti.sendMapView();
+					graffiti.scheduleSendMapView();
 					animatedGraffiti.put(old, graffiti);
 				} else {
 					animatedGraffiti.remove(old);
@@ -103,7 +110,7 @@ public class GraffitiManager {
 		spawnedMaps.put(coords, itemFrame);
 		playerPlacedMaps.put(owner, itemFrame);
 		if (graffiti.isAnimated()) {
-			graffiti.sendMapView();
+			graffiti.scheduleSendMapView();
 			animatedGraffiti.put(itemFrame, graffiti);
 		}
 		return true;
@@ -111,14 +118,6 @@ public class GraffitiManager {
 
 	public void tick() {
 		animatedGraffiti.forEach((frame, graffiti) -> frame.setItem(graffiti.getMapItem(), false));
-//		spawnedMaps.values().removeIf(itemFrame -> {
-//			if (itemFrame.getTicksLived() >= GRAFFITI_DURATION) {
-//				itemFrame.setItem(null, false);
-//				itemFrame.remove();
-//				return true;
-//			}
-//			return false;
-//		});
 	}
 
 	public void cleanUp() {

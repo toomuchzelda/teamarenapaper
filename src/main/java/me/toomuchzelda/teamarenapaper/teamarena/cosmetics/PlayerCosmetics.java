@@ -70,7 +70,7 @@ public class PlayerCosmetics implements CosmeticsProvider {
 	}
 
 	// Graffiti utility methods
-	private Player getPlayer() {
+	public Player getPlayer() {
 		return Objects.requireNonNull(Bukkit.getPlayer(uuid), "Player " + uuid + " is offline?");
 	}
 
@@ -87,9 +87,9 @@ public class PlayerCosmetics implements CosmeticsProvider {
 		).color(NamedTextColor.AQUA));
 	}
 
-	public void sendMapView(MapView view) {
+	public void sendMapView(Player player, MapView view) {
 		if (viewedMapIds.add(view.getId())) {
-			getPlayer().sendMap(view);
+			player.sendMap(view);
 		}
 	}
 

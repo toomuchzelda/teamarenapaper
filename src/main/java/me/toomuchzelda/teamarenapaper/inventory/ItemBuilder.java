@@ -42,6 +42,10 @@ public final class ItemBuilder {
         return new ItemBuilder(stack);
     }
 
+	public static ItemBuilder fromHead(String textureUrl) {
+		return from(ItemUtils.createPlayerHead(textureUrl));
+	}
+
     public ItemBuilder amount(int amount) {
         stack.setAmount(amount);
         return this;
