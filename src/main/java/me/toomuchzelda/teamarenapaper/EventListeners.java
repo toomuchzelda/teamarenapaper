@@ -872,7 +872,7 @@ public class EventListeners implements Listener
 		}
 	}
 
-	@EventHandler
+	/*@EventHandler
 	public void playerChunkLoad(PlayerChunkLoadEvent event) {
 		LoadedChunkTracker.addTrackedChunk(event.getPlayer(), event.getChunk());
 	}
@@ -895,7 +895,7 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void playerRecipeDiscover(PlayerRecipeDiscoverEvent e) {
 		e.setCancelled(true);
-	}
+	}*/
 
 	@EventHandler
 	public void playerItemConsume(PlayerItemConsumeEvent event){

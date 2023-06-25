@@ -21,13 +21,12 @@ import org.bukkit.event.block.BlockDamageAbortEvent;
 import org.bukkit.event.block.BlockDamageEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
 import org.intellij.lang.annotations.RegExp;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class DigAndBuild extends TeamArena
 {
@@ -67,7 +66,8 @@ public class DigAndBuild extends TeamArena
 		Enchantment.DIG_SPEED, 2
 	);
 
-	private static final int TICKS_PER_BLOCK = 20;
+	private static final int TICKS_PER_GAIN_BLOCK = 20;
+	private static final int TICKS_PER_LOSE_BLOCK = 40;
 	private static final int MAX_BLOCK_COUNT = 16;
 
 	private static final int TEAM_DEAD_SCORE = 1;
@@ -79,6 +79,13 @@ public class DigAndBuild extends TeamArena
 	private ItemStack[] tools;
 	private ItemStack[] blocks;
 	private List<IntBoundingBox> noBuildZones;
+	private class BlockTimes {
+		static final int NO_TIME = -1;
+		int blockPlaceTime;
+		int blockBreakTime;
+		public BlockTimes() { this.blockPlaceTime = NO_TIME; this.blockBreakTime = NO_TIME; }
+	}
+	private Map<Player, BlockTimes> blockTimes;
 
 	private Map<TeamArenaTeam, LifeOre> teamOres;
 	private Map<BlockCoords, LifeOre> oreLookup;
@@ -92,8 +99,14 @@ public class DigAndBuild extends TeamArena
 	public DigAndBuild(TeamArenaMap map) {
 		super(map);
 
+		// Make player nametags visible to teammates only
+		for (TeamArenaTeam team : this.teams) {
+			team.setNametagVisible(Team.OptionStatus.FOR_OWN_TEAM);
+		}
+
 		this.midMarker = new PointMarker(middle.toLocation(this.gameWorld), Component.text("Middle"), Color.WHITE,
 			Material.LIGHTNING_ROD);
+		this.blockTimes = new HashMap<>();
 	}
 
 	@Override
@@ -217,9 +230,34 @@ public class DigAndBuild extends TeamArena
 		if (oreInRange != null) {
 			event.setCancelled(true);
 			playNoBuildEffect(block, event.getPlayer(), false);
+			return true;
 		}
 
+		// Give them an extra block
+		giveBlockOnBreak(block, event.getPlayer());
+
 		return true;
+	}
+
+	/** Find the right type of block to give upon breaking a block. If none can be found then default to first
+	 *  one in this.blocks */
+	private void giveBlockOnBreak(Block block, Player breaker) {
+		final Material brokenBlockType = block.getType();
+		// Don't give blocks for instant-breakable and other misc blocks.
+		if (BreakableBlocks.isBlockBreakable(brokenBlockType)) return;
+		if (!block.isSolid()) return;
+
+		BlockTimes times = this.blockTimes.computeIfAbsent(breaker, player -> new BlockTimes());
+		times.blockBreakTime = TeamArena.getGameTick();
+
+		for (ItemStack stack : this.blocks) {
+			if (stack.getType() == brokenBlockType) {
+				breaker.getInventory().addItem(stack.asOne());
+				return;
+			}
+		}
+
+		breaker.getInventory().addItem(this.blocks[0].asOne());
 	}
 
 	/**
@@ -232,12 +270,13 @@ public class DigAndBuild extends TeamArena
 		if (event.isCancelled())
 			return;
 
+		final Player placer = event.getPlayer();
 		final Block block = event.getBlock();
 		BlockCoords coords = new BlockCoords(block);
 		for (IntBoundingBox noBuildZone : this.noBuildZones) {
 			if (noBuildZone.contains(coords)) {
 				event.setCancelled(true);
-				playNoBuildEffect(block, event.getPlayer(), false);
+				playNoBuildEffect(block, placer, false);
 				return;
 			}
 		}
@@ -245,12 +284,13 @@ public class DigAndBuild extends TeamArena
 		LifeOre oreInRange = isWithinOreRadius(block.getLocation());
 		if (oreInRange != null) {
 			event.setCancelled(true);
-			playNoBuildEffect(block, event.getPlayer(), false);
+			playNoBuildEffect(block, placer, false);
 			return;
 		}
 
 		// Event not cancelled if reached here
-
+		// Set the timer for next block regen
+		this.blockTimes.computeIfAbsent(placer, player -> new BlockTimes()).blockPlaceTime = TeamArena.getGameTick();
 	}
 
 	/** Broadcast ore damage */
@@ -362,9 +402,26 @@ public class DigAndBuild extends TeamArena
 	}
 
 	@Override
+	public void onDamage(DamageEvent event) {
+		super.onDamage(event);
+
+		// Nerf damage of tools to max(fist, tool damage / 3)
+		if (event.getDamageType().isMelee() && event.getFinalAttacker() instanceof Player) {
+			for (ItemStack tool : tools) {
+				if (tool.isSimilar(event.getMeleeWeapon())) {
+					event.setRawDamage(Math.max(1d, event.getRawDamage() / 3d));
+					break;
+				}
+			}
+		}
+	}
+
+	@Override
 	public void handleDeath(DamageEvent event) {
-		// Prevent players on teams with destroyed ores from respawning.
 		if (event.getVictim() instanceof Player playerVictim) {
+			this.blockTimes.remove(playerVictim);
+
+			// Prevent players on teams with destroyed ores from respawning.
 			TeamArenaTeam victimsTeam = Main.getPlayerInfo(playerVictim).team;
 			LifeOre ore = teamOres.get(victimsTeam);
 
@@ -381,7 +438,7 @@ public class DigAndBuild extends TeamArena
 				}
 			}
 			else {
-				Main.logger().warning("DigAngBuild.handleDeath() player that died didn't have an ore??");
+				Main.logger().warning("DigAndBuild.handleDeath() player that died didn't have an ore??");
 				Thread.dumpStack();
 			}
 		}
@@ -409,6 +466,43 @@ public class DigAndBuild extends TeamArena
 			PlayerUtils.sendOptionalTitle(Component.empty(), FASTER_TOOLS_TITLE, 1, 20, 10);
 			for (Player p : Bukkit.getOnlinePlayers()) {
 				p.playSound(p, Sound.ENTITY_CAT_PURREOW, SoundCategory.AMBIENT, 1f, 2f);
+			}
+		}
+
+		final int currentTick = TeamArena.getGameTick();
+		// Block stack regeneration
+		for (Player player : this.players) {
+			// Only increment and decrement block stacks one at a time, priority in the order of this.blocks
+			boolean incremented = false;
+			boolean decremented = false;
+			for (ItemStack blockStack : this.blocks) {
+				PlayerInventory inventory = player.getInventory();
+				final int count = ItemUtils.getItemCount(inventory, blockStack);
+				if (count != MAX_BLOCK_COUNT) {
+					BlockTimes times = this.blockTimes.get(player); // Should never be null
+					if (times == null) {
+						Main.logger().warning(player.getName() + " has " + count + " blocks and doesn't have lastPlaceTime cooldown");
+						continue;
+					}
+
+					if (!incremented && times.blockPlaceTime != BlockTimes.NO_TIME &&
+						currentTick - times.blockPlaceTime >= TICKS_PER_GAIN_BLOCK && count < MAX_BLOCK_COUNT) {
+						incremented = true;
+						times.blockPlaceTime = currentTick;
+						inventory.addItem(blockStack.asOne());
+					}
+					else if (!decremented && times.blockBreakTime != BlockTimes.NO_TIME &&
+						currentTick - times.blockBreakTime >= TICKS_PER_LOSE_BLOCK && count > MAX_BLOCK_COUNT) {
+						decremented = true;
+						times.blockBreakTime = currentTick;
+						inventory.removeItemAnySlot(blockStack.asOne());
+
+
+					}
+				}
+
+				if (incremented && decremented)
+					break;
 			}
 		}
 
@@ -536,6 +630,7 @@ public class DigAndBuild extends TeamArena
 	public void leavingPlayer(Player player) {
 		super.leavingPlayer(player);
 
+		this.blockTimes.remove(player);
 		//LoadedChunkTracker.removeTrackedChunks(player);
 	}
 

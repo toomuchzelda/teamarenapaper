@@ -33,7 +33,7 @@ public class BreakableBlocks
 		BREAKABLE_BLOCKS[mat.ordinal()] = breakable;
 	}
 
-	static boolean isBlockBreakable(Material mat) {
+	public static boolean isBlockBreakable(Material mat) {
 		return BREAKABLE_BLOCKS[mat.ordinal()];
 	}
 }

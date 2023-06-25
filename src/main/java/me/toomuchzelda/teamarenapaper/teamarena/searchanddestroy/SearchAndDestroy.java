@@ -19,10 +19,7 @@ import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Firework;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.TNTPrimed;
+import org.bukkit.entity.*;
 import org.bukkit.event.Event;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -573,17 +570,14 @@ public class SearchAndDestroy extends TeamArena
 	@Override
 	public void handleDeath(DamageEvent event) {
 		// Fuse kills
-		// Check raw damage coz there's some shenanigans with the order the DamageEvent is created -> held item changes
-		// are processed -> DamageEvent gets processed
-		if ((event.getRawDamage() == 1d || event.getRawDamage() == 1.5d)
-			&& event.getDamageType().is(DamageType.MELEE)) {
-			Player killer = (Player) event.getFinalAttacker();
-			if (killer.getEquipment().getItemInMainHand().getType() == BASE_FUSE.getType()) {
-				event.setDamageType(FUSE_KILL);
+		if (event.getFinalAttacker() instanceof LivingEntity killer && event.getDamageType().is(DamageType.MELEE) &&
+			event.getMeleeWeapon().getType() == BASE_FUSE.getType()) {
 
-				AnnouncerManager.playSound(killer, AnnouncerSound.CHAT_DISGRACEFUL);
-				AnnouncerManager.playSound(event.getPlayerVictim(), AnnouncerSound.CHAT_MY_GOD);
-			}
+			event.setDamageType(FUSE_KILL);
+
+			AnnouncerManager.playSound(event.getPlayerVictim(), AnnouncerSound.CHAT_MY_GOD);
+			if (killer instanceof Player playerKiller)
+				AnnouncerManager.playSound(playerKiller, AnnouncerSound.CHAT_DISGRACEFUL);
 		}
 
 		super.handleDeath(event);

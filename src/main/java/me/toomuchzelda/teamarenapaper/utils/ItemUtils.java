@@ -139,6 +139,16 @@ public class ItemUtils {
 		return itemCount;
 	}
 
+	public static int getItemCount(Inventory inv, ItemStack item) {
+		List<ItemStack> items = getItemsInInventory(item, inv);
+		int count = 0;
+		for (ItemStack i : items) {
+			count += i.getAmount();
+		}
+
+		return count;
+	}
+
     /**
      * also get rid of item from armor slots, and offhand
      *

@@ -752,13 +752,9 @@ public abstract class TeamArena
 
 		if(event.hasKnockback()) {
 			//reduce knockback done by axes
-			if (event.getDamageType().isMelee() && finalAttacker instanceof LivingEntity living) {
-				if (living.getEquipment() != null) {
-					ItemStack weapon = living.getEquipment().getItemInMainHand();
-					if (weapon.getType().toString().endsWith("_AXE")) {
-						event.getKnockback().multiply(0.8);
-						//Bukkit.broadcastMessage("Reduced axe knockback");
-					}
+			if (event.getDamageType().isMelee() && finalAttacker instanceof LivingEntity) {
+				if (event.getMeleeWeapon().getType().toString().endsWith("_AXE")) {
+					event.getKnockback().multiply(0.8);
 				}
 			}
 			//reduce knockback done by projectiles
