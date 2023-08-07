@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Map;
 import java.util.Set;
 
 public class FileUtils {
@@ -84,5 +85,23 @@ public class FileUtils {
 		if (idx == -1)
 			return new FileInfo(fileName, "");
 		return new FileInfo(fileName.substring(0, idx), fileName.substring(idx + 1));
+	}
+
+	/** For reducing repeated code in parsing YAML options */
+	public static <T> T getYamlValue(Map<String, Object> map, String key, T defaultValue, String errorMsg) {
+		if (map == null) return defaultValue;
+
+		T val;
+		try {
+			val = (T) map.get(key);
+			if (val == null)
+				val = defaultValue;
+		}
+		catch (ClassCastException | NullPointerException e) {
+			Main.logger().info(errorMsg + ". For key " + key + ". " + e.getMessage());
+			val = defaultValue;
+		}
+
+		return val;
 	}
 }

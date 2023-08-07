@@ -23,7 +23,7 @@ import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
 
-import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
 
@@ -60,7 +60,7 @@ public class TeamArenaTeam
 	private final Team paperTeam;
 
 	private Location[] spawns;
-	private final LinkedHashSet<Player> playerMembers = new LinkedHashSet<>();
+	private final LinkedHashMap<Player, Void> playerMembers = new LinkedHashMap<>();
 
 	//next spawn position to use
 	private int spawnsIndex;
@@ -211,7 +211,7 @@ public class TeamArenaTeam
 				//if they're already on this team
 				// check both their reference and this Set as having the reference point to `this` doesn't always mean
 				// being in the team yet i.e when player logging in
-				if(team == this && playerMembers.contains(player)) {
+				if(team == this && playerMembers.containsKey(player)) {
 					updateNametag(player);
 					continue;
 				}
@@ -223,7 +223,7 @@ public class TeamArenaTeam
 				// and armor stand nametag
 				updateNametag(player);
 
-				playerMembers.add(player);
+				playerMembers.put(player, null);
 
 				Main.getGame().onTeamSwitch(player, team, this);
 			}
@@ -261,7 +261,7 @@ public class TeamArenaTeam
 
 	public void removeAllMembers() {
 		//removeMembers(entityMembers.toArray(new Entity[0]));
-		for (Player player : playerMembers)
+		for (Player player : playerMembers.keySet())
 		{
 			Main.getPlayerInfo(player).team = null;
 			playerMembers.remove(player);
@@ -280,13 +280,13 @@ public class TeamArenaTeam
 	}
 
 	public Set<Player> getPlayerMembers() {
-		return playerMembers;
+		return playerMembers.keySet();
 	}
 
 	public Player getLastJoinedPlayer() {
 		Player last = null;
 		//LinkedHashSet doesn't ahve a getter for last element
-		for(Player p : playerMembers) {
+		for(Player p : playerMembers.keySet()) {
 			last = p;
 		}
 
@@ -310,17 +310,21 @@ public class TeamArenaTeam
 		return false;
 	}
 
+	public boolean hasMember(Player player) {
+		return this.playerMembers.containsKey(player);
+	}
+
 	public boolean hasMember(Entity entity) {
 		if(entity == null) return false;
 		if(entity instanceof Player p) {
-			return this.playerMembers.contains(p);
+			return this.playerMembers.containsKey(p);
 		}
 
 		return this.paperTeam.hasEntity(entity);
 	}
 
 	public void updateNametags() {
-		for(Player player : playerMembers) {
+		for(Player player : playerMembers.keySet()) {
 			updateNametag(player);
 		}
 	}
@@ -353,9 +357,8 @@ public class TeamArenaTeam
 		return spawns[spawnsIndex++ % spawns.length];
 	}
 
-	//for the spectator team only
-	public void setNametagVisible() {
-		paperTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.FOR_OWN_TEAM);
+	public void setNametagVisible(Team.OptionStatus visibility) {
+		paperTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, visibility);
 	}
 
 	//create gradient component word like player name or team name
@@ -388,7 +391,7 @@ public class TeamArenaTeam
 	}
 
 	public static void playFireworks(TeamArenaTeam team) {
-		for(Entity e : team.playerMembers) {
+		for(Entity e : team.playerMembers.keySet()) {
 			Color colour1;
 			Color colour2;
 			if(team.secondColour != null) {

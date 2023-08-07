@@ -115,6 +115,7 @@ public class LifeOre
 
 			if (highestTeam == null) {
 				Main.logger().warning("LifeOre.getMinerComponent highestTeam was null when should never be");
+				Thread.dumpStack();
 				return Component.text("Herobrine", NamedTextColor.YELLOW);
 			}
 
@@ -138,8 +139,6 @@ public class LifeOre
 		if (pinfo.team != this.owningTeam) {
 			this.health = Math.max(0, this.health - 1);
 			// Update the hologram
-			//this.hologramLines[1] = this.healthComponents[this.health];
-			//this.hologram.setText(this.hologramLines);
 			this.hologram.setText(this.getTextDisplayComponent());
 
 			// Issue where after breaking, but the player continues mining, the BlockDamageEvent isn't re-called
@@ -179,6 +178,6 @@ public class LifeOre
 		else
 			color = NamedTextColor.GREEN;
 
-		return Component.text("Health: ").append(Component.text("" + health, color, TextDecoration.BOLD));
+		return Component.text("Health: ").append(Component.text(String.valueOf(health), color, TextDecoration.BOLD));
 	}
 }

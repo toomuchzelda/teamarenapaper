@@ -210,7 +210,7 @@ public class KitSniper extends Kit {
 				final double speed = projVelocity.length(); // Distance it will travel in the next tick
 
 				final RayTraceResult rayTrace = projectile.getWorld().rayTrace(projectileCentreLoc, projVelocity, speed,
-					FluidCollisionMode.NEVER, true, projectile.getWidth(), entity -> entity != shooter && entity != projectile);
+					FluidCollisionMode.NEVER, true, projectile.getWidth(), entity -> entity != shooter && entity != projectile && !Main.getGame().isDead(entity));
 
 				if (rayTrace != null && rayTrace.getHitEntity() != null &&
 					rayTrace.getHitPosition().getY() > minYForHeadshot &&

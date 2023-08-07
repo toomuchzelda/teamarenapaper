@@ -12,6 +12,8 @@ import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.Style;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.enchantments.Enchantment;
@@ -79,16 +81,22 @@ public class DigAndBuild extends TeamArena
 	private ItemStack[] tools;
 	private ItemStack[] blocks;
 	private List<IntBoundingBox> noBuildZones;
-	private class BlockTimes {
+	private static class BlockTimes {
 		static final int NO_TIME = -1;
 		int blockPlaceTime;
 		int blockBreakTime;
 		public BlockTimes() { this.blockPlaceTime = NO_TIME; this.blockBreakTime = NO_TIME; }
 	}
-	private Map<Player, BlockTimes> blockTimes;
+	private final Map<Player, BlockTimes> blockTimes;
 
 	private Map<TeamArenaTeam, LifeOre> teamOres;
 	private Map<BlockCoords, LifeOre> oreLookup;
+
+	private List<PointMarker> statusOreMarkers;
+	private Map<StatusOreType, TeamArenaMap.DNBStatusOreInfo> statusOreInfos;
+	private Map<StatusOreType, ItemStack> statusOreItems;
+	private Map<ItemStack, StatusOreType> statusItemLookup;
+	private Map<BlockCoords, StatusOre> statusOreLookup;
 
 	/** If players can join after the game has started.
 	 *  Players won't be allowed to join after an Ore has been broken */
@@ -160,6 +168,49 @@ public class DigAndBuild extends TeamArena
 			this.teamOres.put(team, lifeOre);
 			this.oreLookup.put(tinfo.oreCoords(), lifeOre);
 		}
+
+		this.statusOreMarkers = new ArrayList<>();
+		// Should never be modified (even if we made a copy and weren't referencing the original TeamArenaMap data)
+		this.statusOreInfos = Collections.unmodifiableMap(mapInfo.statusOres());
+		this.statusOreItems = new EnumMap<>(StatusOreType.class);
+		this.statusItemLookup = new HashMap<>();
+		this.statusOreLookup = new HashMap<>();
+		for (var statusOreEntry : this.statusOreInfos.entrySet()) {
+			final StatusOreType type = statusOreEntry.getKey();
+
+			for (BlockCoords coords : statusOreEntry.getValue().coords()) {
+				StatusOre ore = new StatusOre(type, coords, this.gameWorld);
+				this.statusOreLookup.put(coords, ore);
+			}
+
+			final ItemStack itemStack = createItemStack(type, statusOreEntry.getValue());
+			this.statusOreItems.put(type, itemStack);
+			this.statusItemLookup.put(itemStack, type);
+
+			for (Vector markerLoc : statusOreEntry.getValue().hologramLocs()) {
+				PointMarker marker = new PointMarker(markerLoc.toLocation(this.gameWorld), type.displayName, type.color,
+					statusOreEntry.getValue().itemType());
+
+				this.statusOreMarkers.add(marker);
+			}
+		}
+	}
+
+	private static ItemStack createItemStack(StatusOreType type, TeamArenaMap.DNBStatusOreInfo info) {
+		Component name = createOreItemName(0, info.required(), type.displayName);
+		List<Component> lore = TextUtils.wrapString(type.description, Style.style(TextUtils.RIGHT_CLICK_TO));
+
+		return ItemBuilder.of(info.itemType()).displayName(name).lore(lore).build();
+	}
+
+	private static Component createOreItemName(int have, int required, Component displayName) {
+		TextColor colour;
+		if (have >= required)
+			colour = NamedTextColor.GREEN;
+		else
+			colour = NamedTextColor.RED;
+
+		return displayName.append(Component.text("  " + have + " / " + required, colour));
 	}
 
 	/**
@@ -172,49 +223,24 @@ public class DigAndBuild extends TeamArena
 			return true;
 
 		final Block block = event.getBlock();
-		BlockCoords coords = new BlockCoords(block);
+		final BlockCoords coords = new BlockCoords(block);
 
-		LifeOre ore = this.oreLookup.get(coords);
+		final LifeOre ore = this.oreLookup.get(coords);
 		if (ore != null) {
 			event.setCancelled(true);
 			Player breaker = event.getPlayer();
-			LifeOre.OreBreakResult result = ore.onBreak(breaker);
+			this.handleLifeOreBreak(event, block, ore, breaker);
+			return true;
+		}
 
-			if (result == LifeOre.OreBreakResult.BROKEN_BY_TEAMMATE) {
-				playNoBuildEffect(block, event.getPlayer(), true);
+		final StatusOre statusOre = this.statusOreLookup.get(coords);
+		if (statusOre != null) {
+			event.setCancelled(true);
+
+			final Player breaker = event.getPlayer();
+			if (statusOre.onBreak(breaker)) { // If broken goodly then give them ore item
+				this.giveStatusOreItem(breaker, statusOre);
 			}
-			else  {
-				if (result == LifeOre.OreBreakResult.BROKEN_BY_ENEMY) {
-					// Need to manually play block break effect since event was cancelled.
-					// For everyone except the breaker.
-					Location loc = block.getLocation();
-					for (Player p : Bukkit.getOnlinePlayers()) {
-						if (p != breaker && EntityUtils.distanceSqr(p, loc) <= 30d * 30d) {
-							ParticleUtils.blockBreakEffect(p, block);
-						}
-					}
-
-					this.announceOreDamaged(ore);
-				}
-				else { // KILLED
-					event.setCancelled(false);
-					// Stop the team from respawning
-					for (Player loser : ore.owningTeam.getPlayerMembers()) {
-						if (this.respawnTimers.remove(loser) != null) {
-							loser.sendActionBar(YOU_WONT_RESPAWN);
-						}
-					}
-					this.announceOreKilled(ore);
-
-					this.canJoinMidGame = false; // Prevent players from joining the game from now on.
-				}
-				// Bit messy to do here, need to clear current miners manually after successfully damaged
-				ore.clearMiners();
-
-				if (this.effTime != EFF_ACTIVE)
-					this.effTime += 7 * 20; // Delay time until anti stall
-			}
-
 			return true;
 		}
 
@@ -234,9 +260,52 @@ public class DigAndBuild extends TeamArena
 		}
 
 		// Give them an extra block
-		giveBlockOnBreak(block, event.getPlayer());
+		this.giveBlockOnBreak(block, event.getPlayer());
 
 		return true;
+	}
+
+	private void handleLifeOreBreak(BlockBreakEvent event, Block block, LifeOre ore, Player breaker) {
+		final LifeOre.OreBreakResult result = ore.onBreak(breaker);
+
+		if (result == LifeOre.OreBreakResult.BROKEN_BY_TEAMMATE) {
+			playNoBuildEffect(block, event.getPlayer(), true);
+		}
+		else  {
+			if (result == LifeOre.OreBreakResult.BROKEN_BY_ENEMY) {
+				// Need to manually play block break effect since event was cancelled.
+				// For everyone except the breaker.
+				Location loc = block.getLocation();
+				for (Player p : Bukkit.getOnlinePlayers()) {
+					if (p != breaker && EntityUtils.distanceSqr(p, loc) <= 30d * 30d) {
+						ParticleUtils.blockBreakEffect(p, block);
+					}
+				}
+
+				this.announceOreDamaged(ore);
+			}
+			else { // KILLED
+				event.setCancelled(false);
+				// Stop the team from respawning
+				for (Player loser : ore.owningTeam.getPlayerMembers()) {
+					if (this.respawnTimers.remove(loser) != null) {
+						loser.sendActionBar(YOU_WONT_RESPAWN);
+					}
+				}
+				this.announceOreKilled(ore);
+
+				this.canJoinMidGame = false; // Prevent players from joining the game from now on.
+			}
+			// Bit messy to do here, need to clear current miners manually after successfully damaged
+			ore.clearMiners();
+
+			if (this.effTime != EFF_ACTIVE)
+				this.effTime += 7 * 20; // Delay time until anti stall
+		}
+	}
+
+	private void giveStatusOreItem(final Player breaker, final StatusOre brokenOre) {
+		breaker.getInventory().addItem(this.statusOreItems.get(brokenOre.getType()));
 	}
 
 	/** Find the right type of block to give upon breaking a block. If none can be found then default to first
@@ -358,6 +427,8 @@ public class DigAndBuild extends TeamArena
 				p.playSound(p, Sound.BLOCK_NOTE_BLOCK_IRON_XYLOPHONE, SoundCategory.AMBIENT, 2f, 0.5f);
 			}
 		}, 5);
+
+		this.gameWorld.strikeLightningEffect(ore.coordsAsLoc.clone().add(0.5, 0, 0.5));
 	}
 
 	private void playNoBuildEffect(Block block, Player player, boolean lifeOre) {
@@ -428,7 +499,7 @@ public class DigAndBuild extends TeamArena
 			if (ore != null) {
 				if (ore.isDead()) {
 					// Spawn the angel before calling super, so the angel spawned by super has no effect.
-					// We want an angle that doesn't lock the player's position.
+					// We want an angel that doesn't lock the player's position.
 					SpectatorAngelManager.spawnAngel(playerVictim, false);
 					super.handleDeath(event);
 					this.respawnTimers.remove(playerVictim); // Also don't respawn them
@@ -456,6 +527,10 @@ public class DigAndBuild extends TeamArena
 	public void liveTick() {
 		super.liveTick();
 
+		this.statusOreLookup.forEach((blockCoords, statusOre) -> {
+			statusOre.tick();
+		});
+
 		// Anti stall
 		if (this.effTime != EFF_ACTIVE && TeamArena.getGameTick() - this.effTime >= 0) { // Activate
 			this.effTime = EFF_ACTIVE;
@@ -463,12 +538,23 @@ public class DigAndBuild extends TeamArena
 			this.upgradeTools(DEFAULT_EFF_ENCHANTS);
 
 			Bukkit.broadcast(FASTER_TOOLS_CHAT);
-			PlayerUtils.sendOptionalTitle(Component.empty(), FASTER_TOOLS_TITLE, 1, 20, 10);
+			PlayerUtils.sendOptionalTitle(Component.empty(), FASTER_TOOLS_TITLE, 1, 30, 20);
 			for (Player p : Bukkit.getOnlinePlayers()) {
 				p.playSound(p, Sound.ENTITY_CAT_PURREOW, SoundCategory.AMBIENT, 1f, 2f);
 			}
 		}
 
+		this.doBlockCooldowns();
+
+		// Check if game should be over
+		this.checkWinner();
+
+		if (this.winningTeam != null) {
+			this.prepEnd();
+		}
+	}
+
+	private void doBlockCooldowns() {
 		final int currentTick = TeamArena.getGameTick();
 		// Block stack regeneration
 		for (Player player : this.players) {
@@ -476,7 +562,7 @@ public class DigAndBuild extends TeamArena
 			boolean incremented = false;
 			boolean decremented = false;
 			for (ItemStack blockStack : this.blocks) {
-				PlayerInventory inventory = player.getInventory();
+				final PlayerInventory inventory = player.getInventory();
 				final int count = ItemUtils.getItemCount(inventory, blockStack);
 				if (count != MAX_BLOCK_COUNT) {
 					BlockTimes times = this.blockTimes.get(player); // Should never be null
@@ -496,8 +582,6 @@ public class DigAndBuild extends TeamArena
 						decremented = true;
 						times.blockBreakTime = currentTick;
 						inventory.removeItemAnySlot(blockStack.asOne());
-
-
 					}
 				}
 
@@ -505,18 +589,12 @@ public class DigAndBuild extends TeamArena
 					break;
 			}
 		}
-
-		// Check if game should be over
-		this.checkWinner();
-
-		if (this.winningTeam != null) {
-			this.prepEnd();
-		}
 	}
 
 	@Override
 	public void prepEnd() {
 		super.prepEnd();
+
 		//LoadedChunkTracker.clearTrackedChunks();
 	}
 

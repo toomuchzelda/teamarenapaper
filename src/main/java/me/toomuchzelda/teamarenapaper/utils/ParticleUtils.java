@@ -27,5 +27,9 @@ public class ParticleUtils {
 	public static void blockBreakEffect(Player player, Block block) {
 		Location loc = block.getLocation();
 		player.playEffect(loc, Effect.STEP_SOUND, block.getType());
+
+		// TODO Test Play the sound too
+		//final SoundGroup soundGroup = block.getBlockSoundGroup();
+		//player.playSound(loc, soundGroup.getBreakSound(), SoundCategory.BLOCKS, soundGroup.getVolume(), soundGroup.getPitch());
 	}
 }

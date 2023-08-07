@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.gamescheduler;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.GameType;
+import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.StatusOreType;
 import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
 import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
 import me.toomuchzelda.teamarenapaper.utils.IntBoundingBox;
@@ -43,8 +44,11 @@ public class TeamArenaMap
 
 	/** Info per team for dnb */
 	public record DNBTeamInfo(BlockCoords oreCoords, double protectionRadius) {}
+	public record DNBStatusOreInfo(Material oreType, Material itemType, int required, List<Vector> hologramLocs,
+								   List<BlockCoords> coords) {}
 	public record DNBInfo(Vector middle, Material oreType, List<Material> tools, List<Material> blocks,
-						  List<IntBoundingBox> noBuildZones, Map<String, DNBTeamInfo> teams) {}
+						  List<IntBoundingBox> noBuildZones, Map<StatusOreType, DNBStatusOreInfo> statusOres,
+						  Map<String, DNBTeamInfo> teams) {}
 
 	private final String name;
 	private final String authors;
@@ -394,6 +398,40 @@ public class TeamArenaMap
 					noBuildZones = new ArrayList<>();
 				}
 
+				Map<StatusOreType, DNBStatusOreInfo> statusOres;
+				try {
+					Map<String, Map<String, Object>> oresConfig = (Map<String, Map<String, Object>>) dnbMap.get("StatusOres");
+					statusOres = new EnumMap<>(StatusOreType.class);
+					for (var entry : oresConfig.entrySet()) {
+
+						StatusOreType type = StatusOreType.valueOf(entry.getKey().toUpperCase(Locale.ENGLISH));
+						Material statusOreType = Material.valueOf(((String) entry.getValue().get("OreType")).toUpperCase(Locale.ENGLISH));
+						Material itemType = Material.valueOf(((String) entry.getValue().get("Item")).toUpperCase(Locale.ENGLISH));
+						int required = (Integer) entry.getValue().get("Required");
+
+						List<String> holograms = (List<String>) entry.getValue().get("Holograms");
+						List<Vector> hologramCoords = new ArrayList<>(holograms.size());
+						for (String hologramCoordStr : holograms) {
+							hologramCoords.add(BlockUtils.parseCoordsToVec(hologramCoordStr, 0.5d, 0.5d, 0.5d));
+						}
+
+						List<String> coords = (List<String>) entry.getValue().get("Locations");
+						List<BlockCoords> oreStatusBlockCoordsList = new ArrayList<>(coords.size());
+						for (String oreStatusCoordStr : coords) {
+							BlockCoords oreStatusBlockCoords = BlockUtils.parseCoordsToBlockCoords(oreStatusCoordStr);
+							oreStatusBlockCoordsList.add(oreStatusBlockCoords);
+						}
+
+						DNBStatusOreInfo statusOreInfo = new DNBStatusOreInfo(statusOreType, itemType, required, hologramCoords,
+							oreStatusBlockCoordsList);
+						statusOres.put(type, statusOreInfo);
+					}
+				}
+				catch (ClassCastException | NullPointerException | IllegalArgumentException e) {
+					Main.logger().warning("Bad value in DNB status ore config of " + worldFolder.getName() + ". " + e.getMessage());
+					statusOres = Collections.emptyMap();
+				}
+
 				Map<String, DNBTeamInfo> teamInfo;
 				try {
 					Map<String, Map<String, Object>> teamConfigs = (Map<String, Map<String, Object>>) dnbMap.get("Teams");
@@ -416,7 +454,7 @@ public class TeamArenaMap
 					throw e;
 				}
 
-				dnbInfo = new DNBInfo(middle, oreType, tools, blocks, noBuildZones, teamInfo);
+				dnbInfo = new DNBInfo(middle, oreType, tools, blocks, noBuildZones, statusOres, teamInfo);
 			}
 			catch (Exception e) {
 				Main.logger().warning("Error when parsing DNB config for " + worldFolder.getName());
