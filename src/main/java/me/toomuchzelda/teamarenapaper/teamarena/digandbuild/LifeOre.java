@@ -3,32 +3,27 @@ package me.toomuchzelda.teamarenapaper.teamarena.digandbuild;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
-import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
-import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
-import me.toomuchzelda.teamarenapaper.utils.RealHologram;
-import me.toomuchzelda.teamarenapaper.utils.TextColors;
+import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.entity.Player;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class LifeOre
 {
 	/** Number of times ore must be broken to disqualify the team */
 	private static final int HEALTH = 12;
+	private static final double HEAL_PARTICLE_DIST = 1d;
+	public static final int HEAL_PARTICLE_COUNT = 20;
 
 	final TeamArenaTeam owningTeam;
 	final BlockCoords coords;
 	final Location coordsAsLoc;
+	private final Location midLoc; // The middle of the block (coordsAsLoc + (0.5, 0.5, 0.5))
 
 	private int health;
 
@@ -36,7 +31,6 @@ public class LifeOre
 	final double protectionRadiusSqr;
 
 	private final Component[] healthComponents; // Pre generated components of the ore's health.
-
 	private final PointMarker hologram;
 
 	private final Set<Player> currentMiners;
@@ -45,6 +39,7 @@ public class LifeOre
 		this.owningTeam = owningTeam;
 		this.coords = coords;
 		this.coordsAsLoc = coords.toLocation(world);
+		this.midLoc = this.coordsAsLoc.clone().add(0.5, 0.5, 0.5);
 
 		this.health = HEALTH;
 
@@ -135,11 +130,13 @@ public class LifeOre
 	}
 
 	OreBreakResult onBreak(Player breaker) {
+		if (this.health == 0) return OreBreakResult.ALREADY_DEAD;
+
 		final PlayerInfo pinfo = Main.getPlayerInfo(breaker);
 		if (pinfo.team != this.owningTeam) {
-			this.health = Math.max(0, this.health - 1);
-			// Update the hologram
-			this.hologram.setText(this.getTextDisplayComponent());
+
+			boolean b = this.setHealth(this.health - 1);
+			assert b;
 
 			// Issue where after breaking, but the player continues mining, the BlockDamageEvent isn't re-called
 			// So the player isn't in currentMiners anymore.
@@ -162,7 +159,29 @@ public class LifeOre
 	enum OreBreakResult {
 		BROKEN_BY_ENEMY,
 		BROKEN_BY_TEAMMATE,
-		KILLED
+		KILLED,
+		ALREADY_DEAD
+	}
+
+	public int getHealth() {
+		return this.health;
+	}
+
+	public boolean setHealth(int newHealth) {
+		if (this.health == 0) return false; // Cannot change health after died.
+
+		this.health = Math.max(0, newHealth);
+		this.hologram.setText(this.getTextDisplayComponent());
+		return true;
+	}
+
+	public void playHealEffect() {
+		final World world = this.midLoc.getWorld();
+		world.spawnParticle(Particle.VILLAGER_HAPPY, this.midLoc, HEAL_PARTICLE_COUNT, HEAL_PARTICLE_DIST, HEAL_PARTICLE_DIST, HEAL_PARTICLE_DIST);
+
+		// Sounds
+		world.playSound(this.midLoc, Sound.BLOCK_ANVIL_USE, SoundCategory.BLOCKS, 1f, 2f);
+		world.playSound(this.midLoc, Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.BLOCKS, 1f, 0.5f);
 	}
 
 	private Component createHealthComponent(int health) {

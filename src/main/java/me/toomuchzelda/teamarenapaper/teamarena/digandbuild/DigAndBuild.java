@@ -18,10 +18,9 @@ import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockDamageAbortEvent;
-import org.bukkit.event.block.BlockDamageEvent;
-import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.Event;
+import org.bukkit.event.block.*;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.scoreboard.Team;
@@ -197,20 +196,14 @@ public class DigAndBuild extends TeamArena
 	}
 
 	private static ItemStack createItemStack(StatusOreType type, TeamArenaMap.DNBStatusOreInfo info) {
-		Component name = createOreItemName(0, info.required(), type.displayName);
+		Component name = createOreItemName(info.required(), type.displayName);
 		List<Component> lore = TextUtils.wrapString(type.description, Style.style(TextUtils.RIGHT_CLICK_TO));
 
 		return ItemBuilder.of(info.itemType()).displayName(name).lore(lore).build();
 	}
 
-	private static Component createOreItemName(int have, int required, Component displayName) {
-		TextColor colour;
-		if (have >= required)
-			colour = NamedTextColor.GREEN;
-		else
-			colour = NamedTextColor.RED;
-
-		return displayName.append(Component.text("  " + have + " / " + required, colour));
+	private static Component createOreItemName(int required, Component displayName) {
+		return displayName.append(Component.text(" - Need " + required, NamedTextColor.RED));
 	}
 
 	/**
@@ -267,6 +260,7 @@ public class DigAndBuild extends TeamArena
 
 	private void handleLifeOreBreak(BlockBreakEvent event, Block block, LifeOre ore, Player breaker) {
 		final LifeOre.OreBreakResult result = ore.onBreak(breaker);
+		if (result == LifeOre.OreBreakResult.ALREADY_DEAD) return;
 
 		if (result == LifeOre.OreBreakResult.BROKEN_BY_TEAMMATE) {
 			playNoBuildEffect(block, event.getPlayer(), true);
@@ -309,7 +303,8 @@ public class DigAndBuild extends TeamArena
 	}
 
 	/** Find the right type of block to give upon breaking a block. If none can be found then default to first
-	 *  one in this.blocks */
+	 *  one in this.blocks.
+	 *  Does not handle status ore blocks */
 	private void giveBlockOnBreak(Block block, Player breaker) {
 		final Material brokenBlockType = block.getType();
 		// Don't give blocks for instant-breakable and other misc blocks.
@@ -360,6 +355,42 @@ public class DigAndBuild extends TeamArena
 		// Event not cancelled if reached here
 		// Set the timer for next block regen
 		this.blockTimes.computeIfAbsent(placer, player -> new BlockTimes()).blockPlaceTime = TeamArena.getGameTick();
+	}
+
+	@Override
+	public void onInteract(final PlayerInteractEvent event) {
+		super.onInteract(event);
+
+		if (event.useItemInHand() == Event.Result.DENY) return;
+		if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+
+		// If they're redeeming status ore items to get the buff
+		final LifeOre clickedOre = this.isWithinOreRadius(event.getClickedBlock().getLocation());
+		if (clickedOre == null) return;
+		final Player clicker = event.getPlayer();
+		if (!clickedOre.owningTeam.hasMember(clicker)) return;
+
+		final ItemStack usedItemStack = event.getItem();
+		if (usedItemStack != null) {
+			final StatusOreType oreType = this.statusItemLookup.get(usedItemStack.asOne());
+			if (oreType != null) { // A valid item was used and we have the corresponding StatusOreType
+				int itemAmount = ItemUtils.getItemCount(clicker.getInventory(), usedItemStack);
+				final int required = this.statusOreInfos.get(oreType).required();
+				final int toTake = oreType.action.buff(clicker, required, itemAmount, clickedOre, this);
+				if (toTake > 0) {
+					itemAmount -= toTake;
+					if (itemAmount < 0) {
+						Main.logger().severe("itemAmount less than 0");
+						Thread.dumpStack();
+						itemAmount = 0; // fallback
+					}
+
+					ItemUtils.maxItemAmount(clicker.getInventory(), usedItemStack, itemAmount);
+
+					assert ItemUtils.getItemCount(clicker.getInventory(), usedItemStack) == itemAmount;
+				}
+			}
+		}
 	}
 
 	/** Broadcast ore damage */
@@ -563,25 +594,27 @@ public class DigAndBuild extends TeamArena
 			boolean decremented = false;
 			for (ItemStack blockStack : this.blocks) {
 				final PlayerInventory inventory = player.getInventory();
-				final int count = ItemUtils.getItemCount(inventory, blockStack);
-				if (count != MAX_BLOCK_COUNT) {
+				final int totalCount = ItemUtils.getItemCount(inventory, blockStack);
+				if (totalCount != MAX_BLOCK_COUNT) {
 					BlockTimes times = this.blockTimes.get(player); // Should never be null
 					if (times == null) {
-						Main.logger().warning(player.getName() + " has " + count + " blocks and doesn't have lastPlaceTime cooldown");
+						Main.logger().warning(player.getName() + " has " + totalCount + " blocks and doesn't have lastPlaceTime cooldown");
 						continue;
 					}
 
 					if (!incremented && times.blockPlaceTime != BlockTimes.NO_TIME &&
-						currentTick - times.blockPlaceTime >= TICKS_PER_GAIN_BLOCK && count < MAX_BLOCK_COUNT) {
+						currentTick - times.blockPlaceTime >= TICKS_PER_GAIN_BLOCK && totalCount < MAX_BLOCK_COUNT) {
 						incremented = true;
 						times.blockPlaceTime = currentTick;
 						inventory.addItem(blockStack.asOne());
 					}
 					else if (!decremented && times.blockBreakTime != BlockTimes.NO_TIME &&
-						currentTick - times.blockBreakTime >= TICKS_PER_LOSE_BLOCK && count > MAX_BLOCK_COUNT) {
+						currentTick - times.blockBreakTime >= TICKS_PER_LOSE_BLOCK && totalCount > MAX_BLOCK_COUNT) {
 						decremented = true;
 						times.blockBreakTime = currentTick;
-						inventory.removeItemAnySlot(blockStack.asOne());
+						ItemUtils.maxItemAmount(inventory, blockStack, totalCount - 1);
+
+						assert ItemUtils.getItemCount(inventory, blockStack) == totalCount - 1;
 					}
 				}
 

@@ -270,7 +270,7 @@ public class KitExplosive extends Kit
 					final int timeSince = currentTick - cinfo.throwTime();
 
 					if(timeSince % 6 == 0) {
-						thrower.getWorld().playSound(thrower, Sound.BLOCK_ANVIL_PLACE, SoundCategory.PLAYERS, 0.75f, 0.8f);
+						thrower.getWorld().playSound(thrower, Sound.BLOCK_ANVIL_PLACE, SoundCategory.PLAYERS, 0.7f, 0.8f);
 					}
 
 					if(timeSince % 2 == 0) {
@@ -418,6 +418,7 @@ public class KitExplosive extends Kit
 
 			if (ItemUtils.getMaterialCount(inv, RPG.getType()) == RPG_MAX_IN_INV) {
 				RPG_RECHARGES.put(shooter, TeamArena.getGameTick());
+				Main.logger().severe("The forbidden code has run. KitExplosive.ExplosiveAbility.rpgLaunch()");
 			}
 
 			Location loc = shooter.getEyeLocation();

@@ -103,8 +103,11 @@ public class EntityUtils {
 		}
 
 		//send to all viewers
-		for (Player p : entity.getTrackedPlayers()) {
+		/*for (Player p : entity.getTrackedPlayers()) {
 			PlayerUtils.sendPacket(p, packet);
+		}*/
+		for (ServerPlayerConnection connection : getTrackedPlayers0(entity)) {
+			connection.send(packet);
 		}
 	}
 
@@ -247,6 +250,7 @@ public class EntityUtils {
 		return createMovePacket(entity.getId(), entity.getLocation(), xDelta, yDelta, zDelta, yawDelta, pitchDelta, onGround);
 	}
 
+	// Following 2 methods exist because paper Entity.getTrackedPlayers() is really slow
 	@Deprecated
 	public static Set<ServerPlayerConnection> getTrackedPlayers0(Entity viewedEntity) {
 		net.minecraft.world.entity.Entity nmsEntity = ((CraftEntity) viewedEntity).getHandle();

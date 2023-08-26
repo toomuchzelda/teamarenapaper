@@ -12,6 +12,7 @@ import org.bukkit.block.Sign;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.SkullMeta;
@@ -88,6 +89,18 @@ public class ItemUtils {
 			ItemStack cursor = p.getItemOnCursor();
 			if(cursor != null && predicate.test(cursor))
 				itemsFound.add(cursor);
+
+			// Get their open crafting slots if we can
+			InventoryView view = p.getOpenInventory();
+			if (view.getType() == InventoryType.CRAFTING) { // WORKBENCH is crafting tables
+				CraftingInventory craftingInventory = (CraftingInventory) view.getTopInventory();
+				// 1-4 are the crafting slots, 0 is the result slot
+				// although i will just use getMatrix() for betterness
+				for (ItemStack craftingItem : craftingInventory.getMatrix()) {
+					if (craftingItem != null && predicate.test(craftingItem))
+						itemsFound.add(craftingItem);
+				}
+			}
 		}
 
 		return itemsFound;
@@ -102,7 +115,28 @@ public class ItemUtils {
 	 * @author onett425
 	 */
 	public static void maxItemAmount(Inventory inv, ItemStack targetItem, int maxCount) {
+		List<ItemStack> items = getItemsInInventory(targetItem, inv);
+
 		int count = 0;
+		for (ItemStack item : items) {
+			assert item != null && targetItem.isSimilar(item);
+			int stackAmount = item.getAmount();
+
+			if (count + stackAmount <= maxCount) {
+				count += stackAmount;
+			}
+			else {
+				if (maxCount - count > 0) {
+					item.setAmount(maxCount - count);
+					count = maxCount;
+				}
+				else {
+					item.setAmount(0);
+				}
+			}
+		}
+
+		/*int count = 0;
 		for (var iterator = inv.iterator(); iterator.hasNext(); ) {
 			ItemStack stack = iterator.next();
 			if (stack == null || !targetItem.isSimilar(stack))
@@ -119,7 +153,7 @@ public class ItemUtils {
 			} else {
 				count += amount;
 			}
-		}
+		}*/
 	}
 
 	/**
@@ -129,12 +163,11 @@ public class ItemUtils {
 	 * @author onett425
 	 */
 	public static int getMaterialCount(Inventory inv, Material material) {
-		ItemStack[] items = inv.getContents();
+		List<ItemStack> items = getItemsInInventory(material, inv);
 		int itemCount = 0;
 		for (ItemStack item : items) {
-			if (item != null && item.getType() == material) {
-				itemCount += item.getAmount();
-			}
+			assert item.getType() == material;
+			itemCount += item.getAmount();
 		}
 		return itemCount;
 	}
@@ -151,7 +184,8 @@ public class ItemUtils {
 
     /**
      * also get rid of item from armor slots, and offhand
-     *
+     * Only used by CaptureTheFlag
+	 *
      * @param item   item to remove
      * @param player player to remove from
      */
@@ -168,6 +202,12 @@ public class ItemUtils {
         }
         if (player.getItemOnCursor().isSimilar(item))
             player.setItemOnCursor(null);
+
+		// Remove from inventory crafting view if they have it open.
+		final InventoryView openInventory = player.getOpenInventory();
+		if (openInventory.getType() == InventoryType.CRAFTING) {
+			openInventory.getTopInventory().remove(item);
+		}
     }
 
     public static ItemStack colourLeatherArmor(Color color, ItemStack armorPiece) {
@@ -191,15 +231,15 @@ public class ItemUtils {
 	}
 
     /**
-     * return a bunch of color chars to append to the end of item name/lore to make it unique?
+     * return a bunch of color chars to append to the end of item name/lore to make it unique (including uniquely hash-able)
      * used to stop stacking of otherwise identical items.
      * credit libraryaddict - https://github.com/libraryaddict/RedWarfare/blob/master/redwarfare-core/src/me/libraryaddict/core/utils/UtilInv.java
      */
     public static String getUniqueId() {
-        StringBuilder string = new StringBuilder();
-
-        for (char c : Integer.toString(_uniqueName++).toCharArray()) {
-            string.append(ChatColor.COLOR_CHAR).append(c);
+		final String strints = Integer.toString(_uniqueName++);
+		final StringBuilder string = new StringBuilder(strints.length() * 2);
+        for (int i = 0; i < strints.length(); i++) {
+            string.append(ChatColor.COLOR_CHAR).append(strints.charAt(i));
         }
 
         return string.toString();

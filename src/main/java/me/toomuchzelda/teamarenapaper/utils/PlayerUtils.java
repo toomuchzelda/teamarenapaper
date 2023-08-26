@@ -87,7 +87,7 @@ public class PlayerUtils {
 	}
 
 	public static PacketContainer createUseEntityPacket(Player user, int usedEntityId, EquipmentSlot hand, boolean attack) {
-		ByteBuf buf = Unpooled.directBuffer();
+		ByteBuf buf = Unpooled.buffer();
 		FriendlyByteBuf friendly = new FriendlyByteBuf(buf);
 		friendly.writeVarInt(usedEntityId);
 
