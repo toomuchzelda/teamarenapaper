@@ -17,6 +17,7 @@ import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitbox;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
+import me.toomuchzelda.teamarenapaper.potioneffects.PotionEffectManager;
 import me.toomuchzelda.teamarenapaper.sql.DBSetPreferences;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
@@ -133,6 +134,13 @@ public class EventListeners implements Listener
 		}
 
 		try {
+			PotionEffectManager.tick();
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		try {
 			ChatAnnouncerManager.tick();
 		}
 		catch(Exception e) {
@@ -234,11 +242,14 @@ public class EventListeners implements Listener
 	public void playerQuit(PlayerQuitEvent event) {
 		event.quitMessage(null);
 		final Player leaver = event.getPlayer();
+
 		Main.getGame().leavingPlayer(leaver);
 		BuildingListeners.onPlayerQuit(event);
 		//Main.getPlayerInfo(event.getPlayer()).nametag.remove();
 		FakeHitboxManager.removeFakeHitbox(leaver);
 		LoadedChunkTracker.removeTrackedChunks(leaver);
+		SidebarManager.removeInstance(leaver);
+
 		PlayerInfo pinfo = Main.removePlayerInfo(leaver);
 
 		//save preferences when leaving
@@ -631,6 +642,11 @@ public class EventListeners implements Listener
 			FakeHitbox hitbox = FakeHitboxManager.getFakeHitbox(player);
 			hitbox.handlePoseChange(event);
 		}
+	}
+
+	@EventHandler
+	public void entityPotionEffect(EntityPotionEffectEvent event) {
+		PotionEffectManager.onEntityPotionEffect(event);
 	}
 
 	@EventHandler
