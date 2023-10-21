@@ -44,7 +44,7 @@ public class PlayerInfo
 
 	private Map<Preference<?>, Object> preferences = new HashMap<>();
 
-	private Map<CosmeticType, NamespacedKey> selectedCosmetic = new EnumMap<>(CosmeticType.class);
+	private final Map<CosmeticType, NamespacedKey> selectedCosmetic = new EnumMap<>(CosmeticType.class);
 
 	private final Map<String, Integer> messageCooldowns = new HashMap<>();
 	private final LinkedList<DamageLogEntry> damageReceivedLog;
@@ -106,7 +106,6 @@ public class PlayerInfo
 	 *     <li>If the player has an active kit, return the active kit.</li>
 	 *     <li>Otherwise, return the player's selected kit.</li>
 	 * </ul>
-	 * @return
 	 */
 	public Kit getEffectiveKit() {
 		return activeKit != null ? activeKit : kit;
@@ -198,7 +197,7 @@ public class PlayerInfo
 		messageCooldowns.clear();
 	}
 
-	public void logDamageReceived(Damageable damaged, DamageType damageType, double damage, @Nullable Entity damager, int time) {
+	public void logDamageReceived(DamageType damageType, double damage, @Nullable Entity damager, int time) {
 		Component damagerComponent = damager == null ? null : EntityUtils.getComponent(damager);
 		damageReceivedLog.add(new DamageLogEntry(damageType, damage, damagerComponent, time));
 	}

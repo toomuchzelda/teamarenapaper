@@ -4,6 +4,7 @@ import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
+import me.toomuchzelda.teamarenapaper.potioneffects.PotionEffectManager;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
@@ -21,6 +22,8 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 
 import java.util.LinkedHashMap;
@@ -61,18 +64,22 @@ public class KitNinja extends Kit
 
 	public static class NinjaAbility extends Ability
 	{
-		private static final Vector EXTRA_GRAVITY_DELTA = new Vector(0d, -0.1d, 0d);
+		private static final String EFFECT_KEY = "ninjanightvision";
+		private static final PotionEffect NIGHT_VISION_EFFECT = new PotionEffect(PotionEffectType.NIGHT_VISION, PotionEffect.INFINITE_DURATION, 1);
 
+		private static final Vector EXTRA_GRAVITY_DELTA = new Vector(0d, -0.1d, 0d);
 		private final Map<Player, EnderPearl> THROWN_PEARLS = new LinkedHashMap<>();
 
 		@Override
 		public void giveAbility(Player player) {
 			player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).addModifier(NINJA_SPEED_MODIFIER);
+			PotionEffectManager.addEffect(player, EFFECT_KEY, NIGHT_VISION_EFFECT);
 		}
 
 		@Override
 		public void removeAbility(Player player) {
 			player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).removeModifier(NINJA_SPEED_MODIFIER);
+			PotionEffectManager.removeEffect(player, PotionEffectType.NIGHT_VISION, EFFECT_KEY);
 			THROWN_PEARLS.remove(player);
 		}
 

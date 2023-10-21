@@ -2,9 +2,11 @@ package me.toomuchzelda.teamarenapaper.teamarena.digandbuild;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
+import me.toomuchzelda.teamarenapaper.potioneffects.PotionEffectManager;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.statusorebuffactions.HasteOreAction;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy.SearchAndDestroy;
@@ -13,7 +15,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
-import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.enchantments.Enchantment;
@@ -23,6 +24,7 @@ import org.bukkit.event.block.*;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
 import org.intellij.lang.annotations.RegExp;
@@ -32,7 +34,7 @@ import java.util.*;
 public class DigAndBuild extends TeamArena
 {
 	private static final Component GAME_NAME = Component.text("Dig and Build", NamedTextColor.DARK_GREEN);
-	private static final Component HOW_TO_PLAY = Component.text("Dig your way around the map and break the enemies' " +
+	private static final Component HOW_TO_PLAY = Component.text("Make your way around the map and break the enemies' " +
 		"Life Ore!!", NamedTextColor.DARK_GREEN);
 
 	// MESSAGES
@@ -364,10 +366,12 @@ public class DigAndBuild extends TeamArena
 		if (event.useItemInHand() == Event.Result.DENY) return;
 		if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
 
+		final Player clicker = event.getPlayer();
+		if (this.isDead(clicker)) return;
+
 		// If they're redeeming status ore items to get the buff
 		final LifeOre clickedOre = this.isWithinOreRadius(event.getClickedBlock().getLocation());
 		if (clickedOre == null) return;
-		final Player clicker = event.getPlayer();
 		if (!clickedOre.owningTeam.hasMember(clicker)) return;
 
 		final ItemStack usedItemStack = event.getItem();
@@ -520,6 +524,7 @@ public class DigAndBuild extends TeamArena
 
 	@Override
 	public void handleDeath(DamageEvent event) {
+		boolean callSuper = true;
 		if (event.getVictim() instanceof Player playerVictim) {
 			this.blockTimes.remove(playerVictim);
 
@@ -527,25 +532,25 @@ public class DigAndBuild extends TeamArena
 			TeamArenaTeam victimsTeam = Main.getPlayerInfo(playerVictim).team;
 			LifeOre ore = teamOres.get(victimsTeam);
 
-			if (ore != null) {
-				if (ore.isDead()) {
-					// Spawn the angel before calling super, so the angel spawned by super has no effect.
-					// We want an angel that doesn't lock the player's position.
-					SpectatorAngelManager.spawnAngel(playerVictim, false);
-					super.handleDeath(event);
-					this.respawnTimers.remove(playerVictim); // Also don't respawn them
+			assert ore != null : playerVictim.getName() + " died and didn't have an ore??";
 
-					this.checkWinner();
-					return; // Don't call super again
-				}
+			if (ore.isDead()) {
+				// Spawn the angel before calling super, so the angel spawned by super has no effect.
+				// We want an angel that doesn't lock the player's position.
+				SpectatorAngelManager.spawnAngel(playerVictim, false);
+				super.handleDeath(event);
+				this.respawnTimers.remove(playerVictim); // Also don't respawn them
+
+				this.checkWinner();
+				callSuper = false; // Don't call super again
 			}
-			else {
-				Main.logger().warning("DigAndBuild.handleDeath() player that died didn't have an ore??");
-				Thread.dumpStack();
-			}
+
+			// Should be removed by super.handleDeath -> PlayerUtils.resetState
+			assert !PotionEffectManager.hasEffect(playerVictim, PotionEffectType.FAST_DIGGING, HasteOreAction.HASTE_EFFECT_KEY);
 		}
 
-		super.handleDeath(event);
+		if (callSuper)
+			super.handleDeath(event);
 	}
 
 	@Override

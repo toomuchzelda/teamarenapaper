@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.digandbuild;
 
+import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.statusorebuffactions.HasteOreAction;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.statusorebuffactions.HealOreAction;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
@@ -18,7 +19,7 @@ public enum StatusOreType
 	HASTE(Color.ORANGE, Component.text("Team Haste"),
 		"Trade at the canteen to speed up your team's digging",
 		10 * 20,
-		null);
+		new HasteOreAction());
 
 	public final Color color;
 	public final Component displayName;

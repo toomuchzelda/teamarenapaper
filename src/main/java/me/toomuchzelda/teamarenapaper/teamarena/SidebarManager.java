@@ -16,10 +16,14 @@ import static me.toomuchzelda.teamarenapaper.utils.ScoreboardUtils.*;
 public class SidebarManager {
 
 	public static final Component DEFAULT_TITLE = Component.text("Blue Warfare", NamedTextColor.BLUE);
-	private static final WeakHashMap<Player, SidebarManager> cachedScoreboard = new WeakHashMap<>();
+	private static final Map<Player, SidebarManager> cachedScoreboard = new HashMap<>();
 
 	public static SidebarManager getInstance(Player player) {
 		return cachedScoreboard.computeIfAbsent(player, ignored -> new SidebarManager(DEFAULT_TITLE));
+	}
+
+	public static void removeInstance(Player player) {
+		cachedScoreboard.remove(player);
 	}
 
 	public Component title;

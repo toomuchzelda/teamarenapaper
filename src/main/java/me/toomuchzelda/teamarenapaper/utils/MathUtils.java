@@ -55,6 +55,10 @@ public class MathUtils
 		return Math.max(Math.min(value, max), min);
 	}
 
+	public static long clamp(long min, long max, long value) {
+		return Math.max(Math.min(value, max), min);
+	}
+
 	public static double clamp(double min, double max, double value) {
 		return Math.max(Math.min(value, max), min);
 	}

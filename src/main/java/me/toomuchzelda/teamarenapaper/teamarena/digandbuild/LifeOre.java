@@ -16,7 +16,8 @@ import java.util.*;
 public class LifeOre
 {
 	/** Number of times ore must be broken to disqualify the team */
-	private static final int HEALTH = 12;
+	public static final int STARTING_HEALTH = 12;
+	public static final int MAX_HEALTH = 15;
 	private static final double HEAL_PARTICLE_DIST = 1d;
 	public static final int HEAL_PARTICLE_COUNT = 20;
 
@@ -41,13 +42,13 @@ public class LifeOre
 		this.coordsAsLoc = coords.toLocation(world);
 		this.midLoc = this.coordsAsLoc.clone().add(0.5, 0.5, 0.5);
 
-		this.health = HEALTH;
+		this.health = STARTING_HEALTH;
 
 		this.protectionRadius = protectionRadius;
 		this.protectionRadiusSqr = protectionRadius * protectionRadius;
 
 		// Pre generate the health hologram texts
-		this.healthComponents = new Component[this.health + 1];
+		this.healthComponents = new Component[MAX_HEALTH + 1];
 		for (int i = 0; i < this.healthComponents.length; i++) {
 			this.healthComponents[i] = createHealthComponent(i);
 		}
@@ -181,6 +182,15 @@ public class LifeOre
 
 		// Sounds
 		world.playSound(this.midLoc, Sound.BLOCK_ANVIL_USE, SoundCategory.BLOCKS, 1f, 2f);
+		world.playSound(this.midLoc, Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.BLOCKS, 1f, 0.5f);
+	}
+
+	public void playHasteEffect() {
+		final World world = this.midLoc.getWorld();
+		world.spawnParticle(Particle.FLAME, this.midLoc, HEAL_PARTICLE_COUNT, HEAL_PARTICLE_DIST, HEAL_PARTICLE_DIST, HEAL_PARTICLE_DIST);
+
+		// Sounds
+		world.playSound(this.midLoc, Sound.ENTITY_WARDEN_DIG, SoundCategory.BLOCKS, 1f, 2f);
 		world.playSound(this.midLoc, Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.BLOCKS, 1f, 0.5f);
 	}
 

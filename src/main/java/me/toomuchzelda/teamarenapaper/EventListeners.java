@@ -248,6 +248,7 @@ public class EventListeners implements Listener
 		//Main.getPlayerInfo(event.getPlayer()).nametag.remove();
 		FakeHitboxManager.removeFakeHitbox(leaver);
 		LoadedChunkTracker.removeTrackedChunks(leaver);
+		PotionEffectManager.removeAll(event.getPlayer());
 		SidebarManager.removeInstance(leaver);
 
 		PlayerInfo pinfo = Main.removePlayerInfo(leaver);

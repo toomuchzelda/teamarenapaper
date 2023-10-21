@@ -714,7 +714,7 @@ public abstract class TeamArena
 					hologram.respawn();
 
 					//add to their damage log
-					pinfo.logDamageReceived(p, event.getDamageType(), event.getFinalDamage(), event.getFinalAttacker(), gameTick);
+					pinfo.logDamageReceived(event.getDamageType(), event.getFinalDamage(), event.getFinalAttacker(), gameTick);
 
 					//give kill assist credit
 					if (event.getFinalAttacker() instanceof Player attacker && p != attacker) {
@@ -829,6 +829,7 @@ public abstract class TeamArena
 		// Item handling
 		if (respawnItem.isSimilar(item)) {
 			event.setUseItemInHand(Event.Result.DENY);
+			assert isDead(player);
 			if (canRespawn(player))
 				setToRespawn(player);
 			else

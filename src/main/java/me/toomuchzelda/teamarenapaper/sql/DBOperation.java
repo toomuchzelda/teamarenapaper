@@ -13,15 +13,23 @@ public abstract class DBOperation<T>
 	public final T run() throws SQLException {
 		T value;
 		if(DatabaseManager.isActive()) {
+			Connection connection = null;
 			try {
 				Main.logger().info("DB: " + this.getClass().getSimpleName() + ' ' + this.getLogMessage());
-				value = this.execute(DatabaseManager.getConnection());
+				connection = DatabaseManager.getConnection();
+				value = this.execute(connection);
 			}
 			catch (SQLException e) {
 				Main.logger().severe(e.getMessage());
 				Main.logger().severe(e.getSQLState());
 				e.printStackTrace();
 				throw e;
+			}
+			finally {
+				if (connection != null) {
+					connection.close();
+					DatabaseManager.ACTIVE_CONNECTIONS.remove(connection);
+				}
 			}
 		}
 		else {

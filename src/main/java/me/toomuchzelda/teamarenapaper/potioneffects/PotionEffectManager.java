@@ -66,10 +66,10 @@ public class PotionEffectManager
 				// Only apply new effect if differs from current visible effect
 				if (!highestEffect.compare(this.visibleEffect, this.visibleEffectApplied, TeamArena.getGameTick())) {
 					newEffect = highestEffect.toPotionEffect(iDuration);
-					Bukkit.broadcastMessage("compare false for " + highestEffect.type);
+					//Bukkit.broadcastMessage("compare false for " + highestEffect.type);
 				}
 				else {
-					Bukkit.broadcastMessage("compare true for " + highestEffect.type);
+					//Bukkit.broadcastMessage("compare true for " + highestEffect.type);
 				}
 				this.toTick = highestEffect;
 
@@ -104,7 +104,7 @@ public class PotionEffectManager
 				assert this.toTick != null;
 				if (!this.toTick.tick()) { // recalc once effect has run out
 					this.effects.remove(this.toTick.key);
-					Bukkit.broadcastMessage("Removed " + this.toTick.key);
+					//Bukkit.broadcastMessage("Removed " + this.toTick.key);
 					this.recalcVisibleEffect();
 				}
 			}
@@ -144,18 +144,13 @@ public class PotionEffectManager
 	}
 
 	public static void addEffect(LivingEntity entity, String key, PotionEffect effect) {
-		blockEvent = true;
-
 		Map<PotionEffectType, StackedEffect> effects = getEffects(entity);
 		StackedEffect stackedEffect = effects.computeIfAbsent(effect.getType(), potionEffectType -> new StackedEffect(entity));
 		stackedEffect.addEffect(key, effect);
-
-		blockEvent = false;
-		Bukkit.broadcastMessage("Added key " + key + " type " + effect.getType());
+		// Bukkit.broadcastMessage("Added key " + key + " type " + effect.getType());
 	}
 
 	public static void removeEffect(LivingEntity entity, PotionEffectType type, String key) {
-		blockEvent = true;
 		Map<PotionEffectType, StackedEffect> effects = ALL_EFFECTS.get(entity);
 		if (effects != null) {
 			StackedEffect stackedEffect = effects.get(type);
@@ -163,15 +158,25 @@ public class PotionEffectManager
 				stackedEffect.removeEffect(key);
 			}
 		}
-		blockEvent = false;
 	}
 
-	private static void removeAll(LivingEntity entity) {
-		blockEvent = true;
-		for (var stackedEffects : ALL_EFFECTS.get(entity).values()) {
+	public static boolean hasEffect(LivingEntity entity, PotionEffectType type, String key) {
+		Map<PotionEffectType, StackedEffect> effects = ALL_EFFECTS.get(entity);
+		if (effects == null) return false;
+
+		StackedEffect stackedEffect = effects.get(type);
+		if (stackedEffect == null) return false;
+
+		if (stackedEffect.effects.containsKey(key))
+			return true;
+
+		return false;
+	}
+
+	public static void removeAll(LivingEntity entity) {
+		for (var stackedEffects : ALL_EFFECTS.remove(entity).values()) {
 			stackedEffects.removeAll();
 		}
-		blockEvent = false;
 	}
 
 	public static void onEntityPotionEffect(EntityPotionEffectEvent event) {
@@ -179,6 +184,8 @@ public class PotionEffectManager
 			return;
 
 		blockEvent = true;
+
+		event.setCancelled(true); // Should cancel ALL shenanigans done by the game.
 
 		assert event.getEntity() instanceof LivingEntity;
 		final LivingEntity livent = (LivingEntity) event.getEntity();
@@ -188,7 +195,6 @@ public class PotionEffectManager
 			removeEffect(livent, event.getModifiedType(), VANILLA_KEY);
 		}
 		else if (action == EntityPotionEffectEvent.Action.ADDED || action == EntityPotionEffectEvent.Action.CHANGED) {
-			event.setCancelled(true);
 			assert event.getNewEffect() != null;
 			addEffect(livent, VANILLA_KEY, event.getNewEffect());
 		}
@@ -200,7 +206,14 @@ public class PotionEffectManager
 	}
 
 	public static void tick() {
+		if (TeamArena.getGameTick() % (2 * 20 * 60) == 11) {
+			ALL_EFFECTS.entrySet().removeIf(entry -> !entry.getKey().isValid());
+		}
+
 		for (var entry : ALL_EFFECTS.entrySet()) {
+			//sometimes removed effects don't trigger the event, so detect them here and remove
+
+
 			entry.getValue().forEach((potionEffectType, stackedEffect) -> {
 				stackedEffect.tick();
 			});
