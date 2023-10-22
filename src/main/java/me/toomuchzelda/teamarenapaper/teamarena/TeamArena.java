@@ -92,6 +92,7 @@ public abstract class TeamArena
 
 	protected BoundingBox border;
 	protected Location spawnPos;
+	private boolean spawnPosDangerous = false;
 
 	protected TeamArenaTeam[] teams;
 	//to avoid having to construct a new List on every tabComplete
@@ -183,6 +184,12 @@ public abstract class TeamArena
 		//load the map config into real game stuff (teams, and sub-game things)
 		this.gameMap = map;
 		loadConfig(map);
+
+		var spawnRayTrace = gameWorld.rayTraceBlocks(spawnPos, new Vector(0, -1, 0), 1, FluidCollisionMode.NEVER, true);
+		if (spawnRayTrace == null || spawnRayTrace.getHitBlock() == null || spawnRayTrace.getHitBlock().isSolid()) {
+			Main.logger().warning("Mappers make functional spawn points challenge (impossible)");
+			spawnPosDangerous = true;
+		}
 
 		gameWorld.setSpawnLocation(spawnPos);
 		gameWorld.setAutoSave(false);
@@ -315,6 +322,7 @@ public abstract class TeamArena
 
 			PlayerUtils.resetState(p);
 			p.setAllowFlight(true);
+			p.setFlying(spawnPosDangerous);
 
 			p.getInventory().clear();
 			giveLobbyItems(p);
@@ -2058,6 +2066,8 @@ public abstract class TeamArena
 		Main.logger().info("GameState: " + gameState);
 	}
 
+
+
 	public boolean canAttack(Player one, Player two) {
 		TeamArenaTeam team = Main.getPlayerInfo(one).team;
 		//if two is on the same team as one
@@ -2152,6 +2162,10 @@ public abstract class TeamArena
 
 	public Location getSpawnPos() {
 		return this.spawnPos != null ? this.spawnPos.clone() : null;
+	}
+
+	public boolean isSpawnPosDangerous() {
+		return spawnPosDangerous;
 	}
 
 	/**

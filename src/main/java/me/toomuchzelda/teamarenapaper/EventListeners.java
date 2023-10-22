@@ -187,7 +187,15 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void playerSpawn(PlayerSpawnLocationEvent event) {
-		event.setSpawnLocation(Main.getPlayerInfo(event.getPlayer()).spawnPoint);
+		TeamArena game = Main.getGame();
+		Location spawnPoint = Main.getPlayerInfo(event.getPlayer()).spawnPoint;
+		event.setSpawnLocation(spawnPoint);
+		if (spawnPoint.equals(game.getSpawnPos()) && game.isSpawnPosDangerous()) {
+			Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
+				event.getPlayer().setAllowFlight(true);
+				event.getPlayer().setFlying(true);
+			});
+		}
 	}
 
 	@EventHandler
@@ -472,7 +480,15 @@ public class EventListeners implements Listener
 	// try have the server avoid loading the default "world" world
 	@EventHandler
 	public void playerRespawn(PlayerRespawnEvent event) {
-		event.setRespawnLocation(Main.getPlayerInfo(event.getPlayer()).spawnPoint);
+		TeamArena game = Main.getGame();
+		Location spawnPoint = Main.getPlayerInfo(event.getPlayer()).spawnPoint;
+		event.setRespawnLocation(spawnPoint);
+		if (spawnPoint.equals(game.getSpawnPos()) && game.isSpawnPosDangerous()) {
+			Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
+				event.getPlayer().setAllowFlight(true);
+				event.getPlayer().setFlying(true);
+			});
+		}
 	}
 
 	//this event is fired for shooting bows including by players
