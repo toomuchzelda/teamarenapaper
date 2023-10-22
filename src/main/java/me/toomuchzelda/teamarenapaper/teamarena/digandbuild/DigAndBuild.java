@@ -208,6 +208,16 @@ public class DigAndBuild extends TeamArena
 		return displayName.append(Component.text(" - Need " + required, NamedTextColor.RED));
 	}
 
+	public boolean isInNoBuildZone(BlockCoords coords) {
+		for (IntBoundingBox noBuildZone : this.noBuildZones) {
+			if (noBuildZone.contains(coords)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	/**
 	 * Handle block breaking.
 	 * Prevent breaking blocks in no-build-zones and near the life ores. Also handle breaking the life ore block.
@@ -239,12 +249,10 @@ public class DigAndBuild extends TeamArena
 			return true;
 		}
 
-		for (IntBoundingBox noBuildZone : this.noBuildZones) {
-			if (noBuildZone.contains(coords)) {
-				event.setCancelled(true);
-				playNoBuildEffect(block, event.getPlayer(), false);
-				return true;
-			}
+		if (this.isInNoBuildZone(coords)) {
+			event.setCancelled(true);
+			playNoBuildEffect(block, event.getPlayer(), false);
+			return true;
 		}
 
 		LifeOre oreInRange = isWithinOreRadius(block.getLocation());
@@ -339,12 +347,10 @@ public class DigAndBuild extends TeamArena
 		final Player placer = event.getPlayer();
 		final Block block = event.getBlock();
 		BlockCoords coords = new BlockCoords(block);
-		for (IntBoundingBox noBuildZone : this.noBuildZones) {
-			if (noBuildZone.contains(coords)) {
-				event.setCancelled(true);
-				playNoBuildEffect(block, placer, false);
-				return;
-			}
+		if (this.isInNoBuildZone(coords)) {
+			event.setCancelled(true);
+			playNoBuildEffect(block, placer, false);
+			return;
 		}
 
 		LifeOre oreInRange = isWithinOreRadius(block.getLocation());
