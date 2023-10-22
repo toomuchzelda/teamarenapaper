@@ -1,9 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
-import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
-import me.toomuchzelda.teamarenapaper.teamarena.GameState;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
@@ -11,18 +9,21 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
-import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
-import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.AbstractArrow.PickupStatus;
-import org.bukkit.entity.*;
+import org.bukkit.entity.Arrow;
+import org.bukkit.entity.Item;
+import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -31,7 +32,6 @@ import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
-import org.bukkit.util.BoundingBox;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
@@ -179,28 +179,31 @@ public class KitSniper extends Kit {
 			}
 			//Grenade Throw
 			//Main Hand ONLY
-			else if (mat == Material.TURTLE_HELMET && player.hasCooldown(Material.TURTLE_HELMET) && event.getHand() == EquipmentSlot.HAND) {
-				//Removes 1 grenade from hand
-				inv.setItemInMainHand(item.subtract());
-				if (action == Action.LEFT_CLICK_AIR || action == Action.LEFT_CLICK_BLOCK) {
-					//Left Click => Hard Throw
-					throwGrenade(player, 1.5d);
-				} else if (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK) {
-					//Right Click => Soft Toss
-					throwGrenade(player, 0.8d);
+			else if (mat == Material.TURTLE_HELMET) {
+				event.setCancelled(true);
+				if (player.hasCooldown(Material.TURTLE_HELMET) && event.getHand() == EquipmentSlot.HAND) {
+					//Removes 1 grenade from hand
+					inv.setItemInMainHand(item.subtract());
+					if (action == Action.LEFT_CLICK_AIR || action == Action.LEFT_CLICK_BLOCK) {
+						//Left Click => Hard Throw
+						throwGrenade(player, 1.5d);
+					} else if (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK) {
+						//Right Click => Soft Toss
+						throwGrenade(player, 0.8d);
+					}
 				}
 			}
 		}
 
 		//Headshot
 		@Override
-		public void onProjectileHitEntity(ProjectileCollideEvent event) {
+		public void onProjectileHit(ProjectileHitEvent event) {
 			final Projectile projectile = event.getEntity();
 			if (!(projectile instanceof Arrow))
 				return;
 
 			final Player shooter = (Player) projectile.getShooter();
-			if (event.getCollidedWith() instanceof Player playerVictim) {
+			if (event.getHitEntity() instanceof Player playerVictim) {
 				final Location victimLoc = playerVictim.getLocation();
 				final double minYForHeadshot = victimLoc.getY() + MIN_HEIGHT_FOR_HEADHSHOT;
 
@@ -225,24 +228,29 @@ public class KitSniper extends Kit {
 			}
 		}
 
+		static double calcInaccuracy(Player player) {
+			//Inaccuracy based on movement
+			//player.getVelocity() sux so i will base movement on the player's state
+			if (player.isSprinting() || player.isGliding() || player.isJumping() || !EntityUtils.isOnGround(player) ||
+				player.getVelocity().lengthSquared() > 1) {
+				return 0.2;
+			} else if (player.isInWater() || player.isSwimming()) {
+				return 0.1;
+			}
+			return 0;
+		}
+
 		//Sniper Rifle Shooting
 		public void onPlayerDropItem(PlayerDropItemEvent event) {
 			Player player = event.getPlayer();
 			Item item = event.getItemDrop();
 			World world = player.getWorld();
 			if (item.getItemStack().getType() == Material.SPYGLASS && !player.hasCooldown(Material.SPYGLASS)) {
-				//Inaccuracy based on movement
-				//player.getVelocity() sux so i will base movement on the player's state
-				Location loc = player.getLocation();
-				double inaccuracy = 0;
-				if (player.isSprinting() || player.isGliding() || player.isJumping() || !player.isOnGround() ||
-						loc.subtract(0,0.2,0).getBlock().getType() == Material.AIR ||
-						player.getVelocity().lengthSquared() > 1) {
-					inaccuracy = 0.2;
-				} else if (player.isInWater() || player.isSwimming()) {
-					inaccuracy = 0.1;
+				double inaccuracy = calcInaccuracy(player);
+				if (CommandDebug.sniperAccuracy) {
+					player.sendActionBar(Component.text("Inaccuracy: " + inaccuracy));
 				}
-				Vector velocity = loc.getDirection();
+				Vector velocity = player.getLocation().getDirection();
 				if (inaccuracy != 0) {
 					var random = new Vector(gunInaccuracy.nextGaussian(), gunInaccuracy.nextGaussian(), gunInaccuracy.nextGaussian());
 					random.normalize().multiply(inaccuracy);
@@ -286,7 +294,9 @@ public class KitSniper extends Kit {
 
 			//Sniper Information message
 			if (inventory.getItemInMainHand().getType() == Material.SPYGLASS) {
-				Component actionBar = Component.text("Drop Spyglass in hand to shoot", SNIPER_MSG_COLOR);
+				Component actionBar = CommandDebug.sniperAccuracy ?
+					Component.text("Inaccuracy: " + calcInaccuracy(player)) :
+					Component.text("Drop Spyglass in hand to shoot", SNIPER_MSG_COLOR);
 				Component text = Component.text("Drop Spyglass in your main hand to shoot", SNIPER_MSG_COLOR);
 				PlayerInfo pinfo = Main.getPlayerInfo(player);
 				if (pinfo.getPreference(Preferences.KIT_ACTION_BAR)) {

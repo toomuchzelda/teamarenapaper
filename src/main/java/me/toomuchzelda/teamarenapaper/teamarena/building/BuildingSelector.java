@@ -85,10 +85,11 @@ public class BuildingSelector {
 
 	/**
 	 * Adds a building to be previewed to the player.
-	 * @param clazz The class of the building
+	 *
+	 * @param clazz    The class of the building
 	 * @param building The building
 	 * @return Whether the add operation succeeded, i.e. the player wasn't previously shown
-	 * 			another building of the same class.
+	 * another building of the same class.
 	 */
 	public <T extends Building & PreviewableBuilding> boolean addPreview(Class<T> clazz, T building) {
 		if (buildingPreviews.containsKey(clazz))
@@ -99,10 +100,11 @@ public class BuildingSelector {
 
 	/**
 	 * Adds a building to be previewed to the player.
-	 * @param clazz The class of the building
+	 *
+	 * @param clazz            The class of the building
 	 * @param buildingSupplier A supplier to create the building if absent
 	 * @return Whether the add operation succeeded, i.e. the player wasn't previously shown
-	 * 			another building of the same class.
+	 * another building of the same class.
 	 */
 	public <T extends Building & PreviewableBuilding> boolean addPreviewIfAbsent(Class<T> clazz, Supplier<T> buildingSupplier) {
 		if (buildingPreviews.containsKey(clazz))
@@ -113,6 +115,7 @@ public class BuildingSelector {
 
 	/**
 	 * Returns whether the player can see a building preview.
+	 *
 	 * @param clazz The class of the building
 	 */
 	public <T extends Building & PreviewableBuilding> boolean hasPreview(Class<T> clazz) {
@@ -121,6 +124,7 @@ public class BuildingSelector {
 
 	/**
 	 * Removes a building preview.
+	 *
 	 * @param clazz The class of the building
 	 * @return The building removed, or null if there were no matching previews.
 	 */
@@ -137,6 +141,7 @@ public class BuildingSelector {
 
 	/**
 	 * Attempts to place a building preview in the world, if permitted by the preview.
+	 *
 	 * @param clazz The class of the building
 	 * @return The placed building, or null if placement was invalid
 	 */
@@ -191,6 +196,7 @@ public class BuildingSelector {
 
 	private List<Action> actions;
 	private boolean wasActive = false;
+
 	public boolean isActive(Player player) {
 		return actions != null;
 	}
@@ -335,15 +341,13 @@ public class BuildingSelector {
 	}
 
 	private void showGroups(Location playerLoc, List<List<List<Building>>> yawGroups, Map<Building, Double> buildingGroupDistances) {
-		Location temp = playerLoc.clone();
-
-		for (var yawIter = yawGroups.listIterator(); yawIter.hasNext();) {
+		for (var yawIter = yawGroups.listIterator(); yawIter.hasNext(); ) {
 			int yawGroup = yawIter.nextIndex();
 			List<List<Building>> pitchGroups = yawIter.next();
 			if (pitchGroups == null)
 				continue;
 			pitch:
-			for (var pitchIter = pitchGroups.listIterator(); pitchIter.hasNext();) {
+			for (var pitchIter = pitchGroups.listIterator(); pitchIter.hasNext(); ) {
 				int pitchGroup = pitchIter.nextIndex();
 				List<Building> groupedBuildings = pitchIter.next();
 				if (groupedBuildings == null)
@@ -353,15 +357,15 @@ public class BuildingSelector {
 					// try to merge into the next yaw/pitch group
 					// cannot merge into previous groups as they won't be recalculated
 					Building building = groupedBuildings.get(0);
-					var nextPitchGroup = pitchGroups.get((pitchGroup + 1) % MERGE_PITCH_GROUPS);
+					var nextPitchGroup = pitchGroups.get(Math.floorMod(pitchGroup + 1, MERGE_PITCH_GROUPS));
 					if (nextPitchGroup != null) {
 						nextPitchGroup.add(building);
 						continue;
 					}
-					var nextYawGroup = yawGroups.get((yawGroup + 1) % MERGE_YAW_GROUPS);
+					var nextYawGroup = yawGroups.get(Math.floorMod(yawGroup + 1, MERGE_YAW_GROUPS));
 					if (nextYawGroup != null) {
 						for (int i : new int[]{0, 1, -1}) {
-							nextPitchGroup = nextYawGroup.get((pitchGroup + i) % MERGE_PITCH_GROUPS);
+							nextPitchGroup = nextYawGroup.get(Math.floorMod(pitchGroup + i, MERGE_PITCH_GROUPS));
 							if (nextPitchGroup != null) {
 								nextPitchGroup.add(building);
 								continue pitch;
@@ -386,67 +390,75 @@ public class BuildingSelector {
 				}
 
 				BuildingOutline outline = buildingOutlines.computeIfAbsent(outlineBuilding, BuildingOutline::fromBuilding);
-				if (groupedBuildings.size() == 1) {
-					outline.setDisplay(textOfChildren(
-						text(outlineBuilding.getName(), outlineBuilding == selected ? selectedOutlineColor : outlineBuilding.getOutlineColor()),
-						text("\n" + TextUtils.formatNumber(outlineDistance) + "m", NamedTextColor.YELLOW),
-						// debug: show yaw/pitch groups
-						text("\n" + yawGroup + "/" + pitchGroup, NamedTextColor.YELLOW)
-					));
-					continue;
-				}
-
-				// hologram lines
-				List<Component> lines = new ArrayList<>();
-
-				Map<Component, Integer> names = new HashMap<>();
-				double distanceSum = 0;
-				boolean hasSelected = false;
-				for (Building inner : groupedBuildings) {
-					// calculate aggregated properties
-					double distance = inner.getLocation().distance(playerLoc);
-					String name = inner.getName();
-					if (inner == selected) {
-						hasSelected = true;
-						lines.add(textOfChildren(
-							text(name, selectedOutlineColor),
-							space(),
-							text("(" + TextUtils.formatNumber(distance) + "m)", NamedTextColor.YELLOW)
-						));
-					} else {
-						names.merge(text(name, inner.getOutlineColor()), 1, Integer::sum);
-						distanceSum += distance;
-					}
-
-					// hide others' text
-					if (inner != outlineBuilding) {
-						BuildingOutline outline1 = buildingOutlines.get(inner);
-						if (outline1 != null) {
-							outline1.setDisplay(null);
-						}
-					}
-				}
-				// BuildingA x10, BuildingB, BuildingC x3
-				for (var entry : names.entrySet()) {
-					Component name = entry.getKey();
-					int count = entry.getValue();
-					if (count == 1)
-						lines.add(name);
-					else
-						lines.add(textOfChildren(name, text(" x" + count, NamedTextColor.YELLOW)));
-				}
-				// 5.1m (avg)
-				double avgDist = distanceSum / groupedBuildings.size();
-				// only show (avg) when there are at least 2 unselected buildings
-				lines.add(text(TextUtils.formatNumber(avgDist) + "m" +
-						(groupedBuildings.size() - (hasSelected ? 1 : 0) != 1 ? " (avg)" : ""),
-					NamedTextColor.YELLOW));
-				// debug: show groups
-				lines.add(text(yawGroup + "/" + pitchGroup));
-				outline.setDisplay(Component.join(JoinConfiguration.newlines(), lines));
-				outline.setTextEnlarged(hasSelected);
+				updateOutlineForGroup(playerLoc, groupedBuildings, outline, outlineBuilding);
 			}
 		}
+	}
+
+	private void updateOutlineForGroup(Location playerLoc, List<Building> groupedBuildings, BuildingOutline outline, Building outlineBuilding) {
+		if (groupedBuildings.size() == 1) {
+			outline.setDisplay(textOfChildren(
+				text(outlineBuilding.getName(), outlineBuilding == selected ? selectedOutlineColor : outlineBuilding.getOutlineColor()),
+				text("\n" + TextUtils.formatNumber(outlineBuilding.getLocation().distance(playerLoc)) + "m", NamedTextColor.YELLOW)
+			));
+			return;
+		}
+
+		// hologram lines
+		List<Component> lines = new ArrayList<>();
+
+		Map<Component, Integer> names = new HashMap<>();
+		double distanceSum = 0;
+		int distanceCount = 0;
+		boolean hasSelected = false;
+		for (Building inner : groupedBuildings) {
+			// calculate aggregated properties
+			double distance = inner.getLocation().distance(playerLoc);
+			String name = inner.getName();
+			if (inner == selected) {
+				hasSelected = true;
+				lines.add(textOfChildren(
+					text(name, selectedOutlineColor),
+					space(),
+					text("(" + TextUtils.formatNumber(distance) + "m)", NamedTextColor.YELLOW)
+				));
+			} else {
+				names.merge(text(name, inner.getOutlineColor()), 1, Integer::sum);
+				distanceSum += distance;
+				distanceCount++;
+			}
+
+			// hide others' text
+			if (inner != outlineBuilding) {
+				BuildingOutline outline1 = buildingOutlines.get(inner);
+				if (outline1 != null) {
+					outline1.setDisplay(null);
+				}
+			}
+		}
+		// Special case: two buildings in group and one is selected
+		if (distanceCount == 1) {
+			var entry = names.entrySet().iterator().next();
+			lines.add(textOfChildren(
+				entry.getKey(),
+				space(),
+				text(" (" + TextUtils.formatNumber(distanceSum) + "m)")
+			));
+		} else {
+			// BuildingA x10, BuildingB, BuildingC x3
+			for (var entry : names.entrySet()) {
+				Component name = entry.getKey();
+				int count = entry.getValue();
+				if (count == 1)
+					lines.add(name);
+				else
+					lines.add(textOfChildren(name, text(" x" + count, NamedTextColor.YELLOW)));
+			}
+			// 5.1m (avg)
+			lines.add(text(TextUtils.formatNumber(distanceSum / distanceCount) + "m (avg)", NamedTextColor.YELLOW));
+		}
+		outline.setDisplay(Component.join(JoinConfiguration.newlines(), lines));
+		outline.setTextEnlarged(hasSelected);
 	}
 
 	private boolean processActions(Player player) {
@@ -536,11 +548,15 @@ public class BuildingSelector {
 	}
 
 	public sealed interface Action {
-		record FilterBuilding(@Nullable Predicate<Building> buildingFilter, @Nullable Predicate<Building> selectableFilter)
-			implements Action {}
+		record FilterBuilding(@Nullable Predicate<Building> buildingFilter,
+							  @Nullable Predicate<Building> selectableFilter)
+			implements Action {
+		}
 
-		record SelectBuilding(@Nullable Component message, @Nullable Predicate<Building> buildingFilter, @Nullable Predicate<Building> selectableFilter)
-			implements Action {}
+		record SelectBuilding(@Nullable Component message, @Nullable Predicate<Building> buildingFilter,
+							  @Nullable Predicate<Building> selectableFilter)
+			implements Action {
+		}
 
 		static Action filterBuilding(@Nullable Predicate<Building> buildingFilter) {
 			return new FilterBuilding(buildingFilter, null);
@@ -562,7 +578,8 @@ public class BuildingSelector {
 																	 @NotNull Class<T> clazz,
 																	 @NotNull Function<Player, T> buildingSupplier,
 																	 @Nullable Predicate<Player> condition)
-			implements Action {}
+			implements Action {
+		}
 
 		static <T extends Building & PreviewableBuilding> Action showPreview(@Nullable Component message,
 																			 @NotNull Class<T> clazz,
@@ -572,15 +589,16 @@ public class BuildingSelector {
 		}
 
 		static <T extends Building & PreviewableBuilding> Action showBlockPreview(@Nullable Component message,
-																			 @NotNull Class<T> clazz,
-																			 @NotNull BiFunction<Player, Block, T> constructor,
-																			 @Nullable Predicate<Player> condition) {
+																				  @NotNull Class<T> clazz,
+																				  @NotNull BiFunction<Player, Block, T> constructor,
+																				  @Nullable Predicate<Player> condition) {
 			return new ShowPreview<>(message, clazz, p -> constructor.apply(p, p.getLocation().getBlock()), condition);
 		}
+
 		static <T extends Building & PreviewableBuilding> Action showEntityPreview(@Nullable Component message,
-																			 @NotNull Class<T> clazz,
-																			 @NotNull BiFunction<Player, Location, T> constructor,
-																			 @Nullable Predicate<Player> condition) {
+																				   @NotNull Class<T> clazz,
+																				   @NotNull BiFunction<Player, Location, T> constructor,
+																				   @Nullable Predicate<Player> condition) {
 			return new ShowPreview<>(message, clazz, p -> constructor.apply(p, p.getLocation()), condition);
 		}
 	}

@@ -1,7 +1,6 @@
 package me.toomuchzelda.teamarenapaper;
 
 import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
-import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import com.destroystokyo.paper.event.player.PlayerAdvancementCriterionGrantEvent;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import com.destroystokyo.paper.event.player.PlayerUseUnknownEntityEvent;
@@ -607,25 +606,15 @@ public class EventListeners implements Listener
 	//stop projectiles from colliding with spectators
 	// and the flags in CTF
 	@EventHandler
-	public void projectileCollide(ProjectileCollideEvent event) {
-		if(Main.getGame() != null) {
-			if(event.getCollidedWith() instanceof Player p && Main.getGame().isSpectator(p))
-				event.setCancelled(true);
-			else if(event.getCollidedWith() instanceof ArmorStand stand && Main.getGame() instanceof CaptureTheFlag ctf
-					&& ctf.flagStands.containsKey(stand))
-				event.setCancelled(true);
-
-			if(!event.isCancelled() && event.getEntity().getShooter() instanceof Player p) {
-				for(Ability a : Kit.getAbilities(p)) {
-					a.onProjectileHitEntity(event);
-				}
-			}
-		}
-	}
-
-	@EventHandler
 	public void projectileHit(ProjectileHitEvent event) {
 		if(Main.getGame() != null) {
+			Entity collidedWith = event.getHitEntity();
+
+			if(collidedWith instanceof Player p && Main.getGame().isSpectator(p))
+				event.setCancelled(true);
+			else if(collidedWith instanceof ArmorStand stand && Main.getGame() instanceof CaptureTheFlag ctf
+				&& ctf.flagStands.containsKey(stand))
+				event.setCancelled(true);
 			if(event.getEntity().getShooter() instanceof Player p) {
 				for(Ability a : Kit.getAbilities(p)) {
 					a.onProjectileHit(event);

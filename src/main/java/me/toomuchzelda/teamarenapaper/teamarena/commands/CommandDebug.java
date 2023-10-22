@@ -18,6 +18,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitBurst;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSniper;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
@@ -50,9 +51,10 @@ public class CommandDebug extends CustomCommand {
 
 	// TODO temporary feature
 	public static boolean ignoreWinConditions;
-	public static boolean kitSniper;
+	public static boolean kitSniper = true;
 	public static boolean sniperAccuracy;
-	public static Predicate<Kit> kitPredicate = ignored -> true;
+	private static final Predicate<Kit> DEFAULT_KIT_PREDICATE = kit -> !(kit instanceof KitSniper);
+	public static Predicate<Kit> kitPredicate = DEFAULT_KIT_PREDICATE;
 
 	public CommandDebug() {
 		super("debug", "", "/debug ...", PermissionLevel.OWNER, "abuse");
@@ -266,8 +268,8 @@ public class CommandDebug extends CustomCommand {
 		if (args.length < 3)
 			throw throwUsage("/debug game kitfilter <allow/block/clear> [kit1,...]");
 		if (args[2].equalsIgnoreCase("clear")) {
-			kitPredicate = kit -> true;
-			sender.sendMessage(Component.text("Allowing all kits.", NamedTextColor.YELLOW));
+			kitPredicate = DEFAULT_KIT_PREDICATE;
+			sender.sendMessage(Component.text("Allowing all kits (except sniper).", NamedTextColor.YELLOW));
 			auditEvent(sender, "game kitFilter clear");
 			return;
 		}
@@ -302,9 +304,9 @@ public class CommandDebug extends CustomCommand {
 					}
 				}), /* else */ () -> {
 					// cannot allow blocking all kits!
-					kitPredicate = kit -> true;
+					kitPredicate = DEFAULT_KIT_PREDICATE;
 					auditEvent(sender, "game kitFilter invalid");
-					sender.sendMessage(Component.text("Warning: no fallback kit found. Allowing all kits instead.", NamedTextColor.YELLOW));
+					sender.sendMessage(Component.text("Warning: no fallback kit found. Allowing all kits (except sniper) instead.", NamedTextColor.YELLOW));
 				});
 	}
 

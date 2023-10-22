@@ -1,6 +1,5 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.abilities;
 
-import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
@@ -117,12 +116,6 @@ public abstract class Ability {
 	public void onInteract(PlayerInteractEvent event) {}
 
 	public void onInteractEntity(PlayerInteractEntityEvent event) {}
-
-	/**
-	 * When a projectile shot by this user hits an entity
-	 * @deprecated Try to use ProjectileHitEvent instead
-	 */
-	public void onProjectileHitEntity(ProjectileCollideEvent event) {}
 
 	public void onProjectileHit(ProjectileHitEvent event) {}
 
