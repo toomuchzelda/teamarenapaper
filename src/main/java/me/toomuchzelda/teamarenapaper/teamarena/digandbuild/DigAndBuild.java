@@ -28,6 +28,7 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
 import org.intellij.lang.annotations.RegExp;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -208,14 +209,23 @@ public class DigAndBuild extends TeamArena
 		return displayName.append(Component.text(" - Need " + required, NamedTextColor.RED));
 	}
 
-	public boolean isInNoBuildZone(BlockCoords coords) {
+	@Nullable
+	public IntBoundingBox findNoBuildZone(BlockCoords coords) {
 		for (IntBoundingBox noBuildZone : this.noBuildZones) {
 			if (noBuildZone.contains(coords)) {
-				return true;
+				return noBuildZone;
 			}
 		}
+		return null;
+	}
 
-		return false;
+	// Prevent placing buildings in no-build zones
+	@Override
+	public boolean canBuildAt(Block block) {
+		if (!super.canBuildAt(block))
+			return false;
+		BlockCoords coords = new BlockCoords(block);
+		return findOreInRange(block.getLocation()) == null && findNoBuildZone(coords) == null;
 	}
 
 	/**
@@ -249,16 +259,17 @@ public class DigAndBuild extends TeamArena
 			return true;
 		}
 
-		if (this.isInNoBuildZone(coords)) {
+		IntBoundingBox nbz = findNoBuildZone(coords);
+		if (nbz != null) {
 			event.setCancelled(true);
-			playNoBuildEffect(block, event.getPlayer(), false);
+			playNoBuildEffect(block, event.getPlayer(), nbz);
 			return true;
 		}
 
-		LifeOre oreInRange = isWithinOreRadius(block.getLocation());
+		LifeOre oreInRange = findOreInRange(block.getLocation());
 		if (oreInRange != null) {
 			event.setCancelled(true);
-			playNoBuildEffect(block, event.getPlayer(), false);
+			playNoBuildEffect(block, event.getPlayer(), oreInRange, false);
 			return true;
 		}
 
@@ -273,7 +284,7 @@ public class DigAndBuild extends TeamArena
 		if (result == LifeOre.OreBreakResult.ALREADY_DEAD) return;
 
 		if (result == LifeOre.OreBreakResult.BROKEN_BY_TEAMMATE) {
-			playNoBuildEffect(block, event.getPlayer(), true);
+			playNoBuildEffect(block, event.getPlayer(), ore, true);
 		}
 		else  {
 			if (result == LifeOre.OreBreakResult.BROKEN_BY_ENEMY) {
@@ -347,16 +358,18 @@ public class DigAndBuild extends TeamArena
 		final Player placer = event.getPlayer();
 		final Block block = event.getBlock();
 		BlockCoords coords = new BlockCoords(block);
-		if (this.isInNoBuildZone(coords)) {
+
+		IntBoundingBox nbz = findNoBuildZone(coords);
+		if (nbz != null) {
 			event.setCancelled(true);
-			playNoBuildEffect(block, placer, false);
+			playNoBuildEffect(block, placer, nbz);
 			return;
 		}
 
-		LifeOre oreInRange = isWithinOreRadius(block.getLocation());
+		LifeOre oreInRange = findOreInRange(block.getLocation());
 		if (oreInRange != null) {
 			event.setCancelled(true);
-			playNoBuildEffect(block, placer, false);
+			playNoBuildEffect(block, placer, oreInRange, false);
 			return;
 		}
 
@@ -376,7 +389,7 @@ public class DigAndBuild extends TeamArena
 		if (this.isDead(clicker)) return;
 
 		// If they're redeeming status ore items to get the buff
-		final LifeOre clickedOre = this.isWithinOreRadius(event.getClickedBlock().getLocation());
+		final LifeOre clickedOre = this.findOreInRange(event.getClickedBlock().getLocation());
 		if (clickedOre == null) return;
 		if (!clickedOre.owningTeam.hasMember(clicker)) return;
 
@@ -472,15 +485,73 @@ public class DigAndBuild extends TeamArena
 		this.gameWorld.strikeLightningEffect(ore.coordsAsLoc.clone().add(0.5, 0, 0.5));
 	}
 
-	private void playNoBuildEffect(Block block, Player player, boolean lifeOre) {
+	private void playNoBuildEffect(Block block, Player player, IntBoundingBox noBuildZone) {
 		Location loc = block.getLocation().add(0.5d, 0.5d, 0.5d);
 		player.spawnParticle(Particle.VILLAGER_ANGRY, loc, 2);
 		player.playSound(loc, Sound.ENTITY_ITEM_BREAK, SoundCategory.BLOCKS, 0.5f, 2f);
 
-		if (!lifeOre)
-			player.sendMessage(CANT_BUILD_HERE);
-		else
-			player.sendMessage(CANT_BREAK_YOUR_ORE);
+		var min = noBuildZone.getMin();
+		var max = noBuildZone.getMax();
+		Particle.DustOptions data = new Particle.DustOptions(Color.RED, 1);
+		float xInterval = (max.x() + 1 - min.x()) / 10f,
+			zInterval = (max.z() + 1 - min.z()) / 10f,
+			yInterval = (max.y() + 1 - min.y()) / 10f;
+		for (int i = 0; i < 10; i++) {
+			float x = min.x() + xInterval * i;
+			float yOffset = yInterval * (i / 10f);
+			for (int j = 0; j < 10; j++) {
+				float y = min.y() + yInterval * j + yOffset;
+				player.spawnParticle(Particle.REDSTONE, x, y, min.z(), 0, data);
+				player.spawnParticle(Particle.REDSTONE, x, y, max.z() + 1, 0, data);
+			}
+		}
+		for (int k = 0; k < 10; k++) {
+			float z = min.z() + zInterval * k;
+			float yOffset = yInterval * (k / 10f);
+			for (int j = 0; j < 10; j++) {
+				float y = min.y() + yInterval * j + yOffset;
+				player.spawnParticle(Particle.REDSTONE, min.x(), y, z, 0, data);
+				player.spawnParticle(Particle.REDSTONE, max.x() + 1, y, z, 0, data);
+			}
+		}
+
+		player.sendMessage(CANT_BUILD_HERE);
+	}
+
+	private void playNoBuildEffect(Block block, Player player, LifeOre source, boolean isBreaking) {
+		Location loc = block.getLocation().add(0.5d, 0.5d, 0.5d).subtract(player.getLocation().getDirection());
+		if (isBreaking) {
+			player.spawnParticle(Particle.BLOCK_MARKER, loc, 1, Material.BARRIER.createBlockData());
+		} else {
+			Particle.DustOptions data = new Particle.DustOptions(source.owningTeam.getColour(), 1);
+			double radius = Math.sqrt(source.protectionRadiusSqr);
+			double sample = radius / 5;
+			var coords = source.coords;
+			double centerX = coords.x() + 0.5;
+			double centerY = coords.y() + 0.5;
+			double centerZ = coords.z() + 0.5;
+			double minY = centerY - radius;
+			double maxY = centerY + radius;
+			// bottom and top
+			player.spawnParticle(Particle.REDSTONE, centerX, minY, centerZ, 0, data);
+			player.spawnParticle(Particle.REDSTONE, centerX, maxY, centerZ, 0, data);
+			for (int j = 1; j <= 5; j++) {
+				double y1 = minY + sample * j;
+				double y2 = maxY - sample * j;
+				double a = Math.acos((centerY - y1) / radius);
+				double effectiveRadius = radius * Math.sin(a);
+				for (int i = 0; i < 10; i++) {
+					double b = (360 / 10d) * i;
+					double x = centerX + effectiveRadius * Math.cos(b);
+					double z = centerZ + effectiveRadius * Math.sin(b);
+					player.spawnParticle(Particle.REDSTONE, x, y1, z, 0, data);
+					if (j != 5)
+						player.spawnParticle(Particle.REDSTONE, x, y2, z, 0, data);
+				}
+			}
+		}
+		player.playSound(loc, Sound.ENTITY_ITEM_BREAK, SoundCategory.BLOCKS, 0.5f, 2f);
+		player.sendMessage(isBreaking ? CANT_BREAK_YOUR_ORE : CANT_BUILD_HERE);
 	}
 
 	/** Add players to ore current miners when they start digging it */
@@ -727,12 +798,9 @@ public class DigAndBuild extends TeamArena
 	/**
 	 * @return The LifeOre that loc is in range of, or null if none.
 	 */
-	private LifeOre isWithinOreRadius(Location loc) {
-		for (var entry : this.teamOres.entrySet()) {
-			final LifeOre ore = entry.getValue();
-			final double distanceSqr = loc.distanceSquared(ore.coordsAsLoc);
-
-			if (distanceSqr <= ore.protectionRadiusSqr) {
+	private LifeOre findOreInRange(Location loc) {
+		for (LifeOre ore : teamOres.values()) {
+			if (loc.distanceSquared(ore.coordsAsLoc) <= ore.protectionRadiusSqr) {
 				return ore;
 			}
 		}

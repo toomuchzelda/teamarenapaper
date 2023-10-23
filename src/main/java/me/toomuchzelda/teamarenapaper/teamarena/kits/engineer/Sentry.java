@@ -403,8 +403,8 @@ public class Sentry extends EntityBuilding implements PreviewableBuilding {
 	}
 
 	private static boolean isValidLocation(Location location) {
-		BoundingBox aabb = BoundingBox.of(location.clone().add(0, 1.05, 0), 0.3, 1, 0.3);
-		return !location.getWorld().hasCollisionsIn(aabb);
+		return Main.getGame().canBuildAt(location.getBlock()) &&
+			!location.getWorld().hasCollisionsIn(BoundingBox.of(location.clone().add(0, 1.05, 0), 0.3, 1, 0.3));
 	}
 
 	private static List<PreviewEntity> PREVIEW;

@@ -1,6 +1,9 @@
 package me.toomuchzelda.teamarenapaper.teamarena.building;
 
+import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -60,7 +63,7 @@ public final class BuildingManager {
 	}
 
 	public static boolean isLocationValid(@NotNull Block block) {
-		return block.isReplaceable();
+		return (block.getType() == Material.AIR || block.isReplaceable()) && Main.getGame().canBuildAt(block);
 	}
 
 	public static boolean canPlaceAt(@NotNull Block block) {

@@ -215,8 +215,10 @@ public class Teleporter extends BlockBuilding implements PreviewableBuilding {
 			FluidCollisionMode.NEVER, false);
 		if (result != null) {
 			// only accept blockFace = UP
-			return new PreviewResult(result.getHitBlockFace() == BlockFace.UP,
-				result.getHitBlock().getLocation().add(0.5, 0.01, 0.5));
+			var block = result.getHitBlock();
+			var face = result.getHitBlockFace();
+			return new PreviewResult(face == BlockFace.UP && Main.getGame().canBuildAt(block),
+				block.getLocation().add(0.5, 0.01, 0.5));
 		}
 		return null;
 	}

@@ -2072,7 +2072,14 @@ public abstract class TeamArena
 		Main.logger().info("GameState: " + gameState);
 	}
 
-
+	/**
+	 * Whether players can place buildings at the block
+	 * @param block The block
+	 * @return
+	 */
+	public boolean canBuildAt(Block block) {
+		return border.contains(block.getX(), block.getY(), block.getZ());
+	}
 
 	public boolean canAttack(Player one, Player two) {
 		TeamArenaTeam team = Main.getPlayerInfo(one).team;

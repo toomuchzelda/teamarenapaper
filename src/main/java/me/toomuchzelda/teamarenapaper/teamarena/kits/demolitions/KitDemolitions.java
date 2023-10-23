@@ -157,12 +157,7 @@ public class KitDemolitions extends Kit
 
 		Block mine = base.getRelative(BlockFace.UP);
 
-		if (Main.getGame() instanceof DigAndBuild dnb && (dnb.isInNoBuildZone(new BlockCoords(base)) ||
-			dnb.isInNoBuildZone(new BlockCoords(mine)))) {
-			return false;
-		}
-
-		return (mine.getType() == Material.AIR || mine.isReplaceable()) && BuildingManager.getBuildingAt(mine) == null;
+		return (mine.getType() == Material.AIR || mine.isReplaceable()) && Main.getGame().canBuildAt(mine);
 	}
 
 	public record RegeneratingMine(MineType type, int removedTime) {}
