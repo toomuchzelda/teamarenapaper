@@ -174,7 +174,7 @@ public class PotionEffectManager
 	}
 
 	public static void removeAll(LivingEntity entity) {
-		var effectsMap = ALL_EFFECTS.remove(entity);
+		Map<PotionEffectType, StackedEffect> effectsMap = ALL_EFFECTS.remove(entity);
 		if (effectsMap != null) {
 			for (var stackedEffects : effectsMap.values()) {
 				stackedEffects.removeAll();

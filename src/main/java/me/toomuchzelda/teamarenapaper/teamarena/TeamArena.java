@@ -677,8 +677,14 @@ public abstract class TeamArena
 
 		//ability on confirmed attacks done in this.onConfirmedDamage() called by DamageEvent.executeAttack()
 		if(event.getFinalAttacker() instanceof Player p && event.getVictim() instanceof Player p2) {
-			if(!canAttack(p, p2))
+			// Pushed into void somehow by self or teammate
+			// Possible with demolition push mines.
+			if (p == p2 && event.getDamageType().isVoid()) {
+				event.setDamageType(DamageType.VOID_PUSHED_SELF);
+			}
+			else if(!canAttack(p, p2))
 				event.setCancelled(true);
+
 		}
 
 		//ability pre-attack events

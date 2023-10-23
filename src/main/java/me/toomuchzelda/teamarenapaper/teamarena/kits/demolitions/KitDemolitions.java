@@ -10,9 +10,11 @@ import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingSelector;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.DigAndBuild;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
@@ -152,7 +154,14 @@ public class KitDemolitions extends Kit
 	public static boolean checkMineLocation(Block base) {
 		if (!isValidMineBlock(base))
 			return false;
+
 		Block mine = base.getRelative(BlockFace.UP);
+
+		if (Main.getGame() instanceof DigAndBuild dnb && (dnb.isInNoBuildZone(new BlockCoords(base)) ||
+			dnb.isInNoBuildZone(new BlockCoords(mine)))) {
+			return false;
+		}
+
 		return (mine.getType() == Material.AIR || mine.isReplaceable()) && BuildingManager.getBuildingAt(mine) == null;
 	}
 
@@ -160,7 +169,7 @@ public class KitDemolitions extends Kit
 
 	public static class DemolitionsAbility extends Ability
 	{
-		public static final Map<Player, List<RegeneratingMine>> regeneratingMines = new LinkedHashMap<>();
+		private static final Map<Player, List<RegeneratingMine>> regeneratingMines = new LinkedHashMap<>();
 
 		public static final DamageType DEMO_TNTMINE_BYSTANDER = new DamageType(DamageType.DEMO_TNTMINE,
 				"%Killed% was blown up by %Killer%'s TNT Mine because %Cause% stepped on it. Thanks a lot!");
