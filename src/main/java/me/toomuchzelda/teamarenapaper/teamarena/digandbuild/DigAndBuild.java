@@ -12,9 +12,11 @@ import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy.SearchAndDestroy;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.enchantments.Enchantment;
@@ -31,6 +33,8 @@ import org.intellij.lang.annotations.RegExp;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class DigAndBuild extends TeamArena
 {
@@ -119,9 +123,88 @@ public class DigAndBuild extends TeamArena
 		this.blockTimes = new HashMap<>();
 	}
 
+	private final Map<TeamArenaTeam, Component> sidebarCache = new LinkedHashMap<>();
 	@Override
 	public void updateSidebar(Player player, SidebarManager sidebar) {
-		// TODO
+		var playerTeam = Main.getPlayerInfo(player).team;
+		sidebar.setTitle(player, getGameName());
+
+		int teamsShown = 0;
+
+		for (var entry : sidebarCache.entrySet()) {
+			var team = entry.getKey();
+			Component line = entry.getValue();
+
+			if (teamsShown >= 4 && team != playerTeam)
+				continue; // don't show
+			teamsShown++;
+			if (team == playerTeam) {
+				sidebar.addEntry(Component.textOfChildren(OWN_TEAM_PREFIX, line));
+			} else {
+				sidebar.addEntry(line);
+			}
+		}
+		// unimportant teams
+		if (sidebarCache.size() != teamsShown)
+			sidebar.addEntry(Component.text("+ " + (sidebarCache.size() - teamsShown) + " teams", NamedTextColor.GRAY));
+		sidebar.addEntry(Component.empty());
+		sidebar.addEntry(Component.text("$ Team Resources", NamedTextColor.YELLOW));
+		sidebar.addEntry(Component.text("  ur team broke bro ☠", NamedTextColor.GRAY));
+	}
+
+	@Override
+	public Collection<Component> updateSharedSidebar() {
+		sidebarCache.clear();
+		// sort by ascending health, or if health = 0, by ascending player count
+		var aliveCounts = teamOres.keySet().stream()
+			.collect(Collectors.toMap(Function.identity(), team -> {
+				int alive = 0;
+				for (var player : team.getPlayerMembers())
+					if (!isDead(player))
+						alive++;
+				return alive;
+			}));
+
+        List<Map.Entry<TeamArenaTeam, LifeOre>> sorted = new ArrayList<>(teamOres.entrySet());
+		sorted.sort(Comparator.comparingInt(entry -> entry.getValue().getHealth() == 0 ?
+			-aliveCounts.get(entry.getKey()) :
+			entry.getValue().getHealth()));
+		for (Map.Entry<TeamArenaTeam, LifeOre> entry : sorted) {
+			var team = entry.getKey();
+			if (team.score == TEAM_DEAD_SCORE)
+				continue;
+			var ore = entry.getValue();
+
+			sidebarCache.put(entry.getKey(), Component.textOfChildren(
+				team.getComponentName(),
+				Component.text(": "),
+				ore.getHealth() != 0 ?
+					formatOreHealth(ore.getHealth()) :
+					Component.text(aliveCounts.get(team) + " alive", NamedTextColor.DARK_RED)
+			));
+		}
+
+		return List.of(Component.text("Last to stand", NamedTextColor.GRAY));
+	}
+
+	private static TextComponent formatOreHealth(int health) {
+		if (health < LifeOre.STARTING_HEALTH) {
+			float percentage = (float) health / LifeOre.STARTING_HEALTH;
+			return Component.text(health + "⛏",
+				percentage < 0.5f ?
+					TextColor.lerp(percentage * 2, NamedTextColor.DARK_RED, NamedTextColor.YELLOW) :
+					TextColor.lerp((percentage - 0.5f) * 2, NamedTextColor.YELLOW, NamedTextColor.GREEN));
+		} else {
+			int extra = health - LifeOre.STARTING_HEALTH;
+			if (extra != 0)
+				return Component.textOfChildren(
+					Component.text(LifeOre.STARTING_HEALTH, NamedTextColor.BLUE),
+					Component.text(" + ", NamedTextColor.GRAY),
+					Component.text(extra + "⛏", TextColors.ABSORPTION_HEART)
+				);
+			else
+				return Component.text(LifeOre.STARTING_HEALTH + "⛏", NamedTextColor.BLUE);
+		}
 	}
 
 	@Override

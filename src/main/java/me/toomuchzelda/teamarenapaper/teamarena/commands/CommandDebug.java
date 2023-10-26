@@ -134,7 +134,7 @@ public class CommandDebug extends CustomCommand {
 							)));
 			case "respawn" -> {
 				var game = Main.getGame();
-				var toRespawn = selectPlayersOrThrow(sender, args, 2);
+				var toRespawn = selectPlayersOrThrow(sender, args, 1);
 				toRespawn.forEach(game::respawnPlayer);
 				auditEvent(sender, "game respawn %s", namePlayers(toRespawn));
 			}
