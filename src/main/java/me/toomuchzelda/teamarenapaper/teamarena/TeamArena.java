@@ -49,6 +49,7 @@ import org.bukkit.entity.*;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.*;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
@@ -56,6 +57,7 @@ import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.BoundingBox;
+import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -185,8 +187,8 @@ public abstract class TeamArena
 		this.gameMap = map;
 		loadConfig(map);
 
-		var spawnRayTrace = gameWorld.rayTraceBlocks(spawnPos, new Vector(0, -1, 0), 1, FluidCollisionMode.NEVER, true);
-		if (spawnRayTrace == null || spawnRayTrace.getHitBlock() == null || spawnRayTrace.getHitBlock().isSolid()) {
+		RayTraceResult spawnRayTrace = gameWorld.rayTraceBlocks(spawnPos, new Vector(0, -1, 0), 10, FluidCollisionMode.NEVER, true);
+		if (spawnRayTrace == null || spawnRayTrace.getHitBlock() == null || !spawnRayTrace.getHitBlock().isSolid()) {
 			Main.logger().warning("Mappers make functional spawn points challenge (impossible)");
 			spawnPosDangerous = true;
 		}
@@ -983,6 +985,12 @@ public abstract class TeamArena
 
 	public void onBlockStopDig(BlockDamageAbortEvent event) {}
 
+	public void onDropItem(PlayerDropItemEvent event) {
+		if (event.getPlayer().getGameMode() != GameMode.CREATIVE) {
+			event.setCancelled(true);
+		}
+	}
+
 	public void onChat(AsyncChatEvent event) {
 		event.setCancelled(true);
 
@@ -1778,6 +1786,9 @@ public abstract class TeamArena
 			}
 			if (gameState == GameState.PREGAME || gameState == GameState.TEAMS_CHOSEN) {
 				player.setAllowFlight(true);
+				if (this.isSpawnPosDangerous()) {
+					player.setFlying(true);
+				}
 			}
 		} else if (gameState == GameState.LIVE) {
 			//if it's a respawning game put them on a team and in the respawn queue
@@ -2116,7 +2127,7 @@ public abstract class TeamArena
 
 	public boolean canSeeStatusBar(Player player, Player viewer) {
 		TeamArenaTeam viewersTeam = Main.getPlayerInfo(viewer).team;
-		return viewersTeam == Main.getGame().spectatorTeam || viewersTeam.getPlayerMembers().contains(player);
+		return viewersTeam == this.spectatorTeam || viewersTeam.getPlayerMembers().contains(player);
 	}
 
 	public boolean isTeamHotbarItem(ItemStack item) {
@@ -2137,7 +2148,7 @@ public abstract class TeamArena
 			damageQueue.add(event);
 	}
 
-	public void queueUnsafeDamage(DamageEvent event) {
+	public void queueDamageUnsafe(DamageEvent event) {
 		damageQueue.add(event);
 	}
 

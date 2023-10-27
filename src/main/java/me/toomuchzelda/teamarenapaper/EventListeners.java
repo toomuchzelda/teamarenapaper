@@ -186,15 +186,7 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void playerSpawn(PlayerSpawnLocationEvent event) {
-		TeamArena game = Main.getGame();
-		Location spawnPoint = Main.getPlayerInfo(event.getPlayer()).spawnPoint;
-		event.setSpawnLocation(spawnPoint);
-		if (spawnPoint.equals(game.getSpawnPos()) && game.isSpawnPosDangerous()) {
-			Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
-				event.getPlayer().setAllowFlight(true);
-				event.getPlayer().setFlying(true);
-			});
-		}
+		event.setSpawnLocation(Main.getPlayerInfo(event.getPlayer()).spawnPoint);
 	}
 
 	@EventHandler
@@ -479,15 +471,8 @@ public class EventListeners implements Listener
 	// try have the server avoid loading the default "world" world
 	@EventHandler
 	public void playerRespawn(PlayerRespawnEvent event) {
-		TeamArena game = Main.getGame();
-		Location spawnPoint = Main.getPlayerInfo(event.getPlayer()).spawnPoint;
-		event.setRespawnLocation(spawnPoint);
-		if (spawnPoint.equals(game.getSpawnPos()) && game.isSpawnPosDangerous()) {
-			Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
-				event.getPlayer().setAllowFlight(true);
-				event.getPlayer().setFlying(true);
-			});
-		}
+		assert false;
+		event.setRespawnLocation(Main.getPlayerInfo(event.getPlayer()).spawnPoint);
 	}
 
 	//this event is fired for shooting bows including by players
@@ -692,14 +677,12 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void playerDropItem(PlayerDropItemEvent event) {
-		Player player = event.getPlayer();
-		if (player.getGameMode() != GameMode.CREATIVE) {
-			event.setCancelled(true);
-		}
-
 		TeamArena game = Main.getGame();
 		if (game != null) {
+			game.onDropItem(event);
+
 			if (game.getGameState() == LIVE) {
+				Player player = event.getPlayer();
 				for (Ability a : Kit.getAbilities(player)) {
 					a.onPlayerDropItem(event);
 				}

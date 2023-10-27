@@ -23,6 +23,7 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.*;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -478,7 +479,7 @@ public class DigAndBuild extends TeamArena
 
 		final ItemStack usedItemStack = event.getItem();
 		if (usedItemStack != null) {
-			final StatusOreType oreType = this.statusItemLookup.get(usedItemStack.asOne());
+			final StatusOreType oreType = this.getStatusOreByItem(usedItemStack);
 			if (oreType != null) { // A valid item was used and we have the corresponding StatusOreType
 				int itemAmount = ItemUtils.getItemCount(clicker.getInventory(), usedItemStack);
 				final int required = this.statusOreInfos.get(oreType).required();
@@ -497,6 +498,10 @@ public class DigAndBuild extends TeamArena
 				}
 			}
 		}
+	}
+
+	private StatusOreType getStatusOreByItem(ItemStack item) {
+		return this.statusItemLookup.get(item.asOne());
 	}
 
 	/** Broadcast ore damage */
@@ -671,7 +676,7 @@ public class DigAndBuild extends TeamArena
 	public void onDamage(DamageEvent event) {
 		super.onDamage(event);
 
-		// Nerf damage of tools to max(fist, tool damage / 3)
+		// Nerf damage of tools to max(fist, tool_damage / 3)
 		if (event.getDamageType().isMelee() && event.getFinalAttacker() instanceof Player) {
 			for (ItemStack tool : tools) {
 				if (tool.isSimilar(event.getMeleeWeapon())) {
@@ -679,6 +684,16 @@ public class DigAndBuild extends TeamArena
 					break;
 				}
 			}
+		}
+	}
+
+	// Allow dropping of status ore items.
+	@Override
+	public void onDropItem(PlayerDropItemEvent event) {
+		super.onDropItem(event);
+
+		if (this.getStatusOreByItem(event.getItemDrop().getItemStack()) != null) {
+			event.setCancelled(false);
 		}
 	}
 
