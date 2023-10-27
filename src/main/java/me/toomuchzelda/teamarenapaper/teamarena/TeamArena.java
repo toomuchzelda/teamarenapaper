@@ -49,6 +49,7 @@ import org.bukkit.entity.*;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.*;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
+import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -987,6 +988,12 @@ public abstract class TeamArena
 
 	public void onDropItem(PlayerDropItemEvent event) {
 		if (event.getPlayer().getGameMode() != GameMode.CREATIVE) {
+			event.setCancelled(true);
+		}
+	}
+
+	public void onAttemptPickupItem(PlayerAttemptPickupItemEvent event) {
+		if (this.isDead(event.getPlayer())) {
 			event.setCancelled(true);
 		}
 	}

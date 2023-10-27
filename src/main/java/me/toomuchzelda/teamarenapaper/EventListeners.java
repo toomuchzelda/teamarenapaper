@@ -690,11 +690,16 @@ public class EventListeners implements Listener
 		}
 	}
 
-	//stop items being moved from one inventory to another (chests etc)
 	@EventHandler
+	public void playerAttemptPickupItem(PlayerAttemptPickupItemEvent event) {
+		Main.getGame().onAttemptPickupItem(event);
+	}
+
+	//stop items being moved from one inventory to another (chests etc)
+	/*@EventHandler
 	public void inventoryMoveItem(InventoryMoveItemEvent event) {
 		event.setCancelled(true);
-	}
+	}*/
 
 	//stop players from messing with the armor of CTF Flags
 	@EventHandler

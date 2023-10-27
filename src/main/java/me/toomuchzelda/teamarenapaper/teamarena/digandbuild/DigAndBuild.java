@@ -20,9 +20,11 @@ import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.*;
+import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
@@ -698,10 +700,35 @@ public class DigAndBuild extends TeamArena
 	}
 
 	@Override
+	public void onAttemptPickupItem(PlayerAttemptPickupItemEvent event) {
+		super.onAttemptPickupItem(event);
+
+		if (!this.isDead(event.getPlayer()) &&
+			this.getStatusOreByItem(event.getItem().getItemStack()) != null) {
+
+			event.setCancelled(false);
+		}
+	}
+
+	@Override
 	public void handleDeath(DamageEvent event) {
 		boolean callSuper = true;
 		if (event.getVictim() instanceof Player playerVictim) {
 			this.blockTimes.remove(playerVictim);
+
+			// Drop half of their status ores
+			List<ItemStack> items = ItemUtils.getItemsInInventory(itemStack ->
+				this.getStatusOreByItem(itemStack) != null, playerVictim.getInventory());
+			for (ItemStack statusOreItem : items) {
+				int halfQty = (statusOreItem.getAmount() / 2) + MathUtils.randomMax(1);
+				if (halfQty != 0) {
+					ItemStack half = statusOreItem.asQuantity(halfQty);
+					this.gameWorld.spawn(playerVictim.getLocation(), Item.class, item -> {
+						item.setItemStack(half);
+						item.setVelocity(item.getVelocity().multiply(1.45d));
+					});
+				}
+			}
 
 			// Prevent players on teams with destroyed ores from respawning.
 			TeamArenaTeam victimsTeam = Main.getPlayerInfo(playerVictim).team;
@@ -713,12 +740,13 @@ public class DigAndBuild extends TeamArena
 				// Spawn the angel before calling super, so the angel spawned by super has no effect.
 				// We want an angel that doesn't lock the player's position.
 				SpectatorAngelManager.spawnAngel(playerVictim, false);
+				callSuper = false; // Don't call super again
 				super.handleDeath(event);
 				this.respawnTimers.remove(playerVictim); // Also don't respawn them
 
 				this.checkWinner();
-				callSuper = false; // Don't call super again
 			}
+
 
 			// Should be removed by super.handleDeath -> PlayerUtils.resetState
 			assert !PotionEffectManager.hasEffect(playerVictim, PotionEffectType.FAST_DIGGING, HasteOreAction.HASTE_EFFECT_KEY);
