@@ -27,8 +27,14 @@ public class PointMarker
 	private Component currentText; // Cache textDisplay Component for faster .equals() comparison
 
 	public PointMarker(Location loc, Component pointName, Color color, Material mat) {
+		this(loc, pointName, color, mat, false);
+	}
+
+	public PointMarker(Location loc, Component pointName, Color color, Material mat, boolean smallItem) {
 		this.currentText = pointName;
-		this.textDisplay = loc.getWorld().spawn(loc, TextDisplay.class, display -> {
+		this.textDisplay = loc.getWorld().spawn(smallItem ? loc.clone().subtract(0d, 0.6d, 0d) : loc,
+			TextDisplay.class, display -> {
+
 			display.text(pointName);
 			display.setAlignment(TextDisplay.TextAlignment.CENTER);
 			display.setBillboard(Display.Billboard.CENTER);
@@ -38,13 +44,19 @@ public class PointMarker
 			display.setGlowColorOverride(color);
 
 			// Scale to make larger
-			display.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(2.5f, 2.5f, 2.5f), new AxisAngle4f()));
+			if (!smallItem)
+				display.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(2.5f, 2.5f, 2.5f), new AxisAngle4f()));
 
 			display.setGlowing(true);
 		});
 
 		this.itemDisplay = loc.getWorld().spawn(loc.clone().subtract(0d, 1d, 0d), ItemDisplay.class, display -> {
-			display.setBillboard(Display.Billboard.CENTER);
+			if (smallItem) {
+				display.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(.5f, .5f, .5f), new AxisAngle4f()));
+				display.setBillboard(Display.Billboard.VERTICAL);
+			}
+			else
+				display.setBillboard(Display.Billboard.CENTER);
 
 			display.setBrightness(new Display.Brightness(15, 15));
 			display.setGlowColorOverride(color);

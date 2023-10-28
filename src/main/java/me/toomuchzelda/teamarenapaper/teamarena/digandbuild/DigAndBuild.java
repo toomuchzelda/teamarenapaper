@@ -77,7 +77,7 @@ public class DigAndBuild extends TeamArena
 		Enchantment.DIG_SPEED, 2
 	);
 
-	private static final int TICKS_PER_GAIN_BLOCK = 20;
+	private static final int TICKS_PER_GAIN_BLOCK = 30;
 	private static final int TICKS_PER_LOSE_BLOCK = 40;
 	private static final int MAX_BLOCK_COUNT = 16;
 
@@ -85,7 +85,7 @@ public class DigAndBuild extends TeamArena
 	private static final int TEAM_LASTMAN_SCORE = 2;
 
 	private Vector middle;
-	private PointMarker midMarker;
+	private final PointMarker midMarker;
 
 	private ItemStack[] tools;
 	private ItemStack[] blocks;
@@ -100,8 +100,9 @@ public class DigAndBuild extends TeamArena
 
 	private Map<TeamArenaTeam, LifeOre> teamOres;
 	private Map<BlockCoords, LifeOre> oreLookup;
+	private Map<BlockCoords, TeamArenaTeam> chestLookup;
 
-	private List<PointMarker> statusOreMarkers;
+	private List<PointMarker> pointMarkers;
 	private Map<StatusOreType, TeamArenaMap.DNBStatusOreInfo> statusOreInfos;
 	private Map<StatusOreType, ItemStack> statusOreItems;
 	private Map<ItemStack, StatusOreType> statusItemLookup;
@@ -244,8 +245,11 @@ public class DigAndBuild extends TeamArena
 			//i++;
 		}
 
+		this.pointMarkers = new ArrayList<>();
+
 		this.teamOres = new HashMap<>();
 		this.oreLookup = new HashMap<>();
+		this.chestLookup = new HashMap<>();
 		for (var entry : mapInfo.teams().entrySet()) {
 			TeamArenaTeam team = this.getTeamByLegacyConfigName(entry.getKey());
 			final TeamArenaMap.DNBTeamInfo tinfo = entry.getValue();
@@ -255,9 +259,18 @@ public class DigAndBuild extends TeamArena
 
 			this.teamOres.put(team, lifeOre);
 			this.oreLookup.put(tinfo.oreCoords(), lifeOre);
+
+			BlockCoords chestCoords = tinfo.teamChest();
+			if (chestCoords != null) {
+				PointMarker marker = new PointMarker(chestCoords.toLocation(this.gameWorld).add(0.5d, 2.2d, 0.5d),
+					team.getComponentName().append(Component.text("'s chest", team.getRGBTextColor())),
+					team.getColour(), Material.CHEST, true);
+				this.pointMarkers.add(marker);
+
+				this.chestLookup.put(chestCoords, team);
+			}
 		}
 
-		this.statusOreMarkers = new ArrayList<>();
 		// Should never be modified (even if we made a copy and weren't referencing the original TeamArenaMap data)
 		this.statusOreInfos = Collections.unmodifiableMap(mapInfo.statusOres());
 		this.statusOreItems = new EnumMap<>(StatusOreType.class);
@@ -279,7 +292,7 @@ public class DigAndBuild extends TeamArena
 				PointMarker marker = new PointMarker(markerLoc.toLocation(this.gameWorld), type.displayName, type.color,
 					statusOreEntry.getValue().itemType());
 
-				this.statusOreMarkers.add(marker);
+				this.pointMarkers.add(marker);
 			}
 		}
 	}
@@ -469,10 +482,24 @@ public class DigAndBuild extends TeamArena
 		super.onInteract(event);
 
 		if (event.useItemInHand() == Event.Result.DENY) return;
+		if (event.useInteractedBlock() == Event.Result.DENY) return;
 		if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
 
 		final Player clicker = event.getPlayer();
 		if (this.isDead(clicker)) return;
+
+		// Clicked a team chest
+		TeamArenaTeam clickedChestTeam = this.chestLookup.get(new BlockCoords(event.getClickedBlock()));
+		if (clickedChestTeam != null) {
+			// Checking if player is dead is done in super and sets useInteractedBlock to DENY
+			assert !this.isDead(clicker);
+			if (Main.getPlayerInfo(clicker).team != clickedChestTeam) {
+				event.setUseInteractedBlock(Event.Result.DENY);
+				clicker.playSound(clicker, Sound.BLOCK_CHEST_LOCKED, SoundCategory.BLOCKS, 1f, 1.7f);
+			}
+
+			return;
+		}
 
 		// If they're redeeming status ore items to get the buff
 		final LifeOre clickedOre = this.findOreInRange(event.getClickedBlock().getLocation());
@@ -837,6 +864,14 @@ public class DigAndBuild extends TeamArena
 		super.prepEnd();
 
 		//LoadedChunkTracker.clearTrackedChunks();
+	}
+
+	@Override
+	public void prepDead() {
+		this.pointMarkers.forEach(PointMarker::remove);
+		this.midMarker.remove();
+
+		super.prepDead();
 	}
 
 	/** Apply enchantments to all the default tools to be given to players */

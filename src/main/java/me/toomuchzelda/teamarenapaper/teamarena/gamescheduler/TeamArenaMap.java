@@ -18,6 +18,7 @@ import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
 import org.yaml.snakeyaml.Yaml;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -43,7 +44,7 @@ public class TeamArenaMap
 	public record SNDInfo(boolean randomBases, Map<String, List<BlockVector>> teamBombs) {}
 
 	/** Info per team for dnb */
-	public record DNBTeamInfo(BlockCoords oreCoords, double protectionRadius) {}
+	public record DNBTeamInfo(BlockCoords oreCoords, double protectionRadius, @Nullable BlockCoords teamChest) {}
 	public record DNBStatusOreInfo(Material oreType, Material itemType, int required, List<Vector> hologramLocs,
 								   List<BlockCoords> coords) {}
 	public record DNBInfo(Vector middle, Material oreType, List<Material> tools, List<Material> blocks,
@@ -440,8 +441,14 @@ public class TeamArenaMap
 						if (this.teamSpawns.containsKey(entry.getKey())) {
 							BlockCoords oreCoords = BlockUtils.parseCoordsToBlockCoords((String) entry.getValue().get("Ore"));
 							double radius = (double) entry.getValue().get("Radius");
+							String chestCoordStr = (String) entry.getValue().get("Chest");
+							BlockCoords chestCoords;
+							if (chestCoordStr != null)
+								 chestCoords = BlockUtils.parseCoordsToBlockCoords(chestCoordStr);
+							else
+								chestCoords = null;
 
-							DNBTeamInfo tinfo = new DNBTeamInfo(oreCoords, radius);
+							DNBTeamInfo tinfo = new DNBTeamInfo(oreCoords, radius, chestCoords);
 							teamInfo.put(entry.getKey(), tinfo);
 						}
 						else {

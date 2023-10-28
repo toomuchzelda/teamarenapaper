@@ -108,6 +108,7 @@ public class GameScheduler
 				}
 				catch (Exception e) {
 					Main.logger().warning("Exception for: " + mapFolder.getName() + " " + e.getMessage());
+					e.printStackTrace();
 				}
 			}
 		}
@@ -139,7 +140,9 @@ public class GameScheduler
 		}
 		//next game type has not been specified manually by an admin so pick one from Q
 		else {
-			gameType = GAMETYPE_Q[gameTypeCtr++];
+			//gameType = GAMETYPE_Q[gameTypeCtr++];
+			gameTypeCtr++;
+			gameType = GameType.DNB; // TODO for debugging
 			//if all have been played, shuffle
 			if(gameTypeCtr == GAMETYPE_Q.length) {
 				gameTypeCtr = 0;
