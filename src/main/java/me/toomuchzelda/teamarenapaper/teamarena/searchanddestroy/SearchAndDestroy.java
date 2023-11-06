@@ -12,10 +12,12 @@ import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.util.Ticks;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.enchantments.Enchantment;
@@ -35,6 +37,7 @@ import org.bukkit.scoreboard.Team;
 import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
 import org.intellij.lang.annotations.RegExp;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -50,6 +53,8 @@ public class SearchAndDestroy extends TeamArena
 {
 	public static final Component GAME_NAME = Component.text("Search and Destroy", NamedTextColor.GOLD);
 	public static final Component HOW_TO_PLAY = Component.text("Arm and detonate other team's bombs or kill every enemy to win! Remember: there's no respawning, so play carefully!", NamedTextColor.GOLD);
+	public static final @NotNull TextComponent LAST_TO_STAND = Component.text("Last to stand", NamedTextColor.GRAY);
+	public static final int POISON_ANNOUNCEMENT = 60 * 20;
 
 	//record it here from the map config but won't use it for anything
 	protected boolean randomBases = false;
@@ -65,7 +70,7 @@ public class SearchAndDestroy extends TeamArena
 	//starts counting down when game is live
 	// is increased by player death and bomb arms
 	protected int poisonTimeLeft = POISON_TIME;
-	protected int bombAddPoison = 60 * 20;
+	protected int bombAddPoison = POISON_ANNOUNCEMENT;
 	protected boolean isPoison = false;
 	//keeps track of which player to next strike with lightning
 	protected ArrayList<Player> poisonVictims;
@@ -77,7 +82,10 @@ public class SearchAndDestroy extends TeamArena
 	protected final ItemStack BASE_FUSE;
 	public static final Component FUSE_NAME = ItemUtils.noItalics(Component.text("Bomb Fuse", NamedTextColor.GOLD));
 	public static final String FUSE_ENCHANT_NAME = "Bomb Technician";
-	private static final List<Component> FUSE_LORE;
+	private static final List<Component> FUSE_LORE = List.of(
+        ItemUtils.noItalics(Component.text("Hold right click on a team's bomb to arm it", TextUtils.RIGHT_CLICK_TO)),
+        ItemUtils.noItalics(Component.text("Hold right click on your own bomb to disarm it", TextUtils.RIGHT_CLICK_TO))
+    );
 	public static final int SPAM_PERIOD = 4 * 20;
 
 	public static final int TEAM_DEAD_SCORE = 1;
@@ -89,75 +97,53 @@ public class SearchAndDestroy extends TeamArena
 	private static final DamageType FUSE_KILL = new DamageType(DamageType.MELEE, "%Killed% was pummelled to death by %Killer%'s Bomb Fuse");
 
 	//===========MESSAGE STUFF
+	//<editor-fold desc="Messages">
+	public static final Component SHORT_OBFUSCATED = Component.text("ab", NamedTextColor.GOLD, TextDecoration.OBFUSCATED);
+	public static final Component LONG_OBFUSCATED = Component.text("Herobrine", NamedTextColor.DARK_RED, TextDecoration.OBFUSCATED);
+
+
 	@RegExp
 	public static final String BOMB_TEAM_KEY = "%bombTeam%";
 	@RegExp
 	public static final String ARMING_TEAM_KEY = "%armingTeam%";
 
-	public static final Component TEAM_ARMED_TEAM_MESSAGE;
-	public static final Component TEAM_ARMED_TEAM_TITLE;
+	public static final Component TEAM_ARMED_TEAM_MESSAGE = Component.textOfChildren(
+        SHORT_OBFUSCATED,
+            Component.text(" " + ARMING_TEAM_KEY + " has just armed " + BOMB_TEAM_KEY + "'s bomb! ",
+                    NamedTextColor.GOLD),
+        SHORT_OBFUSCATED
+    );
+	public static final Component TEAM_ARMED_TEAM_TITLE = Component.textOfChildren(
+        SHORT_OBFUSCATED,
+            Component.text(" " + ARMING_TEAM_KEY + " armed " + BOMB_TEAM_KEY + "'s bomb! ", NamedTextColor.GOLD),
+        SHORT_OBFUSCATED
+    );
 
 	public static final Component TEAM_DEFUSED_MESSAGE = Component.text(BOMB_TEAM_KEY + " has just defused their bomb!", NamedTextColor.GOLD);
 	public static final Component TEAM_DEFUSED_TITLE = Component.text(BOMB_TEAM_KEY + " defused their bomb!", NamedTextColor.GOLD);
 
-	public static final Component TEAM_EXPLODED_MESSAGE;
-	public static final Component TEAM_EXPLODED_TITLE;
+	public static final Component TEAM_EXPLODED_MESSAGE = Component.textOfChildren(
+        SHORT_OBFUSCATED,
+            Component.text(" " + BOMB_TEAM_KEY + "'s bomb has exploded! ", NamedTextColor.GOLD),
+        SHORT_OBFUSCATED
+    );
+	public static final Component TEAM_EXPLODED_TITLE = Component.textOfChildren(
+        SHORT_OBFUSCATED,
+            Component.text(" " + BOMB_TEAM_KEY + "'s bomb exploded! ", NamedTextColor.GOLD),
+        SHORT_OBFUSCATED
+    );
 
 	public static final Component TEAM_DEFEATED_MESSAGE = Component.text(BOMB_TEAM_KEY + " has been defeated!", NamedTextColor.GOLD);
 
-	public static final Component MIN_TO_POISON_MESSAGE;
-	public static final Component MIN_TO_POISON_TITLE;
+	public static final Component MIN_TO_POISON_MESSAGE = Component.text("One minute until ", NamedTextColor.DARK_RED).append(LONG_OBFUSCATED).append(Component.text(" appears.", NamedTextColor.DARK_RED));
+	public static final Component MIN_TO_POISON_TITLE = Component.text("One minute until ", NamedTextColor.DARK_RED).append(LONG_OBFUSCATED);
 
-	public static final Component POISON_NOW_TITLE;
-	public static final Component POISON_NOW_MESSAGE;
+	public static final Component POISON_NOW_TITLE = Component.text("abcdefghijklmnopqrstuvwxyz12345", NamedTextColor.DARK_RED, TextDecoration.OBFUSCATED);
+	public static final Component POISON_NOW_MESSAGE = Component.join(JoinConfiguration.newlines(), Collections.nCopies(5, POISON_NOW_TITLE));
+	//</editor-fold>
 	//===========END MESSAGE STUFF
 
-	static {
-		FUSE_LORE = new ArrayList<>(2);
-		FUSE_LORE.add(ItemUtils.noItalics(Component.text("Hold right click on a team's bomb to arm it", TextUtils.RIGHT_CLICK_TO)));
-		FUSE_LORE.add(ItemUtils.noItalics(Component.text("Hold right click on your own bomb to disarm it", TextUtils.RIGHT_CLICK_TO)));
-
-		Component obfuscated = Component.text("ab", NamedTextColor.GOLD, TextDecoration.OBFUSCATED);
-
-		TEAM_ARMED_TEAM_MESSAGE = Component.text().append(
-				obfuscated,
-				Component.text(" " + ARMING_TEAM_KEY + " has just armed " + BOMB_TEAM_KEY + "'s bomb! ",
-						NamedTextColor.GOLD),
-				obfuscated
-		).build();
-		TEAM_ARMED_TEAM_TITLE = Component.text().append(
-				obfuscated,
-				Component.text(" " + ARMING_TEAM_KEY + " armed " + BOMB_TEAM_KEY + "'s bomb! ", NamedTextColor.GOLD),
-				obfuscated
-		).build();
-
-
-		TEAM_EXPLODED_MESSAGE = Component.text().append(
-				obfuscated,
-				Component.text(" " + BOMB_TEAM_KEY + "'s bomb has exploded! ", NamedTextColor.GOLD),
-				obfuscated
-		).build();
-		TEAM_EXPLODED_TITLE = Component.text().append(
-				obfuscated,
-				Component.text(" " + BOMB_TEAM_KEY + "'s bomb exploded! ", NamedTextColor.GOLD),
-				obfuscated
-		).build();
-
-		Component longObf = Component.text("Herobrine", NamedTextColor.DARK_RED, TextDecoration.OBFUSCATED);
-		MIN_TO_POISON_MESSAGE = Component.text("One minute until ", NamedTextColor.DARK_RED).append(longObf).append(Component.text(" appears.", NamedTextColor.DARK_RED));
-		MIN_TO_POISON_TITLE = Component.text("One minute until ", NamedTextColor.DARK_RED).append(longObf);
-
-		POISON_NOW_TITLE = Component.text("abcdefghijklmnopqrstuvwxyz12345", NamedTextColor.DARK_RED, TextDecoration.OBFUSCATED);
-		TextComponent.Builder builder = Component.text();
-		for(int i = 0; i < 5; i++) {
-			builder.append(POISON_NOW_TITLE);
-			if(i != 4)
-				builder.append(Component.newline());
-		}
-		POISON_NOW_MESSAGE = builder.build();
-	}
-
-	public SearchAndDestroy(TeamArenaMap map) {
+    public SearchAndDestroy(TeamArenaMap map) {
 		super(map);
 
 		initBombVisualTeams(); // init before init'ing Bombs as Bombs will put themselves onto visual teams.
@@ -476,9 +462,6 @@ public class SearchAndDestroy extends TeamArena
 	}
 
 	public void poisonTick() {
-		if (CommandDebug.ignoreWinConditions)
-			return;
-
 		final int currentTick = getGameTick();
 		this.poisonTimeLeft--;
 		if (this.poisonTimeLeft <= 0) {
@@ -515,7 +498,7 @@ public class SearchAndDestroy extends TeamArena
 				}
 			}
 		}
-		else if (this.poisonTimeLeft == 60 * 20) {
+		else if (this.poisonTimeLeft == POISON_ANNOUNCEMENT) {
 			Bukkit.broadcast(MIN_TO_POISON_MESSAGE);
 			PlayerUtils.sendOptionalTitle(Component.empty(), MIN_TO_POISON_TITLE, 30, 30, 30);
 
@@ -527,7 +510,7 @@ public class SearchAndDestroy extends TeamArena
 
 			spawnPos.getWorld().strikeLightningEffect(spawnPos.clone().add(0, 2, 0));
 		}
-		else if (this.poisonTimeLeft < 60 * 20 || isPoison) {
+		else if (this.poisonTimeLeft < POISON_ANNOUNCEMENT || isPoison) {
 			if (currentTick % (10 * 20) == 0) {
 				Firework firework = (Firework) gameWorld.spawnEntity(this.spawnPos.clone().add(0, 1, 0), EntityType.FIREWORK);
 				FireworkMeta meta = firework.getFireworkMeta();
@@ -542,7 +525,7 @@ public class SearchAndDestroy extends TeamArena
 			}
 		}
 
-		if (isPoison) {
+		if (isPoison && !CommandDebug.ignoreWinConditions) {
 			if (currentTick % 3 == 0) {
 				int idx;
 				if (poisonVictims == null)
@@ -884,6 +867,7 @@ public class SearchAndDestroy extends TeamArena
 	}
 
 	private static final DecimalFormat ONE_DP = new DecimalFormat("0.0");
+	private static final String BOMB_EMOJI = "\uD83D\uDCA3"; // 💣
 	@Override
 	public Collection<Component> updateSharedSidebar() {
 		this.sidebarCache.clear();
@@ -891,33 +875,6 @@ public class SearchAndDestroy extends TeamArena
 		for (var entry : teamBombs.entrySet()) {
 			var team = entry.getKey();
 			var bombs = entry.getValue();
-			if (!CommandDebug.ignoreWinConditions && !team.hasLivingOrRespawningMembers())
-				continue;
-
-			var builder = Component.text();
-			builder.append(team.getComponentSimpleName(), Component.text(": "));
-			Bomb bomb;
-			if (bombs.size() == 1 && (bomb = bombs.get(0)).isArmed()) {
-				int timeLeft = Bomb.BOMB_DETONATION_TIME - (currentTick - bomb.getArmedTime());
-				double disarmProgress;
-				// defusing
-				if (bomb.getArmingTeams().contains(team) && (disarmProgress = bomb.getTeamArmingProgress(team)) != 0) {
-					var disarmProgressBar = TextUtils.getProgressBar(NamedTextColor.DARK_RED, team.getRGBTextColor(), 3, disarmProgress);
-					builder.append(Component.text("\uD83D\uDD25 ", team.getRGBTextColor()), // fire emoji
-							disarmProgressBar);
-				} else {
-					var textColor = timeLeft % 40 < 20 ? NamedTextColor.RED : NamedTextColor.YELLOW;
-					String timeLeftText = timeLeft >= 200 ?
-							Integer.toString(timeLeft / 20) :
-							ONE_DP.format(timeLeft / 20d);
-					builder.append(Component.text("⚡ " + timeLeftText + "s", textColor));
-				}
-			} else if (bombs.stream().anyMatch(Bomb::isArmed)) {
-				// weird map
-				builder.append(Component.text("❌ In danger", NamedTextColor.DARK_RED));
-			} else {
-				builder.append(Component.text("✔ Safe", NamedTextColor.GREEN));
-			}
 
 			int playersAlive = 0;
 			for (var player : team.getPlayerMembers()) {
@@ -925,13 +882,48 @@ public class SearchAndDestroy extends TeamArena
 					playersAlive++;
 				}
 			}
+
+			if (!CommandDebug.ignoreWinConditions && playersAlive == 0)
+				continue;
+
+			var builder = Component.text();
+			builder.append(team.getComponentSimpleName(), Component.text(": "));
+			Bomb bomb;
+			if (bombs.size() == 1 && (bomb = bombs.get(0)).isArmed()) {
+				int timeLeft = Bomb.BOMB_DETONATION_TIME - (currentTick - bomb.getArmedTime());
+				// defusing
+				if (bomb.getArmingTeams().contains(team) && bomb.getTeamArmingProgress(team) != 0) {
+					builder.append(Component.text("✂ Defusing", team.getRGBTextColor()));// scissors emoji
+				} else {
+					var textColor = timeLeft % 40 < 20 ? NamedTextColor.RED : NamedTextColor.YELLOW;
+					String timeLeftText = timeLeft >= 200 ?
+							Integer.toString(timeLeft / 20) :
+							ONE_DP.format(timeLeft / 20d);
+					builder.append(Component.text(BOMB_EMOJI + " " + timeLeftText + "s", textColor));
+				}
+			} else if (bombs.stream().anyMatch(Bomb::isArmed)) {
+				// weird map
+				builder.append(Component.text(BOMB_EMOJI + " In danger", NamedTextColor.DARK_RED));
+			} else {
+				builder.append(Component.text("Safe", NamedTextColor.DARK_GREEN));
+			}
+
 			builder.append(Component.text(" | ", NamedTextColor.DARK_GRAY),
 					Component.text(playersAlive + " alive"));
 
 			sidebarCache.put(team, builder.build());
 		}
-
-		return Collections.singletonList(Component.text("Last to stand", NamedTextColor.GRAY));
+		if (poisonTimeLeft >= POISON_ANNOUNCEMENT && !isPoison)
+			return List.of(LAST_TO_STAND);
+		Component herobrine = Component.text("???", NamedTextColor.DARK_RED);
+		return List.of(LAST_TO_STAND,
+			isPoison ?
+				Component.textOfChildren(herobrine, Component.text(" ongoing", NamedTextColor.GRAY)) :
+				Component.textOfChildren(herobrine,
+					Component.text(" in "),
+					TextUtils.formatDurationMmSs(Ticks.duration(poisonTimeLeft))
+				)
+		);
 	}
 
 	@Override
@@ -1023,6 +1015,18 @@ public class SearchAndDestroy extends TeamArena
 	@Override
 	public File getMapPath() {
 		return new File(super.getMapPath(), "SND");
+	}
+
+	@Override
+	public String getDebugAntiStall() {
+		return """
+   			*poisonTimeLeft: %d
+   			POISON_ANNOUNCEMENT: %d""".formatted(poisonTimeLeft, POISON_ANNOUNCEMENT);
+	}
+
+	@Override
+	public void setDebugAntiStall(int antiStallCountdown) {
+		poisonTimeLeft = antiStallCountdown;
 	}
 
 	enum BombEvent {

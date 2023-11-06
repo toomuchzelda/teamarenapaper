@@ -51,9 +51,18 @@ public class TextUtils {
 			string.append(hours).append('h');
 		if (minutes != 0)
 			string.append(minutes).append('m');
-		if (remainingSeconds != 0)
-			string.append(formatNumber(remainingSeconds)).append('s');
-		return Component.text(string.length() == 0 ? "just now" : string.toString(), NamedTextColor.YELLOW);
+		if (remainingSeconds != 0) // show more precision only when necessary
+			string.append(string.isEmpty() ? formatNumber(remainingSeconds) : Integer.toString((int) remainingSeconds)).append('s');
+		return Component.text(string.isEmpty() ? "just now" : string.toString(), NamedTextColor.YELLOW);
+	}
+
+	public static TextComponent formatDurationMmSs(@NotNull Duration duration) {
+		String minutes = "" + duration.toMinutesPart();
+		String seconds  = "" + duration.toSecondsPart();
+		return Component.text(
+			(minutes.length() != 2 ? "0" : "") + minutes +
+			":" +
+			(seconds.length() != 2 ? "0" : "") + seconds, NamedTextColor.YELLOW);
 	}
 
 	public static String formatNumber(double value, int scale) {
@@ -79,7 +88,7 @@ public class TextUtils {
 	}
 
 	public static String formatHealth(double health) {
-		return "" + Math.round(health * 5d) / 10d + "❤";
+		return Math.round(health * 5d) / 10d + "❤";
 	}
 
 	public static boolean containsIgnoreCase(String needle, String haystack) {
@@ -253,8 +262,10 @@ public class TextUtils {
 		return getProgressText(string, Style.style(backgroundColor), Style.style(cursorColor), Style.style(foregroundColor), progress);
 	}
 
+	@Deprecated
 	private static final String[] PROGRESS_BLOCK = {"▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"};
 
+	@Deprecated
 	public static String getProgressBlock(double progress) {
 		return PROGRESS_BLOCK[MathUtils.clamp(0, 7, (int) Math.round(progress / 0.125))];
 	}
@@ -262,6 +273,7 @@ public class TextUtils {
 	/**
 	 * Create a smoother progress bar
 	 */
+	@Deprecated
 	public static Component getProgressBar(Style background, Style foreground, int blocks, double progress) {
 		if (blocks <= 0)
 			throw new IllegalArgumentException("blocks must be > 0");
@@ -294,6 +306,7 @@ public class TextUtils {
 		return builder.build();
 	}
 
+	@Deprecated
 	public static Component getProgressBar(TextColor backgroundColor, TextColor foregroundColor, int blocks, double progress) {
 		return getProgressBar(Style.style(backgroundColor), Style.style(foregroundColor), blocks, progress);
 	}

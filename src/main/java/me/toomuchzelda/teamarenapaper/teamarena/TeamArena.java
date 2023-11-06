@@ -60,6 +60,7 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -2226,6 +2227,12 @@ public abstract class TeamArena
 	public GameState getGameState() {
 		return gameState;
 	}
+
+	@ApiStatus.Internal
+	public abstract String getDebugAntiStall();
+
+	@ApiStatus.Internal
+	public abstract void setDebugAntiStall(int antiStallCountdown);
 
 	public static int getGameTick() {
 		return gameTick;

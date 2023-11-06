@@ -318,11 +318,13 @@ public class Bomb
 	}
 
 	private void removeGlowerStand() {
-		this.visualTeam.removeEntities(this.glowingBlockStand);
-		PlayerScoreboard.removeMembersAll(this.visualTeam, this.glowingBlockStand);
+		if (glowingBlockStand != null) {
+			this.visualTeam.removeEntities(this.glowingBlockStand);
+			PlayerScoreboard.removeMembersAll(this.visualTeam, this.glowingBlockStand);
 
-		this.glowingBlockStand.remove();
-		this.glowingBlockStand = null;
+			this.glowingBlockStand.remove();
+			this.glowingBlockStand = null;
+		}
 	}
 
 	private void removeTnt() {

@@ -17,6 +17,7 @@ import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.util.Ticks;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.enchantments.Enchantment;
@@ -188,7 +189,15 @@ public class DigAndBuild extends TeamArena
 			));
 		}
 
-		return List.of(Component.text("Last to stand", NamedTextColor.GRAY));
+		Component antiStallAction = Component.text("Faster tools", TextColor.color(PotionEffectType.FAST_DIGGING.getColor().asRGB()));
+		return List.of(Component.text("Last to stand", NamedTextColor.GRAY),
+			effTime == EFF_ACTIVE ?
+				Component.textOfChildren(antiStallAction, Component.text(" active")) :
+				Component.textOfChildren(
+					antiStallAction,
+					Component.text(" in "),
+					TextUtils.formatDurationMmSs(Ticks.duration(effTime - getGameTick()))
+				));
 	}
 
 	private static TextComponent formatOreHealth(int health) {
@@ -1013,5 +1022,17 @@ public class DigAndBuild extends TeamArena
 	@Override
 	public Component getHowToPlayBrief() {
 		return HOW_TO_PLAY;
+	}
+
+	@Override
+	public String getDebugAntiStall() {
+		return """
+			effTime: %d
+			*antiStallTime: %d""".formatted(effTime, effTime - gameTick);
+	}
+
+	@Override
+	public void setDebugAntiStall(int antiStallCountdown) {
+		effTime = antiStallCountdown + gameTick;
 	}
 }
