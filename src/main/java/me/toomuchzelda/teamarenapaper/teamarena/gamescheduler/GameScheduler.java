@@ -113,9 +113,11 @@ public class GameScheduler
 			}
 		}
 
-		//setup gametype queue
-		GAMETYPE_Q = new GameType[GameType.values().length];
-		System.arraycopy(GameType.values(), 0, GAMETYPE_Q, 0, GameType.values().length);
+		//setup gametype queue. Exclude DNB
+		GAMETYPE_Q = new GameType[GameType.values().length - 1];
+		GAMETYPE_Q[0] = GameType.KOTH;
+		GAMETYPE_Q[1] = GameType.CTF;
+		GAMETYPE_Q[2] = GameType.SND;
 		MathUtils.shuffleArray(GAMETYPE_Q);
 
 		//setup map queues
@@ -140,14 +142,11 @@ public class GameScheduler
 		}
 		//next game type has not been specified manually by an admin so pick one from Q
 		else {
-			//gameType = GAMETYPE_Q[gameTypeCtr++];
-			gameTypeCtr++;
-			gameType = GameType.DNB; // TODO for debugging
+			gameType = GAMETYPE_Q[gameTypeCtr++];
 			//if all have been played, shuffle
 			if(gameTypeCtr == GAMETYPE_Q.length) {
 				gameTypeCtr = 0;
 				MathUtils.shuffleArray(GAMETYPE_Q);
-				//Bukkit.broadcastMessage("shuffled gametypes");
 			}
 		}
 
