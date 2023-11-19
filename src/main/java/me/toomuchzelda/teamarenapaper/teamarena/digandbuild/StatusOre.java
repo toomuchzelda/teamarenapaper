@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.digandbuild;
 
+import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
@@ -66,7 +67,8 @@ public class StatusOre
 	public void tick() {
 		final int currentTick = TeamArena.getGameTick();
 		if (!this.ready && currentTick - this.lastBreakTime >= this.type.regenTime) {
-			assert currentTick - this.lastBreakTime == this.type.regenTime: "Shouldn't be > this.type.regenTime. " +
+			assert CompileAsserts.OMIT ||
+				currentTick - this.lastBreakTime == this.type.regenTime: "Shouldn't be > this.type.regenTime. " +
 				"Means this wasn't called for some reason in a previous tick.";
 
 			this.position.toBlock(this.world).setBlockData(this.originalBlock);

@@ -27,6 +27,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.DigAndBuild;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitGhost;
@@ -716,7 +717,22 @@ public class EventListeners implements Listener
 		InventoryView view = event.getView();
 		InventoryAction action = event.getAction();
 
-		// check for external inventories
+		if (game instanceof DigAndBuild dnb) {
+			ItemStack item;
+			if (action == InventoryAction.HOTBAR_SWAP) {
+				assert CompileAsserts.OMIT || event.getHotbarButton() != -1;
+				item = view.getBottomInventory().getItem(event.getHotbarButton());
+			}
+			else
+				item = event.getCurrentItem();
+
+			if (dnb.canMoveToInventory(player, item, event.getInventory())) {
+				return; // Operation allowed, no further checks.
+			}
+		}
+
+		// check for external inventories and cancel if it is
+		// i.e prevent moving items to/from chests. Exception for DNB team chests.
 		if (event.getInventory().getType() != InventoryType.CRAFTING) {
 			if (event.getClickedInventory() != null && event.getClickedInventory() == event.getInventory()) {
 				event.setCancelled(true);
@@ -731,6 +747,7 @@ public class EventListeners implements Listener
 		}
 
 		// these two actions move the current item so check the current item
+		// and cancel if it's not an item to be moved
 		if (action == InventoryAction.MOVE_TO_OTHER_INVENTORY || action == InventoryAction.HOTBAR_SWAP) {
 			if (!game.isWearableArmorPiece(event.getCurrentItem()))
 				event.setCancelled(true);

@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
 import io.papermc.paper.event.player.AsyncChatEvent;
+import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
@@ -847,7 +848,7 @@ public abstract class TeamArena
 		// Item handling
 		if (respawnItem.isSimilar(item)) {
 			event.setUseItemInHand(Event.Result.DENY);
-			assert isDead(player);
+			assert CompileAsserts.OMIT || isDead(player);
 			if (canRespawn(player))
 				setToRespawn(player);
 			else

@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.digandbuild;
 
+import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.potioneffects.PotionEffectManager;
@@ -20,14 +21,19 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.util.Ticks;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
+import org.bukkit.block.Chest;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.*;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.potion.PotionEffectType;
@@ -501,7 +507,7 @@ public class DigAndBuild extends TeamArena
 		TeamArenaTeam clickedChestTeam = this.chestLookup.get(new BlockCoords(event.getClickedBlock()));
 		if (clickedChestTeam != null) {
 			// Checking if player is dead is done in super and sets useInteractedBlock to DENY
-			assert !this.isDead(clicker);
+			assert CompileAsserts.OMIT || !this.isDead(clicker);
 			if (Main.getPlayerInfo(clicker).team != clickedChestTeam) {
 				event.setUseInteractedBlock(Event.Result.DENY);
 				clicker.playSound(clicker, Sound.BLOCK_CHEST_LOCKED, SoundCategory.BLOCKS, 1f, 1.7f);
@@ -532,7 +538,8 @@ public class DigAndBuild extends TeamArena
 
 					ItemUtils.maxItemAmount(clicker.getInventory(), usedItemStack, itemAmount);
 
-					assert ItemUtils.getItemCount(clicker.getInventory(), usedItemStack) == itemAmount;
+					assert CompileAsserts.OMIT ||
+						ItemUtils.getItemCount(clicker.getInventory(), usedItemStack) == itemAmount;
 				}
 			}
 		}
@@ -540,6 +547,35 @@ public class DigAndBuild extends TeamArena
 
 	private StatusOreType getStatusOreByItem(ItemStack item) {
 		return this.statusItemLookup.get(item.asOne());
+	}
+
+	public boolean canMoveToInventory(Player user, ItemStack item, Inventory inventory) {
+		if (inventory.getType() != InventoryType.CHEST)
+			return false;
+
+		if (this.getStatusOreByItem(item) == null) // Only move status ore items in team chest.
+			return false;
+
+		for (var entry : this.chestLookup.entrySet()) {
+			BlockCoords coords = entry.getKey();
+			int x = coords.x();
+			int y = coords.y();
+			int z = coords.z();
+			Block block = this.gameWorld.getBlockAt(x, y, z);
+			assert CompileAsserts.OMIT || block.getType().name().endsWith("CHEST");
+
+			if (block.getState() instanceof Chest chestState) {
+				Inventory teamChestInv = chestState.getBlockInventory();
+
+				if (teamChestInv.equals(inventory))
+					//Bukkit.broadcastMessage("chest invs Did equals");
+
+				if (teamChestInv.equals(inventory) && Main.getPlayerInfo(user).team == entry.getValue())
+					return true;
+			}
+		}
+
+		return false;
 	}
 
 	/** Broadcast ore damage */

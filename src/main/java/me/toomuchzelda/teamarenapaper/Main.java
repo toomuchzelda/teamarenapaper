@@ -84,7 +84,7 @@ public final class Main extends JavaPlugin
 		registerCommands();
 
 		// fetch latest update
-		Bukkit.getScheduler().runTask(this, ChangelogMenu::fetch);
+		//Bukkit.getScheduler().runTask(this, ChangelogMenu::fetch);
 	}
 
 	@Override
