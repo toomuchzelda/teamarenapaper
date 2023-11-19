@@ -8,12 +8,15 @@ import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
+import io.papermc.paper.event.packet.PlayerChunkLoadEvent;
+import io.papermc.paper.event.packet.PlayerChunkUnloadEvent;
 import io.papermc.paper.event.player.*;
 import me.toomuchzelda.teamarenapaper.explosions.EntityExplosionInfo;
 import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitbox;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
+import me.toomuchzelda.teamarenapaper.potioneffects.PotionEffectManager;
 import me.toomuchzelda.teamarenapaper.sql.DBSetPreferences;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
@@ -24,6 +27,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.DigAndBuild;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitGhost;
@@ -51,6 +55,7 @@ import org.bukkit.event.block.*;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.*;
+import org.bukkit.event.world.WorldUnloadEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
@@ -61,7 +66,6 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
@@ -72,32 +76,6 @@ import static me.toomuchzelda.teamarenapaper.teamarena.GameState.LIVE;
 
 public class EventListeners implements Listener
 {
-	private static final boolean[] BREAKABLE_BLOCKS;
-
-	static {
-		BREAKABLE_BLOCKS = new boolean[Material.values().length];
-		Arrays.fill(BREAKABLE_BLOCKS, false);
-
-		for(Material mat : Material.values()) {
-			if(mat.isBlock() && !mat.isCollidable() && !mat.name().endsWith("SIGN") && !mat.name().endsWith("TORCH") &&
-				!mat.name().endsWith("BANNER")) {
-				setBlockBreakable(mat, true);
-			}
-
-			//don't break big dripleaf as may be part of map path
-			setBlockBreakable(Material.BIG_DRIPLEAF_STEM, false);
-			setBlockBreakable(Material.BIG_DRIPLEAF, false);
-		}
-	}
-
-	private static void setBlockBreakable(Material mat, boolean breakable) {
-		BREAKABLE_BLOCKS[mat.ordinal()] = breakable;
-	}
-
-	private static boolean isBlockBreakable(Material mat) {
-		return BREAKABLE_BLOCKS[mat.ordinal()];
-	}
-
 	public EventListeners(Plugin plugin) {
 		Bukkit.getServer().getPluginManager().registerEvents(this,plugin);
 	}
@@ -152,6 +130,13 @@ public class EventListeners implements Listener
 			FakeHitboxManager.tick();
 		}
 		catch(Exception e) {
+			e.printStackTrace();
+		}
+
+		try {
+			PotionEffectManager.tick();
+		}
+		catch (Exception e) {
 			e.printStackTrace();
 		}
 
@@ -256,11 +241,16 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void playerQuit(PlayerQuitEvent event) {
 		event.quitMessage(null);
-		Player leaver = event.getPlayer();
+		final Player leaver = event.getPlayer();
+
 		Main.getGame().leavingPlayer(leaver);
 		BuildingListeners.onPlayerQuit(event);
 		//Main.getPlayerInfo(event.getPlayer()).nametag.remove();
 		FakeHitboxManager.removeFakeHitbox(leaver);
+		LoadedChunkTracker.removeTrackedChunks(leaver);
+		PotionEffectManager.removeAll(event.getPlayer());
+		SidebarManager.removeInstance(leaver);
+
 		PlayerInfo pinfo = Main.removePlayerInfo(leaver);
 
 		//save preferences when leaving
@@ -374,37 +364,37 @@ public class EventListeners implements Listener
 		//Handling breaking blocks
 		TeamArena game = Main.getGame();
 		if(game != null) {
-			GameState state = Main.getGame().getGameState();
-			if (state == LIVE || state == GameState.END) {
-				Player player = event.getPlayer();
-				// Players in creative can break any blocks
-				if (player.getGameMode() != GameMode.CREATIVE) {
-					if (game.isDead(player)) {
-						event.setCancelled(true);
-						return;
-					}
-					// not handled by BuildingManager and not breakable
-					if (!BuildingListeners.onBlockBroken(event) && !isBlockBreakable(event.getBlock().getType()))
-						event.setCancelled(true);
-				}
-			}
-			else {
-				event.setCancelled(true);
-			}
+			game.onBreakBlock(event);
+		}
+
+		// Creative mode players can break anything
+		if (event.getPlayer().getGameMode() == GameMode.CREATIVE) {
+			event.setCancelled(false);
 		}
 	}
 
 	@EventHandler
 	public void blockPlace(BlockPlaceEvent event) {
-		if(event.getPlayer().getGameMode() != GameMode.CREATIVE) {
-			event.setCancelled(true);
-		}
-
 		Main.getGame().onPlaceBlock(event);
 
 		for(Ability ability : Kit.getAbilities(event.getPlayer())) {
 			ability.onPlaceBlock(event);
 		}
+
+		// Creative can build anywhere
+		if (event.getPlayer().getGameMode() == GameMode.CREATIVE) {
+			event.setCancelled(false);
+		}
+	}
+
+	@EventHandler
+	public void blockDamage(BlockDamageEvent event) {
+		Main.getGame().onBlockDig(event);
+	}
+
+	@EventHandler
+	public void blockDamageAbort(BlockDamageAbortEvent event) {
+		Main.getGame().onBlockStopDig(event);
 	}
 
 	@EventHandler
@@ -482,6 +472,7 @@ public class EventListeners implements Listener
 	// try have the server avoid loading the default "world" world
 	@EventHandler
 	public void playerRespawn(PlayerRespawnEvent event) {
+		assert false;
 		event.setRespawnLocation(Main.getPlayerInfo(event.getPlayer()).spawnPoint);
 	}
 
@@ -646,6 +637,11 @@ public class EventListeners implements Listener
 	}
 
 	@EventHandler
+	public void entityPotionEffect(EntityPotionEffectEvent event) {
+		PotionEffectManager.onEntityPotionEffect(event);
+	}
+
+	@EventHandler
 	public void arrowBodyCountChange(ArrowBodyCountChangeEvent event) {
 		//not worth adding a new method to Ability.java for this one
 		if(Main.getGame() != null && Main.getGame().getGameState() == LIVE) {
@@ -682,14 +678,12 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void playerDropItem(PlayerDropItemEvent event) {
-		Player player = event.getPlayer();
-		if (player.getGameMode() != GameMode.CREATIVE) {
-			event.setCancelled(true);
-		}
-
 		TeamArena game = Main.getGame();
 		if (game != null) {
+			game.onDropItem(event);
+
 			if (game.getGameState() == LIVE) {
+				Player player = event.getPlayer();
 				for (Ability a : Kit.getAbilities(player)) {
 					a.onPlayerDropItem(event);
 				}
@@ -697,11 +691,16 @@ public class EventListeners implements Listener
 		}
 	}
 
-	//stop items being moved from one inventory to another (chests etc)
 	@EventHandler
+	public void playerAttemptPickupItem(PlayerAttemptPickupItemEvent event) {
+		Main.getGame().onAttemptPickupItem(event);
+	}
+
+	//stop items being moved from one inventory to another (chests etc)
+	/*@EventHandler
 	public void inventoryMoveItem(InventoryMoveItemEvent event) {
 		event.setCancelled(true);
-	}
+	}*/
 
 	//stop players from messing with the armor of CTF Flags
 	@EventHandler
@@ -718,7 +717,22 @@ public class EventListeners implements Listener
 		InventoryView view = event.getView();
 		InventoryAction action = event.getAction();
 
-		// check for external inventories
+		if (game instanceof DigAndBuild dnb) {
+			ItemStack item;
+			if (action == InventoryAction.HOTBAR_SWAP) {
+				assert CompileAsserts.OMIT || event.getHotbarButton() != -1;
+				item = view.getBottomInventory().getItem(event.getHotbarButton());
+			}
+			else
+				item = event.getCurrentItem();
+
+			if (dnb.canMoveToInventory(player, item, event.getInventory())) {
+				return; // Operation allowed, no further checks.
+			}
+		}
+
+		// check for external inventories and cancel if it is
+		// i.e prevent moving items to/from chests. Exception for DNB team chests.
 		if (event.getInventory().getType() != InventoryType.CRAFTING) {
 			if (event.getClickedInventory() != null && event.getClickedInventory() == event.getInventory()) {
 				event.setCancelled(true);
@@ -733,6 +747,7 @@ public class EventListeners implements Listener
 		}
 
 		// these two actions move the current item so check the current item
+		// and cancel if it's not an item to be moved
 		if (action == InventoryAction.MOVE_TO_OTHER_INVENTORY || action == InventoryAction.HOTBAR_SWAP) {
 			if (!game.isWearableArmorPiece(event.getCurrentItem()))
 				event.setCancelled(true);
@@ -884,10 +899,30 @@ public class EventListeners implements Listener
 		}
 	}
 
+	/*@EventHandler
+	public void playerChunkLoad(PlayerChunkLoadEvent event) {
+		LoadedChunkTracker.addTrackedChunk(event.getPlayer(), event.getChunk());
+	}
+
+	@EventHandler
+	public void playerChunkUnload(PlayerChunkUnloadEvent event) {
+		LoadedChunkTracker.removeTrackedChunk(event.getPlayer(), event.getChunk());
+	}
+
+	@EventHandler
+	public void playerChangedWorldEvent(PlayerChangedWorldEvent event) {
+		LoadedChunkTracker.removeTrackedChunks(event.getPlayer(), event.getFrom());
+	}
+
+	@EventHandler
+	public void worldUnload(WorldUnloadEvent event) {
+		LoadedChunkTracker.removeTrackedChunks(event.getWorld());
+	}
+
 	@EventHandler
 	public void playerRecipeDiscover(PlayerRecipeDiscoverEvent e) {
 		e.setCancelled(true);
-	}
+	}*/
 
 	@EventHandler
 	public void playerItemConsume(PlayerItemConsumeEvent event){

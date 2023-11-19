@@ -40,6 +40,7 @@ public class BuildingListeners {
 		BuildingManager.getAllPlayerBuildings(event.getPlayer()).forEach(BuildingManager::destroyBuilding);
 	}
 
+	/** @return true if handled by Building framework */
 	public static boolean onBlockBroken(BlockBreakEvent e) {
 		if (e.isCancelled())
 			return false;

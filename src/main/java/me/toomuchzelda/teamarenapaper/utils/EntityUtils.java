@@ -28,9 +28,9 @@ import org.bukkit.craftbukkit.v1_19_R3.util.CraftVector;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -103,8 +103,11 @@ public class EntityUtils {
 		}
 
 		//send to all viewers
-		for (Player p : entity.getTrackedPlayers()) {
+		/*for (Player p : entity.getTrackedPlayers()) {
 			PlayerUtils.sendPacket(p, packet);
+		}*/
+		for (ServerPlayerConnection connection : getTrackedPlayers0(entity)) {
+			connection.send(packet);
 		}
 	}
 
@@ -247,6 +250,7 @@ public class EntityUtils {
 		return createMovePacket(entity.getId(), entity.getLocation(), xDelta, yDelta, zDelta, yawDelta, pitchDelta, onGround);
 	}
 
+	// Following 2 methods exist because paper Entity.getTrackedPlayers() is really slow
 	@Deprecated
 	public static Set<ServerPlayerConnection> getTrackedPlayers0(Entity viewedEntity) {
 		net.minecraft.world.entity.Entity nmsEntity = ((CraftEntity) viewedEntity).getHandle();
@@ -270,6 +274,15 @@ public class EntityUtils {
 		Vec3 posTwo = ((CraftEntity) two).getHandle().position();
 
 		return posOne.distanceToSqr(posTwo);
+	}
+
+	public static double distanceSqr(Entity entity, Location loc) {
+		Vec3 posOne = ((CraftEntity) entity).getHandle().position();
+
+		double x = posOne.x() - loc.getX();
+		double y = posOne.y() - loc.getY();
+		double z = posOne.z() - loc.getZ();
+		return (x * x) + (y * y) + (z * z);
 	}
 
 	public static List<Pair<net.minecraft.world.entity.EquipmentSlot, net.minecraft.world.item.ItemStack>>

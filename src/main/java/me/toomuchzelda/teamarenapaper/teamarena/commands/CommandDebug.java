@@ -11,10 +11,7 @@ import me.toomuchzelda.teamarenapaper.inventory.InventoryProvider;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.inventory.TabBar;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
-import me.toomuchzelda.teamarenapaper.teamarena.GameState;
-import me.toomuchzelda.teamarenapaper.teamarena.MiniMapManager;
-import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
@@ -119,6 +116,8 @@ public class CommandDebug extends CustomCommand {
 					kitSniper = args.length == 3 ? Boolean.parseBoolean(args[2]) : !kitSniper;
 					auditEvent(sender, "game kitSniper %s", kitSniper);
 					sender.sendMessage(Component.text("Set enable kit sniper to " + kitSniper, NamedTextColor.GREEN));
+				} else if (args[1].equals("antistall")) {
+					doGameAntiStall(sender, args);
 				} else if (args[1].equals("kitfilter")) {
 					setKitRestrictions(sender, args);
 				}
@@ -137,7 +136,7 @@ public class CommandDebug extends CustomCommand {
 							)));
 			case "respawn" -> {
 				var game = Main.getGame();
-				var toRespawn = selectPlayersOrThrow(sender, args, 2);
+				var toRespawn = selectPlayersOrThrow(sender, args, 1);
 				toRespawn.forEach(game::respawnPlayer);
 				auditEvent(sender, "game respawn %s", namePlayers(toRespawn));
 			}
@@ -256,6 +255,21 @@ public class CommandDebug extends CustomCommand {
 			}
 		}
 		return true;
+	}
+
+	private void doGameAntiStall(CommandSender sender, String[] args) {
+		var game = Main.getGame();
+		if (args.length < 3) {
+			// info
+			sender.sendMessage(Component.textOfChildren(
+				Component.text("Anti-stall info:\ngameTick: " + TeamArena.getGameTick() + "\n", NamedTextColor.GOLD),
+				Component.text(game.getDebugAntiStall())
+			));
+		} else {
+			int antiStallCountdown = Integer.parseInt(args[2]);
+			game.setDebugAntiStall(antiStallCountdown);
+			sender.sendMessage(Component.text("Set anti-stall countdown to " + antiStallCountdown));
+		}
 	}
 
 	public static Kit filterKit(Kit kit) {
@@ -498,6 +512,19 @@ public class CommandDebug extends CustomCommand {
 				ClientboundHurtAnimationPacket hurtAnimationPacket = new ClientboundHurtAnimationPacket(player.getEntityId(), yaw);
 				PlayerUtils.sendPacket(player, hurtAnimationPacket);
 			}
+			case "chunktracker" -> {
+				player.sendMessage(LoadedChunkTracker.getStatus());
+
+				if (args.length >= 2) {
+					if (args[1].equalsIgnoreCase("refresh")) {
+						LoadedChunkTracker.cleanup();
+						Bukkit.broadcastMessage("refreshed");
+					}
+					else {
+						throw throwUsage("chunktracker refresh");
+					}
+				}
+			}
 			default -> showUsage(sender);
 		}
 	}
@@ -511,7 +538,7 @@ public class CommandDebug extends CustomCommand {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");
 				case "guitest" -> Arrays.asList("tab", "spectate");
-				case "game" -> Arrays.asList("start", "ignorewinconditions", "sniperaccuracy", "enablekitsniper", "kitfilter");
+				case "game" -> List.of("start", "ignorewinconditions", "sniperaccuracy", "enablekitsniper", "kitfilter", "antistall");
 				case "setrank" -> Arrays.stream(PermissionLevel.values()).map(Enum::name).toList();
 				case "setteam" -> Arrays.stream(Main.getGame().getTeams())
 						.map(team -> team.getSimpleName().replace(' ', '_'))
@@ -519,6 +546,7 @@ public class CommandDebug extends CustomCommand {
 				case "setkit" -> Main.getGame().getTabKitList();
 				case "draw" -> Arrays.asList("text", "area", "clear", "invalidatebase");
 				case "graffititest" -> CosmeticsManager.getLoadedCosmetics(CosmeticType.GRAFFITI).stream().map(NamespacedKey::toString).toList();
+				case "respawn" -> Bukkit.getOnlinePlayers().stream().map(Player::getName).toList();
 				default -> Collections.emptyList();
 			};
 		} else if (args.length == 3) {
@@ -527,8 +555,9 @@ public class CommandDebug extends CustomCommand {
 						.map(Player::getName).toList();
 				case "game" -> switch (args[1]) {
 					case "start" -> Collections.emptyList();
-					case "kitfilter" -> Arrays.asList("allow", "block");
-					default -> Arrays.asList("true", "false");
+					case "kitfilter" -> List.of("allow", "block");
+					case "antistall" -> List.of("0");
+					default -> List.of("true", "false");
 				};
 				default -> Collections.emptyList();
 			};

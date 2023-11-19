@@ -89,8 +89,9 @@ public class KitJuggernaut extends Kit {
 
 		private static boolean isBatonAttack(DamageEvent event) {
 			if (event.getDamageType().is(DamageType.MELEE)) {
-				return event.getFinalAttacker() instanceof Player jugg && jugg.getEquipment().getItemInMainHand()
-					.isSimilar(BATON);
+				//return event.getFinalAttacker() instanceof Player jugg && jugg.getEquipment().getItemInMainHand()
+				//	.isSimilar(BATON);
+				return event.getFinalAttacker() instanceof Player && event.getMeleeWeapon().isSimilar(BATON);
 			}
 
 			return false;

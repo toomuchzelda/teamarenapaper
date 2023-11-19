@@ -148,6 +148,8 @@ public class DamageType {
     public static final DamageType VOID_PUSHED = new DamageType("Void Pushed", "%Killed% was knocked into the void by %Killer%")
             .setIgnoreArmor().setNoKnockback().setIgnoreRate();
 
+	public static final DamageType VOID_PUSHED_SELF = new DamageType(VOID_PUSHED, "%Killed% pushed themselves into the void");
+
     public static final DamageType VOID_SHOT = new DamageType("Void Shot", "%Killed% was shot into the void by %Killer%")
             .setIgnoreArmor().setNoKnockback().setIgnoreRate();
 
@@ -604,6 +606,10 @@ public class DamageType {
     public boolean isProjectile() {
         return _projectile;
     }
+
+	public boolean isVoid() {
+		return this.is(VOID) || this.is(VOID_PUSHED) || this.is(VOID_SHOT);
+	}
 
 	public boolean hasDeathMessages() {
 		return this._deathMessages.length > 0;

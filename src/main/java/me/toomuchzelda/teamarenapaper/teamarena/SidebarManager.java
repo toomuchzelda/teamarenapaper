@@ -16,10 +16,14 @@ import static me.toomuchzelda.teamarenapaper.utils.ScoreboardUtils.*;
 public class SidebarManager {
 
 	public static final Component DEFAULT_TITLE = Component.text("Blue Warfare", NamedTextColor.BLUE);
-	private static final WeakHashMap<Player, SidebarManager> cachedScoreboard = new WeakHashMap<>();
+	private static final Map<Player, SidebarManager> cachedScoreboard = new HashMap<>();
 
 	public static SidebarManager getInstance(Player player) {
 		return cachedScoreboard.computeIfAbsent(player, ignored -> new SidebarManager(DEFAULT_TITLE));
+	}
+
+	public static void removeInstance(Player player) {
+		cachedScoreboard.remove(player);
 	}
 
 	public Component title;
@@ -34,14 +38,14 @@ public class SidebarManager {
 
 	private final Line[] team1 = new Line[MAX_ENTRIES];
 	private final Line[] team2 = new Line[MAX_ENTRIES];
-	private static final String ALPHANUMERIC = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+	private static final char[] ALPHANUMERIC = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".toCharArray();
 	private static final Random RANDOM = new Random();
 
 	private static String getRandomString() {
-		StringBuilder sb = new StringBuilder(16);
+		char[] sb = new char[16];
 		for (int i = 0; i < 16; i++)
-			sb.append(ALPHANUMERIC.charAt(RANDOM.nextInt(16)));
-		return sb.toString();
+			sb[i] = ALPHANUMERIC[RANDOM.nextInt(16)];
+		return new String(sb);
 	}
 
 	private static void sendCreateLinePacket(Player player, Line line) {
@@ -93,6 +97,7 @@ public class SidebarManager {
 		Component[] lastList = isSidebar2 ? sidebar2LastEntries : sidebar1LastEntries;
 		int lastListSize = isSidebar2 ? sidebar2LastSize : sidebar1LastSize;
 		boolean shouldSetScore = listSize != lastListSize;
+		boolean sidebarChanged = false;
 		var iterator = entries.listIterator(listSize);
 		// calculate score
 		for (int i = 0; i < MAX_ENTRIES; i++) {
@@ -108,13 +113,16 @@ public class SidebarManager {
 				if (shouldSetScore) {
 					sendSetScorePacket(player, false, objective, line.scoreboardName, i);
 				}
+				sidebarChanged = true;
 			} else if (shouldSetScore) {
 				// should reset (remove from sidebar) all indices >= listSize
 				sendSetScorePacket(player, true, objective, line.scoreboardName, 0);
+				sidebarChanged = true;
 			}
 		}
 		// swap objectives
-		sendDisplayObjectivePacket(player, objective, DisplaySlot.SIDEBAR);
+		if (sidebarChanged)
+			sendDisplayObjectivePacket(player, objective, DisplaySlot.SIDEBAR);
 
 		// update internal states
 		entries.clear();

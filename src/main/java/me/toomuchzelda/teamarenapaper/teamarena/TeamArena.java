@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
 import io.papermc.paper.event.player.AsyncChatEvent;
+import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
@@ -39,19 +40,18 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
-import org.bukkit.block.Sign;
 import org.bukkit.command.CommandSender;
 import org.bukkit.craftbukkit.v1_19_R3.CraftWorld;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
-import org.bukkit.event.block.Action;
-import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.block.*;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
+import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
@@ -59,7 +59,9 @@ import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.BoundingBox;
+import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -95,6 +97,7 @@ public abstract class TeamArena
 
 	protected BoundingBox border;
 	protected Location spawnPos;
+	private boolean spawnPosDangerous = false;
 
 	protected TeamArenaTeam[] teams;
 	//to avoid having to construct a new List on every tabComplete
@@ -187,6 +190,12 @@ public abstract class TeamArena
 		this.gameMap = map;
 		loadConfig(map);
 
+		RayTraceResult spawnRayTrace = gameWorld.rayTraceBlocks(spawnPos, new Vector(0, -1, 0), 10, FluidCollisionMode.NEVER, true);
+		if (spawnRayTrace == null || spawnRayTrace.getHitBlock() == null || !spawnRayTrace.getHitBlock().isSolid()) {
+			Main.logger().warning("Mappers make functional spawn points challenge (impossible)");
+			spawnPosDangerous = true;
+		}
+
 		gameWorld.setSpawnLocation(spawnPos);
 		gameWorld.setAutoSave(false);
 		gameWorld.setGameRule(GameRule.DISABLE_RAIDS, true);
@@ -229,7 +238,7 @@ public abstract class TeamArena
 					chunk.setForceLoaded(true);
 
 					// Remove almost all of the old Buy signs if any - leave a few at random for easter egg
-					Collection<BlockState> signs = chunk.getTileEntities(block -> isOldBuySign(block.getState()), false);
+					Collection<BlockState> signs = chunk.getTileEntities(block -> ItemUtils.isOldBuySign(block.getState()), false);
 					for (BlockState state : signs) {
 						if (MathUtils.random.nextDouble() < 0.95d) {
 							state.getBlock().setType(Material.AIR);
@@ -318,6 +327,7 @@ public abstract class TeamArena
 
 			PlayerUtils.resetState(p);
 			p.setAllowFlight(true);
+			p.setFlying(spawnPosDangerous);
 
 			p.getInventory().clear();
 			giveLobbyItems(p);
@@ -629,7 +639,14 @@ public abstract class TeamArena
 		}
 	}
 
+	/** If a player can join during the game. Made so subclasses can override */
+	protected boolean canJoinMidGame() {
+		return true; // can join if also a respawning game
+	}
+
 	public void handlePlayerJoinMidGame(Player player) {
+		if (!this.canJoinMidGame()) return;
+
 		TeamArenaTeam team = addToLowestTeam(player, false);
 		//if team was dead before, now becoming alive, show their bossbar
 		// - not anymore
@@ -641,8 +658,10 @@ public abstract class TeamArena
 		team.addMembers(player);
 
 		informOfTeam(player);
-
 		Bukkit.broadcast(player.playerListName().append(Component.text(" joined ", NamedTextColor.YELLOW)).append(team.getComponentName()));
+
+		respawnTimers.put(player, new RespawnInfo(gameTick));
+		giveLobbyItems(player);
 	}
 
 	public void damageTick() {
@@ -663,8 +682,14 @@ public abstract class TeamArena
 
 		//ability on confirmed attacks done in this.onConfirmedDamage() called by DamageEvent.executeAttack()
 		if(event.getFinalAttacker() instanceof Player p && event.getVictim() instanceof Player p2) {
-			if(!canAttack(p, p2))
+			// Pushed into void somehow by self or teammate
+			// Possible with demolition push mines.
+			if (p == p2 && event.getDamageType().isVoid()) {
+				event.setDamageType(DamageType.VOID_PUSHED_SELF);
+			}
+			else if(!canAttack(p, p2))
 				event.setCancelled(true);
+
 		}
 
 		//ability pre-attack events
@@ -708,7 +733,7 @@ public abstract class TeamArena
 					hologram.respawn();
 
 					//add to their damage log
-					pinfo.logDamageReceived(p, event.getDamageType(), event.getFinalDamage(), event.getFinalAttacker(), gameTick);
+					pinfo.logDamageReceived(event.getDamageType(), event.getFinalDamage(), event.getFinalAttacker(), gameTick);
 
 					//give kill assist credit
 					if (event.getFinalAttacker() instanceof Player attacker && p != attacker) {
@@ -746,13 +771,9 @@ public abstract class TeamArena
 
 		if(event.hasKnockback()) {
 			//reduce knockback done by axes
-			if (event.getDamageType().isMelee() && finalAttacker instanceof LivingEntity living) {
-				if (living.getEquipment() != null) {
-					ItemStack weapon = living.getEquipment().getItemInMainHand();
-					if (weapon.getType().toString().endsWith("AXE")) {
-						event.getKnockback().multiply(0.8);
-						//Bukkit.broadcastMessage("Reduced axe knockback");
-					}
+			if (event.getDamageType().isMelee() && finalAttacker instanceof LivingEntity) {
+				if (event.getMeleeWeapon().getType().toString().endsWith("_AXE")) {
+					event.getKnockback().multiply(0.8);
 				}
 			}
 			//reduce knockback done by projectiles
@@ -827,6 +848,7 @@ public abstract class TeamArena
 		// Item handling
 		if (respawnItem.isSimilar(item)) {
 			event.setUseItemInHand(Event.Result.DENY);
+			assert CompileAsserts.OMIT || isDead(player);
 			if (canRespawn(player))
 				setToRespawn(player);
 			else
@@ -878,7 +900,7 @@ public abstract class TeamArena
 		// Destroy old buy signs when they are clicked
 		if (event.getAction() == Action.RIGHT_CLICK_BLOCK && event.useInteractedBlock() != Event.Result.DENY) {
 			final Block clickedBlock = event.getClickedBlock();
-			if (isOldBuySign(clickedBlock.getState())) {
+			if (ItemUtils.isOldBuySign(clickedBlock.getState())) {
 				event.setUseInteractedBlock(Event.Result.DENY);
 				clickedBlock.breakNaturally(true);
 
@@ -888,16 +910,6 @@ public abstract class TeamArena
 				}
 			}
 		}
-	}
-
-	private static boolean isOldBuySign(BlockState blockState) {
-		if (blockState instanceof Sign signState) {
-			final String asString = PlainTextComponentSerializer.plainText().serialize(signState.lines().get(0));
-
-			return asString.contains("[Buy]");
-		}
-
-		return false;
 	}
 
 	public void setViewingGlowingTeammates(PlayerInfo pinfo, boolean glow, boolean message) {
@@ -934,7 +946,59 @@ public abstract class TeamArena
 		}
 	}
 
+	public final void onBreakBlock(BlockBreakEvent event) {
+		if (this.gameState == GameState.LIVE || this.gameState == GameState.END) {
+			if (this.isDead(event.getPlayer())) {
+				event.setCancelled(true);
+				return;
+			}
+
+			if (BuildingListeners.onBlockBroken(event)) {
+				event.setCancelled(true);
+			}
+
+			// Can't break blocks outside the border
+			if (!this.border.contains(event.getBlock().getLocation().add(0.5, 0.5, 0.5).toVector())) {
+				event.setCancelled(true);
+				event.getPlayer().sendMessage(Component.text("You've hit the border", TextColors.ERROR_RED));
+				return;
+			}
+
+			if (onBreakBlockSub(event)) { // if true, the implementor would have handled it so return
+				return;
+			}
+
+			if (!BreakableBlocks.isBlockBreakable(event.getBlock().getType())) {
+				event.setCancelled(true);
+			}
+		}
+		else {
+			event.setCancelled(true);
+		}
+	}
+
+	/** @return true if the block breaking is being handled by the implementor */
+	protected boolean onBreakBlockSub(BlockBreakEvent event) {
+		return false;
+	}
+
 	public void onPlaceBlock(BlockPlaceEvent event) {}
+
+	public void onBlockDig(BlockDamageEvent event) {}
+
+	public void onBlockStopDig(BlockDamageAbortEvent event) {}
+
+	public void onDropItem(PlayerDropItemEvent event) {
+		if (event.getPlayer().getGameMode() != GameMode.CREATIVE) {
+			event.setCancelled(true);
+		}
+	}
+
+	public void onAttemptPickupItem(PlayerAttemptPickupItemEvent event) {
+		if (this.isDead(event.getPlayer())) {
+			event.setCancelled(true);
+		}
+	}
 
 	public void onChat(AsyncChatEvent event) {
 		event.setCancelled(true);
@@ -1731,13 +1795,14 @@ public abstract class TeamArena
 			}
 			if (gameState == GameState.PREGAME || gameState == GameState.TEAMS_CHOSEN) {
 				player.setAllowFlight(true);
+				if (this.isSpawnPosDangerous()) {
+					player.setFlying(true);
+				}
 			}
 		} else if (gameState == GameState.LIVE) {
 			//if it's a respawning game put them on a team and in the respawn queue
 			if (this.isRespawningGame() && Main.getPlayerInfo(player).team == spectatorTeam) {
 				handlePlayerJoinMidGame(player);
-				respawnTimers.put(player, new RespawnInfo(gameTick));
-				giveLobbyItems(player);
 			}
 
 			// Apply the spectator effects
@@ -1928,7 +1993,7 @@ public abstract class TeamArena
 		player.sendMessage(gameAndMapMessage);
 	}
 
-	public void loadConfig(TeamArenaMap map) {
+	protected void loadConfig(TeamArenaMap map) {
 		Main.logger().info("Loading map config data");
 		Main.logger().info(map.toString());
 
@@ -2027,6 +2092,15 @@ public abstract class TeamArena
 		Main.logger().info("GameState: " + gameState);
 	}
 
+	/**
+	 * Whether players can place buildings at the block
+	 * @param block The block
+	 * @return
+	 */
+	public boolean canBuildAt(Block block) {
+		return border.contains(block.getX(), block.getY(), block.getZ());
+	}
+
 	public boolean canAttack(Player one, Player two) {
 		TeamArenaTeam team = Main.getPlayerInfo(one).team;
 		//if two is on the same team as one
@@ -2062,7 +2136,7 @@ public abstract class TeamArena
 
 	public boolean canSeeStatusBar(Player player, Player viewer) {
 		TeamArenaTeam viewersTeam = Main.getPlayerInfo(viewer).team;
-		return viewersTeam == Main.getGame().spectatorTeam || viewersTeam.getPlayerMembers().contains(player);
+		return viewersTeam == this.spectatorTeam || viewersTeam.getPlayerMembers().contains(player);
 	}
 
 	public boolean isTeamHotbarItem(ItemStack item) {
@@ -2083,7 +2157,7 @@ public abstract class TeamArena
 			damageQueue.add(event);
 	}
 
-	public void queueUnsafeDamage(DamageEvent event) {
+	public void queueDamageUnsafe(DamageEvent event) {
 		damageQueue.add(event);
 	}
 
@@ -2123,6 +2197,10 @@ public abstract class TeamArena
 		return this.spawnPos != null ? this.spawnPos.clone() : null;
 	}
 
+	public boolean isSpawnPosDangerous() {
+		return spawnPosDangerous;
+	}
+
 	/**
 	 * for use in configs
 	 */
@@ -2150,6 +2228,12 @@ public abstract class TeamArena
 	public GameState getGameState() {
 		return gameState;
 	}
+
+	@ApiStatus.Internal
+	public abstract String getDebugAntiStall();
+
+	@ApiStatus.Internal
+	public abstract void setDebugAntiStall(int antiStallCountdown);
 
 	public static int getGameTick() {
 		return gameTick;

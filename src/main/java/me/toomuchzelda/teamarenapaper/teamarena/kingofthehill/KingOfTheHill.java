@@ -15,6 +15,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.util.Ticks;
 import org.bukkit.*;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -27,6 +28,8 @@ import java.util.*;
 
 public class KingOfTheHill extends TeamArena
 {
+	public static final int ANTI_STALL_ROTATION_TIME = 5 * 60 * 20;
+	public static final int ANTI_STALL_HALVE_TIME = 120 * 20;
 	protected boolean randomHillOrder;
 	protected Hill[] hills;
 	protected Hill activeHill;
@@ -220,28 +223,27 @@ public class KingOfTheHill extends TeamArena
 
 		if (owningTeam == null) {
 			//no team owns the hill; do anti-stalling mechanism
-			if (!CommandDebug.ignoreWinConditions) { // disable anti-stall if debug
-				//no hill caps for 5 minutes, end the game
-				if (gameTick - lastHillChangeTime >= 5 * 60 * 20) {
-					for (int i = 0; i < 5; i++) {
-						Bukkit.broadcast(Component.text("Too slow! It's been 5 minutes!!", NamedTextColor.RED));
-					}
-					nextHillOrEnd(true);
+			//no hill caps for 5 minutes, end the game
+			if (gameTick - lastHillChangeTime >= ANTI_STALL_ROTATION_TIME) {
+				for (int i = 0; i < 5; i++) {
+					Bukkit.broadcast(Component.text("Too slow! It's been 5 minutes!!", NamedTextColor.RED));
 				}
-				//every two minutes
-				else if ((gameTick - lastHillChangeTime) % (120 * 20) == 0 && lastHillChangeTime != gameTick) {
-					String s = "The time to capture the Hill has been halved";
-					if (ticksAndPlayersToCaptureHill != INITIAL_CAP_TIME)
-						s += " again";
+				// disable anti-stall game end if debug
+				nextHillOrEnd(!CommandDebug.ignoreWinConditions);
+			}
+			//every two minutes
+			else if ((gameTick - lastHillChangeTime) % ANTI_STALL_HALVE_TIME == 0 && lastHillChangeTime != gameTick) {
+				String s = "The time to capture the Hill has been halved";
+				if (ticksAndPlayersToCaptureHill != INITIAL_CAP_TIME)
+					s += " again";
 
-					s += "! It will reset when one team captures the hill";
-					Bukkit.broadcast(Component.text(s).color(TextColor.color(255, 10, 10)));
+				s += "! It will reset when one team captures the hill";
+				Bukkit.broadcast(Component.text(s).color(TextColor.color(255, 10, 10)));
 
-					ticksAndPlayersToCaptureHill /= 2;
+				ticksAndPlayersToCaptureHill /= 2;
 
-					for (Player p : Bukkit.getOnlinePlayers()) {
-						p.playSound(p.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.AMBIENT, 99999, 0.6f);
-					}
+				for (Player p : Bukkit.getOnlinePlayers()) {
+					p.playSound(p.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.AMBIENT, 99999, 0.6f);
 				}
 			}
 		}
@@ -274,8 +276,8 @@ public class KingOfTheHill extends TeamArena
 						.thenComparingDouble(summary -> summary.team.getTotalScore())
 						.reversed())
 				.toList();
-		if (teamSummary.size() == 0)
-			return Collections.emptyList();
+		if (teamSummary.isEmpty())
+			return List.of();
 
 		double fastestGrowth = teamSummary.stream()
 				.mapToDouble(CaptureSummary::change).max().orElse(1);
@@ -303,7 +305,26 @@ public class KingOfTheHill extends TeamArena
 			sidebarCache.put(summary.team, builder.build());
 		}
 
-		return Collections.singletonList(Component.text("First to " + TICKS_TO_WIN / 20 + "s of King", NamedTextColor.GRAY));
+		// next anti-stall
+		int antiStallTime = gameTick - lastHillChangeTime;
+		int timeUntilRotation = ANTI_STALL_ROTATION_TIME - antiStallTime;
+		int timeUntilHalve = ANTI_STALL_HALVE_TIME - antiStallTime % ANTI_STALL_HALVE_TIME;
+		Component antiStallAction;
+		int antiStallCountdown;
+
+		if (timeUntilHalve < timeUntilRotation) {
+			boolean again = ticksAndPlayersToCaptureHill != INITIAL_CAP_TIME;
+			antiStallAction = Component.text("Capture speed " + (again ? "II" : "I"), NamedTextColor.GREEN);
+			antiStallCountdown = timeUntilHalve;
+		} else {
+			antiStallAction = Component.text("Hill rotates", NamedTextColor.DARK_AQUA);
+			antiStallCountdown = timeUntilRotation;
+		}
+
+		return List.of(
+			Component.text("First to " + TICKS_TO_WIN / 20 + "s of King", NamedTextColor.GRAY),
+			Component.textOfChildren(antiStallAction, Component.text(" in "), TextUtils.formatDurationMmSs(Ticks.duration(antiStallCountdown)))
+		);
 	}
 
 	@Override
@@ -622,5 +643,26 @@ public class KingOfTheHill extends TeamArena
 	@Override
 	public File getMapPath() {
 		return new File(super.getMapPath(), "KOTH");
+	}
+
+	@Override
+	public String getDebugAntiStall() {
+
+		int antiStallTime = gameTick - lastHillChangeTime;
+		int timeUntilRotation = ANTI_STALL_ROTATION_TIME - antiStallTime;
+		int timeUntilHalve = ANTI_STALL_HALVE_TIME - antiStallTime % ANTI_STALL_HALVE_TIME;
+		return """
+   			lastHillChangeTime: %d
+   			*antiStallTime: %d
+   			timeUntilRotation: %d
+   			timeUntilHalve: %d
+   			ANTI_STALL_ROTATION_TIME: %d
+   			ANTI_STALL_HALVE_TIME: %d""".formatted(lastHillChangeTime, antiStallTime, timeUntilRotation, timeUntilHalve,
+			ANTI_STALL_ROTATION_TIME, ANTI_STALL_HALVE_TIME);
+	}
+
+	@Override
+	public void setDebugAntiStall(int antiStallCountdown) {
+		lastHillChangeTime = gameTick - antiStallCountdown;
 	}
 }

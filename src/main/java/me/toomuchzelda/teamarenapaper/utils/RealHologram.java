@@ -102,8 +102,10 @@ public class RealHologram {
 
     private static class HologramLine {
         public ArmorStand bukkitStand;
+		private Component currentLine; // Cache for faster .equals() comparison
 
         public HologramLine(Component text, Location location) {
+			this.currentLine = text;
             bukkitStand = location.getWorld().spawn(location, ArmorStand.class, stand -> {
                 stand.setMarker(true);
                 stand.setVisible(false);
@@ -114,7 +116,10 @@ public class RealHologram {
         }
 
         public void setText(Component text) {
-            bukkitStand.customName(text);
+			if (!Objects.equals(this.currentLine, text)) {
+				this.currentLine = text;
+				bukkitStand.customName(text);
+			}
         }
 
 		public void moveTo(Location location) {

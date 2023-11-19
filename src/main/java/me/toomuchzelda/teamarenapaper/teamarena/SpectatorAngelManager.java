@@ -34,7 +34,7 @@ import java.util.Map;
  */
 public class SpectatorAngelManager
 {
-	private static final int ANGEL_LIVE_TIME = 35;
+	private static final int ANGEL_LIVE_TIME = 40;
 	private static final Map<Player, RestrictInfo> RESTRICTED_PLAYERS = new LinkedHashMap<>();
 
 	// if baseLoc == null then the player is not restricted to the angel's position.
@@ -47,7 +47,7 @@ public class SpectatorAngelManager
 	 * @param lock true if the player should be locked to the angel's position. false will have the angel follow
 	 *             the player's position.
 	 */
-	static void spawnAngel(Player spectator, boolean lock) {
+	public static void spawnAngel(Player spectator, boolean lock) {
 		if(!RESTRICTED_PLAYERS.containsKey(spectator)) {
 			Location loc = spectator.getLocation();
 

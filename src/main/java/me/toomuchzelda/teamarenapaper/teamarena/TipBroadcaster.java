@@ -26,11 +26,11 @@ public class TipBroadcaster
 	private static final TextColor COLOR = TextColor.color(99, 186, 157);
 
 	private static final Component[] TIPS = new Component[] {
-		Component.text()
+		/*Component.text()
 			.append(Component.text("Check out our ", COLOR))
 			.append(Component.text("website!", COLOR, TextDecoration.UNDERLINED)
 				.clickEvent(ClickEvent.clickEvent(ClickEvent.Action.OPEN_URL, "https://www.bluewarfare.xyz")))
-			.build(),
+			.build(),*/
 
 		Component.text()
 			.append(Component.text("Join our ", COLOR))

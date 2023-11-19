@@ -84,7 +84,7 @@ public final class Main extends JavaPlugin
 		registerCommands();
 
 		// fetch latest update
-		Bukkit.getScheduler().runTask(this, ChangelogMenu::fetch);
+		//Bukkit.getScheduler().runTask(this, ChangelogMenu::fetch);
 	}
 
 	@Override
@@ -141,6 +141,7 @@ public final class Main extends JavaPlugin
 		commandMap.register(fallbackPrefix, new CommandEventTime());
 		commandMap.register(fallbackPrefix, new CommandTime());
 		commandMap.register(fallbackPrefix, new CommandMenu());
+		commandMap.register(fallbackPrefix, new CommandPotion());
 	}
 
 	public static PlayerInfo getPlayerInfo(Player player) {

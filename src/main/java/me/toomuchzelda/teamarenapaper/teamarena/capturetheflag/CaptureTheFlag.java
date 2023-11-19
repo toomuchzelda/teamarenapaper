@@ -10,10 +10,12 @@ import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.util.Ticks;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
@@ -30,6 +32,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.map.MapCursor;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
@@ -39,6 +42,7 @@ import java.util.*;
 
 public class CaptureTheFlag extends TeamArena
 {
+	public static final int TIME_TO_SPEED_ANNOUNCEMENT = 60 * 20;
 	public HashMap<TeamArenaTeam, Flag> teamToFlags; //initialized in parseConfig
 	public HashMap<ArmorStand, Flag> flagStands; // this too
 	public HashMap<Player, Set<Flag>> flagHolders = new HashMap<>();
@@ -196,78 +200,78 @@ public class CaptureTheFlag extends TeamArena
 				}
 			}
 		}
-		if (!CommandDebug.ignoreWinConditions) { // disable anti-stall if debug
 
-			this.timeToSpeed--;
-			//one minute left, announce
-			Component announcementMsg = null;
-			Component announcementTitle = null;
-			if (this.timeToSpeed == 60 * 20) {
-				announcementMsg = ONE_MINUTE_LEFT_SPEED_MESSAGE;
-				announcementTitle = ONE_MINUTE_LEFT_SPEED_TITLE;
-			} else if (this.timeToSpeed == 0) {
-				announcementMsg = SPEED_NOW_MESSAGE;
-				announcementTitle = SPEED_NOW_TITLE;
 
-				for (Player carrier : flagHolders.keySet()) {
-					carrier.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).addModifier(SPEED_ATTR);
-					currentSpeeders.add(carrier);
-				}
-			}
-			// out of time, end the game.
-			else if (this.timeToSpeed == -TIME_TO_END_AFTER_SPEED) {
-				int score = 0;
-				List<TeamArenaTeam> drawList = new ArrayList<>(teams.length);
-				for (TeamArenaTeam team : teams) {
-					if (team.getTotalScore() > score) {
-						score = team.getTotalScore();
-						drawList.clear();
-						drawList.add(team);
-					} else if (team.getTotalScore() == score) {
-						drawList.add(team);
-					}
+        this.timeToSpeed--;
+        //one minute left, announce
+        Component announcementMsg = null;
+        Component announcementTitle = null;
+        if (this.timeToSpeed == TIME_TO_SPEED_ANNOUNCEMENT) {
+            announcementMsg = ONE_MINUTE_LEFT_SPEED_MESSAGE;
+            announcementTitle = ONE_MINUTE_LEFT_SPEED_TITLE;
+        } else if (this.timeToSpeed == 0) {
+            announcementMsg = SPEED_NOW_MESSAGE;
+            announcementTitle = SPEED_NOW_TITLE;
 
-					//only 1 winner
-					if (drawList.size() == 1) {
-						this.winningTeam = drawList.get(0);
-					}
+            for (Player carrier : flagHolders.keySet()) {
+                carrier.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).addModifier(SPEED_ATTR);
+                currentSpeeders.add(carrier);
+            }
+        }
+        // out of time, end the game.
+		// disable anti-stall if debug
+        else if (!CommandDebug.ignoreWinConditions && this.timeToSpeed == -TIME_TO_END_AFTER_SPEED) {
+            int score = 0;
+            List<TeamArenaTeam> drawList = new ArrayList<>(teams.length);
+            for (TeamArenaTeam team : teams) {
+                if (team.getTotalScore() > score) {
+                    score = team.getTotalScore();
+                    drawList.clear();
+                    drawList.add(team);
+                } else if (team.getTotalScore() == score) {
+                    drawList.add(team);
+                }
 
-					Bukkit.broadcast(TOOK_TOO_LONG);
-					for (Player p : Bukkit.getOnlinePlayers()) {
-						for (int i = 0; i < 10; i++) {
-							p.playSound(p.getLocation(), SoundUtils.getRandomObnoxiousSound(), 9999f, (float) MathUtils.randomRange(-0.5, 2d));
-						}
-					}
+                //only 1 winner
+                if (drawList.size() == 1) {
+                    this.winningTeam = drawList.get(0);
+                }
 
-					prepEnd();
+                Bukkit.broadcast(TOOK_TOO_LONG);
+                for (Player p : Bukkit.getOnlinePlayers()) {
+                    for (int i = 0; i < 10; i++) {
+                        p.playSound(p.getLocation(), SoundUtils.getRandomObnoxiousSound(), 9999f, (float) MathUtils.randomRange(-0.5, 2d));
+                    }
+                }
 
-					//Don't do the rest of the tick.
-					return;
-				}
-			}
+                prepEnd();
 
-			if (announcementMsg != null) {
-				Bukkit.broadcast(announcementMsg);
+                //Don't do the rest of the tick.
+                return;
+            }
+        }
 
-				var title = TextUtils.createTitle(Component.empty(), announcementTitle, 10, 40, 10);
-				Main.getPlayerInfoMap().forEach((player, playerInfo) -> {
-					if (playerInfo.getPreference(Preferences.RECEIVE_GAME_TITLES)) {
-						player.showTitle(title);
-					}
-				});
+        if (announcementMsg != null) {
+            Bukkit.broadcast(announcementMsg);
 
-				// annoy players
-				for (int i = 0; i < 5; i++) {
-					Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
-						for (var player : Bukkit.getOnlinePlayers()) {
-							player.playSound(player, Sound.BLOCK_AMETHYST_CLUSTER_BREAK, SoundCategory.AMBIENT, 1, 1);
-						}
-					}, i);
-				}
-			}
-		}
+            var title = TextUtils.createTitle(Component.empty(), announcementTitle, 10, 40, 10);
+            Main.getPlayerInfoMap().forEach((player, playerInfo) -> {
+                if (playerInfo.getPreference(Preferences.RECEIVE_GAME_TITLES)) {
+                    player.showTitle(title);
+                }
+            });
 
-		super.liveTick();
+            // annoy players
+            for (int i = 0; i < 5; i++) {
+                Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
+                    for (var player : Bukkit.getOnlinePlayers()) {
+                        player.playSound(player, Sound.BLOCK_AMETHYST_CLUSTER_BREAK, SoundCategory.AMBIENT, 1, 1);
+                    }
+                }, i);
+            }
+        }
+
+        super.liveTick();
 	}
 
 	private final Map<Flag, Component> sidebarCache = new LinkedHashMap<>();
@@ -287,9 +291,9 @@ public class CaptureTheFlag extends TeamArena
 			if (flag.holdingTeam != null) {
 				builder.append(
 						Component.space(),
-						TextUtils.getProgressBar(NamedTextColor.GRAY, flag.holdingTeam.getRGBTextColor(),
-								1, (double) flag.ticksUntilReturn / TAKEN_FLAG_RETURN_TIME).decorate(TextDecoration.BOLD),
-						flag.holdingTeam.colourWord(" Held").decorate(TextDecoration.BOLD)
+					TextUtils.getProgressText("\uD83C\uDFF3 Held",
+						NamedTextColor.GRAY, flag.holdingTeam.getRGBTextColor(), flag.holdingTeam.getRGBTextColor(),
+						(double) flag.ticksUntilReturn / TAKEN_FLAG_RETURN_TIME).decorate(TextDecoration.BOLD)
 				);
 			} else if(!flag.isAtBase) {
 				builder.append(
@@ -299,11 +303,31 @@ public class CaptureTheFlag extends TeamArena
 			}
 			sidebarCache.put(flag, builder.build());
 		}
+		Component antiStallAction = null;
+		int antiStallCountdown = 0;
+		if (timeToSpeed < 0) {
+			antiStallAction = Component.text("Game ends", NamedTextColor.RED);
+			antiStallCountdown = timeToSpeed + TIME_TO_END_AFTER_SPEED;
+		} else if (timeToSpeed < TIME_TO_SPEED_ANNOUNCEMENT) {
+			antiStallAction = Component.text("Flag speed", TextColor.color(PotionEffectType.SPEED.getColor().asRGB()));
+			antiStallCountdown = timeToSpeed;
+		}
 
-		return Collections.singletonList(Component.textOfChildren(
-				Component.text("First to ", NamedTextColor.GRAY),
-				Component.text("⚑ " + capsToWin, NamedTextColor.GREEN)
-		));
+
+		TextComponent objective = Component.textOfChildren(
+			Component.text("First to ", NamedTextColor.GRAY),
+			Component.text("⚑ " + capsToWin, NamedTextColor.GREEN)
+		);
+		if (antiStallAction != null)
+			return List.of(
+				objective,
+				Component.textOfChildren(
+					antiStallAction,
+					Component.text(" in "),
+					TextUtils.formatDurationMmSs(Ticks.duration(antiStallCountdown))
+				)
+			);
+		return List.of(objective);
 	}
 
 	@Override
@@ -951,5 +975,18 @@ public class CaptureTheFlag extends TeamArena
 	@Override
 	public File getMapPath() {
 		return new File(super.getMapPath(), "CTF");
+	}
+
+	@Override
+	public String getDebugAntiStall() {
+		return """
+			*timeToSpeed: %d
+			TIME_TO_SPEED_ANNOUNCEMENT: %d
+			TIME_TO_END_AFTER_SPEED: %d""".formatted(timeToSpeed, TIME_TO_SPEED_ANNOUNCEMENT, TIME_TO_END_AFTER_SPEED);
+	}
+
+	@Override
+	public void setDebugAntiStall(int antiStallCountdown) {
+		timeToSpeed = antiStallCountdown;
 	}
 }

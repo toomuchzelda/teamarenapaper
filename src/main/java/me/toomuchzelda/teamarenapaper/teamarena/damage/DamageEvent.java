@@ -15,6 +15,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.attribute.Attribute;
@@ -69,6 +70,7 @@ public class DamageEvent {
 	private boolean wasSprinting;
 	private boolean isSweep = false;
 	private boolean ignoreInvulnerability = false;
+	private ItemStack meleeWeapon; // melee attacks only
 
 	private boolean cancelled;
 
@@ -195,6 +197,8 @@ public class DamageEvent {
 		boolean alreadyCalcedArmor = false;
 		Entity realAttacker = null;
 
+		ItemStack weapon = null;
+
 		if(attacker != null) {
 			//damageEvent.isCritical = dEvent.isCritical();
 			if(attacker instanceof Projectile projectile) {
@@ -223,9 +227,9 @@ public class DamageEvent {
 			else if(attacker instanceof LivingEntity living) {
 				if(damageType.isMelee() && living.getEquipment() != null) {
 					//item used during the attack, if applicable
-					ItemStack item = living.getEquipment().getItemInMainHand();
+					weapon = living.getEquipment().getItemInMainHand();
 
-					double[] damages = DamageCalculator.calcItemDamageOnEntity(living, item, damageType, critical, victim);
+					double[] damages = DamageCalculator.calcItemDamageOnEntity(living, weapon, damageType, critical, victim);
 					damageEvent.baseDamage = damages[0];
 					damageEvent.enchantDamage = damages[1];
 					damageEvent.rawDamage = damages[0] + damages[1];
@@ -234,7 +238,7 @@ public class DamageEvent {
 					alreadyCalcedArmor = true;
 
 					//halve the strength of knockback enchantments
-					knockbackLevels += ((float) item.getEnchantmentLevel(Enchantment.KNOCKBACK)) / 2;
+					knockbackLevels += ((float) weapon.getEnchantmentLevel(Enchantment.KNOCKBACK)) / 2;
 					//knockbackMults.add(level);
 
 					//cancelled bukkit event doesn't do sweeping attacks, re-do them here
@@ -252,7 +256,7 @@ public class DamageEvent {
 
 						if(isChargedWeapon && !isChargedSprintAttack && !critical &&
 								notExceedingWalkSpeed) {
-							if(ItemUtils.isSword(item))
+							if(ItemUtils.isSword(weapon))
 								sweep = true;
 						}
 
@@ -326,6 +330,7 @@ public class DamageEvent {
 		damageEvent.realAttacker = realAttacker;
 		damageEvent.knockbackLevels = knockbackLevels;
 		damageEvent.knockbackResistance = knockbackResistance;
+		damageEvent.meleeWeapon = weapon;
 
 		return damageEvent;
 
@@ -789,6 +794,14 @@ public class DamageEvent {
 
 	public double getFinalDamage() {
 		return finalDamage;
+	}
+
+	public ItemStack getMeleeWeapon() {
+		if (!(this.getFinalAttacker() instanceof LivingEntity) || !this.damageType.isMelee()) {
+			Main.logger().warning("DamageEvent.getMeleeWeapon called on non-living-attacker or non-melee DamageEvent");
+			Thread.dumpStack();
+		}
+		return this.meleeWeapon != null ? this.meleeWeapon : new ItemStack(Material.AIR);
 	}
 
 	public void setFinalDamage(double damage) {

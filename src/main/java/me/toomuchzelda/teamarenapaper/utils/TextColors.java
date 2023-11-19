@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.utils;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Commonly-used {@link TextColor}s
@@ -16,7 +17,8 @@ public final class TextColors {
 	public static final TextColor LIGHT_BROWN = TextColor.color(199, 157, 74);
 
 	public static final TextColor HEALTH = TextColor.color(247, 18, 18);
+	public static final TextColor ABSORPTION_HEART = TextColor.color(212, 175, 55);
 
 	public static final Component HEART = Component.text("❤", HEALTH);
-	public static final Component YELLOW_HEART = Component.text("❤", TextColor.color(212, 175, 55));
+	public static final Component YELLOW_HEART = Component.text("❤", ABSORPTION_HEART);
 }
