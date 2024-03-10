@@ -52,7 +52,7 @@ public class CaptureTheFlag extends TeamArena
 	protected int capsToWin;
 	public static final int TIME_TO_SPEED_BOOST = 5 * 60 * 20;
 	protected int timeToSpeed = TIME_TO_SPEED_BOOST;
-	public static final int TIME_TO_END_AFTER_SPEED = 3 * 60 * 20;
+	public static final int TIME_TO_END_AFTER_SPEED = 2 * 60 * 20;
 	public static final int TIME_TO_END_MINUTES = (TIME_TO_END_AFTER_SPEED / 60) / 20;
 
 	public static final int TAKEN_FLAG_RETURN_TIME = 3 * 60 * 20;

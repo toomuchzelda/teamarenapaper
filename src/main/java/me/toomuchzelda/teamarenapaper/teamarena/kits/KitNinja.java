@@ -4,7 +4,7 @@ import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
-import me.toomuchzelda.teamarenapaper.potioneffects.PotionEffectManager;
+//import me.toomuchzelda.teamarenapaper.potioneffects.PotionEffectManager;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
@@ -73,13 +73,13 @@ public class KitNinja extends Kit
 		@Override
 		public void giveAbility(Player player) {
 			player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).addModifier(NINJA_SPEED_MODIFIER);
-			PotionEffectManager.addEffect(player, EFFECT_KEY, NIGHT_VISION_EFFECT);
+			player.addPotionEffect(NIGHT_VISION_EFFECT);
 		}
 
 		@Override
 		public void removeAbility(Player player) {
 			player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).removeModifier(NINJA_SPEED_MODIFIER);
-			PotionEffectManager.removeEffect(player, PotionEffectType.NIGHT_VISION, EFFECT_KEY);
+			player.removePotionEffect(NIGHT_VISION_EFFECT.getType());
 			THROWN_PEARLS.remove(player);
 		}
 

@@ -1,7 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.digandbuild.statusorebuffactions;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.potioneffects.PotionEffectManager;
+//import me.toomuchzelda.teamarenapaper.potioneffects.PotionEffectManager;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.DigAndBuild;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.LifeOre;
@@ -44,6 +44,6 @@ public class HasteOreAction implements StatusOreType.BuffAction
 
 	public static void giveEffect(LivingEntity living) {
 		final String compositeKey = HASTE_EFFECT_KEY + compositeKeyCounter++;
-		PotionEffectManager.addEffect(living, compositeKey, HASTE_EFFECT);
+		//PotionEffectManager.addEffect(living, compositeKey, HASTE_EFFECT);
 	}
 }

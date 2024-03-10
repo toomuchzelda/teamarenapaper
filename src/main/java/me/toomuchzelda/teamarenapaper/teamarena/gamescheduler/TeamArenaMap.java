@@ -3,10 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.gamescheduler;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.GameType;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.StatusOreType;
-import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
-import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
-import me.toomuchzelda.teamarenapaper.utils.IntBoundingBox;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.ComponentBuilder;
 import net.kyori.adventure.text.TextComponent;
@@ -58,6 +55,7 @@ public class TeamArenaMap
 
 	private final boolean doDaylightCycle;
 	private final boolean doWeatherCycle;
+	private final boolean tntPrimable; // For maps downloaded from miner movies replays.
 
 	private final Vector minBorderCorner;
 	private final Vector maxBorderCorner;
@@ -137,6 +135,15 @@ public class TeamArenaMap
 				doWeatherCycle = false;
 			}
 			this.doWeatherCycle = doWeatherCycle;
+
+			boolean tntPrimable;
+			try {
+				tntPrimable = (boolean) mainMap.get("TntPrimable");
+			}
+			catch (NullPointerException | ClassCastException e) {
+				tntPrimable = true;
+			}
+			this.tntPrimable = tntPrimable;
 
 			boolean inRotation;
 			try {
@@ -512,6 +519,10 @@ public class TeamArenaMap
 
 	public boolean isDoWeatherCycle() {
 		return doWeatherCycle;
+	}
+
+	public boolean isTntPrimable() {
+		return this.tntPrimable;
 	}
 
 	public boolean isInRotation() {

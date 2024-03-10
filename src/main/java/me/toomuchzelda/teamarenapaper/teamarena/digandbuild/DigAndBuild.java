@@ -3,7 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.digandbuild;
 import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
-import me.toomuchzelda.teamarenapaper.potioneffects.PotionEffectManager;
+//import me.toomuchzelda.teamarenapaper.potioneffects.PotionEffectManager;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
@@ -464,11 +464,6 @@ public class DigAndBuild extends TeamArena
 	 */
 	@Override
 	public void onPlaceBlock(BlockPlaceEvent event) {
-		super.onPlaceBlock(event);
-
-		if (event.isCancelled())
-			return;
-
 		final Player placer = event.getPlayer();
 		final Block block = event.getBlock();
 		BlockCoords coords = new BlockCoords(block);
@@ -821,7 +816,7 @@ public class DigAndBuild extends TeamArena
 
 
 			// Should be removed by super.handleDeath -> PlayerUtils.resetState
-			assert !PotionEffectManager.hasEffect(playerVictim, PotionEffectType.FAST_DIGGING, HasteOreAction.HASTE_EFFECT_KEY);
+			//assert !PotionEffectManager.hasEffect(playerVictim, PotionEffectType.FAST_DIGGING, HasteOreAction.HASTE_EFFECT_KEY);
 		}
 
 		if (callSuper)

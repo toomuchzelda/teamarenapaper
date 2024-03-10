@@ -51,7 +51,7 @@ public class CommandDebug extends CustomCommand {
 
 	// TODO temporary feature
 	public static boolean ignoreWinConditions;
-	public static boolean kitSniper = true;
+	public static boolean kitSniper = false;
 	public static boolean sniperAccuracy;
 	private static final Predicate<Kit> DEFAULT_KIT_PREDICATE = kit -> !(kit instanceof KitSniper);
 	public static Predicate<Kit> kitPredicate = DEFAULT_KIT_PREDICATE;

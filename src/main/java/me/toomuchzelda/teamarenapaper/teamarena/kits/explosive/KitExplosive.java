@@ -98,7 +98,7 @@ public class KitExplosive extends Kit
 		public static final int RPG_MAX_IN_INV = 2;
 		public static final int RPG_CD = 7 * 20;
 		public static final double RPG_BLAST_RADIUS = 8;
-		private static final int RPG_CHARGEUP_TIME = 2 * 20; //2 secs
+		private static final int RPG_CHARGEUP_TIME = 35; //1.75 secs
 
 		private static final Component RPG_CHARGE_BOSSBAR_NAME = Component.text("CHARGING", NamedTextColor.YELLOW, TextDecoration.BOLD);
 		private static final Component RPG_CHARGE_ALMOST_READY = Component.text("CHARGING", NamedTextColor.GOLD, TextDecoration.BOLD);
@@ -270,7 +270,7 @@ public class KitExplosive extends Kit
 					final int timeSince = currentTick - cinfo.throwTime();
 
 					if(timeSince % 6 == 0) {
-						thrower.getWorld().playSound(thrower, Sound.BLOCK_ANVIL_PLACE, SoundCategory.PLAYERS, 0.7f, 0.8f);
+						thrower.getWorld().playSound(thrower, Sound.BLOCK_ANVIL_PLACE, SoundCategory.PLAYERS, 0.65f, 0.8f);
 					}
 
 					if(timeSince % 2 == 0) {

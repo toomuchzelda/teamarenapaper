@@ -6,7 +6,6 @@ import com.comphenix.protocol.events.PacketContainer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.potioneffects.PotionEffectManager;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
@@ -228,7 +227,6 @@ public class PlayerUtils {
 		player.setInvisible(false);
 		player.setFireTicks(0);
 		player.setHurtDirection(0f);
-		PotionEffectManager.removeAll(player);
 		for (PotionEffect effect : player.getActivePotionEffects()) {
 			player.removePotionEffect(effect.getType());
 		}

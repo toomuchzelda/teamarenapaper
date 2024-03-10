@@ -77,7 +77,7 @@ public abstract class TeamArena
 {
 	private final File tempWorldFile;
 	public World gameWorld;
-	private final TeamArenaMap gameMap;
+	public final TeamArenaMap gameMap;
 
 	//ticks of wait time before teams are decided
 	protected static final int PRE_TEAMS_TIME = 30 * 20;
@@ -122,7 +122,7 @@ public abstract class TeamArena
 	protected static ItemStack respawnItem = ItemBuilder.of(Material.RED_DYE)
 			.displayName(Component.text("Right click to respawn", NamedTextColor.RED))
 			.build();
-	public static final int RESPAWN_SECONDS = 5;
+	public static final int RESPAWN_SECONDS = 6;
 
 	protected final List<Kit> defaultKits;
 
@@ -982,7 +982,11 @@ public abstract class TeamArena
 		return false;
 	}
 
-	public void onPlaceBlock(BlockPlaceEvent event) {}
+	public void onPlaceBlock(BlockPlaceEvent event) {
+		if (event.getPlayer().getGameMode() != GameMode.CREATIVE) {
+			event.setCancelled(true);
+		}
+	}
 
 	public void onBlockDig(BlockDamageEvent event) {}
 
@@ -2087,7 +2091,7 @@ public abstract class TeamArena
 		}
 	}
 
-	public void setGameState(GameState gameState) {
+	private void setGameState(GameState gameState) {
 		this.gameState = gameState;
 		Main.logger().info("GameState: " + gameState);
 	}

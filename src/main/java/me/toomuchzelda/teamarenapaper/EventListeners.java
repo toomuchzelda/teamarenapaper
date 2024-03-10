@@ -16,7 +16,6 @@ import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitbox;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
-import me.toomuchzelda.teamarenapaper.potioneffects.PotionEffectManager;
 import me.toomuchzelda.teamarenapaper.sql.DBSetPreferences;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
@@ -44,7 +43,9 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.command.Command;
 import org.bukkit.craftbukkit.v1_19_R3.CraftWorldBorder;
 import org.bukkit.entity.*;
@@ -130,13 +131,6 @@ public class EventListeners implements Listener
 			FakeHitboxManager.tick();
 		}
 		catch(Exception e) {
-			e.printStackTrace();
-		}
-
-		try {
-			PotionEffectManager.tick();
-		}
-		catch (Exception e) {
 			e.printStackTrace();
 		}
 
@@ -248,7 +242,6 @@ public class EventListeners implements Listener
 		//Main.getPlayerInfo(event.getPlayer()).nametag.remove();
 		FakeHitboxManager.removeFakeHitbox(leaver);
 		LoadedChunkTracker.removeTrackedChunks(leaver);
-		PotionEffectManager.removeAll(event.getPlayer());
 		SidebarManager.removeInstance(leaver);
 
 		PlayerInfo pinfo = Main.removePlayerInfo(leaver);
@@ -422,10 +415,23 @@ public class EventListeners implements Listener
 		event.blockList().clear();
 	}
 
+	private static final BlockData STONE_DATA = Material.STONE.createBlockData();
 	@EventHandler
 	public void tntPrime(TNTPrimeEvent event) {
-		if (event.getCause() == org.bukkit.event.block.TNTPrimeEvent.PrimeCause.PROJECTILE) {
+		final TNTPrimeEvent.PrimeCause cause = event.getCause();
+		if (cause == org.bukkit.event.block.TNTPrimeEvent.PrimeCause.PROJECTILE) {
 			event.setCancelled(true);
+		}
+		else if ((cause == TNTPrimeEvent.PrimeCause.REDSTONE ||
+			cause == TNTPrimeEvent.PrimeCause.EXPLOSION ||
+			cause == TNTPrimeEvent.PrimeCause.FIRE)
+			&& !Main.getGame().gameMap.isTntPrimable()) {
+
+			event.setCancelled(true);
+			Block primingBlock = event.getPrimingBlock();
+			if (primingBlock != null)
+				primingBlock.setBlockData(STONE_DATA);
+			event.getBlock().setBlockData(STONE_DATA);
 		}
 	}
 
@@ -634,11 +640,6 @@ public class EventListeners implements Listener
 			FakeHitbox hitbox = FakeHitboxManager.getFakeHitbox(player);
 			hitbox.handlePoseChange(event);
 		}
-	}
-
-	@EventHandler
-	public void entityPotionEffect(EntityPotionEffectEvent event) {
-		PotionEffectManager.onEntityPotionEffect(event);
 	}
 
 	@EventHandler

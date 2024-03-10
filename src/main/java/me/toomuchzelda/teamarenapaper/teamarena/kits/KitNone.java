@@ -25,11 +25,14 @@ public class KitNone extends Kit {
 
 	private static class NoneAbility extends Ability
 	{
+		private static final Material[] ALL_MATS = Material.values();
+
 		@Override
 		public void giveAbility(Player player) {
 			Material chosenMat;
+
 			do {
-				chosenMat = MathUtils.randomElement(Material.values());
+				chosenMat = MathUtils.randomElement(ALL_MATS);
 			}
 			while (!chosenMat.isItem());
 

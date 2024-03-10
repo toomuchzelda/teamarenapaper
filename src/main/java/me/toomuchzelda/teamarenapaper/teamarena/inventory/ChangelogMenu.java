@@ -124,7 +124,8 @@ public class ChangelogMenu implements InventoryProvider {
 	static boolean fetching = false;
 
 	static boolean shouldFetch() {
-		return (LAST_FETCH == null || Duration.between(LAST_FETCH, LocalDateTime.now()).compareTo(CACHE_DURATION) > 0);
+		//return (LAST_FETCH == null || Duration.between(LAST_FETCH, LocalDateTime.now()).compareTo(CACHE_DURATION) > 0);
+		return false;
 	}
 
 	static HttpClient client = HttpClient.newHttpClient();
