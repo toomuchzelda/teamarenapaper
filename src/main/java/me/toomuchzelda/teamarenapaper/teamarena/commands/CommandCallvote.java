@@ -2,8 +2,10 @@ package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
+import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.bossbar.BossBar;
@@ -38,9 +40,11 @@ public class CommandCallvote extends CustomCommand {
 	public record TopicOptions(boolean priority,
 							   @Nullable Consumer<VotingResults> action,
 							   @NotNull Component actionMessage,
+							   // <Command string to vote for it, the option>
+							   // String must not have spaces.
 							   @NotNull Map<String, VoteOption> options) {}
 	public record Topic(@Nullable UUID caller,
-						@NotNull Component owner,
+						@Nullable Component owner,
 						@NotNull Component display,
 						@NotNull TopicOptions options,
 						@NotNull ZonedDateTime time) {}
@@ -63,6 +67,7 @@ public class CommandCallvote extends CustomCommand {
 		public static final VoteOption NAY = new VoteOption("no", Component.text("No", NamedTextColor.RED),
 				Component.text("Nays: "), Component.text("DID NOT PASS", NamedTextColor.DARK_RED, TextDecoration.BOLD));
 		public static final Map<String, VoteOption> DEFAULT_OPTIONS = Map.of("yes", YEA, "no", NAY);
+
 		public static Map<String, VoteOption> getOptions(VoteOption... options) {
 			var map = new HashMap<String, VoteOption>();
 			for (var option : options) {
@@ -84,6 +89,8 @@ public class CommandCallvote extends CustomCommand {
 			return votes.getOrDefault(option, Collections.emptySet());
 		}
 	}
+
+	private static final Component NO_TOPIC = Component.text("There is no topic to vote on! Suggest one with /callvote [topic]").color(NamedTextColor.RED);
 
 	public final Queue<Topic> priorityQueue = new ArrayDeque<>();
 	public final Queue<Topic> queue = new ArrayDeque<>(); // obviously arrays > linked lists
@@ -107,28 +114,60 @@ public class CommandCallvote extends CustomCommand {
 		instance = this;
 	}
 
-	static final Component SEPARATOR_COMPONENT = Component.text("==========", NamedTextColor.GOLD, TextDecoration.BOLD);
-	void tick() {
-		if (currentTopic == null) {
-			if ((currentTopic = priorityQueue.poll()) == null) // poll priority queue first
-				// don't start a new vote in game
-				if (Main.getGame().getGameState() == GameState.LIVE || (currentTopic = queue.poll()) == null)
-					return; // no topic
+	public boolean isVoteActive() {
+		return this.currentTopic != null;
+	}
+
+	public enum StartVoteOption {
+		MAP, MISC
+	}
+	public void startVote(StartVoteOption option) {
+		assert CompileAsserts.OMIT || Main.getGame().getGameState() != GameState.LIVE;
+		if (currentTopic != null) {
+			Main.logger().info("CommandCallvote.startVote() called while a vote in progress already. Overriding...");
+			this.cancelVote();
+		}
+		if (option == StartVoteOption.MAP) {
+			currentTopic = GameScheduler.getVoteTopic();
+		}
+		else {
+			currentTopic = priorityQueue.poll();
+			if (currentTopic == null) {
+				currentTopic = queue.poll();
+				if (currentTopic == null) {
+					return;
+				}
+			}
+		}
+
+		Component topicComponent = Component.textOfChildren(
+			Component.text("Topic: ", NamedTextColor.GOLD, TextDecoration.BOLD), currentTopic.display);
+		Component instruction;
+
+		if (option == StartVoteOption.MAP) {
+			maxTime = 10;
+			timeLeft = 10;
+			instruction = Component.text("Vote for the next map:", NamedTextColor.YELLOW);
+		}
+		else {
 			maxTime = 30;
 			timeLeft = 30;
+			assert CompileAsserts.OMIT || currentTopic.owner != null;
+			instruction = currentTopic.owner.append(Component.text(" has called for a new vote!", NamedTextColor.YELLOW));
+		}
 
-			Component topicComponent = Component.textOfChildren(
-					Component.text("Topic: ", NamedTextColor.GOLD, TextDecoration.BOLD), currentTopic.display);
+		Bukkit.broadcast(Component.textOfChildren(
+			instruction,
+			Component.newline(), topicComponent,
+			//Component.newline(), SEPARATOR_COMPONENT,
+			Component.newline(), getTopicVoteLinks(),
+			Component.newline(), SEPARATOR_COMPONENT));
+	}
 
-			Bukkit.broadcast(Component.textOfChildren(
-					currentTopic.owner,
-					Component.text(" has called for a new vote!", NamedTextColor.YELLOW),
-					Component.newline(), topicComponent,
-					//Component.newline(), SEPARATOR_COMPONENT,
-					Component.newline(), getTopicVoteLinks(),
-					Component.newline(), SEPARATOR_COMPONENT));
-		} else {
-			if (timeLeft == 30 || timeLeft == 20 || timeLeft == 10 || timeLeft == 5) {
+	static final Component SEPARATOR_COMPONENT = Component.text("==========", NamedTextColor.GOLD, TextDecoration.BOLD);
+	void tick() {
+		if (currentTopic != null) {
+			if (timeLeft == 30 || /*timeLeft == 20 ||*/ timeLeft == 10 /*|| timeLeft == 5*/) {
 				// don't spam the console
 				var message = Component.text(timeLeft + " seconds until the vote ends!", NamedTextColor.YELLOW);
 				Bukkit.getOnlinePlayers().forEach(player -> player.sendMessage(message));
@@ -203,6 +242,13 @@ public class CommandCallvote extends CustomCommand {
 		}
 	}
 
+	public void cancelVote() {
+		if (currentTopic != null && currentTopic.caller != null)
+			calledVotes.remove(currentTopic.caller);
+		currentTopic = null;
+		ballot.clear();
+	}
+
 	VotingResults tallyResults() {
 		// transform map of voter to vote into map of vote to list of voters
 		var map = ballot.entrySet().stream()
@@ -223,15 +269,22 @@ public class CommandCallvote extends CustomCommand {
 				Component.newline(),
 				Component.text("Topic: ", NamedTextColor.YELLOW),
 				topic.display(),
-				Component.text("\nSubmitted by ", NamedTextColor.YELLOW),
+				Component.newline()
+		);
+		if (topic.owner() != null) {
+			message.append(
+				Component.text("Submitted by ", NamedTextColor.YELLOW),
 				topic.owner(),
 				Component.space(),
 				TextUtils.formatDuration(time, currentTopic.time(), locale),
 				Component.text(" ago", NamedTextColor.YELLOW),
-				Component.newline(),
+				Component.newline());
+		}
+		message.append(
 				topic.options().actionMessage(),
 				Component.newline()
 		);
+
 		if (topic == currentTopic) {
 			if (results != null) {
 				var options = new ArrayList<Component>(results.votes().size());
@@ -288,17 +341,18 @@ public class CommandCallvote extends CustomCommand {
 
 	@Override
 	public void run(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) {
+		// Cast a ballot. if no option given, send them the clickable ones
 		if ("vote".equalsIgnoreCase(label)) {
 			if (!(sender instanceof Player player)) {
 				sender.sendMessage(Component.text("Computers don't have voting rights!", NamedTextColor.RED));
 				return;
 			}
-			if (args.length != 1) {
-				player.sendMessage(getTopicVoteLinks());
+			if (currentTopic == null) {
+				player.sendMessage(NO_TOPIC);
 				return;
 			}
-			if (currentTopic == null) {
-				player.sendMessage(Component.text("There is no topic to vote on!").color(NamedTextColor.RED));
+			if (args.length != 1) {
+				player.sendMessage(getTopicVoteLinks());
 				return;
 			}
 			var options = currentTopic.options().options();
@@ -319,7 +373,7 @@ public class CommandCallvote extends CustomCommand {
 			} else {
 				player.sendMessage(Component.text("You casted your vote.").color(NamedTextColor.GREEN));
 			}
-		} else {
+		} else { // "callvote", Call a new election thing
 			if (args.length == 0) {
 				showUsage(sender);
 				return;
@@ -364,10 +418,7 @@ public class CommandCallvote extends CustomCommand {
 					if (currentTopic == null) {
 						return;
 					}
-					if (currentTopic.caller != null)
-						calledVotes.remove(currentTopic.caller);
-					currentTopic = null;
-					ballot.clear();
+					cancelVote();
 					Bukkit.broadcast(Component.text("The ongoing poll has been aborted.", NamedTextColor.YELLOW));
 				}
 				case "extend" -> {

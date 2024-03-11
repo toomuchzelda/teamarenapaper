@@ -13,10 +13,12 @@ import me.toomuchzelda.teamarenapaper.teamarena.announcer.ChatAnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingListeners;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingOutlineManager;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandCallvote;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandTeamChat;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.GraffitiManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
+import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.GameMenu;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.KitInventory;
@@ -86,11 +88,12 @@ public abstract class TeamArena
 	//ticks of game starting time
 	protected static final int GAME_STARTING_TIME = 10 * 20;
 	protected static final int TOTAL_WAITING_TIME = PRE_TEAMS_TIME + PRE_GAME_STARTING_TIME + GAME_STARTING_TIME;
-	protected static final int END_GAME_TIME = 10 * 20;
+	protected static final int END_GAME_TIME = 11 * 20; // 11 seconds, 10 seconds are for map voting.
 	protected static final int MIN_PLAYERS_REQUIRED = 2;
 
 	//init to this, don't want negative numbers when waitingSince is set to the past in the prepGamestate() methods
 	protected static int gameTick = TOTAL_WAITING_TIME * 3;
+	private int gameCreationTime;
 	private int waitingSince;
 	protected int gameLiveTime;
 	protected GameState gameState;
@@ -248,6 +251,7 @@ public abstract class TeamArena
 			}
 		}
 
+		gameCreationTime = gameTick;
 		waitingSince = gameTick;
 		//gameState = GameState.PREGAME;
 		setGameState(GameState.PREGAME);
@@ -299,6 +303,9 @@ public abstract class TeamArena
 		}
 
 		setupMiniMap();
+
+		if (CommandCallvote.instance != null) // TeamArena created before CommandCallvote in Main()
+			CommandCallvote.instance.cancelVote(); // 5 seconds later, in preGameTick(), next one is started
 
 		//init all the players online at time of construction
 		Kit fallbackKit = CommandDebug.filterKit(kits.values().iterator().next());
@@ -481,6 +488,14 @@ public abstract class TeamArena
 	}
 
 	public void preGameTick() {
+		// Start votes during pregame
+		if (gameState == GameState.PREGAME && gameTick != gameCreationTime &&
+			(gameTick - gameCreationTime) % 5 * 20 == 0) {
+
+			if (!CommandCallvote.instance.isVoteActive())
+				CommandCallvote.instance.startVote(CommandCallvote.StartVoteOption.MISC);
+		}
+
 		//if countdown is ticking, do announcements
 		if (CommandDebug.ignoreWinConditions || players.size() >= MIN_PLAYERS_REQUIRED) {
 			//announce Game starting in:
@@ -1259,6 +1274,9 @@ public abstract class TeamArena
 		damageQueue.clear();
 
 		setGameState(GameState.END);
+
+		GameScheduler.updateOptions();
+		CommandCallvote.instance.startVote(CommandCallvote.StartVoteOption.MAP);
 		//Bukkit.broadcastMessage("Game end");
 	}
 
@@ -1869,7 +1887,7 @@ public abstract class TeamArena
 			Component.text("You got "),
 			Component.text(TextUtils.formatNumber(pinfo.totalKills, 2), NamedTextColor.YELLOW),
 			Component.text(" kills and died " + pinfo.deaths + " times this game.")
-		).color(NamedTextColor.DARK_GRAY));
+		).color(NamedTextColor.GRAY));
 	}
 
 	/**Sends a chat message to the player telling how long the game has gone on for.

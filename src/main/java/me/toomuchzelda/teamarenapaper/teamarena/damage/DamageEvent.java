@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
+import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
@@ -797,7 +798,7 @@ public class DamageEvent {
 	}
 
 	public ItemStack getMeleeWeapon() {
-		if (!(this.getFinalAttacker() instanceof LivingEntity) || !this.damageType.isMelee()) {
+		if (!CompileAsserts.OMIT && !(this.getFinalAttacker() instanceof LivingEntity) || !this.damageType.isMelee()) {
 			Main.logger().warning("DamageEvent.getMeleeWeapon called on non-living-attacker or non-melee DamageEvent");
 			Thread.dumpStack();
 		}
