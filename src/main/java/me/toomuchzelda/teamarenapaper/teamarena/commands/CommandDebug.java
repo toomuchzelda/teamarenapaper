@@ -133,7 +133,7 @@ public class CommandDebug extends CustomCommand {
 									new CommandCallvote.VoteOption("zelda", TextUtils.getUselessRainbowText("toomuchzelda"), TextUtils.getUselessRainbowText("toomuchzelda: ")),
 									new CommandCallvote.VoteOption("toed", Component.text("T_0_E_D", NamedTextColor.DARK_GREEN)),
 									new CommandCallvote.VoteOption("onett", Component.text("Onett_", NamedTextColor.BLUE))
-							)));
+							), true));
 			case "respawn" -> {
 				var game = Main.getGame();
 				var toRespawn = selectPlayersOrThrow(sender, args, 1);

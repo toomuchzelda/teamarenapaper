@@ -84,7 +84,9 @@ public class TeamArenaMap
 				+ ", url: " + url
 				+ ", doDaylightCycle: " + doDaylightCycle
 				+ ", doWeatherCycle: " + doWeatherCycle
+				+ ", tntPrimable: " + tntPrimable
 				+ ", inRotation: " + inRotation
+				+ ", minPlayers: " + minPlayers
 				+ ", minBorderCorner: " + minBorderCorner.toString()
 				+ ", maxBorderCorner: " + maxBorderCorner.toString()
 				+ ", noVerticalBorder: " + noVerticalBorder

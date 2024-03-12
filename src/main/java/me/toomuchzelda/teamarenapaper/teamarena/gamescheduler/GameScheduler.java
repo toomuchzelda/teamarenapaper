@@ -154,7 +154,7 @@ public class GameScheduler
 				GameQueueMember chosen = idLookup.get(result.id());
 				GameScheduler.setNextMap(chosen);
 			}
-		}, Component.empty(), voteOptions);
+		}, Component.empty(), voteOptions, false);
 
 		return new CommandCallvote.Topic(null, null, Component.text("Next Map"), topicOptions, ZonedDateTime.now());
 	}

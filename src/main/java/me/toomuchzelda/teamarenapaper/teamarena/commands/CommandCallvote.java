@@ -42,7 +42,10 @@ public class CommandCallvote extends CustomCommand {
 							   @NotNull Component actionMessage,
 							   // <Command string to vote for it, the option>
 							   // String must not have spaces.
-							   @NotNull Map<String, VoteOption> options) {}
+							   @NotNull Map<String, VoteOption> options,
+							   // Added for not spamming chat with map vote result
+							   boolean broadcastResult) {
+	}
 	public record Topic(@Nullable UUID caller,
 						@Nullable Component owner,
 						@NotNull Component display,
@@ -173,11 +176,14 @@ public class CommandCallvote extends CustomCommand {
 				Bukkit.getOnlinePlayers().forEach(player -> player.sendMessage(message));
 			} else if (timeLeft == 0) {
 				VotingResults results = tallyResults();
-				Bukkit.broadcast(Component.text("The vote has ended!", NamedTextColor.AQUA));
-				for (Player player : Bukkit.getOnlinePlayers()) {
-					player.sendMessage(getTopicDisplay(currentTopic, player.locale(), results));
+				if (currentTopic.options().broadcastResult()) {
+					Bukkit.broadcast(Component.text("The vote has ended!", NamedTextColor.AQUA));
+					for (Player player : Bukkit.getOnlinePlayers()) {
+						player.sendMessage(getTopicDisplay(currentTopic, player.locale(), results));
+					}
 				}
 				Bukkit.getConsoleSender().sendMessage(getTopicDisplay(currentTopic, null, results));
+
 				if (currentTopic.options().action() != null) {
 					currentTopic.options().action().accept(results);
 				}
@@ -329,7 +335,7 @@ public class CommandCallvote extends CustomCommand {
 
 	static final Component LE_FUNNY_VOTE = Component.text("Reminder: This vote has no actual effect!", NamedTextColor.YELLOW);
 	public void createVote(@Nullable UUID caller, Component owner, Component display) {
-		createVote(caller, owner, display, new TopicOptions(false, null, LE_FUNNY_VOTE, VoteOption.DEFAULT_OPTIONS));
+		createVote(caller, owner, display, new TopicOptions(false, null, LE_FUNNY_VOTE, VoteOption.DEFAULT_OPTIONS, true));
 	}
 	public void createVote(@Nullable UUID caller, Component owner, Component display, @NotNull TopicOptions options) {
 		Topic topic = new Topic(caller, owner, display, options, ZonedDateTime.now());
@@ -498,7 +504,7 @@ public class CommandCallvote extends CustomCommand {
 						name = sender.name();
 					}
 					createVote(caller, name, LegacyComponentSerializer.legacyAmpersand().deserialize(topic),
-							new TopicOptions(true, null, LE_FUNNY_VOTE, VoteOption.DEFAULT_OPTIONS));
+							new TopicOptions(true, null, LE_FUNNY_VOTE, VoteOption.DEFAULT_OPTIONS, true));
 					sender.sendMessage(Component.text("Queued a topic!").color(NamedTextColor.GREEN));
 				}
 				default -> {
