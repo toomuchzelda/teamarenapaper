@@ -6,9 +6,9 @@ import me.toomuchzelda.teamarenapaper.sql.DBSetDefaultKit;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
-import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitFilter;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
@@ -71,7 +71,7 @@ public class KitInventory implements InventoryProvider {
 	private static final TextComponent SELECTED_COMPONENT = Component.text("Currently selected!", NamedTextColor.GREEN, TextDecoration.BOLD);
 
 	private static ClickableItem kitToItem(Kit kit, boolean selected) {
-		boolean disabled = !CommandDebug.kitPredicate.test(kit);
+		boolean disabled = !KitFilter.isAllowed(kit);
 		Style nameStyle = Style.style(kit.getCategory().textColor());
 		String desc = kit.getDescription();
 		// word wrapping
@@ -99,7 +99,7 @@ public class KitInventory implements InventoryProvider {
 				})
 				.build(),
 			e -> {
-				if (!CommandDebug.kitPredicate.test(kit))
+				if (!KitFilter.isAllowed(kit))
 					return;
 				Player player = (Player) e.getWhoClicked();
 				Main.getGame().selectKit(player, kit);

@@ -32,6 +32,8 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.beekeeper.KitBeekeeper;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.KitDemolitions;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.engineer.KitEngineer;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.explosive.KitExplosive;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitFilter;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.medic.KitMedic;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.trigger.KitTrigger;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
@@ -93,7 +95,7 @@ public abstract class TeamArena
 
 	//init to this, don't want negative numbers when waitingSince is set to the past in the prepGamestate() methods
 	protected static int gameTick = TOTAL_WAITING_TIME * 3;
-	private int gameCreationTime;
+	private final int gameCreationTime;
 	private int waitingSince;
 	protected int gameLiveTime;
 	protected GameState gameState;
@@ -308,7 +310,7 @@ public abstract class TeamArena
 			CommandCallvote.instance.cancelVote(); // 5 seconds later, in preGameTick(), next one is started
 
 		//init all the players online at time of construction
-		Kit fallbackKit = CommandDebug.filterKit(kits.values().iterator().next());
+		Kit fallbackKit = KitFilter.filterKit(kits.values().iterator().next());
 		for (var entry : Main.getPlayerInfoMap().entrySet()) {
 			Player p = entry.getKey();
 			PlayerInfo pinfo = entry.getValue();
@@ -352,7 +354,7 @@ public abstract class TeamArena
 
 	protected void registerKits() {
 		defaultKits.forEach(this::registerKit);
-		if (CommandDebug.kitSniper)
+		if (KitOptions.kitSniper)
 			registerKit(new KitSniper());
 	}
 
@@ -1789,10 +1791,10 @@ public abstract class TeamArena
 		}
 
 		if (playerInfo.kit == null) {
-			playerInfo.kit = CommandDebug.filterKit(findKit(playerInfo.defaultKit));
+			playerInfo.kit = KitFilter.filterKit(findKit(playerInfo.defaultKit));
 			//default kit somehow invalid; maybe a kit was removed
 			if (playerInfo.kit == null) {
-				playerInfo.kit = CommandDebug.filterKit(kits.values().iterator().next());
+				playerInfo.kit = KitFilter.filterKit(kits.values().iterator().next());
 				Main.logger().severe("PlayerInfo default kit somehow invalid in TeamArena#loggingInPlayer. Should" +
 						" have been handled in EventListeners playerLogin.");
 			}

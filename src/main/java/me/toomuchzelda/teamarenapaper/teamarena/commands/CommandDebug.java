@@ -16,9 +16,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitBurst;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSniper;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
@@ -42,19 +40,15 @@ import org.jetbrains.annotations.Nullable;
 
 import java.net.InetSocketAddress;
 import java.util.*;
-import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
 
 public class CommandDebug extends CustomCommand {
 
 	// TODO temporary feature
 	public static boolean ignoreWinConditions;
-	public static boolean kitSniper = false;
-	public static boolean sniperAccuracy;
-	private static final Predicate<Kit> DEFAULT_KIT_PREDICATE = kit -> !(kit instanceof KitSniper);
-	public static Predicate<Kit> kitPredicate = DEFAULT_KIT_PREDICATE;
 
 	public CommandDebug() {
 		super("debug", "", "/debug ...", PermissionLevel.OWNER, "abuse");
@@ -108,18 +102,8 @@ public class CommandDebug extends CustomCommand {
 					ignoreWinConditions = args.length == 3 ? Boolean.parseBoolean(args[2]) : !ignoreWinConditions;
 					auditEvent(sender, "game ignoreWinConditions %s", ignoreWinConditions);
 					sender.sendMessage(Component.text("Set ignore win conditions to " + ignoreWinConditions, NamedTextColor.GREEN));
-				} else if (args[1].equals("sniperaccuracy")) {
-					sniperAccuracy = args.length == 3 ? Boolean.parseBoolean(args[2]) : !sniperAccuracy;
-					auditEvent(sender, "game sniperAccuracy %s", sniperAccuracy);
-					sender.sendMessage(Component.text("Set sniper accuracy debug to " + sniperAccuracy, NamedTextColor.GREEN));
-				} else if (args[1].equals("enablekitsniper")) {
-					kitSniper = args.length == 3 ? Boolean.parseBoolean(args[2]) : !kitSniper;
-					auditEvent(sender, "game kitSniper %s", kitSniper);
-					sender.sendMessage(Component.text("Set enable kit sniper to " + kitSniper, NamedTextColor.GREEN));
 				} else if (args[1].equals("antistall")) {
 					doGameAntiStall(sender, args);
-				} else if (args[1].equals("kitfilter")) {
-					setKitRestrictions(sender, args);
 				}
 			}
 			case "draw" -> {
@@ -270,61 +254,6 @@ public class CommandDebug extends CustomCommand {
 			game.setDebugAntiStall(antiStallCountdown);
 			sender.sendMessage(Component.text("Set anti-stall countdown to " + antiStallCountdown));
 		}
-	}
-
-	public static Kit filterKit(Kit kit) {
-		if (!kitPredicate.test(kit))
-			return Main.getGame().getKits().stream()
-					.filter(kitPredicate)
-					.findFirst().orElse(null);
-		else
-			return kit;
-	}
-
-	private void setKitRestrictions(@NotNull CommandSender sender, @NotNull String @NotNull [] args) {
-		if (args.length < 3)
-			throw throwUsage("/debug game kitfilter <allow/block/clear> [kit1,...]");
-		if (args[2].equalsIgnoreCase("clear")) {
-			kitPredicate = DEFAULT_KIT_PREDICATE;
-			sender.sendMessage(Component.text("Allowing all kits (except sniper).", NamedTextColor.YELLOW));
-			auditEvent(sender, "game kitFilter clear");
-			return;
-		}
-
-		boolean block = args[2].equalsIgnoreCase("block");
-		Set<String> kitNames;
-		if (args.length == 4) {
-			kitNames = Set.of(args[3].split(","));
-		} else {
-			kitNames = Set.of();
-		}
-		// XOR
-		kitPredicate = kit -> block != kitNames.contains(kit.getName().toLowerCase(Locale.ENGLISH));
-		auditEvent(sender, "game %s %s", args[2], kitNames);
-		sender.sendMessage(Component.text("Set kit restrictions to: " +
-				args[2] + " " + kitNames, NamedTextColor.GREEN));
-		Main.getGame().getKits().stream()
-				.filter(kitPredicate)
-				.findFirst()
-				.ifPresentOrElse(fallbackKit -> Main.getPlayerInfoMap().forEach((player, playerInfo) -> {
-					if (playerInfo.kit != null && !kitPredicate.test(playerInfo.kit)) {
-						playerInfo.kit = fallbackKit;
-						player.sendMessage(Component.text("The kit you have selected has been disabled by an admin. " +
-								"It has been replaced with: " + fallbackKit.getName(), NamedTextColor.YELLOW));
-					}
-					if (playerInfo.activeKit != null && !kitPredicate.test(playerInfo.activeKit)) {
-						// also change active kit
-						playerInfo.activeKit.removeKit(player, playerInfo);
-						Main.getGame().givePlayerItems(player, playerInfo, true);
-						player.sendMessage(Component.text("The kit you are using has been disabled by an admin. " +
-								"It has been replaced with your selected kit.", NamedTextColor.YELLOW));
-					}
-				}), /* else */ () -> {
-					// cannot allow blocking all kits!
-					kitPredicate = DEFAULT_KIT_PREDICATE;
-					auditEvent(sender, "game kitFilter invalid");
-					sender.sendMessage(Component.text("Warning: no fallback kit found. Allowing all kits (except sniper) instead.", NamedTextColor.YELLOW));
-				});
 	}
 
 	private void doDrawCommand(String[] args) {
@@ -538,7 +467,7 @@ public class CommandDebug extends CustomCommand {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");
 				case "guitest" -> Arrays.asList("tab", "spectate");
-				case "game" -> List.of("start", "ignorewinconditions", "sniperaccuracy", "enablekitsniper", "kitfilter", "antistall");
+				case "game" -> List.of("start", "ignorewinconditions", "antistall");
 				case "setrank" -> Arrays.stream(PermissionLevel.values()).map(Enum::name).toList();
 				case "setteam" -> Arrays.stream(Main.getGame().getTeams())
 						.map(team -> team.getSimpleName().replace(' ', '_'))
@@ -555,7 +484,6 @@ public class CommandDebug extends CustomCommand {
 						.map(Player::getName).toList();
 				case "game" -> switch (args[1]) {
 					case "start" -> Collections.emptyList();
-					case "kitfilter" -> List.of("allow", "block");
 					case "antistall" -> List.of("0");
 					default -> List.of("true", "false");
 				};

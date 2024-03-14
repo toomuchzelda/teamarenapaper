@@ -24,6 +24,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.spigotmc.SpigotConfig;
 
 import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 public final class Main extends JavaPlugin
@@ -142,6 +144,7 @@ public final class Main extends JavaPlugin
 		commandMap.register(fallbackPrefix, new CommandTime());
 		commandMap.register(fallbackPrefix, new CommandMenu());
 		commandMap.register(fallbackPrefix, new CommandMapInfo());
+		commandMap.register(fallbackPrefix, new CommandKitControl());
 	}
 
 	public static PlayerInfo getPlayerInfo(Player player) {
@@ -152,8 +155,13 @@ public final class Main extends JavaPlugin
 		return playerInfo.values();
 	}
 
+	@Deprecated
 	public static Map<Player, PlayerInfo> getPlayerInfoMap() {
 		return playerInfo;
+	}
+
+	public static void forEachPlayerInfo(BiConsumer<Player, PlayerInfo> function) {
+		playerInfo.forEach(function);
 	}
 
 	public static Iterator<Map.Entry<Player, PlayerInfo>> getPlayersIter() {

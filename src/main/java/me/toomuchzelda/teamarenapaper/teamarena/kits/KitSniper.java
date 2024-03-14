@@ -4,10 +4,10 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
-import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
@@ -247,7 +247,7 @@ public class KitSniper extends Kit {
 			World world = player.getWorld();
 			if (item.getItemStack().getType() == Material.SPYGLASS && !player.hasCooldown(Material.SPYGLASS)) {
 				double inaccuracy = calcInaccuracy(player);
-				if (CommandDebug.sniperAccuracy) {
+				if (KitOptions.sniperAccuracy) {
 					player.sendActionBar(Component.text("Inaccuracy: " + inaccuracy));
 				}
 				Vector velocity = player.getLocation().getDirection();
@@ -269,7 +269,7 @@ public class KitSniper extends Kit {
 				world.playSound(player, Sound.ENTITY_GENERIC_EXPLODE, 0.8f, 2.5f);
 
 				//Sniper Cooldown + deleting the dropped sniper and returning a new one.
-				if (!CommandDebug.sniperAccuracy) {
+				if (!KitOptions.sniperAccuracy) {
 					player.setCooldown(Material.SPYGLASS, 50);
 				}
 				event.setCancelled(true);
@@ -294,7 +294,7 @@ public class KitSniper extends Kit {
 
 			//Sniper Information message
 			if (inventory.getItemInMainHand().getType() == Material.SPYGLASS) {
-				Component actionBar = CommandDebug.sniperAccuracy ?
+				Component actionBar = KitOptions.sniperAccuracy ?
 					Component.text("Inaccuracy: " + calcInaccuracy(player)) :
 					Component.text("Drop Spyglass in hand to shoot", SNIPER_MSG_COLOR);
 				Component text = Component.text("Drop Spyglass in your main hand to shoot", SNIPER_MSG_COLOR);
