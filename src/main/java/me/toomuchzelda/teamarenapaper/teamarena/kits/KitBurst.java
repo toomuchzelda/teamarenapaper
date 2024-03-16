@@ -9,6 +9,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowImpaleStatus;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
@@ -82,17 +83,16 @@ public class KitBurst extends Kit
 				"%Killed% was caught in their own Rocket explosion");
 
 		//possible firework effects for fired fireworks
-		private static final List<FireworkEffect.Type> FIREWORK_EFFECTS;
+		private static final ArrayList<FireworkEffect.Type> FIREWORK_EFFECTS;
 
-		private static final List<Arrow> SHOTGUN_ARROWS = new LinkedList<>();
+		private static final List<Arrow> SHOTGUN_ARROWS = new ArrayList<>(120);
 		private static final Map<Component, Set<Entity>> BLAST_HIT_ENTITIES = new HashMap<>();
 
-		//used for identifying the entity in events
+		//used for identifying the entity across events
 		private static final Component SHOTUGUN_FIREWORK_NAME = Component.text("burstfw");
-		private static final double SHOTGUN_SELF_DAMAGE = 7d;
+		private static final double SHOTGUN_SELF_DAMAGE = 8d;
 		private static final double SHOTGUN_MAX_DAMAGE = 18d;
 		private static final int SHOTGUN_ARROW_LIVE_TICKS = 17;
-		public static boolean HIDE_SHOTGUN_ARROWS = true;
 
 		static {
 			FIREWORK_EFFECTS = new ArrayList<>(FireworkEffect.Type.values().length);
@@ -139,10 +139,12 @@ public class KitBurst extends Kit
 
 					//if the burst is in their own explosion range un-cancel the damage
 					// and make them not the final attacker, so they don't get kill credit for it
+					// also increase the damage a bit
 					if (event.getFinalAttacker() == event.getVictim()) {
 						event.setCancelled(false);
 						event.setFinalAttacker(null);
 						event.setDamageType(DamageType.BURST_FIREWORK_SELF);
+						event.setFinalDamage(event.getFinalDamage() * 2.0d);
 					}
 					else {
 						event.setDamageType(DamageType.BURST_FIREWORK);
@@ -288,7 +290,7 @@ public class KitBurst extends Kit
 
 					arrow.customName(arrowShotId);
 
-					if(HIDE_SHOTGUN_ARROWS) {
+					if(!KitOptions.burstShowArrows) {
 						for(Player viewer : Bukkit.getOnlinePlayers()) {
 							viewer.hideEntity(Main.getPlugin(), arrow);
 						}

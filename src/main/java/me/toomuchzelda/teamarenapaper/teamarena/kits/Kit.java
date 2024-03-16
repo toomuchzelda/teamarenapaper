@@ -234,6 +234,7 @@ public abstract class Kit {
         }*/
     }
 
+	/** Out of date: Abilities are now tracked in PlayerInfo */
     public static boolean hasAbility(Player player, Class<? extends Ability> ability) {
         Kit kit = getActiveKit(player);
         return hasAbility(kit, ability);

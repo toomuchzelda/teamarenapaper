@@ -16,7 +16,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.KitBurst;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
@@ -203,11 +202,6 @@ public class CommandDebug extends CustomCommand {
 						rad, guar, damage, minDamage, knockbackStrength, DamageType.EXPLOSION, p);
 				explosion.explode();
 				auditEvent(sender, "game explode %d %d %d %d %d", (Object[]) Arrays.copyOfRange(args, 1, args.length));
-			}
-			case "burst" -> {
-				KitBurst.BurstAbility.HIDE_SHOTGUN_ARROWS = !KitBurst.BurstAbility.HIDE_SHOTGUN_ARROWS;
-				auditEvent(sender, "game hideBurstShotgunArrows %s", KitBurst.BurstAbility.HIDE_SHOTGUN_ARROWS);
-				sender.sendMessage("Set burst show arrows to: " + KitBurst.BurstAbility.HIDE_SHOTGUN_ARROWS);
 			}
 			case "fakehitbox" -> {
 				boolean show = args.length == 2 ? Boolean.parseBoolean(args[1]) : !FakeHitboxManager.show;
@@ -462,7 +456,7 @@ public class CommandDebug extends CustomCommand {
 	public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
 		if (args.length == 1) {
 			return Arrays.asList("hide", "gui", "guitest", "signtest", "game", "setrank", "setteam", "setkit",
-				"votetest", "draw", "graffititest", "burst", "respawn", "fakehitbox", "testmotd");
+				"votetest", "draw", "graffititest", "respawn", "fakehitbox", "testmotd");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");

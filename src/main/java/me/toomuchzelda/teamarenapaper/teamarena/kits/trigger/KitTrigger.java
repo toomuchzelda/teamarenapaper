@@ -284,7 +284,7 @@ public class KitTrigger extends Kit
 
 			//esplode
 			if(diff >= BOOM_TIME) {
-				TeamArenaExplosion boom = new TeamArenaExplosion(null, 10d, 2d, 40d, 2d, 0.7d, DamageType.TRIGGER_BOOM, player);
+				TeamArenaExplosion boom = new TeamArenaExplosion(null, 10d, 2d, 42d, 2d, 0.7d, DamageType.TRIGGER_BOOM, player);
 				boom.explode();
 
 				DamageEvent selfKill = DamageEvent.newDamageEvent(player, 999999d, DamageType.TRIGGER_BOOM_SELF, null, false);

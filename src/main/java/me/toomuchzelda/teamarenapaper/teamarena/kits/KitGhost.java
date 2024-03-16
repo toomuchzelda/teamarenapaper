@@ -6,6 +6,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.PacketListeners;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowImpaleStatus;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
@@ -89,9 +90,11 @@ public class KitGhost extends Kit
 		@Override
 		public void giveAbility(Player player) {
 			PlayerUtils.setInvisible(player, true);
+
 			ShieldInfo sinfo = new ShieldInfo();
-			player.showBossBar(sinfo.bar);
 			SHIELDS.put(player, sinfo);
+			if (KitOptions.ghostAetherial)
+				player.showBossBar(sinfo.bar);
 		}
 
 		@Override
@@ -134,41 +137,43 @@ public class KitGhost extends Kit
 			boolean shielded = false;
 
 			//shield damage from indirect sources if there is any shield left
-			ShieldInfo sinfo = SHIELDS.get(ghost);
-			if(event.getDamageType().isExplosion() || event.getDamageType().isProjectile()) {
-				sinfo.lastHit = TeamArena.getGameTick();
-				//change bossbar name colour to red to indicate not charging
-				if(!sinfo.bar.name().equals(BOSSBAR_RED_NAME))
-					sinfo.bar.name(BOSSBAR_RED_NAME);
+			if (KitOptions.ghostAetherial) {
+				ShieldInfo sinfo = SHIELDS.get(ghost);
+				if (event.getDamageType().isExplosion() || event.getDamageType().isProjectile()) {
+					sinfo.lastHit = TeamArena.getGameTick();
+					//change bossbar name colour to red to indicate not charging
+					if (!sinfo.bar.name().equals(BOSSBAR_RED_NAME))
+						sinfo.bar.name(BOSSBAR_RED_NAME);
 
-				if(sinfo.bar.progress() > 0) {
-					//reduce shield count
-					//the shield effectively is 5 hearts.
-					double shieldHearts = sinfo.bar.progress() * 5d;
-					shieldHearts -= event.getFinalDamage();
+					if (sinfo.bar.progress() > 0) {
+						//reduce shield count
+						//the shield effectively is 5 hearts.
+						double shieldHearts = sinfo.bar.progress() * 5d;
+						shieldHearts -= event.getFinalDamage();
 
-					final Location loc = ghost.getLocation();
-					if(shieldHearts < 0) {
-						// half of the remaining damage after shield or 4 hearts, whichever is smaller
-						event.setFinalDamage(Math.min(Math.abs(shieldHearts / 2d), 8d));
+						final Location loc = ghost.getLocation();
+						if (shieldHearts < 0) {
+							// half of the remaining damage after shield or 4 hearts, whichever is smaller
+							event.setFinalDamage(Math.min(Math.abs(shieldHearts / 2d), 8d));
 
-						//also play a "shield broke" sound
-						ghost.getWorld().playSound(loc, Sound.BLOCK_GLASS_BREAK, 2f, 0.8f);
-						ghost.getWorld().playSound(loc, Sound.BLOCK_GLASS_BREAK, 1.5f, 1.1f);
+							//also play a "shield broke" sound
+							ghost.getWorld().playSound(loc, Sound.BLOCK_GLASS_BREAK, 2f, 0.8f);
+							ghost.getWorld().playSound(loc, Sound.BLOCK_GLASS_BREAK, 1.5f, 1.1f);
+						}
+						else {
+							event.setFinalDamage(0d);
+						}
+
+						float newProgress = ((float) shieldHearts) / 5f;
+						newProgress = MathUtils.clamp(0f, 1f, newProgress);
+						sinfo.bar.progress(newProgress);
+
+						//play shield damage sound at an inaccurate location
+						loc.add(MathUtils.randomRange(-2.5d, 2.5d), 0, MathUtils.randomRange(-2.5d, 2.5d));
+						ghost.getWorld().playSound(loc, Sound.ENTITY_SKELETON_DEATH, SoundCategory.PLAYERS, 1f, 2.1f);
+
+						shielded = true;
 					}
-					else {
-						event.setFinalDamage(0d);
-					}
-
-					float newProgress = ((float) shieldHearts) / 5f;
-					newProgress = MathUtils.clamp(0f, 1f, newProgress);
-					sinfo.bar.progress(newProgress);
-
-					//play shield damage sound at an inaccurate location
-					loc.add(MathUtils.randomRange(-2.5d, 2.5d), 0, MathUtils.randomRange(-2.5d, 2.5d));
-					ghost.getWorld().playSound(loc, Sound.ENTITY_SKELETON_DEATH, SoundCategory.PLAYERS, 1f, 2.1f);
-
-					shielded = true;
 				}
 			}
 
@@ -193,7 +198,7 @@ public class KitGhost extends Kit
 
 				if (aa.getPierceLevel() > 0 && ArrowImpaleStatus.isImpaling(aa)) {
 					//make arrows stick in the Ghost if it's a piercing projectile (normally doesn't)
-					ghost.setArrowsInBody(event.getPlayerVictim().getArrowsInBody() + 1);
+					ghost.setArrowsInBody(arrowsInBody);
 				}
 			}
 
@@ -226,24 +231,26 @@ public class KitGhost extends Kit
 		//slowly regen the shields
 		@Override
 		public void onTick() {
-			final int currentTick = TeamArena.getGameTick();
+			if (KitOptions.ghostAetherial) {
+				final int currentTick = TeamArena.getGameTick();
 
-			for(Map.Entry<Player, ShieldInfo> entry : SHIELDS.entrySet()) {
-				ShieldInfo sinfo = entry.getValue();
+				for (Map.Entry<Player, ShieldInfo> entry : SHIELDS.entrySet()) {
+					ShieldInfo sinfo = entry.getValue();
 
-				//if it increased back from 0 reset the colour back to blue
-				if(sinfo.bar.progress() > 0f && sinfo.bar.color() == BossBar.Color.RED) {
-					sinfo.bar.color(BossBar.Color.BLUE);
-				}
-
-				if(currentTick - sinfo.lastHit >= SHIELD_COOLDOWN_TIME) {
-					//if it was not charging and now is charging change it back to blue
-					if(sinfo.bar.name().equals(BOSSBAR_RED_NAME)) {
-						sinfo.bar.name(BOSSBAR_NAME);
+					//if it increased back from 0 reset the colour back to blue
+					if (sinfo.bar.progress() > 0f && sinfo.bar.color() == BossBar.Color.RED) {
+						sinfo.bar.color(BossBar.Color.BLUE);
 					}
-					float newProgress = sinfo.bar.progress();
-					newProgress = Math.min(1f, newProgress + SHIELD_REGEN_PER_TICK);
-					sinfo.bar.progress(newProgress);
+
+					if (currentTick - sinfo.lastHit >= SHIELD_COOLDOWN_TIME) {
+						//if it was not charging and now is charging change it back to blue
+						if (sinfo.bar.name().equals(BOSSBAR_RED_NAME)) {
+							sinfo.bar.name(BOSSBAR_NAME);
+						}
+						float newProgress = sinfo.bar.progress();
+						newProgress = Math.min(1f, newProgress + SHIELD_REGEN_PER_TICK);
+						sinfo.bar.progress(newProgress);
+					}
 				}
 			}
 		}

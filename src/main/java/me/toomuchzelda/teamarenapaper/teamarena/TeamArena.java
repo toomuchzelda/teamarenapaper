@@ -281,10 +281,19 @@ public abstract class TeamArena
 		graffiti = new GraffitiManager(this);
 		killStreakManager = new KillStreakManager();
 
-		this.defaultKits = List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
-				new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(),
-				new KitNone(), new KitVenom(), new KitRewind(), new KitValkyrie(), new KitEngineer(), new KitExplosive(),
-				new KitTrigger(), new KitMedic(this.killStreakManager), new KitBeekeeper());
+		if (KitOptions.rwfKits) {
+			// TODO sort out teleporter, other missing kits
+			this.defaultKits = List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(), new KitBurst(),
+				new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(), new KitNone(),
+				new KitVenom(), new KitRewind(), new KitExplosive(), new KitTrigger(), new KitMedic(this.killStreakManager)
+				);
+		}
+		else {
+			this.defaultKits = List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
+					new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(),
+					new KitNone(), new KitVenom(), new KitRewind(), new KitValkyrie(), new KitEngineer(), new KitExplosive(),
+					new KitTrigger(), new KitMedic(this.killStreakManager), new KitBeekeeper());
+		}
 
 		registerKits();
 
@@ -359,7 +368,9 @@ public abstract class TeamArena
 	}
 
 	protected void registerKit(Kit kit) {
-		kits.put(kit.getName().toLowerCase(Locale.ENGLISH), kit);
+		if (kits.put(kit.getName().toLowerCase(Locale.ENGLISH), kit) != null) {
+			throw new RuntimeException("Tried to register two kits of same name!");
+		}
 		for (Ability ability : kit.getAbilities()) {
 			ability.registerAbility();
 		}

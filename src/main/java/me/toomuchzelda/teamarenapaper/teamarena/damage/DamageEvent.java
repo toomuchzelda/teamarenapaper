@@ -541,7 +541,7 @@ public class DamageEvent {
 				int fireTicks = 0;
 				DamageType type = DamageType.FIRE_TICK;
 				if(damageType.isMelee()) {
-					ItemStack weapon = livingDamager.getEquipment().getItemInMainHand();
+					ItemStack weapon = this.getMeleeWeapon();
 					fireTicks = weapon.getEnchantmentLevel(Enchantment.FIRE_ASPECT);
 					fireTicks *= 80; //80 ticks of fire per level
 					type = DamageType.FIRE_ASPECT;

@@ -1,11 +1,13 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
@@ -54,14 +56,16 @@ public class KitPyro extends Kit
 		super("Pyro", "I fear no man...\n\nThis kit is equipped to burn everything that's not on its team.\n\n" +
 				"With a flaming sword, it can burn up close. " +
 				"With a flaming bow, it can burn from afar.\n\n" +
-				"And with an incendiary launcher, it can sear victims nicely, while they're still fresh (alive)."
+				(!KitOptions.pyroMolotov ?
+					"And with an incendiary launcher, it can sear victims nicely, while they're still fresh (alive)."
+					:
+					"And with explosion-proof armour, it's safer than Obama in his limousine.")
 				, Material.FLINT_AND_STEEL);
 
-		ItemStack boots = new ItemStack(Material.CHAINMAIL_BOOTS);
-		boots.addEnchantment(Enchantment.PROTECTION_FIRE, 4);
+		ItemStack boots = ItemBuilder.of(Material.CHAINMAIL_BOOTS).enchant(Enchantment.PROTECTION_FIRE, 5).build();
 
-		ItemStack leggings = new ItemStack(Material.LEATHER_LEGGINGS);
-		leggings.addEnchantment(Enchantment.PROTECTION_EXPLOSIONS, 3);
+		ItemStack leggings = ItemBuilder.of(Material.LEATHER_LEGGINGS)
+			.enchant(Enchantment.PROTECTION_EXPLOSIONS, KitOptions.pyroMolotov ? 3 : 8).build();
 
 		ItemStack chestplate = new ItemStack(Material.LEATHER_CHESTPLATE);
 		chestplate.addEnchantment(Enchantment.PROTECTION_PROJECTILE, 3);
@@ -73,7 +77,8 @@ public class KitPyro extends Kit
 
 		this.setArmor(helmet, chestplate, leggings, boots);
 
-		ItemStack sword = new ItemStack(Material.WOODEN_SWORD);
+		Material swordMat = KitOptions.pyroMolotov ? Material.WOODEN_SWORD : Material.IRON_SWORD;
+		ItemStack sword = new ItemStack(swordMat);
 		sword.addEnchantment(Enchantment.FIRE_ASPECT, 1);
 
 		ItemStack bow = new ItemStack(Material.BOW);
@@ -82,7 +87,10 @@ public class KitPyro extends Kit
 		bowMeta.addEnchant(Enchantment.ARROW_INFINITE, 1, true);
 		bow.setItemMeta(bowMeta);
 
-		this.setItems(sword, bow, MOLOTOV_BOW, new ItemStack(Material.ARROW));
+		if (KitOptions.pyroMolotov)
+			this.setItems(sword, bow, MOLOTOV_BOW, new ItemStack(Material.ARROW));
+		else
+			this.setItems(sword, bow, new ItemStack(Material.ARROW));
 
 		this.setAbilities(new PyroAbility());
 

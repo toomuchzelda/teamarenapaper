@@ -10,6 +10,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
@@ -51,9 +52,11 @@ public class KitNinja extends Kit
 				new ItemStack(Material.CHAINMAIL_LEGGINGS), boots);
 
 		ItemStack sword = new ItemStack(Material.IRON_SWORD);
-		ItemMeta swordMeta = sword.getItemMeta();
-		swordMeta.displayName(Component.text("Fast Dagger"));
-		sword.setItemMeta(swordMeta);
+		if (KitOptions.ninjaFastAttack) {
+			ItemMeta swordMeta = sword.getItemMeta();
+			swordMeta.displayName(Component.text("Fast Dagger"));
+			sword.setItemMeta(swordMeta);
+		}
 
 		setItems(sword, PEARL);
 
@@ -140,6 +143,9 @@ public class KitNinja extends Kit
 
 		@Override
 		public void onAttemptedAttack(DamageEvent event) {
+			if (!KitOptions.ninjaFastAttack) // shaking and crying rn
+				return;
+
 			if(event.getDamageType().isMelee() && event.getVictim() instanceof LivingEntity living) {
 				if(event.hasKnockback())
 					event.getKnockback().multiply(0.65);
