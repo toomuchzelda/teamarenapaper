@@ -69,7 +69,7 @@ public class DamageEvent {
 	private boolean isCritical;
 	//if the attacker was sprinting, only applicable if the attacker is a Player
 	private boolean wasSprinting;
-	private boolean isSweep = false;
+	private boolean sweepEffect = false;
 	private boolean ignoreInvulnerability = false;
 	private ItemStack meleeWeapon; // melee attacks only
 
@@ -283,11 +283,10 @@ public class DamageEvent {
 									//does the damage/armor calculations and calls the EntityDamageEvent,
 									// which will create another one of these and queue it
 									nmsLivingEntity.hurt(DamageType.getSweeping(p).getDamageSource(), sweepingEdgeDmg);
+									damageEvent.sweepEffect = true; // Only sweep attack effect if actually sweep attack'd
 								}
 							}
 						}
-
-						damageEvent.isSweep = sweep;
 					}
 					else if(damageType.is(DamageType.SWEEP_ATTACK)) {
 						//sweep attacks no do base kb
@@ -590,7 +589,7 @@ public class DamageEvent {
 					if (isCritical) {
 						p.getWorld().playSound(p, Sound.ENTITY_PLAYER_ATTACK_CRIT, SoundCategory.PLAYERS, 1f, 1f);
 					}
-					else if (isSweep) {
+					else if (sweepEffect) {
 						p.getWorld().playSound(p, Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 1f, 1f);
 						nmsPlayer.sweepAttack();
 					}
