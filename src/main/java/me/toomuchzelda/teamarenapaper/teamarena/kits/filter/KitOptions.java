@@ -16,6 +16,8 @@ public class KitOptions
 	public static boolean burstShowArrows;
 	public static boolean ninjaFastAttack;
 	public static boolean pyroMolotov;
+	public static boolean rewindClockPhases;
+	public static boolean rewindStasis;
 
 	private static void resetToDefault() {
 		kitSniper = false; sniperAccuracy = false;
@@ -26,6 +28,8 @@ public class KitOptions
 		burstShowArrows = false;
 		ninjaFastAttack = false;
 		pyroMolotov = false;
+		rewindClockPhases = false;
+		rewindStasis = false;
 	}
 
 	// Keys must not have spaces and be type-able with a keyboard.
@@ -39,11 +43,11 @@ public class KitOptions
 		OPTION_TOGGLE_FUNCS.put("kitSniper", () -> kitSniper = !kitSniper);
 		OPTION_TOGGLE_FUNCS.put("sniperAccuracy", () -> sniperAccuracy = !sniperAccuracy);
 
-		OPTION_TOGGLE_FUNCS.put("reset", KitOptions::resetToDefault);
+		OPTION_TOGGLE_FUNCS.put("resetToDefault", KitOptions::resetToDefault);
 
 		OPTION_TOGGLE_FUNCS.put("teamArenaKits", () -> {
 			rwfKits = false; ghostAetherial = true; burstShowArrows = false; ninjaFastAttack = true;
-			pyroMolotov = true;
+			pyroMolotov = true; rewindClockPhases = true; rewindStasis = true;
 		});
 
 		OPTION_TOGGLE_FUNCS.put("rwfKits", () -> rwfKits = !rwfKits);
@@ -51,6 +55,8 @@ public class KitOptions
 		OPTION_TOGGLE_FUNCS.put("burstShowArrows", () -> burstShowArrows = !burstShowArrows);
 		OPTION_TOGGLE_FUNCS.put("ninjaFastAttack", () -> ninjaFastAttack = !ninjaFastAttack);
 		OPTION_TOGGLE_FUNCS.put("pyroMolotov", () -> pyroMolotov = !pyroMolotov);
+		OPTION_TOGGLE_FUNCS.put("rewindClockPhases", () -> rewindClockPhases = !rewindClockPhases);
+		OPTION_TOGGLE_FUNCS.put("rewindStasis", () -> rewindStasis = !rewindStasis);
 	}
 
 	/** @return true if toggling was successful. */

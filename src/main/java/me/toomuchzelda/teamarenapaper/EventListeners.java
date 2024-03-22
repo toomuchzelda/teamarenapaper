@@ -148,6 +148,7 @@ public class EventListeners implements Listener
 			e.printStackTrace();
 		}
 
+		// TODO - Find a way to do these as soon as relevant
 		//every 2 minutes
 		int count = event.getTickNumber() % (2 * 60 * 20);
 		if(count == 0) {

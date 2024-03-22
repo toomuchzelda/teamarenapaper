@@ -10,13 +10,12 @@ import java.util.*;
 
 /**
  * Values used by Entity metadata. May change with each Minecraft version.
- * <a href="https://wiki.vg/Entity_metadata">https://wiki.vg/Entity_metadata</a>
+ * Documentation of values for 1.19.4:
+ * <a href="https://wiki.vg/index.php?title=Entity_metadata&oldid=18076#Display">...</a>
  */
 public class MetaIndex
 {
 	private static final Map<Integer, WrappedDataWatcher.Serializer> INDEX_SERIALIZER_MAP = new HashMap<>();
-
-	public static final int MAX_FIELD_INDEX = 22;
 
 	public static final int BASE_BITFIELD_IDX = 0;
 	public static final int CUSTOM_NAME_IDX = 2;
@@ -34,7 +33,6 @@ public class MetaIndex
 	public static final byte BASE_BITFIELD_GLOWING_MASK = 0x40;
 
 	public static final int ARMOR_STAND_BITFIELD_IDX = 15;
-	public static final int ARMOR_STAND_MARKER_IDX = 3;
 	public static final byte ARMOR_STAND_MARKER_MASK = 0x10;
 
 	public static final int CREEPER_STATE_IDX = 16;
@@ -46,6 +44,12 @@ public class MetaIndex
 	public static final int AXOLOTL_COLOR_IDX = 17;
 
 	public static final int GUARDIAN_TARGET_IDX = 17;
+
+	public static final int DISPLAY_TRANSLATION_IDX = 10;
+	public static final int DISPLAY_SCALE_IDX = 11;
+	public static final int DISPLAY_BILLBOARD_IDX = 14;
+
+	public static final int ITEM_DISPLAY_ITEM_IDX = 22;
 
 
 	public static final MetadataBitfieldValue GLOWING_METADATA_VALUE = MetadataBitfieldValue.create(Collections.singletonMap(BASE_BITFIELD_GLOWING_IDX, true));
@@ -69,6 +73,23 @@ public class MetaIndex
 	public static final WrappedDataWatcherObject AXOLOTL_COLOR_OBJ;
 
 	public static final WrappedDataWatcherObject GUARDIAN_TARGET_OBJ;
+
+	public static final WrappedDataWatcherObject DISPLAY_TRANSLATION_OBJ;
+	public static final WrappedDataWatcherObject DISPLAY_SCALE_OBJ;
+
+	public static final WrappedDataWatcherObject DISPLAY_BILLBOARD_OBJ;
+	public enum DisplayBillboardOption {
+		FIXED(0),
+		VERTICAL(1),
+		HORIZONTAL(2),
+		CENTRE(3);
+
+		private final byte b;
+		DisplayBillboardOption(int value) { b = (byte) value; }
+		public byte get() { return this.b; }
+	}
+
+	public static final WrappedDataWatcherObject ITEM_DISPLAY_ITEM_OBJ;
 
 	private static void addMapping(WrappedDataWatcherObject object) {
 		INDEX_SERIALIZER_MAP.put(object.getIndex(), object.getSerializer());
@@ -116,6 +137,19 @@ public class MetaIndex
 
 		GUARDIAN_TARGET_OBJ = new WrappedDataWatcherObject(GUARDIAN_TARGET_IDX, WrappedDataWatcher.Registry.get(Integer.class));
 		addMapping(GUARDIAN_TARGET_OBJ);
+
+
+		DISPLAY_TRANSLATION_OBJ = new WrappedDataWatcherObject(DISPLAY_TRANSLATION_IDX, WrappedDataWatcher.Registry.getVectorSerializer());
+		addMapping(DISPLAY_TRANSLATION_OBJ);
+
+		DISPLAY_SCALE_OBJ = new WrappedDataWatcherObject(DISPLAY_SCALE_IDX, WrappedDataWatcher.Registry.getVectorSerializer());
+		addMapping(DISPLAY_SCALE_OBJ);
+
+		DISPLAY_BILLBOARD_OBJ = new WrappedDataWatcherObject(DISPLAY_BILLBOARD_IDX, WrappedDataWatcher.Registry.get(Byte.class));
+		addMapping(DISPLAY_BILLBOARD_OBJ);
+
+		ITEM_DISPLAY_ITEM_OBJ = new WrappedDataWatcherObject(ITEM_DISPLAY_ITEM_IDX, WrappedDataWatcher.Registry.getItemStackSerializer(false));
+		addMapping(ITEM_DISPLAY_ITEM_OBJ);
 	}
 
 	/**

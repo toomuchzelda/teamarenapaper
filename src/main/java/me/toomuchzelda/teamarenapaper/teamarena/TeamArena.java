@@ -35,6 +35,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.explosive.KitExplosive;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitFilter;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.medic.KitMedic;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.rewind.KitRewind;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.trigger.KitTrigger;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
@@ -582,15 +583,15 @@ public abstract class TeamArena
 			}
 		}
 
-		// Killstreak tick events
-		this.killStreakManager.tick();
-
 		// Kit and killstreak player tick events
 		for (var entry : Main.getPlayerInfoMap().entrySet()) {
 			for(Ability a : entry.getValue().abilities) {
 				a.onPlayerTick(entry.getKey());
 			}
 		}
+
+		// Killstreak tick events
+		this.killStreakManager.tick();
 
 		//handle and queue fire + poison damage events
 		fireAndPoisonTick();
