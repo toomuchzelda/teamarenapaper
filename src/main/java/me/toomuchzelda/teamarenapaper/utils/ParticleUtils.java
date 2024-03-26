@@ -14,6 +14,15 @@ public class ParticleUtils {
 				brightness, options);
 	}
 
+	public static void colouredRedstone(Location location, int count, double offX, double offY, double offZ, Color colour,
+										double brightness, float size) {
+		Particle.DustOptions options = new Particle.DustOptions(colour, size);
+		location.getWorld().spawnParticle(Particle.REDSTONE, location,
+			count,
+			offX, offY, offZ,
+			brightness, options);
+	}
+
 	public static void playExplosionParticle(Location location, float offX, float offY, float offZ, boolean large) {
 		ParticleOptions particle = large ? ParticleTypes.EXPLOSION_EMITTER : ParticleTypes.EXPLOSION;
 		ClientboundLevelParticlesPacket packet = new ClientboundLevelParticlesPacket(particle, false, location.getX(), location.getY(), location.getZ(), offX, offY, offZ, 1f, 1);
@@ -27,9 +36,10 @@ public class ParticleUtils {
 	public static void blockBreakEffect(Player player, Block block) {
 		Location loc = block.getLocation();
 		player.playEffect(loc, Effect.STEP_SOUND, block.getType());
+	}
 
-		// TODO Test Play the sound too
-		//final SoundGroup soundGroup = block.getBlockSoundGroup();
-		//player.playSound(loc, soundGroup.getBreakSound(), SoundCategory.BLOCKS, soundGroup.getVolume(), soundGroup.getPitch());
+	/** Play the block destruction effect that happens when a player breaks a block */
+	public static void blockBreakEffect(Player player, Material mat, Location loc) {
+		player.playEffect(loc, Effect.STEP_SOUND, mat);
 	}
 }

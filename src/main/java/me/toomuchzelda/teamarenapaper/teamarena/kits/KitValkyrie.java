@@ -238,7 +238,8 @@ public class KitValkyrie extends Kit {
 				int initTick = entry.getValue();
 
 				//If Axe is removed from hand, cancel the attack
-				if(player.getInventory().getItemInMainHand().getType() != VALK_AXE_MAT) {
+				if(player.getInventory().getItemInMainHand().getType() != VALK_AXE_MAT &&
+					player.getInventory().getItemInOffHand().getType() != VALK_AXE_MAT) {
 					player.setExp(0f);
 					axeIter.remove();
 

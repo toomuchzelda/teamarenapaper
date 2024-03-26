@@ -166,8 +166,8 @@ public class PlayerUtils {
 	 * We need to call this event for the player percent damage kill assist thing
 	 */
 	public static void heal(Player player, double amount, EntityRegainHealthEvent.RegainReason reason) {
-		double maxHealth = player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
-		double oldHealth = player.getHealth();
+		final double maxHealth = player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+		final double oldHealth = player.getHealth();
 		double newHealth = oldHealth + amount;
 		if (newHealth > maxHealth) {
 			newHealth = maxHealth;
@@ -178,6 +178,10 @@ public class PlayerUtils {
 		Bukkit.getPluginManager().callEvent(event);
 
 		if (!event.isCancelled()) {
+			newHealth = oldHealth + event.getAmount();
+			if (newHealth > maxHealth)
+				newHealth = maxHealth;
+
 			player.setHealth(newHealth);
 			if (Main.getPlayerInfo(player).getPreference(Preferences.HEARTS_FLASH_REGEN))
 				sendHealth(player);

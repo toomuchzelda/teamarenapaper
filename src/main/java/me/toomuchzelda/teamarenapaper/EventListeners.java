@@ -627,10 +627,17 @@ public class EventListeners implements Listener
 		if(event.getEntity() instanceof LivingEntity living) {
 			if(KitVenom.VenomAbility.isVenomBlockingEating(living)) {
 				event.setCancelled(true);
+				return;
+			}
+		}
+
+		if (event.getEntity() instanceof Player player) {
+			for (Ability a : Kit.getAbilities(player)) {
+				a.onHeal(event);
 			}
 
-			if(!event.isCancelled() && event.getEntity() instanceof Player p) {
-				Main.getPlayerInfo(p).getKillAssistTracker().heal(event.getAmount());
+			if(!event.isCancelled()) {
+				Main.getPlayerInfo(player).getKillAssistTracker().heal(event.getAmount());
 			}
 		}
 	}

@@ -8,6 +8,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -133,6 +134,8 @@ public abstract class Ability {
 	 * When ability user consumes an item. May be cancelled at this point.
 	 */
 	public void onConsumeItem(PlayerItemConsumeEvent event) {}
+
+	public void onHeal(EntityRegainHealthEvent event) {}
 
 	public void onSwapHandItems(PlayerSwapHandItemsEvent event) {}
 

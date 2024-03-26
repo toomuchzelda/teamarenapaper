@@ -425,9 +425,9 @@ public class KitMedic extends Kit
 				EntityUtils.getComponent(healed),
 				SEPARATOR,
 				TextColors.HEART, Component.space(),
-				Component.text(TextUtils.formatNumber(healthPercentage) + "%", TextColors.HEALTH),
-				SEPARATOR,
-				ticksToFull < 1 ? FULL : Component.text(TextUtils.formatNumber(ticksToFull / 20) + "s to full", NamedTextColor.YELLOW)
+				Component.text(TextUtils.formatNumber(healthPercentage) + "%", TextColors.HEALTH)
+				//SEPARATOR,
+				//ticksToFull < 1 ? FULL : Component.text(TextUtils.formatNumber(ticksToFull / 20) + "s to full", NamedTextColor.YELLOW)
 			);
 		}
 
