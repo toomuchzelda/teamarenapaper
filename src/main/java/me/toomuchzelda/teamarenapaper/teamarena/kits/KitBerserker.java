@@ -7,6 +7,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -22,7 +23,9 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.ListIterator;
+import java.util.Map;
 
 public class KitBerserker extends Kit {
 	private static final ItemStack FOOD_ITEM = ItemBuilder.of(Material.COOKED_BEEF).displayName(Component.text("Insta-Steak"))
@@ -76,6 +79,21 @@ public class KitBerserker extends Kit {
 		private static final double KB_LOSS_STEPS = 6d;
 		private static final double HEAL_LOSS_STEPS = 9d;
 
+		private static final Component BOSSBAR_TITLE = Component.text("Rage!!!", NamedTextColor.DARK_RED);
+		private final Map<Player, BossBar> bossBars = new HashMap<>(Bukkit.getMaxPlayers());
+
+		@Override
+		public void giveAbility(Player player) {
+			BossBar bar = BossBar.bossBar(BOSSBAR_TITLE, 0f, BossBar.Color.RED, BossBar.Overlay.NOTCHED_6);
+			player.showBossBar(bar);
+			bossBars.put(player, bar);
+		}
+
+		@Override
+		public void removeAbility(Player player) {
+			player.hideBossBar(bossBars.remove(player));
+		}
+
 		@Override
 		public void onInteract(PlayerInteractEvent event) {
 			if (event.useItemInHand() != Event.Result.DENY && event.getAction().isRightClick()) {
@@ -126,9 +144,15 @@ public class KitBerserker extends Kit {
 
 		@Override
 		public void onAssist(Player berserker, double amount, Player victim) {
-			double killsNow = Main.getPlayerInfo(berserker).kills;
-			double killsBefore = killsNow - amount;
+			final double killsNow = Main.getPlayerInfo(berserker).kills;
 
+			// Update bossbar
+			final double floor = Math.floor(killsNow);
+			float remainder = MathUtils.clamp(0f, 1f, (float) (killsNow - floor));
+			final BossBar bossBar = bossBars.get(berserker);
+			bossBar.progress(remainder);
+
+			final double killsBefore = killsNow - amount;
 			// If the killcount crossed a whole number boundary i.e 1.9 -> 2.1 (crosses 2.0)
 			if ((int) killsBefore != (int) killsNow) {
 				ListIterator<ItemStack> iter = berserker.getInventory().iterator();
@@ -140,6 +164,13 @@ public class KitBerserker extends Kit {
 						iter.set(createAxe((int) killsNow));
 					}
 				}
+
+				// Update heal rate on bossbar
+				final double healRate = 100d - ((Math.min(floor, HEAL_LOSS_STEPS - 1d) / HEAL_LOSS_STEPS) * 100d);
+				Component title = BOSSBAR_TITLE.append(
+					Component.text(" | " + MathUtils.round(healRate, 1) + "% healing rate", NamedTextColor.WHITE)
+				);
+				bossBar.name(title);
 			}
 
 			// Blood visual effect

@@ -802,7 +802,7 @@ public abstract class TeamArena
 			//reduce knockback done by axes
 			if (event.getDamageType().isMelee() && finalAttacker instanceof LivingEntity) {
 				if (event.getMeleeWeapon().getType().toString().endsWith("_AXE")) {
-					event.getKnockback().multiply(0.8);
+					event.getKnockback().multiply(0.85);
 				}
 			}
 			//reduce knockback done by projectiles

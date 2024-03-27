@@ -759,7 +759,6 @@ public class DamageEvent {
 		return knockback != null;
 	}
 
-	@Nullable
 	public Vector getKnockback() {
 		return knockback;
 	}
