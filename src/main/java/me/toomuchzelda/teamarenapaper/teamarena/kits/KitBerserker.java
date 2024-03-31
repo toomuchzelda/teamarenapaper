@@ -9,6 +9,7 @@ import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
@@ -21,6 +22,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -79,7 +81,8 @@ public class KitBerserker extends Kit {
 		private static final double KB_LOSS_STEPS = 6d;
 		private static final double HEAL_LOSS_STEPS = 9d;
 
-		private static final Component BOSSBAR_TITLE = Component.text("Rage!!!", NamedTextColor.DARK_RED);
+		private static final Component BOSSBAR_TITLE = Component.text("Rage!!!", NamedTextColor.DARK_RED)
+			.append(getHealRateComp(100));
 		private final Map<Player, BossBar> bossBars = new HashMap<>(Bukkit.getMaxPlayers());
 
 		@Override
@@ -100,6 +103,11 @@ public class KitBerserker extends Kit {
 				final ItemStack item = event.getItem();
 				if (item != null && item.getType() == FOOD_ITEM.getType()) {
 					final Player eater = event.getPlayer();
+					if (KitVenom.VenomAbility.isVenomBlockingEating(eater)) {
+						Component msg = Component.text("You're too sick to eat", NamedTextColor.LIGHT_PURPLE);
+						PlayerUtils.sendKitMessage(eater, msg, msg);
+						return;
+					}
 					if (eater.getHealth() + 0.5d < eater.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue()) {
 						item.subtract();
 						PlayerUtils.heal(eater, HEAL_AMOUNT, EntityRegainHealthEvent.RegainReason.CUSTOM);
@@ -167,9 +175,7 @@ public class KitBerserker extends Kit {
 
 				// Update heal rate on bossbar
 				final double healRate = 100d - ((Math.min(floor, HEAL_LOSS_STEPS - 1d) / HEAL_LOSS_STEPS) * 100d);
-				Component title = BOSSBAR_TITLE.append(
-					Component.text(" | " + MathUtils.round(healRate, 1) + "% healing rate", NamedTextColor.WHITE)
-				);
+				Component title = BOSSBAR_TITLE.append(getHealRateComp(healRate));
 				bossBar.name(title);
 			}
 
@@ -182,6 +188,11 @@ public class KitBerserker extends Kit {
 					ParticleUtils.blockBreakEffect(player, Material.REDSTONE_BLOCK, up1);
 				});
 			}
+		}
+
+		@NotNull
+		private static TextComponent getHealRateComp(double percent) {
+			return Component.text(" | " + MathUtils.round(percent, 1) + "% healing rate", NamedTextColor.WHITE);
 		}
 
 		@Override

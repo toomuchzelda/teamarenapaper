@@ -1099,7 +1099,15 @@ public abstract class TeamArena
 				}
 
 				if ((currentTick - time.getTimeGiven()) % 20 == 0) {
-					DamageEvent fireDEvent = DamageEvent.newDamageEvent(victim, 1, DamageType.FIRE_TICK, null, false);
+					//DamageEvent fireDEvent = DamageEvent.newDamageEvent(victim, 1, DamageType.FIRE_TICK, null, false);
+					DamageType type = time.getDamageType();
+					// FIRE is handled by bukkit event. We don't call any such events ourselves.
+					if (type == null || type.is(DamageType.FIRE))
+						type = DamageType.FIRE_TICK;
+					DamageEvent fireDEvent = DamageEvent.newDamageEvent(victim, 1,
+						type,
+						time.getGiver(),
+						false);
 					queueDamage(fireDEvent);
 				}
 			}
@@ -2137,10 +2145,10 @@ public abstract class TeamArena
 		return border.contains(block.getX(), block.getY(), block.getZ());
 	}
 
-	public boolean canAttack(Player one, Player two) {
+	public boolean canAttack(Player one, LivingEntity two) {
 		TeamArenaTeam team = Main.getPlayerInfo(one).team;
 		//if two is on the same team as one
-		if(team.getPlayerMembers().contains(two)) {
+		if (team.hasMember(two)) {
 			return false;
 		}
 		return true;

@@ -160,6 +160,7 @@ public class DamageEvent {
 
 		//if it's fire caused by a non-specified attacker, set the damager from the cached DamageTimes
 		// sort of re-construct this DamageEvent so it's accurate
+		// Note: burn damagetypes are NOT inherently fire
 		if(damageType.isFire() && attacker == null) {
 			if(victim instanceof LivingEntity living) {
 				DamageTimes.DamageTime dTime = DamageTimes.getDamageTime(living, DamageTimes.TrackedDamageTypes.FIRE);

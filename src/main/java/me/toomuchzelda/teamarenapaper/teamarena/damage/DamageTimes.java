@@ -164,10 +164,6 @@ public class DamageTimes {
 			this.timeGiven = timeGiven;
 		}
 
-		public void update(Entity giver, int lastTimeDamaged, double damage, DamageType damageType) {
-			update(giver, lastTimeDamaged, lastTimeDamaged, damage, damageType);
-		}
-
 		public void update(Entity giver, int timeGiven, int lastTimeDamaged, double damage, DamageType damageType) {
 			this.giver = giver;
 			this.timeGiven = timeGiven;
@@ -182,6 +178,24 @@ public class DamageTimes {
 			this.lastTimeDamaged = 0;
 			this.damage = 0d;
 			this.damageType = null;
+		}
+
+		@Override
+		public String toString() {
+			StringBuilder s = new StringBuilder(80);
+
+			s.append("giver=");
+			if (this.giver != null)
+				s.append(this.giver.getName());
+			else
+				s.append("null");
+
+			s.append(",timeGiven=").append(this.timeGiven);
+			s.append(",lastTimeDamaged=").append(this.lastTimeDamaged);
+			s.append(",damage=").append(this.damage);
+			s.append(",damageType=").append(this.damageType);
+
+			return s.toString();
 		}
 	}
 

@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
+import me.toomuchzelda.teamarenapaper.teamarena.GameState;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
@@ -34,7 +35,6 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
 
-import javax.annotation.Nullable;
 import java.util.*;
 
 //Kit Description:
@@ -89,10 +89,16 @@ public class KitVenom extends Kit {
 	public static class VenomAbility extends Ability
 	{
 		public static final HashMap<LivingEntity, Integer> POISONED_ENTITIES = new HashMap<>();
+		private static final List<VenomLeapTicker> VENOM_LEAPS = new ArrayList<>();
+		private static final int MAX_POISON_TIME = 5 * 25; // Poison damages once every 25 ticks
+		private static final int POISON_INCREMENT = 2 * 25;
+		public static final int LEAP_CD = 12 * 20;
+		public static final int LEAP_CD_DECREMENT = 6 * 20;
 
 		//clean up
 		public void unregisterAbility() {
 			POISONED_ENTITIES.clear();
+			VENOM_LEAPS.clear();
 		}
 
 		@Override
@@ -102,7 +108,8 @@ public class KitVenom extends Kit {
 
 		//When Poison is applied
 		public void applyPoison(LivingEntity victim, Player giver){
-			if (Main.getPlayerInfo(giver).team.hasMember(victim)) // Don't poison allies.
+			if (Main.getGame().isDead(victim)) return;
+			if (!Main.getGame().canAttack(giver, victim)) // Don't poison allies.
 				return;
 
 			int poisonDuration = 0;
@@ -113,14 +120,8 @@ public class KitVenom extends Kit {
 				hadPoison = true;
 			}
 			//At level 1, Poison deals damage every 25 ticks.
-			if(poisonDuration <= 4 * 25){
-				if(poisonDuration > 2 * 25){
-					victim.addPotionEffect(new PotionEffect(PotionEffectType.POISON, 4 * 25, 0));
-				}
-				else{
-					victim.addPotionEffect(new PotionEffect(PotionEffectType.POISON, 2 * 25 + poisonDuration, 0));
-				}
-			}
+			poisonDuration = Math.min(MAX_POISON_TIME, poisonDuration + POISON_INCREMENT);
+			victim.addPotionEffect(new PotionEffect(PotionEffectType.POISON, poisonDuration, 0));
 			//Adds new victim, or updates current victim's poison duration.
 			//Extra check is necessary since some mobs are immune to poison.
 			if(victim.hasPotionEffect(PotionEffectType.POISON)){
@@ -152,10 +153,8 @@ public class KitVenom extends Kit {
 					//Leap Ability Implementation
 					World world = player.getWorld();
 					Vector direction = player.getLocation().getDirection();
-					Vector multiplier = new Vector(1.0, 0.5, 1.0);
-					multiplier.multiply(1.5);
-					direction.multiply(multiplier);
-					player.setCooldown(Material.CHICKEN, 12 * 20);
+					direction.multiply(new Vector(1.5, 0.75, 1.5));
+					player.setCooldown(Material.CHICKEN, LEAP_CD);
 					player.setCooldown(Material.COOKED_CHICKEN, 4 * 20);
 					//world.playSound to play sound for all players
 					world.playSound(player, Sound.ENTITY_WITHER_SHOOT, 0.3f, 1.1f);
@@ -164,61 +163,23 @@ public class KitVenom extends Kit {
 
 					//Checking for collision during the leap, and reducing cooldown + applying poison accordingly
 					//keeps track of whose already been hit with leapVictims
-					if (player.getVelocity().length() > 0.8) {
-						BukkitTask runnable = new BukkitRunnable()
-						{
-							int activeDuration = 10;
-							Set<LivingEntity> leapVictims = new HashSet<>();
-
-							public void run() {
-								if (activeDuration <= 0) {
-									cancel();
-								}
-								else {
-									activeDuration--;
-									List<Entity> nearby = player.getNearbyEntities(1, 2, 1);
-									for (Entity entity : nearby) {
-										if (entity instanceof LivingEntity && !leapVictims.contains(entity) && !(entity.getType().equals(EntityType.ARMOR_STAND))) {
-											//Applying DMG + Sounds
-											LivingEntity victim = (LivingEntity) entity;
-											int newCooldown = player.getCooldown(Material.CHICKEN);
-											if (victim instanceof Player) {
-												newCooldown -= 6 * 20;
-											}
-											if (newCooldown <= 0) {
-												newCooldown = 0;
-												player.stopSound(Sound.BLOCK_CONDUIT_ACTIVATE);
-												player.playSound(player, Sound.BLOCK_CONDUIT_ACTIVATE, 1, 1.5f);
-											}
-											DamageEvent.newDamageEvent(victim , 2, DamageType.TOXIC_LEAP, player, false);
-
-											player.stopSound(Sound.ENTITY_ILLUSIONER_MIRROR_MOVE);
-											player.playSound(player, Sound.ENTITY_ILLUSIONER_MIRROR_MOVE, 1, 1.2f);
-											player.setCooldown(Material.CHICKEN, newCooldown);
-
-											player.setCooldown(Material.COOKED_CHICKEN, 0);
-
-											//Applying Poison, tracking the poisoned entity
-											applyPoison(victim, player);
-											leapVictims.add(victim);
-										}
-									}
-								}
-							}
-						}.runTaskTimer(Main.getPlugin(), 0, 0);
-					}
+					if (player.getVelocity().length() > 0.8) { // Always true?
+						// Runnable will cancel self.
+                        VENOM_LEAPS.add(new VenomLeapTicker(player));
+                    }
 				}
 			}
 		}
+
 		//Poison Sword Ability
 		@Override
-		public void onAttemptedAttack(DamageEvent event){
+		public void onDealtAttack(DamageEvent event){
 			Player player = (Player) event.getFinalAttacker();
-			if(player.getInventory().getItemInMainHand().getType() == Material.IRON_SWORD){
-				if(event.getDamageType().isMelee() && event.getVictim() instanceof LivingEntity){
+			if(event.getDamageType().isMelee() && event.getVictim() instanceof LivingEntity){
+				if (event.getMeleeWeapon().getType() == Material.IRON_SWORD) {
 					LivingEntity victim = (LivingEntity) event.getVictim();
 					//prevent friendly poison
-					if(!(victim instanceof Player p) || Main.getGame().canAttack(player, p)) {
+					if(Main.getGame().canAttack(player, victim)) {
 						applyPoison(victim, player);
 					}
 				}
@@ -247,13 +208,73 @@ public class KitVenom extends Kit {
 					entry.setValue(durationLeft - 1);
 				}
 
-				if(entity.isDead()){
+				if(Main.getGame().isDead(entity)){
 					iter.remove();
-					entity.removePotionEffect(PotionEffectType.POISON);
 				}
 				//Preventing Healing/Eating is handled in EventListeners.java
 				//Entities cannot be healed
 				//Players cannot be healed + cannot eat
+			}
+
+            VENOM_LEAPS.removeIf(VenomLeapTicker::tick);
+		}
+
+		// Author: onett425
+		private class VenomLeapTicker {
+			private final Player player;
+			int activeDuration;
+			final Set<LivingEntity> leapVictims;
+
+			boolean playedConduit;
+			boolean playedIllusioner;
+
+			public VenomLeapTicker(Player player) {
+				this.player = player;
+				activeDuration = 10;
+				leapVictims = new HashSet<>();
+				playedConduit = false;
+				playedIllusioner = false;
+			}
+
+			public boolean tick() {
+				if (activeDuration <= 0 || Main.getGame().getGameState() != GameState.LIVE) {
+					return true;
+				} else {
+					activeDuration--;
+					List<Entity> nearby = player.getNearbyEntities(1, 2, 1);
+					for (Entity entity : nearby) {
+						if (!Main.getGame().isDead(entity) && entity instanceof LivingEntity victim &&
+							!leapVictims.contains(entity) && !(entity.getType().equals(EntityType.ARMOR_STAND))) {
+							//Applying DMG + Sounds
+                            int newCooldown = player.getCooldown(Material.CHICKEN);
+							if (victim instanceof Player) {
+								newCooldown -= LEAP_CD_DECREMENT;
+							}
+							if (newCooldown <= 0 && !playedConduit) {
+								newCooldown = 0;
+								playedConduit = true;
+								player.playSound(player, Sound.BLOCK_CONDUIT_ACTIVATE, 1, 1.5f);
+							}
+
+							if (!playedIllusioner) {
+								playedIllusioner = true;
+								player.playSound(player, Sound.ENTITY_ILLUSIONER_MIRROR_MOVE, 1, 1.2f);
+							}
+
+							Main.getGame().queueDamage(DamageEvent.newDamageEvent(victim, 2, DamageType.TOXIC_LEAP, player, false));
+
+							newCooldown = Math.max(0, newCooldown);
+							player.setCooldown(Material.CHICKEN, newCooldown);
+							player.setCooldown(Material.COOKED_CHICKEN, 0);
+
+							//Applying Poison, tracking the poisoned entity
+							applyPoison(victim, player);
+							leapVictims.add(victim);
+						}
+					}
+
+					return false;
+				}
 			}
 		}
 	}
