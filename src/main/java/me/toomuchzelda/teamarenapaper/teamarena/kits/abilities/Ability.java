@@ -124,7 +124,7 @@ public abstract class Ability {
 	/** When a projectile hits the user */
 	public void onHitByProjectile(ProjectileHitEvent event) {}
 
-	public void onReflect(Player reflector, Entity projectile) {}
+	public void onReflect(ProjectileReflectEvent event) {}
 
 	public void onPlayerDropItem(PlayerDropItemEvent event) {}
 

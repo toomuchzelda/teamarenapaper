@@ -197,6 +197,9 @@ public class DamageType {
 	public static final DamageType EXPLOSIVE_RPG = new DamageType("Explosive RPG", "%Killed% was caught in %Killer%'s RPG")
 			.setExplosion();
 
+	public static final DamageType EXPLOSIVE_RPG_SELF = new DamageType("Explosive Self RPG", "%Killed% shot their RPG a bit too close to themselves")
+			.setExplosion();
+
 	public static final DamageType EXPLOSIVE_GRENADE = new DamageType("Explosive Grenade", "%Killed% was blown up by %Killer%'s grenades")
 			.setExplosion();
 
@@ -624,6 +627,11 @@ public class DamageType {
     public boolean is(DamageType damageType) {
         return this.id == damageType.id;
     }
+
+	// Slightly hacky
+	public boolean isExact(DamageType other) {
+		return this._name.equals(other._name);
+	}
 
 	/**
 	 * When need to use a DamageType and copy the DamageSource from another.

@@ -11,6 +11,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.ProjectileReflectEvent;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
@@ -20,10 +21,7 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.AbstractArrow;
-import org.bukkit.entity.Arrow;
-import org.bukkit.entity.Item;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -106,8 +104,6 @@ public class KitExplosive extends Kit
 		public static final int GRENADE_MAX_IN_INV = 5;
 		public static final int GRENADE_FUSE_TIME = 60;
 
-		public static final DamageType SELF_RPG = new DamageType(DamageType.EXPLOSIVE_RPG, "%Killed% shot their RPG a bit too close to themselves");
-
 		private static class ExplosiveInfo {
 			private RPGChargeInfo chargingRpg;
 			private final List<RPGInfo> activeRpgs;
@@ -126,12 +122,13 @@ public class KitExplosive extends Kit
 		}
 
 		//info for charging up rpgs
-		private record RPGChargeInfo(Player thrower, BossBar bossbar, int throwTime) {}
+		private record RPGChargeInfo(BossBar bossbar, int throwTime) {}
 		//info for thrown rpgs
-		private record RPGInfo(Arrow rpgArrow, Player thrower, int spawnTime) {}
-		private record GrenadeInfo(Item grenade, Player thrower, Color color, int spawnTime) {}
+		private record RPGInfo(Arrow rpgArrow, int spawnTime) {}
+		private record GrenadeInfo(Item grenade, Color color, int spawnTime) {}
 
 		private final Map<Player, ExplosiveInfo> explosiveInfos = new HashMap<>();
+		private final Map<Player, RPGInfo> reflectedRpgs = new HashMap<>();
 
 		@Override
 		public void unregisterAbility() {
@@ -143,6 +140,11 @@ public class KitExplosive extends Kit
 				einfo.activeRpgs.clear();
 			}
 			explosiveInfos.clear();
+
+			for (var entry : reflectedRpgs.entrySet()) {
+				entry.getValue().rpgArrow.remove();
+			}
+			reflectedRpgs.clear();
 		}
 
 		@Override
@@ -170,13 +172,6 @@ public class KitExplosive extends Kit
 				event.setCancelled(true);
 				event.getAttacker().remove();
 			}
-			else if (event.getDamageType().is(DamageType.EXPLOSIVE_RPG)) { // slightly boost RPG upwards kb
-				if (event.hasKnockback()) {
-					Vector kb = event.getKnockback();
-					kb.setY(Math.max(kb.getY() + 0.1d, 0.2d));
-					event.setKnockback(kb);
-				}
-			}
 		}
 
 		@Override
@@ -185,7 +180,23 @@ public class KitExplosive extends Kit
 			grenadeTick();
 
 			//Handling RPG Behavior
-			rpgTick();
+			for (var entry : explosiveInfos.entrySet()) {
+				var playerRpgIter = entry.getValue().activeRpgs.iterator();
+				while (playerRpgIter.hasNext()) {
+					final RPGInfo rpgInfo = playerRpgIter.next();
+
+					if (rpgTick(entry.getKey(), rpgInfo, false)) {
+						playerRpgIter.remove();
+					}
+				}
+			}
+			// Tick reflected RPGs
+            for (var iterator = reflectedRpgs.entrySet().iterator(); iterator.hasNext(); ) {
+                var entry = iterator.next();
+				if (rpgTick(entry.getKey(), entry.getValue(), true)) {
+					iterator.remove();
+				}
+            }
 
 			//Tick RPG launches that are charging up
 			rpgChargeTick();
@@ -234,37 +245,32 @@ public class KitExplosive extends Kit
 			}
 		}
 
-		private void rpgTick() {
-			for (var entry : explosiveInfos.entrySet()) {
-				var playerRpgIter = entry.getValue().activeRpgs.iterator();
-				while (playerRpgIter.hasNext()) {
-					final RPGInfo rpgInfo = playerRpgIter.next();
+		// return true if RPG is done and cleanup needed
+		private boolean rpgTick(final Player thrower, RPGInfo rpgInfo, boolean reflected) {
+			final World world = thrower.getWorld();
+			final Arrow rpgArrow = rpgInfo.rpgArrow();
+			final Location arrowLoc = rpgArrow.getLocation();
 
-					final World world = rpgInfo.thrower().getWorld();
-					final Player thrower = rpgInfo.thrower();
-					final Arrow rpgArrow = rpgInfo.rpgArrow();
-					final Location arrowLoc = rpgArrow.getLocation();
+			//Explode RPG if it hits block or player
+			if (rpgArrow.isInBlock() || rpgArrow.isOnGround() || rpgArrow.isDead() ||
+					rpgArrow.getTicksLived() >= 38) {
+				rpgBlast(arrowLoc, thrower, reflected);
 
-					//Explode RPG if it hits block or player
-					if (rpgArrow.isInBlock() || rpgArrow.isOnGround() || rpgArrow.isDead() ||
-							rpgArrow.getTicksLived() >= 38) {
-						rpgBlast(arrowLoc, thrower);
-
-						rpgArrow.remove();
-						playerRpgIter.remove();
-					}
-					//RPG particle trail
-					else {
-						final int currentTick = TeamArena.getGameTick();
-						if ((currentTick - rpgInfo.spawnTime()) % 5 == 0) {
-							world.spawnParticle(Particle.EXPLOSION_LARGE, arrowLoc, 1);
-						}
-
-						if((currentTick - rpgInfo.spawnTime()) % 2 == 0) {
-							ParticleUtils.colouredRedstone(arrowLoc, Main.getPlayerInfo(thrower).team.getColour(), 1d, 3f);
-						}
-					}
+				rpgArrow.remove();
+				return true;
+			}
+			//RPG particle trail
+			else {
+				final int currentTick = TeamArena.getGameTick();
+				if ((currentTick - rpgInfo.spawnTime()) % 5 == 0) {
+					world.spawnParticle(Particle.EXPLOSION_LARGE, arrowLoc, 1);
 				}
+
+				if((currentTick - rpgInfo.spawnTime()) % 2 == 0) {
+					ParticleUtils.colouredRedstone(arrowLoc, Main.getPlayerInfo(thrower).team.getColour(), 1d, 3f);
+				}
+
+				return false;
 			}
 		}
 
@@ -290,7 +296,7 @@ public class KitExplosive extends Kit
 					//Grenade particles
 					else {
 						//Particles for when grenade has landed
-						World world = grenadeInfo.thrower().getWorld();
+						World world = entry.getKey().getWorld();
 						if (grenade.isOnGround()) {
 							world.spawnParticle(Particle.REDSTONE, grenade.getLocation(), 1, 0.25, 0.25, 0.25, particleOptions);
 						}
@@ -305,19 +311,28 @@ public class KitExplosive extends Kit
 
 		@Override
 		public void onAttemptedDamage(DamageEvent event) {
-			if(event.getDamageType().is(SELF_RPG)) {
+			if(event.getDamageType().is(DamageType.EXPLOSIVE_RPG_SELF)) {
 				event.setFinalDamage(5); //self RPG always does 5 damage
 			}
 		}
 
-		public void rpgBlast(Location explodeLoc, Player owner) {
+		public void rpgBlast(Location explodeLoc, Player owner, boolean reflected) {
 			//self damage multiplier does not matter here, is overridden in attempted damage
+			double selfDamageMult, selfKnockbackMult;
+			if (!reflected) {
+				selfDamageMult = 1.2d; selfKnockbackMult = 1d;
+			}
+			else {
+				selfDamageMult = 0d; selfKnockbackMult = 0d;
+			}
 			RPGExplosion explosion = new RPGExplosion(explodeLoc, RPG_BLAST_RADIUS, 1.4d,
-					25, 2, 1.7, DamageType.EXPLOSIVE_RPG, owner, 1.2d, 1, SELF_RPG);
+				25, 2, 1.7, DamageType.EXPLOSIVE_RPG, owner,
+				selfDamageMult, selfKnockbackMult, DamageType.EXPLOSIVE_RPG_SELF);
+
 			explosion.explode();
 		}
 
-		/*@Override
+		/*@Override // No longer needed
 		public void onPlayerTick(Player player) {
 			//Fixing glitch where player can get extra explosives by "hiding" grenades
 			//in inventory's crafting menu
@@ -344,7 +359,7 @@ public class KitExplosive extends Kit
 					BossBar chargeBar = BossBar.bossBar(RPG_CHARGE_BOSSBAR_NAME, 0f, BossBar.Color.YELLOW,
 							BossBar.Overlay.PROGRESS);
 					shooter.showBossBar(chargeBar);
-					einfo.chargingRpg = new RPGChargeInfo(shooter, chargeBar, TeamArena.getGameTick());
+					einfo.chargingRpg = new RPGChargeInfo(chargeBar, TeamArena.getGameTick());
 				}
 			}
 		}
@@ -387,7 +402,7 @@ public class KitExplosive extends Kit
 			shooter.getWorld().playSound(shooter, Sound.ENTITY_FIREWORK_ROCKET_LAUNCH, SoundCategory.PLAYERS, 2f, 0.5f);
 
 			List<RPGInfo> list = einfo.activeRpgs;
-			list.add(new RPGInfo(rpgArrow, shooter, TeamArena.getGameTick()));
+			list.add(new RPGInfo(rpgArrow, TeamArena.getGameTick()));
 		}
 
 		@Override
@@ -436,7 +451,7 @@ public class KitExplosive extends Kit
 			grenadeDrop.setVelocity(vel);
 			world.playSound(grenadeDrop, Sound.ENTITY_CREEPER_PRIMED, 1.0f, 1.1f);
 
-			currActiveGrenades.add(new GrenadeInfo(grenadeDrop, thrower, teamColor, TeamArena.getGameTick()));
+			currActiveGrenades.add(new GrenadeInfo(grenadeDrop, teamColor, TeamArena.getGameTick()));
 
 			final PlayerInventory inv = thrower.getInventory();
 			//Resetting Grenade recharge time
@@ -475,6 +490,33 @@ public class KitExplosive extends Kit
 		public void onInventoryDrag(InventoryDragEvent event) {
 			if (explosiveInfos.get((Player) event.getWhoClicked()).chargingRpg != null) {
 				event.setCancelled(true);
+			}
+		}
+
+		@Override
+		public void onReflect(ProjectileReflectEvent event) {
+			// Maybe an RPG
+			if (event.projectile instanceof Arrow arrow && event.shooter instanceof Player shooter) {
+				final ExplosiveInfo einfo = explosiveInfos.get(shooter);
+				if (einfo != null) {
+                    for (Iterator<RPGInfo> iterator = einfo.activeRpgs.iterator(); iterator.hasNext(); ) {
+                        RPGInfo rinfo = iterator.next();
+                        if (rinfo.rpgArrow.equals(arrow)) { // Indeed an explosive's RPG
+                            if (!CompileAsserts.OMIT && Main.getPlayerInfo(event.reflector).team.hasMember(shooter)) {
+                                Main.logger().warning("ExplosiveAbility.onReflect(), RPG was reflected by teammate");
+                                Thread.dumpStack();
+                            }
+
+							// Set shooter to explosive so event handlers here can cancel the arrow's damage
+							arrow.setShooter(shooter);
+							event.overrideShooter = false;
+							// Remove from explosive's ownership and add entry for the reflector
+							iterator.remove();
+							reflectedRpgs.put(event.reflector, new RPGInfo(arrow, TeamArena.getGameTick()));
+                            break;
+                        }
+                    }
+				}
 			}
 		}
 	}
