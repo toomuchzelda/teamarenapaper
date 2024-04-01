@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.utils;
 
 import com.destroystokyo.paper.MaterialSetTag;
+import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import net.kyori.adventure.text.Component;
@@ -119,7 +120,7 @@ public class ItemUtils {
 
 		int count = 0;
 		for (ItemStack item : items) {
-			assert item != null && targetItem.isSimilar(item);
+			assert CompileAsserts.OMIT || item != null && targetItem.isSimilar(item);
 			int stackAmount = item.getAmount();
 
 			if (count + stackAmount <= maxCount) {
@@ -154,6 +155,26 @@ public class ItemUtils {
 				count += amount;
 			}
 		}*/
+	}
+
+	/**
+	 * Based on the lastUsedTick, itemDist gives the player the desiredItem
+	 * @ rechargeTime until maxCount is reached
+	 * @author onett425
+	 */
+	public static void addRechargedItem(Player player, int currentTick, int lastUsedTick,
+										int maxCount, int rechargeTime, ItemStack desiredItem) {
+		PlayerInventory inv = player.getInventory();
+		int itemCount = getItemCount(inv, desiredItem);
+
+		if (itemCount < maxCount &&
+			(currentTick - lastUsedTick) % rechargeTime == 0) {
+			if (inv.getItemInOffHand().isSimilar(desiredItem)) {
+				inv.getItemInOffHand().add();
+			} else {
+				inv.addItem(desiredItem);
+			}
+		}
 	}
 
 	/**

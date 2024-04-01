@@ -282,19 +282,22 @@ public abstract class TeamArena
 		graffiti = new GraffitiManager(this);
 		killStreakManager = new KillStreakManager();
 
+		this.defaultKits = new ArrayList<>();
 		if (KitOptions.rwfKits) {
 			// TODO sort out teleporter, other missing kits
-			this.defaultKits = List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(), new KitBurst(),
+			this.defaultKits.addAll(List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(), new KitBurst(),
 				new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(), new KitNone(),
 				new KitVenom(), new KitRewind(), new KitExplosive(), new KitTrigger(), new KitMedic(this.killStreakManager),
-				new KitBerserker());
+				new KitBerserker(), new KitEngineer(), new KitLongbow()));
 		}
 		else {
-			this.defaultKits = List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
+			this.defaultKits.addAll(List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
 					new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(),
 					new KitNone(), new KitVenom(), new KitRewind(), new KitValkyrie(), new KitEngineer(), new KitExplosive(),
-					new KitTrigger(), new KitMedic(this.killStreakManager), new KitBeekeeper());
+					new KitTrigger(), new KitMedic(this.killStreakManager), new KitBeekeeper()));
 		}
+		if (KitOptions.porcEnable)
+			this.defaultKits.add(new KitPorcupine());
 
 		registerKits();
 

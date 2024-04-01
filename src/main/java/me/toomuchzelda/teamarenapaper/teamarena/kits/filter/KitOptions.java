@@ -18,6 +18,7 @@ public class KitOptions
 	public static boolean pyroMolotov;
 	public static boolean rewindClockPhases;
 	public static boolean rewindStasis;
+	public static boolean porcEnable;
 
 	private static void resetToDefault() {
 		kitSniper = false; sniperAccuracy = false;
@@ -30,6 +31,7 @@ public class KitOptions
 		pyroMolotov = false;
 		rewindClockPhases = false;
 		rewindStasis = false;
+		porcEnable = true;
 	}
 
 	// Keys must not have spaces and be type-able with a keyboard.
@@ -47,7 +49,7 @@ public class KitOptions
 
 		OPTION_TOGGLE_FUNCS.put("teamArenaKits", () -> {
 			rwfKits = false; ghostAetherial = true; burstShowArrows = false; ninjaFastAttack = true;
-			pyroMolotov = true; rewindClockPhases = true; rewindStasis = true;
+			pyroMolotov = true; rewindClockPhases = true; rewindStasis = true; porcEnable = false;
 		});
 
 		OPTION_TOGGLE_FUNCS.put("rwfKits", () -> rwfKits = !rwfKits);
@@ -57,6 +59,7 @@ public class KitOptions
 		OPTION_TOGGLE_FUNCS.put("pyroMolotov", () -> pyroMolotov = !pyroMolotov);
 		OPTION_TOGGLE_FUNCS.put("rewindClockPhases", () -> rewindClockPhases = !rewindClockPhases);
 		OPTION_TOGGLE_FUNCS.put("rewindStasis", () -> rewindStasis = !rewindStasis);
+		OPTION_TOGGLE_FUNCS.put("porcEnable", () -> porcEnable = !porcEnable);
 	}
 
 	/** @return true if toggling was successful. */

@@ -15,10 +15,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.phys.Vec3;
-import org.bukkit.Bukkit;
-import org.bukkit.Material;
-import org.bukkit.Sound;
-import org.bukkit.SoundCategory;
+import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.craftbukkit.v1_19_R3.CraftSound;
 import org.bukkit.craftbukkit.v1_19_R3.entity.CraftEntity;
@@ -688,14 +685,16 @@ public class DamageEvent {
 		Vector knockback = new Vector();
 		if (attacker != null)
 		{
+			final Location attackerLoc = attacker.getLocation();
+			final boolean isProjectile = attacker instanceof Projectile && damageType.isProjectile();
 			if(baseKnockback) {
 				Vector offset;
-				if (attacker instanceof Projectile && damageType.isProjectile()) {
-					offset = attacker.getLocation().getDirection();
+				if (isProjectile) {
+					offset = attackerLoc.getDirection();
 					offset.setZ(-offset.getZ());
 				}
 				else {
-					offset = attacker.getLocation().toVector().subtract(victim.getLocation().toVector());
+					offset = victim.getLocation().subtract(attackerLoc).toVector().multiply(-1d);
 				}
 
 				double xDist = offset.getX();
@@ -727,12 +726,15 @@ public class DamageEvent {
 				knockbackLevels *= xzMult;
 				knockbackLevels /= 2;
 
-				Vector kbEnch;
+				if (isProjectile) {
+					Vector dir = attackerLoc.getDirection();
+					dir.setX(-dir.getX());
+					attackerLoc.setDirection(dir); // Misuse for getYaw()
+				}
+				double xKb = -Math.sin(attackerLoc.getYaw() * Math.PI / 180.0d) * knockbackLevels;
+				double zKb = Math.cos(attackerLoc.getYaw() * Math.PI / 180.0d) * knockbackLevels;
 
-				double xKb = -Math.sin(attacker.getLocation().getYaw() * 3.1415927F / 180.0f) * knockbackLevels;
-				double zKb = Math.cos(attacker.getLocation().getYaw() * 3.1415927F / 180.0f) * knockbackLevels;
-
-				kbEnch = new Vector(xKb * knockbackResistance, yMult, zKb * knockbackResistance);
+				Vector kbEnch = new Vector(xKb * knockbackResistance, yMult, zKb * knockbackResistance);
 				knockback.add(kbEnch);
 			}
 		}
