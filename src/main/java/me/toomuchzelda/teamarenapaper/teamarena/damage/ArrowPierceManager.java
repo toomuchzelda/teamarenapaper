@@ -1,10 +1,17 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
+import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
+import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
+import me.toomuchzelda.teamarenapaper.metadata.SimpleMetadataValue;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import org.bukkit.Location;
 import org.bukkit.craftbukkit.v1_19_R3.entity.CraftArrow;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.Entity;
+import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
@@ -19,8 +26,7 @@ public class ArrowPierceManager {
             info = new ArrowInfo();
             info.piercedEntities = new ArrayList<>(Math.min(arrow.getPierceLevel(), 20));
             info.velocity = arrow.getVelocity();
-            info.pitch = arrow.getLocation().getPitch();
-            info.yaw = arrow.getLocation().getYaw();
+			info.loc = arrow.getLocation();
 
             info.lastUpdated = TeamArena.getGameTick();
 
@@ -35,20 +41,27 @@ public class ArrowPierceManager {
         // so just check to make sure these aren't updated twice in the same tick
         else if(info.lastUpdated != TeamArena.getGameTick()) {
             info.velocity = arrow.getVelocity();
-            info.pitch = arrow.getLocation().getPitch();
-            info.yaw = arrow.getLocation().getYaw();
+			info.loc = arrow.getLocation();
             info.lastUpdated = TeamArena.getGameTick();
         }
     }
 
     public static void fixArrowMovement(AbstractArrow arrow) {
-        ArrowInfo info = PIERCED_ENTITIES_MAP.get(arrow);
+        /*ArrowInfo info = PIERCED_ENTITIES_MAP.get(arrow);
 
-        net.minecraft.world.entity.projectile.AbstractArrow nmsArrow = ((CraftArrow) arrow).getHandle();
+		arrow.teleport(info.loc);
+        arrow.setVelocity(info.velocity);*/
 
-        nmsArrow.setXRot(info.pitch);
-        nmsArrow.setYRot(info.yaw);
-        arrow.setVelocity(info.velocity);
+		// TODO: DO this business in the projectile hit event to stop bouncing off
+		// hit entities due to cancelled damage event.
+		// Clients won't do disappearing if the arrow metadata is shot from crossbow
+		// and has high enough piercing levels.
+		// Seems that clients also track and decrement piercing levels.
+		// Trouble is metadataviewer doesn't work as spawning a plain, bow-shot arrow
+		// Doesn't send a metadata packet as no metadata is needed for it.
+		// So got to figure somethin' out there.
+		// Maybe find a way to send it manually for entities that spawn with no metadata set
+		// ServerEntity.sendPairingData() is where metadata packet is sent on entity spawn
     }
 
 
@@ -79,7 +92,7 @@ public class ArrowPierceManager {
 		PIERCED_ENTITIES_MAP.remove(arrow);
 	}
 
-    public enum PierceType
+	public enum PierceType
     {
         ALREADY_HIT,
         PIERCE,
@@ -90,11 +103,25 @@ public class ArrowPierceManager {
     {
         public ArrayList<Entity> piercedEntities;
         public Vector velocity;
-        public float yaw;
-        public float pitch;
+        public Location loc;
         public int lastUpdated;
 
         public ArrowInfo() {
         }
     }
+
+	/** Prevent clients predicting arrows disappearing when they hit a player
+	 *  by sending them high pierce level metadata. */
+	public static void addArrowMetaFilter(EntitySpawnEvent event) {
+		final Entity spawnedEntity = event.getEntity();
+		if (spawnedEntity instanceof AbstractArrow arrow) {
+			var iter = Main.getPlayersIter();
+			while (iter.hasNext()) {
+				var entry = iter.next();
+				MetadataViewer metadataViewer = entry.getValue().getMetadataViewer();
+				metadataViewer.setViewedValue(MetaIndex.ABSTRACT_ARROW_PIERCING_LEVEL_IDX,
+					new SimpleMetadataValue<>((byte) Byte.MAX_VALUE), arrow);
+			}
+		}
+	}
 }

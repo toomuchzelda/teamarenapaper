@@ -8,8 +8,6 @@ import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
-import io.papermc.paper.event.packet.PlayerChunkLoadEvent;
-import io.papermc.paper.event.packet.PlayerChunkUnloadEvent;
 import io.papermc.paper.event.player.*;
 import me.toomuchzelda.teamarenapaper.explosions.EntityExplosionInfo;
 import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
@@ -42,12 +40,14 @@ import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import net.minecraft.world.phys.Vec3;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.command.Command;
 import org.bukkit.craftbukkit.v1_19_R3.CraftWorldBorder;
+import org.bukkit.craftbukkit.v1_19_R3.entity.CraftArrow;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -56,7 +56,6 @@ import org.bukkit.event.block.*;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.*;
-import org.bukkit.event.world.WorldUnloadEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
@@ -67,9 +66,7 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 
 import static me.toomuchzelda.teamarenapaper.teamarena.GameState.DEAD;
@@ -489,8 +486,9 @@ public class EventListeners implements Listener
 		//event.getProjectile().setVelocity(EntityUtils.projectileLaunchVector(event.getEntity(),
 		//		event.getProjectile().getVelocity(), EntityUtils.VANILLA_PROJECTILE_SPRAY));
 		if(Main.getGame().getGameState() == LIVE) {
-			if (event.getProjectile() instanceof AbstractArrow aa)
+			if (event.getProjectile() instanceof AbstractArrow aa) {
 				aa.setPickupStatus(AbstractArrow.PickupStatus.CREATIVE_ONLY);
+			}
 
 			if (event.getEntity() instanceof Player p) {
 				for (Ability a : Kit.getAbilities(p)) {
@@ -603,11 +601,21 @@ public class EventListeners implements Listener
 		if(Main.getGame() != null) {
 			Entity collidedWith = event.getHitEntity();
 
-			if(collidedWith instanceof Player p && Main.getGame().isSpectator(p))
+			if (event.getEntity().getShooter() instanceof Player pShooter && collidedWith instanceof LivingEntity livingVictim) {
+				if (!Main.getGame().canAttack(pShooter, livingVictim)) {
+					event.setCancelled(true);
+					return;
+				}
+			}
+			if (collidedWith instanceof Player p && Main.getGame().isSpectator(p)) {
 				event.setCancelled(true);
+				return;
+			}
 			else if(collidedWith instanceof ArmorStand stand && Main.getGame() instanceof CaptureTheFlag ctf
-				&& ctf.flagStands.containsKey(stand))
+				&& ctf.flagStands.containsKey(stand)) {
 				event.setCancelled(true);
+				return;
+			}
 
 			if(event.getEntity().getShooter() instanceof Player p) {
 				for(Ability a : Kit.getAbilities(p)) {
@@ -615,9 +623,41 @@ public class EventListeners implements Listener
 				}
 			}
 
-			if (event.getHitEntity() instanceof Player p) {
-				Kit.getAbilities(p).forEach(ability -> ability.onHitByProjectile(event));
+			if (!event.isCancelled()) {
+				if (event.getHitEntity() instanceof Player p) {
+					Kit.getAbilities(p).forEach(ability -> ability.onHitByProjectile(event));
+				}
 			}
+
+			// If event is cancelled it'll pass right through them easily
+			if (event.getEntity() instanceof AbstractArrow aa && aa.getPierceLevel() > 0 &&
+				!event.isCancelled()) {
+				/*
+				this.setDeltaMovement(this.getDeltaMovement().scale(-0.1D));
+				this.setYRot(this.getYRot() + 180.0F);
+				this.yRotO += 180.0F;
+				 */
+				// TODO put this in ArrowPierceManager
+				// And test super-high piercing level with lots of villagers and lag
+				final net.minecraft.world.entity.projectile.AbstractArrow nmsAa = ((CraftArrow) aa).getHandle();
+				final Vec3 vel = nmsAa.getDeltaMovement();
+				final float yRot = nmsAa.getYRot();
+				final float yRotO = nmsAa.yRotO;
+				Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
+					nmsAa.setDeltaMovement(vel);
+					nmsAa.setYRot(yRot);
+					nmsAa.yRotO = yRotO;
+				}, 0L);
+			}
+		}
+	}
+
+	// To make arrows appear to go through teammates properly
+	@EventHandler(priority = EventPriority.MONITOR)
+	public void entitySpawn(EntitySpawnEvent event) {
+		if (!event.isCancelled()) {
+			ArrowPierceManager.addArrowMetaFilter(event);
+			MetadataViewer.sendMetaIfNeeded(event);
 		}
 	}
 

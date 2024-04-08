@@ -15,6 +15,8 @@ public class ProjectileReflectEvent {
 	public boolean overrideShooter = true;
 
 	// To be initialized by the consumer of this event, if needed.
+	// Function should not assume the projectile is alive or dead
+	// Adapt this to a List later when more than 1 handler needs to use it
 	public BiConsumer<Player, Projectile> cleanupFunc = null;
 
 	public ProjectileReflectEvent(Player reflector, Projectile projectile, ProjectileSource shooter) {

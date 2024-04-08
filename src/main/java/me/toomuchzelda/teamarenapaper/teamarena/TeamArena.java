@@ -713,13 +713,13 @@ public abstract class TeamArena
 			return;
 
 		//ability on confirmed attacks done in this.onConfirmedDamage() called by DamageEvent.executeAttack()
-		if(event.getFinalAttacker() instanceof Player p && event.getVictim() instanceof Player p2) {
+		if(event.getFinalAttacker() instanceof Player p && event.getVictim() instanceof LivingEntity lv) {
 			// Pushed into void somehow by self or teammate
 			// Possible with demolition push mines.
-			if (p == p2 && event.getDamageType().isVoid()) {
+			if (p == lv && event.getDamageType().isVoid()) {
 				event.setDamageType(DamageType.VOID_PUSHED_SELF);
 			}
-			else if(!canAttack(p, p2))
+			else if(!canAttack(p, lv))
 				event.setCancelled(true);
 
 		}
@@ -791,10 +791,6 @@ public abstract class TeamArena
 			return;
 		}
 
-		// let buildings handle events first
-		if (BuildingListeners.onEntityAttack(event))
-			return;
-
 		final Entity finalAttacker = event.getFinalAttacker();
 		if(this.killStreakManager.isCrateFirework(finalAttacker)) {
 			event.setCancelled(true);
@@ -815,6 +811,9 @@ public abstract class TeamArena
 				}
 			}
 		}
+
+		if (BuildingListeners.onEntityAttack(event)) // Handled by building
+			return;
 
 		// Handle entities that are part of some Ability
 		if(event.getVictim() instanceof Wolf) {

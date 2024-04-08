@@ -32,6 +32,15 @@ public class MetaIndex
 	public static final int BASE_BITFIELD_GLOWING_IDX = 6;
 	public static final byte BASE_BITFIELD_GLOWING_MASK = 0x40;
 
+	public static final int ABSTRACT_ARROW_BITFIELD_IDX = 8;
+	public static final int ABSTRACT_ARROW_PIERCING_LEVEL_IDX = 9;
+
+	public static final int ABSTRACT_ARROW_BITFIELD_CRIT_IDX = 0;
+	public static final byte ABSTRACT_ARROW_BITFIELD_CRIT_MASK = 0x01;
+	public static final byte ABSTRACT_ARROW_BITFIELD_NOCLIP_MASK = 0x02;
+	public static final int ABSTRACT_ARROW_BITFIELD_FROM_CROSSBOW_IDX = 2;
+	public static final byte ABSTRACT_ARROW_BITFIELD_FROM_CROSSBOW_MASK = 0x04;
+
 	public static final int ARMOR_STAND_BITFIELD_IDX = 15;
 	public static final byte ARMOR_STAND_MARKER_MASK = 0x10;
 
@@ -59,6 +68,9 @@ public class MetaIndex
 	public static final WrappedDataWatcherObject CUSTOM_NAME_VISIBLE_OBJ;
 	public static final WrappedDataWatcherObject NO_GRAVITY_OBJ;
 	public static final WrappedDataWatcherObject POSE_OBJ;
+
+	public static final WrappedDataWatcherObject ABSTRACT_ARROW_BITFIELD_OBJ;
+	public static final WrappedDataWatcherObject ABSTRACT_ARROW_PIERCING_LEVEL_OBJ;
 
 	public static final WrappedDataWatcherObject ARMOR_STAND_BITFIELD_OBJ;
 	public static final WrappedDataWatcherObject ARMOR_STAND_LEFT_LEG_POSE;
@@ -110,6 +122,12 @@ public class MetaIndex
 
 		POSE_OBJ = new WrappedDataWatcherObject(POSE_IDX, WrappedDataWatcher.Registry.get(EnumWrappers.getEntityPoseClass()));
 		addMapping(POSE_OBJ);
+
+		ABSTRACT_ARROW_BITFIELD_OBJ = new WrappedDataWatcherObject(ABSTRACT_ARROW_BITFIELD_IDX, WrappedDataWatcher.Registry.get(Byte.class));
+		addMapping(ABSTRACT_ARROW_BITFIELD_OBJ);
+
+		ABSTRACT_ARROW_PIERCING_LEVEL_OBJ = new WrappedDataWatcherObject(ABSTRACT_ARROW_PIERCING_LEVEL_IDX, WrappedDataWatcher.Registry.get(Byte.class));
+		addMapping(ABSTRACT_ARROW_PIERCING_LEVEL_OBJ);
 
 		ARMOR_STAND_BITFIELD_OBJ = new WrappedDataWatcherObject(ARMOR_STAND_BITFIELD_IDX, WrappedDataWatcher.Registry.get(Byte.class));
 		addMapping(ARMOR_STAND_BITFIELD_OBJ);

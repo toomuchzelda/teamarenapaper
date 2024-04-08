@@ -9,8 +9,10 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.entity.EntitySpawnEvent;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
@@ -366,6 +368,37 @@ public class MetadataViewer
 		}
 		else {
 			return metadataPacket;
+		}
+	}
+
+	// Called by EventListeners entitySpawn()
+	public static void sendMetaIfNeeded(EntitySpawnEvent event) {
+		// Hack: If no metadata for this entity is dirty, then no metadata packet is sent after the spawn packet,
+		// thus meaning no MetadataViewer replacements will be sent.
+		// So just check if any metadata will be sent and if not, send it ourselves.
+		WrappedDataWatcher watcher = WrappedDataWatcher.getEntityWatcher(event.getEntity());
+		boolean noneDirty = true;
+		for (var value : watcher) {
+			if (value.getDirtyState()) {
+				noneDirty = false;
+				break;
+			}
+		}
+
+		if (noneDirty) {
+			final Entity spawnedEntity = event.getEntity();
+			Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
+				var iter = Main.getPlayersIter();
+				while (iter.hasNext()) {
+					var entry = iter.next();
+					MetadataViewer viewer = entry.getValue().getMetadataViewer();
+
+					if (viewer.hasMetadataFor(spawnedEntity.getEntityId())) {
+						viewer.setAllDirty(spawnedEntity);
+						viewer.refreshViewer(spawnedEntity);
+					}
+				}
+			}, 0L);
 		}
 	}
 

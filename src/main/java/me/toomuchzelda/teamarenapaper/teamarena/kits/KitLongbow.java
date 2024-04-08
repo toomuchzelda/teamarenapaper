@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
+import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
@@ -24,7 +25,10 @@ public class KitLongbow extends Kit {
 
 		ItemStack sword = new ItemStack(Material.STONE_SWORD);
 
-		ItemStack[] items = new ItemStack[]{sword, bow, new ItemStack(Material.ARROW)};
+		ItemStack[] items = new ItemStack[]{sword, bow, new ItemStack(Material.ARROW, 64),
+			ItemBuilder.of(Material.CROSSBOW).enchant(Enchantment.PIERCING, 1).enchant(Enchantment.ARROW_INFINITE, 1)
+				.build()
+		};
 		setItems(items);
 
 		setCategory(KitCategory.RANGED);

@@ -14,7 +14,9 @@ import net.minecraft.network.protocol.game.*;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerPlayerConnection;
 import net.minecraft.world.phys.Vec3;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
@@ -250,7 +252,7 @@ public class EntityUtils {
 		return createMovePacket(entity.getId(), entity.getLocation(), xDelta, yDelta, zDelta, yawDelta, pitchDelta, onGround);
 	}
 
-	// Following 2 methods exist because paper Entity.getTrackedPlayers() is really slow
+	// Following 3 methods exist because paper Entity.getTrackedPlayers() is really slow
 	@Deprecated
 	public static Set<ServerPlayerConnection> getTrackedPlayers0(Entity viewedEntity) {
 		net.minecraft.world.entity.Entity nmsEntity = ((CraftEntity) viewedEntity).getHandle();
@@ -263,6 +265,18 @@ public class EntityUtils {
 
 	public static boolean isTrackingEntity(Player viewer, Entity viewedEntity) {
 		return getTrackedPlayers0(viewedEntity).contains(((CraftPlayer) viewer).getHandle().connection);
+	}
+
+	public static ArrayList<Player> getTrackedPlayers(Entity viewedEntity) {
+		Set<ServerPlayerConnection> connections = getTrackedPlayers0(viewedEntity);
+		ArrayList<Player> list = new ArrayList<>(connections.size());
+		for (ServerPlayerConnection connection : connections) {
+			Player player = connection.getPlayer().getBukkitEntity().getPlayer();
+			if (player != null) // CraftEntity.getPlayer() returns null for OfflinePlayers
+				list.add(player);
+		}
+
+		return list;
 	}
 
 	/**
@@ -301,5 +315,18 @@ public class EntityUtils {
 		var nmsPlayer = ((CraftPlayer) player).getHandle();
 		var boundingBox = nmsPlayer.getBoundingBox().move(0, -0.1, 0);
 		return !nmsPlayer.level.noCollision(nmsPlayer, boundingBox);
+	}
+
+	// For debugging only
+	@Deprecated
+	public static Entity getById(int id) {
+		for (World world : Bukkit.getWorlds()) {
+			for (Entity entity : world.getEntities()) {
+				if (entity.getEntityId() == id)
+					return entity;
+			}
+		}
+
+		return null;
 	}
 }

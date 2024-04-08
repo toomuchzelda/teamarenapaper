@@ -29,6 +29,7 @@ import org.bukkit.*;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Villager;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.map.MapPalette;
@@ -447,6 +448,13 @@ public class CommandDebug extends CustomCommand {
 						throw throwUsage("chunktracker refresh");
 					}
 				}
+			}
+			case "villager" -> {
+				Villager villager = player.getWorld().spawn(player.getLocation(), Villager.class);
+				villager.setMaxHealth(999);
+				villager.setAI(false);
+				villager.setGlowing(true);
+				Main.getPlayerInfo(player).team.addMembers(villager);
 			}
 			default -> showUsage(sender);
 		}
