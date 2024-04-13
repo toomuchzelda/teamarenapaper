@@ -14,6 +14,7 @@ import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
@@ -456,6 +457,9 @@ public class CommandDebug extends CustomCommand {
 				villager.setGlowing(true);
 				Main.getPlayerInfo(player).team.addMembers(villager);
 			}
+			case "arrowMarker" -> {
+				ArrowManager.spawnArrowMarkers = !ArrowManager.spawnArrowMarkers;
+			}
 			default -> showUsage(sender);
 		}
 	}
@@ -464,7 +468,7 @@ public class CommandDebug extends CustomCommand {
 	public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
 		if (args.length == 1) {
 			return Arrays.asList("hide", "gui", "guitest", "signtest", "game", "setrank", "setteam", "setkit",
-				"votetest", "draw", "graffititest", "respawn", "fakehitbox", "testmotd");
+				"votetest", "draw", "graffititest", "respawn", "fakehitbox", "testmotd", "arrowMarker");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");

@@ -114,19 +114,7 @@ public class DamageEvent {
 				//fix arrow damage - no random crits
 				//  arrow damage is the vanilla formula without the random crit part
 				double damage = DamageNumbers.calcArrowDamage(aa.getDamage(), aa.getVelocity().length());
-
 				dEvent.setDamage(damage);
-
-				//stop arrows from bouncing off after this event is run
-				//store info about how it's moving now, before the EntityDamageEvent ends and the cancellation
-				// makes the arrow bounce off the damagee, so we can re-set the movement later
-				ArrowPierceManager.addOrUpdateInfo(aa);
-
-				//fix the movement after event is run
-				Bukkit.getScheduler().runTaskLater(Main.getPlugin(), bukkitTask -> {
-					if(aa.isValid())
-						ArrowPierceManager.fixArrowMovement(aa);
-				}, 0L);
 			}
 			// Stop ender-pearls from doing fall damage
 			else if (damageCause == EntityDamageEvent.DamageCause.FALL && dEvent.getDamager() instanceof EnderPearl)
@@ -357,26 +345,6 @@ public class DamageEvent {
 	public void executeAttack() {
 		if(cancelled)
 			return;
-
-		//if its an arrow check if it can hit this particular damagee
-		// also fix it's movement
-		if(attacker instanceof AbstractArrow aa && aa.isValid() && damageType.isProjectile()) {
-			//Bukkit.broadcastMessage("arrow pirece levels: " + aa.getPierceLevel());
-			//if(aa.getPierceLevel() > 0) {
-			ArrowPierceManager.PierceType type = ArrowPierceManager.canPierce(aa, victim);
-			//Bukkit.broadcastMessage(type.toString());
-			if (type == ArrowPierceManager.PierceType.REMOVE_ARROW) {
-				aa.remove();
-			} else {
-				//don't do damage to the same entity more than once for piercing enchanted arrows
-				if (type == ArrowPierceManager.PierceType.ALREADY_HIT) {
-					return;
-				}
-			}
-            /*}
-            else
-                aa.remove();*/
-		}
 
 		//non-livingentitys dont have NDT or health, can't do much
 		if(!(victim instanceof LivingEntity)) {

@@ -13,24 +13,25 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerPlayerConnection;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.OfflinePlayer;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
+import org.bukkit.block.BlockFace;
 import org.bukkit.craftbukkit.v1_19_R3.CraftEquipmentSlot;
 import org.bukkit.craftbukkit.v1_19_R3.CraftWorld;
+import org.bukkit.craftbukkit.v1_19_R3.entity.CraftArrow;
 import org.bukkit.craftbukkit.v1_19_R3.entity.CraftEntity;
 import org.bukkit.craftbukkit.v1_19_R3.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_19_R3.inventory.CraftItemStack;
 import org.bukkit.craftbukkit.v1_19_R3.util.CraftVector;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
@@ -78,6 +79,23 @@ public class EntityUtils {
 
         return direction;
     }
+
+	// For getting the hit block from Arrow ProjectileHitEvents where only the hit entity is given
+	public static BlockHitResult getHitBlock(ProjectileHitEvent event) {
+		AbstractArrow arrow = (AbstractArrow) event.getEntity();
+		net.minecraft.world.entity.projectile.AbstractArrow nmsAa = ((CraftArrow) arrow).getHandle();
+
+		Vec3 position = nmsAa.position();
+		Vec3 vel = nmsAa.getDeltaMovement();
+		Vec3 nextPos = position.add(vel);
+
+		BlockHitResult blockHitResult = nmsAa.level.clip(new ClipContext(position, nextPos, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, nmsAa));
+		if (blockHitResult.getType() != HitResult.Type.MISS) {
+			return blockHitResult;
+		}
+
+		return null;
+	}
 
     /**
      * play critical hit animation on entity

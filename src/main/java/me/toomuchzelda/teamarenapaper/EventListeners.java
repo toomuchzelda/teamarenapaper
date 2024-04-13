@@ -21,7 +21,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.announcer.ChatAnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingListeners;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowPierceManager;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.DigAndBuild;
@@ -32,22 +32,17 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.KitReach;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitVenom;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
-import me.toomuchzelda.teamarenapaper.utils.TextColors;
+import me.toomuchzelda.teamarenapaper.utils.*;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-import net.minecraft.world.phys.Vec3;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.command.Command;
 import org.bukkit.craftbukkit.v1_19_R3.CraftWorldBorder;
-import org.bukkit.craftbukkit.v1_19_R3.entity.CraftArrow;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -81,6 +76,13 @@ public class EventListeners implements Listener
 	//run the TeamArena tick
 	@EventHandler
 	public void endTick(ServerTickEndEvent event) {
+		try {
+			ArrowManager.tick();
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+
 		PacketListeners.cancelDamageSounds = false;
 
 		//run this before the game tick so there is a whole tick after prepDead and construction of the next
@@ -146,8 +148,8 @@ public class EventListeners implements Listener
 		}
 
 		// TODO - Find a way to do these as soon as relevant
-		//every 2 minutes
-		int count = event.getTickNumber() % (2 * 60 * 20);
+		//every 30 seconds
+		int count = event.getTickNumber() % (20 * 30);
 		if(count == 0) {
 			for(PlayerInfo pinfo : Main.getPlayerInfos()) {
 				pinfo.getMetadataViewer().cleanUp();
@@ -599,7 +601,11 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void projectileHit(ProjectileHitEvent event) {
 		if(Main.getGame() != null) {
-			Entity collidedWith = event.getHitEntity();
+			final Entity collidedWith = event.getHitEntity();
+
+			if (collidedWith != null) {
+				ArrowManager.handleBlockCollision(event);
+			}
 
 			if (event.getEntity().getShooter() instanceof Player pShooter && collidedWith instanceof LivingEntity livingVictim) {
 				if (!Main.getGame().canAttack(pShooter, livingVictim)) {
@@ -617,46 +623,27 @@ public class EventListeners implements Listener
 				return;
 			}
 
+			// Handle calling damage event and removing the arrow ourselves
+			if (collidedWith != null && event.getEntity() instanceof AbstractArrow) {
+				ArrowManager.handleArrowEntityCollision(event);
+			}
+
 			if(event.getEntity().getShooter() instanceof Player p) {
 				for(Ability a : Kit.getAbilities(p)) {
 					a.onProjectileHit(event);
 				}
 			}
 
-			if (!event.isCancelled()) {
-				if (event.getHitEntity() instanceof Player p) {
-					Kit.getAbilities(p).forEach(ability -> ability.onHitByProjectile(event));
-				}
-			}
-
-			// If event is cancelled it'll pass right through them easily
-			if (event.getEntity() instanceof AbstractArrow aa && aa.getPierceLevel() > 0 &&
-				!event.isCancelled()) {
-				/*
-				this.setDeltaMovement(this.getDeltaMovement().scale(-0.1D));
-				this.setYRot(this.getYRot() + 180.0F);
-				this.yRotO += 180.0F;
-				 */
-				// TODO put this in ArrowPierceManager
-				// And test super-high piercing level with lots of villagers and lag
-				final net.minecraft.world.entity.projectile.AbstractArrow nmsAa = ((CraftArrow) aa).getHandle();
-				final Vec3 vel = nmsAa.getDeltaMovement();
-				final float yRot = nmsAa.getYRot();
-				final float yRotO = nmsAa.yRotO;
-				Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
-					nmsAa.setDeltaMovement(vel);
-					nmsAa.setYRot(yRot);
-					nmsAa.yRotO = yRotO;
-				}, 0L);
+			if (event.getHitEntity() instanceof Player p) {
+				Kit.getAbilities(p).forEach(ability -> ability.onHitByProjectile(event));
 			}
 		}
 	}
 
-	// To make arrows appear to go through teammates properly
 	@EventHandler(priority = EventPriority.MONITOR)
 	public void entitySpawn(EntitySpawnEvent event) {
 		if (!event.isCancelled()) {
-			ArrowPierceManager.addArrowMetaFilter(event);
+			ArrowManager.addArrowMetaFilter(event);
 			MetadataViewer.sendMetaIfNeeded(event);
 		}
 	}
@@ -996,13 +983,14 @@ public class EventListeners implements Listener
 		}
 	}
 
+	public static boolean avoidCME = false; // Avoid CME when aa.remove() in ArrowManager.tick();
 	/**
 	 * Clean up despawning arrows from ArrowPierceManager
 	 */
 	@EventHandler
 	public void entityRemoveFromWorld(EntityRemoveFromWorldEvent event) {
-		if(event.getEntity() instanceof AbstractArrow arrow) {
-			ArrowPierceManager.removeInfo(arrow);
+		if (event.getEntity() instanceof AbstractArrow arrow && !avoidCME) {
+			ArrowManager.remove(arrow);
 		}
 	}
 
