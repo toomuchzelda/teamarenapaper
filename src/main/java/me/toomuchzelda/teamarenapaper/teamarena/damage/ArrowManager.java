@@ -1,20 +1,24 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import me.toomuchzelda.teamarenapaper.EventListeners;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.metadata.SimpleMetadataValue;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
 import net.kyori.adventure.text.Component;
 import net.minecraft.world.phys.BlockHitResult;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.craftbukkit.v1_19_R3.entity.CraftArrow;
 import org.bukkit.craftbukkit.v1_19_R3.util.CraftVector;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.Entity;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 
@@ -84,6 +88,10 @@ public class ArrowManager {
 
     private static final Map<AbstractArrow, ArrowInfo> PIERCED_ENTITIES_MAP = new WeakHashMap<>();
 
+	private static final Map<EntityDamageEvent.DamageModifier, Double> modifiers;
+	private static final Function<? super Double, Double> zero = Functions.constant(-0.0);
+	private static final Map<EntityDamageEvent.DamageModifier, Function<? super Double, Double>> modifierFuncs = new HashMap<>();
+	static { modifiers = new HashMap<>(); modifiers.put(EntityDamageEvent.DamageModifier.BASE, 1d); modifierFuncs.put(EntityDamageEvent.DamageModifier.BASE, zero); }
     public static void handleArrowEntityCollision(ProjectileHitEvent event) {
 		event.setCancelled(true);
 
@@ -97,11 +105,14 @@ public class ArrowManager {
 		ainfo.hit(hitEntity);
 		ainfo.hitOccured = true;
 
-		final int currentTick = TeamArena.getGameTick();
 		// Call damage events until its piercing has run out
 		// Arrow removal done in tick()
 		if (ainfo.count() <= arrow.getPierceLevel() + 1) {
-			//Bukkit.broadcastMessage("Would call damage for tick " + currentTick);
+			// Hacky, but all the arrow calculation code has already been written, so just fake it
+			// Damage will be calculated by DamageEvent's handler
+			EntityDamageByEntityEvent bukkitEvent = new EntityDamageByEntityEvent(arrow, hitEntity, EntityDamageEvent.DamageCause.PROJECTILE,
+				modifiers, modifierFuncs, arrow.isCritical());
+			Bukkit.getPluginManager().callEvent(bukkitEvent);
 		}
     }
 

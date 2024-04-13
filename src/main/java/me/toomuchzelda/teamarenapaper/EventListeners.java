@@ -607,12 +607,6 @@ public class EventListeners implements Listener
 				ArrowManager.handleBlockCollision(event);
 			}
 
-			if (event.getEntity().getShooter() instanceof Player pShooter && collidedWith instanceof LivingEntity livingVictim) {
-				if (!Main.getGame().canAttack(pShooter, livingVictim)) {
-					event.setCancelled(true);
-					return;
-				}
-			}
 			if (collidedWith instanceof Player p && Main.getGame().isSpectator(p)) {
 				event.setCancelled(true);
 				return;
@@ -621,6 +615,16 @@ public class EventListeners implements Listener
 				&& ctf.flagStands.containsKey(stand)) {
 				event.setCancelled(true);
 				return;
+			}
+
+			if (!(event.getEntity() instanceof FishHook) && // Medic needs to fishhook teammates
+				event.getEntity().getShooter() instanceof Player pShooter &&
+				collidedWith instanceof LivingEntity livingVictim) {
+
+				if (!Main.getGame().canAttack(pShooter, livingVictim)) {
+					event.setCancelled(true);
+					return;
+				}
 			}
 
 			// Handle calling damage event and removing the arrow ourselves
