@@ -6,6 +6,7 @@ import io.papermc.paper.event.player.PlayerItemCooldownEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DetailedProjectileHitEvent;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockPlaceEvent;
@@ -119,10 +120,10 @@ public abstract class Ability {
 
 	public void onInteractEntity(PlayerInteractEntityEvent event) {}
 
-	public void onProjectileHit(ProjectileHitEvent event) {}
+	public void onProjectileHit(DetailedProjectileHitEvent event) {}
 
 	/** When a projectile hits the user */
-	public void onHitByProjectile(ProjectileHitEvent event) {}
+	public void onHitByProjectile(DetailedProjectileHitEvent event) {}
 
 	public void onReflect(ProjectileReflectEvent event) {}
 

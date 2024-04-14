@@ -6,6 +6,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DetailedProjectileHitEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
@@ -197,7 +198,9 @@ public class KitSniper extends Kit {
 
 		//Headshot
 		@Override
-		public void onProjectileHit(ProjectileHitEvent event) {
+		public void onProjectileHit(DetailedProjectileHitEvent detEvent) {
+			final ProjectileHitEvent event = detEvent.projectileHitEvent;
+			// TODO use BlockHitResult
 			final Projectile projectile = event.getEntity();
 			if (!(projectile instanceof Arrow))
 				return;

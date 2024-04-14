@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.EventListeners;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
@@ -65,6 +66,7 @@ public class ArrowManager {
 	private static class ArrowInfo {
 		private final List<Integer> hitEntities;
 		private boolean hitOccured = true;
+		private boolean resetPierced = true;
 		private BlockHitResult hitBlock = null;
 
 		public ArrowInfo(AbstractArrow aa) {
@@ -88,31 +90,35 @@ public class ArrowManager {
 
     private static final Map<AbstractArrow, ArrowInfo> PIERCED_ENTITIES_MAP = new WeakHashMap<>();
 
+	// All this stuff for calling the Bukkit damage event
 	private static final Map<EntityDamageEvent.DamageModifier, Double> modifiers;
 	private static final Function<? super Double, Double> zero = Functions.constant(-0.0);
 	private static final Map<EntityDamageEvent.DamageModifier, Function<? super Double, Double>> modifierFuncs = new HashMap<>();
 	static { modifiers = new HashMap<>(); modifiers.put(EntityDamageEvent.DamageModifier.BASE, 1d); modifierFuncs.put(EntityDamageEvent.DamageModifier.BASE, zero); }
     public static void handleArrowEntityCollision(ProjectileHitEvent event) {
-		event.setCancelled(true);
-
 		final AbstractArrow arrow = (AbstractArrow) event.getEntity();
 		final ArrowInfo ainfo = PIERCED_ENTITIES_MAP.computeIfAbsent(arrow, ArrowInfo::new);
-		final Entity hitEntity = event.getHitEntity();
-		if (ainfo.hasHit(hitEntity)) {
-			return;
-		}
 
-		ainfo.hit(hitEntity);
-		ainfo.hitOccured = true;
+		ainfo.resetPierced = true;
 
-		// Call damage events until its piercing has run out
-		// Arrow removal done in tick()
-		if (ainfo.count() <= arrow.getPierceLevel() + 1) {
-			// Hacky, but all the arrow calculation code has already been written, so just fake it
-			// Damage will be calculated by DamageEvent's handler
-			EntityDamageByEntityEvent bukkitEvent = new EntityDamageByEntityEvent(arrow, hitEntity, EntityDamageEvent.DamageCause.PROJECTILE,
-				modifiers, modifierFuncs, arrow.isCritical());
-			Bukkit.getPluginManager().callEvent(bukkitEvent);
+		if (!event.isCancelled()) {
+			final Entity hitEntity = event.getHitEntity();
+			if (ainfo.hasHit(hitEntity)) {
+				return;
+			}
+
+			ainfo.hit(hitEntity);
+			ainfo.hitOccured = true;
+
+			// Call damage events until its piercing has run out
+			// Arrow removal done in tick()
+			if (ainfo.count() <= arrow.getPierceLevel() + 1) {
+				// Hacky, but all the arrow calculation code has already been written, so just fake it
+				// Damage will be calculated by DamageEvent's handler
+				EntityDamageByEntityEvent bukkitEvent = new EntityDamageByEntityEvent(arrow, hitEntity, EntityDamageEvent.DamageCause.PROJECTILE,
+					modifiers, modifierFuncs, arrow.isCritical());
+				Bukkit.getPluginManager().callEvent(bukkitEvent);
+			}
 		}
     }
 
@@ -144,8 +150,8 @@ public class ArrowManager {
 						ainfo.hitBlock = null;
 					}
 				}
-				if (ainfo.hitOccured) {
-					ainfo.hitOccured = false;
+				if (ainfo.resetPierced) {
+					ainfo.resetPierced = false;
 					if (NMS_AA_RESET_PIERCED_ENTITIES != null) {
 						try {
 							NMS_AA_RESET_PIERCED_ENTITIES.invoke(nmsAa);
@@ -154,7 +160,9 @@ public class ArrowManager {
 							e.printStackTrace();
 						}
 					}
-
+				}
+				if (ainfo.hitOccured) {
+					ainfo.hitOccured = false;
 					final int pierceLevel = arrow.getPierceLevel();
 					if (ainfo.count() >= pierceLevel + 1) {
 						arrow.remove();
@@ -188,6 +196,7 @@ public class ArrowManager {
 				ainfo.hitBlock = hitBlock;
 			}
 		}
+		else if (!CompileAsserts.OMIT) { Main.logger().warning("ArrowManager.handleBlockCollision called on non-arrow"); }
 	}
 
 	/** Prevent clients predicting arrows disappearing when they hit a player

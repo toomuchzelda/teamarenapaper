@@ -24,6 +24,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DetailedProjectileHitEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.DigAndBuild;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
@@ -37,6 +38,8 @@ import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -602,44 +605,55 @@ public class EventListeners implements Listener
 	public void projectileHit(ProjectileHitEvent event) {
 		if(Main.getGame() != null) {
 			final Entity collidedWith = event.getHitEntity();
-
-			if (collidedWith != null) {
-				ArrowManager.handleBlockCollision(event);
-			}
+			final Projectile projectile = event.getEntity();
 
 			if (collidedWith instanceof Player p && Main.getGame().isSpectator(p)) {
 				event.setCancelled(true);
-				return;
 			}
 			else if(collidedWith instanceof ArmorStand stand && Main.getGame() instanceof CaptureTheFlag ctf
 				&& ctf.flagStands.containsKey(stand)) {
 				event.setCancelled(true);
-				return;
 			}
-
-			if (!(event.getEntity() instanceof FishHook) && // Medic needs to fishhook teammates
-				event.getEntity().getShooter() instanceof Player pShooter &&
+			else if (!(projectile instanceof FishHook) && // Medic needs to fishhook teammates
+				projectile.getShooter() instanceof Player pShooter &&
 				collidedWith instanceof LivingEntity livingVictim) {
 
 				if (!Main.getGame().canAttack(pShooter, livingVictim)) {
 					event.setCancelled(true);
-					return;
 				}
 			}
 
-			// Handle calling damage event and removing the arrow ourselves
-			if (collidedWith != null && event.getEntity() instanceof AbstractArrow) {
-				ArrowManager.handleArrowEntityCollision(event);
+			// Cancelled event at this point means absolutely NO collision
+			if (event.isCancelled()) {
+				if (collidedWith != null && projectile instanceof AbstractArrow) {
+					ArrowManager.handleBlockCollision(event);
+					ArrowManager.handleArrowEntityCollision(event);
+				}
+				return;
 			}
+			assert CompileAsserts.OMIT || !event.isCancelled();
 
-			if(event.getEntity().getShooter() instanceof Player p) {
+			// Get more info to pass around to handlers
+			// Abilities may cancel event, modify projectile state etc
+			final DetailedProjectileHitEvent betterEvent = new DetailedProjectileHitEvent(event);
+
+			if(projectile.getShooter() instanceof Player p) {
 				for(Ability a : Kit.getAbilities(p)) {
-					a.onProjectileHit(event);
+					a.onProjectileHit(betterEvent);
 				}
 			}
 
 			if (event.getHitEntity() instanceof Player p) {
-				Kit.getAbilities(p).forEach(ability -> ability.onHitByProjectile(event));
+				Kit.getAbilities(p).forEach(ability -> ability.onHitByProjectile(betterEvent));
+			}
+
+			if (collidedWith != null &&
+				betterEvent.projectileHitEvent.getEntity() instanceof AbstractArrow) {
+				ArrowManager.handleBlockCollision(event);
+				ArrowManager.handleArrowEntityCollision(event);
+
+				// Cancel at the end for smooth arrow movement
+				event.setCancelled(true);
 			}
 		}
 	}

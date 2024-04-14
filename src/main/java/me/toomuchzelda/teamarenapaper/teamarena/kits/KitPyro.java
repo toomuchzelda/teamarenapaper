@@ -6,6 +6,7 @@ import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DetailedProjectileHitEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
 import me.toomuchzelda.teamarenapaper.utils.*;
@@ -278,8 +279,10 @@ public class KitPyro extends Kit
 		//called manually in EventListeners.projectileHit
 		// spawn the molotov effect
 		@Override
-		public void onProjectileHit(ProjectileHitEvent event) {
+		public void onProjectileHit(DetailedProjectileHitEvent dEvent) {
+			ProjectileHitEvent event = dEvent.projectileHitEvent;
 			Projectile projectile = event.getEntity();
+			// TODO use BlockHitResult for better molotov spawning
 
 			if (projectile instanceof Arrow || projectile instanceof Snowball) {
 				// use the colour to know if it's a molotov arrow

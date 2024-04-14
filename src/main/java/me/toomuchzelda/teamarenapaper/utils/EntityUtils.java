@@ -5,6 +5,7 @@ import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
 import com.mojang.datafixers.util.Pair;
 import io.netty.buffer.Unpooled;
+import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -13,10 +14,10 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerPlayerConnection;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.HitResult;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.*;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
@@ -34,6 +35,8 @@ import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.projectiles.ProjectileSource;
+import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -82,12 +85,12 @@ public class EntityUtils {
 
 	// For getting the hit block from Arrow ProjectileHitEvents where only the hit entity is given
 	public static BlockHitResult getHitBlock(ProjectileHitEvent event) {
-		AbstractArrow arrow = (AbstractArrow) event.getEntity();
-		net.minecraft.world.entity.projectile.AbstractArrow nmsAa = ((CraftArrow) arrow).getHandle();
+		final AbstractArrow arrow = (AbstractArrow) event.getEntity();
+		final net.minecraft.world.entity.projectile.AbstractArrow nmsAa = ((CraftArrow) arrow).getHandle();
 
-		Vec3 position = nmsAa.position();
-		Vec3 vel = nmsAa.getDeltaMovement();
-		Vec3 nextPos = position.add(vel);
+		final Vec3 position = nmsAa.position();
+		final Vec3 vel = nmsAa.getDeltaMovement();
+		final Vec3 nextPos = position.add(vel);
 
 		BlockHitResult blockHitResult = nmsAa.level.clip(new ClipContext(position, nextPos, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, nmsAa));
 		if (blockHitResult.getType() != HitResult.Type.MISS) {
@@ -95,6 +98,24 @@ public class EntityUtils {
 		}
 
 		return null;
+	}
+
+	// Get the actual hit point of a ProjectileHitEvent that hit an entity
+	public static EntityHitResult getHitEntity(ProjectileHitEvent event) {
+		final AbstractArrow arrow = (AbstractArrow) event.getEntity();
+		final net.minecraft.world.entity.projectile.AbstractArrow nmsArrow = ((CraftArrow) arrow).getHandle();
+
+		final Entity hitEntity = event.getHitEntity();
+		assert hitEntity != null;
+		final net.minecraft.world.entity.Entity nmsHitEntity = ((CraftEntity) hitEntity).getHandle();
+
+		final Vec3 currentPos = nmsArrow.position();
+		final Vec3 vel = nmsArrow.getDeltaMovement();
+		final Vec3 nextPos = currentPos.add(vel);
+
+		return ProjectileUtil.getEntityHitResult(nmsArrow.level, nmsArrow, currentPos, nextPos,
+		nmsArrow.getBoundingBox().expandTowards(vel).inflate(1d),
+			entity -> entity == nmsHitEntity, 0.3f);
 	}
 
     /**

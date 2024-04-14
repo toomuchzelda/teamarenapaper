@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DetailedProjectileHitEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.ProjectileReflectEvent;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
@@ -55,8 +56,9 @@ public class KitPorcupine extends Kit {
 		public void unregisterAbility() {
 			reflectedProjectiles.forEach((player, projectileAndFunc) -> {
 				projectileAndFunc.forEach((projectile, func) -> {
-					if (func != null)
-						func.accept(player, projectile);
+					// Each ability's unregisterAbility should handle cleanup for porcs
+					//if (func != null)
+					//	func.accept(player, projectile);
 
 					projectile.remove();
 				});
@@ -94,9 +96,13 @@ public class KitPorcupine extends Kit {
 		}
 
 		@Override
-		public void onHitByProjectile(ProjectileHitEvent event) {
-			final Player porc = (Player) event.getHitEntity();
-			final Projectile projectile = event.getEntity();
+		public void onHitByProjectile(DetailedProjectileHitEvent detailedEvent) {
+			// TODO adapt this handler to use detailed and then test
+			//  arrows again
+			final ProjectileHitEvent projectileEvent = detailedEvent.projectileHitEvent;
+
+			final Player porc = (Player) projectileEvent.getHitEntity();
+			final Projectile projectile = projectileEvent.getEntity();
 
 			if (projectile.getShooter() instanceof LivingEntity shooter &&
 				!Main.getGame().canAttack(porc, shooter)) {
@@ -107,7 +113,7 @@ public class KitPorcupine extends Kit {
 			if (history.containsKey(projectile)) return;
 
 			if (true || porc.isBlocking()) {
-				event.setCancelled(true);
+				projectileEvent.setCancelled(true);
 
 				// Inform the shooter's Ability to allow it to handle special details
 				ProjectileReflectEvent reflectEvent = new ProjectileReflectEvent(porc, projectile, projectile.getShooter());
@@ -119,15 +125,15 @@ public class KitPorcupine extends Kit {
 
 				history.put(projectile, reflectEvent.cleanupFunc);
 
-				final List<Player> viewers = EntityUtils.getTrackedPlayers(projectile);
+				/*final List<Player> viewers = EntityUtils.getTrackedPlayers(projectile);
 				for (Player viewer : viewers) {
 					viewer.hideEntity(Main.getPlugin(), projectile);
-				}
+				}*/
 
 				if (reflectEvent.overrideShooter)
 					projectile.setShooter(porc);
 
-				// ProjectileHitEvent doesn't give where the hit actually occured, only where it will
+				// ProjectileHitEvent doesn't give where the hit actually occured, only where it was
 				// Also flip the looking direction too
 				// TODO explosive use cleanUp func
 				// TODO test this v
@@ -143,9 +149,9 @@ public class KitPorcupine extends Kit {
 				}
 
 				// Re-spawn the entity for clients that predicted it disappearing
-				for (Player viewer : viewers) {
+				/*for (Player viewer : viewers) {
 					viewer.showEntity(Main.getPlugin(), projectile);
-				}
+				}*/
 
 				porc.getWorld().playSound(porc, Sound.BLOCK_NOTE_BLOCK_SNARE, 2f, 1f);
 				// TODO vfx

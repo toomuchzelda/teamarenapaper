@@ -8,6 +8,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowImpaleStatus;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DetailedProjectileHitEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
@@ -391,9 +392,10 @@ public class KitBurst extends Kit
 		}
 
 		@Override
-		public void onProjectileHit(ProjectileHitEvent event) {
+		public void onProjectileHit(DetailedProjectileHitEvent dEvent) {
 			//all arrows shot by burst are from the shotgun
 			// despawn immediately if hit a block
+			ProjectileHitEvent event = dEvent.projectileHitEvent;
 			if (event.getEntity() instanceof Arrow arrow) {
 				if (event.getHitBlock() != null) {
 					arrow.remove();
