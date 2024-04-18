@@ -2,13 +2,15 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DetailedProjectileHitEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.ProjectileReflectEvent;
-import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.LivingEntity;
@@ -21,7 +23,6 @@ import org.bukkit.util.Vector;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.BiConsumer;
 
 public class KitPorcupine extends Kit {
@@ -95,10 +96,9 @@ public class KitPorcupine extends Kit {
 			});
 		}
 
+		private static int dbgCounter = 0;
 		@Override
 		public void onHitByProjectile(DetailedProjectileHitEvent detailedEvent) {
-			// TODO adapt this handler to use detailed and then test
-			//  arrows again
 			final ProjectileHitEvent projectileEvent = detailedEvent.projectileHitEvent;
 
 			final Player porc = (Player) projectileEvent.getHitEntity();
@@ -125,35 +125,32 @@ public class KitPorcupine extends Kit {
 
 				history.put(projectile, reflectEvent.cleanupFunc);
 
-				/*final List<Player> viewers = EntityUtils.getTrackedPlayers(projectile);
-				for (Player viewer : viewers) {
-					viewer.hideEntity(Main.getPlugin(), projectile);
-				}*/
-
 				if (reflectEvent.overrideShooter)
 					projectile.setShooter(porc);
 
-				// ProjectileHitEvent doesn't give where the hit actually occured, only where it was
-				// Also flip the looking direction too
 				// TODO explosive use cleanUp func
 				// TODO test this v
-				Location hitLoc = projectile.getLocation().add(projectile.getVelocity());
+				Location hitLoc = projectile.getLocation();
+				Vector hitPos = detailedEvent.getEntityHitResult().getHitPosition();
+				if (ArrowManager.spawnArrowMarkers) {
+					PacketHologram hologram = new PacketHologram(hitPos.toLocation(hitLoc.getWorld()), null, player -> true, Component.text("" + dbgCounter++));
+					hologram.respawn();
+				}
+				hitLoc.setX(hitPos.getX());
+				hitLoc.setY(hitPos.getY());
+				hitLoc.setZ(hitPos.getZ());
 				hitLoc.setDirection(hitLoc.getDirection().multiply(-1));
 				projectile.teleport(hitLoc);
-
 				projectile.setVelocity(projectile.getVelocity().multiply(-1d));
-				projectile.setHasLeftShooter(false);
+				projectile.setHasLeftShooter(true);
 
                 if (projectile instanceof AbstractArrow arrow) {
 					arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
 				}
 
-				// Re-spawn the entity for clients that predicted it disappearing
-				/*for (Player viewer : viewers) {
-					viewer.showEntity(Main.getPlugin(), projectile);
-				}*/
-
 				porc.getWorld().playSound(porc, Sound.BLOCK_NOTE_BLOCK_SNARE, 2f, 1f);
+				// TODO test particle effect
+				porc.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, hitLoc, 1);
 				// TODO vfx
 			}
 		}

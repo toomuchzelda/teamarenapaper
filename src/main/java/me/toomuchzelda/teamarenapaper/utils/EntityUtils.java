@@ -5,7 +5,6 @@ import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
 import com.mojang.datafixers.util.Pair;
 import io.netty.buffer.Unpooled;
-import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -14,20 +13,15 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerPlayerConnection;
-import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.*;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
-import org.bukkit.block.BlockFace;
 import org.bukkit.craftbukkit.v1_19_R3.CraftEquipmentSlot;
 import org.bukkit.craftbukkit.v1_19_R3.CraftWorld;
-import org.bukkit.craftbukkit.v1_19_R3.entity.CraftArrow;
-import org.bukkit.craftbukkit.v1_19_R3.entity.CraftEntity;
-import org.bukkit.craftbukkit.v1_19_R3.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_19_R3.entity.*;
 import org.bukkit.craftbukkit.v1_19_R3.inventory.CraftItemStack;
 import org.bukkit.craftbukkit.v1_19_R3.util.CraftVector;
 import org.bukkit.entity.*;
@@ -35,13 +29,14 @@ import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.projectiles.ProjectileSource;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Predicate;
 
 public class EntityUtils {
     public static void cacheReflection() {
@@ -83,16 +78,16 @@ public class EntityUtils {
         return direction;
     }
 
-	// For getting the hit block from Arrow ProjectileHitEvents where only the hit entity is given
+	// For getting the hit block ProjectileHitEvents where only the hit entity is given
 	public static BlockHitResult getHitBlock(ProjectileHitEvent event) {
-		final AbstractArrow arrow = (AbstractArrow) event.getEntity();
-		final net.minecraft.world.entity.projectile.AbstractArrow nmsAa = ((CraftArrow) arrow).getHandle();
+		final Entity proj = event.getEntity();
+		final net.minecraft.world.entity.Entity nmsProj = ((CraftEntity) proj).getHandle();
 
-		final Vec3 position = nmsAa.position();
-		final Vec3 vel = nmsAa.getDeltaMovement();
+		final Vec3 position = nmsProj.position();
+		final Vec3 vel = nmsProj.getDeltaMovement();
 		final Vec3 nextPos = position.add(vel);
 
-		BlockHitResult blockHitResult = nmsAa.level.clip(new ClipContext(position, nextPos, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, nmsAa));
+		BlockHitResult blockHitResult = nmsProj.level.clip(new ClipContext(position, nextPos, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, nmsProj));
 		if (blockHitResult.getType() != HitResult.Type.MISS) {
 			return blockHitResult;
 		}
@@ -101,21 +96,52 @@ public class EntityUtils {
 	}
 
 	// Get the actual hit point of a ProjectileHitEvent that hit an entity
-	public static EntityHitResult getHitEntity(ProjectileHitEvent event) {
-		final AbstractArrow arrow = (AbstractArrow) event.getEntity();
-		final net.minecraft.world.entity.projectile.AbstractArrow nmsArrow = ((CraftArrow) arrow).getHandle();
-
+	public static RayTraceResult getEntityHitPoint(ProjectileHitEvent event) {
 		final Entity hitEntity = event.getHitEntity();
-		assert hitEntity != null;
-		final net.minecraft.world.entity.Entity nmsHitEntity = ((CraftEntity) hitEntity).getHandle();
+		if (hitEntity == null) return null;
 
-		final Vec3 currentPos = nmsArrow.position();
-		final Vec3 vel = nmsArrow.getDeltaMovement();
-		final Vec3 nextPos = currentPos.add(vel);
+		final Projectile proj = event.getEntity();
 
-		return ProjectileUtil.getEntityHitResult(nmsArrow.level, nmsArrow, currentPos, nextPos,
-		nmsArrow.getBoundingBox().expandTowards(vel).inflate(1d),
-			entity -> entity == nmsHitEntity, 0.3f);
+		final Location loc = proj.getLocation();
+		final Vector dir = proj.getVelocity();
+
+		// Raysize comes from ProjectileUtil
+		return rayTraceEntities(loc.getWorld(), loc, dir, dir.length(), 1.0f, 0.3f,
+			entity -> entity == hitEntity);
+	}
+
+	// Copied from CraftWorld, patched to allow custom scaling of ray's box
+	public static RayTraceResult rayTraceEntities(World world, Location start, Vector direction, double maxDistance, double boxExpand,
+												  double raySize, Predicate<Entity> filter) {
+		if (maxDistance < 0.0D) {
+			return null;
+		}
+
+		Vector startPos = start.toVector();
+		Vector dir = direction.clone().normalize().multiply(maxDistance);
+		BoundingBox aabb = BoundingBox.of(startPos, startPos).expandDirectional(dir).expand(boxExpand);
+		Collection<Entity> entities = world.getNearbyEntities(aabb, filter);
+
+		Entity nearestHitEntity = null;
+		RayTraceResult nearestHitResult = null;
+		double nearestDistanceSq = Double.MAX_VALUE;
+
+		for (Entity entity : entities) {
+			BoundingBox boundingBox = entity.getBoundingBox().expand(raySize);
+			RayTraceResult hitResult = boundingBox.rayTrace(startPos, direction, maxDistance);
+
+			if (hitResult != null) {
+				double distanceSq = startPos.distanceSquared(hitResult.getHitPosition());
+
+				if (distanceSq < nearestDistanceSq) {
+					nearestHitEntity = entity;
+					nearestHitResult = hitResult;
+					nearestDistanceSq = distanceSq;
+				}
+			}
+		}
+
+		return (nearestHitEntity == null) ? null : new RayTraceResult(nearestHitResult.getHitPosition(), nearestHitEntity, nearestHitResult.getHitBlockFace());
 	}
 
     /**

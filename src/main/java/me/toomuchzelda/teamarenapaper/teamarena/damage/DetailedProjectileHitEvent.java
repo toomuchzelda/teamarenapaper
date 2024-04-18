@@ -2,18 +2,20 @@ package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.EntityHitResult;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.event.entity.ProjectileHitEvent;
+import org.bukkit.util.RayTraceResult;
 
 /**
  * Class that contains lots of info about Arrow Projectile Hit events that
  * ProjectileHitEvent doesn't have.
  */
 public class DetailedProjectileHitEvent {
+	// If Bukkit event says Entity was hit, then there will be an EntityHitResult and may be a BlockHitResult
+	// If Bukkit says a block was hit, there will be a BlockHitResult and may be an EntityHitResult
 	public final ProjectileHitEvent projectileHitEvent;
 	private BlockHitResult blockHitResult;
-	private EntityHitResult entityHitResult;
+	private RayTraceResult entityHitResult;
 
 	public DetailedProjectileHitEvent(ProjectileHitEvent phevent) {
 		this.projectileHitEvent = phevent;
@@ -23,7 +25,7 @@ public class DetailedProjectileHitEvent {
 	public void refreshHitResults() {
 		if (this.projectileHitEvent.getEntity() instanceof AbstractArrow) {
 			this.blockHitResult = EntityUtils.getHitBlock(this.projectileHitEvent);
-			this.entityHitResult = EntityUtils.getHitEntity(this.projectileHitEvent);
+			this.entityHitResult = EntityUtils.getEntityHitPoint(this.projectileHitEvent);
 		}
 		else {
 			this.blockHitResult = null;
@@ -31,7 +33,7 @@ public class DetailedProjectileHitEvent {
 		}
 	}
 
-	public EntityHitResult getEntityHitResult() {
+	public RayTraceResult getEntityHitResult() {
 		return entityHitResult;
 	}
 
