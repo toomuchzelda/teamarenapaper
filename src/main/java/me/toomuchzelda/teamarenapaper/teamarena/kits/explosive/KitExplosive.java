@@ -10,6 +10,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitPorcupine;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.ProjectileReflectEvent;
 import me.toomuchzelda.teamarenapaper.utils.*;
@@ -493,6 +494,21 @@ public class KitExplosive extends Kit
 			}
 		}
 
+		// Called when porc or its projectile dies
+		private void onReflectorCleanup(Player porc, Projectile projectile,
+										KitPorcupine.CleanupReason reason) {
+			if (reason == KitPorcupine.CleanupReason.PORC_DIED) {
+				RPGInfo rinfo = this.reflectedRpgs.remove(porc);
+				if (!CompileAsserts.OMIT && rinfo == null) {
+					Main.logger().warning("rinfo null");
+					Thread.dumpStack();
+				}
+
+				rinfo.rpgArrow.remove();
+			}
+			// PROJ_DIED handled by this onTick()
+		}
+
 		@Override
 		public void onReflect(ProjectileReflectEvent event) {
 			// Maybe an RPG
@@ -510,6 +526,7 @@ public class KitExplosive extends Kit
 							// Set shooter to explosive so event handlers here can cancel the arrow's damage
 							arrow.setShooter(shooter);
 							event.overrideShooter = false;
+							event.cleanupFunc = this::onReflectorCleanup;
 							// Remove from explosive's ownership and add entry for the reflector
 							iterator.remove();
 							reflectedRpgs.put(event.reflector, new RPGInfo(arrow, TeamArena.getGameTick()));

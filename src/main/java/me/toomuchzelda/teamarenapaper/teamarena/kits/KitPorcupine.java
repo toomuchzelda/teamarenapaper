@@ -8,16 +8,14 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.ProjectileReflectEvent;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
 import net.kyori.adventure.text.Component;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Particle;
-import org.bukkit.Sound;
+import org.bukkit.*;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.util.Vector;
 
 import java.util.HashMap;
@@ -42,16 +40,25 @@ public class KitPorcupine extends Kit {
 			new ItemStack(Material.IRON_BOOTS)
 		);
 
-		setItems(SWORD, SHIELD);
+		setItems(SWORD); //, SHIELD);
 
 		setCategory(KitCategory.UTILITY);
 
 		setAbilities(new PorcupineAbility());
 	}
 
+	public enum CleanupReason {
+		PORC_DIED,
+		PROJ_DIED
+	}
+
+	public interface CleanupFunc {
+		void cleanup(Player porc, Projectile projectile, CleanupReason reason);
+	}
+
 	private static class PorcupineAbility extends Ability {
 		// Also keeps the cleanup func for each one
-		private final Map<Player, Map<Projectile, BiConsumer<Player, Projectile>>> reflectedProjectiles = new HashMap<>();
+		private final Map<Player, Map<Projectile, CleanupFunc>> reflectedProjectiles = new HashMap<>();
 
 		@Override
 		public void unregisterAbility() {
@@ -69,13 +76,15 @@ public class KitPorcupine extends Kit {
 		@Override
 		public void removeAbility(Player player) {
 			var projs = reflectedProjectiles.remove(player);
-			projs.forEach((projectile, cleanupFunc) -> {
-				if (cleanupFunc != null)
-					cleanupFunc.accept(player, projectile);
-			});
+			if (projs != null) {
+				projs.forEach((projectile, cleanupFunc) -> {
+					if (cleanupFunc != null)
+						cleanupFunc.cleanup(player, projectile, CleanupReason.PORC_DIED);
+				});
+			}
 		}
 
-		private Map<Projectile, BiConsumer<Player, Projectile>> getProjectiles(Player porc) {
+		private Map<Projectile, CleanupFunc> getProjectiles(Player porc) {
 			return reflectedProjectiles.computeIfAbsent(porc, player -> new HashMap<>());
 		}
 
@@ -86,9 +95,9 @@ public class KitPorcupine extends Kit {
 				projectileMap.entrySet().removeIf(entry -> {
 					Projectile projectile = entry.getKey();
 					if (!projectile.isValid()) {
-						BiConsumer<Player, Projectile> cleanupFunc = entry.getValue();
+						CleanupFunc cleanupFunc = entry.getValue();
 						if (cleanupFunc != null)
-							cleanupFunc.accept(player, projectile);
+							cleanupFunc.cleanup(player, projectile, CleanupReason.PROJ_DIED);
 						return true;
 					}
 					else return false;
@@ -104,55 +113,58 @@ public class KitPorcupine extends Kit {
 			final Player porc = (Player) projectileEvent.getHitEntity();
 			final Projectile projectile = projectileEvent.getEntity();
 
-			if (projectile.getShooter() instanceof LivingEntity shooter &&
-				!Main.getGame().canAttack(porc, shooter)) {
+			final ProjectileSource projShooter = projectile.getShooter();
+			if (projShooter instanceof LivingEntity lShooter &&
+				!Main.getGame().canAttack(porc, lShooter)) {
 				return;
 			}
 
-			final Map<Projectile, BiConsumer<Player, Projectile>> history = getProjectiles(porc);
+			final Map<Projectile, CleanupFunc> history = getProjectiles(porc);
 			if (history.containsKey(projectile)) return;
 
-			if (true || porc.isBlocking()) {
-				projectileEvent.setCancelled(true);
+			projectileEvent.setCancelled(true);
 
-				// Inform the shooter's Ability to allow it to handle special details
-				ProjectileReflectEvent reflectEvent = new ProjectileReflectEvent(porc, projectile, projectile.getShooter());
-				if (projectile.getShooter() instanceof Player pShooter) {
-					Kit.getAbilities(pShooter).forEach(ability -> ability.onReflect(reflectEvent));
-				}
-				if (reflectEvent.cancelled)
-					return;
-
-				history.put(projectile, reflectEvent.cleanupFunc);
-
-				if (reflectEvent.overrideShooter)
-					projectile.setShooter(porc);
-
-				// TODO explosive use cleanUp func
-				// TODO test this v
-				Location hitLoc = projectile.getLocation();
-				Vector hitPos = detailedEvent.getEntityHitResult().getHitPosition();
-				if (ArrowManager.spawnArrowMarkers) {
-					PacketHologram hologram = new PacketHologram(hitPos.toLocation(hitLoc.getWorld()), null, player -> true, Component.text("" + dbgCounter++));
-					hologram.respawn();
-				}
-				hitLoc.setX(hitPos.getX());
-				hitLoc.setY(hitPos.getY());
-				hitLoc.setZ(hitPos.getZ());
-				hitLoc.setDirection(hitLoc.getDirection().multiply(-1));
-				projectile.teleport(hitLoc);
-				projectile.setVelocity(projectile.getVelocity().multiply(-1d));
-				projectile.setHasLeftShooter(true);
-
-                if (projectile instanceof AbstractArrow arrow) {
-					arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
-				}
-
-				porc.getWorld().playSound(porc, Sound.BLOCK_NOTE_BLOCK_SNARE, 2f, 1f);
-				// TODO test particle effect
-				porc.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, hitLoc, 1);
-				// TODO vfx
+			// Inform the shooter's Ability to allow it to handle special details
+			ProjectileReflectEvent reflectEvent = new ProjectileReflectEvent(porc, projectile, projShooter);
+			if (projShooter instanceof Player pShooter) {
+				Kit.getAbilities(pShooter).forEach(ability -> ability.onReflect(reflectEvent));
 			}
+			if (reflectEvent.cancelled)
+				return;
+
+			history.put(projectile, reflectEvent.cleanupFunc);
+
+			if (reflectEvent.overrideShooter)
+				projectile.setShooter(porc);
+
+			Location hitLoc = projectile.getLocation();
+			Vector hitPos = detailedEvent.getEntityHitResult().getHitPosition();
+			if (ArrowManager.spawnArrowMarkers) {
+				PacketHologram hologram = new PacketHologram(hitPos.toLocation(hitLoc.getWorld()), null, player -> true, Component.text("" + dbgCounter++));
+				hologram.respawn();
+			}
+			hitLoc.setX(hitPos.getX());
+			hitLoc.setY(hitPos.getY());
+			hitLoc.setZ(hitPos.getZ());
+			hitLoc.setDirection(hitLoc.getDirection().multiply(-1));
+			final Vector vel = projectile.getVelocity(); // Get before teleport
+			projectile.teleport(hitLoc);
+			projectile.setVelocity(vel.multiply(-1d));
+			projectile.setHasLeftShooter(true);
+
+			if (projectile instanceof AbstractArrow arrow) {
+				arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
+			}
+
+			if (projShooter instanceof Player pShooter) {
+				pShooter.playSound(pShooter, Sound.ENTITY_ARROW_HIT, SoundCategory.PLAYERS, 1f, 2f);
+			}
+			porc.getWorld().playSound(porc, Sound.BLOCK_NOTE_BLOCK_SNARE, 2f, 1f);
+
+			porc.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, hitLoc, 10);
+			Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
+				porc.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, hitLoc, 10);
+			}, 1L);
 		}
 
 		// TODO DamageType
