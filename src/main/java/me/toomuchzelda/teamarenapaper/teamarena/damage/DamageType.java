@@ -128,7 +128,7 @@ public class DamageType {
 
 	public static final DamageType SPECTATE = new DamageType("Suicide", "%Killed% died").setInstantDeath().setNoKnockback();
 
-    public static final DamageType SUICIDE_ASSISTED = new DamageType("Assisted Suicide",
+    public static final DamageType KILL_ADMIN = new DamageType("Admin",
             "%Killed% saw T_0_E_D's face and died", "%Killed% caught a whiff " +
             "of their own body odour", "%Killed% thought Mineplex was better than Red Warfare", "%Killed% kicked a stray " +
             "cat and thought it was funny", "%Killed% had negative social credit score", "%Killed% played " +
@@ -195,6 +195,9 @@ public class DamageType {
 			.setIgnoreRate().setIgnoreArmor().setExplosion();
 
 	public static final DamageType EXPLOSIVE_RPG = new DamageType("Explosive RPG", "%Killed% was caught in %Killer%'s RPG")
+			.setExplosion();
+
+	public static final DamageType EXPLOSIVE_RPG_REFLECTED = new DamageType("Reflected RPG", "%Killed% died to %Killer% reflecting %Cause%'s RPG")
 			.setExplosion();
 
 	public static final DamageType EXPLOSIVE_RPG_SELF = new DamageType("Explosive Self RPG", "%Killed% shot their RPG a bit too close to themselves")

@@ -32,6 +32,7 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
+import java.lang.reflect.Field;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
@@ -830,5 +831,23 @@ public class DamageEvent {
 
 	public boolean isCancelled() {
 		return cancelled;
+	}
+
+	/** For debug only */
+	@Deprecated
+	@Override
+	public String toString() {
+		StringBuilder s = new StringBuilder(2048);
+		for (Field f : this.getClass().getDeclaredFields()) {
+			try {
+				if (f.canAccess(this)) {
+					s.append(f.getName()).append("=").append(f.get(this));
+					s.append("\n");
+				}
+			}
+			catch (IllegalArgumentException | IllegalAccessException ignored) {}
+		}
+
+		return s.toString();
 	}
 }

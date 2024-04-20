@@ -42,6 +42,7 @@ public class CustomExplosion
 	private DamageType damageType;
 	private double knockbackStrength;
 	private Entity entity;
+	private Entity cause;
 
 	/**
 	 * @param centre The centre of the explosion. May be null only if entity is not null.
@@ -71,6 +72,7 @@ public class CustomExplosion
 		this.minDamage = minDamage;
 		this.damageType = damageType;
 		this.entity = entity;
+		this.cause = null;
 
 		this.knockbackStrength = knockbackStrength;
 	}
@@ -213,6 +215,9 @@ public class CustomExplosion
 
 		DamageEvent event = DamageEvent.newDamageEvent(victim, damage, this.damageType, this.entity, false);
 		event.setKnockback(kb);
+		if (this.cause != null)
+			event.setDamageTypeCause(this.cause);
+
 		return event;
 	}
 
@@ -300,6 +305,11 @@ public class CustomExplosion
 		}
 
 		this.entity = entity;
+	}
+
+	/** For DamageEvent purposes */
+	public void setCause(Entity entity) {
+		this.cause = entity;
 	}
 
 	public double getExplosionRadius() {

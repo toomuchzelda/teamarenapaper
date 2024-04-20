@@ -1,27 +1,23 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
+import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowManager;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DetailedProjectileHitEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.ProjectileReflectEvent;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
-import org.bukkit.entity.AbstractArrow;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.Projectile;
+import org.bukkit.entity.*;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.util.Vector;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.BiConsumer;
+import java.util.*;
 
 public class KitPorcupine extends Kit {
 	private static final ItemStack SWORD = ItemBuilder.of(Material.IRON_SWORD).build();
@@ -49,16 +45,38 @@ public class KitPorcupine extends Kit {
 
 	public enum CleanupReason {
 		PORC_DIED,
-		PROJ_DIED
 	}
-
-	public interface CleanupFunc {
+	public interface CleanupFunc { // So other Abilities can handle cleanups
 		void cleanup(Player porc, Projectile projectile, CleanupReason reason);
+	}
+	public interface OnHitFunc {
+		void onHit(Player porc, DetailedProjectileHitEvent event);
+	}
+	public interface OnAttackFunc {
+		void onAttack(DamageEvent event);
 	}
 
 	private static class PorcupineAbility extends Ability {
-		// Also keeps the cleanup func for each one
-		private final Map<Player, Map<Projectile, CleanupFunc>> reflectedProjectiles = new HashMap<>();
+		private static final class ReflectedInfo {
+			private final CleanupFunc cleanupFunc;
+			private final OnHitFunc hitFunc;
+			private final OnAttackFunc attackFunc;
+			private boolean remove = false;
+
+			private ReflectedInfo(CleanupFunc cleanupFunc, OnHitFunc hitFunc, OnAttackFunc attackFunc) {
+				this.cleanupFunc = cleanupFunc;
+				this.hitFunc = hitFunc;
+				this.attackFunc = attackFunc;
+			}
+		}
+		private final Map<Player, Map<Projectile, ReflectedInfo>> reflectedProjectiles = new HashMap<>();
+
+		// To globally enforce 1 reflection per projectile
+		private final WeakHashMap<Projectile, Void> reflectedProjLookup = new WeakHashMap<>();
+
+		private Map<Projectile, ReflectedInfo> getProjectiles(Player porc) {
+			return reflectedProjectiles.computeIfAbsent(porc, player -> new HashMap<>());
+		}
 
 		@Override
 		public void unregisterAbility() {
@@ -71,21 +89,23 @@ public class KitPorcupine extends Kit {
 					projectile.remove();
 				});
 			});
+
+			reflectedProjLookup.clear();
 		}
 
 		@Override
 		public void removeAbility(Player player) {
 			var projs = reflectedProjectiles.remove(player);
 			if (projs != null) {
-				projs.forEach((projectile, cleanupFunc) -> {
-					if (cleanupFunc != null)
-						cleanupFunc.cleanup(player, projectile, CleanupReason.PORC_DIED);
+				projs.forEach((projectile, reflectedInfo) -> {
+					if (reflectedInfo.cleanupFunc != null)
+						reflectedInfo.cleanupFunc.cleanup(player, projectile, CleanupReason.PORC_DIED);
+					else
+						projectile.remove();
+
+					reflectedProjLookup.remove(projectile);
 				});
 			}
-		}
-
-		private Map<Projectile, CleanupFunc> getProjectiles(Player porc) {
-			return reflectedProjectiles.computeIfAbsent(porc, player -> new HashMap<>());
 		}
 
 		@Override
@@ -94,15 +114,54 @@ public class KitPorcupine extends Kit {
 			reflectedProjectiles.forEach((player, projectileMap) -> {
 				projectileMap.entrySet().removeIf(entry -> {
 					Projectile projectile = entry.getKey();
-					if (!projectile.isValid()) {
-						CleanupFunc cleanupFunc = entry.getValue();
-						if (cleanupFunc != null)
-							cleanupFunc.cleanup(player, projectile, CleanupReason.PROJ_DIED);
+					ReflectedInfo rinfo = entry.getValue();
+					if (rinfo.remove) {
+						reflectedProjLookup.remove(projectile);
 						return true;
 					}
-					else return false;
+					else if (!projectile.isValid()) {
+						rinfo.remove = true; // Defer removal until next tick as Damage handler may need its presence
+						return false;
+					}
+
+					return false;
 				});
 			});
+		}
+
+		@Override
+		public void onProjectileHit(DetailedProjectileHitEvent event) {
+			final Player porc = (Player) event.projectileHitEvent.getEntity().getShooter();
+			Map<Projectile, ReflectedInfo> reflections = this.reflectedProjectiles.get(porc);
+			ReflectedInfo rinfo = reflections.get(event.projectileHitEvent.getEntity());
+			if (rinfo != null) {
+				if (rinfo.hitFunc != null)
+					rinfo.hitFunc.onHit(porc, event);
+			}
+			else {
+				Main.logger().warning("Porc hit a projectile that it didn't reflect ??");
+				Thread.dumpStack();
+			}
+		}
+
+		@Override
+		public void onAttemptedAttack(DamageEvent event) {
+			// DamageType may sometimes be explosion and not projectile
+			//Bukkit.broadcastMessage(event.getDamageType().getName() + " " + TeamArena.getGameTick()); // TODO
+			if (event.getAttacker() instanceof Projectile projectile) {
+				final Player porc = (Player) event.getFinalAttacker();
+				final Map<Projectile, ReflectedInfo> reflections = this.reflectedProjectiles.get(porc);
+				ReflectedInfo rinfo = reflections.get(projectile);
+				if (rinfo != null) {
+					if (rinfo.attackFunc != null)
+						rinfo.attackFunc.onAttack(event);
+				}
+				else {
+					Main.logger().warning("Porc onAttemptedAttack");
+					Main.logger().warning(event.toString());
+					Thread.dumpStack();
+				}
+			}
 		}
 
 		private static int dbgCounter = 0;
@@ -113,29 +172,32 @@ public class KitPorcupine extends Kit {
 			final Player porc = (Player) projectileEvent.getHitEntity();
 			final Projectile projectile = projectileEvent.getEntity();
 
+			// No projectile may be reflected twice
+			if (this.reflectedProjLookup.containsKey(projectile)) return;
+
 			final ProjectileSource projShooter = projectile.getShooter();
 			if (projShooter instanceof LivingEntity lShooter &&
 				!Main.getGame().canAttack(porc, lShooter)) {
 				return;
 			}
 
-			final Map<Projectile, CleanupFunc> history = getProjectiles(porc);
-			if (history.containsKey(projectile)) return;
+			final Map<Projectile, ReflectedInfo> history = getProjectiles(porc);
+			assert CompileAsserts.OMIT || !history.containsKey(projectile);
 
 			projectileEvent.setCancelled(true);
 
 			// Inform the shooter's Ability to allow it to handle special details
-			ProjectileReflectEvent reflectEvent = new ProjectileReflectEvent(porc, projectile, projShooter);
+			final ProjectileReflectEvent reflectEvent = new ProjectileReflectEvent(porc, projectile, projShooter);
 			if (projShooter instanceof Player pShooter) {
 				Kit.getAbilities(pShooter).forEach(ability -> ability.onReflect(reflectEvent));
 			}
 			if (reflectEvent.cancelled)
 				return;
 
-			history.put(projectile, reflectEvent.cleanupFunc);
+			history.put(projectile, new ReflectedInfo(reflectEvent.cleanupFunc, reflectEvent.hitFunc, reflectEvent.attackFunc));
+			this.reflectedProjLookup.put(projectile, null);
 
-			if (reflectEvent.overrideShooter)
-				projectile.setShooter(porc);
+			projectile.setShooter(porc);
 
 			Location hitLoc = projectile.getLocation();
 			Vector hitPos = detailedEvent.getEntityHitResult().getHitPosition();
@@ -159,12 +221,16 @@ public class KitPorcupine extends Kit {
 			if (projShooter instanceof Player pShooter) {
 				pShooter.playSound(pShooter, Sound.ENTITY_ARROW_HIT, SoundCategory.PLAYERS, 1f, 2f);
 			}
+
 			porc.getWorld().playSound(porc, Sound.BLOCK_NOTE_BLOCK_SNARE, 2f, 1f);
 
 			porc.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, hitLoc, 10);
 			Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
 				porc.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, hitLoc, 10);
 			}, 1L);
+			Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
+				porc.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, hitLoc, 6);
+			}, 2L);
 		}
 
 		// TODO DamageType

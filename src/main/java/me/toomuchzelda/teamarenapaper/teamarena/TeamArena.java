@@ -789,9 +789,14 @@ public abstract class TeamArena
 			event.setCancelled(true);
 			//don't bother passing it to event handlers?
 			return;
+
+		}
+		final Entity finalAttacker = event.getFinalAttacker();
+		if (finalAttacker != null && isDead(finalAttacker)) { // Similarly for an attacker
+			event.setCancelled(true);
+			return;
 		}
 
-		final Entity finalAttacker = event.getFinalAttacker();
 		if(this.killStreakManager.isCrateFirework(finalAttacker)) {
 			event.setCancelled(true);
 			return;

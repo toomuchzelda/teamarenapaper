@@ -8,7 +8,6 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.event.entity.EntityDamageEvent;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
@@ -26,7 +25,7 @@ public class CommandRespawn extends CustomCommand {
 			Player toKill = Bukkit.getPlayer(args[0]);
 			if (toKill != null) {
 				// admin abuse
-				DamageEvent killEvent = DamageEvent.newDamageEvent(toKill, 99999d, DamageType.SUICIDE_ASSISTED, null, false);
+				DamageEvent killEvent = DamageEvent.newDamageEvent(toKill, 99999d, DamageType.KILL_ADMIN, null, false);
 				Main.getGame().queueDamage(killEvent);
 			} else {
 				sender.sendMessage(Component.text("Invalid player").color(NamedTextColor.RED));

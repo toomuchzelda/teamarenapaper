@@ -1,11 +1,10 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.abilities;
 
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitPorcupine;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.projectiles.ProjectileSource;
-
-import java.util.function.BiConsumer;
 
 public class ProjectileReflectEvent {
 	public Player reflector;
@@ -13,12 +12,12 @@ public class ProjectileReflectEvent {
 	public ProjectileSource shooter;
 
 	public boolean cancelled = false;
-	public boolean overrideShooter = true;
 
 	// To be initialized by the consumer of this event, if needed.
-	// Function should not assume the projectile is alive or dead
-	// Adapt this to a List later when more than 1 handler needs to use it
+	// Function is responsible for removing the projectile(s) if desired
 	public KitPorcupine.CleanupFunc cleanupFunc = null;
+	public KitPorcupine.OnHitFunc hitFunc = null;
+	public KitPorcupine.OnAttackFunc attackFunc = null;
 
 	public ProjectileReflectEvent(Player reflector, Projectile projectile, ProjectileSource shooter) {
 		this.reflector = reflector;

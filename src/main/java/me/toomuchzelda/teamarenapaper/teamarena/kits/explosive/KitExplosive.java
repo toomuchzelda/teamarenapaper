@@ -168,7 +168,7 @@ public class KitExplosive extends Kit
 		}
 
 		@Override
-		public void onAttemptedAttack(DamageEvent event) {
+		public void onAttemptedAttack(DamageEvent event) { // Also called by porc onAttack
 			if (event.getDamageType().is(DamageType.PROJECTILE)) { //Prevent RPG arrow from hitting players
 				event.setCancelled(true);
 				event.getAttacker().remove();
@@ -255,7 +255,10 @@ public class KitExplosive extends Kit
 			//Explode RPG if it hits block or player
 			if (rpgArrow.isInBlock() || rpgArrow.isOnGround() || rpgArrow.isDead() ||
 					rpgArrow.getTicksLived() >= 38) {
-				rpgBlast(arrowLoc, thrower, reflected);
+				// rpgArrow.getShooter will be the original thrower if reflected, as handled in onReflect()
+				// TODO ^ not true
+				rpgBlast(arrowLoc, thrower, reflected,
+					rpgArrow.getShooter() instanceof Entity eShooter ? eShooter : null);
 
 				rpgArrow.remove();
 				return true;
@@ -317,19 +320,21 @@ public class KitExplosive extends Kit
 			}
 		}
 
-		public void rpgBlast(Location explodeLoc, Player owner, boolean reflected) {
+		public void rpgBlast(Location explodeLoc, Player owner, boolean reflected, Entity originalThrower) {
 			//self damage multiplier does not matter here, is overridden in attempted damage
 			double selfDamageMult, selfKnockbackMult;
+			DamageType damageType = reflected ? DamageType.EXPLOSIVE_RPG_REFLECTED : DamageType.EXPLOSIVE_RPG;
 			if (!reflected) {
 				selfDamageMult = 1.2d; selfKnockbackMult = 1d;
 			}
 			else {
 				selfDamageMult = 0d; selfKnockbackMult = 0d;
+				assert CompileAsserts.OMIT || originalThrower != null;
 			}
 			RPGExplosion explosion = new RPGExplosion(explodeLoc, RPG_BLAST_RADIUS, 1.4d,
-				25, 2, 1.7, DamageType.EXPLOSIVE_RPG, owner,
+				25, 2, 1.7, damageType, owner,
 				selfDamageMult, selfKnockbackMult, DamageType.EXPLOSIVE_RPG_SELF);
-
+			explosion.setCause(originalThrower);
 			explosion.explode();
 		}
 
@@ -494,19 +499,15 @@ public class KitExplosive extends Kit
 			}
 		}
 
-		// Called when porc or its projectile dies
+		// Called when porc dies
 		private void onReflectorCleanup(Player porc, Projectile projectile,
 										KitPorcupine.CleanupReason reason) {
 			if (reason == KitPorcupine.CleanupReason.PORC_DIED) {
 				RPGInfo rinfo = this.reflectedRpgs.remove(porc);
-				if (!CompileAsserts.OMIT && rinfo == null) {
-					Main.logger().warning("rinfo null");
-					Thread.dumpStack();
+				if (rinfo != null) { // May be null if onTick(), which is called before this, removed it
+					rinfo.rpgArrow.remove();
 				}
-
-				rinfo.rpgArrow.remove();
 			}
-			// PROJ_DIED handled by this onTick()
 		}
 
 		@Override
@@ -523,10 +524,8 @@ public class KitExplosive extends Kit
                                 Thread.dumpStack();
                             }
 
-							// Set shooter to explosive so event handlers here can cancel the arrow's damage
-							arrow.setShooter(shooter);
-							event.overrideShooter = false;
 							event.cleanupFunc = this::onReflectorCleanup;
+							event.attackFunc = this::onAttemptedAttack; // Handle damage mults
 							// Remove from explosive's ownership and add entry for the reflector
 							iterator.remove();
 							reflectedRpgs.put(event.reflector, new RPGInfo(arrow, TeamArena.getGameTick()));

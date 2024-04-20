@@ -23,14 +23,8 @@ public class DetailedProjectileHitEvent {
 	}
 
 	public void refreshHitResults() {
-		if (this.projectileHitEvent.getEntity() instanceof AbstractArrow) {
-			this.blockHitResult = EntityUtils.getHitBlock(this.projectileHitEvent);
-			this.entityHitResult = EntityUtils.getEntityHitPoint(this.projectileHitEvent);
-		}
-		else {
-			this.blockHitResult = null;
-			this.entityHitResult = null;
-		}
+		this.blockHitResult = EntityUtils.getHitBlock(this.projectileHitEvent);
+		this.entityHitResult = EntityUtils.getEntityHitPoint(this.projectileHitEvent);
 	}
 
 	public RayTraceResult getEntityHitResult() {
