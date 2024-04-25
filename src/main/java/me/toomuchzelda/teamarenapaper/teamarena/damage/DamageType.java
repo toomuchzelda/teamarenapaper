@@ -185,6 +185,9 @@ public class DamageType {
 	public static final DamageType BURST_FIREWORK = new DamageType("Burst Firework", "%Killed% was blown to shimmering, shining bits by %Killer%'s firework")
 			.setExplosion();
 
+	public static final DamageType BURST_FIREWORK_REFLECTED = new DamageType("Reflected Firework", "%Killed% had %Cause%'s firework reflected at them by %Killer%")
+			.setExplosion();
+
 	public static final DamageType BURST_FIREWORK_SELF = new DamageType("Badly Aimed Firework", "%Killed% became a part of their firework show")
 			.setIgnoreRate().setExplosion();
 

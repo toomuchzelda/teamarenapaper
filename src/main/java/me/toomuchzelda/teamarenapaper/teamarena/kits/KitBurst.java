@@ -10,6 +10,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DetailedProjectileHitEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.ProjectileReflectEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
@@ -39,7 +40,7 @@ public class KitBurst extends Kit
 	public KitBurst() {
 		super("Burst", "Do you love fireworks? Kit Burst does! So much so, they often shoot them a bit too close and blow themselves up!\n\n" +
 				"This kit launches fireworks around with a crossbow. It's very effective against groups of enemies! " +
-				"Just be careful not to get caught in your own fireworks.", Material.FIREWORK_ROCKET);
+				"Just be careful not to get caught in your own explosions.", Material.FIREWORK_ROCKET);
 
 		ItemStack[] armour = new ItemStack[4];
 		armour[3] = new ItemStack(Material.CHAINMAIL_HELMET);
@@ -85,6 +86,8 @@ public class KitBurst extends Kit
 
 		//possible firework effects for fired fireworks
 		private static final ArrayList<FireworkEffect.Type> FIREWORK_EFFECTS;
+		// For getting original shooter after reflection
+		private final WeakHashMap<Firework, UUID> originalFwShooters = new WeakHashMap<>();
 
 		private static final List<Arrow> SHOTGUN_ARROWS = new ArrayList<>(120);
 		private static final Map<Component, Set<Entity>> BLAST_HIT_ENTITIES = new HashMap<>();
@@ -114,6 +117,7 @@ public class KitBurst extends Kit
 			}
 
 			BLAST_HIT_ENTITIES.clear();
+			this.originalFwShooters.clear();
 		}
 
 		@Override
@@ -126,31 +130,8 @@ public class KitBurst extends Kit
 
 				shooter.playSound(shooter, Sound.ENTITY_ARROW_HIT_PLAYER, 1.0f, 1.0f);
 			}
-			else if(event.getAttacker() instanceof Firework fw) {
-				//if it's damage from the firework used for shotgun visual effect
-				if (SHOTUGUN_FIREWORK_NAME.equals(fw.customName())) {
-					event.setCancelled(true);
-				}
-				else { //it's a firework rocket
-					//buff damage a bit and reduce kb
-					event.setFinalDamage(event.getFinalDamage() * 1.6d);
-					if (event.hasKnockback()) {
-						event.setKnockback(event.getKnockback().multiply(0.55d));
-					}
-
-					//if the burst is in their own explosion range un-cancel the damage
-					// and make them not the final attacker, so they don't get kill credit for it
-					// also increase the damage a bit
-					if (event.getFinalAttacker() == event.getVictim()) {
-						event.setCancelled(false);
-						event.setFinalAttacker(null);
-						event.setDamageType(DamageType.BURST_FIREWORK_SELF);
-						event.setFinalDamage(event.getFinalDamage() * 2.0d);
-					}
-					else {
-						event.setDamageType(DamageType.BURST_FIREWORK);
-					}
-				}
+			else if(event.getAttacker() instanceof Firework) {
+				this.fwAttemptAttack(event, false);
 			}
 			else if (event.getAttacker() instanceof Arrow arrow) { //may be shotgun
 				//this check is necessary in addition to the projectilehitevent one because of how damage events are
@@ -173,6 +154,50 @@ public class KitBurst extends Kit
 			}
 		}
 
+		// Also called by porc reflection
+		private void fwAttemptAttack(DamageEvent event, boolean reflected) {
+			//if it's damage from the firework used for shotgun visual effect
+			if (SHOTUGUN_FIREWORK_NAME.equals(event.getAttacker().customName())) {
+				event.setCancelled(true);
+			}
+			else { //it's a firework rocket
+				//buff damage a bit and reduce kb
+				event.setFinalDamage(event.getFinalDamage() * 1.6d);
+				if (event.hasKnockback()) {
+					event.setKnockback(event.getKnockback().multiply(0.55d));
+				}
+
+				//if the burst is in their own explosion range un-cancel the damage
+				// and make them not the final attacker, so they don't get kill credit for it
+				// also increase the damage a bit
+				if (event.getFinalAttacker() == event.getVictim()) {
+					if (!reflected) {
+						event.setCancelled(false);
+						event.setFinalAttacker(null);
+						event.setDamageType(DamageType.BURST_FIREWORK_SELF);
+						event.setFinalDamage(event.getFinalDamage() * 2.0d);
+					}
+					else {
+						event.setCancelled(true); // porcs don't hurt themselves
+					}
+				}
+				else {
+					if (!reflected)
+						event.setDamageType(DamageType.BURST_FIREWORK);
+					else {
+						event.setDamageType(DamageType.BURST_FIREWORK_REFLECTED);
+						UUID uuid = this.originalFwShooters.get(event.getAttacker());
+						if (uuid == null) {
+							Thread.dumpStack(); return;
+						}
+						final Player originalShooter = Bukkit.getPlayer(uuid);
+						if (originalShooter != null)
+							event.setDamageTypeCause(originalShooter);
+					}
+				}
+			}
+		}
+
 		@Override
 		public void onShootBow(EntityShootBowEvent event) {
 			if(event.getProjectile() instanceof Firework firework && event.getEntity() instanceof Player p) {
@@ -191,6 +216,8 @@ public class KitBurst extends Kit
 				//meta.setPower(1);
 				firework.setFireworkMeta(meta);
 				firework.setVelocity(firework.getVelocity().multiply(0.7));
+
+				this.originalFwShooters.put(firework, p.getUniqueId());
 			}
 		}
 
@@ -393,9 +420,11 @@ public class KitBurst extends Kit
 
 		@Override
 		public void onProjectileHit(DetailedProjectileHitEvent dEvent) {
+			ProjectileHitEvent event = dEvent.projectileHitEvent;
+			if (event.isCancelled()) return;
+
 			//all arrows shot by burst are from the shotgun
 			// despawn immediately if hit a block
-			ProjectileHitEvent event = dEvent.projectileHitEvent;
 			if (event.getEntity() instanceof Arrow arrow) {
 				if (event.getHitBlock() != null) {
 					arrow.remove();
@@ -409,6 +438,23 @@ public class KitBurst extends Kit
 						event.setCancelled(true);
 					}
 				}
+			}
+		}
+
+		@Override
+		public void onReflect(ProjectileReflectEvent event) {
+			if (event.projectile instanceof Arrow) { // No reflect shotguns
+				event.cancelled = true;
+				event.projectile.remove();
+			}
+			else {
+				if (!(event.projectile instanceof Firework)) {
+					Thread.dumpStack(); return;
+				}
+
+				event.attackFunc = damageEvent -> fwAttemptAttack(damageEvent, true);
+
+				// TODO change firework colours
 			}
 		}
 

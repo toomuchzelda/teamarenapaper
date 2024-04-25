@@ -635,14 +635,15 @@ public class EventListeners implements Listener
 			// Abilities may cancel event, modify projectile state etc
 			final DetailedProjectileHitEvent betterEvent = new DetailedProjectileHitEvent(event);
 
+			// Run onHitByProjectile first so porc can cancel them
+			if (event.getHitEntity() instanceof Player p) {
+				Kit.getAbilities(p).forEach(ability -> ability.onHitByProjectile(betterEvent));
+			}
+
 			if(projectile.getShooter() instanceof Player p) {
 				for(Ability a : Kit.getAbilities(p)) {
 					a.onProjectileHit(betterEvent);
 				}
-			}
-
-			if (event.getHitEntity() instanceof Player p) {
-				Kit.getAbilities(p).forEach(ability -> ability.onHitByProjectile(betterEvent));
 			}
 
 			if (collidedWith != null &&

@@ -281,6 +281,7 @@ public class KitPyro extends Kit
 		@Override
 		public void onProjectileHit(DetailedProjectileHitEvent dEvent) {
 			ProjectileHitEvent event = dEvent.projectileHitEvent;
+			if (event.isCancelled()) return;
 			Projectile projectile = event.getEntity();
 			// TODO use BlockHitResult for better molotov spawning
 

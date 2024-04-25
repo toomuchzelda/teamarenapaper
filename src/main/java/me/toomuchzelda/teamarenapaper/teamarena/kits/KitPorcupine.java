@@ -147,7 +147,6 @@ public class KitPorcupine extends Kit {
 		@Override
 		public void onAttemptedAttack(DamageEvent event) {
 			// DamageType may sometimes be explosion and not projectile
-			//Bukkit.broadcastMessage(event.getDamageType().getName() + " " + TeamArena.getGameTick()); // TODO
 			if (event.getAttacker() instanceof Projectile projectile) {
 				final Player porc = (Player) event.getFinalAttacker();
 				final Map<Projectile, ReflectedInfo> reflections = this.reflectedProjectiles.get(porc);
@@ -232,7 +231,5 @@ public class KitPorcupine extends Kit {
 				porc.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, hitLoc, 6);
 			}, 2L);
 		}
-
-		// TODO DamageType
 	}
 }

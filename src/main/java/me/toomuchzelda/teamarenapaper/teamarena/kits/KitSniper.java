@@ -8,6 +8,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DetailedProjectileHitEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.ProjectileReflectEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
@@ -90,6 +91,10 @@ public class KitSniper extends Kit {
 		public static final TextColor GRENADE_MSG_COLOR = TextColor.color(66, 245, 158);
 
 		private static final double MIN_HEIGHT_FOR_HEADHSHOT = 1.5d;
+
+		private static final DamageType REFLECTED_SNIPER = new DamageType(DamageType.SNIPER_HEADSHOT,
+			"%Cause% did not have enough map knowledge",
+			"%Killed% suffered from %Cause%'s skill issue");
 
 		final List<BukkitTask> GRENADE_TASKS = new ArrayList<>();
 		final Random gunInaccuracy = new Random();
@@ -200,6 +205,7 @@ public class KitSniper extends Kit {
 		@Override
 		public void onProjectileHit(DetailedProjectileHitEvent detEvent) {
 			final ProjectileHitEvent event = detEvent.projectileHitEvent;
+			if (event.isCancelled()) return;
 			// TODO use BlockHitResult
 			final Projectile projectile = event.getEntity();
 			if (!(projectile instanceof Arrow))
@@ -229,6 +235,15 @@ public class KitSniper extends Kit {
 					shooter.playSound(shooter.getLocation(), Sound.ENTITY_ITEM_FRAME_PLACE, 2f, 2.0f);
 				}
 			}
+		}
+
+		@Override
+		public void onReflect(ProjectileReflectEvent event) {
+			final Player shooter = (Player) event.projectile.getShooter();
+			event.attackFunc = dEvent -> { // All reflected sniper shots are insta kill
+				dEvent.setDamageTypeCause(shooter);
+				dEvent.setDamageType(REFLECTED_SNIPER);
+			};
 		}
 
 		static double calcInaccuracy(Player player) {

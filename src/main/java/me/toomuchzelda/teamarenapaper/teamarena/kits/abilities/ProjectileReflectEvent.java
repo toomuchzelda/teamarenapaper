@@ -7,9 +7,9 @@ import org.bukkit.entity.Projectile;
 import org.bukkit.projectiles.ProjectileSource;
 
 public class ProjectileReflectEvent {
-	public Player reflector;
-	public Projectile projectile;
-	public ProjectileSource shooter;
+	public final Player reflector;
+	public final Projectile projectile;
+	public final ProjectileSource shooter;
 
 	public boolean cancelled = false;
 
