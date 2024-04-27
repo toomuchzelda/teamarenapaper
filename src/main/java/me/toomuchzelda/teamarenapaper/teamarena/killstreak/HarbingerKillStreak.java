@@ -341,7 +341,7 @@ public class HarbingerKillStreak extends CratedKillStreak
 
 				Location loc = new Location(world, vector.x(), vector.y(), vector.z());
 				if (MathUtils.random.nextBoolean()) { // poofy smokey particle effect
-					loc.getWorld().spawnParticle(Particle.EXPLOSION_NORMAL, loc, 14);
+					loc.getWorld().spawnParticle(Particle.EXPLOSION_NORMAL, loc, 7);
 				} else {
 					for (var entry : Main.getPlayerInfoMap().entrySet()) {
 						if (entry.getValue().getPreference(Preferences.VIEW_HARBINGER_PARTICLES)) {

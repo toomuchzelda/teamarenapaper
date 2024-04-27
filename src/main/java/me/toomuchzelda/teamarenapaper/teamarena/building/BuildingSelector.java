@@ -525,7 +525,8 @@ public class BuildingSelector {
 			}
 		}
 
-		player.sendActionBar(message != null ? message : Component.empty());
+		if (message != null)
+			player.sendActionBar(message);
 		return false;
 	}
 

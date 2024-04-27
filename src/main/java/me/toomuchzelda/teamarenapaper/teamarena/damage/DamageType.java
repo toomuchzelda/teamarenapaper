@@ -220,7 +220,11 @@ public class DamageType {
 	public static final DamageType TRIGGER_BOOM = new DamageType("Trigger BOOM", "%Killed% was caught in %Killer%'s explosion of madness")
 			.setExplosion().setIgnoreRate();
 
-	public static final DamageType ENGINEER_SENTRY = new DamageType("Sentry arrow", "%Killed% was shot by %Killer%'s sentry").setProjectile().setNoKnockback();
+	public static final DamageType ENGINEER_SENTRY = new DamageType("Sentry arrow", "%Killed% was shot by %Killer%'s sentry")
+			.setProjectile().setNoKnockback();
+
+	public static final DamageType ENGINEER_SENTRY_REFLECTED = new DamageType("Reflected Sentry Arrow", "%Killed% <-- %Killer% reflect <-- %Cause%'s sentry")
+			.setProjectile().setNoKnockback();
 
 	public static final DamageType BEEKEEPER_BEE = new DamageType("Beekeeper's bee", "%Killed% was stung by %Killer%'s bee");
 

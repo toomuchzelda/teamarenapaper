@@ -2,25 +2,18 @@ package me.toomuchzelda.teamarenapaper.teamarena.killstreak;
 
 import com.destroystokyo.paper.entity.ai.*;
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.teamarena.GameState;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.crate.CratePayload;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.trigger.KitTrigger;
 import me.toomuchzelda.teamarenapaper.teamarena.mobgoals.TargetEnemiesAtPointGoal;
-import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
 import org.bukkit.entity.IronGolem;
-import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
@@ -58,7 +51,7 @@ public class IronGolemKillStreak extends CratedKillStreak
 	}
 
 	// Band aid - pass the crate location to the WolvesAbility#giveAbility()
-	private static final HashMap<Player, Location> crateLocs = new HashMap<>();
+	private static final Map<Player, Location> crateLocs = new WeakHashMap<>();
 
 	@Override
 	public void onCrateLand(Player player, Location destination) {

@@ -82,4 +82,5 @@ public abstract class CratedKillStreak extends KillStreak {
 		destination.getWorld().playSound(destination, Sound.ENTITY_GENERIC_EXPLODE, 1f, 2f);
 	}
 
+	public void onCrateRemove(Crate crate) {}
 }

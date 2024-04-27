@@ -28,7 +28,7 @@ public class Crate
 	private static final double SLOW_FALL_VELOCITY = -0.25;
 	private static final double FALL_VELOCITY = -2;
 
-	private final Player owner;
+	public final Player owner;
 	private final CratedKillStreak killStreak; // Killstreak given to the player that opens it.
 	private final boolean fragile;
 	private final Location destination; // Destination it needs to fall to.
@@ -129,8 +129,16 @@ public class Crate
 		}
 	}
 
-	void setDone() {
-		this.done = true;
+	void remove() {
+		this.killStreak.onCrateRemove(this);
+		if (this.parrot != null)
+			this.parrot.remove();
+
+		if (this.firework != null)
+			this.firework.remove();
+
+		if (this.fallingCrate != null)
+			this.fallingCrate.despawn();
 	}
 
 	boolean isDone() {

@@ -64,7 +64,7 @@ public class KillStreakManager
 		this.allKillstreaks.values().forEach(killStreak ->
 				killStreak.getAbilities().forEach(Ability::registerAbility));
 
-		this.allCrates = new LinkedList<>();
+		this.allCrates = new ArrayList<>();
 	}
 
 	public KillStreak getKillStreak(String name) {
@@ -148,6 +148,14 @@ public class KillStreakManager
 				}
 			}
 		}
+
+		this.allCrates.removeIf(crate -> {
+			if (crate.owner == player) {
+				crate.remove();
+				return true;
+			}
+			return false;
+		}); // remove currently falling crates
 	}
 
 	public void tick() {
@@ -160,6 +168,7 @@ public class KillStreakManager
 			Crate crate = crateIter.next();
 
 			if(crate.isDone()) {
+				crate.remove();
 				crateIter.remove();
 			}
 			else {

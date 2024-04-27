@@ -54,7 +54,7 @@ public class WolvesKillStreak extends CratedKillStreak
 	}
 
 	// Band aid - pass the crate location to the WolvesAbility#giveAbility()
-	private static final HashMap<Player, Location> crateLocs = new HashMap<>();
+	private static final Map<Player, Location> crateLocs = new WeakHashMap<>();
 
 	@Override
 	public void onCrateLand(Player player, Location destination) {

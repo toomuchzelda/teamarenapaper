@@ -328,7 +328,7 @@ public class Sentry extends EntityBuilding implements PreviewableBuilding {
 			}
 			//Sentry remains locked on until the target becomes obstructed from view OR target dies
 			if ((sentry.getTarget() != null && sentryCanSee(sentry, (Player) sentry.getTarget()))
-					&& Main.getPlayerInfo((Player) sentry.getTarget()).activeKit != null) {
+					&& !Main.getGame().isDead(sentry.getTarget())) {
 				if (TeamArena.getGameTick() % SENTRY_FIRE_RATE == 0) {
 					Vector direction = sentry.getTarget().getLocation().subtract(sentry.getLocation()).toVector().normalize();
 					shoot(direction);

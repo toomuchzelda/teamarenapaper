@@ -8,6 +8,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.ProjectileReflectEvent;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
@@ -192,6 +193,15 @@ public class KitEngineer extends Kit {
 					event.getAttacker() instanceof Arrow) {
 				event.setDamageType(DamageType.ENGINEER_SENTRY);
 			}
+		}
+
+		@Override
+		public void onReflect(ProjectileReflectEvent event) {
+			final Player shooter = (Player) event.projectile.getShooter(); // The sentry owner, not the sentry
+			event.attackFunc = dEvent -> {
+				dEvent.setDamageType(DamageType.ENGINEER_SENTRY_REFLECTED);
+				dEvent.setDamageTypeCause(shooter);
+			};
 		}
 
 		@Override
