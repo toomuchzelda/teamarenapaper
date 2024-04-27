@@ -328,8 +328,17 @@ public class PacketEntity
 		return (byte) (Math.floor(angle) * 0.7111111111111111111111111111d);
 	}
 
-	protected void updateRotateHeadPacket(float yaw) {
-		this.headPacketBytes.write(0, angleToByte(yaw));
+	protected boolean updateRotateHeadPacket(float yaw) {
+		byte newb = angleToByte(yaw);
+		byte old = this.headPacketBytes.read(0);
+
+		if (old != newb) {
+			this.headPacketBytes.write(0, angleToByte(yaw));
+			return true;
+		}
+		else {
+			return false;
+		}
 	}
 
 	protected void updateTeleportPacket(Location newLocation) {
@@ -394,12 +403,14 @@ public class PacketEntity
 
 		newLocation = newLocation.clone();
 		if(isAlive) {
-			updateRotateHeadPacket(newLocation.getYaw());
+			// Optimization: Don't send yaw if not needed
+			boolean sendYaw = updateRotateHeadPacket(newLocation.getYaw());
 			ClientboundMoveEntityPacket movePacket = getRelativePosPacket(this.location, newLocation);
 			if(movePacket != null) {
 				for (Player p : realViewers) {
 					PlayerUtils.sendPacket(p, movePacket);
-					PlayerUtils.sendPacket(p, this.rotateHeadPacket);
+					if (sendYaw)
+						PlayerUtils.sendPacket(p, this.rotateHeadPacket);
 				}
 
 				if(this.dirtyRelativePacketTime == HASNT_MOVED) {
@@ -409,7 +420,9 @@ public class PacketEntity
 			else {
 				updateTeleportPacket(newLocation);
 				for (Player p : realViewers) {
-					PlayerUtils.sendPacket(p, teleportPacket, this.rotateHeadPacket);
+					PlayerUtils.sendPacket(p, teleportPacket);
+					if (sendYaw)
+						PlayerUtils.sendPacket(p, this.rotateHeadPacket);
 				}
 			}
 		}
@@ -482,8 +495,12 @@ public class PacketEntity
 			if(dirtyRelativePacketTime != HASNT_MOVED && (TeamArena.getGameTick() - dirtyRelativePacketTime) >= TICKS_PER_TELEPORT_UPDATE) {
 				this.dirtyRelativePacketTime = HASNT_MOVED;
 				this.updateTeleportPacket(this.location);
-				this.updateRotateHeadPacket(this.location.getYaw());
-				realViewers.forEach(player -> PlayerUtils.sendPacket(player, this.teleportPacket, this.rotateHeadPacket));
+				boolean sendYaw = this.updateRotateHeadPacket(this.location.getYaw());
+				realViewers.forEach(player -> {
+					PlayerUtils.sendPacket(player, this.teleportPacket);
+					if (sendYaw)
+						PlayerUtils.sendPacket(player, this.rotateHeadPacket);
+				});
 			}
 		}
 	}

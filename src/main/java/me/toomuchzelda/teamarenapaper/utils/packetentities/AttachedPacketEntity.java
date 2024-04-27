@@ -69,8 +69,7 @@ public class AttachedPacketEntity extends PacketEntity
 
 		newLocation = newLocation.clone();
 		if(this.isAlive() && this.selfSee && this.entity instanceof Player player) {
-			if(this.sendHeadRotPackets)
-				this.updateRotateHeadPacket(newLocation.getYaw());
+			final boolean sendYaw = this.sendHeadRotPackets && this.updateRotateHeadPacket(newLocation.getYaw());
 
 			ClientboundMoveEntityPacket movePacket = getRelativePosPacket(this.location, newLocation);
 			if(movePacket == null || (
@@ -82,7 +81,7 @@ public class AttachedPacketEntity extends PacketEntity
 			}
 			else {
 				PlayerUtils.sendPacket(player, movePacket);
-				if (this.sendHeadRotPackets)
+				if (sendYaw)
 					PlayerUtils.sendPacket(player, this.getRotateHeadPacket());
 
 				if (this.dirtyRelativePacketTime == HASNT_MOVED) {
