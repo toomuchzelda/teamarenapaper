@@ -32,14 +32,15 @@ import org.jetbrains.annotations.Nullable;
 
 import java.sql.SQLException;
 import java.util.*;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 public class KitInventory implements InventoryProvider {
 
-	private final List<Kit> kits;
-	private final EnumMap<KitCategory, List<Kit>> kitsByCategory;
-	private final TabBar<KitCategory> categoryTab = new TabBar<>(null);
-	private final Pagination pagination = new Pagination();
+	protected final List<Kit> kits;
+	protected final EnumMap<KitCategory, List<Kit>> kitsByCategory;
+	protected final TabBar<KitCategory> categoryTab = new TabBar<>(null);
+	protected final Pagination pagination = new Pagination();
 
 	public KitInventory(Collection<? extends Kit> kits) {
 		var temp = kits.toArray(new Kit[0]);
@@ -67,8 +68,8 @@ public class KitInventory implements InventoryProvider {
 		return 6;
 	}
 
-	private static final Style LORE_STYLE = Style.style(NamedTextColor.YELLOW);
-	private static final TextComponent SELECTED_COMPONENT = Component.text("Currently selected!", NamedTextColor.GREEN, TextDecoration.BOLD);
+	protected static final Style LORE_STYLE = Style.style(NamedTextColor.YELLOW);
+	protected static final TextComponent SELECTED_COMPONENT = Component.text("Currently selected!", NamedTextColor.GREEN, TextDecoration.BOLD);
 
 	private static ClickableItem kitToItem(Kit kit, boolean selected) {
 		boolean disabled = !KitFilter.isAllowed(kit);
@@ -109,7 +110,7 @@ public class KitInventory implements InventoryProvider {
 	}
 
 
-	private static final ItemStack TEAM_COMPOSITION_UNAVAILABLE = ItemBuilder.of(Material.LEATHER_CHESTPLATE)
+	protected static final ItemStack TEAM_COMPOSITION_UNAVAILABLE = ItemBuilder.of(Material.LEATHER_CHESTPLATE)
 		.displayName(Component.text("Team composition", NamedTextColor.WHITE))
 		.lore(TextUtils.wrapString("You can see your team's kit composition here " +
 			"after teams have been chosen.", Style.style(NamedTextColor.GRAY)))
@@ -177,7 +178,9 @@ public class KitInventory implements InventoryProvider {
 		}
 
 		Kit selected = playerInfo.kit;
-		List<Kit> shownKits = categoryFilter == null ? kits : kitsByCategory.get(categoryFilter);
+		List<Kit> shownKits = (categoryFilter == null ? kits : kitsByCategory.get(categoryFilter)).stream()
+			.filter(KitFilter::isAllowed) // no reason to show kits the player can't choose
+			.toList();
 		pagination.showPageItems(inventory, shownKits, kit -> kitToItem(kit, kit == selected),
 			9, 45, true);
 	}
@@ -187,15 +190,15 @@ public class KitInventory implements InventoryProvider {
 		Main.getGame().setToRespawn(player);
 	}
 
-	private static final ItemStack ALL_TAB_ITEM = ItemBuilder.of(Material.BOOK)
+	protected static final ItemStack ALL_TAB_ITEM = ItemBuilder.of(Material.BOOK)
 		.displayName(Component.text("All kits", NamedTextColor.WHITE))
 		.lore(Component.text("Show all kits in Team Arena", NamedTextColor.GRAY))
 		.build();
 
 
-	private static final Component TEXT_INDENTATION = Component.text("   ");
-	private static final Component TEXT_INDENTATION_KIT = Component.text("▶ ");
-	private static final Component TEXT_SEPARATOR = Component.text(": ", NamedTextColor.GRAY);
+	protected static final Component TEXT_INDENTATION = Component.text("   ");
+	protected static final Component TEXT_INDENTATION_KIT = Component.text("▶ ");
+	protected static final Component TEXT_SEPARATOR = Component.text(": ", NamedTextColor.GRAY);
 	public static List<? extends Component> calculateTeamKitComposition(TeamArenaTeam team, @Nullable KitCategory viewerCategory) {
 		var game = Main.getGame();
 		var teamKitComposition = new EnumMap<KitCategory, Integer>(KitCategory.class);
@@ -231,7 +234,7 @@ public class KitInventory implements InventoryProvider {
 		return components;
 	}
 
-	private static void saveDefaultKit(InventoryClickEvent e) {
+	protected static void saveDefaultKit(InventoryClickEvent e) {
 		Player clicker = (Player) e.getWhoClicked();
 		PlayerInfo playerInfo = Main.getPlayerInfo(clicker);
 		playerInfo.defaultKit = playerInfo.kit.getName();
@@ -247,9 +250,7 @@ public class KitInventory implements InventoryProvider {
 				).color(NamedTextColor.GREEN));
 			} catch (SQLException ex) {
 				clicker.sendMessage(Component.text("Failed to save kit", TextColors.ERROR_RED));
-				if (Inventories.debug) {
-					ex.printStackTrace();
-				}
+				Main.logger().log(Level.SEVERE, "Failed to save kit for " + clicker.getName(), ex);
 			}
 		});
 
