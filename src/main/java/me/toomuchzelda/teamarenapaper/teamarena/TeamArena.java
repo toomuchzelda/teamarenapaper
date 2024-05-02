@@ -335,7 +335,12 @@ public abstract class TeamArena
 			players.add(p);
 
 			pinfo.spawnPoint = spawnPos;
-			pinfo.kit = findKit(pinfo.defaultKit);
+			Kit kit = findKit(pinfo.defaultKit), filteredKit = KitFilter.filterKit(kit);
+			pinfo.kit = filteredKit;
+			if (kit != filteredKit) {
+				p.sendMessage(KitFilter.getSelectedKitMessage(filteredKit));
+			}
+
 			pinfo.team = noTeamTeam;
 			pinfo.clearDamageReceivedLog();
 			pinfo.getKillAssistTracker().clear();
@@ -1818,7 +1823,13 @@ public abstract class TeamArena
 		}
 
 		if (playerInfo.kit == null) {
-			playerInfo.kit = KitFilter.filterKit(findKit(playerInfo.defaultKit));
+			Kit kit = findKit(playerInfo.defaultKit), filteredKit = KitFilter.filterKit(kit);
+			playerInfo.kit = filteredKit;
+			if (kit != filteredKit) {
+				Bukkit.getScheduler().runTask(Main.getPlugin(), () ->
+					player.sendMessage(KitFilter.getSelectedKitMessage(filteredKit)));
+			}
+
 			//default kit somehow invalid; maybe a kit was removed
 			if (playerInfo.kit == null) {
 				playerInfo.kit = KitFilter.filterKit(kits.values().iterator().next());

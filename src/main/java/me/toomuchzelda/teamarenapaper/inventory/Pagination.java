@@ -59,7 +59,7 @@ public class Pagination {
 			if (overrideFilledSlots || stack == null || stack.getType().isAir())
 				emptySlots.add(index);
 		}
-		if (emptySlots.size() == 0)
+		if (emptySlots.isEmpty())
 			return List.of();
 		maxPage = items.size() / emptySlots.size() + 1;
 		int page = MathUtils.clamp(1, maxPage, this.page) - 1;
