@@ -2,8 +2,10 @@ package me.toomuchzelda.teamarenapaper.metadata;
 
 import com.comphenix.protocol.wrappers.*;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher.WrappedDataWatcherObject;
+import me.toomuchzelda.teamarenapaper.Main;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.decoration.ArmorStand;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -175,10 +177,11 @@ public class MetaIndex
 	 * @param object An object of the desired type, so that the Serializer may be fetched by ProtocolLib if it
 	 *               has not been cached here.
 	 */
-	public static WrappedDataWatcher.Serializer serializerByIndex(int index, @Nullable Object object) {
+	public static WrappedDataWatcher.Serializer serializerByIndex(int index, Object object) {
 		WrappedDataWatcher.Serializer serializer;
 		if(object == null) {
-			serializer = INDEX_SERIALIZER_MAP.get(index);
+			Main.logger().warning("Null object provided for index " + index);
+			serializer = null;
 		}
 		else {
 			if(object instanceof AbstractWrapper wrapper)
