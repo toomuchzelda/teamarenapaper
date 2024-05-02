@@ -68,10 +68,10 @@ public class DatabaseManager
 		try {
 			DBSetupTables setupTables = new DBSetupTables();
 			Main.logger().info("Got First SQLite connection");
+			active = true;
 			setupTables.run();
 			DBDeleteTempPlayerInfos deleteTempPlayerInfos = new DBDeleteTempPlayerInfos();
 			deleteTempPlayerInfos.run();
-			active = true;
 		}
 		catch(SQLException e) {
 			active = false;

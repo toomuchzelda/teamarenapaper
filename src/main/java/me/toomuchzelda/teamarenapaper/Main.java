@@ -56,7 +56,7 @@ public final class Main extends JavaPlugin
 		// load important classes
 		Preferences.registerPreferences();
 		FileUtils.init();
-		try {
+		try { // Hack for avoiding NoClassDefFound after hot-reloading jar
 			Class.forName("me.toomuchzelda.teamarenapaper.sql.DBSetPreferences");
 		} catch (Exception ignored) {
 
