@@ -24,7 +24,7 @@ import java.util.stream.Stream;
  */
 public class KitFilter {
 
-	private static final Set<String> DEFAULT_BLOCKED_KITS = Set.of("sniper");
+	private static final Set<String> DEFAULT_BLOCKED_KITS = Set.of("sniper", "longbow");
 	private static FilterPreset preset;
 	private static Set<String> blockedKits = DEFAULT_BLOCKED_KITS;
 

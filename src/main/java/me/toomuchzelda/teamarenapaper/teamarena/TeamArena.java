@@ -287,21 +287,11 @@ public abstract class TeamArena
 		killStreakManager = new KillStreakManager();
 
 		this.defaultKits = new ArrayList<>();
-		if (KitOptions.rwfKits) {
-			// TODO sort out teleporter, other missing kits
-			this.defaultKits.addAll(List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(), new KitBurst(),
-				new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(), new KitNone(),
-				new KitVenom(), new KitRewind(), new KitExplosive(), new KitTrigger(), new KitMedic(this.killStreakManager),
-				new KitBerserker(), new KitEngineer()/*, new KitLongbow()*/));
-		}
-		else {
-			this.defaultKits.addAll(List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
-					new KitBurst(), new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(),
-					new KitNone(), new KitVenom(), new KitRewind(), new KitValkyrie(), new KitEngineer(), new KitExplosive(),
-					new KitTrigger(), new KitMedic(this.killStreakManager), new KitBeekeeper()));
-		}
-		if (KitOptions.porcEnable)
-			this.defaultKits.add(new KitPorcupine());
+		this.defaultKits.addAll(List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(), new KitBurst(),
+			new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(), new KitNone(),
+			new KitVenom(), new KitRewind(), new KitValkyrie(), new KitExplosive(), new KitTrigger(), new KitMedic(this.killStreakManager),
+			new KitBerserker(), new KitEngineer(), new KitPorcupine(), new KitLongbow(), new KitSniper(), new KitBeekeeper())
+		);
 
 		registerKits();
 
@@ -376,8 +366,6 @@ public abstract class TeamArena
 
 	protected void registerKits() {
 		defaultKits.forEach(this::registerKit);
-		if (KitOptions.kitSniper)
-			registerKit(new KitSniper());
 	}
 
 	protected void registerKit(Kit kit) {

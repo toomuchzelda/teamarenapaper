@@ -6,11 +6,7 @@ import java.util.Map;
 
 public class KitOptions
 {
-	public static boolean kitSniper;
 	public static boolean sniperAccuracy;
-
-	// These flags used to change behaviour of kits to be more old style
-	public static boolean rwfKits;
 
 	public static boolean ghostAetherial;
 	public static boolean burstShowArrows;
@@ -18,12 +14,9 @@ public class KitOptions
 	public static boolean pyroMolotov;
 	public static boolean rewindClockPhases;
 	public static boolean rewindStasis;
-	public static boolean porcEnable;
 
 	private static void resetToDefault() {
-		kitSniper = false; sniperAccuracy = false;
-
-		rwfKits = true;
+		sniperAccuracy = false;
 
 		ghostAetherial = false;
 		burstShowArrows = false;
@@ -31,7 +24,6 @@ public class KitOptions
 		pyroMolotov = false;
 		rewindClockPhases = false;
 		rewindStasis = false;
-		porcEnable = true;
 	}
 
 	// Keys must not have spaces and be type-able with a keyboard.
@@ -42,24 +34,22 @@ public class KitOptions
 
 		OPTION_TOGGLE_FUNCS = new HashMap<>();
 
-		OPTION_TOGGLE_FUNCS.put("kitSniper", () -> kitSniper = !kitSniper);
 		OPTION_TOGGLE_FUNCS.put("sniperAccuracy", () -> sniperAccuracy = !sniperAccuracy);
 
 		OPTION_TOGGLE_FUNCS.put("resetToDefault", KitOptions::resetToDefault);
 
 		OPTION_TOGGLE_FUNCS.put("teamArenaKits", () -> {
-			rwfKits = false; ghostAetherial = true; burstShowArrows = false; ninjaFastAttack = true;
-			pyroMolotov = true; rewindClockPhases = true; rewindStasis = true; porcEnable = false;
+			ghostAetherial = true; burstShowArrows = false; ninjaFastAttack = true;
+			pyroMolotov = true; rewindClockPhases = true; rewindStasis = true;
 		});
 
-		OPTION_TOGGLE_FUNCS.put("rwfKits", () -> rwfKits = !rwfKits);
+		OPTION_TOGGLE_FUNCS.put("rwfKits", KitOptions::resetToDefault);
 		OPTION_TOGGLE_FUNCS.put("ghostAetherial", () -> ghostAetherial = !ghostAetherial);
 		OPTION_TOGGLE_FUNCS.put("burstShowArrows", () -> burstShowArrows = !burstShowArrows);
 		OPTION_TOGGLE_FUNCS.put("ninjaFastAttack", () -> ninjaFastAttack = !ninjaFastAttack);
 		OPTION_TOGGLE_FUNCS.put("pyroMolotov", () -> pyroMolotov = !pyroMolotov);
 		OPTION_TOGGLE_FUNCS.put("rewindClockPhases", () -> rewindClockPhases = !rewindClockPhases);
 		OPTION_TOGGLE_FUNCS.put("rewindStasis", () -> rewindStasis = !rewindStasis);
-		OPTION_TOGGLE_FUNCS.put("porcEnable", () -> porcEnable = !porcEnable);
 	}
 
 	/** @return true if toggling was successful. */
