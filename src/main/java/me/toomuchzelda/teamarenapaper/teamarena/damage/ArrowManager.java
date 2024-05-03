@@ -209,8 +209,8 @@ public class ArrowManager {
 			while (iter.hasNext()) {
 				var entry = iter.next();
 				MetadataViewer metadataViewer = entry.getValue().getMetadataViewer();
-				metadataViewer.setViewedValue(MetaIndex.ABSTRACT_ARROW_PIERCING_LEVEL_IDX,
-					new SimpleMetadataValue<>((byte) Byte.MAX_VALUE), arrow);
+				metadataViewer.setViewedValue(MetaIndex.ABSTRACT_ARROW_PIERCING_LEVEL_OBJ,
+					Byte.MAX_VALUE, arrow);
 			}
 		}
 	}

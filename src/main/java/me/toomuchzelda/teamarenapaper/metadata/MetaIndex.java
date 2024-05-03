@@ -2,8 +2,10 @@ package me.toomuchzelda.teamarenapaper.metadata;
 
 import com.comphenix.protocol.wrappers.*;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher.WrappedDataWatcherObject;
+import me.toomuchzelda.teamarenapaper.Main;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.decoration.ArmorStand;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -60,8 +62,7 @@ public class MetaIndex
 
 	public static final int ITEM_DISPLAY_ITEM_IDX = 22;
 
-
-	public static final MetadataBitfieldValue GLOWING_METADATA_VALUE = MetadataBitfieldValue.create(Collections.singletonMap(BASE_BITFIELD_GLOWING_IDX, true));
+	public static final WrappedDataWatcher.Serializer BITFIELD_SERIALIZER = WrappedDataWatcher.Registry.get(Byte.class);
 
 	public static final WrappedDataWatcherObject BASE_BITFIELD_OBJ;
 	public static final WrappedDataWatcherObject CUSTOM_NAME_OBJ;
@@ -171,14 +172,18 @@ public class MetaIndex
 	}
 
 	/**
-	 * Get the Metadata Serializer for whatever's at that index
+	 * Get the Metadata Serializer for whatever's at that index.
+	 * @deprecated Mistaken idea to get serializers by index. Can only get one properly with an Obj reference.
+	 * Also, there may be multiple serializers for a given type. This doesn't handle that properly.
 	 * @param object An object of the desired type, so that the Serializer may be fetched by ProtocolLib if it
 	 *               has not been cached here.
 	 */
-	public static WrappedDataWatcher.Serializer serializerByIndex(int index, @Nullable Object object) {
+	@Deprecated
+	public static WrappedDataWatcher.Serializer serializerByIndex(int index, Object object) {
 		WrappedDataWatcher.Serializer serializer;
-		if(object == null) {
-			serializer = INDEX_SERIALIZER_MAP.get(index);
+		if(object == null) { // Should never run
+			Main.logger().warning("Null object provided for index " + index);
+			serializer = null;
 		}
 		else {
 			if(object instanceof AbstractWrapper wrapper)
@@ -186,8 +191,12 @@ public class MetaIndex
 
 			// If the mapping doesn't exist, get the serializer and cache it.
 			Object finalObject = object;
-			serializer = INDEX_SERIALIZER_MAP.computeIfAbsent(index,
-					integer -> WrappedDataWatcher.Registry.get(finalObject.getClass()));
+			serializer = WrappedDataWatcher.Registry.get(finalObject.getClass());
+
+			WrappedDataWatcher.Serializer tabledSer = INDEX_SERIALIZER_MAP.put(index, serializer);
+			if (tabledSer != null && tabledSer != serializer) {
+				Main.logger().warning("Index lookup table had different serializer placed for same index");
+			}
 		}
 
 		return serializer;

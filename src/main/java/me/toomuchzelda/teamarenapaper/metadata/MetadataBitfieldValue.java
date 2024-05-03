@@ -1,6 +1,5 @@
 package me.toomuchzelda.teamarenapaper.metadata;
 
-import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -9,25 +8,30 @@ import java.util.Map;
  * Can set values for bits to 1 (true) or 0 (false)
  * To have a bit be longer altered by the MetadataViewer, remove it (instead of setting to 0 or 1).
  */
-public class MetadataBitfieldValue extends MetadataValue<Map<Integer, Boolean>>
+public class MetadataBitfieldValue extends MetadataValue
 {
 	private MetadataBitfieldValue(Map<Integer, Boolean> value) {
 		super(value);
 	}
 
-	public static MetadataBitfieldValue create(Map<Integer, Boolean> value) {
+	static MetadataBitfieldValue create(Map<Integer, Boolean> value) {
 		Map<Integer, Boolean> newMap = new HashMap<>(value);
 		return new MetadataBitfieldValue(newMap);
 	}
 
+	@SuppressWarnings("unchecked")
+	public Map<Integer, Boolean> getMap() {
+		return (Map<Integer, Boolean>) this.value;
+	}
+
 	public byte combine(byte other) {
-		for(Map.Entry<Integer, Boolean> entry : value.entrySet()) {
+		for(Map.Entry<Integer, Boolean> entry : getMap().entrySet()) {
 			int ind = entry.getKey();
 			if(entry.getValue()) {
-				other |= 1 << ind;
+				other |= (byte) (1 << ind);
 			}
 			else {
-				other &= ~(1 << ind);
+				other &= (byte) ~(1 << ind);
 			}
 		}
 
@@ -39,18 +43,18 @@ public class MetadataBitfieldValue extends MetadataValue<Map<Integer, Boolean>>
 	 * @param on Whether the bit should be 1 or 0
 	 */
 	public void setBit(int bitIndex, boolean on) {
-		this.getValue().put(bitIndex, on);
+		this.getMap().put(bitIndex, on);
 	}
 
 	public void setBits(Map<Integer, Boolean> bits) {
-		this.getValue().putAll(bits);
+		this.getMap().putAll(bits);
 	}
 
 	/**
 	 * Number of bits with special values set
 	 */
 	public int size() {
-		return getValue().size();
+		return getMap().size();
 	}
 
 	public Byte getByte() {
@@ -63,6 +67,6 @@ public class MetadataBitfieldValue extends MetadataValue<Map<Integer, Boolean>>
 	 * @param bitIndex Index of the bit in the bitfield
 	 */
 	public void removeBit(int bitIndex) {
-		this.getValue().remove(bitIndex);
+		this.getMap().remove(bitIndex);
 	}
 }
