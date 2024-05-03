@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
+import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import net.kyori.adventure.text.Component;

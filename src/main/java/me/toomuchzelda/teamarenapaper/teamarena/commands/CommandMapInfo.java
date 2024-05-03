@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
+import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import net.kyori.adventure.text.Component;

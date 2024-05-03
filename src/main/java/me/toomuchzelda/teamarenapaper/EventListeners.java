@@ -21,6 +21,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.announcer.ChatAnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingListeners;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
+import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
@@ -214,7 +215,7 @@ public class EventListeners implements Listener
 			if (command == null) // command not found
 				return true;
 			if (command instanceof CustomCommand customCommand) {
-				return pinfo.permissionLevel.compareTo(customCommand.permissionLevel) < 0;
+				return !pinfo.hasPermission(customCommand.permissionLevel);
 			} else if (command.getPermission() != null) {
 				return !player.hasPermission(command.getPermission());
 			}
@@ -226,7 +227,7 @@ public class EventListeners implements Listener
 	public void asyncChat(AsyncChatEvent event) {
 		if (event.isCancelled()) return;
 
-		if (Main.getPlayerInfo(event.getPlayer()).permissionLevel.compareTo(CustomCommand.PermissionLevel.MOD) >= 0) {
+		if (Main.getPlayerInfo(event.getPlayer()).hasPermission(PermissionLevel.MOD)) {
 			event.message(MiniMessage.miniMessage().deserialize(PlainTextComponentSerializer.plainText().serialize(event.message())));
 		}
 

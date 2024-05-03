@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.*;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
+import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.inventory.Book;
 import net.kyori.adventure.text.Component;
@@ -58,7 +58,7 @@ public class ChangelogMenu implements InventoryProvider {
 			populate(player, inventory);
 		}
 		inventory.set(2, 4, MenuItems.CLOSE);
-		if (Main.getPlayerInfo(player).permissionLevel == CustomCommand.PermissionLevel.OWNER) {
+		if (Main.getPlayerInfo(player).permissionLevel == PermissionLevel.OWNER) {
 			inventory.set(2, 5, ItemBuilder.of(Material.BEDROCK)
 				.displayName(Component.text("Force refetch (ADMIN)"))
 				.toClickableItem(e -> {

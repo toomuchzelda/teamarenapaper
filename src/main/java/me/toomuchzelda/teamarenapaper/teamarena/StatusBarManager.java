@@ -1,7 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
@@ -68,7 +67,7 @@ public class StatusBarManager
 			this.currentText = PREGAME_TEXT;
 			PlayerInfo pinfo = Main.getPlayerInfo(player);
 			// If they're mod or higher and have their tag displayed, else random 5% chance.
-			this.preGameRgb = (pinfo.displayPermissionLevel && pinfo.permissionLevel.compareTo(CustomCommand.PermissionLevel.MOD) >= 0) ||
+			this.preGameRgb = (pinfo.displayPermissionLevel && pinfo.hasPermission(PermissionLevel.MOD)) ||
 				MathUtils.random.nextDouble() >= 0.95d;
 		}
 

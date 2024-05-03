@@ -4,7 +4,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
+import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
 import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
@@ -176,7 +176,7 @@ public class GraffitiManager {
 			return;
 		int lastGraffiti = graffitiCooldown.getOrDefault(uuid, 0);
 		int ticksElapsed = now - lastGraffiti;
-		if (ticksElapsed >= GRAFFITI_COOLDOWN || playerInfo.permissionLevel == CustomCommand.PermissionLevel.OWNER) {
+		if (ticksElapsed >= GRAFFITI_COOLDOWN || playerInfo.permissionLevel == PermissionLevel.OWNER) {
 			if (spawnGraffiti(player, graffiti)) {
 				graffitiCooldown.put(uuid, now);
 			}

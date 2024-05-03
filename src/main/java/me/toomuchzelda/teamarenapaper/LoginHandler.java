@@ -5,7 +5,7 @@ import com.destroystokyo.paper.profile.PlayerProfile;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.sql.*;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
-import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
+import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
@@ -27,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class LoginHandler
 {
-	private record DBLoadedData(Map<Preference<?>, ?> preferenceMap, String defaultKit, CustomCommand.PermissionLevel permissionLevel) {}
+	private record DBLoadedData(Map<Preference<?>, ?> preferenceMap, String defaultKit, PermissionLevel permissionLevel) {}
 
 	private static final ConcurrentHashMap<UUID, DBLoadedData> loadedDbDataCache = new ConcurrentHashMap<>();
 
@@ -110,16 +110,16 @@ public class LoginHandler
 		}
 
 		// Load CustomCommand permission level if any set.
-		CustomCommand.PermissionLevel permissionLevel;
+		PermissionLevel permissionLevel;
 		DBGetPermissionLevel getPermissionLevel = new DBGetPermissionLevel(uuid);
 		try {
 			permissionLevel = getPermissionLevel.run();
 			if (permissionLevel == null) {
-				permissionLevel = CustomCommand.PermissionLevel.ALL;
+				permissionLevel = PermissionLevel.ALL;
 			}
 		}
 		catch (SQLException e) {
-			permissionLevel = CustomCommand.PermissionLevel.ALL;
+			permissionLevel = PermissionLevel.ALL;
 		}
 
 		DBLoadedData data = new DBLoadedData(retrievedPrefs, defaultKit, permissionLevel);
@@ -144,12 +144,12 @@ public class LoginHandler
 		}
 
 		if (PlayerUtils.getOpLevel(player) == 4) { // Being max level op on vanilla server overrides DB
-			playerInfo = new PlayerInfo(CustomCommand.PermissionLevel.OWNER, player);
+			playerInfo = new PlayerInfo(PermissionLevel.OWNER, player);
 		} else {
 			playerInfo = new PlayerInfo(loadedData.permissionLevel(), player);
 		}
 
-		if (playerInfo.permissionLevel != CustomCommand.PermissionLevel.ALL) {
+		if (playerInfo.permissionLevel != PermissionLevel.ALL) {
 			Bukkit.getScheduler().runTask(Main.getPlugin(),
 				() -> player.sendMessage(Component.text("Your rank has been updated to " + playerInfo.permissionLevel.name(),
 					NamedTextColor.GREEN)));

@@ -2,7 +2,8 @@ package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
-import me.toomuchzelda.teamarenapaper.teamarena.inventory.KitFilterInventory;
+import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
+import me.toomuchzelda.teamarenapaper.teamarena.inventory.KitControlInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitFilter;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
@@ -29,7 +30,7 @@ public class CommandKitControl extends CustomCommand {
 			KitFilter.resetFilter();
 			sender.sendMessage(Component.text("Allowing all kits", NamedTextColor.YELLOW));
 		} else if (args[0].equalsIgnoreCase("gui") && sender instanceof Player player) {
-			Inventories.openInventory(player, new KitFilterInventory());
+			Inventories.openInventory(player, new KitControlInventory());
 		} else if (args[0].equalsIgnoreCase("option")) {
 			if (args.length != 2)
 				throw throwUsage("Provide option name");
@@ -83,7 +84,7 @@ public class CommandKitControl extends CustomCommand {
 				return kitNames;
 			}
 		} else {
-			return List.of("allow", "block", "clear", "option");
+			return List.of("allow", "block", "clear", "option", "gui");
 		}
 
 		return List.of();

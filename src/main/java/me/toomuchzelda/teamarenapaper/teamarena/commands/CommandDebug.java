@@ -77,7 +77,7 @@ public class CommandDebug extends CustomCommand {
 			Component.text(args.length != 0 ? message.formatted(args) : message)
 		).color(NamedTextColor.BLUE);
 		Main.getPlayerInfoMap().forEach((player, info) -> {
-			if (info.permissionLevel.compareTo(PermissionLevel.MOD) >= 0) {
+			if (info.hasPermission(PermissionLevel.MOD)) {
 				player.sendMessage(broadcast);
 			}
 		});

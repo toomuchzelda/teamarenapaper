@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.ServerListPingManager;
+import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 

@@ -13,14 +13,13 @@ import me.toomuchzelda.teamarenapaper.teamarena.announcer.ChatAnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingListeners;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingOutlineManager;
-import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandCallvote;
-import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
-import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandTeamChat;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.*;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.GraffitiManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.GameMenu;
+import me.toomuchzelda.teamarenapaper.teamarena.inventory.KitControlInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.KitInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.IronGolemKillStreak;
@@ -135,6 +134,11 @@ public abstract class TeamArena
 	protected Map<String, Kit> kits = new LinkedHashMap<>();
 	protected static ItemStack kitMenuItem = ItemBuilder.of(Material.FEATHER)
 		.displayName(Component.text("Select a Kit", NamedTextColor.BLUE))
+		.build();
+
+	protected static ItemStack kitControlMenuItem = ItemBuilder.of(Material.WRITABLE_BOOK)
+		.displayName(Component.text("Kit restrictions", NamedTextColor.AQUA))
+		.lore(Component.text("Click here to set kit restrictions", NamedTextColor.GRAY))
 		.build();
 
 	protected static ItemStack gameMenuItem = ItemBuilder.of(Material.CHEST)
@@ -897,6 +901,9 @@ public abstract class TeamArena
 		} else if (kitMenuItem.isSimilar(item)) {
 			event.setUseItemInHand(Event.Result.DENY);
 			Inventories.openInventory(player, new KitInventory());
+		} else if (kitControlMenuItem.isSimilar(item) && Main.getPlayerInfo(player).hasPermission(PermissionLevel.MOD)) {
+			event.setUseItemInHand(Event.Result.DENY);
+			Inventories.openInventory(player, new KitControlInventory());
 		} else if (gameMenuItem.isSimilar(item)) {
 			event.setUseItemInHand(Event.Result.DENY);
 			Inventories.openInventory(player, new GameMenu());
@@ -1419,6 +1426,9 @@ public abstract class TeamArena
 	public void giveLobbyItems(Player player) {
 		PlayerInventory inventory = player.getInventory();
 		inventory.setItem(0, kitMenuItem.clone());
+		if (Main.getPlayerInfo(player).hasPermission(PermissionLevel.MOD)) {
+			inventory.setItem(2, kitControlMenuItem.clone());
+		}
 		inventory.setItem(4, gameMenuItem.clone());
 		inventory.setItem(8, miniMap.getMapItem());
 	}

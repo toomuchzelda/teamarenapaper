@@ -1,6 +1,6 @@
 package me.toomuchzelda.teamarenapaper.sql;
 
-import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
+import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
 import org.bukkit.entity.Player;
 
 import javax.annotation.Nullable;
@@ -11,12 +11,12 @@ import java.sql.SQLException;
 public class DBSetPermissionLevel extends DBOperation<Void>
 {
 	private final String uuid;
-	private final CustomCommand.PermissionLevel permissionLevel;
+	private final PermissionLevel permissionLevel;
 
 	/**
 	 * If null permissionLevel is specified, the player's permissionLevel will be deleted instead.
 	 */
-	public DBSetPermissionLevel(Player player, @Nullable CustomCommand.PermissionLevel permissionLevel) {
+	public DBSetPermissionLevel(Player player, @Nullable PermissionLevel permissionLevel) {
 		this.uuid = player.getUniqueId().toString();
 		this.permissionLevel = permissionLevel;
 	}

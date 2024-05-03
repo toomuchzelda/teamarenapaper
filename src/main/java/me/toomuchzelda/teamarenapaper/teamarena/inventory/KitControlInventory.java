@@ -2,7 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.inventory;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.*;
-import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
+import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitFilter;
@@ -21,14 +21,14 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public class KitFilterInventory extends KitInventory {
+public class KitControlInventory extends KitInventory {
 
 	private final List<Kit> kits;
 	private final EnumMap<KitCategory, List<Kit>> kitsByCategory;
 	private final TabBar<KitCategory> categoryTab = new TabBar<>(null);
 	private final Pagination pagination = new Pagination();
 
-	public KitFilterInventory(Collection<? extends Kit> kits) {
+	public KitControlInventory(Collection<? extends Kit> kits) {
 		var temp = kits.toArray(new Kit[0]);
 		Arrays.sort(temp, Kit.COMPARATOR);
 		this.kits = List.of(temp);
@@ -40,7 +40,7 @@ public class KitFilterInventory extends KitInventory {
 			));
 	}
 
-	public KitFilterInventory() {
+	public KitControlInventory() {
 		this(Main.getGame().getKits());
 	}
 
@@ -52,7 +52,7 @@ public class KitFilterInventory extends KitInventory {
 	private static final Style LORE_STYLE = Style.style(NamedTextColor.YELLOW);
 
 	private static boolean checkPermissions(Player player) {
-		return Main.getPlayerInfo(player).permissionLevel.compareTo(CustomCommand.PermissionLevel.MOD) >= 0;
+		return Main.getPlayerInfo(player).hasPermission(PermissionLevel.MOD);
 	}
 
 	private static ClickableItem kitToItem(Kit kit, int affected, InventoryAccessor inventory) {
@@ -103,7 +103,7 @@ public class KitFilterInventory extends KitInventory {
 					inventory.invalidate();
 				} catch (IllegalArgumentException ex) {
 					player.sendMessage(Component.text(ex.getMessage(), NamedTextColor.DARK_RED));
-					Inventories.closeInventory(player, KitFilterInventory.class);
+					Inventories.closeInventory(player, KitControlInventory.class);
 				}
 			}
 		);

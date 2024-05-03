@@ -1,11 +1,11 @@
 package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -13,26 +13,12 @@ import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
-import javax.annotation.Nullable;
 import java.util.*;
 
 public abstract class CustomCommand extends Command {
     public final PermissionLevel permissionLevel;
-    public enum PermissionLevel {
-        ALL(null),
-		MOD(Component.text("[Staff] ", TextColor.color(49, 235, 42))),
-		OWNER(Component.text("[Admin] ", TextColor.color(224, 124, 242)));
 
-		public final Component tag;
-		/** @param tag The tag that accompanies the player's name if they choose to display it.
-		 *             Remember to include a space after it.
-		 */
-		PermissionLevel(@Nullable Component tag) {
-			this.tag = tag;
-		}
-    }
-
-    private static final HashMap<String, CustomCommand> PLUGIN_COMMANDS = new HashMap<>();
+	private static final HashMap<String, CustomCommand> PLUGIN_COMMANDS = new HashMap<>();
 	protected static final List<String> BOOLEAN_SUGGESTIONS = List.of("true", "false");
 
 	protected CustomCommand(@NotNull String name, @NotNull String description, @NotNull String usage,
@@ -57,7 +43,7 @@ public abstract class CustomCommand extends Command {
     public final boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         if (sender instanceof Player player) {
             PlayerInfo playerInfo = Main.getPlayerInfo(player);
-            if (playerInfo.permissionLevel.compareTo(permissionLevel) < 0) {
+            if (!playerInfo.hasPermission(permissionLevel)) {
                 player.sendMessage(NO_PERMISSION);
                 return true;
             }
@@ -83,7 +69,7 @@ public abstract class CustomCommand extends Command {
     public final @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
         if (sender instanceof Player player) {
             PlayerInfo playerInfo = Main.getPlayerInfo(player);
-            if (playerInfo.permissionLevel.compareTo(permissionLevel) < 0) {
+            if (!playerInfo.hasPermission(permissionLevel)) {
                 return List.of();
             }
         }
@@ -129,7 +115,7 @@ public abstract class CustomCommand extends Command {
 
     protected boolean hasPermission(CommandSender sender, PermissionLevel level) {
         if (sender instanceof Player player)
-            return Main.getPlayerInfo(player).permissionLevel.compareTo(level) >= 0;
+            return Main.getPlayerInfo(player).hasPermission(level);
         else
             return sender instanceof ConsoleCommandSender;
     }

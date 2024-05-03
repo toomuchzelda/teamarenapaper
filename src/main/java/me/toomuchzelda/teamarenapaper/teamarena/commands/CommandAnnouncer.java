@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
+import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;

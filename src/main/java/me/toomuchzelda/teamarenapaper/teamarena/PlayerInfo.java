@@ -3,7 +3,6 @@ package me.toomuchzelda.teamarenapaper.teamarena;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
-import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
@@ -17,7 +16,6 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
-import org.bukkit.entity.Damageable;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -26,11 +24,11 @@ import javax.annotation.Nullable;
 import java.util.*;
 
 //container class to store per-player info
-public class PlayerInfo
+public final class PlayerInfo
 {
 	private final UUID playerUuid;
 
-	public CustomCommand.PermissionLevel permissionLevel;
+	public PermissionLevel permissionLevel;
 	public boolean displayPermissionLevel; // if should be displayed in chat and playerlistname
 	public TeamArenaTeam team;
 	public Location spawnPoint;
@@ -71,7 +69,7 @@ public class PlayerInfo
 
 	public UUID lastMessageSender;
 
-	public PlayerInfo(CustomCommand.PermissionLevel permissionLevel, Player player) {
+	public PlayerInfo(PermissionLevel permissionLevel, Player player) {
 		this.playerUuid = player.getUniqueId();
 		team = null;
 		spawnPoint = null;
@@ -98,6 +96,10 @@ public class PlayerInfo
 
 		this.scoreboard = new PlayerScoreboard(player);
 		this.metadataViewer = new MetadataViewer(player);
+	}
+
+	public boolean hasPermission(PermissionLevel permissionLevel) {
+		return this.permissionLevel.compareTo(permissionLevel) >= 0;
 	}
 
 	/**
