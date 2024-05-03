@@ -130,6 +130,7 @@ public class BuildingSelector {
 	 */
 	@Nullable
 	public <T extends Building & PreviewableBuilding> T removePreview(Class<T> clazz) {
+		@SuppressWarnings("unchecked")
 		T building = (T) buildingPreviews.remove(clazz);
 		if (building == null)
 			return null;
@@ -209,21 +210,21 @@ public class BuildingSelector {
 
 	// Calculates the yaw and pitch groups buildings belong to
 	static int calcYawGroup(double yaw) { // yaw = 0 - 360
-		return ((int) yaw + MERGE_YAW_MIN / 2) / MERGE_YAW_MIN % MERGE_YAW_GROUPS;
+		return Math.floorMod((int) yaw, MERGE_YAW_GROUPS);
 	}
 
 
 	static int calcPitchGroup(double pitch) { // pitch = -90 - 90
-		return (90 + (int) pitch + MERGE_PITCH_MIN / 2) / MERGE_PITCH_MIN % MERGE_PITCH_GROUPS;
+		return Math.floorMod((90 + (int) pitch + MERGE_PITCH_MIN / 2) / MERGE_PITCH_MIN, MERGE_PITCH_GROUPS);
 	}
 
 	// Calculates a building's distance to the center of a yaw/pitch group
 	static double calcYawGroupDistance(double yaw) {
-		return Math.abs(((int) yaw + MERGE_YAW_MIN / 2f) % MERGE_YAW_MIN - MERGE_YAW_MIN / 2f);
+		return Math.abs(Math.floorMod((int) (yaw + MERGE_YAW_MIN / 2f), MERGE_YAW_MIN) - MERGE_YAW_MIN / 2f);
 	}
 
 	static double calcPitchGroupDistance(double pitch) {
-		return Math.abs(((int) pitch + MERGE_PITCH_MIN / 2f) % MERGE_PITCH_MIN - MERGE_PITCH_MIN / 2f);
+		return Math.abs(Math.floorMod((int) (pitch + MERGE_PITCH_MIN / 2f), MERGE_PITCH_MIN) - MERGE_PITCH_MIN / 2f);
 	}
 
 	public void tick(Player player) {
@@ -303,7 +304,7 @@ public class BuildingSelector {
 
 
 		// don't select when a preview is active
-		if (selectableBuildings.size() == 0 || buildingPreviews.size() != 0) {
+		if (selectableBuildings.isEmpty() || !buildingPreviews.isEmpty()) {
 			// properly clean up selected outline
 			cleanUpSelected();
 			return;
@@ -518,10 +519,10 @@ public class BuildingSelector {
 			}
 		}
 		// hide other previews
-		for (/*Class*/var clazz : buildingPreviews.keySet().toArray()) {
+		for (var clazz : buildingPreviews.keySet().toArray(new Class[0])) {
 			if (clazz != previewClazz) {
-				// noinspection rawtypes,unchecked
-				removePreview((Class) clazz);
+				// noinspection unchecked
+				removePreview(clazz);
 			}
 		}
 
