@@ -27,11 +27,12 @@ public class KitPorcupine extends Kit {
 		.build();
 
 	public KitPorcupine() {
-		super("Porcupine", "Ouch!", Material.DEAD_BUSH);
+		super("Reflector", "\"Life is a mirror and will reflect back to the thinker what he thinks into it.\" - Ernest Holmes",
+			Material.DEAD_BUSH);
 
 		this.setArmor(
-			new ItemStack(Material.CHAINMAIL_HELMET),
-			new ItemStack(Material.IRON_CHESTPLATE),
+			new ItemStack(Material.IRON_HELMET),
+			new ItemStack(Material.CHAINMAIL_CHESTPLATE),
 			new ItemStack(Material.CHAINMAIL_LEGGINGS),
 			new ItemStack(Material.IRON_BOOTS)
 		);

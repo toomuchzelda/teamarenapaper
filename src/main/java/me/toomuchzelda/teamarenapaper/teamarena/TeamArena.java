@@ -288,7 +288,7 @@ public abstract class TeamArena
 			this.defaultKits.addAll(List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(), new KitBurst(),
 				new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(), new KitNone(),
 				new KitVenom(), new KitRewind(), new KitExplosive(), new KitTrigger(), new KitMedic(this.killStreakManager),
-				new KitBerserker(), new KitEngineer(), new KitLongbow()));
+				new KitBerserker(), new KitEngineer()/*, new KitLongbow()*/));
 		}
 		else {
 			this.defaultKits.addAll(List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(),
