@@ -353,10 +353,13 @@ public class MetadataViewer
 						Object val = metadataValueStatus.value instanceof MetadataBitfieldValue bitfieldValue ?
 							bitfieldValue.getByte() : metadataValueStatus.value.getValue();
 
-						// TODO debug
 						WrappedDataWatcher.Serializer serializer = MetaIndex.serializerByIndex(index, val);
 						if (serializer != null)
 							valueMap.put(index, new WrappedDataValue(index, serializer, val));
+						else {
+							Main.logger().warning("adjustMetadataPacket for " + this.player.getName() + " returned null: " +
+								"index=" + index + ", val=" + val);
+						}
 					}
 				}
 			});

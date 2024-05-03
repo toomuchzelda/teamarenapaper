@@ -173,13 +173,15 @@ public class MetaIndex
 	}
 
 	/**
-	 * Get the Metadata Serializer for whatever's at that index
+	 * Get the Metadata Serializer for whatever's at that index.
+	 * @deprecated Mistaken idea to get serializers by index. Can only get one properly with an Obj reference.
+	 * Also, there may be multiple serializers for a given type. This doesn't handle that properly.
 	 * @param object An object of the desired type, so that the Serializer may be fetched by ProtocolLib if it
 	 *               has not been cached here.
 	 */
 	public static WrappedDataWatcher.Serializer serializerByIndex(int index, Object object) {
 		WrappedDataWatcher.Serializer serializer;
-		if(object == null) {
+		if(object == null) { // Should never run
 			Main.logger().warning("Null object provided for index " + index);
 			serializer = null;
 		}
@@ -189,8 +191,12 @@ public class MetaIndex
 
 			// If the mapping doesn't exist, get the serializer and cache it.
 			Object finalObject = object;
-			serializer = INDEX_SERIALIZER_MAP.computeIfAbsent(index,
-					integer -> WrappedDataWatcher.Registry.get(finalObject.getClass()));
+			serializer = WrappedDataWatcher.Registry.get(finalObject.getClass());
+
+			WrappedDataWatcher.Serializer tabledSer = INDEX_SERIALIZER_MAP.put(index, serializer);
+			if (tabledSer != null && tabledSer != serializer) {
+				Main.logger().warning("Index lookup table had different serializer placed for same index");
+			}
 		}
 
 		return serializer;
