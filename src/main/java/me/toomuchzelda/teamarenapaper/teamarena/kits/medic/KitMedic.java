@@ -233,7 +233,8 @@ public class KitMedic extends Kit
 
 			// Set the healed to glow for the medic only.
 			MetadataViewer viewer = pinfo.getMetadataViewer();
-			viewer.setViewedValue(MetaIndex.BASE_BITFIELD_IDX, MetaIndex.GLOWING_METADATA_VALUE, healed);
+			//viewer.setViewedValue(MetaIndex.BASE_BITFIELD_IDX, MetaIndex.GLOWING_METADATA_VALUE, healed);
+			viewer.updateBitfieldValue(healed, MetaIndex.BASE_BITFIELD_IDX, MetaIndex.BASE_BITFIELD_GLOWING_IDX, true);
 			viewer.refreshViewer(healed);
 
 			guardian.setTarget(healed.getEntityId());

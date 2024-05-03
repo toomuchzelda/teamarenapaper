@@ -1,8 +1,8 @@
 package me.toomuchzelda.teamarenapaper.metadata;
 
-public class SimpleMetadataValue<T> extends MetadataValue<T>
+public class SimpleMetadataValue extends MetadataValue
 {
-	public SimpleMetadataValue(T value) {
+	SimpleMetadataValue(Object value) {
 		super(value);
 	}
 }

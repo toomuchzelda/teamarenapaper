@@ -5,6 +5,7 @@ import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.WrappedDataValue;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
+import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
@@ -32,10 +33,12 @@ public class MetadataViewer
 {
 	/** Simple container class to keep a MetadataValue and whether it has been sent to the player viewer yet.*/
 	private static class MetadataValueStatus {
+		public final WrappedDataWatcher.Serializer serializer;
 		public MetadataValue value; // null value means refresh to default and remove on next sync
 		public boolean dirty;
 
-		public MetadataValueStatus(MetadataValue value) {
+		public MetadataValueStatus(WrappedDataWatcher.Serializer serializer, MetadataValue value) {
+			this.serializer = serializer;
 			this.value = value;
 			this.dirty = true;
 		}
@@ -64,59 +67,72 @@ public class MetadataViewer
 		this.entityValues = new LinkedHashMap<>();
 	}
 
-	public void setViewedValues(int index, MetadataValue value, Entity... viewedEntities) {
-		for(Entity e : viewedEntities) {
-			setViewedValue(index, value, e);
-		}
+	public void setViewedValue(WrappedDataWatcher.WrappedDataWatcherObject object, Object value, Entity viewedEntity) {
+		setViewedValue(object.getIndex(), object.getSerializer(), value, false, viewedEntity);
 	}
 
-	public void setViewedValue(int index, MetadataValue value, Entity viewedEntity) {
-		setViewedValue(index, value, viewedEntity.getEntityId(), viewedEntity);
+	public void setViewedValue(WrappedDataWatcher.WrappedDataWatcherObject object, Optional<?> value, Entity viewedEntity) {
+		setViewedValue(object.getIndex(), object.getSerializer(), value, true, viewedEntity);
 	}
 
 	/**
-	 * Assumes all args are correct as given. Bitfield values will stack onto previous values if any.
+	 * Assumes all args are correct as given. Do not use for bitfield values, use updateBitfieldValue().
 	 * @param index Index of metadata
-	 * @param value Value to put there
+	 * @param value Value to put there. Must be NMS/ProtocolLib structure that has a ProtocolLib serializer
 	 */
-	public void setViewedValue(int index, MetadataValue value, int entityId, Entity viewedEntity) {
+	private void setViewedValue(int index, final WrappedDataWatcher.Serializer serializer, Object value, boolean optionalValue,
+							   Entity viewedEntity) {
+
+		if (!CompileAsserts.OMIT) {
+			if (value == null) {
+				throw new IllegalArgumentException("Call this.remove* for removing values");
+			}
+
+			if (optionalValue != serializer.isOptional()) {
+				throw new IllegalArgumentException("Optionality of value and serializer don't match. OptValue: " + optionalValue + ", serializer: " + serializer);
+			}
+			else if (optionalValue) {
+				Optional opt = (Optional) value;
+				if (opt.isPresent() && !serializer.getType().isAssignableFrom(opt.get().getClass())) {
+					throw new IllegalArgumentException("Provided serializer for optional is not correct. opt.isPresent=" + opt.isPresent() + ", serializerType=" + serializer.getType() + ", opt.get type=" + opt.get().getClass());
+				}
+			}
+			else if (!serializer.getType().isAssignableFrom(value.getClass())) {
+				throw new IllegalArgumentException("The provided serializer is not for the provided value type! serializer type=" + serializer.getType() + ", value type=" + value.getClass());
+			}
+		}
+
+		final int entityId = viewedEntity.getEntityId();
 		EntityMetaValues viewedValues = entityValues.computeIfAbsent(entityId,
 				integer -> new EntityMetaValues(viewedEntity, new HashMap<>(1)));
 
-		MetadataValueStatus origStatus = viewedValues.indexedValues().computeIfAbsent(index, integer -> new MetadataValueStatus(null));
-		if(value instanceof MetadataBitfieldValue bitfield) {
-			if(origStatus.value == null)
-				origStatus.value = MetadataBitfieldValue.create(new HashMap<>(1));
+		MetadataValueStatus origStatus = viewedValues.indexedValues().computeIfAbsent(index, integer -> new MetadataValueStatus(serializer, null));
+		if (!CompileAsserts.OMIT) {
+			if (!Objects.equals(origStatus.serializer.getType(), serializer.getType())) {
+				Main.logger().severe("Subsequent calls to setViewedValue on player " + this.player.getName() +
+					" for entity " + viewedEntity.getName() + " for index " + index +
+					" provided two different serializers");
 
-			MetadataBitfieldValue origBitfield = (MetadataBitfieldValue) origStatus.value;
-			origBitfield.setBits(bitfield.getValue());
-			origStatus.dirty = true;
+				Thread.dumpStack(); return;
+			}
 		}
-		/*if(value instanceof MetadataBitfieldValue bitfield && origValue instanceof MetadataBitfieldValue origBitfield) {
-			//add the values of the new bitfield, overriding old ones
-			origBitfield.setBits(bitfield.getValue());
-			origStatus.dirty = true;
-		}*/
-		else {
-			//viewedValues.indexedValues().put(index, value);
-			origStatus.setValue(value);
-		}
+		origStatus.setValue(new SimpleMetadataValue(value));
 	}
 
 	public boolean hasMetadataFor(int entityId) {
 		return entityValues.containsKey(entityId);
 	}
 
-	public @Nullable MetadataValue getViewedValue(Entity entity, int index) {
-		return getViewedValue(entity.getEntityId(), index);
+	public MetadataValue getViewedValue(Entity viewedEntity, int index) {
+		MetadataValueStatus status = getValueStatus(viewedEntity.getEntityId(), index);
+		if (status != null) return status.value;
+		else return null;
 	}
 
-	public @Nullable MetadataValue getViewedValue(int entityId, int index) {
+	private @Nullable MetadataValueStatus getValueStatus(int entityId, int index) {
 		EntityMetaValues viewedValues = entityValues.get(entityId);
 		if(viewedValues != null) {
-			MetadataValueStatus status = viewedValues.indexedValues().get(index);
-			if(status != null)
-				return status.value;
+			return viewedValues.indexedValues().get(index);
 		}
 
 		return null;
@@ -131,7 +147,19 @@ public class MetadataViewer
 				integer -> new EntityMetaValues(viewedEntity, new HashMap<>(1)));
 
 		MetadataValueStatus status = viewedValues.indexedValues().computeIfAbsent(index,
-				integer -> new MetadataValueStatus(MetadataBitfieldValue.create(new HashMap<>(1))));
+				integer -> new MetadataValueStatus(
+					MetaIndex.BITFIELD_SERIALIZER, MetadataBitfieldValue.create(new HashMap<>(1))
+				));
+
+		if (!CompileAsserts.OMIT) {
+			if (!Objects.equals(status.serializer.getType(), MetaIndex.BITFIELD_SERIALIZER.getType())) {
+				Main.logger().severe("Call to updateBitfieldValue on player " + this.player.getName() +
+					" for entity " + viewedEntity.getName() + " for index " + index + " but value already existed with " +
+					"non-bitfield serializer");
+
+				Thread.dumpStack(); return;
+			}
+		}
 
 		if(status.value == null) {
 			status.value = MetadataBitfieldValue.create(new HashMap<>(1));
@@ -145,6 +173,9 @@ public class MetadataViewer
 		if(viewedValues != null) {
 			MetadataValueStatus status = viewedValues.indexedValues().get(index);
 			if(status != null) {
+				if (!CompileAsserts.OMIT && !(status.value instanceof MetadataBitfieldValue)) {
+					Thread.dumpStack(); return;
+				}
 				MetadataBitfieldValue bitfield = (MetadataBitfieldValue) status.value;
 				if (bitfield != null) {
 					status.dirty = true;
@@ -164,7 +195,11 @@ public class MetadataViewer
 	}
 
 	public void removeViewedValues(Entity viewedEntity) {
-		entityValues.remove(viewedEntity.getEntityId());
+		// Set all nulldirty so the client is updated before records are removed
+		this.setAllNullDirty(viewedEntity);
+		if (EntityUtils.isTrackingEntity(this.player, viewedEntity))
+			this.refreshViewer(viewedEntity);
+		this.entityValues.remove(viewedEntity.getEntityId());
 	}
 
 	public void removeViewedValue(Entity viewedEntity, int index) {
@@ -179,6 +214,15 @@ public class MetadataViewer
 	public static void removeAllValues(Entity... viewedEntities) {
 		for(PlayerInfo p : Main.getPlayerInfos()) {
 			p.getMetadataViewer().removeViewedValues(viewedEntities);
+		}
+	}
+
+	public void setAllNullDirty(Entity viewedEntity) {
+		EntityMetaValues values = this.entityValues.get(viewedEntity.getEntityId());
+		if (values != null) {
+			values.indexedValues().forEach((integer, metadataValueStatus) -> {
+				metadataValueStatus.setValue(null);
+			});
 		}
 	}
 
@@ -220,7 +264,7 @@ public class MetadataViewer
 					}
 				}
 
-				if(entry.getValue().indexedValues().size() == 0) {
+				if(entry.getValue().indexedValues().isEmpty()) {
 					iter.remove();
 				}
 			}
@@ -230,8 +274,8 @@ public class MetadataViewer
 	/**
 	 * Clean up any null MetadataValue(Statuses) after having refreshed the viewer
 	 */
-	private void removeNulls(int viewerId) {
-		EntityMetaValues values = this.entityValues.get(viewerId);
+	private void removeNulls(int viewedId) {
+		EntityMetaValues values = this.entityValues.get(viewedId);
 		if (values != null) {
 			var iter = values.indexedValues().entrySet().iterator();
 			while (iter.hasNext()) {
@@ -270,22 +314,23 @@ public class MetadataViewer
 			for (Map.Entry<Integer, MetadataValueStatus> entry : meta.indexedValues().entrySet()) {
 
 				WrappedWatchableObject obj = originalData.getWatchableObject(entry.getKey());
-
+				assert CompileAsserts.OMIT || obj != null;
 				MetadataValueStatus status = entry.getValue();
+
 				if(status.dirty) {
 					status.dirty = false;
-					MetadataValue metadataValue = status.value;
 					Object newValue;
-					if (metadataValue instanceof MetadataBitfieldValue bitfield) {
-						newValue = bitfield.combine((Byte) obj.getValue());
+					if (status.value instanceof MetadataBitfieldValue bitfield) {
+						newValue = bitfield.combine((Byte) obj.getValue()); // Override vanilla's bit options
 					}
-					else if (metadataValue != null) {
-						newValue = metadataValue.getValue();
+					else if (status.value != null) {
+						newValue = status.value.getValue();
 					}
 					else { // null and dirty, so need to refresh by setting back to default data
 						newValue = obj.getValue();
 					}
 
+					// Think the serializer is also gotten from the WatchableObject
 					modifiedData.setObject(obj.getWatcherObject(), newValue);
 				}
 			}
@@ -297,7 +342,8 @@ public class MetadataViewer
 		// TODO: band-aid fix
 		//metadataPacket.getWatchableCollectionModifier().write(0, modifiedData.getWatchableObjects());
 		metadataPacket.getDataValueCollectionModifier().write(0,
-				MetaIndex.getFromWatchableObjectsList(modifiedData.getWatchableObjects()));
+				MetaIndex.getFromWatchableObjectsList(modifiedData.getWatchableObjects())
+		);
 		PlayerUtils.sendPacket(this.player, metadataPacket);
 
 		// Clean up non-dirty nulls
@@ -321,23 +367,24 @@ public class MetadataViewer
 
 			final List<WrappedDataValue> packetDataValues = metadataPacket.getDataValueCollectionModifier().read(0);
 			// Our resulting values to be seen by viewer
-			final Map<Integer, WrappedDataValue> valueMap = new HashMap<>((int) (packetDataValues.size() * 1.5));
+			final Map<Integer, WrappedDataValue> valueMap = new HashMap<>(packetDataValues.size() * 2);
 
 			// First copy over any values already included in the packet by Vanilla and replace with custom values
 			// as needed
 			for (WrappedDataValue dataVal : packetDataValues) {
-				MetadataValue value = this.getViewedValue(viewedId, dataVal.getIndex());
-				if (value != null) {
-					//new watcher object to put into packet. Copy the properties of the old obj
-					Object newValue;
-					if (value instanceof MetadataBitfieldValue bitField) {
-						newValue = bitField.combine((Byte) dataVal.getValue());
-					}
-					else {
-						newValue = value.getValue();
-					}
+				MetadataValueStatus status = this.getValueStatus(viewedId, dataVal.getIndex());
+				if (status != null) {
+					status.dirty = false;
+					if (status.value != null) {
+						Object newValue;
+						if (status.value instanceof MetadataBitfieldValue bitField) {
+							newValue = bitField.combine((Byte) dataVal.getValue());
+						} else {
+							newValue = status.value.getValue();
+						}
 
-					valueMap.put(dataVal.getIndex(), MetaIndex.copyWithValue(dataVal, newValue));
+						valueMap.put(dataVal.getIndex(), MetaIndex.copyWithValue(dataVal, newValue));
+					} // else keep the vanilla value
 				}
 				else {
 					valueMap.put(dataVal.getIndex(), dataVal);
@@ -345,22 +392,30 @@ public class MetadataViewer
 			}
 
 			// Then copy over any custom values that are dirty but not included in the packet by Vanilla
-			Map<Integer, MetadataValueStatus> allValues = this.getViewedValues(viewedId);
-			allValues.forEach((index, metadataValueStatus) -> {
-				if(metadataValueStatus.dirty && metadataValueStatus.value != null) {
-					if(!valueMap.containsKey(index)) {
+			Map<Integer, MetadataValueStatus> customValues = this.getViewedValues(viewedId);
+			customValues.forEach((index, metadataValueStatus) -> {
+				if (!valueMap.containsKey(index)) { // Haven't already replaced
+					if(metadataValueStatus.dirty) {
 						metadataValueStatus.dirty = false;
-						Object val = metadataValueStatus.value instanceof MetadataBitfieldValue bitfieldValue ?
-							bitfieldValue.getByte() : metadataValueStatus.value.getValue();
+						if (metadataValueStatus.value != null) {
+							Object val = metadataValueStatus.value instanceof MetadataBitfieldValue bitfieldValue ?
+								bitfieldValue.getByte() : metadataValueStatus.value.getValue();
 
-						WrappedDataWatcher.Serializer serializer = MetaIndex.serializerByIndex(index, val);
-						if (serializer != null)
-							valueMap.put(index, new WrappedDataValue(index, serializer, val));
-						else {
-							Main.logger().warning("adjustMetadataPacket for " + this.player.getName() + " returned null: " +
-								"index=" + index + ", val=" + val);
+							//WrappedDataWatcher.Serializer serializer = MetaIndex.serializerByIndex(index, val);
+							WrappedDataWatcher.Serializer serializer = metadataValueStatus.serializer;
+							if (serializer != null)
+								valueMap.put(index, new WrappedDataValue(index, serializer, val));
+							else {
+								Main.logger().warning("adjustMetadataPacket for " + this.player.getName() + " null serializer: " +
+									"index=" + index + ", val=" + val);
+							}
 						}
 					}
+				}
+				else if (!CompileAsserts.OMIT && metadataValueStatus.dirty) {
+					Main.logger().warning(this.player.getName() + " index " + index +
+						"still dirty for some reason");
+					Thread.dumpStack();
 				}
 			});
 

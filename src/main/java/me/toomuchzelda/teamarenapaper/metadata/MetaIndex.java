@@ -62,8 +62,7 @@ public class MetaIndex
 
 	public static final int ITEM_DISPLAY_ITEM_IDX = 22;
 
-
-	public static final MetadataBitfieldValue GLOWING_METADATA_VALUE = MetadataBitfieldValue.create(Collections.singletonMap(BASE_BITFIELD_GLOWING_IDX, true));
+	public static final WrappedDataWatcher.Serializer BITFIELD_SERIALIZER = WrappedDataWatcher.Registry.get(Byte.class);
 
 	public static final WrappedDataWatcherObject BASE_BITFIELD_OBJ;
 	public static final WrappedDataWatcherObject CUSTOM_NAME_OBJ;
@@ -179,6 +178,7 @@ public class MetaIndex
 	 * @param object An object of the desired type, so that the Serializer may be fetched by ProtocolLib if it
 	 *               has not been cached here.
 	 */
+	@Deprecated
 	public static WrappedDataWatcher.Serializer serializerByIndex(int index, Object object) {
 		WrappedDataWatcher.Serializer serializer;
 		if(object == null) { // Should never run

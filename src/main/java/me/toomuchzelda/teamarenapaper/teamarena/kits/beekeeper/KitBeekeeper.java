@@ -188,16 +188,20 @@ public class KitBeekeeper extends Kit
 					this.name.displayName()).getHandle());
 
 				MetadataViewer viewer = pinfo.getMetadataViewer();
-				viewer.setViewedValue(MetaIndex.BASE_BITFIELD_IDX, MetaIndex.GLOWING_METADATA_VALUE, beeEntity);
+				//viewer.setViewedValue(MetaIndex.BASE_BITFIELD_IDX, MetaIndex.GLOWING_METADATA_VALUE, beeEntity);
+				viewer.updateBitfieldValue(beeEntity, MetaIndex.BASE_BITFIELD_IDX, MetaIndex.BASE_BITFIELD_GLOWING_IDX, true);
 				//viewer.setViewedValue(MetaIndex.CUSTOM_NAME_VISIBLE_IDX, new SimpleMetadataValue<>(Boolean.TRUE), beeEntity);
-				viewer.setViewedValue(MetaIndex.CUSTOM_NAME_IDX, new SimpleMetadataValue<Object>(nameComponent), beeEntity);
+				viewer.setViewedValue(MetaIndex.CUSTOM_NAME_OBJ, nameComponent, beeEntity);
 				viewer.refreshViewer(beeEntity);
 
 				// Make it glowing for all teammates.
 				// Team joins/leaves/changes are handled in teamSwitch(...)
 				for (Player teammate : pinfo.team.getPlayerMembers()) {
-					Main.getPlayerInfo(teammate).getMetadataViewer()
-						.setViewedValue(MetaIndex.BASE_BITFIELD_IDX, MetaIndex.GLOWING_METADATA_VALUE, beeEntity);
+					MetadataViewer teammateViewer = Main.getPlayerInfo(teammate).getMetadataViewer();
+					teammateViewer.updateBitfieldValue(beeEntity,
+						MetaIndex.BASE_BITFIELD_IDX, MetaIndex.BASE_BITFIELD_GLOWING_IDX, true
+					);
+					teammateViewer.refreshViewer(beeEntity);
 				}
 			}
 
@@ -574,8 +578,9 @@ public class KitBeekeeper extends Kit
 				if (newTeam != null && newTeam.getPlayerMembers().contains(entry.getKey())) {
 					for (BeekeeperBee bee : entry.getValue().bees) {
 						if (!bee.isDead()) {
-							metadataViewer.setViewedValue(MetaIndex.BASE_BITFIELD_IDX, MetaIndex.GLOWING_METADATA_VALUE,
-								bee.beeEntity);
+							//metadataViewer.setViewedValue(MetaIndex.BASE_BITFIELD_IDX, MetaIndex.GLOWING_METADATA_VALUE,
+							//	bee.beeEntity);
+							metadataViewer.updateBitfieldValue(bee.beeEntity, MetaIndex.BASE_BITFIELD_IDX, MetaIndex.BASE_BITFIELD_GLOWING_IDX, true);
 							metadataViewer.refreshViewer(bee.beeEntity);
 						}
 					}
