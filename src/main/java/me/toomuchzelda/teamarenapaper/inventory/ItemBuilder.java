@@ -19,6 +19,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -81,7 +82,7 @@ public final class ItemBuilder {
         return lore(Arrays.asList(components));
     }
 
-    public ItemBuilder lore(List<? extends ComponentLike> components) {
+    public ItemBuilder lore(Collection<? extends ComponentLike> components) {
         List<Component> lore = new ArrayList<>(components.size());
         for (ComponentLike componentLike : components) {
 			lore.add(componentLike.asComponent().decorationIfAbsent(TextDecoration.ITALIC, TextDecoration.State.FALSE));
@@ -94,7 +95,7 @@ public final class ItemBuilder {
 		return addLore(Arrays.asList(components));
 	}
 
-	public ItemBuilder addLore(List<? extends ComponentLike> components) {
+	public ItemBuilder addLore(Collection<? extends ComponentLike> components) {
 		List<Component> oldLore = lore(), newLore;
 		if (oldLore != null) {
 			newLore = new ArrayList<>(oldLore.size() + components.size());

@@ -351,9 +351,10 @@ public class PreferencesInventory implements InventoryProvider {
 		}
 
 		@Override
-		public void close(Player player, InventoryCloseEvent.Reason reason) {
+		public boolean close(Player player, InventoryCloseEvent.Reason reason) {
 			if (parent != null && reason == InventoryCloseEvent.Reason.PLAYER)
 				Inventories.openInventory(player, parent);
+			return true;
 		}
 
 		private ClickableItem prefOptionToItem(InventoryAccessor inventory, T option, boolean selected) {

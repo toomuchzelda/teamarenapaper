@@ -262,7 +262,7 @@ public class TicTacToe {
                 .displayName(Component.text("...").color(NamedTextColor.WHITE).decoration(TextDecoration.ITALIC, false)).build();
 
         @Override
-        public void close(Player player, InventoryCloseEvent.Reason reason) {
+        public boolean close(Player player, InventoryCloseEvent.Reason reason) {
             if (game != null) {
                 State winner = game.winner;
                 if (winner == null) {
@@ -276,6 +276,7 @@ public class TicTacToe {
                     player.sendMessage(Component.text("You lost!").color(NamedTextColor.RED));
                 }
             }
+			return true;
         }
 
         ItemStack getItem(State player) {

@@ -2,10 +2,10 @@ package me.toomuchzelda.teamarenapaper.inventory;
 
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
-import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
@@ -15,6 +15,7 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -23,11 +24,13 @@ import java.util.function.Function;
 @ParametersAreNonnullByDefault
 public class TabBar<T> {
 	private T currentTab;
+	private Consumer<T> tabChangeHandler;
 
 	public TabBar(@Nullable T defaultTab) {
 		this.currentTab = defaultTab;
 	}
 
+	@Nullable
 	public T getCurrentTab() {
 		return currentTab;
 	}
@@ -46,20 +49,25 @@ public class TabBar<T> {
 		return false;
 	}
 
-	@Nullable
-	private net.kyori.adventure.sound.Sound clickSound = net.kyori.adventure.sound.Sound.sound(Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.BLOCKS, 0.5f, 1);
+	public TabBar<T> setTabChangeHandler(Consumer<T> tabChangeHandler) {
+		this.tabChangeHandler = tabChangeHandler;
+		return this;
+	}
 
 	@Nullable
-	public net.kyori.adventure.sound.Sound getClickSound() {
+	private Sound clickSound = Sound.sound(org.bukkit.Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.BLOCKS, 0.5f, 1);
+
+	@Nullable
+	public Sound getClickSound() {
 		return clickSound;
 	}
 
-	public TabBar<T> setClickSound(@Nullable net.kyori.adventure.sound.Sound clickSound) {
+	public TabBar<T> setClickSound(@Nullable Sound clickSound) {
 		this.clickSound = clickSound;
 		return this;
 	}
 
-	public TabBar<T> setClickSound(@Nullable Sound clickSound, SoundCategory category, float volume, float pitch) {
+	public TabBar<T> setClickSound(@Nullable org.bukkit.Sound clickSound, SoundCategory category, float volume, float pitch) {
 		this.clickSound = clickSound != null ?
 				net.kyori.adventure.sound.Sound.sound(clickSound, category, volume, pitch) :
 				null;

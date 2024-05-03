@@ -1,23 +1,69 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.filter;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.Style;
+import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.title.Title;
+import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
- * Moved from CommandDebug and adjusted by toomuchzelda, original author jacky8399
+ * Filter kits based on their kit name.
+ * By convention, kit filters are lowercase.
  */
 public class KitFilter {
 
 	private static final Set<String> DEFAULT_BLOCKED_KITS = Set.of("sniper");
+	private static FilterPreset preset;
 	private static Set<String> blockedKits = DEFAULT_BLOCKED_KITS;
 
-	// TODO add presets
-	record FilterPreset(String name, String desc, Set<String> blockedKits) {}
-	private static final List<FilterPreset> PRESETS = List.of();
+	public record FilterPreset(String name, String desc, ItemStack displayItem, boolean allow, Set<String> blockedKits) {
+		public FilterPreset {
+			displayItem = displayItem.clone();
+			blockedKits = Set.copyOf(blockedKits);
+			if (allow && blockedKits.isEmpty()) {
+				throw new IllegalArgumentException("Cannot block all kits");
+			}
+		}
+
+		public FilterPreset(String name, String desc, Material display, boolean allow, Set<String> blockedKits) {
+			this(name, desc, ItemBuilder.of(display)
+				.displayName(Component.text(name, NamedTextColor.BLUE))
+				.lore(TextUtils.wrapString(desc, Style.style(NamedTextColor.GRAY)))
+				.build(), allow, blockedKits);
+		}
+
+		public FilterPreset(String name, String desc, boolean allow, Set<String> blockedKits) {
+			this(name, desc, Material.PAPER, allow, blockedKits);
+		}
+	}
+
+
+	public static final Map<String, FilterPreset> PRESETS = Stream.of(
+			new FilterPreset("Default", "The default Team Arena™ experience", false, DEFAULT_BLOCKED_KITS),
+			// TODO define RWF default here
+			new FilterPreset("Red Warfare Default", "Who used Kit Rewind on SnD??", true, Set.of("trooper")),
+			new FilterPreset("Sniper Duel", "The best FPS player shall prevail", Material.SPYGLASS, true, Set.of("sniper")),
+			new FilterPreset("Ghost Town", "Where'd everyone go?", Material.WHITE_STAINED_GLASS, true, Set.of("ghost")),
+			new FilterPreset("Imposter Game", "There is an imposter... ඞ", true, Set.of("spy")),
+			new FilterPreset("Close-Range Combat", "A battle between true warriors", Material.STONE_SWORD,
+				false, Set.of("burst", "ghost", "engineer", "shortbow", "longbow", "pyro", "sniper")),
+			new FilterPreset("Archer Duel", "Bow-spammers rise!", Material.BOW, true, Set.of("shortbow", "longbow", "pyro"))
+		)
+		.collect(Collectors.toUnmodifiableMap(
+			p -> p.name.toLowerCase(Locale.ENGLISH).replaceAll("\\W", "_"), p -> p
+		));
 
 
 	public static Kit filterKit(Kit kit) {
@@ -33,6 +79,20 @@ public class KitFilter {
 		return !blockedKits.contains(kit.getName().toLowerCase(Locale.ENGLISH));
 	}
 
+	@Nullable
+	public static FilterPreset getPreset() {
+		return preset;
+	}
+
+	public static void setPreset(@NotNull FilterPreset preset) {
+		if (preset.allow) {
+			setAllowed(preset.blockedKits);
+		} else {
+			setBlocked(preset.blockedKits);
+		}
+		KitFilter.preset = preset;
+	}
+
 	public static void setAllowed(Collection<String> allowed) throws IllegalArgumentException {
 		var allowedKits = new HashSet<>(allowed);
 
@@ -45,6 +105,7 @@ public class KitFilter {
 	}
 
 	public static void setBlocked(Collection<String> blocked) throws IllegalArgumentException {
+		preset = null;
 		blockedKits = Set.copyOf(blocked);
 		// For anyone not using an allowed kit, set it to a fallback one.
 		Optional<Kit> fallbackOpt = Main.getGame().getKits().stream()
@@ -69,6 +130,7 @@ public class KitFilter {
 				Component message = null;
 				if (!activeKitAvailable) {
 					message = getActiveKitMessage(fallbackKit);
+					player.showTitle(getActiveKitTitle(fallbackKit));
 				} else if (!kitAvailable) {
 					message = getSelectedKitMessage(fallbackKit);
 				}
@@ -79,6 +141,10 @@ public class KitFilter {
 			blockedKits = DEFAULT_BLOCKED_KITS;
 			throw new IllegalArgumentException("Cannot block all kits");
 		}
+	}
+
+	public static Set<String> getBlockedKits() {
+		return blockedKits;
 	}
 
 	public static void allowKit(String kitName) {
@@ -103,6 +169,17 @@ public class KitFilter {
 		return Component.textOfChildren(
 			Component.text("The kit you are using has been disabled by an admin.\nYou are now using ", NamedTextColor.YELLOW),
 			newKit.getDisplayName()
+		);
+	}
+
+	public static Title getActiveKitTitle(Kit newKit) {
+		return Title.title(
+			Component.text("Kit updated", NamedTextColor.GOLD),
+			Component.textOfChildren(
+				Component.text("You are now using ", NamedTextColor.YELLOW),
+				newKit.getDisplayName().decorate(TextDecoration.UNDERLINED)
+			),
+			Title.DEFAULT_TIMES
 		);
 	}
 

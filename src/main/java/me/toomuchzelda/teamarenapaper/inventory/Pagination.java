@@ -74,7 +74,14 @@ public class Pagination {
 		}
 
 		var iter = emptySlots.iterator();
-		pageItems.forEach(item -> inventory.set(iter.next(), itemFunction.apply(item)));
+		for (T item : pageItems) {
+			inventory.set(iter.next(), itemFunction.apply(item));
+		}
+		if (overrideFilledSlots) {
+			while (iter.hasNext()) {
+				inventory.set(iter.next(), (ItemStack) null);
+			}
+		}
 		return List.copyOf(emptySlots.subList(pageItems.size(), emptySlots.size()));
 	}
 

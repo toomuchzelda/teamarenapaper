@@ -186,8 +186,9 @@ public class KitInventory implements InventoryProvider {
 	}
 
 	@Override
-	public void close(Player player, InventoryCloseEvent.Reason reason) {
+	public boolean close(Player player, InventoryCloseEvent.Reason reason) {
 		Main.getGame().setToRespawn(player);
+		return true;
 	}
 
 	protected static final ItemStack ALL_TAB_ITEM = ItemBuilder.of(Material.BOOK)

@@ -27,7 +27,16 @@ public interface InventoryProvider {
     default void update(Player player, InventoryAccessor inventory) {}
 
     // Called when the inventory is closed
-    default void close(Player player, InventoryCloseEvent.Reason reason) {}
+
+	/**
+	 * Close the inventory
+	 * @param player The player
+	 * @param reason The reason
+	 * @return True if the inventory can be closed, false if the inventory should be reopened if possible.
+	 */
+    default boolean close(Player player, InventoryCloseEvent.Reason reason) {
+		return true;
+	}
 
     interface InventoryAccessor {
         void set(int slot, @Nullable ItemStack stack, @Nullable Consumer<InventoryClickEvent> eventHandler);

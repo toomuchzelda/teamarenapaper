@@ -7,7 +7,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.inventory.KitControlInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitFilter;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
-import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
@@ -18,7 +17,7 @@ import java.util.*;
 
 public class CommandKitControl extends CustomCommand {
 	public CommandKitControl() {
-		super("kitcontrol", "Configure kits", "/kitcontrol <allow|block|option>", PermissionLevel.MOD);
+		super("kitcontrol", "Configure kits", "/kitcontrol ...", PermissionLevel.MOD);
 	}
 
 	@Override
@@ -33,16 +32,16 @@ public class CommandKitControl extends CustomCommand {
 			Inventories.openInventory(player, new KitControlInventory());
 		} else if (args[0].equalsIgnoreCase("option")) {
 			if (args.length != 2)
-				throw throwUsage("Provide option name");
+				throw throwUsage("/kitcontrol option <option>");
 
 			if (KitOptions.toggleOption(args[1])) {
 				sender.sendMessage(Component.text("Toggled option", NamedTextColor.BLUE));
 			} else {
-				sender.sendMessage(Component.text("Option doesn't exist", TextColors.ERROR_RED));
+				throw new IllegalArgumentException("Option doesn't exist");
 			}
 		} else if (args[0].equalsIgnoreCase("block") || args[0].equalsIgnoreCase("allow")) {
 			if (args.length < 2)
-				throw throwUsage("List the kits to block/allow");
+				throw throwUsage("/kitcontrol " + args[0] + " <kit1> [kit2 [kit3...]]");
 
 			boolean block = args[0].equalsIgnoreCase("block");
 			Set<String> kitNames;
@@ -67,6 +66,13 @@ public class CommandKitControl extends CustomCommand {
 			} catch (IllegalArgumentException ex) {
 				throw new CommandException("Cannot block all kits! Reset to all kits allowed");
 			}
+		} else if (args[0].equalsIgnoreCase("preset")) {
+			if (args.length < 2)
+				throw throwUsage("/kitcontrol preset <preset>");
+			KitFilter.FilterPreset preset = KitFilter.PRESETS.get(args[1]);
+			if (preset == null)
+				throw new IllegalArgumentException("Preset " + args[1] + " doesn't exist");
+			KitFilter.setPreset(preset);
 		}
 	}
 
@@ -82,9 +88,13 @@ public class CommandKitControl extends CustomCommand {
 				List<String> kitNames = new ArrayList<>(kits.size());
 				kits.forEach(kit -> kitNames.add(kit.getName().toLowerCase(Locale.ENGLISH)));
 				return kitNames;
+			} else if (args[0].equalsIgnoreCase("preset")) {
+				if (args.length == 2) {
+					return KitFilter.PRESETS.keySet();
+				}
 			}
 		} else {
-			return List.of("allow", "block", "clear", "option", "gui");
+			return List.of("allow", "block", "clear", "option", "gui", "preset");
 		}
 
 		return List.of();

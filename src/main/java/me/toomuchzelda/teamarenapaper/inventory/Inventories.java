@@ -105,6 +105,7 @@ public final class Inventories implements Listener {
         Inventory inv = Bukkit.createInventory(player, size, title);
         InventoryData data = new InventoryData(inv, provider);
         Inventory oldInv = playerInventories.put(player, inv);
+		boolean canOpen = true;
         if (oldInv != null) {
             InventoryData old = pluginInventories.remove(oldInv);
             // clean up old inventory
@@ -113,16 +114,24 @@ public final class Inventories implements Listener {
             }
             if (old != null) {
                 try {
-                    old.provider.close(player, InventoryCloseEvent.Reason.OPEN_NEW);
+                    canOpen = old.provider.close(player, InventoryCloseEvent.Reason.OPEN_NEW);
+					if (!canOpen) {
+						pluginInventories.put(oldInv, old);
+						playerInventories.put(player, oldInv);
+						data.provider.init(player, data);
+						Bukkit.getScheduler().runTask(Main.getPlugin(), () -> player.openInventory(oldInv));
+					}
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    new RuntimeException("Closing GUI " + old.provider + " for " + player.getName(), e).printStackTrace();
                 }
             }
         }
-        pluginInventories.put(inv, data);
-        provider.init(player, data);
-        // just to be safe
-        Bukkit.getScheduler().runTask(Main.getPlugin(), () -> player.openInventory(inv));
+		if (canOpen) {
+			pluginInventories.put(inv, data);
+			provider.init(player, data);
+			// just to be safe
+			Bukkit.getScheduler().runTask(Main.getPlugin(), () -> player.openInventory(inv));
+		}
     }
 
     public static void closeInventory(Player player) {
@@ -214,9 +223,18 @@ public final class Inventories implements Listener {
             if (debug)
                 Main.logger().info("[GUI] Closed GUI has provider " + data.provider);
             try {
-                data.provider.close(player, e.getReason());
+				var reason = e.getReason();
+                if (!data.provider.close(player, reason)) {
+					if (reason == InventoryCloseEvent.Reason.TELEPORT || reason == InventoryCloseEvent.Reason.PLAYER) {
+						// safe to reopen
+						playerInventories.put(player, e.getInventory());
+						pluginInventories.put(e.getInventory(), data);
+						data.provider.init(player, data);
+						Bukkit.getScheduler().runTask(Main.getPlugin(), () -> player.openInventory(e.getInventory()));
+					}
+				}
             } catch (Exception ex) {
-                ex.printStackTrace();
+                new RuntimeException("Closing GUI " + data + " for player " + player, ex).printStackTrace();
             }
         }
     }
