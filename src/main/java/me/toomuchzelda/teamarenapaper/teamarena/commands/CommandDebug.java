@@ -50,6 +50,7 @@ public class CommandDebug extends CustomCommand {
 
 	// TODO temporary feature
 	public static boolean ignoreWinConditions;
+	public static boolean disableMiniMapInCaseSomethingTerribleHappens;
 
 	public CommandDebug() {
 		super("debug", "", "/debug ...", PermissionLevel.OWNER, "abuse");
@@ -252,52 +253,58 @@ public class CommandDebug extends CustomCommand {
 		}
 	}
 
-	private void doDrawCommand(String[] args) {
-		if (args.length < 4)
-			throw throwUsage("/debug draw clear/<text/area> <x> <z> ...");
-
-		int x = Integer.parseInt(args[2]), z = Integer.parseInt(args[3]);
-		if ("text".equalsIgnoreCase(args[1])) {
-			if (args.length < 5)
-				throw throwUsage("/debug draw text <x> <z> <text>");
-
-			// white by default
-			String text = "§34;" + MAP_COLOR.matcher(
-					String.join(" ", Arrays.copyOfRange(args, 4, args.length))
-							.replace('&', ChatColor.COLOR_CHAR)
-			).replaceAll(result -> {
-				int hex = Integer.parseInt(result.group(1), 16);
-				//noinspection deprecation
-				return "§" + MapPalette.matchColor(new java.awt.Color(hex)) + ";";
-			});
-			canvasOperations.add((viewer, ignored, canvas, renderer) ->
-					canvas.drawText((renderer.convertX(x) + 128) / 2, (renderer.convertZ(z) + 128) / 2,
-							MinecraftFont.Font, text));
-		} else if ("area".equalsIgnoreCase(args[1])) {
-			if (args.length < 7)
-				throw throwUsage("/debug draw area <x> <z> <x2> <z2> <color>");
-			int x2 = Integer.parseInt(args[4]), z2 = Integer.parseInt(args[5]);
-			byte color;
-			Matcher matcher = MAP_COLOR.matcher(args[6]);
-			if (matcher.matches()) {
-				int hex = Integer.parseInt(matcher.group(1), 16);
-				//noinspection deprecation
-				color = MapPalette.matchColor(new java.awt.Color(hex));
-			} else {
-				color = Byte.parseByte(args[6]);
-			}
-			int minX = Math.min(x, x2), maxX = Math.max(x, x2), minY = Math.min(z, z2), maxY = Math.max(z, z2);
-			canvasOperations.add((viewer, ignored, canvas, renderer) -> {
-				int startX = (renderer.convertX(minX) + 128) / 2, endX = (renderer.convertX(maxX) + 128) / 2;
-				int startY = (renderer.convertZ(minY) + 128) / 2, endY = (renderer.convertZ(maxY) + 128) / 2;
-				for (int i = startX; i < endX; i++)
-					for (int j = startY; j < endY; j++)
-						canvas.setPixel(i, j, color);
-			});
-		} else if ("clear".equalsIgnoreCase(args[1])) {
+	private void doDrawCommand(CommandSender sender, String[] args) {
+		if (args.length < 2)
+			throw throwUsage("/debug draw clear/disable/invalidate");
+		if ("clear".equalsIgnoreCase(args[1])) {
 			canvasOperations.clear();
-		} else if ("invalidatebase".equalsIgnoreCase(args[1])) {
+		} else if ("invalidate".equalsIgnoreCase(args[1])) {
 			((MiniMapManager.GameMapRenderer) Main.getGame().miniMap.view.getRenderers().get(0)).hasDrawn = false;
+		} else if ("disable".equalsIgnoreCase(args[1])) {
+			disableMiniMapInCaseSomethingTerribleHappens = !disableMiniMapInCaseSomethingTerribleHappens;
+			sender.sendMessage(Component.text("Minimap is now " + (disableMiniMapInCaseSomethingTerribleHappens ? "disabled" : "enabled")));
+		} else {
+			if (args.length < 4)
+				throw throwUsage("/debug draw clear/disable/<text/area> <x> <z> ...");
+			int x = Integer.parseInt(args[2]), z = Integer.parseInt(args[3]);
+			if ("text".equalsIgnoreCase(args[1])) {
+				if (args.length < 5)
+					throw throwUsage("/debug draw text <x> <z> <text>");
+
+				// white by default
+				String text = "§34;" + MAP_COLOR.matcher(
+					String.join(" ", Arrays.copyOfRange(args, 4, args.length))
+						.replace('&', ChatColor.COLOR_CHAR)
+				).replaceAll(result -> {
+					int hex = Integer.parseInt(result.group(1), 16);
+					//noinspection deprecation
+					return "§" + MapPalette.matchColor(new java.awt.Color(hex)) + ";";
+				});
+				canvasOperations.add((viewer, ignored, canvas, renderer) ->
+					canvas.drawText((renderer.convertX(x) + 128) / 2, (renderer.convertZ(z) + 128) / 2,
+						MinecraftFont.Font, text));
+			} else if ("area".equalsIgnoreCase(args[1])) {
+				if (args.length < 7)
+					throw throwUsage("/debug draw area <x> <z> <x2> <z2> <color>");
+				int x2 = Integer.parseInt(args[4]), z2 = Integer.parseInt(args[5]);
+				byte color;
+				Matcher matcher = MAP_COLOR.matcher(args[6]);
+				if (matcher.matches()) {
+					int hex = Integer.parseInt(matcher.group(1), 16);
+					//noinspection deprecation
+					color = MapPalette.matchColor(new java.awt.Color(hex));
+				} else {
+					color = Byte.parseByte(args[6]);
+				}
+				int minX = Math.min(x, x2), maxX = Math.max(x, x2), minY = Math.min(z, z2), maxY = Math.max(z, z2);
+				canvasOperations.add((viewer, ignored, canvas, renderer) -> {
+					int startX = (renderer.convertX(minX) + 128) / 2, endX = (renderer.convertX(maxX) + 128) / 2;
+					int startY = (renderer.convertZ(minY) + 128) / 2, endY = (renderer.convertZ(maxY) + 128) / 2;
+					for (int i = startX; i < endX; i++)
+						for (int j = startY; j < endY; j++)
+							canvas.setPixel(i, j, color);
+				});
+			}
 		}
 		if (!Main.getGame().miniMap.hasCanvasOperation(operationExecutor)) {
 			Main.getGame().miniMap.registerCanvasOperation(operationExecutor);
@@ -479,7 +486,7 @@ public class CommandDebug extends CustomCommand {
 						.map(team -> team.getSimpleName().replace(' ', '_'))
 						.toList();
 				case "setkit" -> Main.getGame().getTabKitList();
-				case "draw" -> Arrays.asList("text", "area", "clear", "invalidatebase");
+				case "draw" -> Arrays.asList("text", "area", "clear", "invalidate", "disable");
 				case "graffititest" -> CosmeticsManager.getLoadedCosmetics(CosmeticType.GRAFFITI).stream().map(NamespacedKey::toString).toList();
 				case "respawn" -> Bukkit.getOnlinePlayers().stream().map(Player::getName).toList();
 				default -> Collections.emptyList();

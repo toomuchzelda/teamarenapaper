@@ -6,6 +6,7 @@ import com.google.common.collect.Multiset;
 import com.google.common.collect.Multisets;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
@@ -24,6 +25,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.craftbukkit.v1_19_R3.CraftWorld;
+import org.bukkit.craftbukkit.v1_19_R3.map.CraftMapView;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.MapMeta;
@@ -34,8 +36,11 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
@@ -84,9 +89,13 @@ public class MiniMapManager {
 
     final List<CanvasOperation> canvasOperations = new ArrayList<>();
 
+	private static MapView sharedView;
     public MiniMapManager(TeamArena game) {
+		if (sharedView == null) {
+			sharedView = Bukkit.createMap(Bukkit.getWorlds().get(0));
+		}
         // create map view and adjust center and scale
-        view = Bukkit.createMap(game.gameWorld);
+        view = sharedView;
         BoundingBox box = game.border;
         centerX = Location.locToBlock(box.getCenterX());
         centerZ = Location.locToBlock(box.getCenterZ());
@@ -112,10 +121,23 @@ public class MiniMapManager {
 		mapDataFile.deleteOnExit();
 
         // our renderers
-		view.removeRenderer(view.getRenderers().get(0));
+		view.getRenderers().forEach(view::removeRenderer);
+		if (CommandDebug.disableMiniMapInCaseSomethingTerribleHappens) // don't add our renderers when disabled
+			return;
 		view.addRenderer(new GameMapRenderer(scale, mapWidth, centerX, centerZ));
         view.addRenderer(new GameRenderer());
     }
+
+	private static final VarHandle renderCacheVarHandle;
+
+	static {
+		try {
+			var lookup = MethodHandles.privateLookupIn(CraftMapView.class, MethodHandles.lookup());
+			renderCacheVarHandle = lookup.findVarHandle(CraftMapView.class, "renderCache", Map.class);
+		} catch (Exception ex) {
+			throw new AssertionError("Couldn't find CraftMapView.renderCache", ex);
+		}
+	}
 
     public void onGameEnd() {
     }
@@ -126,7 +148,13 @@ public class MiniMapManager {
 		canvasOperations.clear();
 		// properly release the renderers, or get nasty memory leaks
 		view.getRenderers().forEach(view::removeRenderer);
-    }
+		// bukkit moment
+		((Map<?, ?>) renderCacheVarHandle.get(view)).clear();
+	}
+
+	public void onPlayerCleanup(Player player) {
+		((Map<?, ?>) renderCacheVarHandle.get(view)).remove(player);
+	}
 
     @NotNull
     public ItemStack getMapItem() {
@@ -256,7 +284,7 @@ public class MiniMapManager {
 			hasDrawn = true;
 
 			var box = Main.getGame().border;
-			var bukkitWorld = player.getWorld();
+			var bukkitWorld = Main.getGame().getWorld();
 			int minY = Math.max((int) box.getMinY(), bukkitWorld.getMinHeight());
 			int maxY = Math.min((int) box.getMaxY(), bukkitWorld.getMaxHeight());
 

@@ -13,7 +13,9 @@ import me.toomuchzelda.teamarenapaper.teamarena.announcer.ChatAnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingListeners;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingOutlineManager;
-import me.toomuchzelda.teamarenapaper.teamarena.commands.*;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandCallvote;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandTeamChat;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.GraffitiManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
@@ -32,7 +34,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.KitDemolitions;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.engineer.KitEngineer;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.explosive.KitExplosive;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitFilter;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.medic.KitMedic;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.rewind.KitRewind;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.trigger.KitTrigger;
@@ -1893,6 +1894,7 @@ public abstract class TeamArena
 		pinfo.team.removeMembers(player);
 
 		StatusBarManager.hideStatusBar(player, pinfo);
+		miniMap.onPlayerCleanup(player);
 
 		players.remove(player);
 		spectators.remove(player);
