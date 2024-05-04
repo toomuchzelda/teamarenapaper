@@ -536,14 +536,11 @@ public abstract class TeamArena
 					team.removeAllMembers();
 				}*/
 
-				//maybe band-aid, needed to set gamestate now for setSpectator() to work
-				setGameState(GameState.PREGAME);
-				for (Player p : Bukkit.getOnlinePlayers()) {
-					if (isSpectator(p))
-						setSpectator(p, false, false);
-					else
-						noTeamTeam.addMembers(p);
+				if (gameState == GameState.GAME_STARTING) {
+					Bukkit.getOnlinePlayers().forEach(player -> player.setAllowFlight(true));
 				}
+
+				setGameState(GameState.PREGAME);
 				showTeamColours = false;
 
 				//announce game cancelled
@@ -1516,14 +1513,16 @@ public abstract class TeamArena
 				//player.showTitle(Title.title(Component.empty(), text));
 				player.sendMessage(text);
 			} else {
-				//EntityDamageEvent event = new EntityDamageEvent(player, EntityDamageEvent.DamageCause.VOID, 9999d);
-				//DamageEvent dEvent = DamageEvent.createFromBukkitEvent(event, DamageType.SUICIDE);
-				this.processDamageEvent(DamageEvent.newDamageEvent(player, 99999d, DamageType.SPECTATE, null, false));
+				if (gameState == GameState.LIVE) {
+					//EntityDamageEvent event = new EntityDamageEvent(player, EntityDamageEvent.DamageCause.VOID, 9999d);
+					//DamageEvent dEvent = DamageEvent.createFromBukkitEvent(event, DamageType.SUICIDE);
+					this.processDamageEvent(DamageEvent.newDamageEvent(player, 99999d, DamageType.SPECTATE, null, false));
 
-				if(isRespawningGame()) {
-					respawnTimers.remove(player); //if respawning game remove them from respawn queue
+					if (isRespawningGame()) {
+						respawnTimers.remove(player); //if respawning game remove them from respawn queue
+					}
+					makeSpectator(player);
 				}
-				makeSpectator(player);
 
 				if(shame) {
 					Component text = player.displayName().append(Component.text(" has joined the spectators", NamedTextColor.GRAY));

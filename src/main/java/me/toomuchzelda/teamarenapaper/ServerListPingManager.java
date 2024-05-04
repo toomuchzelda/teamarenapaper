@@ -31,8 +31,8 @@ public class ServerListPingManager
 		.append(Component.text("SnD", SearchAndDestroy.GAME_NAME.color()))
 		.append(MOTD_SEPARATOR)
 		.append(Component.text("CtF", CaptureTheFlag.GAME_NAME.color()))
-		.append(MOTD_SEPARATOR)
-		.append(Component.text("KoTH", KingOfTheHill.GAME_NAME.color()))
+		//.append(MOTD_SEPARATOR)
+		//.append(Component.text("KoTH", KingOfTheHill.GAME_NAME.color()))
 		.append(Component.text("]"))
 		.build();
 

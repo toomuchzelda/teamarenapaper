@@ -467,6 +467,7 @@ public class SearchAndDestroy extends TeamArena
 		if (this.poisonTimeLeft <= 0) {
 			if (!isPoison) {
 				this.isPoison = true;
+				this.poisonVictims = new ArrayList<>(this.getPlayers());
 				Bukkit.broadcast(POISON_NOW_MESSAGE);
 				PlayerUtils.sendOptionalTitle(Component.empty(), POISON_NOW_TITLE, 0, 30, 30);
 
@@ -526,13 +527,8 @@ public class SearchAndDestroy extends TeamArena
 		}
 
 		if (isPoison && !CommandDebug.ignoreWinConditions) {
-			if (currentTick % 3 == 0) {
-				int idx;
-				if (poisonVictims == null)
-					idx = 0;
-				else
-					idx = ++poisonRingIndex % poisonVictims.size();
-
+			if (currentTick % 4 == 0) {
+				int idx = ++poisonRingIndex % poisonVictims.size();
 				if (idx == 0) {
 					//increase lightning damage on every cycle
 					poisonDamage += 0.75d;
