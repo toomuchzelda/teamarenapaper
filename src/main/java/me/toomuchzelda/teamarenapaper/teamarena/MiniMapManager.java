@@ -129,11 +129,15 @@ public class MiniMapManager {
     }
 
 	private static final VarHandle renderCacheVarHandle;
+	private static final VarHandle canvasesVarHandle;
 
 	static {
 		try {
 			var lookup = MethodHandles.privateLookupIn(CraftMapView.class, MethodHandles.lookup());
 			renderCacheVarHandle = lookup.findVarHandle(CraftMapView.class, "renderCache", Map.class);
+
+			canvasesVarHandle = MethodHandles.privateLookupIn(CraftMapView.class, MethodHandles.lookup())
+				.findVarHandle(CraftMapView.class, "canvases", Map.class);
 		} catch (Exception ex) {
 			throw new AssertionError("Couldn't find CraftMapView.renderCache", ex);
 		}
@@ -153,7 +157,17 @@ public class MiniMapManager {
 	}
 
 	public void onPlayerCleanup(Player player) {
-		((Map<?, ?>) renderCacheVarHandle.get(view)).remove(player);
+		// Defer because the impl. re-adds it right after this
+		Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
+			((Map<?, ?>) renderCacheVarHandle.get(view)).remove(player);
+
+			for (MapRenderer renderer : view.getRenderers()) {
+				Map canvases = (Map) canvasesVarHandle.get(view);
+				Map renderMap = (Map) canvases.get(renderer);
+				if (renderMap != null)
+					renderMap.remove(player);
+			}
+		}, 0L);
 	}
 
     @NotNull

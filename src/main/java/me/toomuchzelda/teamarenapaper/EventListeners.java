@@ -22,10 +22,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingListeners;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowManager;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.DetailedProjectileHitEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.DigAndBuild;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
@@ -1009,6 +1006,10 @@ public class EventListeners implements Listener
 	public void entityRemoveFromWorld(EntityRemoveFromWorldEvent event) {
 		if (event.getEntity() instanceof AbstractArrow arrow && !avoidCME) {
 			ArrowManager.remove(arrow);
+		}
+
+		if (event.getEntity() instanceof LivingEntity living) {
+			DamageTimes.remove(living);
 		}
 	}
 

@@ -250,7 +250,7 @@ public class TeamArenaMap
 			}
 			//just run with koth not available
 			catch (Exception e) {
-				Main.logger().warning("Error when parsing Koth config for " + worldFolder.getName());
+				Main.logger().warning("Error when parsing Koth config for " + worldFolder.getName() + ": " + e);
 				kothInfo = null;
 			}
 		}
@@ -286,7 +286,7 @@ public class TeamArenaMap
 				ctfInfo = new CTFInfo(capsToWin, teamFlags);
 			}
 			catch (Exception e) {
-				Main.logger().warning("Error when parsing CTF config for " + worldFolder.getName());
+				Main.logger().warning("Error when parsing CTF config for " + worldFolder.getName() + ": " + e);
 			}
 		}
 		this.ctfInfo = ctfInfo;
@@ -327,7 +327,7 @@ public class TeamArenaMap
 				sndInfo = new SNDInfo(randomBases, teamBombs);
 			}
 			catch (Exception e) {
-				Main.logger().warning("Error when parsing SND config for " + worldFolder.getName());
+				Main.logger().warning("Error when parsing SND config for " + worldFolder.getName() + ": " + e);
 			}
 		}
 		this.sndInfo = sndInfo;
@@ -473,7 +473,7 @@ public class TeamArenaMap
 				dnbInfo = new DNBInfo(middle, oreType, tools, blocks, noBuildZones, statusOres, teamInfo);
 			}
 			catch (Exception e) {
-				Main.logger().warning("Error when parsing DNB config for " + worldFolder.getName());
+				Main.logger().warning("Error when parsing DNB config for " + worldFolder.getName() + ": " + e);
 			}
 		}
 		this.dnbInfo = dnbInfo;

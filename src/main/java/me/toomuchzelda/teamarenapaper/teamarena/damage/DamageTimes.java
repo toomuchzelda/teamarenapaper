@@ -92,6 +92,10 @@ public class DamageTimes {
 		ENTITY_DAMAGE_TIMES.clear();
 	}
 
+	public static void remove(LivingEntity living) {
+		ENTITY_DAMAGE_TIMES.remove(living);
+	}
+
 	public static Iterator<Map.Entry<LivingEntity, DamageTime[]>> getIterator() {
 		return ENTITY_DAMAGE_TIMES.entrySet().iterator();
 	}

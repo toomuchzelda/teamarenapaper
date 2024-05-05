@@ -110,7 +110,7 @@ public class CommandDebug extends CustomCommand {
 			}
 			case "draw" -> {
 				auditEvent(sender, "miniMapDraw", (Object[]) Arrays.copyOfRange(args, 1, args.length));
-				doDrawCommand(args);
+				doDrawCommand(sender, args);
 			}
 			case "votetest" -> CommandCallvote.instance.createVote(null, sender.name(),
 					Component.text("Next player to ban?"),
