@@ -549,12 +549,14 @@ public class SearchAndDestroy extends TeamArena
 	@Override
 	public void handleDeath(DamageEvent event) {
 		// Fuse kills
-		if (event.getFinalAttacker() instanceof LivingEntity killer && event.getDamageType().is(DamageType.MELEE) &&
+		if (event.getFinalAttacker() instanceof LivingEntity killer &&
+			event.getVictim() instanceof Player playerVictim &&
+			event.getDamageType().is(DamageType.MELEE) &&
 			event.getMeleeWeapon().getType() == BASE_FUSE.getType()) {
 
 			event.setDamageType(FUSE_KILL);
 
-			AnnouncerManager.playSound(event.getPlayerVictim(), AnnouncerSound.CHAT_MY_GOD);
+			AnnouncerManager.playSound(playerVictim, AnnouncerSound.CHAT_MY_GOD);
 			if (killer instanceof Player playerKiller)
 				AnnouncerManager.playSound(playerKiller, AnnouncerSound.CHAT_DISGRACEFUL);
 		}

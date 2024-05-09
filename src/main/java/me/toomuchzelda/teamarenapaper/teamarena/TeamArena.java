@@ -483,7 +483,7 @@ public abstract class TeamArena
 	}
 
 	public void tick() {
-		gameTick++;
+		//gameTick++;
 
 		if(gameState.isPreGame())
 		{
@@ -697,7 +697,11 @@ public abstract class TeamArena
 			DamageEvent event = iter.next();
 			iter.remove();
 
-			processDamageEvent(event);
+			try {
+				processDamageEvent(event);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
@@ -784,14 +788,9 @@ public abstract class TeamArena
 			event.setCancelled(true);
 			//don't bother passing it to event handlers?
 			return;
-
 		}
+
 		final Entity finalAttacker = event.getFinalAttacker();
-		if (finalAttacker != null && isDead(finalAttacker)) { // Similarly for an attacker
-			event.setCancelled(true);
-			return;
-		}
-
 		if(this.killStreakManager.isCrateFirework(finalAttacker)) {
 			event.setCancelled(true);
 			return;
@@ -1067,7 +1066,7 @@ public abstract class TeamArena
 				.build();
 	}
 
-	public void regenTick() {
+	private void regenTick() {
 		if(gameTick % 60 == 0) {
 			Iterator<Map.Entry<Player, PlayerInfo>> iter = Main.getPlayersIter();
 			while(iter.hasNext()) {
@@ -2298,5 +2297,9 @@ public abstract class TeamArena
 
 	public static int getGameTick() {
 		return gameTick;
+	}
+
+	public static void incrementGameTick() {
+		gameTick++;
 	}
 }

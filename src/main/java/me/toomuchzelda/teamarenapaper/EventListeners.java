@@ -93,6 +93,7 @@ public class EventListeners implements Listener
 				Entry<Player, PlayerInfo> entry = pinfoIter.next();
 
 				if(!entry.getKey().isOnline()) {
+					Main.logger().warning("PlayerInfo entry wasn't cleaned up by PlayerQuit");
 					pinfoIter.remove();
 				}
 				else {
@@ -157,6 +158,8 @@ public class EventListeners implements Listener
 		else if(count == 10) {
 			FakeHitboxManager.cleanUp();
 		}
+
+		TeamArena.incrementGameTick();
 
 		PacketListeners.cancelDamageSounds = true;
 	}

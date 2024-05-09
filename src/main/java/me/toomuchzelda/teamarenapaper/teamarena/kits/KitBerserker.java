@@ -81,13 +81,12 @@ public class KitBerserker extends Kit {
 		private static final double KB_LOSS_STEPS = 6d;
 		private static final double HEAL_LOSS_STEPS = 9d;
 
-		private static final Component BOSSBAR_TITLE = Component.text("Rage!!!", NamedTextColor.DARK_RED)
-			.append(getHealRateComp(100));
+		private static final Component BOSSBAR_TITLE = Component.text("Rage!!!", NamedTextColor.DARK_RED);
 		private final Map<Player, BossBar> bossBars = new HashMap<>(Bukkit.getMaxPlayers());
 
 		@Override
 		public void giveAbility(Player player) {
-			BossBar bar = BossBar.bossBar(BOSSBAR_TITLE, 0f, BossBar.Color.RED, BossBar.Overlay.NOTCHED_6);
+			BossBar bar = BossBar.bossBar(BOSSBAR_TITLE.append(getHealRateComp(100)), 0f, BossBar.Color.RED, BossBar.Overlay.NOTCHED_6);
 			player.showBossBar(bar);
 			bossBars.put(player, bar);
 		}

@@ -48,6 +48,9 @@ public final class Main extends JavaPlugin
 		componentLogger = this.getComponentLogger();
 		logger.info("Starting TMA");
 
+		int availableThreads = Runtime.getRuntime().availableProcessors();
+		logger.info(availableThreads + " CPU threads available.");
+
 		SpigotConfig.logNamedDeaths = false;
 		SpigotConfig.logVillagerDeaths = false;
 

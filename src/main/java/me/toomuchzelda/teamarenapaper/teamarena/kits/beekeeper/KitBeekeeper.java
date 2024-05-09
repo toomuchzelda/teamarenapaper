@@ -7,12 +7,12 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
-import me.toomuchzelda.teamarenapaper.metadata.SimpleMetadataValue;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageNumbers;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
@@ -428,6 +428,13 @@ public class KitBeekeeper extends Kit
 					!Main.getGame().canAttack(pair.owner(), playerAttacker)) {
 
 					event.setCancelled(true);
+				}
+				// Direct melee with weapon type insta-kills bee
+				else if (event.getDamageType().is(DamageType.MELEE) &&
+					(!(event.getFinalAttacker() instanceof LivingEntity) ||
+					DamageNumbers.getMaterialBaseDamage(event.getMeleeWeapon().getType()) > 1d)) {
+
+					event.setFinalDamage(1984d);
 				}
 			}
 		}

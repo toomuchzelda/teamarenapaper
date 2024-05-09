@@ -94,7 +94,7 @@ public class KitValkyrie extends Kit {
 		super("Valkyrie", "A tanky melee kit that excels in group combat. " +
 						"It can easily destroy large groups of enemies with its Cleave ability and Gravity bomb! " +
 						"As a reward for your hard work, you gain Regeneration for every kill!",
-				Material.DIAMOND_AXE);
+				Material.GOLDEN_AXE);
 
 		setArmor(new ItemStack(Material.IRON_HELMET), new ItemStack(Material.DIAMOND_CHESTPLATE),
 				new ItemStack(Material.CHAINMAIL_LEGGINGS), new ItemStack(Material.IRON_BOOTS));

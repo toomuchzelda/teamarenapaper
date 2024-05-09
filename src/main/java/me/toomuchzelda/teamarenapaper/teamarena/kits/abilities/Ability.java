@@ -57,11 +57,13 @@ public abstract class Ability {
 
 	/**
 	 * when the user *attempts* to attack another entity
+	 * Note user may be dead.
 	 */
 	public void onAttemptedAttack(DamageEvent event) {}
 
 	/**
 	 * when the user successfully deals damage to another entity
+	 * Note user may be dead.
 	 */
 	public void onDealtAttack(DamageEvent event) {}
 
