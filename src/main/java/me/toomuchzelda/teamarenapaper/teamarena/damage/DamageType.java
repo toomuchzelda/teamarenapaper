@@ -124,7 +124,8 @@ public class DamageType {
 
     public static final DamageType SUFFOCATION = new DamageType("Suffocation", "%Killed% choked on block").setNoKnockback();
 
-    public static final DamageType SUICIDE = new DamageType("Suicide", "%Killed% died").setInstantDeath().setNoKnockback();
+    public static final DamageType SUICIDE = new DamageType("Suicide", "%Killed% died")
+		.setInstantDeath().setNoKnockback().setIgnoreRate();
 
 	public static final DamageType SPECTATE = new DamageType("Suicide", "%Killed% died").setInstantDeath().setNoKnockback();
 
@@ -132,7 +133,8 @@ public class DamageType {
             "%Killed% saw T_0_E_D's face and died", "%Killed% caught a whiff " +
             "of their own body odour", "%Killed% thought Mineplex was better than Red Warfare", "%Killed% kicked a stray " +
             "cat and thought it was funny", "%Killed% had negative social credit score", "%Killed% played " +
-            "russian roulette, and lost", "%Killed% lost against themselves in a 1v1").setInstantDeath().setNoKnockback();
+            "russian roulette, and lost", "%Killed% lost against themselves in a 1v1")
+		.setInstantDeath().setNoKnockback().setIgnoreRate();
 
     public static final DamageType SWEEP_ATTACK = new DamageType("Sweep Attack", "%Killed% was killed by %Killer%'s sweeping attack")
             .setMelee();
@@ -213,9 +215,10 @@ public class DamageType {
 			.setExplosion().setIgnoreRate();
 
 	public static final DamageType TRIGGER_UNSTABLE_SELF_KILL = new DamageType("Trigger Instability", "%Killed% went emotionally unstable and blew up")
-			.setInstantDeath();
+			.setInstantDeath().setIgnoreRate();
 
-	public static final DamageType TRIGGER_BOOM_SELF = new DamageType("Trigger self-destruct", "%Killed% blew themselves up").setInstantDeath();
+	public static final DamageType TRIGGER_BOOM_SELF = new DamageType("Trigger self-destruct", "%Killed% blew themselves up")
+		.setInstantDeath().setIgnoreRate();
 
 	public static final DamageType TRIGGER_BOOM = new DamageType("Trigger BOOM", "%Killed% was caught in %Killer%'s explosion of madness")
 			.setExplosion().setIgnoreRate();
