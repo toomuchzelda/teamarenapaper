@@ -141,10 +141,10 @@ public class KitSniper extends Kit {
 					//Grenade Particles when it is thrown
 					//In Motion
 					if (!grenade.isOnGround()) {
-						world.spawnParticle(Particle.REDSTONE, grenade.getLocation(), 1, particleOptions);
+						world.spawnParticle(Particle.DUST, grenade.getLocation(), 1, particleOptions);
 					} else {
 						//On the ground
-						world.spawnParticle(Particle.REDSTONE, grenade.getLocation(),
+						world.spawnParticle(Particle.DUST, grenade.getLocation(),
 								2, 0.5, 0.5,0.5, particleOptions);
 					}
 					if (timer <= 0) {

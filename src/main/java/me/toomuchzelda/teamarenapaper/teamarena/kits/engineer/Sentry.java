@@ -281,7 +281,7 @@ public class Sentry extends EntityBuilding implements PreviewableBuilding {
 		Vector inc = direction.multiply(0.5);
 		for (int i = 0; i < 6; i++) {
 			sentryLoc.add(inc);
-			sentry.getWorld().spawnParticle(Particle.REDSTONE, sentryLoc, 1, 0, 0, 0, data);
+			sentry.getWorld().spawnParticle(Particle.DUST, sentryLoc, 1, 0, 0, 0, data);
 		}
 	}
 

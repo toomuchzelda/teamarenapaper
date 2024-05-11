@@ -178,7 +178,7 @@ public class LifeOre
 
 	public void playHealEffect() {
 		final World world = this.midLoc.getWorld();
-		world.spawnParticle(Particle.VILLAGER_HAPPY, this.midLoc, HEAL_PARTICLE_COUNT, HEAL_PARTICLE_DIST, HEAL_PARTICLE_DIST, HEAL_PARTICLE_DIST);
+		world.spawnParticle(Particle.HAPPY_VILLAGER, this.midLoc, HEAL_PARTICLE_COUNT, HEAL_PARTICLE_DIST, HEAL_PARTICLE_DIST, HEAL_PARTICLE_DIST);
 
 		// Sounds
 		world.playSound(this.midLoc, Sound.BLOCK_ANVIL_USE, SoundCategory.BLOCKS, 1f, 2f);

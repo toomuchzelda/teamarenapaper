@@ -9,7 +9,7 @@ import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.minecraft.world.item.enchantment.ProtectionEnchantment;
 import org.bukkit.*;
-import org.bukkit.craftbukkit.v1_20_R3.entity.CraftLivingEntity;
+import org.bukkit.craftbukkit.entity.CraftLivingEntity;
 import org.bukkit.entity.*;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;

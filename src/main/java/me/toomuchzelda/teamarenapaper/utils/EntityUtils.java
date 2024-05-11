@@ -19,11 +19,11 @@ import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
-import org.bukkit.craftbukkit.v1_20_R3.CraftEquipmentSlot;
-import org.bukkit.craftbukkit.v1_20_R3.CraftWorld;
-import org.bukkit.craftbukkit.v1_20_R3.entity.*;
-import org.bukkit.craftbukkit.v1_20_R3.inventory.CraftItemStack;
-import org.bukkit.craftbukkit.v1_20_R3.util.CraftVector;
+import org.bukkit.craftbukkit.CraftEquipmentSlot;
+import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.entity.*;
+import org.bukkit.craftbukkit.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.util.CraftVector;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
@@ -260,7 +260,7 @@ public class EntityUtils {
 		friendlyByteBuf.writeByte(newPitch);
 		friendlyByteBuf.writeBoolean(onGround);
 
-		return new ClientboundTeleportEntityPacket(friendlyByteBuf);
+		return ClientboundTeleportEntityPacket.STREAM_CODEC.decode(friendlyByteBuf);
 	}
 
 	public static Packet<?> createMovePacket(int id, Location location, double xDelta, double yDelta, double zDelta,
@@ -279,7 +279,7 @@ public class EntityUtils {
 			friendlyByteBuf.writeByte(newPitch);
 			friendlyByteBuf.writeBoolean(onGround);
 
-			return new ClientboundTeleportEntityPacket(friendlyByteBuf);
+			return ClientboundTeleportEntityPacket.STREAM_CODEC.decode(friendlyByteBuf);
 		} else {
 			short deltaX = (short) (xDelta * 4096d);
 			short deltaY = (short) (yDelta * 4096d);

@@ -18,7 +18,7 @@ import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.data.BlockData;
-import org.bukkit.craftbukkit.v1_20_R3.block.data.CraftBlockData;
+import org.bukkit.craftbukkit.block.data.CraftBlockData;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;

@@ -307,7 +307,7 @@ public class ItemUtils {
 				.build();
 		}
 		return ItemBuilder.from(stack.clone())
-				.enchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1)
+				.enchant(Enchantment.PROTECTION, 1)
 				.hide(ItemFlag.HIDE_ENCHANTS)
 				.build();
 	}

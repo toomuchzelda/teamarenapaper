@@ -21,8 +21,8 @@ public class KitArcher extends Kit {
 
 		ItemStack bow = new ItemStack(Material.BOW);
 		ItemMeta bowMeta = bow.getItemMeta();
-		bowMeta.addEnchant(Enchantment.ARROW_DAMAGE, 2, false);
-		bowMeta.addEnchant(Enchantment.ARROW_INFINITE, 1, false);
+		bowMeta.addEnchant(Enchantment.POWER, 2, false);
+		bowMeta.addEnchant(Enchantment.INFINITY, 1, false);
 		bow.setItemMeta(bowMeta);
 
 		ItemStack sword = new ItemStack(Material.WOODEN_SWORD);

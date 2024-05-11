@@ -12,14 +12,14 @@ import org.bukkit.entity.Player;
 public class ParticleUtils {
 	public static void colouredRedstone(Location location, Color colour, double brightness, float size) {
 		Particle.DustOptions options = new Particle.DustOptions(colour, size);
-		location.getWorld().spawnParticle(Particle.REDSTONE, location.getX(), location.getY(), location.getZ(), 1, 0, 0, 0,
+		location.getWorld().spawnParticle(Particle.DUST, location.getX(), location.getY(), location.getZ(), 1, 0, 0, 0,
 				brightness, options);
 	}
 
 	public static void colouredRedstone(Location location, int count, double offX, double offY, double offZ, Color colour,
 										double brightness, float size) {
 		Particle.DustOptions options = new Particle.DustOptions(colour, size);
-		location.getWorld().spawnParticle(Particle.REDSTONE, location,
+		location.getWorld().spawnParticle(Particle.DUST, location,
 			count,
 			offX, offY, offZ,
 			brightness, options);

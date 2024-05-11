@@ -18,8 +18,8 @@ import net.minecraft.world.entity.Pose;
 import net.minecraft.world.phys.AABB;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.craftbukkit.v1_20_R3.CraftWorld;
-import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
+import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityPoseChangeEvent;
@@ -395,6 +395,7 @@ public class FakeHitbox
 		PacketContainer[] newPackets = null;
 		for (WrappedDataValue dataValue : packet.getDataValueCollectionModifier().read(0)) {
 			if (dataValue.getIndex() == MetaIndex.POSE_IDX) { //if the metadata has pose
+				//Pose pose = (Pose) dataValue.getValue();
 				newPackets = new PacketContainer[4];
 				List<WrappedDataValue> hitboxValueList = List.of(dataValue);
 				for(int i = 0; i < 4; i++) {

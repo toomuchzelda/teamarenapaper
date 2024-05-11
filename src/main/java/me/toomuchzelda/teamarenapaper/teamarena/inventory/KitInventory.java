@@ -95,7 +95,7 @@ public class KitInventory implements InventoryProvider {
 				.hide(ItemFlag.values())
 				.meta(meta -> {
 					if (selected) {
-						meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
+						meta.addEnchant(Enchantment.PROTECTION, 1, true);
 					}
 				})
 				.build(),

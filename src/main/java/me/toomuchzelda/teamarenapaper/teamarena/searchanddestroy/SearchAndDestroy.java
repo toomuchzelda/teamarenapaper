@@ -513,7 +513,7 @@ public class SearchAndDestroy extends TeamArena
 		}
 		else if (this.poisonTimeLeft < POISON_ANNOUNCEMENT || isPoison) {
 			if (currentTick % (10 * 20) == 0) {
-				Firework firework = (Firework) gameWorld.spawnEntity(this.spawnPos.clone().add(0, 1, 0), EntityType.FIREWORK);
+				Firework firework = (Firework) gameWorld.spawnEntity(this.spawnPos.clone().add(0, 1, 0), EntityType.FIREWORK_ROCKET);
 				FireworkMeta meta = firework.getFireworkMeta();
 				meta.setPower(3);
 				meta.clearEffects();
@@ -589,7 +589,7 @@ public class SearchAndDestroy extends TeamArena
 		ItemMeta fuseMeta = fuse.getItemMeta();
 
 		//we are storing the actual level in the unbreaking enchantment which should be hidden
-		fuseMeta.addEnchant(Enchantment.DURABILITY, levels, true);
+		fuseMeta.addEnchant(Enchantment.UNBREAKING, levels, true);
 
 		List<Component> lore = fuseMeta.lore();
 		Component enchantLore = getFuseEnchantLore(levels);
@@ -607,7 +607,7 @@ public class SearchAndDestroy extends TeamArena
 
 	public int getFuseEnchantmentLevel(ItemStack fuse) {
 		if(fuse.getType() == BASE_FUSE.getType())
-			return fuse.getEnchantmentLevel(Enchantment.DURABILITY);
+			return fuse.getEnchantmentLevel(Enchantment.UNBREAKING);
 		else
 			return 0;
 	}
@@ -629,7 +629,7 @@ public class SearchAndDestroy extends TeamArena
 		}
 
 		List<Component> lore = fuseMeta.lore();
-		if(fuseMeta.hasEnchant(Enchantment.DURABILITY)) { //had bomb tech enchantment
+		if(fuseMeta.hasEnchant(Enchantment.UNBREAKING)) { //had bomb tech enchantment
 			if(level == 0) {
 				lore.remove(0);
 			}
@@ -643,10 +643,10 @@ public class SearchAndDestroy extends TeamArena
 
 		// Add the enchantment.
 		if(level == 0) {
-			fuseMeta.removeEnchant(Enchantment.DURABILITY);
+			fuseMeta.removeEnchant(Enchantment.UNBREAKING);
 		}
 		else if (level > 0) {
-			fuseMeta.addEnchant(Enchantment.DURABILITY, level, true);
+			fuseMeta.addEnchant(Enchantment.UNBREAKING, level, true);
 		}
 
 		fuseMeta.addItemFlags(ItemFlag.HIDE_ENCHANTS);

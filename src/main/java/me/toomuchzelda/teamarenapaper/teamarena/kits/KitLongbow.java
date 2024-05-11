@@ -19,14 +19,14 @@ public class KitLongbow extends Kit {
 
 		ItemStack bow = new ItemStack(Material.BOW);
 		ItemMeta bowMeta = bow.getItemMeta();
-		bowMeta.addEnchant(Enchantment.ARROW_KNOCKBACK, 2, false);
-		bowMeta.addEnchant(Enchantment.ARROW_INFINITE, 1, false);
+		bowMeta.addEnchant(Enchantment.PUNCH, 2, false);
+		bowMeta.addEnchant(Enchantment.INFINITY, 1, false);
 		bow.setItemMeta(bowMeta);
 
 		ItemStack sword = new ItemStack(Material.STONE_SWORD);
 
 		ItemStack[] items = new ItemStack[]{sword, bow, new ItemStack(Material.ARROW, 64),
-			ItemBuilder.of(Material.CROSSBOW).enchant(Enchantment.PIERCING, 1).enchant(Enchantment.ARROW_INFINITE, 1)
+			ItemBuilder.of(Material.CROSSBOW).enchant(Enchantment.PIERCING, 1).enchant(Enchantment.INFINITY, 1)
 				.build()
 		};
 		setItems(items);

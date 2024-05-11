@@ -45,7 +45,7 @@ public class KitNinja extends Kit
 
 		ItemStack boots = new ItemStack(Material.CHAINMAIL_BOOTS);
 		ItemMeta bootsMeta = boots.getItemMeta();
-		bootsMeta.addEnchant(Enchantment.PROTECTION_FALL, 2, true);
+		bootsMeta.addEnchant(Enchantment.FEATHER_FALLING, 2, true);
 		boots.setItemMeta(bootsMeta);
 
 		this.setArmor(new ItemStack(Material.IRON_HELMET), new ItemStack(Material.IRON_CHESTPLATE),

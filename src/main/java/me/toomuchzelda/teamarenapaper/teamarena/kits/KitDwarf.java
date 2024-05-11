@@ -165,15 +165,15 @@ public class KitDwarf extends Kit
 				ItemMeta meta = item.getItemMeta();
 				if (ItemUtils.isArmor(item)) {
 					if (enchantLevels == 0)
-						meta.removeEnchant(Enchantment.PROTECTION_ENVIRONMENTAL);
+						meta.removeEnchant(Enchantment.PROTECTION);
 					else if (enchantLevels <= MAX_PROTECTION)
-						meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, enchantLevels, true);
+						meta.addEnchant(Enchantment.PROTECTION, enchantLevels, true);
 				}
 				else if (ItemUtils.isSword(item)) {
 					if (enchantLevels == 0)
-						meta.removeEnchant(Enchantment.DAMAGE_ALL);
+						meta.removeEnchant(Enchantment.SHARPNESS);
 					else
-						meta.addEnchant(Enchantment.DAMAGE_ALL, enchantLevels, true);
+						meta.addEnchant(Enchantment.SHARPNESS, enchantLevels, true);
 				}
 				item.setItemMeta(meta);
 			}

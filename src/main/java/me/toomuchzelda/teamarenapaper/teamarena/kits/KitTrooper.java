@@ -31,7 +31,7 @@ public class KitTrooper extends Kit {
 
         ItemStack sword = new ItemStack(Material.IRON_SWORD);
         ItemMeta swordMeta = sword.getItemMeta();
-        swordMeta.addEnchant(Enchantment.DAMAGE_ALL, 1, false);
+        swordMeta.addEnchant(Enchantment.SHARPNESS, 1, false);
         sword.setItemMeta(swordMeta);
 
         ItemStack gapples = new ItemStack(Material.GOLDEN_APPLE);

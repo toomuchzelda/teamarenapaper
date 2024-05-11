@@ -50,7 +50,7 @@ public class KitGhost extends Kit
 
 		ItemStack sword = new ItemStack(Material.GOLDEN_SWORD);
 		ItemMeta swordMeta = sword.getItemMeta();
-		swordMeta.addEnchant(Enchantment.DAMAGE_ALL, 1, true);
+		swordMeta.addEnchant(Enchantment.SHARPNESS, 1, true);
 		sword.setItemMeta(swordMeta);
 
 		ItemStack pearls = new ItemStack(Material.ENDER_PEARL);

@@ -158,7 +158,7 @@ public class KitControlInventory extends KitInventory {
 				.hideAll()
 				.meta(meta -> {
 					if (allowed) {
-						meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1, true);
+						meta.addEnchant(Enchantment.PROTECTION, 1, true);
 					}
 				})
 				.build(),
