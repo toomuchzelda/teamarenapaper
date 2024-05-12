@@ -95,7 +95,7 @@ public enum KitCategory {
 		public static final ItemStack HEALER_BANNER = ItemBuilder.of(Material.WHITE_BANNER)
 				// blatant violation of the Geneva Conventions
 				.meta(BannerMeta.class, bannerMeta -> bannerMeta.setPatterns(Arrays.asList(
-						new Pattern(DyeColor.WHITE, PatternType.HALF_HORIZONTAL_MIRROR),
+						new Pattern(DyeColor.WHITE, PatternType.HALF_HORIZONTAL_BOTTOM),
 						new Pattern(DyeColor.WHITE, PatternType.HALF_HORIZONTAL),
 						new Pattern(DyeColor.RED, PatternType.STRAIGHT_CROSS),
 						new Pattern(DyeColor.WHITE, PatternType.STRIPE_TOP),
@@ -106,7 +106,7 @@ public enum KitCategory {
 				.build();
 		public static final ItemStack HEALER_BANNER_INVERTED = ItemBuilder.of(Material.RED_BANNER)
 				.meta(BannerMeta.class, bannerMeta -> bannerMeta.setPatterns(Arrays.asList(
-						new Pattern(DyeColor.RED, PatternType.HALF_HORIZONTAL_MIRROR),
+						new Pattern(DyeColor.RED, PatternType.HALF_HORIZONTAL_BOTTOM),
 						new Pattern(DyeColor.RED, PatternType.HALF_HORIZONTAL),
 						new Pattern(DyeColor.WHITE, PatternType.STRAIGHT_CROSS),
 						new Pattern(DyeColor.RED, PatternType.STRIPE_TOP),

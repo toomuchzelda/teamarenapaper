@@ -131,7 +131,7 @@ public class DamageNumbers
 	}
 
 	public static double getEnchantmentDamage(Enchantment enchantment, int levels, LivingEntity victim) {
-		return (double) enchantment.getDamageIncrease(levels, victim.getCategory());
+		return (double) enchantment.getDamageIncrease(levels, victim.getType());
 	}
 
 	public static double getBaseDefensePoints(Material mat) {

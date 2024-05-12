@@ -289,7 +289,7 @@ public class CommandDebug extends CustomCommand {
 						.replace('&', ChatColor.COLOR_CHAR)
 				).replaceAll(result -> {
 					int hex = Integer.parseInt(result.group(1), 16);
-					//noinspection deprecation
+					//noinspection removal
 					return "§" + MapPalette.matchColor(new java.awt.Color(hex)) + ";";
 				});
 				canvasOperations.add((viewer, ignored, canvas, renderer) ->
@@ -303,7 +303,7 @@ public class CommandDebug extends CustomCommand {
 				Matcher matcher = MAP_COLOR.matcher(args[6]);
 				if (matcher.matches()) {
 					int hex = Integer.parseInt(matcher.group(1), 16);
-					//noinspection deprecation
+					//noinspection removal
 					color = MapPalette.matchColor(new java.awt.Color(hex));
 				} else {
 					color = Byte.parseByte(args[6]);
