@@ -45,6 +45,8 @@ import java.util.List;
 import java.util.WeakHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author jacky8399
@@ -57,9 +59,13 @@ public final class Inventories implements Listener {
 	private static final WeakHashMap<Player, ManagedSign> managedSigns = new WeakHashMap<>();
     public static Inventories INSTANCE = new Inventories();
 
+	private static Logger logger;
+
     public static boolean debug = false;
 
     private Inventories() {
+		logger = Main.logger();
+
         Bukkit.getScheduler().runTaskTimer(Main.getPlugin(), Inventories::tick, 1, 1);
 
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(Main.getPlugin(), PacketType.Play.Client.UPDATE_SIGN) {
@@ -123,8 +129,8 @@ public final class Inventories implements Listener {
 						data.provider.init(player, data);
 						Bukkit.getScheduler().runTask(Main.getPlugin(), () -> player.openInventory(oldInv));
 					}
-                } catch (Exception e) {
-                    new RuntimeException("Closing GUI " + old.provider + " for " + player.getName(), e).printStackTrace();
+                } catch (Exception ex) {
+					logger.log(Level.WARNING, "Closing GUI " + old.provider + " for " + player.getName(), ex);
                 }
             }
         }
@@ -210,7 +216,7 @@ public final class Inventories implements Listener {
         }
 		ManagedSign managedSign = managedSigns.remove(e.getPlayer());
 		if (managedSign != null) {
-			Main.logger().info("Player quit before sending sign edit packet");
+			logger.warning("Player " + e.getPlayer().getName() + " quit before sending sign edit packet");
 			managedSign.future.complete("");
 		}
     }
@@ -240,7 +246,7 @@ public final class Inventories implements Listener {
 					}
 				}
             } catch (Exception ex) {
-                new RuntimeException("Closing GUI " + data + " for player " + player, ex).printStackTrace();
+				logger.log(Level.WARNING, "Closing GUI " + data + " for player " + player.getName(), ex);
             }
         }
     }
@@ -272,9 +278,9 @@ public final class Inventories implements Listener {
             try {
                 eventHandler.accept(e);
             } catch (Exception ex) {
-                new RuntimeException("Handling slot %d %s click (%s) for %s in %s".formatted(
+                logger.log(Level.WARNING, "Handling slot %d %s click (%s) for %s in %s".formatted(
 					e.getSlot(), e.getClick(), e.getAction(), e.getWhoClicked().getName(), data.provider
-				)).printStackTrace();
+				), ex);
             }
         }
     }
