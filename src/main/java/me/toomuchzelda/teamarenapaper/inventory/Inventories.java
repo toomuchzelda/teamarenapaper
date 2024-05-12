@@ -39,10 +39,7 @@ import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.WeakHashMap;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.logging.Level;
@@ -163,8 +160,9 @@ public final class Inventories implements Listener {
 
 		var future = new CompletableFuture<String>();
 		World world = player.getWorld();
-		Location signLocation = player.getLocation().toBlockLocation();
-		signLocation.setY(world.getMinHeight());
+		Location playerLocation = player.getLocation();
+		// needs to be within player interactable range
+		Location signLocation = playerLocation.subtract(playerLocation.getDirection().multiply(3)).toBlockLocation();
 
 		BlockState originalState = world.getBlockState(signLocation);
 
@@ -176,12 +174,10 @@ public final class Inventories implements Listener {
 
 		List<Component> wrapped = TextUtils.wrapString(defaultValue, Style.empty(), 80);
 		net.minecraft.network.chat.Component[] lines = new net.minecraft.network.chat.Component[4];
+		Arrays.fill(lines, net.minecraft.network.chat.Component.empty());
 		for (int i = 0; i < Math.min(wrapped.size(), 2); i++) {
 			//fakeSign.setMessage(i, PaperAdventure.asVanilla(wrapped.get(i)));
 			lines[i] = PaperAdventure.asVanilla(wrapped.get(i));
-		}
-		if (lines[1] == null) {
-			lines[1] = net.minecraft.network.chat.Component.empty();
 		}
 		lines[2] = PaperAdventure.asVanilla(Component.text("^^^^^^^^^^^^^^^"));
 		lines[3] = PaperAdventure.asVanilla(message);

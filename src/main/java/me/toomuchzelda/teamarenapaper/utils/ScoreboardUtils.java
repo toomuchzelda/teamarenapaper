@@ -4,19 +4,15 @@ import io.papermc.paper.adventure.PaperAdventure;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.numbers.BlankFormat;
 import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientboundSetDisplayObjectivePacket;
-import net.minecraft.network.protocol.game.ClientboundSetObjectivePacket;
-import net.minecraft.network.protocol.game.ClientboundSetPlayerTeamPacket;
-import net.minecraft.network.protocol.game.ClientboundSetScorePacket;
-import net.minecraft.server.ServerScoreboard;
+import net.minecraft.network.protocol.game.*;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 import org.bukkit.craftbukkit.v1_20_R3.entity.CraftEntity;
 import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_20_R3.scoreboard.CraftScoreboardTranslations;
-import org.bukkit.entity.Display;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.jetbrains.annotations.Nullable;
@@ -146,11 +142,9 @@ public class ScoreboardUtils {
 	}
 
 	public static void sendSetScorePacket(Player player, boolean remove, String objective, String entry, int score) {
-		//var packet = new ClientboundSetScorePacket(
-		//		remove ? ServerScoreboard.Method.REMOVE : ServerScoreboard.Method.CHANGE,
-		//		objective, entry, score);
-
-		ClientboundSetScorePacket packet = new ClientboundSetScorePacket(entry, objective, score, net.minecraft.network.chat.Component.score(entry, objective), null);
+		Packet<?> packet = remove ?
+			new ClientboundResetScorePacket(entry, objective) :
+			new ClientboundSetScorePacket(entry, objective, score, null, BlankFormat.INSTANCE);
 		sendPacket(player, packet);
 	}
 }

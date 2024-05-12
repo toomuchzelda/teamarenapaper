@@ -340,11 +340,17 @@ public class KitDemolitions extends Kit
 
 				// update depleted items
 				nextRegen.forEach((type, secs) -> {
-					int slot = inventory.first(type.itemDepleted.getType());
-					int qty = secs + 1;
-					ItemStack old = inventory.getItem(slot);
-					if (slot != -1 && (old == null || old.getAmount() != qty))
-						inventory.setItem(slot, type.itemDepleted.asQuantity(secs + 1));
+					int quantity = secs + 1;
+					if (cursorItem.getType() == type.itemDepleted.getType()) {
+						if (cursorItem.getAmount() != quantity)
+							player.setItemOnCursor(type.itemDepleted.asQuantity(quantity));
+					} else {
+						int slot = inventory.first(type.itemDepleted.getType());
+						if (slot == -1) return;
+						ItemStack old = inventory.getItem(slot);
+						if (old == null || old.getAmount() != quantity)
+							inventory.setItem(slot, type.itemDepleted.asQuantity(quantity));
+					}
 				});
 
 				return regeneratingMines.isEmpty();
