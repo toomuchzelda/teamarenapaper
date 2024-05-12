@@ -54,11 +54,11 @@ public class MetaIndex
 
 	public static final int GUARDIAN_TARGET_IDX = 17;
 
-	public static final int DISPLAY_TRANSLATION_IDX = 10;
-	public static final int DISPLAY_SCALE_IDX = 11;
-	public static final int DISPLAY_BILLBOARD_IDX = 14;
+	public static final int DISPLAY_TRANSLATION_IDX = 11;
+	public static final int DISPLAY_SCALE_IDX = 12;
+	public static final int DISPLAY_BILLBOARD_IDX = 15;
 
-	public static final int ITEM_DISPLAY_ITEM_IDX = 22;
+	public static final int ITEM_DISPLAY_ITEM_IDX = 23;
 
 	public static final WrappedDataWatcher.Serializer BITFIELD_SERIALIZER = WrappedDataWatcher.Registry.get(Byte.class);
 

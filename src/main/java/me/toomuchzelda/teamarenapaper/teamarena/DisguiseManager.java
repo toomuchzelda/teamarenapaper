@@ -8,8 +8,8 @@ import me.toomuchzelda.teamarenapaper.Main;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 
 import java.util.*;
@@ -187,10 +187,11 @@ public class DisguiseManager
 			disguisedInfoModifier.write(1, Collections.singletonList(fakePlayerUpdate));
 			addDisguisedPlayerInfoPacket = fakeInfoPacket;*/
 
-			spawnDisguisedPlayerPacket = new PacketContainer(PacketType.Play.Server.NAMED_ENTITY_SPAWN);
+			spawnDisguisedPlayerPacket = new PacketContainer(PacketType.Play.Server.SPAWN_ENTITY);
 			StructureModifier<Object> modifier = spawnDisguisedPlayerPacket.getModifier();
 			modifier.write(0, disguisedPlayer.getEntityId());
 			modifier.write(1, disguisedPlayer.getUniqueId());
+			spawnDisguisedPlayerPacket.getEntityTypeModifier().write(0, EntityType.PLAYER);
 
 			//ServerPlayer nmsPlayer = ((CraftPlayer) disguisedPlayer).getHandle();
 			ClientboundPlayerInfoRemovePacket removeInfoPacket =
@@ -238,18 +239,6 @@ public class DisguiseManager
 			StructureModifier<Object> modifier5 = addTabListPlayerInfoPacket.getModifier();
 			modifier5.write(0, ClientboundPlayerInfoPacket.Action.ADD_PLAYER);
 			modifier5.write(1, Collections.singletonList(realPlayerUpdate));*/
-		}
-
-		public PacketContainer getSpawnDisguisedPlayerPacket() {
-			StructureModifier<Object> modifier = spawnDisguisedPlayerPacket.getModifier();
-			Location loc = disguisedPlayer.getLocation();
-			modifier.write(2, loc.getX());
-			modifier.write(3, loc.getY());
-			modifier.write(4, loc.getZ());
-			modifier.write(5, (byte) loc.getYaw());
-			modifier.write(6, (byte) loc.getPitch());
-
-			return spawnDisguisedPlayerPacket;
 		}
 	}
 }

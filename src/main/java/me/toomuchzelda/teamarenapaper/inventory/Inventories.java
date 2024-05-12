@@ -180,7 +180,9 @@ public final class Inventories implements Listener {
 			//fakeSign.setMessage(i, PaperAdventure.asVanilla(wrapped.get(i)));
 			lines[i] = PaperAdventure.asVanilla(wrapped.get(i));
 		}
-
+		if (lines[1] == null) {
+			lines[1] = net.minecraft.network.chat.Component.empty();
+		}
 		lines[2] = PaperAdventure.asVanilla(Component.text("^^^^^^^^^^^^^^^"));
 		lines[3] = PaperAdventure.asVanilla(message);
 
