@@ -19,11 +19,11 @@ import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
-import org.bukkit.craftbukkit.v1_19_R3.CraftEquipmentSlot;
-import org.bukkit.craftbukkit.v1_19_R3.CraftWorld;
-import org.bukkit.craftbukkit.v1_19_R3.entity.*;
-import org.bukkit.craftbukkit.v1_19_R3.inventory.CraftItemStack;
-import org.bukkit.craftbukkit.v1_19_R3.util.CraftVector;
+import org.bukkit.craftbukkit.v1_20_R3.CraftEquipmentSlot;
+import org.bukkit.craftbukkit.v1_20_R3.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R3.entity.*;
+import org.bukkit.craftbukkit.v1_20_R3.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.v1_20_R3.util.CraftVector;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
@@ -87,7 +87,7 @@ public class EntityUtils {
 		final Vec3 vel = nmsProj.getDeltaMovement();
 		final Vec3 nextPos = position.add(vel);
 
-		BlockHitResult blockHitResult = nmsProj.level.clip(new ClipContext(position, nextPos, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, nmsProj));
+		BlockHitResult blockHitResult = nmsProj.level().clip(new ClipContext(position, nextPos, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, nmsProj));
 		if (blockHitResult.getType() != HitResult.Type.MISS) {
 			return blockHitResult;
 		}
@@ -379,7 +379,7 @@ public class EntityUtils {
 	public static boolean isOnGround(Player player) {
 		var nmsPlayer = ((CraftPlayer) player).getHandle();
 		var boundingBox = nmsPlayer.getBoundingBox().move(0, -0.1, 0);
-		return !nmsPlayer.level.noCollision(nmsPlayer, boundingBox);
+		return !nmsPlayer.level().noCollision(nmsPlayer, boundingBox);
 	}
 
 	// For debugging only

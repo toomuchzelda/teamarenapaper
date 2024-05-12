@@ -38,8 +38,6 @@ public class MetaIndex
 	public static final int ABSTRACT_ARROW_PIERCING_LEVEL_IDX = 9;
 
 	public static final int ABSTRACT_ARROW_BITFIELD_CRIT_IDX = 0;
-	public static final byte ABSTRACT_ARROW_BITFIELD_CRIT_MASK = 0x01;
-	public static final byte ABSTRACT_ARROW_BITFIELD_NOCLIP_MASK = 0x02;
 	public static final int ABSTRACT_ARROW_BITFIELD_FROM_CROSSBOW_IDX = 2;
 	public static final byte ABSTRACT_ARROW_BITFIELD_FROM_CROSSBOW_MASK = 0x04;
 

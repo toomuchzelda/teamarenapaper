@@ -20,12 +20,12 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.material.FluidState;
-import net.minecraft.world.level.material.MaterialColor;
+import net.minecraft.world.level.material.MapColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.craftbukkit.v1_19_R3.CraftWorld;
-import org.bukkit.craftbukkit.v1_19_R3.map.CraftMapView;
+import org.bukkit.craftbukkit.v1_20_R3.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R3.map.CraftMapView;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.MapMeta;
@@ -310,7 +310,7 @@ public class MiniMapManager {
 			int minZ = (int) Math.floor(box.getMinZ());
 			int maxZ = (int) Math.ceil(box.getMaxZ());
 
-			Multiset<MaterialColor> multiset = LinkedHashMultiset.create();
+			Multiset<MapColor> multiset = LinkedHashMultiset.create();
 
 			for (int mapX = 0; mapX < 128; ++mapX) {
 				double d0 = 0.0D;
@@ -355,7 +355,7 @@ public class MiniMapManager {
 									--blockY;
 									pos.set(chunkPos.getMinBlockX() + i + chunkBlockX, blockY, chunkPos.getMinBlockZ() + j + chunkBlockZ);
 									blockState = chunk.getBlockState(pos);
-								} while (blockState.getMapColor(world, pos) == MaterialColor.NONE && blockY > minY);
+								} while (blockState.getMapColor(world, pos) == MapColor.NONE && blockY > minY);
 
 								if (blockY > minY && !blockState.getFluidState().isEmpty()) {
 									int l4 = blockY - 1;
@@ -382,30 +382,30 @@ public class MiniMapManager {
 					}
 
 					k3 /= blocksPerPixel * blocksPerPixel;
-					MaterialColor materialColor = Iterables.getFirst(Multisets.copyHighestCountFirst(multiset), MaterialColor.NONE);
+					MapColor materialColor = Iterables.getFirst(Multisets.copyHighestCountFirst(multiset), MapColor.NONE);
 					double d2;
-					MaterialColor.Brightness brightness;
+					MapColor.Brightness brightness;
 
 					if (isOutsideBorder) {
-						brightness = MaterialColor.Brightness.LOWEST; // dark pixels to indicate that it is outside the playable area
+						brightness = MapColor.Brightness.LOWEST; // dark pixels to indicate that it is outside the playable area
 					} else {
-						if (materialColor == MaterialColor.WATER) {
+						if (materialColor == MapColor.WATER) {
 							d2 = (double) k3 * 0.1D + (double) (mapX + mapZ & 1) * 0.2D;
 							if (d2 < 0.5D) {
-								brightness = MaterialColor.Brightness.HIGH;
+								brightness = MapColor.Brightness.HIGH;
 							} else if (d2 > 0.9D) {
-								brightness = MaterialColor.Brightness.LOW;
+								brightness = MapColor.Brightness.LOW;
 							} else {
-								brightness = MaterialColor.Brightness.NORMAL;
+								brightness = MapColor.Brightness.NORMAL;
 							}
 						} else {
 							d2 = (d1 - d0) * 4.0D / (double) (blocksPerPixel + 4) + ((double) (mapX + mapZ & 1) - 0.5D) * 0.4D;
 							if (d2 > 0.6D) {
-								brightness = MaterialColor.Brightness.HIGH;
+								brightness = MapColor.Brightness.HIGH;
 							} else if (d2 < -0.6D) {
-								brightness = MaterialColor.Brightness.LOW;
+								brightness = MapColor.Brightness.LOW;
 							} else {
-								brightness = MaterialColor.Brightness.NORMAL;
+								brightness = MapColor.Brightness.NORMAL;
 							}
 						}
 					}

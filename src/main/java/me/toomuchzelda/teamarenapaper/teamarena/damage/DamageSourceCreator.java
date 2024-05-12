@@ -2,8 +2,8 @@ package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
 import net.minecraft.world.damagesource.DamageSource;
 import org.bukkit.Material;
-import org.bukkit.craftbukkit.v1_19_R3.entity.CraftEntity;
-import org.bukkit.craftbukkit.v1_19_R3.entity.CraftLivingEntity;
+import org.bukkit.craftbukkit.v1_20_R3.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_20_R3.entity.CraftLivingEntity;
 import org.bukkit.entity.*;
 
 import javax.annotation.Nullable;

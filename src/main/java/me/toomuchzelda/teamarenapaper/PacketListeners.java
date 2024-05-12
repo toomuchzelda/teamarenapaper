@@ -37,9 +37,9 @@ import net.minecraft.world.level.GameType;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Sound;
-import org.bukkit.craftbukkit.v1_19_R3.CraftSound;
-import org.bukkit.craftbukkit.v1_19_R3.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_19_R3.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.v1_20_R3.CraftSound;
+import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_20_R3.inventory.CraftItemStack;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -88,11 +88,12 @@ public class PacketListeners
 	public PacketListeners(JavaPlugin plugin) {
 
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
-				PacketType.Play.Server.NAMED_ENTITY_SPAWN) //packet for players coming in viewable range
+				PacketType.Play.Server.SPAWN_ENTITY)
 		{
 			@Override
 			public void onPacketSending(PacketEvent event) {
 				int id = event.getPacket().getIntegers().read(0);
+				if (!Main.playerIdLookup.containsKey(id)) return; // Only for spawning players
 
 				//if the receiver of this packet is supposed to view a disguise instead of the actual player
 				// re-send the player info packet before spawning them into render distance as we removed it before,
@@ -419,7 +420,7 @@ public class PacketListeners
 				SoundEvent soundEvent = soundHolder.value();
 				Sound sound;
 				try { // Band aid
-					sound = CraftSound.getBukkit(soundEvent);
+					sound = CraftSound.minecraftToBukkit(soundEvent);
 				}
 				catch (NullPointerException e) {
 					return;

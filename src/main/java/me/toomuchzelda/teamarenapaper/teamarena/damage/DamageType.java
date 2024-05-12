@@ -14,8 +14,8 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageSources;
 import net.minecraft.world.level.Level;
 import org.bukkit.Material;
-import org.bukkit.craftbukkit.v1_19_R3.CraftWorld;
-import org.bukkit.craftbukkit.v1_19_R3.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_20_R3.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R3.entity.CraftEntity;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageByBlockEvent;
@@ -355,17 +355,17 @@ public class DamageType {
 		LIGHTNING.setDamageSource(nmsDamageSources.lightningBolt());
 		MAGMA.setDamageSource(nmsDamageSources.hotFloor());
 		// MELEE Handled in getAttack
-		MELTING.setDamageSource(nmsDamageSources.melting);
-		POISON.setDamageSource(nmsDamageSources.poison);
+		MELTING.setDamageSource(nmsDamageSources.melting());
+		POISON.setDamageSource(nmsDamageSources.poison());
 		// PROJECTILE handled in getAttack
 		// SONIC_BOOM
 		STARVATION.setDamageSource(nmsDamageSources.starve());
 		SUFFOCATION.setDamageSource(nmsDamageSources.inWall());
 		// SWEEP ATTACK
 		// THORNS
-		VOID.setDamageSource(nmsDamageSources.outOfWorld());
-		VOID_PUSHED.setDamageSource(nmsDamageSources.outOfWorld());
-		VOID_SHOT.setDamageSource(nmsDamageSources.outOfWorld());
+		VOID.setDamageSource(nmsDamageSources.fellOutOfWorld());
+		VOID_PUSHED.setDamageSource(nmsDamageSources.fellOutOfWorld());
+		VOID_SHOT.setDamageSource(nmsDamageSources.fellOutOfWorld());
 		WITHER_POISON.setDamageSource(nmsDamageSources.wither());
 
 		/* KITS */
@@ -373,7 +373,7 @@ public class DamageType {
 		SNIPER_GRENADE_FAIL.setDamageSource(nmsDamageSources.explosion(null, null)); // TODO handle source and attacker
 		// SNIPER_HEADSHOT TODO handle
 		DEMO_TNTMINE.setDamageSource(nmsDamageSources.explosion(null, null));
-		TOXIC_LEAP.setDamageSource(nmsDamageSources.poison);
+		TOXIC_LEAP.setDamageSource(nmsDamageSources.poison());
 		// BURST_FIREWORK TODO nmsD.firework( ,)
 		// BURST_FIREWORK_SELF.setDamageSource()
 		// BURST_SHOTGUN_SELF

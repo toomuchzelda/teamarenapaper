@@ -14,13 +14,15 @@ import net.kyori.adventure.text.format.Style;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ClientboundOpenSignEditorPacket;
 import net.minecraft.network.protocol.game.ServerboundSignUpdatePacket;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
+import net.minecraft.world.level.block.entity.SignText;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.BlockState;
-import org.bukkit.craftbukkit.v1_19_R3.block.data.CraftBlockData;
+import org.bukkit.craftbukkit.v1_20_R3.block.data.CraftBlockData;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
@@ -167,19 +169,23 @@ public final class Inventories implements Listener {
 		var fakeSign = new SignBlockEntity(blockPos, ((CraftBlockData) fakeData).getState());
 
 		List<Component> wrapped = TextUtils.wrapString(defaultValue, Style.empty(), 80);
+		net.minecraft.network.chat.Component[] lines = new net.minecraft.network.chat.Component[4];
 		for (int i = 0; i < Math.min(wrapped.size(), 2); i++) {
-			fakeSign.setMessage(i, PaperAdventure.asVanilla(wrapped.get(i)));
+			//fakeSign.setMessage(i, PaperAdventure.asVanilla(wrapped.get(i)));
+			lines[i] = PaperAdventure.asVanilla(wrapped.get(i));
 		}
 
-		fakeSign.setMessage(2, PaperAdventure.asVanilla(Component.text("^^^^^^^^^^^^^^^")));
-		fakeSign.setMessage(3, PaperAdventure.asVanilla(message));
+		lines[2] = PaperAdventure.asVanilla(Component.text("^^^^^^^^^^^^^^^"));
+		lines[3] = PaperAdventure.asVanilla(message);
+
+		fakeSign.setText(new SignText(lines, lines, DyeColor.BLACK, false), true);
 
 		Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
 			player.closeInventory();
 			player.sendBlockChange(signLocation, fakeData);
 			managedSigns.put(player, new ManagedSign(new BlockCoords(signLocation), originalState, future));
 			// we will just have to pray that the player isn't currently editing a sign
-			PlayerUtils.sendPacket(player, fakeSign.getUpdatePacket(), new ClientboundOpenSignEditorPacket(blockPos));
+			PlayerUtils.sendPacket(player, fakeSign.getUpdatePacket(), new ClientboundOpenSignEditorPacket(blockPos, true));
 		}, 1);
 		return future;
 	}

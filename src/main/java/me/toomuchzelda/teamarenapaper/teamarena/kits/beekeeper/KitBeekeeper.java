@@ -31,7 +31,7 @@ import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.craftbukkit.v1_19_R3.entity.CraftBee;
+import org.bukkit.craftbukkit.v1_20_R3.entity.CraftBee;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Bee;
 import org.bukkit.entity.Entity;

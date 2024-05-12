@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.utils;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
+import com.comphenix.protocol.wrappers.EnumWrappers;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import me.toomuchzelda.teamarenapaper.Main;
@@ -24,8 +25,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
-import org.bukkit.craftbukkit.v1_19_R3.CraftWorldBorder;
-import org.bukkit.craftbukkit.v1_19_R3.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_20_R3.CraftWorldBorder;
+import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.inventory.EntityEquipment;
@@ -92,10 +93,10 @@ public class PlayerUtils {
 		friendly.writeVarInt(usedEntityId);
 
 		if(attack) {
-			friendly.writeEnum(ServerboundInteractPacket.ActionType.ATTACK);
+			friendly.writeEnum((Enum<?>) EnumWrappers.getEntityUseActionConverter().getGeneric(EnumWrappers.EntityUseAction.ATTACK));
 		}
 		else {
-			friendly.writeEnum(ServerboundInteractPacket.ActionType.INTERACT);
+			friendly.writeEnum((Enum<?>) EnumWrappers.getEntityUseActionConverter().getGeneric(EnumWrappers.EntityUseAction.INTERACT));
 			InteractionHand nmshand = hand == EquipmentSlot.HAND ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
 			friendly.writeEnum(nmshand);
 		}

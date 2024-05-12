@@ -17,11 +17,11 @@ import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
-import org.bukkit.craftbukkit.v1_19_R3.CraftSound;
-import org.bukkit.craftbukkit.v1_19_R3.entity.CraftEntity;
-import org.bukkit.craftbukkit.v1_19_R3.entity.CraftLivingEntity;
-import org.bukkit.craftbukkit.v1_19_R3.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_19_R3.util.CraftVector;
+import org.bukkit.craftbukkit.v1_20_R3.CraftSound;
+import org.bukkit.craftbukkit.v1_20_R3.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_20_R3.entity.CraftLivingEntity;
+import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_20_R3.util.CraftVector;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
@@ -605,7 +605,7 @@ public class DamageEvent {
 				sound = livingVictim.getDeathSound();
 			else {
 				SoundEvent nmsSound = nmsVictim.getHurtSound0(source);
-				sound = CraftSound.getBukkit(nmsSound);
+				sound = CraftSound.minecraftToBukkit(nmsSound);
 			}
 		}
 		else {

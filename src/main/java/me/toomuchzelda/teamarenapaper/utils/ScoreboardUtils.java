@@ -13,9 +13,10 @@ import net.minecraft.server.ServerScoreboard;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
-import org.bukkit.craftbukkit.v1_19_R3.entity.CraftEntity;
-import org.bukkit.craftbukkit.v1_19_R3.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_19_R3.scoreboard.CraftScoreboardTranslations;
+import org.bukkit.craftbukkit.v1_20_R3.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_20_R3.scoreboard.CraftScoreboardTranslations;
+import org.bukkit.entity.Display;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.jetbrains.annotations.Nullable;
@@ -126,28 +127,30 @@ public class ScoreboardUtils {
 
 	public static void sendObjectivePacket(Player player, String objective, Component displayName, boolean update) {
 		var fakeObjective = new Objective(null, objective, ObjectiveCriteria.DUMMY,
-				PaperAdventure.asVanilla(displayName), ObjectiveCriteria.RenderType.INTEGER);
+				PaperAdventure.asVanilla(displayName), ObjectiveCriteria.RenderType.INTEGER, false ,null);
 		var packet = new ClientboundSetObjectivePacket(fakeObjective, update ? 2 : 0);
 		sendPacket(player, packet);
 	}
 
 	public static void sendDisplayObjectivePacket(Player player, @Nullable String objective, DisplaySlot slot) {
-		int slotId = CraftScoreboardTranslations.fromBukkitSlot(slot);
+		net.minecraft.world.scores.DisplaySlot slotId = CraftScoreboardTranslations.fromBukkitSlot(slot);
 		Objective fakeObjective;
 		if (objective == null)
 			fakeObjective = null;
 		else
 			fakeObjective = new Objective(null, objective, ObjectiveCriteria.DUMMY,
-				net.minecraft.network.chat.Component.empty(), ObjectiveCriteria.RenderType.INTEGER);
+				net.minecraft.network.chat.Component.empty(), ObjectiveCriteria.RenderType.INTEGER, false, null);
 
 		var packet = new ClientboundSetDisplayObjectivePacket(slotId, fakeObjective);
 		sendPacket(player, packet);
 	}
 
 	public static void sendSetScorePacket(Player player, boolean remove, String objective, String entry, int score) {
-		var packet = new ClientboundSetScorePacket(
-				remove ? ServerScoreboard.Method.REMOVE : ServerScoreboard.Method.CHANGE,
-				objective, entry, score);
+		//var packet = new ClientboundSetScorePacket(
+		//		remove ? ServerScoreboard.Method.REMOVE : ServerScoreboard.Method.CHANGE,
+		//		objective, entry, score);
+
+		ClientboundSetScorePacket packet = new ClientboundSetScorePacket(entry, objective, score, net.minecraft.network.chat.Component.score(entry, objective), null);
 		sendPacket(player, packet);
 	}
 }

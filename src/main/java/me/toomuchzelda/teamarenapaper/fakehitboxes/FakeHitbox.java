@@ -17,8 +17,9 @@ import net.minecraft.world.entity.Pose;
 import net.minecraft.world.phys.AABB;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.craftbukkit.v1_19_R3.CraftWorld;
-import org.bukkit.craftbukkit.v1_19_R3.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_20_R3.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityPoseChangeEvent;
 import org.bukkit.util.Vector;
@@ -97,9 +98,10 @@ public class FakeHitbox
 
 			playerUpdates.add(wrappedEntry);
 
-			PacketContainer spawnPlayerPacket = new PacketContainer(PacketType.Play.Server.NAMED_ENTITY_SPAWN);
+			PacketContainer spawnPlayerPacket = new PacketContainer(PacketType.Play.Server.SPAWN_ENTITY);
 			spawnPlayerPacket.getIntegers().write(0, fPlayer.entityId);
 			spawnPlayerPacket.getUUIDs().write(0, fPlayer.uuid);
+			spawnPlayerPacket.getEntityTypeModifier().write(0, EntityType.PLAYER);
 			//positions modified in updatePosition()
 			spawnPlayerPackets[i] = spawnPlayerPacket;
 			spawnAndMetaPackets[i] = spawnPlayerPacket;
