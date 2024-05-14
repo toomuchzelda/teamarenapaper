@@ -311,7 +311,7 @@ public class KingOfTheHill extends TeamArena
 
 		if (timeUntilHalve < timeUntilRotation) {
 			boolean again = ticksAndPlayersToCaptureHill != INITIAL_CAP_TIME;
-			antiStallAction = Component.text("Capture speed " + (again ? "II" : "I"), NamedTextColor.GREEN);
+			antiStallAction = Component.text("Capture " + (again ? "even faster" : "faster"), NamedTextColor.GREEN);
 			antiStallCountdown = timeUntilHalve;
 		} else {
 			antiStallAction = Component.text("Hill rotates", NamedTextColor.DARK_AQUA);
@@ -319,7 +319,7 @@ public class KingOfTheHill extends TeamArena
 		}
 
 		return List.of(
-			Component.text("First to " + TICKS_TO_WIN / 20 + "s of King", NamedTextColor.GRAY),
+			Component.text("First to " + TICKS_TO_WIN / 20 + "s as King", NamedTextColor.GRAY),
 			Component.textOfChildren(antiStallAction, Component.text(" in "), TextUtils.formatDurationMmSs(Ticks.duration(antiStallCountdown)))
 		);
 	}
