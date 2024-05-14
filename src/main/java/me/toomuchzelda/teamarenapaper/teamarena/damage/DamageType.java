@@ -37,6 +37,9 @@ public class DamageType {
 
     public static final DamageType BERRY_BUSH = new DamageType("Berry Bush", "%Killed% ate one too many sweet berries").setNoKnockback();
 
+	public static final DamageType BORDER = new DamageType("Out of Bounds", "%Killed% went out of bounds")
+		.setIgnoreArmor().setIgnoreArmorEnchants().setIgnoreRate();
+
     public static final DamageType CACTUS = new DamageType("Cactus", "%Killed% hugged a cactus").setNoKnockback();
 
     public static final DamageType CRAMMING = new DamageType("Cramming", "%Killer% was crammed to death").setIgnoreArmor()
@@ -332,6 +335,7 @@ public class DamageType {
 		nmsDamageSources = nmsWorld.damageSources();
 
 		BERRY_BUSH.setDamageSource(nmsDamageSources.sweetBerryBush());
+		BORDER.setDamageSource(nmsDamageSources.outOfBorder());
 		CACTUS.setDamageSource(nmsDamageSources.cactus());
 		CRAMMING.setDamageSource(nmsDamageSources.cramming());
 		CUSTOM.setDamageSource(nmsDamageSources.generic());
@@ -344,7 +348,7 @@ public class DamageType {
 		FALL_PUSHED.setDamageSource(nmsDamageSources.fall());
 		FALL_SHOT.setDamageSource(nmsDamageSources.fall());
 		//FALLING_BLOCK
-		//FALLING_STALACTITE Both should be handled from getAttack()
+		//FALLING_STALACTITE Both handled from getAttack()
 		FIRE.setDamageSource(nmsDamageSources.inFire());
 		FIRE_ASPECT.setDamageSource(nmsDamageSources.onFire());
 		FIRE_BOW.setDamageSource(nmsDamageSources.onFire());
@@ -361,6 +365,7 @@ public class DamageType {
 		// SONIC_BOOM
 		STARVATION.setDamageSource(nmsDamageSources.starve());
 		SUFFOCATION.setDamageSource(nmsDamageSources.inWall());
+		SUICIDE.setDamageSource(nmsDamageSources.genericKill());
 		// SWEEP ATTACK
 		// THORNS
 		VOID.setDamageSource(nmsDamageSources.fellOutOfWorld());
@@ -418,6 +423,7 @@ public class DamageType {
             case LIGHTNING:
                 return LIGHTNING;
             case SUICIDE:
+			case KILL:
                 return SUICIDE;
             case STARVATION:
                 return STARVATION;
@@ -447,6 +453,8 @@ public class DamageType {
                 return FREEZE;
 			case SONIC_BOOM:
 				return getSonicBoom(event);
+			case WORLD_BORDER:
+				return BORDER;
             default:
 				Main.logger().warning("DamageType UNKNOWN returned for " + event.getEventName() + ", " + event.getCause() +
 					", " + event.getEntity());
@@ -640,11 +648,6 @@ public class DamageType {
     public boolean is(DamageType damageType) {
         return this.id == damageType.id;
     }
-
-	// Slightly hacky
-	public boolean isExact(DamageType other) {
-		return this._name.equals(other._name);
-	}
 
 	/**
 	 * When need to use a DamageType and copy the DamageSource from another.
