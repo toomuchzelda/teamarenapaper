@@ -61,8 +61,6 @@ public class Flag
 	public boolean isAtBase;
 	public int ticksUntilReturn;
 
-	public Component progressBarComponent; //band aid; pass the progress bar from stand custom name calculation to sidebar
-
 	public static final EulerAngle LEG_ANGLE = new EulerAngle(Math.PI, 0, 0);
 
 	public Flag(CaptureTheFlag game, TeamArenaTeam team, Location baseLoc) {

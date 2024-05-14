@@ -130,11 +130,10 @@ public class Preferences {
 		.setValueDescriptionStrings(Map.of(
 			SidebarManager.Style.HIDDEN, "The sidebar will be hidden.",
 			SidebarManager.Style.MODERN, "The default sidebar appearance.",
-			SidebarManager.Style.RGB_MANIAC, "For maniacs that think RGB will improve their GAMING™ performance.",
-			SidebarManager.Style.LEGACY, "The legacy sidebar appearance, if supported."
+			SidebarManager.Style.RGB_MANIAC, "For maniacs that think RGB will improve their GAMING™ performance."
 		))
 		.setCategory(PreferenceCategory.GAMEPLAY)
-		.setMigrationFunction(input -> input.equalsIgnoreCase("LEGACY_RGB_MANIAC") ? SidebarManager.Style.LEGACY : null);
+		.setMigrationFunction(input -> input.contains("LEGACY") ? SidebarManager.Style.MODERN : null);
 
 	public static final Preference<Boolean> DEFAULT_TEAM_CHAT = SimplePreference.ofBoolean("default_team_chat",
 			"Whether your chat messages should go to team chat instead of all chat by default.\n" +

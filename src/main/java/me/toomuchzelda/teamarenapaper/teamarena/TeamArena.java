@@ -448,11 +448,7 @@ public abstract class TeamArena
 				}
 			} else {
 				sharedSidebar.forEach(sidebar::addEntry);
-				if (style != SidebarManager.Style.LEGACY) {
-					updateSidebar(player, sidebar);
-				} else { // for conservatives like toomuchzelda
-					updateLegacySidebar(player, sidebar);
-				}
+				updateSidebar(player, sidebar);
 			}
 
 			if (style == SidebarManager.Style.RGB_MANIAC) {
@@ -476,11 +472,6 @@ public abstract class TeamArena
 	}
 
 	public abstract void updateSidebar(Player player, SidebarManager sidebar);
-
-	public void updateLegacySidebar(Player player, SidebarManager sidebar) {
-		//sidebar.addEntry(Component.text("Warning: legacy unsupported", NamedTextColor.YELLOW));
-		updateSidebar(player, sidebar);
-	}
 
 	public void tick() {
 		//gameTick++;

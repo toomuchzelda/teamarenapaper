@@ -954,35 +954,6 @@ public class SearchAndDestroy extends TeamArena
 			sidebar.addEntry(Component.empty(), Component.text("+ " + (sidebarCache.size() - teamsShown) + " teams", NamedTextColor.GRAY));
 	}
 
-	/** @author toomuchzelda */
-	@Override
-	public void updateLegacySidebar(Player player, SidebarManager sidebar) {
-		teamBombs.forEach((team, bombs) -> {
-			if(!team.isAlive())
-				return;
-
-			int numPlayersAlive = 0;
-			for(Player p : team.getPlayerMembers()) {
-				if(!isDead(p)) {
-					numPlayersAlive++;
-				}
-			}
-
-			if(numPlayersAlive > 0) {
-
-				Component title = Component.text().append(
-						team.getComponentName(),
-						Component.text(": " + numPlayersAlive + " alive", NamedTextColor.WHITE)
-				).build();
-				sidebar.addEntry(title);
-
-				for (Bomb bomb : bombs) {
-					sidebar.addEntry(bomb.getSidebarStatus());
-				}
-			}
-		});
-	}
-
 	@Override
 	public boolean canSelectKitNow() {
 		return this.gameState.isPreGame();

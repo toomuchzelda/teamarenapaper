@@ -171,7 +171,6 @@ public class SidebarManager {
 	public enum Style {
 		HIDDEN,
 		MODERN,
-		RGB_MANIAC,
-		LEGACY,
+		RGB_MANIAC
 	}
 }

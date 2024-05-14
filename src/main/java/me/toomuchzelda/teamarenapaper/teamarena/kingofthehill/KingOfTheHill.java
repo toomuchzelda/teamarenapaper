@@ -12,7 +12,6 @@ import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.util.Ticks;
@@ -349,58 +348,6 @@ public class KingOfTheHill extends TeamArena
 		if (sidebarCache.size() != teamsShown)
 			sidebar.addEntry(Component.empty(), Component.text("+ " + (sidebarCache.size() - teamsShown) + " teams", NamedTextColor.GRAY));
 
-	}
-
-	@Override
-	public void updateLegacySidebar(Player player, SidebarManager sidebar) {
-		sidebar.setTitle(player, Component.text("ThisHill:" + activeHill.getHillTime() + " | ToWin:" + (TICKS_TO_WIN / 20), NamedTextColor.GOLD));
-
-		var aliveTeams = Arrays.stream(teams).filter(TeamArenaTeam::isAlive).toList();
-		int numLines;
-		if(aliveTeams.size() <= 5)
-			numLines = 3;
-		else if (aliveTeams.size() <= 7)
-			numLines = 2;
-		else
-			numLines = 1;
-		for (var team : aliveTeams) {
-			Component first = team.getComponentSimpleName();
-			if (numLines == 3) {
-				sidebar.addEntry(first);
-				sidebar.addEntry(Component.textOfChildren(
-						Component.text("Score: "),
-						Component.text(team.getTotalScore() / 20, team.getRGBTextColor(), TextDecoration.BOLD)
-				));
-			} else {
-				sidebar.addEntry(Component.textOfChildren(
-						first,
-						Component.text(": " + (team.getTotalScore() / 20), team.getRGBTextColor(), TextDecoration.BOLD)
-				));
-			}
-
-			if (numLines != 1) {
-				if (owningTeam == team) {
-					sidebar.addEntry(Component.text("KING", NamedTextColor.GOLD, TextDecoration.BOLD));
-				} else {
-					float cap = hillCapProgresses.getOrDefault(team, 0f);
-					//make it a neater looking percentage
-					byte percent = (byte) ((cap / ticksAndPlayersToCaptureHill) * 100);
-					// also display earning rate
-					float rate = hillCapChange.getOrDefault(team, 0f);
-
-					//do this to get 2 decimal point precision
-					// the round and conversion to int will chop off all decimal points
-					// doesn't always work though....
-					//percent per second
-					rate = (rate / ticksAndPlayersToCaptureHill) * 100 * 20;
-
-					sidebar.addEntry(Component.textOfChildren(
-							Component.text("Cap: " + percent + "%", Style.style(TextDecoration.BOLD)),
-							Component.text(" @" + TextUtils.formatNumber(rate, 2) + "%/s")
-					));
-				}
-			}
-		}
 	}
 
 	@Override
