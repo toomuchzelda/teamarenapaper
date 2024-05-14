@@ -92,7 +92,7 @@ public class SearchAndDestroy extends TeamArena
 	public static final int TEAM_LASTMAN_SCORE = 2;
 
 	//sidebar
-	private final Map<TeamArenaTeam, Component> sidebarCache;
+	private final Map<TeamArenaTeam, SidebarManager.SidebarEntry> sidebarCache;
 
 	private static final DamageType FUSE_KILL = new DamageType(DamageType.MELEE, "%Killed% was pummelled to death by %Killer%'s Bomb Fuse");
 
@@ -906,10 +906,7 @@ public class SearchAndDestroy extends TeamArena
 				builder.append(Component.text("Safe", NamedTextColor.DARK_GREEN));
 			}
 
-			builder.append(Component.text(" | ", NamedTextColor.DARK_GRAY),
-					Component.text(playersAlive + " alive"));
-
-			sidebarCache.put(team, builder.build());
+			sidebarCache.put(team, new SidebarManager.SidebarEntry(builder.build(), Component.text(playersAlive + " alive")));
 		}
 		if (poisonTimeLeft >= POISON_ANNOUNCEMENT && !isPoison)
 			return List.of(LAST_TO_STAND);
@@ -932,23 +929,29 @@ public class SearchAndDestroy extends TeamArena
 
 		for (var entry : sidebarCache.entrySet()) {
 			var team = entry.getKey();
-			Component line = entry.getValue();
+			var line = entry.getValue();
 
 			if (teamsShown >= 4 && team != playerTeam)
 				continue; // don't show
 			teamsShown++;
 			if (team == playerTeam) {
 				// blink red when flag picked up
-				boolean inDanger = teamBombs.get(team).stream().anyMatch(Bomb::isArmed);
+				boolean inDanger = false;
+				for (Bomb bomb : teamBombs.get(team)) {
+					if (bomb.isArmed()) {
+						inDanger = true;
+						break;
+					}
+				}
 				var teamPrefix = inDanger && TeamArena.getGameTick() % 20 < 10 ? OWN_TEAM_PREFIX_DANGER : OWN_TEAM_PREFIX;
-				sidebar.addEntry(Component.textOfChildren(teamPrefix, line));
+				sidebar.addEntry(Component.textOfChildren(teamPrefix, line.text()), line.numberFormat());
 			} else {
 				sidebar.addEntry(line);
 			}
 		}
 		// unimportant teams
 		if (sidebarCache.size() != teamsShown)
-			sidebar.addEntry(Component.text("+ " + (sidebarCache.size() - teamsShown) + " teams", NamedTextColor.GRAY));
+			sidebar.addEntry(Component.empty(), Component.text("+ " + (sidebarCache.size() - teamsShown) + " teams", NamedTextColor.GRAY));
 	}
 
 	/** @author toomuchzelda */

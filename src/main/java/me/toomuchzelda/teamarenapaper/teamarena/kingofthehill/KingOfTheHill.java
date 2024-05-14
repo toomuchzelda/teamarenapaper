@@ -55,7 +55,7 @@ public class KingOfTheHill extends TeamArena
 	public static final Component GAME_NAME = Component.text("King of the Hill", NamedTextColor.YELLOW);
 	public static final Component HOW_TO_PLAY = Component.text("Stand on the active hill to capture it! The first team to be King for enough time wins!", NamedTextColor.YELLOW);
 
-	private final Map<TeamArenaTeam, Component> sidebarCache = new LinkedHashMap<>();
+	private final Map<TeamArenaTeam, SidebarManager.SidebarEntry> sidebarCache = new LinkedHashMap<>();
 
 	public KingOfTheHill(TeamArenaMap map) {
 		super(map);
@@ -300,9 +300,7 @@ public class KingOfTheHill extends TeamArena
 			}
 
 			int controlTime = summary.team.getTotalScore() / 20;
-			builder.append(Component.text(" | ", NamedTextColor.DARK_GRAY),
-					Component.text(controlTime + "s", NamedTextColor.WHITE));
-			sidebarCache.put(summary.team, builder.build());
+			sidebarCache.put(summary.team, new SidebarManager.SidebarEntry(builder.build(), Component.text(controlTime + "s", NamedTextColor.WHITE)));
 		}
 
 		// next anti-stall
@@ -336,20 +334,20 @@ public class KingOfTheHill extends TeamArena
 
 		for (var entry : sidebarCache.entrySet()) {
 			TeamArenaTeam team = entry.getKey();
-			Component line = entry.getValue();
+			var line = entry.getValue();
 
 			if (teamsShown >= 4 && team != playerTeam)
 				continue; // don't show
 			teamsShown++;
 			if (team == playerTeam) {
-				sidebar.addEntry(Component.textOfChildren(OWN_TEAM_PREFIX, line));
+				sidebar.addEntry(Component.textOfChildren(OWN_TEAM_PREFIX, line.text()), line.numberFormat());
 			} else {
 				sidebar.addEntry(line);
 			}
 		}
 		// unimportant teams
 		if (sidebarCache.size() != teamsShown)
-			sidebar.addEntry(Component.text("+ " + (sidebarCache.size() - teamsShown) + " teams", NamedTextColor.GRAY));
+			sidebar.addEntry(Component.empty(), Component.text("+ " + (sidebarCache.size() - teamsShown) + " teams", NamedTextColor.GRAY));
 
 	}
 
@@ -533,7 +531,7 @@ public class KingOfTheHill extends TeamArena
 
 			if (TeamArena.getGameTick() % 40 < 20) { // only render every other second
 				var teamColor = owningTeam != null ? new java.awt.Color(owningTeam.getColour().asRGB(), false) : null;
-				@SuppressWarnings("deprecation")
+				@SuppressWarnings("removal")
 				byte color = teamColor != null ? MapPalette.matchColor(teamColor) : MapPalette.TRANSPARENT;
 				byte borderColor = 29 * 4 + 3; // black
 				renderer.drawRect(canvas, box.getMin(), box.getMax(), color, borderColor);

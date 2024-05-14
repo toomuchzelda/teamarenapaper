@@ -443,10 +443,8 @@ public abstract class TeamArena
 						builder.append(OWN_TEAM_PREFIX);
 					}
 					builder.append(team.getComponentName());
-					if (showTeamSize) {
-						builder.append(Component.text(": " + team.getPlayerMembers().size()));
-					}
-					sidebar.addEntry(builder.build());
+					sidebar.addEntry(builder.build(),
+						showTeamSize ? Component.text(team.getPlayerMembers().size() + "\uD83D\uDC64") : null);
 				}
 			} else {
 				sharedSidebar.forEach(sidebar::addEntry);
@@ -462,8 +460,10 @@ public abstract class TeamArena
 				for (var iterator = sidebar.getEntries().listIterator(); iterator.hasNext(); ) {
 					var index = iterator.nextIndex();
 					var entry = iterator.next();
-					var component = TextUtils.getRGBManiacComponent(entry, Style.empty(), progress + index / 7d);
-					sidebar.setEntry(index, component);
+					double offset = progress + index / 7d;
+					var component = TextUtils.getRGBManiacComponent(entry.text(), Style.empty(), offset);
+					var numberFormat = entry.numberFormat() != null ? TextUtils.getRGBManiacComponent(entry.numberFormat(), Style.empty(), offset) : null;
+					sidebar.setEntry(index, new SidebarManager.SidebarEntry(component, numberFormat));
 				}
 			}
 

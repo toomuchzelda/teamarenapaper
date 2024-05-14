@@ -5,6 +5,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.numbers.BlankFormat;
+import net.minecraft.network.chat.numbers.FixedFormat;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.world.scores.Objective;
@@ -17,7 +18,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.jetbrains.annotations.Nullable;
 
-import java.lang.reflect.Constructor;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
@@ -27,7 +30,7 @@ import java.util.Optional;
  * @author jacky
  */
 public class ScoreboardUtils {
-	private static Constructor<ClientboundSetPlayerTeamPacket> TEAM_PACKET_CTOR;
+	private static MethodHandle TEAM_PACKET_CTOR;
 
 	public static void sendPacket(Player player, Packet<?> packet) {
 		((CraftPlayer) player).getHandle().connection.send(packet);
@@ -36,11 +39,13 @@ public class ScoreboardUtils {
 	private static void initTeamPacketConstructor() {
 		if (TEAM_PACKET_CTOR == null) {
 			try {
-				TEAM_PACKET_CTOR = ClientboundSetPlayerTeamPacket.class
-						.getDeclaredConstructor(String.class, int.class, Optional.class, Collection.class);
-				TEAM_PACKET_CTOR.setAccessible(true);
-			} catch (NoSuchMethodException e) {
-				throw new RuntimeException(e);
+				MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(ClientboundSetPlayerTeamPacket.class, MethodHandles.lookup());
+				TEAM_PACKET_CTOR = lookup.findConstructor(
+					ClientboundSetPlayerTeamPacket.class,
+					MethodType.methodType(void.class, String.class, int.class, Optional.class, Collection.class)
+				);
+			} catch (IllegalAccessException | NoSuchMethodException ex) {
+				throw new AssertionError("Constructor for SetPlayerTeamPacket not found", ex);
 			}
 		}
 	}
@@ -93,10 +98,10 @@ public class ScoreboardUtils {
 		// that's crazy
 		var parameters = createParameter(displayName, color, prefix, suffix);
 		try {
-			var packet = TEAM_PACKET_CTOR.newInstance(name, update ? 2 : 0, Optional.of(parameters), entries);
+			var packet = (ClientboundSetPlayerTeamPacket) TEAM_PACKET_CTOR.invoke(name, update ? 2 : 0, Optional.of(parameters), entries);
 			sendPacket(player, packet);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
+		} catch (Throwable e) {
+			throw new RuntimeException("Failed to construct Team Info packet", e);
 		}
 	}
 
@@ -114,10 +119,10 @@ public class ScoreboardUtils {
 
 		try {
 			Collection<String> collection = List.of(names);
-			var packet = TEAM_PACKET_CTOR.newInstance(name, leave ? 4 : 3, Optional.empty(), collection);
+			var packet = (ClientboundSetPlayerTeamPacket) TEAM_PACKET_CTOR.invoke(name, leave ? 4 : 3, Optional.empty(), collection);
 			sendPacket(player, packet);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
+		} catch (Throwable e) {
+			throw new RuntimeException("Failed to construct Team packet", e);
 		}
 	}
 
@@ -141,10 +146,13 @@ public class ScoreboardUtils {
 		sendPacket(player, packet);
 	}
 
-	public static void sendSetScorePacket(Player player, boolean remove, String objective, String entry, int score) {
-		Packet<?> packet = remove ?
-			new ClientboundResetScorePacket(entry, objective) :
-			new ClientboundSetScorePacket(entry, objective, score, null, BlankFormat.INSTANCE);
-		sendPacket(player, packet);
+	public static void sendResetScorePacket(Player player, String objective, String entry) {
+		sendPacket(player, new ClientboundResetScorePacket(entry, objective));
+	}
+
+	public static void sendSetScorePacket(Player player, String objective, String entry, int score,
+										  @Nullable Component numberFormat) {
+		sendPacket(player, new ClientboundSetScorePacket(entry, objective, score, null,
+			numberFormat == null ? BlankFormat.INSTANCE : new FixedFormat(PaperAdventure.asVanilla(numberFormat))));
 	}
 }
