@@ -98,7 +98,7 @@ public class KitEngineer extends Kit {
 	public static final ItemStack SENTRY;
 	static {
 		List<Component> sentryLore = new ArrayList<>();
-		sentryLore.addAll(TextUtils.wrapString("When your Sentry Projection is Green, Right click to initialize the building process!"
+		sentryLore.addAll(TextUtils.wrapString("When your Sentry Projection is Green, Right click to initialize the building process"
 				, Style.style(TextUtils.RIGHT_CLICK_TO), 200));
 
 		sentryLore.addAll(TextUtils.wrapString("After Construction, your Sentry will Automatically fire at enemies within a "
@@ -146,14 +146,6 @@ public class KitEngineer extends Kit {
 		//SENTRY_CD should be 300, it may be altered for testing purposes
 		public static final int SENTRY_CD = 300;
 		public static final int SENTRY_PLACEMENT_RANGE = 3;
-
-		@Override
-		public void registerAbility() {
-		}
-
-		@Override
-		public void unregisterAbility() {
-		}
 
 		private static final Component RCLICK_PLACE_SENTRY = Component.text("Right click: place sentry", TextUtils.RIGHT_CLICK_TO);
 		private static final Component RCLICK_PLACE_TELEPORTER = Component.text("Right click: place teleporter", TextUtils.RIGHT_CLICK_TO);
@@ -211,7 +203,7 @@ public class KitEngineer extends Kit {
 
 			boolean rightClick = event.getAction().isRightClick();
 
-			Player player = event.getPlayer();
+			final Player player = event.getPlayer();
 			BuildingSelector selector = BuildingOutlineManager.getSelector(player);
 			Material mat = event.getMaterial();
 			Block block = event.getClickedBlock();
@@ -253,7 +245,7 @@ public class KitEngineer extends Kit {
 					//Creating TP
 					if (BuildingManager.getPlayerBuildingCount(player, Teleporter.class) >= 2) {
 						//Failure: 2 TPs already exist
-						message = Component.text("Two teleporters are already active! Destroy one with your Destruction PDA!", TextColors.ERROR_RED);
+						message = Component.text("Two teleporters are already active! Destroy one with your Destruction PDA", TextColors.ERROR_RED);
 					} else {
 						//Success: TP is created
 						selector.placePreview(Teleporter.class);
@@ -264,8 +256,13 @@ public class KitEngineer extends Kit {
 			} else if (rightClick && mat == Material.CHEST_MINECART) {
 				if (!player.hasCooldown(Material.CHEST_MINECART)) {
 					Sentry sentry = selector.placePreview(Sentry.class);
-					if (sentry != null && player.getGameMode() != GameMode.CREATIVE) {
-						player.setCooldown(Material.CHEST_MINECART, SENTRY_CD);
+					if (sentry != null) {
+						// Band aid fix the faulty location used by the building
+						Location pointedLoc = sentry.getLocation();
+						pointedLoc.setYaw(player.getLocation().getYaw());
+						sentry.setLocation(pointedLoc);
+						if (player.getGameMode() != GameMode.CREATIVE)
+							player.setCooldown(Material.CHEST_MINECART, SENTRY_CD);
 					}
 				}
 			} else if (mat == Material.BOOK) {

@@ -305,6 +305,7 @@ public class Sentry extends EntityBuilding implements PreviewableBuilding {
 		this.initTick = TeamArena.getGameTick();
 	}
 
+	// Not ran until BuildingManager places it as a Building
 	@Override
 	public void onTick() {
 		if (sentry.isDead() || isExpired()) {
@@ -419,6 +420,7 @@ public class Sentry extends EntityBuilding implements PreviewableBuilding {
 	@Override
 	public void setLocation(Location newLoc) {
 		super.setLocation(newLoc);
+		this.initYaw = newLoc.getYaw();
 		if (sentry != null)
 			sentry.teleport(newLoc);
 	}
