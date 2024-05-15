@@ -301,6 +301,8 @@ public class MetadataViewer
 	 * If sending modified data, only sends the modified data.
 	 */
 	public void refreshViewer(Entity viewedEntity) {
+		if (!EntityUtils.isTrackingEntity(this.player, viewedEntity)) return;
+
 		PacketContainer metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
 		metadataPacket.getIntegers().write(0, viewedEntity.getEntityId());
 
