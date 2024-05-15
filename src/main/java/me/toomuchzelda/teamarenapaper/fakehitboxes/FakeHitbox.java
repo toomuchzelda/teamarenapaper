@@ -17,8 +17,9 @@ import net.minecraft.world.entity.Pose;
 import net.minecraft.world.phys.AABB;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.craftbukkit.v1_19_R3.CraftWorld;
-import org.bukkit.craftbukkit.v1_19_R3.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_20_R3.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityPoseChangeEvent;
 import org.bukkit.util.Vector;
@@ -31,7 +32,7 @@ public class FakeHitbox
 	//index is the fake player number 0-3
 	private static final Vector[] OFFSETS;
 	//metadata to make them invisible
-	private static final List<WrappedDataValue> METADATA;
+	private static final WrappedDataValue INVIS_META;
 	public static final String USERNAME = "zzzzzz";
 	public static final Component DONT_MIND_ME = Component.text("don't mind me");
 	public static final double VIEWING_RADIUS = 17d;
@@ -47,10 +48,12 @@ public class FakeHitbox
 			}
 		}
 
-		METADATA = List.of(MetaIndex.newValue(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK));
+		INVIS_META = MetaIndex.newValue(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK);
 	}
 
 	private final List<PlayerInfoData> playerInfoEntries;
+	// index 0 = invis bitfield, 1 = pose
+	private final ArrayList<WrappedDataValue> metadataList;
 	private final PacketContainer[] spawnPlayerPackets;
 	private final PacketContainer[] teleportPackets;
 	private final PacketContainer[] metadataPackets;
@@ -71,6 +74,11 @@ public class FakeHitbox
 		viewers = new LinkedHashMap<>();
 		coordinates = new Vector[4];
 		collidings = new boolean[4];
+
+		metadataList = new ArrayList<>(2);
+		metadataList.add(INVIS_META);
+		metadataList.add(MetaIndex.newValue(MetaIndex.POSE_OBJ, MetaIndex.getNmsPose(owner.getPose())));
+
 		spawnPlayerPackets = new PacketContainer[4];
 		teleportPackets = new PacketContainer[4];
 		metadataPackets = new PacketContainer[4];
@@ -97,9 +105,10 @@ public class FakeHitbox
 
 			playerUpdates.add(wrappedEntry);
 
-			PacketContainer spawnPlayerPacket = new PacketContainer(PacketType.Play.Server.NAMED_ENTITY_SPAWN);
+			PacketContainer spawnPlayerPacket = new PacketContainer(PacketType.Play.Server.SPAWN_ENTITY);
 			spawnPlayerPacket.getIntegers().write(0, fPlayer.entityId);
 			spawnPlayerPacket.getUUIDs().write(0, fPlayer.uuid);
+			spawnPlayerPacket.getEntityTypeModifier().write(0, EntityType.PLAYER);
 			//positions modified in updatePosition()
 			spawnPlayerPackets[i] = spawnPlayerPacket;
 			spawnAndMetaPackets[i] = spawnPlayerPacket;
@@ -112,7 +121,7 @@ public class FakeHitbox
 			PacketContainer metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
 			metadataPacket.getIntegers().write(0, fPlayer.entityId);
 			//metadataPacket.getWatchableCollectionModifier().write(0, METADATA);
-			metadataPacket.getDataValueCollectionModifier().write(0, METADATA);
+			metadataPacket.getDataValueCollectionModifier().write(0, this.metadataList);
 			metadataPackets[i] = metadataPacket;
 			spawnAndMetaPackets[i + 4] = metadataPacket;
 
@@ -160,8 +169,8 @@ public class FakeHitbox
 					fakeHitboxViewer.isSeeingHitboxes = nowInRange;
 					//need to spawn / remove the hitboxes for viewer
 					if (nowInRange) {
-						PlayerUtils.sendPacket(playerViewer, getSpawnAndMetadataPackets());
 						fakeHitboxViewer.hitboxSpawnTime = currentTick;
+						PlayerUtils.sendPacket(playerViewer, getSpawnAndMetadataPackets());
 						//Bukkit.broadcastMessage("sent spawn packets from " + this.owner.getName() + " to " + playerViewer.getName());
 					}
 					else {
@@ -276,13 +285,34 @@ public class FakeHitbox
 	}
 
 	public void handlePoseChange(EntityPoseChangeEvent event) {
+		final org.bukkit.entity.Pose bukkitPose = event.getPose();
+		this.metadataList.get(1).setRawValue(MetaIndex.getNmsPose(bukkitPose));
+
 		HitboxPose prevPose = HitboxPose.getFromBukkit(event.getEntity().getPose());
-		HitboxPose newPose = HitboxPose.getFromBukkit(event.getPose());
+		HitboxPose newPose = HitboxPose.getFromBukkit(bukkitPose);
 
 		if(newPose != prevPose) {
-			this.updatePosition(event.getEntity().getLocation(), event.getPose(), true);
+			this.updatePosition(event.getEntity().getLocation(), bukkitPose, true);
+			this.updateMetadataPackets();
 			this.lastPoseChangeTime = TeamArena.getGameTick();
 		}
+	}
+
+	private void updateMetadataPackets() {
+		for (PacketContainer packet : this.metadataPackets) {
+			packet.getDataValueCollectionModifier().write(0, this.metadataList);
+		}
+	}
+
+	// Depends on not being called subsequently with different args
+	void setVisible(boolean visible) {
+		if (visible) {
+			this.metadataList.get(0).setRawValue((byte) 0);
+		}
+		else {
+			this.metadataList.get(0).setRawValue(MetaIndex.BASE_BITFIELD_INVIS_MASK);
+		}
+		this.updateMetadataPackets();
 	}
 
 	/**
@@ -305,10 +335,7 @@ public class FakeHitbox
 	}
 
 	public PacketContainer[] getSpawnAndMetadataPackets() {
-		if(FakeHitboxManager.show)
-			return spawnPlayerPackets;
-		else
-			return spawnAndMetaPackets;
+		return this.spawnAndMetaPackets;
 	}
 
 	public PacketContainer[] getTeleportPackets() {
@@ -354,11 +381,12 @@ public class FakeHitbox
 		doubles.write(2, coords.getZ());
 	}
 
+	// Make new packets that only have the pose change, instead of using this.metadataPackets, to reduce
+	// network use. Also, this handles poses like sneaking that aren't handled by handlePostChange
 	public @Nullable PacketContainer[] createPoseMetadataPackets(PacketContainer packet) {
 		PacketContainer[] newPackets = null;
 		for (WrappedDataValue dataValue : packet.getDataValueCollectionModifier().read(0)) {
 			if (dataValue.getIndex() == MetaIndex.POSE_IDX) { //if the metadata has pose
-				//Pose pose = (Pose) dataValue.getValue();
 				newPackets = new PacketContainer[4];
 				List<WrappedDataValue> hitboxValueList = List.of(dataValue);
 				for(int i = 0; i < 4; i++) {

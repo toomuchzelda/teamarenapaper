@@ -41,7 +41,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.command.Command;
-import org.bukkit.craftbukkit.v1_19_R3.CraftWorldBorder;
+import org.bukkit.craftbukkit.v1_20_R3.CraftWorldBorder;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;

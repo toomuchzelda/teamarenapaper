@@ -58,7 +58,7 @@ public class CaptureTheFlag extends TeamArena
 	public static final int TAKEN_FLAG_RETURN_TIME = 3 * 60 * 20;
 	public static final int DROPPED_TIME_PER_TICK = TAKEN_FLAG_RETURN_TIME / (5 * 20);
 	public static final int DROPPED_PROGRESS_BAR_LENGTH = 10;
-	public static final String DROPPED_PROGRESS_STRING = "█".repeat(DROPPED_PROGRESS_BAR_LENGTH);
+	public static final String DROPPED_PROGRESS_STRING = "█";
 
 	public static final Component GAME_NAME = Component.text("Capture the Flag", NamedTextColor.AQUA);
 	public static final Component HOW_TO_PLAY = Component.text("Take other team's flags and bring them to yours to win! You can't capture another flag if your flag has been taken.", NamedTextColor.AQUA);
@@ -163,7 +163,7 @@ public class CaptureTheFlag extends TeamArena
 				}
 				else {
 					float percentage = (float) flag.ticksUntilReturn / (float) TAKEN_FLAG_RETURN_TIME;
-					percentage += 0.05;
+					percentage += 0.05F;
 					if(percentage > 1)
 						percentage = 1;
 					else if (percentage < 0)
@@ -171,14 +171,10 @@ public class CaptureTheFlag extends TeamArena
 
 					int splitIndex = (int) ((float) DROPPED_PROGRESS_BAR_LENGTH * percentage);
 
-					Component firstComponent = Component.text()
-							.content(DROPPED_PROGRESS_STRING.substring(0, splitIndex))
-							.color(flag.team.getRGBTextColor())
-							.append(Component.text().content(DROPPED_PROGRESS_STRING.substring(splitIndex))
-									.color(NamedTextColor.DARK_RED)
-									.build()).build();
-
-					flag.progressBarComponent = firstComponent;
+					Component firstComponent = Component.textOfChildren(
+						Component.text(DROPPED_PROGRESS_STRING.repeat(splitIndex), flag.team.getRGBTextColor()),
+						Component.text(DROPPED_PROGRESS_STRING.repeat(DROPPED_PROGRESS_BAR_LENGTH - splitIndex), NamedTextColor.DARK_RED)
+					);
 
 					flag.getArmorStand().customName(firstComponent);
 
@@ -274,7 +270,7 @@ public class CaptureTheFlag extends TeamArena
         super.liveTick();
 	}
 
-	private final Map<Flag, Component> sidebarCache = new LinkedHashMap<>();
+	private final Map<Flag, SidebarManager.SidebarEntry> sidebarCache = new LinkedHashMap<>();
 	@Override
 	public Collection<Component> updateSharedSidebar() {
 		sidebarCache.clear();
@@ -286,8 +282,7 @@ public class CaptureTheFlag extends TeamArena
 
 		for (var flag : flags) {
 			var builder = Component.text();
-			builder.append(flag.team.getComponentSimpleName(), Component.text(": "));
-			builder.append(Component.text("⚑ " + flag.team.getTotalScore(), NamedTextColor.GREEN));
+			builder.append(flag.team.getComponentSimpleName());
 			if (flag.holdingTeam != null) {
 				builder.append(
 						Component.space(),
@@ -301,7 +296,7 @@ public class CaptureTheFlag extends TeamArena
 						TextUtils.getProgressText("↓ Dropped", NamedTextColor.GRAY, flag.team.getRGBTextColor(), NamedTextColor.GREEN,
 						1 - (double) flag.ticksUntilReturn / TAKEN_FLAG_RETURN_TIME));
 			}
-			sidebarCache.put(flag, builder.build());
+			sidebarCache.put(flag, new SidebarManager.SidebarEntry(builder.build(), Component.text("⚑ " + flag.team.getTotalScore(), NamedTextColor.GREEN)));
 		}
 		Component antiStallAction = null;
 		int antiStallCountdown = 0;
@@ -340,7 +335,7 @@ public class CaptureTheFlag extends TeamArena
 		for (var entry : sidebarCache.entrySet()) {
 			var flag = entry.getKey();
 			var team = flag.team;
-			Component line = entry.getValue();
+			var line = entry.getValue();
 
 			if (teamsShown >= 4 && team != playerTeam)
 				continue; // don't show
@@ -348,67 +343,15 @@ public class CaptureTheFlag extends TeamArena
 			if (team == playerTeam) {
 				// blink red when flag picked up
 				var teamPrefix = !flag.isAtBase && TeamArena.getGameTick() % 20 < 10 ? OWN_TEAM_PREFIX_DANGER : OWN_TEAM_PREFIX;
-				sidebar.addEntry(Component.textOfChildren(teamPrefix, line));
+				sidebar.addEntry(Component.textOfChildren(teamPrefix, line.text()), line.numberFormat());
 			} else {
 				sidebar.addEntry(line);
 			}
 		}
 		// unimportant teams
 		if (sidebarCache.size() != teamsShown)
-			sidebar.addEntry(Component.text("+ " + (sidebarCache.size() - teamsShown) + " teams", NamedTextColor.GRAY));
+			sidebar.addEntry(Component.empty(), Component.text("+ " + (sidebarCache.size() - teamsShown) + " teams", NamedTextColor.GRAY));
 
-	}
-
-	@Override
-	public void updateLegacySidebar(Player player, SidebarManager sidebar) {
-		sidebar.setTitle(player, Component.text("CapsToWin: " + capsToWin, NamedTextColor.GOLD));
-		//update the sidebar every tick
-		byte numLines;
-		List<Flag> aliveFlags = teamToFlags.values().stream()
-				.filter(flag -> flag.team.isAlive())
-				.sorted(Flag.BY_SCORE_DESC)
-				.toList();
-
-		if (aliveFlags.size() <= 7)
-			numLines = 2;
-		else
-			numLines = 1;
-
-		Component[] lines = new Component[numLines * aliveFlags.size()];
-
-		int index = 0;
-		for (Flag flag : aliveFlags) {
-			Component first = flag.team.getComponentSimpleName();
-			if (numLines == 2) {
-				Component flagStatus = Component.text("Flag ").color(NamedTextColor.WHITE);
-				if (flag.isAtBase)
-					flagStatus = flagStatus.append(Component.text("Safe").color(NamedTextColor.GREEN));
-				else if (flag.holdingTeam != null) {
-					flagStatus = flagStatus.append(Component.text("Held by ")).append(flag.holdingTeam.getComponentSimpleName());
-				} else {
-					flagStatus = flagStatus.append(flag.progressBarComponent);//Component.text("Unsafe").color(TextColor.color(255, 85, 0)));
-				}
-
-				lines[index] = first.append(Component.text(": " + flag.team.getTotalScore()).color(NamedTextColor.WHITE));
-				lines[index + 1] = flagStatus;
-			} else {
-				Component flagStatus;
-				if (flag.isAtBase)
-					flagStatus = Component.text("Safe").color(NamedTextColor.GREEN);
-				else if (flag.holdingTeam != null) {
-					flagStatus = Component.text("Held").color(flag.holdingTeam.getRGBTextColor());
-				} else {
-					flagStatus = flag.progressBarComponent;//Component.text("Unsafe").color(TextColor.color(255, 85, 0));
-				}
-				lines[index] = first.append(Component.text(": " + flag.team.getTotalScore() + ' ').color(NamedTextColor.WHITE).append(flagStatus));
-			}
-
-			index += numLines;
-		}
-
-		for (var line : lines) {
-			sidebar.addEntry(line);
-		}
 	}
 
 	@Override

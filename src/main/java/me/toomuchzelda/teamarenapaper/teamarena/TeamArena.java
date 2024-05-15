@@ -50,7 +50,7 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.command.CommandSender;
-import org.bukkit.craftbukkit.v1_19_R3.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R3.CraftWorld;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.*;
@@ -443,18 +443,12 @@ public abstract class TeamArena
 						builder.append(OWN_TEAM_PREFIX);
 					}
 					builder.append(team.getComponentName());
-					if (showTeamSize) {
-						builder.append(Component.text(": " + team.getPlayerMembers().size()));
-					}
-					sidebar.addEntry(builder.build());
+					sidebar.addEntry(builder.build(),
+						showTeamSize ? Component.text(team.getPlayerMembers().size() + "\uD83D\uDC64") : null);
 				}
 			} else {
 				sharedSidebar.forEach(sidebar::addEntry);
-				if (style != SidebarManager.Style.LEGACY) {
-					updateSidebar(player, sidebar);
-				} else { // for conservatives like toomuchzelda
-					updateLegacySidebar(player, sidebar);
-				}
+				updateSidebar(player, sidebar);
 			}
 
 			if (style == SidebarManager.Style.RGB_MANIAC) {
@@ -462,8 +456,10 @@ public abstract class TeamArena
 				for (var iterator = sidebar.getEntries().listIterator(); iterator.hasNext(); ) {
 					var index = iterator.nextIndex();
 					var entry = iterator.next();
-					var component = TextUtils.getRGBManiacComponent(entry, Style.empty(), progress + index / 7d);
-					sidebar.setEntry(index, component);
+					double offset = progress + index / 7d;
+					var component = TextUtils.getRGBManiacComponent(entry.text(), Style.empty(), offset);
+					var numberFormat = entry.numberFormat() != null ? TextUtils.getRGBManiacComponent(entry.numberFormat(), Style.empty(), offset) : null;
+					sidebar.setEntry(index, new SidebarManager.SidebarEntry(component, numberFormat));
 				}
 			}
 
@@ -476,11 +472,6 @@ public abstract class TeamArena
 	}
 
 	public abstract void updateSidebar(Player player, SidebarManager sidebar);
-
-	public void updateLegacySidebar(Player player, SidebarManager sidebar) {
-		//sidebar.addEntry(Component.text("Warning: legacy unsupported", NamedTextColor.YELLOW));
-		updateSidebar(player, sidebar);
-	}
 
 	public void tick() {
 		//gameTick++;

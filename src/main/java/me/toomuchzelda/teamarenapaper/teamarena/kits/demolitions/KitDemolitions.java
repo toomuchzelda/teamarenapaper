@@ -10,11 +10,9 @@ import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingSelector;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
-import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.DigAndBuild;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
-import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
@@ -310,6 +308,7 @@ public class KitDemolitions extends Kit
 			// tick regenerating mines
 			regeneratingMines.entrySet().removeIf(entry -> {
 				Player player = entry.getKey();
+				ItemStack cursorItem = player.getItemOnCursor();
 				PlayerInventory inventory = player.getInventory();
 				List<RegeneratingMine> regeneratingMines = entry.getValue();
 				EnumMap<MineType, Integer> nextRegen = new EnumMap<>(MineType.class);
@@ -317,12 +316,17 @@ public class KitDemolitions extends Kit
 				regeneratingMines.removeIf(mine -> {
 					if (now - mine.removedTime >= mine.type.timeToRegen) {
 						// replace depleted item with stack
-						int slot = inventory.first(mine.type.itemDepleted.getType());
 						ItemStack toGive = mine.type.item();
-						if (slot != -1) {
-							inventory.setItem(slot, toGive);
+						// imagine holding the depleted item in your cursor
+						if (cursorItem.isSimilar(mine.type.itemDepleted)) {
+							player.setItemOnCursor(toGive);
 						} else {
-							inventory.addItem(toGive);
+							int slot = inventory.first(mine.type.itemDepleted.getType());
+							if (slot != -1) {
+								inventory.setItem(slot, toGive);
+							} else {
+								inventory.addItem(toGive);
+							}
 						}
 						return true;
 					} else {
@@ -336,12 +340,20 @@ public class KitDemolitions extends Kit
 
 				// update depleted items
 				nextRegen.forEach((type, secs) -> {
-					int slot = inventory.first(type.itemDepleted.getType());
-					if (slot != -1)
-						inventory.setItem(slot, type.itemDepleted.asQuantity(secs + 1));
+					int quantity = secs + 1;
+					if (cursorItem.getType() == type.itemDepleted.getType()) {
+						if (cursorItem.getAmount() != quantity)
+							player.setItemOnCursor(type.itemDepleted.asQuantity(quantity));
+					} else {
+						int slot = inventory.first(type.itemDepleted.getType());
+						if (slot == -1) return;
+						ItemStack old = inventory.getItem(slot);
+						if (old == null || old.getAmount() != quantity)
+							inventory.setItem(slot, type.itemDepleted.asQuantity(quantity));
+					}
 				});
 
-				return regeneratingMines.size() == 0;
+				return regeneratingMines.isEmpty();
 			});
 		}
 

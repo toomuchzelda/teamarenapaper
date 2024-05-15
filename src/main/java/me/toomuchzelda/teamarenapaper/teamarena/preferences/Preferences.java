@@ -25,11 +25,12 @@ public class Preferences {
 		.setIcon(Material.BOW)
 		.setCategory(PreferenceCategory.VISUAL_EFFECTS);
 
-	public static final Preference<Boolean> HEARTS_FLASH_DAMAGE = SimplePreference.ofBoolean("hearts_flash_damage",
+	/*public static final Preference<Boolean> HEARTS_FLASH_DAMAGE = SimplePreference.ofBoolean("hearts_flash_damage",
 			"If your hearts should flash when taking damage", true)
 		// https://minecraft-heads.com/custom-heads/miscellaneous/34659-damage-particle
 		.setIcon(ItemUtils.createPlayerHead("5ee118eddaee0dfb2cbc2c3d59c13a41a7d68cce945e42167aa1dcb8d0670517"))
 		.setCategory(PreferenceCategory.VISUAL_EFFECTS);
+	 */
 
 	public static final Preference<Boolean> HEARTS_FLASH_REGEN = SimplePreference.ofBoolean("hearts_flash_regen",
 			"If your hearts should flash while regenerating", true)
@@ -129,11 +130,10 @@ public class Preferences {
 		.setValueDescriptionStrings(Map.of(
 			SidebarManager.Style.HIDDEN, "The sidebar will be hidden.",
 			SidebarManager.Style.MODERN, "The default sidebar appearance.",
-			SidebarManager.Style.RGB_MANIAC, "For maniacs that think RGB will improve their GAMING™ performance.",
-			SidebarManager.Style.LEGACY, "The legacy sidebar appearance, if supported."
+			SidebarManager.Style.RGB_MANIAC, "For maniacs that think RGB will improve their GAMING™ performance."
 		))
 		.setCategory(PreferenceCategory.GAMEPLAY)
-		.setMigrationFunction(input -> input.equalsIgnoreCase("LEGACY_RGB_MANIAC") ? SidebarManager.Style.LEGACY : null);
+		.setMigrationFunction(input -> input.contains("LEGACY") ? SidebarManager.Style.MODERN : null);
 
 	public static final Preference<Boolean> DEFAULT_TEAM_CHAT = SimplePreference.ofBoolean("default_team_chat",
 			"Whether your chat messages should go to team chat instead of all chat by default.\n" +

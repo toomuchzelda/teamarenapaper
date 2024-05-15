@@ -12,7 +12,6 @@ import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.util.Ticks;
@@ -55,7 +54,7 @@ public class KingOfTheHill extends TeamArena
 	public static final Component GAME_NAME = Component.text("King of the Hill", NamedTextColor.YELLOW);
 	public static final Component HOW_TO_PLAY = Component.text("Stand on the active hill to capture it! The first team to be King for enough time wins!", NamedTextColor.YELLOW);
 
-	private final Map<TeamArenaTeam, Component> sidebarCache = new LinkedHashMap<>();
+	private final Map<TeamArenaTeam, SidebarManager.SidebarEntry> sidebarCache = new LinkedHashMap<>();
 
 	public KingOfTheHill(TeamArenaMap map) {
 		super(map);
@@ -300,9 +299,7 @@ public class KingOfTheHill extends TeamArena
 			}
 
 			int controlTime = summary.team.getTotalScore() / 20;
-			builder.append(Component.text(" | ", NamedTextColor.DARK_GRAY),
-					Component.text(controlTime + "s", NamedTextColor.WHITE));
-			sidebarCache.put(summary.team, builder.build());
+			sidebarCache.put(summary.team, new SidebarManager.SidebarEntry(builder.build(), Component.text(controlTime + "s", NamedTextColor.WHITE)));
 		}
 
 		// next anti-stall
@@ -314,7 +311,7 @@ public class KingOfTheHill extends TeamArena
 
 		if (timeUntilHalve < timeUntilRotation) {
 			boolean again = ticksAndPlayersToCaptureHill != INITIAL_CAP_TIME;
-			antiStallAction = Component.text("Capture speed " + (again ? "II" : "I"), NamedTextColor.GREEN);
+			antiStallAction = Component.text("Capture " + (again ? "even faster" : "faster"), NamedTextColor.GREEN);
 			antiStallCountdown = timeUntilHalve;
 		} else {
 			antiStallAction = Component.text("Hill rotates", NamedTextColor.DARK_AQUA);
@@ -322,7 +319,7 @@ public class KingOfTheHill extends TeamArena
 		}
 
 		return List.of(
-			Component.text("First to " + TICKS_TO_WIN / 20 + "s of King", NamedTextColor.GRAY),
+			Component.text("First to " + TICKS_TO_WIN / 20 + "s as King", NamedTextColor.GRAY),
 			Component.textOfChildren(antiStallAction, Component.text(" in "), TextUtils.formatDurationMmSs(Ticks.duration(antiStallCountdown)))
 		);
 	}
@@ -336,73 +333,21 @@ public class KingOfTheHill extends TeamArena
 
 		for (var entry : sidebarCache.entrySet()) {
 			TeamArenaTeam team = entry.getKey();
-			Component line = entry.getValue();
+			var line = entry.getValue();
 
 			if (teamsShown >= 4 && team != playerTeam)
 				continue; // don't show
 			teamsShown++;
 			if (team == playerTeam) {
-				sidebar.addEntry(Component.textOfChildren(OWN_TEAM_PREFIX, line));
+				sidebar.addEntry(Component.textOfChildren(OWN_TEAM_PREFIX, line.text()), line.numberFormat());
 			} else {
 				sidebar.addEntry(line);
 			}
 		}
 		// unimportant teams
 		if (sidebarCache.size() != teamsShown)
-			sidebar.addEntry(Component.text("+ " + (sidebarCache.size() - teamsShown) + " teams", NamedTextColor.GRAY));
+			sidebar.addEntry(Component.empty(), Component.text("+ " + (sidebarCache.size() - teamsShown) + " teams", NamedTextColor.GRAY));
 
-	}
-
-	@Override
-	public void updateLegacySidebar(Player player, SidebarManager sidebar) {
-		sidebar.setTitle(player, Component.text("ThisHill:" + activeHill.getHillTime() + " | ToWin:" + (TICKS_TO_WIN / 20), NamedTextColor.GOLD));
-
-		var aliveTeams = Arrays.stream(teams).filter(TeamArenaTeam::isAlive).toList();
-		int numLines;
-		if(aliveTeams.size() <= 5)
-			numLines = 3;
-		else if (aliveTeams.size() <= 7)
-			numLines = 2;
-		else
-			numLines = 1;
-		for (var team : aliveTeams) {
-			Component first = team.getComponentSimpleName();
-			if (numLines == 3) {
-				sidebar.addEntry(first);
-				sidebar.addEntry(Component.textOfChildren(
-						Component.text("Score: "),
-						Component.text(team.getTotalScore() / 20, team.getRGBTextColor(), TextDecoration.BOLD)
-				));
-			} else {
-				sidebar.addEntry(Component.textOfChildren(
-						first,
-						Component.text(": " + (team.getTotalScore() / 20), team.getRGBTextColor(), TextDecoration.BOLD)
-				));
-			}
-
-			if (numLines != 1) {
-				if (owningTeam == team) {
-					sidebar.addEntry(Component.text("KING", NamedTextColor.GOLD, TextDecoration.BOLD));
-				} else {
-					float cap = hillCapProgresses.getOrDefault(team, 0f);
-					//make it a neater looking percentage
-					byte percent = (byte) ((cap / ticksAndPlayersToCaptureHill) * 100);
-					// also display earning rate
-					float rate = hillCapChange.getOrDefault(team, 0f);
-
-					//do this to get 2 decimal point precision
-					// the round and conversion to int will chop off all decimal points
-					// doesn't always work though....
-					//percent per second
-					rate = (rate / ticksAndPlayersToCaptureHill) * 100 * 20;
-
-					sidebar.addEntry(Component.textOfChildren(
-							Component.text("Cap: " + percent + "%", Style.style(TextDecoration.BOLD)),
-							Component.text(" @" + TextUtils.formatNumber(rate, 2) + "%/s")
-					));
-				}
-			}
-		}
 	}
 
 	@Override
@@ -533,7 +478,7 @@ public class KingOfTheHill extends TeamArena
 
 			if (TeamArena.getGameTick() % 40 < 20) { // only render every other second
 				var teamColor = owningTeam != null ? new java.awt.Color(owningTeam.getColour().asRGB(), false) : null;
-				@SuppressWarnings("deprecation")
+				@SuppressWarnings("removal")
 				byte color = teamColor != null ? MapPalette.matchColor(teamColor) : MapPalette.TRANSPARENT;
 				byte borderColor = 29 * 4 + 3; // black
 				renderer.drawRect(canvas, box.getMin(), box.getMax(), color, borderColor);

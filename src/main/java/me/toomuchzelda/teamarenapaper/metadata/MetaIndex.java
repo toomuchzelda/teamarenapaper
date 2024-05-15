@@ -4,10 +4,9 @@ import com.comphenix.protocol.wrappers.*;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher.WrappedDataWatcherObject;
 import me.toomuchzelda.teamarenapaper.Main;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.decoration.ArmorStand;
-import org.jetbrains.annotations.NotNull;
 
-import javax.annotation.Nullable;
 import java.util.*;
 
 /**
@@ -38,8 +37,6 @@ public class MetaIndex
 	public static final int ABSTRACT_ARROW_PIERCING_LEVEL_IDX = 9;
 
 	public static final int ABSTRACT_ARROW_BITFIELD_CRIT_IDX = 0;
-	public static final byte ABSTRACT_ARROW_BITFIELD_CRIT_MASK = 0x01;
-	public static final byte ABSTRACT_ARROW_BITFIELD_NOCLIP_MASK = 0x02;
 	public static final int ABSTRACT_ARROW_BITFIELD_FROM_CROSSBOW_IDX = 2;
 	public static final byte ABSTRACT_ARROW_BITFIELD_FROM_CROSSBOW_MASK = 0x04;
 
@@ -56,11 +53,11 @@ public class MetaIndex
 
 	public static final int GUARDIAN_TARGET_IDX = 17;
 
-	public static final int DISPLAY_TRANSLATION_IDX = 10;
-	public static final int DISPLAY_SCALE_IDX = 11;
-	public static final int DISPLAY_BILLBOARD_IDX = 14;
+	public static final int DISPLAY_TRANSLATION_IDX = 11;
+	public static final int DISPLAY_SCALE_IDX = 12;
+	public static final int DISPLAY_BILLBOARD_IDX = 15;
 
-	public static final int ITEM_DISPLAY_ITEM_IDX = 22;
+	public static final int ITEM_DISPLAY_ITEM_IDX = 23;
 
 	public static final WrappedDataWatcher.Serializer BITFIELD_SERIALIZER = WrappedDataWatcher.Registry.get(Byte.class);
 
@@ -226,5 +223,28 @@ public class MetaIndex
 		}
 
 		return dataValues;
+	}
+
+	public static Pose getNmsPose(org.bukkit.entity.Pose bukkitPose) {
+		return switch (bukkitPose) {
+			case STANDING -> Pose.STANDING;
+			case FALL_FLYING -> Pose.FALL_FLYING;
+			case SLEEPING -> Pose.SLEEPING;
+			case SWIMMING -> Pose.SWIMMING;
+			case SPIN_ATTACK -> Pose.SPIN_ATTACK;
+			case SNEAKING -> Pose.CROUCHING;
+			case LONG_JUMPING -> Pose.LONG_JUMPING;
+			case DYING -> Pose.DYING;
+			case CROAKING -> Pose.CROAKING;
+			case USING_TONGUE -> Pose.USING_TONGUE;
+			case SITTING -> Pose.SITTING;
+			case ROARING -> Pose.ROARING;
+			case SNIFFING -> Pose.SNIFFING;
+			case EMERGING -> Pose.EMERGING;
+			case DIGGING -> Pose.DIGGING;
+			case SLIDING -> Pose.SLIDING;
+			case SHOOTING -> Pose.SHOOTING;
+			case INHALING -> Pose.INHALING;
+		};
 	}
 }

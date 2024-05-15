@@ -3,7 +3,7 @@ package me.toomuchzelda.teamarenapaper.utils;
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
-import org.bukkit.craftbukkit.v1_19_R3.block.CraftBlock;
+import org.bukkit.craftbukkit.v1_20_R3.block.CraftBlock;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
@@ -25,7 +25,7 @@ public class BlockUtils
 
 	public static int getBlockColor(Block block) {
 		//MaterialColor color = ((CraftBlock) block).getNMS().getMaterial().getColor();
-		return (((CraftBlock) block).getNMS().getBlock().defaultMaterialColor().col);
+		return (((CraftBlock) block).getNMS().getBlock().defaultMapColor().col);
 	}
 
 	public static Color getBlockBukkitColor(Block block) {

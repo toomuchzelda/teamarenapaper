@@ -14,13 +14,15 @@ import net.kyori.adventure.text.format.Style;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ClientboundOpenSignEditorPacket;
 import net.minecraft.network.protocol.game.ServerboundSignUpdatePacket;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
+import net.minecraft.world.level.block.entity.SignText;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.BlockState;
-import org.bukkit.craftbukkit.v1_19_R3.block.data.CraftBlockData;
+import org.bukkit.craftbukkit.v1_20_R3.block.data.CraftBlockData;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
@@ -37,12 +39,11 @@ import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.WeakHashMap;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author jacky8399
@@ -55,9 +56,13 @@ public final class Inventories implements Listener {
 	private static final WeakHashMap<Player, ManagedSign> managedSigns = new WeakHashMap<>();
     public static Inventories INSTANCE = new Inventories();
 
+	private static Logger logger;
+
     public static boolean debug = false;
 
     private Inventories() {
+		logger = Main.logger();
+
         Bukkit.getScheduler().runTaskTimer(Main.getPlugin(), Inventories::tick, 1, 1);
 
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(Main.getPlugin(), PacketType.Play.Client.UPDATE_SIGN) {
@@ -121,8 +126,8 @@ public final class Inventories implements Listener {
 						data.provider.init(player, data);
 						Bukkit.getScheduler().runTask(Main.getPlugin(), () -> player.openInventory(oldInv));
 					}
-                } catch (Exception e) {
-                    new RuntimeException("Closing GUI " + old.provider + " for " + player.getName(), e).printStackTrace();
+                } catch (Exception ex) {
+					logger.log(Level.WARNING, "Closing GUI " + old.provider + " for " + player.getName(), ex);
                 }
             }
         }
@@ -155,8 +160,9 @@ public final class Inventories implements Listener {
 
 		var future = new CompletableFuture<String>();
 		World world = player.getWorld();
-		Location signLocation = player.getLocation().toBlockLocation();
-		signLocation.setY(world.getMinHeight());
+		Location playerLocation = player.getLocation();
+		// needs to be within player interactable range
+		Location signLocation = playerLocation.subtract(playerLocation.getDirection().multiply(3)).toBlockLocation();
 
 		BlockState originalState = world.getBlockState(signLocation);
 
@@ -167,19 +173,23 @@ public final class Inventories implements Listener {
 		var fakeSign = new SignBlockEntity(blockPos, ((CraftBlockData) fakeData).getState());
 
 		List<Component> wrapped = TextUtils.wrapString(defaultValue, Style.empty(), 80);
+		net.minecraft.network.chat.Component[] lines = new net.minecraft.network.chat.Component[4];
+		Arrays.fill(lines, net.minecraft.network.chat.Component.empty());
 		for (int i = 0; i < Math.min(wrapped.size(), 2); i++) {
-			fakeSign.setMessage(i, PaperAdventure.asVanilla(wrapped.get(i)));
+			//fakeSign.setMessage(i, PaperAdventure.asVanilla(wrapped.get(i)));
+			lines[i] = PaperAdventure.asVanilla(wrapped.get(i));
 		}
+		lines[2] = PaperAdventure.asVanilla(Component.text("^^^^^^^^^^^^^^^"));
+		lines[3] = PaperAdventure.asVanilla(message);
 
-		fakeSign.setMessage(2, PaperAdventure.asVanilla(Component.text("^^^^^^^^^^^^^^^")));
-		fakeSign.setMessage(3, PaperAdventure.asVanilla(message));
+		fakeSign.setText(new SignText(lines, lines, DyeColor.BLACK, false), true);
 
 		Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
 			player.closeInventory();
 			player.sendBlockChange(signLocation, fakeData);
 			managedSigns.put(player, new ManagedSign(new BlockCoords(signLocation), originalState, future));
 			// we will just have to pray that the player isn't currently editing a sign
-			PlayerUtils.sendPacket(player, fakeSign.getUpdatePacket(), new ClientboundOpenSignEditorPacket(blockPos));
+			PlayerUtils.sendPacket(player, fakeSign.getUpdatePacket(), new ClientboundOpenSignEditorPacket(blockPos, true));
 		}, 1);
 		return future;
 	}
@@ -204,7 +214,7 @@ public final class Inventories implements Listener {
         }
 		ManagedSign managedSign = managedSigns.remove(e.getPlayer());
 		if (managedSign != null) {
-			Main.logger().info("Player quit before sending sign edit packet");
+			logger.warning("Player " + e.getPlayer().getName() + " quit before sending sign edit packet");
 			managedSign.future.complete("");
 		}
     }
@@ -234,7 +244,7 @@ public final class Inventories implements Listener {
 					}
 				}
             } catch (Exception ex) {
-                new RuntimeException("Closing GUI " + data + " for player " + player, ex).printStackTrace();
+				logger.log(Level.WARNING, "Closing GUI " + data + " for player " + player.getName(), ex);
             }
         }
     }
@@ -266,9 +276,9 @@ public final class Inventories implements Listener {
             try {
                 eventHandler.accept(e);
             } catch (Exception ex) {
-                new RuntimeException("Handling slot %d %s click (%s) for %s in %s".formatted(
+                logger.log(Level.WARNING, "Handling slot %d %s click (%s) for %s in %s".formatted(
 					e.getSlot(), e.getClick(), e.getAction(), e.getWhoClicked().getName(), data.provider
-				)).printStackTrace();
+				), ex);
             }
         }
     }

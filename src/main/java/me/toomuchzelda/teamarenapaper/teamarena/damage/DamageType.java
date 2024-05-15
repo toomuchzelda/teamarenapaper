@@ -14,8 +14,8 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageSources;
 import net.minecraft.world.level.Level;
 import org.bukkit.Material;
-import org.bukkit.craftbukkit.v1_19_R3.CraftWorld;
-import org.bukkit.craftbukkit.v1_19_R3.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_20_R3.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R3.entity.CraftEntity;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageByBlockEvent;
@@ -36,6 +36,9 @@ public class DamageType {
      ******************************************************************************************/
 
     public static final DamageType BERRY_BUSH = new DamageType("Berry Bush", "%Killed% ate one too many sweet berries").setNoKnockback();
+
+	public static final DamageType BORDER = new DamageType("Out of Bounds", "%Killed% went out of bounds")
+		.setIgnoreArmor().setIgnoreArmorEnchants().setIgnoreRate();
 
     public static final DamageType CACTUS = new DamageType("Cactus", "%Killed% hugged a cactus").setNoKnockback();
 
@@ -332,6 +335,7 @@ public class DamageType {
 		nmsDamageSources = nmsWorld.damageSources();
 
 		BERRY_BUSH.setDamageSource(nmsDamageSources.sweetBerryBush());
+		BORDER.setDamageSource(nmsDamageSources.outOfBorder());
 		CACTUS.setDamageSource(nmsDamageSources.cactus());
 		CRAMMING.setDamageSource(nmsDamageSources.cramming());
 		CUSTOM.setDamageSource(nmsDamageSources.generic());
@@ -344,7 +348,7 @@ public class DamageType {
 		FALL_PUSHED.setDamageSource(nmsDamageSources.fall());
 		FALL_SHOT.setDamageSource(nmsDamageSources.fall());
 		//FALLING_BLOCK
-		//FALLING_STALACTITE Both should be handled from getAttack()
+		//FALLING_STALACTITE Both handled from getAttack()
 		FIRE.setDamageSource(nmsDamageSources.inFire());
 		FIRE_ASPECT.setDamageSource(nmsDamageSources.onFire());
 		FIRE_BOW.setDamageSource(nmsDamageSources.onFire());
@@ -355,17 +359,18 @@ public class DamageType {
 		LIGHTNING.setDamageSource(nmsDamageSources.lightningBolt());
 		MAGMA.setDamageSource(nmsDamageSources.hotFloor());
 		// MELEE Handled in getAttack
-		MELTING.setDamageSource(nmsDamageSources.melting);
-		POISON.setDamageSource(nmsDamageSources.poison);
+		MELTING.setDamageSource(nmsDamageSources.melting());
+		POISON.setDamageSource(nmsDamageSources.poison());
 		// PROJECTILE handled in getAttack
 		// SONIC_BOOM
 		STARVATION.setDamageSource(nmsDamageSources.starve());
 		SUFFOCATION.setDamageSource(nmsDamageSources.inWall());
+		SUICIDE.setDamageSource(nmsDamageSources.genericKill());
 		// SWEEP ATTACK
 		// THORNS
-		VOID.setDamageSource(nmsDamageSources.outOfWorld());
-		VOID_PUSHED.setDamageSource(nmsDamageSources.outOfWorld());
-		VOID_SHOT.setDamageSource(nmsDamageSources.outOfWorld());
+		VOID.setDamageSource(nmsDamageSources.fellOutOfWorld());
+		VOID_PUSHED.setDamageSource(nmsDamageSources.fellOutOfWorld());
+		VOID_SHOT.setDamageSource(nmsDamageSources.fellOutOfWorld());
 		WITHER_POISON.setDamageSource(nmsDamageSources.wither());
 
 		/* KITS */
@@ -373,7 +378,7 @@ public class DamageType {
 		SNIPER_GRENADE_FAIL.setDamageSource(nmsDamageSources.explosion(null, null)); // TODO handle source and attacker
 		// SNIPER_HEADSHOT TODO handle
 		DEMO_TNTMINE.setDamageSource(nmsDamageSources.explosion(null, null));
-		TOXIC_LEAP.setDamageSource(nmsDamageSources.poison);
+		TOXIC_LEAP.setDamageSource(nmsDamageSources.poison());
 		// BURST_FIREWORK TODO nmsD.firework( ,)
 		// BURST_FIREWORK_SELF.setDamageSource()
 		// BURST_SHOTGUN_SELF
@@ -418,6 +423,7 @@ public class DamageType {
             case LIGHTNING:
                 return LIGHTNING;
             case SUICIDE:
+			case KILL:
                 return SUICIDE;
             case STARVATION:
                 return STARVATION;
@@ -447,6 +453,8 @@ public class DamageType {
                 return FREEZE;
 			case SONIC_BOOM:
 				return getSonicBoom(event);
+			case WORLD_BORDER:
+				return BORDER;
             default:
 				Main.logger().warning("DamageType UNKNOWN returned for " + event.getEventName() + ", " + event.getCause() +
 					", " + event.getEntity());
@@ -640,11 +648,6 @@ public class DamageType {
     public boolean is(DamageType damageType) {
         return this.id == damageType.id;
     }
-
-	// Slightly hacky
-	public boolean isExact(DamageType other) {
-		return this._name.equals(other._name);
-	}
 
 	/**
 	 * When need to use a DamageType and copy the DamageSource from another.

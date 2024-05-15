@@ -83,7 +83,7 @@ public class KitTrigger extends Kit
 	{
 		//chance to start a stall per tick
 		public static final double CHANCE_TO_STALL = 0.02d;
-		public static final int MAX_STALL_TIME = 2 * 20;
+		public static final int MAX_STALL_TIME = 30;
 		public static final int BOOM_TIME = 1 * 20;
 		public static final int COUNTDOWN_TIME = 7 * 20;
 		public static final float LOWER_BEEPING_BOUND = 0.15f;
@@ -174,7 +174,9 @@ public class KitTrigger extends Kit
 			tinfo.teamEntity.remove();
 
 			for(PlayerInfo pinfo : Main.getPlayerInfos()) {
-				pinfo.getMetadataViewer().removeBitfieldValue(player, MetaIndex.BASE_BITFIELD_IDX, MetaIndex.BASE_BITFIELD_INVIS_IDX);
+				MetadataViewer viewer = pinfo.getMetadataViewer();
+				viewer.removeBitfieldValue(player, MetaIndex.BASE_BITFIELD_IDX, MetaIndex.BASE_BITFIELD_INVIS_IDX);
+				viewer.refreshViewer(player);
 			}
 		}
 

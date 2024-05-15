@@ -20,7 +20,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitGhost;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSpy;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.AttachedPacketEntity;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
@@ -37,11 +36,9 @@ import net.minecraft.world.level.GameType;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Sound;
-import org.bukkit.craftbukkit.v1_19_R3.CraftSound;
-import org.bukkit.craftbukkit.v1_19_R3.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_19_R3.inventory.CraftItemStack;
-import org.bukkit.entity.AbstractArrow;
-import org.bukkit.entity.Entity;
+import org.bukkit.craftbukkit.v1_20_R3.CraftSound;
+import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_20_R3.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -88,11 +85,12 @@ public class PacketListeners
 	public PacketListeners(JavaPlugin plugin) {
 
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
-				PacketType.Play.Server.NAMED_ENTITY_SPAWN) //packet for players coming in viewable range
+				PacketType.Play.Server.SPAWN_ENTITY)
 		{
 			@Override
 			public void onPacketSending(PacketEvent event) {
 				int id = event.getPacket().getIntegers().read(0);
+				if (!Main.playerIdLookup.containsKey(id)) return; // Only for spawning players
 
 				//if the receiver of this packet is supposed to view a disguise instead of the actual player
 				// re-send the player info packet before spawning them into render distance as we removed it before,
@@ -200,12 +198,6 @@ public class PacketListeners
 			public void onPacketSending(PacketEvent event) {
 				if(FakeHitboxManager.ACTIVE) {
 					ClientboundRemoveEntitiesPacket nmsPacket = (ClientboundRemoveEntitiesPacket) event.getPacket().getHandle();
-					/*for (int id : nmsPacket.getEntityIds()) {
-						Entity e = EntityUtils.getById(id);
-						if (e instanceof AbstractArrow aa) {
-							event.getPlayer().sendMessage("Sent delete arrow packet");
-						}
-					}*/
 					var iter = nmsPacket.getEntityIds().listIterator();
 					while(iter.hasNext()) {
 						FakeHitbox removingHitbox = FakeHitboxManager.getByPlayerId(iter.nextInt());
@@ -419,7 +411,7 @@ public class PacketListeners
 				SoundEvent soundEvent = soundHolder.value();
 				Sound sound;
 				try { // Band aid
-					sound = CraftSound.getBukkit(soundEvent);
+					sound = CraftSound.minecraftToBukkit(soundEvent);
 				}
 				catch (NullPointerException e) {
 					return;

@@ -16,7 +16,7 @@ import net.minecraft.world.entity.LivingEntity;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.craftbukkit.v1_19_R3.entity.CraftLivingEntity;
+import org.bukkit.craftbukkit.v1_20_R3.entity.CraftLivingEntity;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -60,8 +60,6 @@ public class Flag
 	public ItemStack item; //item in inventory representing the flag
 	public boolean isAtBase;
 	public int ticksUntilReturn;
-
-	public Component progressBarComponent; //band aid; pass the progress bar from stand custom name calculation to sidebar
 
 	public static final EulerAngle LEG_ANGLE = new EulerAngle(Math.PI, 0, 0);
 

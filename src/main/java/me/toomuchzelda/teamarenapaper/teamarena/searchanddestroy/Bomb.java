@@ -62,8 +62,6 @@ public class Bomb
 	private ExplosionEffect explodeMode = ExplosionEffect.CARBONIZE_BLOCKS;
 	private int lastHissTime = 0;
 
-	private Component sidebarStatus = BOMB_IS_SAFE;
-
 	private ArmorStand glowingBlockStand; // An entity to make the solid block TNT appear as if it is glowing.
 	private Team visualTeam; // Team for the glowing entities to be on to give them correct colour.
 
@@ -282,20 +280,9 @@ public class Bomb
 			if(timeLeft <= 0) {
 				this.detonate(this.explodeMode);
 			}
-
-			Component secondsText = Component.text(" "+ secondsLeft, NamedTextColor.DARK_RED);
-			if(disarmingProgressBar != null) {
-				this.sidebarStatus = disarmingProgressBar.append(secondsText);
-			}
-			else {
-				this.sidebarStatus = Component.textOfChildren(Component.space(), detonatingIn);
-			}
 		}
 		else if(this.isDetonated()){
 			hologramLines.set(0, Component.text("R.I.P " + owningTeam.getName(), owningTeam.getRGBTextColor()));
-		}
-		else {
-			this.sidebarStatus = BOMB_IS_SAFE;
 		}
 
 		Component[] finalLines = hologramLines.toArray(new Component[0]);
@@ -441,10 +428,6 @@ public class Bomb
 
 	public TNTPrimed getTNT() {
 		return this.tnt;
-	}
-
-	public Component getSidebarStatus() {
-		return this.sidebarStatus;
 	}
 
 	public double getExplosionProgress() {
