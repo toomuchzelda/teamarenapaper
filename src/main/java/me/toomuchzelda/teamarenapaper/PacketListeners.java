@@ -20,7 +20,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitGhost;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSpy;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.AttachedPacketEntity;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
@@ -40,8 +39,6 @@ import org.bukkit.Sound;
 import org.bukkit.craftbukkit.v1_20_R3.CraftSound;
 import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_20_R3.inventory.CraftItemStack;
-import org.bukkit.entity.AbstractArrow;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -201,12 +198,6 @@ public class PacketListeners
 			public void onPacketSending(PacketEvent event) {
 				if(FakeHitboxManager.ACTIVE) {
 					ClientboundRemoveEntitiesPacket nmsPacket = (ClientboundRemoveEntitiesPacket) event.getPacket().getHandle();
-					/*for (int id : nmsPacket.getEntityIds()) {
-						Entity e = EntityUtils.getById(id);
-						if (e instanceof AbstractArrow aa) {
-							event.getPlayer().sendMessage("Sent delete arrow packet");
-						}
-					}*/
 					var iter = nmsPacket.getEntityIds().listIterator();
 					while(iter.hasNext()) {
 						FakeHitbox removingHitbox = FakeHitboxManager.getByPlayerId(iter.nextInt());

@@ -109,6 +109,7 @@ public class FakeHitboxManager
 		if(show != visibility) {
 			show = visibility;
 			for(var entry : FAKE_HITBOXES.values()) {
+				entry.setVisible(visibility);
 				entry.invalidateViewers();
 			}
 		}
