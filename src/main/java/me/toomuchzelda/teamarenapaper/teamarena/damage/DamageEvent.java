@@ -1,5 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
+import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.events.PacketContainer;
 import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
@@ -406,7 +408,7 @@ public class DamageEvent {
 					//send knockback packet without modifying player's velocity
 					Vec3 vec = CraftVector.toNMS(knockback);
 					ClientboundSetEntityMotionPacket packet = new ClientboundSetEntityMotionPacket(player.getEntityId(), vec);
-					PlayerUtils.sendPacket(player, packet);
+					PlayerUtils.sendPacket(player, new PacketContainer(PacketType.Play.Server.ENTITY_VELOCITY, packet));
 				} else {
 					victim.setVelocity(knockback);
 				}
@@ -598,6 +600,7 @@ public class DamageEvent {
 		net.minecraft.world.entity.LivingEntity nmsVictim = ((CraftLivingEntity) this.victim).getHandle();
 		DamageSource source = this.damageType.getDamageSource();
 		ClientboundDamageEventPacket damageEventPacket = new ClientboundDamageEventPacket(nmsVictim, source);
+		PacketContainer pLibPacket = new PacketContainer(PacketType.Play.Server.DAMAGE_EVENT, damageEventPacket);
 
 		Sound sound;
 		if (!livingVictim.isSilent()) {
@@ -630,14 +633,16 @@ public class DamageEvent {
 				PlayerUtils.setAndSyncHurtDirection(playerVictim, 0f);
 			}
 
-			PlayerUtils.sendPacket(playerVictim, damageEventPacket);
+			PlayerUtils.sendPacket(playerVictim, pLibPacket);
 		}
 
 		for (ServerPlayerConnection connection : EntityUtils.getTrackedPlayers0(livingVictim)) {
-			connection.send(damageEventPacket);
+			Player player = connection.getPlayer().getBukkitEntity();
+			PlayerUtils.sendPacket(player, pLibPacket);
+			//connection.send(damageEventPacket);
 			// Other players also need to have the sound played to them
 			if (sound != null)
-				((Player) connection.getPlayer().getBukkitEntity()).playSound(victim, sound, nmsVictim.getSoundVolume(),
+				player.playSound(victim, sound, nmsVictim.getSoundVolume(),
 					nmsVictim.getVoicePitch());
 		}
 	}

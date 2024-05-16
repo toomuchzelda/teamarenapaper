@@ -1,5 +1,7 @@
 package me.toomuchzelda.teamarenapaper.utils;
 
+import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.events.PacketContainer;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket;
@@ -25,7 +27,8 @@ public class ParticleUtils {
 
 	public static void playExplosionParticle(Location location, float offX, float offY, float offZ, boolean large) {
 		ParticleOptions particle = large ? ParticleTypes.EXPLOSION_EMITTER : ParticleTypes.EXPLOSION;
-		ClientboundLevelParticlesPacket packet = new ClientboundLevelParticlesPacket(particle, false, location.getX(), location.getY(), location.getZ(), offX, offY, offZ, 1f, 1);
+		PacketContainer packet = new PacketContainer(PacketType.Play.Server.WORLD_PARTICLES,
+			new ClientboundLevelParticlesPacket(particle, false, location.getX(), location.getY(), location.getZ(), offX, offY, offZ, 1f, 1));
 
 		for(Player p : location.getWorld().getPlayers()) {
 			PlayerUtils.sendPacket(p, packet);

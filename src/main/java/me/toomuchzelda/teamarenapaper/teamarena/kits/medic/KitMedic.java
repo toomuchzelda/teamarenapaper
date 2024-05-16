@@ -1,5 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.medic;
 
+import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.events.PacketContainer;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
@@ -249,7 +251,9 @@ public class KitMedic extends Kit
 				Bukkit.getScheduler().runTask(Main.getPlugin(), bukkitTask -> {
 					FishHook hook = medic.getFishHook();
 					if(hook != null) // Need to null check as medic.getFishHook may be null 1 tick later.
-						PlayerUtils.sendPacket(hookedPlayer, EntityUtils.getRemoveEntitiesPacket(hook));
+						PlayerUtils.sendPacket(hookedPlayer,
+							new PacketContainer(PacketType.Play.Server.ENTITY_DESTROY, EntityUtils.getRemoveEntitiesPacket(hook))
+						);
 				});
 			}
 		}

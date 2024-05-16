@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.capturetheflag;
 
+import com.comphenix.protocol.PacketType;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
@@ -448,7 +449,7 @@ public class CaptureTheFlag extends TeamArena
 		//player.addPassenger(flag.getArmorStand());
 		player.setGlowing(true);
 		//send a packet to remove the armor stand so it doesn't obstruct their view
-		PlayerUtils.sendPacket(player, flag.getRemovePacket());
+		PlayerUtils.sendPacket(player, PacketType.Play.Server.ENTITY_DESTROY, flag.getRemovePacket());
 
 		//give them the inventory item
 		player.getInventory().addItem(flag.item);

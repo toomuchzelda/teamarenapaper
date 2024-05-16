@@ -128,7 +128,7 @@ public class SpectatorAngelManager
 		private static final int[] EMPTY_ARR = new int[0];
 
 		private final Player owner;
-		private final ClientboundSetEquipmentPacket equipmentPacket;
+		private final PacketContainer equipmentPacket;
 		final int spawnTime;
 
 		/**
@@ -156,7 +156,7 @@ public class SpectatorAngelManager
 			List<Pair<EquipmentSlot, net.minecraft.world.item.ItemStack>> list = List.of(
 					Pair.of(EquipmentSlot.MAINHAND, CraftItemStack.asNMSCopy(ownersHead))
 			);
-			this.equipmentPacket = new ClientboundSetEquipmentPacket(this.getId(), list);
+			this.equipmentPacket = new PacketContainer(PacketType.Play.Server.ENTITY_EQUIPMENT, new ClientboundSetEquipmentPacket(this.getId(), list));
 
 			this.spawnTime = TeamArena.getGameTick();
 		}

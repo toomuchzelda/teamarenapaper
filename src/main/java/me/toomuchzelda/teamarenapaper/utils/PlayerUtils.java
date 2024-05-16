@@ -49,23 +49,24 @@ public class PlayerUtils {
 	}
 
     public static void sendPacket(Player player, PacketContainer... packets) {
-		sendPacket(player, false, packets);
+		for (PacketContainer p : packets)
+			ProtocolLibrary.getProtocolManager().sendServerPacket(player, p, false);
+	}
+
+	public static void sendPacket(Collection<? extends Player> players, PacketContainer packet) {
+		for (Player player : players) {
+			sendPacket(player, packet);
+		}
 	}
 
 	public static void sendPacket(Collection<? extends Player> players, PacketContainer... packets) {
 		for (Player player : players) {
-			sendPacket(player, false, packets);
+			sendPacket(player, packets);
 		}
 	}
 
-	public static void sendPacket(Player player, boolean triggerPacketListeners, PacketContainer... packets) {
-		for (PacketContainer packet : packets) {
-			ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet, triggerPacketListeners);
-		}
-    }
-
-	public static void sendPacket(Player player, Packet<?> packet) {
-		((CraftPlayer) player).getHandle().connection.send(packet);
+	public static void sendPacket(Player player, PacketType type, Packet<?> packet) {
+		sendPacket(player, new PacketContainer(type, packet));
 	}
 
 	public static void sendPacket(Player player, Packet<?>... packets) {
@@ -194,7 +195,8 @@ public class PlayerUtils {
 		int food = player.getFoodLevel();
 		float saturation = player.getSaturation();
 
-		ClientboundSetHealthPacket packet = new ClientboundSetHealthPacket(health, food, saturation);
+		PacketContainer packet = new PacketContainer(PacketType.Play.Server.UPDATE_HEALTH,
+			new ClientboundSetHealthPacket(health, food, saturation));
 
 		PlayerUtils.sendPacket(player, packet);
 	}
@@ -207,12 +209,12 @@ public class PlayerUtils {
 	public static void setAndSyncHurtDirection(Player player, float yaw) {
 		player.setHurtDirection(yaw);
 		final ClientboundHurtAnimationPacket sync = new ClientboundHurtAnimationPacket(((CraftPlayer) player).getHandle());
-		PlayerUtils.sendPacket(player, sync);
+		PlayerUtils.sendPacket(player, PacketType.Play.Server.ANIMATION, sync);
 	}
 
 	public static void syncHurtDirection(Player player) {
 		final ClientboundHurtAnimationPacket sync = new ClientboundHurtAnimationPacket(((CraftPlayer) player).getHandle());
-		PlayerUtils.sendPacket(player, sync);
+		PlayerUtils.sendPacket(player, PacketType.Play.Server.ANIMATION, sync);
 	}
 
 	public static void resetState(Player player) {
@@ -301,6 +303,6 @@ public class PlayerUtils {
 			craftBorder = (CraftWorldBorder) player.getWorld().getWorldBorder();
 
 		ClientboundSetBorderWarningDistancePacket packet = new ClientboundSetBorderWarningDistancePacket(craftBorder.getHandle());
-		PlayerUtils.sendPacket(player, packet);
+		PlayerUtils.sendPacket(player, PacketType.Play.Server.SET_BORDER_WARNING_DISTANCE, packet);
 	}
 }

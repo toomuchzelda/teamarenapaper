@@ -1,10 +1,10 @@
 package me.toomuchzelda.teamarenapaper.utils.packetentities;
 
+import com.comphenix.protocol.events.PacketContainer;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
-import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -71,7 +71,7 @@ public class AttachedPacketEntity extends PacketEntity
 		if(this.isAlive() && this.selfSee && this.entity instanceof Player player) {
 			final boolean sendYaw = this.sendHeadRotPackets && this.updateRotateHeadPacket(newLocation.getYaw());
 
-			ClientboundMoveEntityPacket movePacket = getRelativePosPacket(this.location, newLocation);
+			PacketContainer movePacket = getRelativePosPacket(this.location, newLocation);
 			if(movePacket == null || (
 					this.dirtyRelativePacketTime != HASNT_MOVED &&
 					TeamArena.getGameTick() - this.dirtyRelativePacketTime >= PacketEntity.TICKS_PER_TELEPORT_UPDATE)) {

@@ -204,7 +204,7 @@ public class Flag
 	}
 
 	public void sendRecreatePackets(Player player) {
-		PlayerUtils.sendPacket(player, getSpawnPacket());
+		PlayerUtils.sendPacket(player, PacketType.Play.Server.SPAWN_ENTITY, getSpawnPacket());
 		PlayerUtils.sendPacket(player, normalMetadataPacket);
 		ItemStack helmet = stand.getEquipment().getHelmet();
 		ItemStack chestplate = stand.getEquipment().getChestplate();

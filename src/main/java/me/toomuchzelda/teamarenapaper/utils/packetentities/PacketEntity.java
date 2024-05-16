@@ -236,7 +236,7 @@ public class PacketEntity
 		if (isAlive() && changed.size() != 0) {
 			var equipmentDeltaPacket = new ClientboundSetEquipmentPacket(getId(), EntityUtils.getNMSEquipmentList(changed));
 			for (Player viewer : getRealViewers()) {
-				PlayerUtils.sendPacket(viewer, equipmentDeltaPacket);
+				PlayerUtils.sendPacket(viewer, PacketType.Play.Server.ENTITY_EQUIPMENT, equipmentDeltaPacket);
 			}
 		}
 	}
@@ -286,7 +286,7 @@ public class PacketEntity
 		this.updateTeleportPacket(this.location);
 	}
 
-	protected ClientboundMoveEntityPacket getRelativePosPacket(Location oldLoc, Location newLoc) {
+	protected PacketContainer getRelativePosPacket(Location oldLoc, Location newLoc) {
 		//cannot move more than 8 blocks, use teleport for that one
 		final double distSqr = oldLoc.distanceSquared(newLoc);
 		if(distSqr > 64d)
@@ -300,6 +300,7 @@ public class PacketEntity
 		final boolean changedRotation = oldYaw != newYaw || oldPitch != newPitch;
 
 		final ClientboundMoveEntityPacket packet;
+		PacketType packetType;
 
 		if(distSqr > 0d) {
 			double xMovement = newLoc.getX() - oldLoc.getX();
@@ -310,17 +311,20 @@ public class PacketEntity
 			short z = (short) (zMovement * 32 * 128);
 			if(changedRotation) {
 				packet = new ClientboundMoveEntityPacket.PosRot(this.id, x, y, z, newYaw, newPitch, false);
+				packetType = PacketType.Play.Server.REL_ENTITY_MOVE_LOOK;
 			}
 			else {
 				packet = new ClientboundMoveEntityPacket.Pos(this.id, x, y, z, false);
+				packetType = PacketType.Play.Server.REL_ENTITY_MOVE;
 			}
 		}
 		else {
 			//do this even if rotation hasn't changed
 			packet = new ClientboundMoveEntityPacket.Rot(this.id, newYaw, newPitch, false);
+			packetType = PacketType.Play.Server.ENTITY_LOOK;
 		}
 
-		return packet;
+		return new PacketContainer(packetType, packet);
 	}
 
 	//convert from 0-360 to 0-255
@@ -405,7 +409,8 @@ public class PacketEntity
 		if(isAlive) {
 			// Optimization: Don't send yaw if not needed
 			boolean sendYaw = updateRotateHeadPacket(newLocation.getYaw());
-			ClientboundMoveEntityPacket movePacket = getRelativePosPacket(this.location, newLocation);
+			// Optimization: Use protocolLib packet instead of NMS to avoid triggering packet listeners
+			PacketContainer movePacket = getRelativePosPacket(this.location, newLocation);
 			if(movePacket != null) {
 				for (Player p : realViewers) {
 					PlayerUtils.sendPacket(p, movePacket);

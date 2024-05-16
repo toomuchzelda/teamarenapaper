@@ -162,7 +162,8 @@ public class EntityUtils {
 	 */
 	public static void playEffect(Entity entity, int effect) {
 		net.minecraft.world.entity.Entity nmsEntity = ((CraftEntity) entity).getHandle();
-		ClientboundAnimatePacket packet = new ClientboundAnimatePacket(nmsEntity, effect);
+		PacketContainer packet = new PacketContainer(PacketType.Play.Server.ANIMATION,
+			new ClientboundAnimatePacket(nmsEntity, effect));
 
 		//if a player, send packet to self
 		if (entity instanceof Player p) {
@@ -174,7 +175,7 @@ public class EntityUtils {
 			PlayerUtils.sendPacket(p, packet);
 		}*/
 		for (ServerPlayerConnection connection : getTrackedPlayers0(entity)) {
-			connection.send(packet);
+			PlayerUtils.sendPacket(connection.getPlayer().getBukkitEntity(), packet);
 		}
 	}
 
