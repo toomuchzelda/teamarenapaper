@@ -399,7 +399,7 @@ public class CommandDebug extends CustomCommand {
 						@Override
 						public void onInteract(Player player, EquipmentSlot hand, boolean attack) {
 							this.setMetadata(MetaIndex.AXOLOTL_COLOR_OBJ, MathUtils.randomMax(4));
-							EntityUtils.playEffect(this, ClientboundAnimatePacket.CRITICAL_HIT);
+							this.playEffect(ClientboundAnimatePacket.CRITICAL_HIT);
 							this.getWorld().playSound(this.getLocation(), Sound.ENTITY_AXOLOTL_SWIM, 1f, 1f);
 							if (attack)
 								Bukkit.broadcast(Component.text("Curse you " + player.getName() + "!", NamedTextColor.DARK_RED));

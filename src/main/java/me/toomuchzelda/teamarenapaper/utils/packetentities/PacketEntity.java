@@ -236,7 +236,7 @@ public class PacketEntity
 		if (isAlive() && changed.size() != 0) {
 			var equipmentDeltaPacket = new ClientboundSetEquipmentPacket(getId(), EntityUtils.getNMSEquipmentList(changed));
 			for (Player viewer : getRealViewers()) {
-				PlayerUtils.sendPacket(viewer, PacketType.Play.Server.ENTITY_EQUIPMENT, equipmentDeltaPacket);
+				this.sendPacket(viewer, new PacketContainer(PacketType.Play.Server.ENTITY_EQUIPMENT, equipmentDeltaPacket));
 			}
 		}
 	}
@@ -384,6 +384,19 @@ public class PacketEntity
 	}
 
 	/**
+	 * @param effect A ClientboundAnimatePacket effect.
+	 */
+	public void playEffect(int effect) {
+		PacketContainer packet = new PacketContainer(PacketType.Play.Server.ANIMATION);
+
+		StructureModifier<Integer> ints = packet.getIntegers();
+		ints.write(0, this.getId());
+		ints.write(1, effect);
+
+		this.realViewers.forEach(player -> this.sendPacket(player, packet));
+	}
+
+	/**
 	 * Mark for syncing position on the next tick
 	 */
 	public void syncLocation() {
@@ -413,9 +426,9 @@ public class PacketEntity
 			PacketContainer movePacket = getRelativePosPacket(this.location, newLocation);
 			if(movePacket != null) {
 				for (Player p : realViewers) {
-					PlayerUtils.sendPacket(p, movePacket);
+					this.sendPacket(p, movePacket);
 					if (sendYaw)
-						PlayerUtils.sendPacket(p, this.rotateHeadPacket);
+						this.sendPacket(p, this.rotateHeadPacket);
 				}
 
 				if(this.dirtyRelativePacketTime == HASNT_MOVED) {
@@ -425,9 +438,9 @@ public class PacketEntity
 			else {
 				updateTeleportPacket(newLocation);
 				for (Player p : realViewers) {
-					PlayerUtils.sendPacket(p, teleportPacket);
+					this.sendPacket(p, teleportPacket);
 					if (sendYaw)
-						PlayerUtils.sendPacket(p, this.rotateHeadPacket);
+						this.sendPacket(p, rotateHeadPacket);
 				}
 			}
 		}
@@ -437,13 +450,14 @@ public class PacketEntity
 	}
 
 	protected void spawn(Player player) {
-		PlayerUtils.sendPacket(player, spawnPacket, metadataPacket);
+		this.sendPacket(player, spawnPacket);
+		this.sendPacket(player, metadataPacket);
 		if (equipmentPacket != null)
-			PlayerUtils.sendPacket(player, equipmentPacket);
+			this.sendPacket(player, equipmentPacket);
 	}
 
 	protected void despawn(Player player) {
-		PlayerUtils.sendPacket(player, deletePacket);
+		this.sendPacket(player, deletePacket);
 	}
 
 	/**
@@ -502,9 +516,9 @@ public class PacketEntity
 				this.updateTeleportPacket(this.location);
 				boolean sendYaw = this.updateRotateHeadPacket(this.location.getYaw());
 				realViewers.forEach(player -> {
-					PlayerUtils.sendPacket(player, this.teleportPacket);
+					this.sendPacket(player, this.teleportPacket);
 					if (sendYaw)
-						PlayerUtils.sendPacket(player, this.rotateHeadPacket);
+						this.sendPacket(player, this.rotateHeadPacket);
 				});
 			}
 		}
@@ -578,7 +592,7 @@ public class PacketEntity
 		this.updateMetadataPacket();
 		if(this.isAlive) {
 			for (Player p : realViewers) {
-				PlayerUtils.sendPacket(p, this.metadataPacket);
+				this.sendPacket(p, this.metadataPacket);
 			}
 		}
 	}
@@ -691,5 +705,12 @@ public class PacketEntity
 	@Override
 	public String toString() {
 		return "PacketEntity{id=" + id + ",type=" + entityType + ",uuid=" + uuid + "}";
+	}
+
+	/**
+	 * For PacketEntity, use this instead of PlayerUtils.sendPacket
+	 */
+	protected void sendPacket(Player receiver, PacketContainer packet) {
+		PlayerUtils.sendPacket(receiver, PacketEntityManager.cache, packet);
 	}
 }

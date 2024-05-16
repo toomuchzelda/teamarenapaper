@@ -170,7 +170,9 @@ public class FakeHitbox
 					//need to spawn / remove the hitboxes for viewer
 					if (nowInRange) {
 						fakeHitboxViewer.hitboxSpawnTime = currentTick;
-						PlayerUtils.sendPacket(playerViewer, getSpawnAndMetadataPackets());
+						PlayerUtils.PacketCache cache = new PlayerUtils.PacketCache();
+						PlayerUtils.sendPacket(playerViewer, cache, getSpawnAndMetadataPackets());
+						cache.flush();
 						//Bukkit.broadcastMessage("sent spawn packets from " + this.owner.getName() + " to " + playerViewer.getName());
 					}
 					else {

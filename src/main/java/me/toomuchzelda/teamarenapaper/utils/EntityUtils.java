@@ -179,19 +179,6 @@ public class EntityUtils {
 		}
 	}
 
-	/**
-	 * @param effect A ClientboundAnimatePacket effect.
-	 */
-	public static void playEffect(PacketEntity packetEntity, int effect) {
-		PacketContainer packet = new PacketContainer(PacketType.Play.Server.ANIMATION);
-
-		StructureModifier<Integer> ints = packet.getIntegers();
-		ints.write(0, packetEntity.getId());
-		ints.write(1, effect);
-
-		packetEntity.getRealViewers().forEach(player -> PlayerUtils.sendPacket(player, packet));
-	}
-
 	public static ClientboundRemoveEntitiesPacket getRemoveEntitiesPacket(Entity... entities) {
 		int[] ints = new int[entities.length];
 		for (int i = 0; i < entities.length; i++) {

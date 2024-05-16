@@ -121,7 +121,7 @@ public class PacketListeners
 		{
 			@Override
 			public void onPacketSending(PacketEvent event) {
-				PacketContainer packet = event.getPacket();
+				final PacketContainer packet = event.getPacket();
 				int id = packet.getIntegers().read(0);
 				Player mover = Main.playerIdLookup.get(id);
 
@@ -133,16 +133,29 @@ public class PacketListeners
 						FakeHitboxViewer hitboxViewer = hitbox.getFakeViewer(viewer);
 						if (hitboxViewer.isSeeingHitboxes()) {
 							//send a precise teleport packet if its right after spawning as desyncs happen here
+							PacketContainer[] toBundle = null;
 							if (event.getPacketType() == PacketType.Play.Server.ENTITY_TELEPORT || hitboxViewer.getHitboxSpawnTime() < TeamArena.getGameTick()) {
 								hitboxViewer.setHitboxSpawnTime(Integer.MAX_VALUE);
-								PlayerUtils.sendPacket(viewer, hitbox.getTeleportPackets());
+								//PlayerUtils.sendPacket(viewer, hitbox.getTeleportPackets());
+								toBundle = hitbox.getTeleportPackets();
 							}
 							else {
 								PacketContainer[] movePackets = hitbox.createRelMovePackets(packet);
 								if (movePackets != null) {
-									PlayerUtils.sendPacket(viewer, movePackets);
+									//PlayerUtils.sendPacket(viewer, movePackets);
+									toBundle = movePackets;
 									//Bukkit.broadcastMessage(TeamArena.getGameTick() + " rel move sent");
 								}
+							}
+
+							if (toBundle != null) {
+								List<PacketContainer> list = new ArrayList<>(toBundle.length + 1);
+								for (PacketContainer p : toBundle)
+									list.add(p);
+								list.add(packet);
+
+								event.setCancelled(true);
+								PlayerUtils.sendPacket(viewer, null, PlayerUtils.PacketCache.createBundle(list));
 							}
 						}
 					}
@@ -160,15 +173,16 @@ public class PacketListeners
 			@Override
 			public void onPacketSending(PacketEvent event) {
 				//if player is trigger, sync up their trigger creeper's movement and position
-				PacketContainer packet = event.getPacket();
+				final PacketContainer packet = event.getPacket();
 				final int id = packet.getIntegers().read(0);
 
 				Set<AttachedPacketEntity> attachedEntities = PacketEntityManager.lookupAttachedEntities(id);
 				if(attachedEntities == null)
 					return;
 
+				List<PacketContainer> toBundle = new ArrayList<>(attachedEntities.size());
+				final Player viewer = event.getPlayer();
 				for(AttachedPacketEntity attachedE : attachedEntities) {
-					final Player viewer = event.getPlayer();
 					if(attachedE.getRealViewers().contains(viewer)) {
 						if (!attachedE.sendHeadRotPackets && packet.getType() == PacketType.Play.Server.ENTITY_HEAD_ROTATION) {
 							continue;
@@ -184,9 +198,16 @@ public class PacketListeners
 							entityPacket.getDoubles().write(1, y);
 						}
 
-						//send the packet immediately
-						PlayerUtils.sendPacket(viewer, entityPacket);
+						toBundle.add(entityPacket);
 					}
+				}
+
+				// Send immediately
+				if (toBundle.size() > 1) {
+					PlayerUtils.sendPacket(viewer, null, PlayerUtils.PacketCache.createBundle(toBundle));
+				}
+				else if (toBundle.size() == 1) {
+					PlayerUtils.sendPacket(viewer, null, toBundle.getFirst());
 				}
 			}
 		});

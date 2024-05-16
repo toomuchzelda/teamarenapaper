@@ -77,12 +77,13 @@ public class AttachedPacketEntity extends PacketEntity
 					TeamArena.getGameTick() - this.dirtyRelativePacketTime >= PacketEntity.TICKS_PER_TELEPORT_UPDATE)) {
 
 				updateTeleportPacket(newLocation);
-				PlayerUtils.sendPacket(player, this.getTeleportPacket(), this.getRotateHeadPacket());
+				this.sendPacket(player, this.getTeleportPacket());
+				this.sendPacket(player, this.getRotateHeadPacket());
 			}
 			else {
-				PlayerUtils.sendPacket(player, movePacket);
+				this.sendPacket(player, movePacket);
 				if (sendYaw)
-					PlayerUtils.sendPacket(player, this.getRotateHeadPacket());
+					this.sendPacket(player, this.getRotateHeadPacket());
 
 				if (this.dirtyRelativePacketTime == HASNT_MOVED) {
 					this.dirtyRelativePacketTime = TeamArena.getGameTick();
@@ -122,7 +123,7 @@ public class AttachedPacketEntity extends PacketEntity
 			//if pose changed, re-send precise loc packet to move the entity up/down
 			this.updateTeleportPacket(loc);
 			for(Player viewer : this.getRealViewers()) {
-				PlayerUtils.sendPacket(viewer, this.getTeleportPacket());
+				this.sendPacket(viewer, this.getTeleportPacket());
 			}
 			this.oldPose = entitysPose;
 		}

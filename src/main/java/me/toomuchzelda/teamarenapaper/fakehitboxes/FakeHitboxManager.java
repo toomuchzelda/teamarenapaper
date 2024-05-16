@@ -77,7 +77,12 @@ public class FakeHitboxManager
 	}
 
 	static void addFakeLookupEntry(int fakeEntityId, Player player) {
-		FAKE_PLAYER_LOOKUP.put(fakeEntityId, player);
+		Player prevPlayer = FAKE_PLAYER_LOOKUP.put(fakeEntityId, player);
+		if (prevPlayer != null) {
+			Main.logger().severe("Previous ID lookup existed for player" + prevPlayer.getName() + " when trying " +
+				"to add ID " + fakeEntityId + " for " + player.getName());
+			Thread.dumpStack();
+		}
 	}
 
 	public static Player getByFakeId(int id) {

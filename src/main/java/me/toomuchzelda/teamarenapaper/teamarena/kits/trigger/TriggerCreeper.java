@@ -24,28 +24,11 @@ import java.util.function.Predicate;
 public class TriggerCreeper extends AttachedPacketEntity
 {
 	private final Player trigger;
-	private boolean wasSneaking;
 
 	public TriggerCreeper(Player trigger, @Nullable Predicate<Player> viewerRule) {
 		super(PacketEntity.NEW_ID, EntityType.CREEPER, trigger, null, viewerRule, false, true);
 
 		this.trigger = trigger;
-		this.wasSneaking = false;
-	}
-
-	/**
-	 * Override this to not send movement packets, since we are doing that in a packet listener
-	 * Do it in the packet listener so that the creeper and player movement won't be weirdly de-synced to viewers
-	 */
-	@Override
-	public void move(Location newLocation) {
-		if(this.location.equals(newLocation))
-			return;
-
-		newLocation = newLocation.clone();
-
-		this.updateSpawnPacket(newLocation);
-		this.location = newLocation;
 	}
 
 	@Override

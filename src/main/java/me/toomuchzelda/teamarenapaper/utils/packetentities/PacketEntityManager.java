@@ -2,8 +2,10 @@ package me.toomuchzelda.teamarenapaper.utils.packetentities;
 
 import com.destroystokyo.paper.event.player.PlayerUseUnknownEntityEvent;
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 
 import java.util.*;
+import java.util.function.Consumer;
 
 public class PacketEntityManager
 {
@@ -26,8 +28,12 @@ public class PacketEntityManager
 		return ATTACHED_PACKET_ENTITIES_LOOKUP.get(id);
 	}
 
+	// Optimization for ticks: store every packet in here and send as bundles
+	// Accessed by PacketEntity##sendPacket()
+	static PlayerUtils.PacketCache cache = null;
 	public static void tick() {
 		var iter = ALL_PACKET_ENTITIES.values().iterator();
+		cache = new PlayerUtils.PacketCache();
 		while(iter.hasNext()) {
 			PacketEntity pEntity = iter.next();
 
@@ -48,6 +54,20 @@ public class PacketEntityManager
 				pEntity.globalTick();
 			}
 		}
+
+		cache.flush();
+		cache = null;
+	}
+
+	// TODO think of something better
+	public static void withBundleCache(Runnable func) {
+		if (cache == null)
+			cache = new PlayerUtils.PacketCache();
+
+		func.run();
+
+		cache.flush();
+		cache = null;
 	}
 
 	public static void cleanUp() {

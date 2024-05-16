@@ -15,10 +15,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientboundHurtAnimationPacket;
-import net.minecraft.network.protocol.game.ClientboundSetBorderWarningDistancePacket;
-import net.minecraft.network.protocol.game.ClientboundSetHealthPacket;
-import net.minecraft.network.protocol.game.ServerboundInteractPacket;
+import net.minecraft.network.protocol.game.*;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.InteractionHand;
 import org.bukkit.Bukkit;
@@ -37,42 +34,101 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.Map;
+import java.util.*;
 
 public class PlayerUtils {
+	// Use and lose, don't keep a reference unless you take care to clear()
+	public static class PacketCache {
+		private final Map<Player, List<PacketContainer>> cache = new HashMap<>(Bukkit.getMaxPlayers());
 
-	public static void sendPacket(Player player, PacketContainer packet) {
-		ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet, false);
+		public void enqueue(Player player, PacketContainer packet) {
+			this.cache.computeIfAbsent(player, p -> new ArrayList<>()).add(packet);
+		}
+
+		public void enqueue(Player player, PacketContainer... packets) {
+			this.cache.computeIfAbsent(player, p -> new ArrayList<>(packets.length)).addAll(Arrays.asList(packets));
+		}
+
+		public void clear() { this.cache.clear(); }
+
+		public void flush() {
+			for (var entry : cache.entrySet()) {
+				List<PacketContainer> queuedPackets = entry.getValue();
+				if (queuedPackets.size() == 1) {
+					sendPacket(entry.getKey(), null, queuedPackets.getFirst());
+				}
+				else {
+					sendPacket(entry.getKey(), null, createBundle(queuedPackets));
+				}
+
+				queuedPackets.clear();
+			}
+		}
+
+		public static PacketContainer createBundle(List<PacketContainer> packets) {
+			PacketContainer bundle = new PacketContainer(PacketType.Play.Server.BUNDLE);
+			bundle.getPacketBundles().write(0, packets);
+			return bundle;
+		}
 	}
 
-    public static void sendPacket(Player player, PacketContainer... packets) {
-		for (PacketContainer p : packets)
-			ProtocolLibrary.getProtocolManager().sendServerPacket(player, p, false);
+	public static void sendPacket(Player player, @Nullable PacketCache cache, PacketContainer packet) {
+		if (cache != null)
+			cache.enqueue(player, packet);
+		else
+			ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet, false);
+	}
+
+	public static void sendPacket(Player player, PacketContainer packet) {
+		sendPacket(player, null, packet);
+	}
+
+	public static void sendPacket(Player player, @Nullable PacketCache cache, PacketContainer... packets) {
+		for (PacketContainer p : packets) {
+			sendPacket(player, cache, p);
+		}
+	}
+
+	public static void sendPacket(Player player, PacketContainer... packets) {
+		sendPacket(player, null, packets);
+	}
+
+	public static void sendPacket(Collection<? extends Player> players, @Nullable PacketCache cache,
+								  PacketContainer packet) {
+		for (Player player : players) {
+			sendPacket(player, cache, packet);
+		}
 	}
 
 	public static void sendPacket(Collection<? extends Player> players, PacketContainer packet) {
+		sendPacket(players, null, packet);
+	}
+
+	public static void sendPacket(Collection<? extends Player> players, @Nullable PacketCache cache, PacketContainer... packets) {
 		for (Player player : players) {
-			sendPacket(player, packet);
+			sendPacket(player, cache, packets);
 		}
 	}
 
 	public static void sendPacket(Collection<? extends Player> players, PacketContainer... packets) {
-		for (Player player : players) {
-			sendPacket(player, packets);
-		}
+		sendPacket(players, null, packets);
+	}
+
+	// NMS packets
+	public static void sendPacket(Player player, @Nullable PacketCache cache, PacketType type, Packet<?> packet) {
+		sendPacket(player, cache, new PacketContainer(type, packet));
 	}
 
 	public static void sendPacket(Player player, PacketType type, Packet<?> packet) {
-		sendPacket(player, new PacketContainer(type, packet));
+		sendPacket(player, null, new PacketContainer(type, packet));
 	}
 
+	@Deprecated
 	public static void sendPacket(Player player, Packet<?>... packets) {
 		sendPacket(player, Arrays.asList(packets));
 	}
 
+	@Deprecated
 	public static void sendPacket(Player player, Collection<? extends Packet<?>> packets) {
 		ServerGamePacketListenerImpl connection = ((CraftPlayer) player).getHandle().connection;
 		for (Packet<?> p : packets) {
