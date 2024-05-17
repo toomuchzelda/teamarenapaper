@@ -169,7 +169,7 @@ public class SpectatorAngelManager
 			setPassengersPacket.getIntegers().write(0, this.getId());
 			int[] mountedEnts = mount ? new int[] {this.owner.getEntityId()} : EMPTY_ARR;
 			setPassengersPacket.getIntegerArrays().write(0, mountedEnts);
-			PlayerUtils.sendPacket(this.owner, setPassengersPacket);
+			this.sendPacket(this.owner, setPassengersPacket);
 		}
 
 		public void setDancing(boolean dance) {
@@ -182,7 +182,7 @@ public class SpectatorAngelManager
 		protected void spawn(Player player) {
 			super.spawn(player);
 
-			PlayerUtils.sendPacket(player, this.equipmentPacket);
+			this.sendPacket(player, this.equipmentPacket);
 		}
 
 		@Override

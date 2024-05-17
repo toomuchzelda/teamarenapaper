@@ -3,7 +3,6 @@ package me.toomuchzelda.teamarenapaper.teamarena.killstreak.crate;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import org.bukkit.DyeColor;
 import org.bukkit.Location;
@@ -233,11 +232,11 @@ public class FallingCrate {
 		public void spawn() {
 			armorStand.respawn();
 			fallingBlock.respawn();
-			PlayerUtils.sendPacket(viewers(), mountPacket);
+			armorStand.broadcastPacket(mountPacket);
 			if (leashKnot != null) {
 				leashKnot.respawn();
 				if (leashPacket != null) {
-					PlayerUtils.sendPacket(viewers(), leashPacket);
+					leashKnot.broadcastPacket(leashPacket);
 				}
 			}
 		}

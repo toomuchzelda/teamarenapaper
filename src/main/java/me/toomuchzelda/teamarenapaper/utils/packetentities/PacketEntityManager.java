@@ -30,10 +30,9 @@ public class PacketEntityManager
 
 	// Optimization for ticks: store every packet in here and send as bundles
 	// Accessed by PacketEntity##sendPacket()
-	static PlayerUtils.PacketCache cache = null;
+	static PlayerUtils.PacketCache cache = new PlayerUtils.PacketCache();
 	public static void tick() {
 		var iter = ALL_PACKET_ENTITIES.values().iterator();
-		cache = new PlayerUtils.PacketCache();
 		while(iter.hasNext()) {
 			PacketEntity pEntity = iter.next();
 
@@ -55,19 +54,25 @@ public class PacketEntityManager
 			}
 		}
 
-		cache.flush();
-		cache = null;
+		if (cache != null) {
+			cache.flush();
+			cache.clear();
+		}
 	}
 
-	// TODO think of something better
-	public static void withBundleCache(Runnable func) {
-		if (cache == null)
-			cache = new PlayerUtils.PacketCache();
-
-		func.run();
-
-		cache.flush();
-		cache = null;
+	public static void toggleCache(boolean toggle) {
+		if (toggle) {
+			if (cache == null) {
+				cache = new PlayerUtils.PacketCache();
+			}
+		}
+		else {
+			if (cache != null) {
+				cache.flush();
+				cache.clear();
+				cache = null;
+			}
+		}
 	}
 
 	public static void cleanUp() {

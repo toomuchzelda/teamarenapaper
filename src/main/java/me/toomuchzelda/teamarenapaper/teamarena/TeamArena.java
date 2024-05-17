@@ -753,7 +753,7 @@ public abstract class TeamArena
 					Location spawnLoc = p.getLocation();
 					spawnLoc.add(0, MathUtils.randomRange(1.4, 2), 0);
 					var hologram = new DamageIndicatorHologram(spawnLoc, PlayerUtils.getDamageIndicatorViewers(p, playerCause), damageText);
-					PacketEntityManager.withBundleCache(hologram::respawn);
+					hologram.respawn();
 
 					//add to their damage log
 					pinfo.logDamageReceived(event.getDamageType(), event.getFinalDamage(), event.getFinalAttacker(), gameTick);

@@ -10,7 +10,6 @@ import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.GlowUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
 import net.kyori.adventure.text.Component;
@@ -506,8 +505,11 @@ public sealed class BuildingOutline extends PacketEntity {
 				// copy equipment
 				setEquipment(packetEntity.getAllEquipment());
 			}
-			if (isAlive() && packets.size() != 0)
-				PlayerUtils.sendPacket(getRealViewers(), packets.toArray(new PacketContainer[0]));
+
+			if (isAlive() && packets.size() != 0) {
+				for (PacketContainer p : packets)
+					this.broadcastPacket(p);
+			}
 		}
 
 		@Override

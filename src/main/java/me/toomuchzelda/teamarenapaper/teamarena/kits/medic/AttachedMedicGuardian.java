@@ -20,18 +20,13 @@ import java.util.function.Predicate;
  */
 public class AttachedMedicGuardian extends AttachedPacketEntity
 {
-	private int targetEntityId;
-
 	AttachedMedicGuardian(LivingEntity followed, Predicate<Player> viewerRule) {
 		super(PacketEntity.NEW_ID, EntityType.GUARDIAN, followed, null, viewerRule, false, false);
 
-		this.targetEntityId = 0;
 		this.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK);
 	}
 
 	void setTarget(int entityId) {
-		this.targetEntityId = entityId;
-
 		this.setMetadata(MetaIndex.GUARDIAN_TARGET_OBJ, entityId);
 		this.refreshViewerMetadata();
 	}

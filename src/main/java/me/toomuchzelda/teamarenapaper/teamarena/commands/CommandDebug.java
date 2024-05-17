@@ -22,6 +22,7 @@ import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
@@ -467,6 +468,14 @@ public class CommandDebug extends CustomCommand {
 			case "arrowMarker" -> {
 				ArrowManager.spawnArrowMarkers = !ArrowManager.spawnArrowMarkers;
 			}
+			case "packetCache" -> {
+				if (args.length < 2)
+					throw throwUsage("packetCache boolean");
+
+				boolean bool = Boolean.parseBoolean(args[1]);
+				PacketEntityManager.toggleCache(bool);
+				sender.sendMessage(Component.text("Toggle cache to " + bool));
+			}
 			default -> showUsage(sender);
 		}
 	}
@@ -475,7 +484,7 @@ public class CommandDebug extends CustomCommand {
 	public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
 		if (args.length == 1) {
 			return Arrays.asList("hide", "gui", "guitest", "signtest", "game", "setrank", "setteam", "setkit",
-				"votetest", "draw", "graffititest", "respawn", "fakehitbox", "testmotd", "arrowMarker");
+				"votetest", "draw", "graffititest", "respawn", "fakehitbox", "testmotd", "arrowMarker", "packetCache");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");
@@ -489,6 +498,7 @@ public class CommandDebug extends CustomCommand {
 				case "draw" -> Arrays.asList("text", "area", "clear", "invalidate", "disable");
 				case "graffititest" -> CosmeticsManager.getLoadedCosmetics(CosmeticType.GRAFFITI).stream().map(NamespacedKey::toString).toList();
 				case "respawn" -> Bukkit.getOnlinePlayers().stream().map(Player::getName).toList();
+				case "packetcache" -> List.of("true", "false");
 				default -> Collections.emptyList();
 			};
 		} else if (args.length == 3) {

@@ -710,7 +710,11 @@ public class PacketEntity
 	/**
 	 * For PacketEntity, use this instead of PlayerUtils.sendPacket
 	 */
-	protected void sendPacket(Player receiver, PacketContainer packet) {
+	public void sendPacket(Player receiver, PacketContainer packet) {
 		PlayerUtils.sendPacket(receiver, PacketEntityManager.cache, packet);
+	}
+
+	public void broadcastPacket(PacketContainer packet) {
+		this.realViewers.forEach(player -> this.sendPacket(player, packet));
 	}
 }

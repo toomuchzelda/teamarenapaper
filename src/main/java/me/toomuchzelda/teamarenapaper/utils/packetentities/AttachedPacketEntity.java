@@ -4,7 +4,6 @@ import com.comphenix.protocol.events.PacketContainer;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
