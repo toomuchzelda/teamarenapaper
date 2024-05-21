@@ -133,6 +133,12 @@ public class PlayerScoreboard
 		}
 	}
 
+	public static void addMembersAll(Team bukkitTeam, Collection<Entity> members) {
+		for(PlayerInfo pinfo : Main.getPlayerInfos()) {
+			pinfo.getScoreboard().addMembers(bukkitTeam, members);
+		}
+	}
+
 	public static void addMembersAll(Team bukkitTeam, String... members) {
 		for(PlayerInfo pinfo : Main.getPlayerInfos()) {
 			pinfo.getScoreboard().addMembers(bukkitTeam, members);
@@ -162,6 +168,10 @@ public class PlayerScoreboard
 	 */
 	public void addMembers(Team bukkitTeam, Entity... members) {
 		addEntities(bukkitTeam, List.of(members));
+	}
+
+	public void addMembers(Team bukkitTeam, Collection<Entity> members) {
+		addEntities(bukkitTeam, members);
 	}
 
 	public void addEntities(Team bukkitTeam, Collection<? extends Entity> members) {

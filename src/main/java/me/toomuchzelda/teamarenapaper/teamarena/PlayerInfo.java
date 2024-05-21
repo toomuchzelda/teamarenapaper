@@ -14,7 +14,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -31,9 +30,8 @@ public final class PlayerInfo
 	public PermissionLevel permissionLevel;
 	public boolean displayPermissionLevel; // if should be displayed in chat and playerlistname
 	public TeamArenaTeam team;
-	public Location spawnPoint;
 	public final int statusIndicatorId; // Only one of these per-player, so can reserve and re-use an entity ID for them.
-	public StatusBarManager.StatusBarHologram statusBar;
+	StatusBarManager.StatusBarHologram statusBar;
 	public Kit kit;
 	public Kit activeKit; // kit they've selected vs the kit they're currently using
 	public final Set<Ability> abilities;
@@ -72,7 +70,6 @@ public final class PlayerInfo
 	public PlayerInfo(PermissionLevel permissionLevel, Player player) {
 		this.playerUuid = player.getUniqueId();
 		team = null;
-		spawnPoint = null;
 		statusIndicatorId = Bukkit.getUnsafe().nextEntityId();
 		statusBar = null;
 		kit = null;

@@ -11,6 +11,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
@@ -77,6 +78,8 @@ public class KitTrigger extends Kit
 		this.setItems(sword, DETONATOR_ITEM);
 
 		this.setAbilities(new TriggerAbility());
+
+		this.setCategory(KitCategory.UTILITY);
 	}
 
 	public static class TriggerAbility extends Ability

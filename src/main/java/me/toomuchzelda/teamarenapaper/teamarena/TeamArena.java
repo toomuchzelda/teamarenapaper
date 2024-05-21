@@ -275,6 +275,7 @@ public abstract class TeamArena
 		tabTeamsList = new ArrayList<>(teams.length);
 		for(TeamArenaTeam team : teams) {
 			tabTeamsList.add(team.getSimpleName());
+			team.putOnMinecraftTeams(false); // Don't show player name colours before teams decided
 		}
 
 		players = new LinkedHashSet<>();
@@ -330,7 +331,6 @@ public abstract class TeamArena
 			}
 			players.add(p);
 
-			pinfo.spawnPoint = spawnPos;
 			Kit kit = findKit(pinfo.defaultKit), filteredKit = KitFilter.filterKit(kit);
 			pinfo.kit = filteredKit;
 			if (kit != filteredKit) {
@@ -534,7 +534,13 @@ public abstract class TeamArena
 				}
 
 				setGameState(GameState.PREGAME);
+
+				noTeamTeam.addMembers(Bukkit.getOnlinePlayers().toArray(new Player[0]));
 				showTeamColours = false;
+				for (TeamArenaTeam team : teams) {
+					//team.updateNametags();
+					team.putOnMinecraftTeams(false);
+				}
 
 				//announce game cancelled
 				// spam sounds lol xddddddd
@@ -1147,6 +1153,7 @@ public abstract class TeamArena
 		//set teams here
 		showTeamColours = true;
 		setupTeams();
+
 		setGameState(GameState.TEAMS_CHOSEN);
 
 		Bukkit.broadcast(Component.text("Teams have been decided!", NamedTextColor.RED));
@@ -1372,6 +1379,7 @@ public abstract class TeamArena
 
 		for(TeamArenaTeam team : teams) {
 			team.updateNametags();
+			team.putOnMinecraftTeams(true);
 		}
 
 		//also update name colours for spectators
@@ -1789,6 +1797,10 @@ public abstract class TeamArena
 
 	//process logging in player
 	public void loggingInPlayer(Player player, PlayerInfo playerInfo) {
+		// Moved to joiningPlayer()
+	}
+
+	public void joiningPlayer(Player player, PlayerInfo playerInfo) {
 		Location toTeleport = spawnPos;
 		if(gameState.isPreGame()) {
 			if(gameState == GameState.TEAMS_CHOSEN || gameState == GameState.GAME_STARTING) {
@@ -1823,15 +1835,12 @@ public abstract class TeamArena
 			if (playerInfo.kit == null) {
 				playerInfo.kit = KitFilter.filterKit(kits.values().iterator().next());
 				Main.logger().severe("PlayerInfo default kit somehow invalid in TeamArena#loggingInPlayer. Should" +
-						" have been handled in EventListeners playerLogin.");
+					" have been handled in EventListeners playerLogin.");
 			}
 		}
 
-		//pass spawnpoint to the PlayerSpawnEvent
-		playerInfo.spawnPoint = toTeleport;
-	}
+		player.teleport(toTeleport);
 
-	public void joiningPlayer(Player player) {
 		player.setGameMode(GameMode.SURVIVAL);
 		player.getAttribute(Attribute.GENERIC_ATTACK_SPEED).setBaseValue(999999);
 		this.sendGameAndMapInfo(player);
@@ -1858,11 +1867,6 @@ public abstract class TeamArena
 
 			// Apply the spectator effects
 			makeSpectator(player);
-
-			/*for (TeamArenaTeam team : teams) {
-				if (team.isAlive())
-					player.showBossBar(team.bossBar);
-			}*/
 		}
 	}
 
@@ -1891,8 +1895,9 @@ public abstract class TeamArena
 		spectators.remove(player);
 		respawnTimers.remove(player);
 		SpectatorAngelManager.removeAngel(player);
-		balancePlayerLeave();
 		PlayerListScoreManager.removeScore(player);
+
+		balancePlayerLeave();
 
 		// If they were a player and left during game then broadcast their quit.
 		if(this.gameState == GameState.LIVE) {
@@ -2187,6 +2192,7 @@ public abstract class TeamArena
 	}
 
 	public boolean canSeeStatusBar(Player player, Player viewer) {
+		if (gameState != GameState.LIVE) return true;
 		TeamArenaTeam viewersTeam = Main.getPlayerInfo(viewer).team;
 		return viewersTeam == this.spectatorTeam || viewersTeam.getPlayerMembers().contains(player);
 	}
@@ -2246,7 +2252,8 @@ public abstract class TeamArena
 	}
 
 	public Location getSpawnPos() {
-		return this.spawnPos != null ? this.spawnPos.clone() : null;
+		assert CompileAsserts.OMIT || this.spawnPos != null;
+		return this.spawnPos;
 	}
 
 	public boolean isSpawnPosDangerous() {

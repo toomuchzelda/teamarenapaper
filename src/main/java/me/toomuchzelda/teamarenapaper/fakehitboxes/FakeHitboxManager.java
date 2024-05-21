@@ -6,10 +6,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Team;
 
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class FakeHitboxManager
@@ -69,7 +66,13 @@ public class FakeHitboxManager
 	public static void removeFakeHitbox(Player player) {
 		if(ACTIVE) {
 			Bukkit.getScheduler().runTaskLater(Main.getPlugin(), bukkitTask -> {
-				FAKE_HITBOXES.remove(player);
+				FakeHitbox fakeHitbox = FAKE_HITBOXES.remove(player);
+				if (fakeHitbox != null)
+					for (int id : fakeHitbox.getFakePlayerIds())
+						FAKE_PLAYER_LOOKUP.remove(id);
+				else
+					Main.logger().warning("FakeHitboxManager.removeFakeHitbox: null fakeHitbox");
+
 				FAKE_HITBOXES_BY_PLAYER_ID.remove(player.getEntityId());
 				FAKE_HITBOXES_BY_PLAYER_UUID.remove(player.getUniqueId());
 			}, 1);
@@ -104,9 +107,18 @@ public class FakeHitboxManager
 		}
 	}
 
-	public static void cleanUp() {
+	// It's possible that isOnline() returns false while the player is in the logging-in stage,
+	// so not every warning will be a leak
+	public static void leakCheck() {
 		if(ACTIVE) {
-			FAKE_PLAYER_LOOKUP.entrySet().removeIf(integerPlayerEntry -> !integerPlayerEntry.getValue().isOnline());
+			final List<Player> litter = new ArrayList<>(0);
+			FAKE_PLAYER_LOOKUP.forEach((integer, player) -> {
+				if (!player.isOnline()) {
+					litter.add(player);
+				}
+			});
+			litter.forEach(player -> Main.logger().info("FakeHitbox id lookup entries for " + player.getName() +
+				" were not removed"));
 		}
 	}
 

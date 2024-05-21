@@ -156,7 +156,7 @@ public class EventListeners implements Listener
 			}
 		}
 		else if(count == 10) {
-			FakeHitboxManager.cleanUp();
+			FakeHitboxManager.leakCheck();
 		}
 
 		TeamArena.incrementGameTick();
@@ -183,19 +183,12 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void playerSpawn(PlayerSpawnLocationEvent event) {
-		event.setSpawnLocation(Main.getPlayerInfo(event.getPlayer()).spawnPoint);
+		event.setSpawnLocation(Main.getGame().getSpawnPos());
 	}
 
 	@EventHandler
 	public void playerJoin(PlayerJoinEvent event) {
-		final Player player = event.getPlayer();
-		//disable yellow "Player has joined the game" messages
-		event.joinMessage(null);
-		Main.getPlayerInfo(player).getScoreboard().set();
-		// send sidebar objectives
-		SidebarManager.getInstance(player).registerObjectives(player);
-
-		Main.getGame().joiningPlayer(player);
+		LoginHandler.handlePlayerJoin(event);
 	}
 
 	//don't show any commands the player doesn't have permission to use in the tab list
@@ -481,7 +474,7 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void playerRespawn(PlayerRespawnEvent event) {
 		assert false;
-		event.setRespawnLocation(Main.getPlayerInfo(event.getPlayer()).spawnPoint);
+		event.setRespawnLocation(Main.getGame().getSpawnPos());
 	}
 
 	//this event is fired for shooting bows including by players
@@ -1052,5 +1045,11 @@ public class EventListeners implements Listener
 		for(Ability a : Kit.getAbilities(event.getPlayer())) {
 			a.onSwitchItemSlot(event);
 		}
+	}
+
+	@EventHandler
+	public void playerOpenSign(PlayerOpenSignEvent event) {
+		if (event.getPlayer().getGameMode() != GameMode.CREATIVE)
+			event.setCancelled(true);
 	}
 }

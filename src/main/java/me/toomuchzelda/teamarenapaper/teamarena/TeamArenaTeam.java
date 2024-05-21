@@ -23,9 +23,7 @@ import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class TeamArenaTeam
 {
@@ -58,6 +56,8 @@ public class TeamArenaTeam
 
 	//paper good spigot bad
 	private final Team paperTeam;
+	// Whether players are/should be on the paper team, which will send updates to client
+	private boolean updatePaperTeam;
 
 	private Location[] spawns;
 	private final LinkedHashMap<Player, Void> playerMembers = new LinkedHashMap<>();
@@ -125,6 +125,7 @@ public class TeamArenaTeam
 		paperTeam.color(NamedTextColor.nearestTo(this.RGBColour));
 
 		PlayerScoreboard.addGlobalTeam(paperTeam);
+		this.updatePaperTeam = true;
 	}
 
 	public String getName() {
@@ -201,8 +202,8 @@ public class TeamArenaTeam
 	}
 
 	public void addMembers(Entity... entities) {
-		for (Entity entity : entities)
-		{
+		ArrayList<Entity> toPaper = new ArrayList<>(Arrays.asList(entities));
+		toPaper.removeIf(entity -> {
 			if (entity instanceof Player player)
 			{
 				PlayerInfo pinfo = Main.getPlayerInfo(player);
@@ -213,7 +214,7 @@ public class TeamArenaTeam
 				// being in the team yet i.e when player logging in
 				if(team == this && playerMembers.containsKey(player)) {
 					updateNametag(player);
-					continue;
+					return true;
 				}
 
 				team.removeMembers(false, player);
@@ -226,11 +227,17 @@ public class TeamArenaTeam
 				playerMembers.put(player, null);
 
 				Main.getGame().onTeamSwitch(player, team, this);
-			}
-		}
 
-		paperTeam.addEntities(entities);
-		PlayerScoreboard.addMembersAll(paperTeam, entities);
+				return !this.updatePaperTeam;
+			}
+			else
+				return false;
+		});
+
+		if (!toPaper.isEmpty()) {
+			paperTeam.addEntities(toPaper);
+			PlayerScoreboard.addMembersAll(paperTeam, toPaper);
+		}
 	}
 
 	public void removeMembers(Entity... entities) {
@@ -242,8 +249,11 @@ public class TeamArenaTeam
 	 *                  and removing them from this one)
 	 */
 	private void removeMembers(boolean callEvent, Entity... entities) {
-		paperTeam.removeEntities(entities);
-		PlayerScoreboard.removeMembersAll(paperTeam, entities);
+		List<Entity> toPaper = new ArrayList<>(Arrays.asList(entities));
+		// Players should always be on a team anyway, which would implicitly do this removal
+		toPaper.removeIf(entity -> entity instanceof Player);
+		paperTeam.removeEntities(toPaper);
+		PlayerScoreboard.removeMembersAll(paperTeam, toPaper);
 		Main.getGame().setLastHadLeft(this);
 
 		for (Entity entity : entities)
@@ -273,6 +283,18 @@ public class TeamArenaTeam
 		paperTeam.removeEntries(paperTeam.getEntries());
 		PlayerScoreboard.removeEntriesAll(paperTeam, paperTeam.getEntries());
 		Main.getGame().setLastHadLeft(this);
+	}
+
+	public void putOnMinecraftTeams(boolean put) {
+		if (put != this.updatePaperTeam) {
+			if(!this.updatePaperTeam) {
+				// how do i do generics
+				Collection<Entity> a = (Collection) this.playerMembers.keySet();
+				this.paperTeam.addEntities(a);
+				PlayerScoreboard.addMembersAll(this.paperTeam, a);
+			}
+			this.updatePaperTeam = put;
+		}
 	}
 
 	public Set<String> getStringMembers() {

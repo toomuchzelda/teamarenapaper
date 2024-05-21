@@ -434,7 +434,8 @@ public class PacketListeners
 				try { // Band aid
 					sound = CraftSound.minecraftToBukkit(soundEvent);
 				}
-				catch (NullPointerException e) {
+				catch (NullPointerException | NoSuchElementException e) {
+					Main.logger().warning("Sound packet listener " + e);
 					return;
 				}
 

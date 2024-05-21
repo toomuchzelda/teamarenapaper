@@ -6,6 +6,7 @@ import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.sql.*;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
+import me.toomuchzelda.teamarenapaper.teamarena.SidebarManager;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
@@ -17,12 +18,14 @@ import net.kyori.adventure.text.format.Style;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
 
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class LoginHandler
@@ -137,6 +140,8 @@ public class LoginHandler
 		final UUID uuid = player.getUniqueId();
 		final PlayerInfo playerInfo;
 
+		Main.logger().info(player.getName() + " PlayerLoginEvent");
+
 		// Remove before check if they are allowed to join to prevent memory leak
 		final DBLoadedData loadedData = loadedDbDataCache.remove(uuid);
 		if (event.getResult() != PlayerLoginEvent.Result.ALLOWED) {
@@ -184,9 +189,27 @@ public class LoginHandler
 			defaultKit = DBGetDefaultKit.DEFAULT_KIT;
 		playerInfo.defaultKit = defaultKit;
 
-		Main.addPlayerInfo(player, playerInfo);
+		loginToJoinCache.put(player, playerInfo);
 		Main.playerIdLookup.put(player.getEntityId(), player);
 		FakeHitboxManager.addFakeHitbox(player);
 		Main.getGame().loggingInPlayer(player, playerInfo);
+	}
+
+	private static final Map<Player, PlayerInfo> loginToJoinCache = new WeakHashMap<>();
+
+	static void handlePlayerJoin(PlayerJoinEvent event) {
+		final Player player = event.getPlayer();
+		Main.logger().info(player.getName() + " PlayerJoinEvent");
+
+		//disable yellow "Player has joined the game" messages
+		event.joinMessage(null);
+
+		final PlayerInfo pinfo = loginToJoinCache.remove(player);
+		Main.addPlayerInfo(player, pinfo);
+		pinfo.getScoreboard().set();
+		// send sidebar objectives
+		SidebarManager.getInstance(player).registerObjectives(player);
+
+		Main.getGame().joiningPlayer(player, pinfo);
 	}
 }
