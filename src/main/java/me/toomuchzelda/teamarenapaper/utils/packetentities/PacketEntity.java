@@ -197,10 +197,10 @@ public class PacketEntity
 		this.viewerRule = rule;
 	}
 
-	Component customName;
+	private Component customNameCache;
 	public void setText(@Nullable Component component, boolean sendPacket) {
-		if (!Objects.equals(customName, component)) {
-			customName = component;
+		if (!Objects.equals(customNameCache, component)) {
+			customNameCache = component;
 			Optional<?> nameComponent = Optional.ofNullable(PaperAdventure.asVanilla(component));
 			this.setMetadata(MetaIndex.CUSTOM_NAME_OBJ, nameComponent);
 
@@ -212,7 +212,7 @@ public class PacketEntity
 
 	@Nullable
 	public Component getText() {
-		return customName;
+		return customNameCache;
 	}
 
 	public void setEquipment(EquipmentSlot slot, ItemStack stack) {

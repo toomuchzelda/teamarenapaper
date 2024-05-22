@@ -343,7 +343,13 @@ public class EventListeners implements Listener
 
 		if(!event.isCancelled() && FakeHitboxManager.ACTIVE) {
 			//don't need to updateClients here, packets will be sent after event by server
-			FakeHitboxManager.getFakeHitbox(player).updatePosition(event.getTo(), player.getPose(), false);
+			FakeHitbox fakeHitbox = FakeHitboxManager.getFakeHitbox(player);
+			if (fakeHitbox != null)
+				fakeHitbox.updatePosition(event.getTo(), player.getPose(), false);
+			else {
+				// Normal on player login? Not called, unlike PlayerTeleportEvent.
+				Main.logger().info(player.getName() + " PlayerMoveEvent null fakeHitbox");
+			}
 		}
 	}
 
@@ -586,7 +592,13 @@ public class EventListeners implements Listener
 
 		if(!event.isCancelled() && FakeHitboxManager.ACTIVE) {
 			//don't need to updateClients here, packets will be sent after this event.
-			FakeHitboxManager.getFakeHitbox(event.getPlayer()).updatePosition(event.getTo(), event.getPlayer().getPose(), false);
+			FakeHitbox fakeHitbox = FakeHitboxManager.getFakeHitbox(event.getPlayer());
+			if (fakeHitbox != null)
+				fakeHitbox.updatePosition(event.getTo(), event.getPlayer().getPose(), false);
+			else {
+				// Expected during login.
+				Main.logger().info(event.getPlayer().getName() + " PlayerTeleportEvent null fakehitbox");
+			}
 		}
 	}
 

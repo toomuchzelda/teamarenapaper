@@ -39,7 +39,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.rewind.KitRewind;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.trigger.KitTrigger;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
-import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -357,7 +356,7 @@ public abstract class TeamArena
 
 			this.sendGameAndMapInfo(p);
 
-			StatusBarManager.showStatusBar(p, pinfo);
+			StatusBarManager.initStatusBar(p, pinfo);
 
 			// Players that joined during end gamestate remain hidden. they need to be revealed.
 			for (Player otherP : Bukkit.getOnlinePlayers()) {
@@ -542,9 +541,10 @@ public abstract class TeamArena
 					team.putOnMinecraftTeams(false);
 				}
 
-				//announce game cancelled
-				// spam sounds lol xddddddd
 				for (Player player : Bukkit.getOnlinePlayers()) {
+					StatusBarManager.setBarText(Main.getPlayerInfo(player), null);
+					//announce game cancelled
+					// spam sounds lol xddddddd
 					for (int i = 0; i < 10; i++) {
 						// peak humor
 						Sound sound = MathUtils.random.nextBoolean() ? SoundUtils.getRandomObnoxiousSound() : SoundUtils.getRandomSound();
@@ -1312,7 +1312,7 @@ public abstract class TeamArena
 			PlayerUtils.resetState(p);
 
 			final PlayerInfo pinfo = entry.getValue();
-			StatusBarManager.hideStatusBar(p, pinfo);
+			StatusBarManager.removeStatusBar(p, pinfo);
 		}
 
 		for (TeamArenaTeam team : teams) {
@@ -1584,7 +1584,7 @@ public abstract class TeamArena
 		pinfo.kills = 0;
 		PlayerListScoreManager.setKills(player, 0);
 
-		StatusBarManager.showStatusBar(player, pinfo);
+		StatusBarManager.initStatusBar(player, pinfo);
 
 		//do this one (two?) tick later
 		// when revealing first then teleporting, the clients interpolate the super fast teleport movement, so players
@@ -1652,7 +1652,7 @@ public abstract class TeamArena
 			spectators.add(playerVictim);
 			makeSpectator(playerVictim);
 
-			StatusBarManager.hideStatusBar(playerVictim, pinfo);
+			StatusBarManager.removeStatusBar(playerVictim, pinfo);
 
 			DamageLogEntry.sendDamageLog(playerVictim);
 			pinfo.clearDamageReceivedLog();
@@ -1849,7 +1849,7 @@ public abstract class TeamArena
 			final PlayerInfo pinfo = Main.getPlayerInfo(player);
 			pinfo.team.addMembers(player);
 			giveLobbyItems(player);
-			StatusBarManager.showStatusBar(player, pinfo);
+			StatusBarManager.initStatusBar(player, pinfo);
 			if (gameState == GameState.TEAMS_CHOSEN || gameState == GameState.GAME_STARTING) {
 				informOfTeam(player);
 			}
@@ -1888,7 +1888,7 @@ public abstract class TeamArena
 
 		pinfo.team.removeMembers(player);
 
-		StatusBarManager.hideStatusBar(player, pinfo);
+		StatusBarManager.removeStatusBar(player, pinfo);
 		miniMap.onPlayerCleanup(player);
 
 		players.remove(player);

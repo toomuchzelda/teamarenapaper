@@ -9,8 +9,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.Style;
 import org.bukkit.entity.Player;
 
-import java.util.Objects;
-
 /**
  * Methods for handling the Status Bars in Team Arena
  *
@@ -22,7 +20,7 @@ public class StatusBarManager
 	 * Show the player's in-game status bar
 	 * Teams must have been decided at this point (TeamArena gamestate must be TEAMS_DECIDED or later)
 	 */
-	static void showStatusBar(Player player, PlayerInfo pinfo) {
+	static void initStatusBar(Player player, PlayerInfo pinfo) {
 		StatusBarHologram hologram = pinfo.statusBar;
 		if(hologram != null) {
 			hologram.remove();
@@ -33,7 +31,7 @@ public class StatusBarManager
 		pinfo.statusBar = hologram;
 	}
 
-	static void hideStatusBar(Player player, PlayerInfo pinfo) {
+	static void removeStatusBar(Player player, PlayerInfo pinfo) {
 		if(pinfo.statusBar != null) {
 			pinfo.statusBar.remove();
 			pinfo.statusBar = null;
@@ -52,7 +50,6 @@ public class StatusBarManager
 		private static Component pregameComp;
 		// RGB effect uses a ton of CPU time, so limit who gets it.
 		private final boolean preGameRgb;
-		private Component currentText;
 
 		// Called by TeamArena
 		static void updatePregameText() {
@@ -60,11 +57,10 @@ public class StatusBarManager
 			pregameComp = TextUtils.getRGBManiacComponent(PREGAME_TEXT, Style.empty(), offset);
 		}
 
-
 		public StatusBarHologram(Player player) {
 			super(player, null, viewer -> Main.getGame().canSeeStatusBar(player, viewer), PREGAME_TEXT, false);
 
-			this.currentText = PREGAME_TEXT;
+			this.setText(PREGAME_TEXT, false);
 			PlayerInfo pinfo = Main.getPlayerInfo(player);
 			// If they're mod or higher and have their tag displayed, else random 5% chance.
 			this.preGameRgb = (pinfo.displayPermissionLevel && pinfo.hasPermission(PermissionLevel.MOD)) ||
@@ -105,10 +101,10 @@ public class StatusBarManager
 
 		@Override
 		public void setText(Component component, boolean sendPacket) {
-			if(component != null && !Objects.equals(this.currentText, component)) {
-				this.currentText = component;
-				super.setText(this.currentText, sendPacket);
-			}
+			if (component != null)
+				super.setText(component, sendPacket);
+			else
+				super.setText(PREGAME_TEXT, sendPacket);
 		}
 	}
 }

@@ -191,7 +191,6 @@ public class LoginHandler
 
 		loginToJoinCache.put(player, playerInfo);
 		Main.playerIdLookup.put(player.getEntityId(), player);
-		FakeHitboxManager.addFakeHitbox(player);
 		Main.getGame().loggingInPlayer(player, playerInfo);
 	}
 
@@ -200,6 +199,8 @@ public class LoginHandler
 	static void handlePlayerJoin(PlayerJoinEvent event) {
 		final Player player = event.getPlayer();
 		Main.logger().info(player.getName() + " PlayerJoinEvent");
+
+		FakeHitboxManager.addFakeHitbox(player);
 
 		//disable yellow "Player has joined the game" messages
 		event.joinMessage(null);
