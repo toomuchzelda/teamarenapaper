@@ -431,11 +431,10 @@ public class PacketListeners
 				final Holder<SoundEvent> soundHolder = (Holder<SoundEvent>) event.getPacket().getModifier().read(0);
 				SoundEvent soundEvent = soundHolder.value();
 				Sound sound;
-				try { // Band aid
+				try {
 					sound = CraftSound.minecraftToBukkit(soundEvent);
 				}
 				catch (NullPointerException | NoSuchElementException e) {
-					Main.logger().warning("Sound packet listener " + e);
 					return;
 				}
 

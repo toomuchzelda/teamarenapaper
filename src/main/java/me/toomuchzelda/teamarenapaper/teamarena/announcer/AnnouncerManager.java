@@ -52,7 +52,7 @@ public class AnnouncerManager
 				(sound.type.isChattable() && pinfo.getPreference(Preferences.ANNOUNCER_CHAT))
 			) {
 				if (!sound.isSwear || pinfo.getPreference(Preferences.ANNOUNCER_SWEAR)) {
-					player.playSound(player.getEyeLocation(), sound.getNamespacedName(), SoundCategory.VOICE,
+					player.playSound(player, sound.getNamespacedName(), SoundCategory.VOICE,
 						sound.type.volumeMult, 1f);
 				}
 			}

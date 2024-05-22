@@ -1339,8 +1339,8 @@ public abstract class TeamArena
 
 	public void setupTeams() {
 		//shuffle order of teams first so certain teams don't always get the odd player(s)
-		TeamArenaTeam[] shuffledTeams = Arrays.copyOf(teams, teams.length);
-		MathUtils.shuffleArray(shuffledTeams);
+		//TeamArenaTeam[] shuffledTeams = Arrays.copyOf(teams, teams.length);
+		//MathUtils.shuffleArray(shuffledTeams);
 
 		//players that didn't choose a team yet
 		ArrayList<Player> shuffledPlayers = new ArrayList<>(players.size());
@@ -1348,17 +1348,10 @@ public abstract class TeamArena
 			if(/*p.getTeamArenaTeam() == null || */Main.getPlayerInfo(p).team == noTeamTeam)
 				shuffledPlayers.add(p);
 		}
-		//if everyone is already on a team (there is noone without a team selected)
-		if(shuffledPlayers.size() == 0)
-			return;
 
 		Collections.shuffle(shuffledPlayers, MathUtils.random);
 
-		int teamCtr = 0;
-		for (Player player : shuffledPlayers) {
-			final int i = teamCtr++ % shuffledTeams.length;
-			shuffledTeams[i].addMembers(player);
-		}
+		shuffledPlayers.forEach(player -> this.addToLowestTeam(player, true));
 
 		//theoretically playerIdx shouldn't become larger than the number of players so i don't need to modulus
 		/*int playerIdx = 0;
