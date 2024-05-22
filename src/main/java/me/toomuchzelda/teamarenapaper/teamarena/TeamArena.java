@@ -1954,52 +1954,26 @@ public abstract class TeamArena
 	//find an appropriate team to put player on at any point during game
 	// boolean to actually put them on that team or just to get the team they would've been put on
 	public TeamArenaTeam addToLowestTeam(Player player, boolean add) {
-		int remainder = players.size() % teams.length;
+		ArrayList<TeamArenaTeam> sorted = new ArrayList<>(teams.length);
+		for (TeamArenaTeam team : this.teams) sorted.add(team);
+		Collections.shuffle(sorted);
 
-		//find the lowest player count on any of the teams
-		TeamArenaTeam lowestTeam = null;
-		int count = Integer.MAX_VALUE;
-		for(TeamArenaTeam team : teams) {
-			if(team.getPlayerMembers().size() < count) {
-				lowestTeam = team;
-				count = team.getPlayerMembers().size();
-			}
+		final int lowestCount = sorted.stream().mapToInt(team -> team.getPlayerMembers().size()).min().orElse(Integer.MAX_VALUE);
+		assert CompileAsserts.OMIT || lowestCount != Integer.MAX_VALUE;
+
+		sorted.removeIf(team -> team.getPlayerMembers().size() > lowestCount);
+		assert CompileAsserts.OMIT || !sorted.isEmpty();
+
+		TeamArenaTeam lowestTeam;
+		if (this.gameState == GameState.LIVE) {
+			sorted.sort((o1, o2) -> o1.getTotalScore() - o2.getTotalScore());
+			lowestTeam = sorted.getFirst();
 		}
-
-		//if theres only 1 team that has 1 less player than the others
-		// put them on that team
-		// else, more than 1 team with the same low player count, judge them based on score if game is live
-		//    else judge on lastLeft, or pick randomly if no lastLeft
-		if(remainder != teams.length - 1)
-		{
-
-			//get all teams with that lowest player amount
-			ArrayList<TeamArenaTeam> lowestTeams = new ArrayList<>(teams.length);
-			for(TeamArenaTeam team : teams) {
-				if(team.getPlayerMembers().size() == count) {
-					lowestTeams.add(team);
-				}
-			}
-
-			if(gameState == GameState.LIVE) {
-				//shuffle them, and loop through and get the first one in the list that has the lowest score.
-				Collections.shuffle(lowestTeams);
-				int lowestScore = Integer.MAX_VALUE;
-				for (TeamArenaTeam team : lowestTeams)
-				{
-					if (team.getTotalScore() < lowestScore)
-					{
-						lowestScore = team.getTotalScore();
-						lowestTeam = team;
-					}
-				}
-			}
-			else if(lastHadLeft == null){
-				lowestTeam = lowestTeams.get(MathUtils.randomMax(lowestTeams.size() - 1));
-			}
-			else {
-				lowestTeam = lastHadLeft;
-			}
+		else if (sorted.contains(this.lastHadLeft)) {
+			lowestTeam = this.lastHadLeft;
+		}
+		else {
+			lowestTeam = sorted.getFirst();
 		}
 
 		if(add)
