@@ -6,6 +6,7 @@ import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.*;
 import com.mojang.authlib.GameProfile;
 import io.papermc.paper.adventure.PaperAdventure;
+import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
@@ -158,17 +159,24 @@ public class FakeHitbox
 					PlayerUtils.sendPacket(playerViewer, getRemoveEntitiesPacket());
 
 				iter.remove();
+				Main.logger().severe("FakeHitbox.tick() iter remove called");
+				Thread.dumpStack();
 				continue;
 			}
 
 			if (fakeHitboxViewer.isSeeingRealPlayer) {
-				double distSqr = playerViewer.getLocation().distanceSquared(ownerLoc);
-				boolean nowInRange = distSqr <= VIEWING_RADIUS_SQR;
+				boolean seeHitboxes;
+				if (this.owner.getVehicle() != null)
+					seeHitboxes = false;
+				else {
+					double distSqr = playerViewer.getLocation().distanceSquared(ownerLoc);
+					seeHitboxes = distSqr <= VIEWING_RADIUS_SQR;
+				}
 
-				if(fakeHitboxViewer.isSeeingHitboxes != nowInRange) {
-					fakeHitboxViewer.isSeeingHitboxes = nowInRange;
+				if(fakeHitboxViewer.isSeeingHitboxes != seeHitboxes) {
+					fakeHitboxViewer.isSeeingHitboxes = seeHitboxes;
 					//need to spawn / remove the hitboxes for viewer
-					if (nowInRange) {
+					if (seeHitboxes) {
 						fakeHitboxViewer.hitboxSpawnTime = currentTick;
 						PlayerUtils.PacketCache cache = new PlayerUtils.PacketCache();
 						PlayerUtils.sendPacket(playerViewer, cache, getSpawnAndMetadataPackets());
