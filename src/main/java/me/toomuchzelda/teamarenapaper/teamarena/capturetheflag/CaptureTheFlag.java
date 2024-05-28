@@ -221,32 +221,32 @@ public class CaptureTheFlag extends TeamArena
             int score = 0;
             List<TeamArenaTeam> drawList = new ArrayList<>(teams.length);
             for (TeamArenaTeam team : teams) {
-                if (team.getTotalScore() > score) {
-                    score = team.getTotalScore();
-                    drawList.clear();
-                    drawList.add(team);
-                } else if (team.getTotalScore() == score) {
-                    drawList.add(team);
-                }
+				if (team.getTotalScore() > score) {
+					score = team.getTotalScore();
+					drawList.clear();
+					drawList.add(team);
+				} else if (team.getTotalScore() == score) {
+					drawList.add(team);
+				}
+			}
 
-                //only 1 winner
-                if (drawList.size() == 1) {
-                    this.winningTeam = drawList.get(0);
-                }
+			//only 1 winner
+			if (drawList.size() == 1) {
+				this.winningTeam = drawList.get(0);
+			}
 
-                Bukkit.broadcast(TOOK_TOO_LONG);
-                for (Player p : Bukkit.getOnlinePlayers()) {
-                    for (int i = 0; i < 10; i++) {
-                        p.playSound(p.getLocation(), SoundUtils.getRandomObnoxiousSound(), 9999f, (float) MathUtils.randomRange(-0.5, 2d));
-                    }
-                }
+			Bukkit.broadcast(TOOK_TOO_LONG);
+			for (Player p : Bukkit.getOnlinePlayers()) {
+				for (int i = 0; i < 10; i++) {
+					p.playSound(p.getLocation(), SoundUtils.getRandomObnoxiousSound(), 9999f, (float) MathUtils.randomRange(-0.5, 2d));
+				}
+			}
 
-                prepEnd();
+			prepEnd();
 
-                //Don't do the rest of the tick.
-                return;
-            }
-        }
+			//Don't do the rest of the tick.
+			return;
+		}
 
         if (announcementMsg != null) {
             Bukkit.broadcast(announcementMsg);

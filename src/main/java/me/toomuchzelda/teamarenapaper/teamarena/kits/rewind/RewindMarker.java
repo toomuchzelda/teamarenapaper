@@ -16,7 +16,6 @@ import java.util.Collections;
 import java.util.List;
 
 public class RewindMarker {
-	private final Player rewind;
 	private final PacketDisplay indicator;
 
 	// Construct once and cache
@@ -36,15 +35,14 @@ public class RewindMarker {
 
 		indicator.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_GLOWING_MASK);
 
-		indicator.setMetadata(MetaIndex.DISPLAY_BILLBOARD_OBJ, MetaIndex.DisplayBillboardOption.CENTRE.get());
+		indicator.setMetadata(MetaIndex.DISPLAY_POSROT_INTERPOLATION_DURATION_OBJ, 1);
+		indicator.setBillboard(MetaIndex.DisplayBillboardOption.CENTRE);
 
 		ItemStack bukkitItem = new ItemStack(Material.CLOCK);
 		indicator.setMetadata(MetaIndex.ITEM_DISPLAY_ITEM_OBJ, CraftItemStack.asNMSCopy(bukkitItem));
 		indicator.updateMetadataPacket();
 
 		indicator.respawn();
-
-		this.rewind = rewind;
 	}
 
 	void remove() {
@@ -64,6 +62,7 @@ public class RewindMarker {
 	}
 
 	void updatePos(Location location) {
+		indicator.translate(location.toVector());
 		indicator.move(location);
 	}
 }

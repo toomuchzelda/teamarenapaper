@@ -84,8 +84,15 @@ public class PlayerUtils {
 	}
 
 	public static void sendPacket(Player player, @Nullable PacketCache cache, PacketContainer... packets) {
-		for (PacketContainer p : packets) {
-			sendPacket(player, cache, p);
+		// Compile many packets into 1 if worth it
+		if (cache == null && packets.length > 1) {
+			PacketContainer bundle = PacketCache.createBundle(Arrays.asList(packets));
+			sendPacket(player, null, bundle);
+		}
+		else {
+			for (PacketContainer p : packets) {
+				sendPacket(player, cache, p);
+			}
 		}
 	}
 
@@ -105,8 +112,17 @@ public class PlayerUtils {
 	}
 
 	public static void sendPacket(Collection<? extends Player> players, @Nullable PacketCache cache, PacketContainer... packets) {
-		for (Player player : players) {
-			sendPacket(player, cache, packets);
+		// Can reduce allocations by compiling into 1 bundle, if worth it, and sending that
+		// to all players
+		if (cache == null && players.size() > 1 && packets.length > 1) {
+			PacketContainer bundle = PacketCache.createBundle(Arrays.asList(packets));
+			for (Player p : players)
+				sendPacket(p, null, bundle);
+		}
+		else {
+			for (Player player : players) {
+				sendPacket(player, cache, packets);
+			}
 		}
 	}
 

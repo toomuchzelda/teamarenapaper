@@ -166,6 +166,8 @@ public abstract class TeamArena
 	};
 
 	private final Component gameAndMapMessage;
+	private final Component gameTitle;
+	private final Component gameSubTitle;
 
 	public TeamArena(TeamArenaMap map) {
 		File worldFile = map.getFile();
@@ -303,11 +305,18 @@ public abstract class TeamArena
 		StatusBarManager.StatusBarHologram.updatePregameText();
 
 		{
+			this.gameTitle = this.getGameName();
 			var builder = Component.text()
 				.append(Component.text("GameType: ", NamedTextColor.GOLD))
 				.append(this.getGameName());
-			if (!this.isRespawningGame())
-				builder.append(Component.text(" (No Respawning!)", NamedTextColor.RED));
+			if (!this.isRespawningGame()) {
+				TextComponent text = Component.text(" (No Respawning!)", NamedTextColor.RED);
+				this.gameSubTitle = text;
+				builder.append(text);
+			}
+			else {
+				this.gameSubTitle = Component.empty();
+			}
 			builder.append(Component.newline());
 			builder.append(this.gameMap.getMapInfoComponent());
 			this.gameAndMapMessage = builder.build();
@@ -2015,6 +2024,7 @@ public abstract class TeamArena
 
 	public void sendGameAndMapInfo(Player player) {
 		player.sendMessage(gameAndMapMessage);
+		PlayerUtils.sendTitle(player, this.gameTitle, this.gameSubTitle, 0, 60, 20);
 	}
 
 	protected void loadConfig(TeamArenaMap map) {

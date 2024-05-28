@@ -53,6 +53,8 @@ public class MetaIndex
 
 	public static final int GUARDIAN_TARGET_IDX = 17;
 
+	public static final int DISPLAY_INTERPOLATION_DELAY_IDX = 8;
+	public static final int DISPLAY_POSROT_INTERPOLATION_DURATION_IDX = 10;
 	public static final int DISPLAY_TRANSLATION_IDX = 11;
 	public static final int DISPLAY_SCALE_IDX = 12;
 	public static final int DISPLAY_BILLBOARD_IDX = 15;
@@ -84,6 +86,8 @@ public class MetaIndex
 
 	public static final WrappedDataWatcherObject GUARDIAN_TARGET_OBJ;
 
+	public static final WrappedDataWatcherObject DISPLAY_INTERPOLATION_DELAY_OBJ;
+	public static final WrappedDataWatcherObject DISPLAY_POSROT_INTERPOLATION_DURATION_OBJ;
 	public static final WrappedDataWatcherObject DISPLAY_TRANSLATION_OBJ;
 	public static final WrappedDataWatcherObject DISPLAY_SCALE_OBJ;
 
@@ -154,6 +158,12 @@ public class MetaIndex
 		GUARDIAN_TARGET_OBJ = new WrappedDataWatcherObject(GUARDIAN_TARGET_IDX, WrappedDataWatcher.Registry.get(Integer.class));
 		addMapping(GUARDIAN_TARGET_OBJ);
 
+
+		DISPLAY_INTERPOLATION_DELAY_OBJ = new WrappedDataWatcherObject(DISPLAY_INTERPOLATION_DELAY_IDX, WrappedDataWatcher.Registry.get(Integer.class));
+		addMapping(DISPLAY_INTERPOLATION_DELAY_OBJ);
+
+		DISPLAY_POSROT_INTERPOLATION_DURATION_OBJ = new WrappedDataWatcherObject(DISPLAY_POSROT_INTERPOLATION_DURATION_IDX, WrappedDataWatcher.Registry.get(Integer.class));
+		addMapping(DISPLAY_POSROT_INTERPOLATION_DURATION_OBJ);
 
 		DISPLAY_TRANSLATION_OBJ = new WrappedDataWatcherObject(DISPLAY_TRANSLATION_IDX, WrappedDataWatcher.Registry.getVectorSerializer());
 		addMapping(DISPLAY_TRANSLATION_OBJ);

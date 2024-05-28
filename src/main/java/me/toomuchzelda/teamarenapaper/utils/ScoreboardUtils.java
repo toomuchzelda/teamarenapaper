@@ -33,7 +33,7 @@ public class ScoreboardUtils {
 	private static MethodHandle TEAM_PACKET_CTOR;
 
 	public static void sendPacket(Player player, Packet<?> packet) {
-		((CraftPlayer) player).getHandle().connection.send(packet);
+		PlayerUtils.sendPacket(player, packet);
 	}
 
 	private static void initTeamPacketConstructor() {
