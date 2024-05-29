@@ -2169,9 +2169,24 @@ public abstract class TeamArena
 	}
 
 	public boolean canSeeStatusBar(Player player, Player viewer) {
-		if (gameState != GameState.LIVE) return true;
 		TeamArenaTeam viewersTeam = Main.getPlayerInfo(viewer).team;
-		return viewersTeam == this.spectatorTeam || viewersTeam.getPlayerMembers().contains(player);
+		if (this.gameState.isEndGame()) {
+			return true;
+		}
+		else if (this.gameState == GameState.PREGAME || viewersTeam.hasMember(player)) {
+			return true;
+		}
+		else if (viewersTeam == spectatorTeam) {
+			if (this.gameState.teamsChosen())
+				return false;
+
+			Kit activeKit = Kit.getActiveKit(player);
+			if (activeKit != null) {
+				return !activeKit.isInvisKit();
+			}
+		}
+
+		return false;
 	}
 
 	public boolean isTeamHotbarItem(ItemStack item) {
