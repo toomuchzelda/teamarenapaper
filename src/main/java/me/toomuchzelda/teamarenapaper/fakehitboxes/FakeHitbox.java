@@ -159,8 +159,6 @@ public class FakeHitbox
 					PlayerUtils.sendPacket(playerViewer, getRemoveEntitiesPacket());
 
 				iter.remove();
-				Main.logger().severe("FakeHitbox.tick() iter remove called");
-				Thread.dumpStack();
 				continue;
 			}
 
