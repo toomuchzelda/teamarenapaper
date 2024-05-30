@@ -94,7 +94,7 @@ public class KitBurst extends Kit
 
 		//used for identifying the entity across events
 		private static final Component SHOTUGUN_FIREWORK_NAME = Component.text("burstfw");
-		private static final double SHOTGUN_SELF_DAMAGE = 8d;
+		private static final double SHOTGUN_SELF_DAMAGE = 7d;
 		private static final double SHOTGUN_MAX_DAMAGE = 18d;
 		private static final int SHOTGUN_ARROW_LIVE_TICKS = 17;
 
@@ -175,7 +175,7 @@ public class KitBurst extends Kit
 						event.setCancelled(false);
 						event.setFinalAttacker(null);
 						event.setDamageType(DamageType.BURST_FIREWORK_SELF);
-						event.setFinalDamage(event.getFinalDamage() * 2.0d);
+						event.setFinalDamage(event.getFinalDamage() * 1.75d);
 					}
 					else {
 						event.setCancelled(true); // porcs don't hurt themselves
@@ -215,7 +215,8 @@ public class KitBurst extends Kit
 				meta.addEffect(effect);
 				//meta.setPower(1);
 				firework.setFireworkMeta(meta);
-				firework.setVelocity(firework.getVelocity().multiply(0.7));
+				firework.setVelocity(firework.getVelocity().multiply(0.6));
+				firework.setTicksToDetonate(18);
 
 				this.originalFwShooters.put(firework, p.getUniqueId());
 			}
