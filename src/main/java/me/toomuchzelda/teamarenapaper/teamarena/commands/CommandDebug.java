@@ -23,6 +23,7 @@ import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
@@ -231,6 +232,16 @@ public class CommandDebug extends CustomCommand {
 				}, Component.empty(), 0, 0, "1.1x", -1, null);
 				ServerListPingManager.handleEvent(fakeEvent);
 				sender.sendMessage(fakeEvent.motd());
+			}
+			case "showSpawns" -> {
+				TeamArena game = Main.getGame();
+				for (var entry : game.gameMap.getTeamSpawns().entrySet()) {
+					int ctr = 0;
+					for (Vector spawnLoc : entry.getValue()) {
+						new PacketHologram(spawnLoc.toLocation(game.getWorld()), null, PacketEntity.VISIBLE_TO_ALL,
+							Component.text(entry.getKey() + ctr++)).respawn();
+					}
+				}
 			}
 			default -> {
 				return false;
@@ -484,7 +495,7 @@ public class CommandDebug extends CustomCommand {
 	public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
 		if (args.length == 1) {
 			return Arrays.asList("hide", "gui", "guitest", "signtest", "game", "setrank", "setteam", "setkit",
-				"votetest", "draw", "graffititest", "respawn", "fakehitbox", "testmotd", "arrowMarker", "packetCache");
+				"votetest", "draw", "graffititest", "respawn", "fakehitbox", "testmotd", "arrowMarker", "packetCache", "showSpawns");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");

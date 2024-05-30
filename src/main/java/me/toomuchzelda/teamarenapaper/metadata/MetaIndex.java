@@ -43,6 +43,8 @@ public class MetaIndex
 	public static final int ARMOR_STAND_BITFIELD_IDX = 15;
 	public static final byte ARMOR_STAND_MARKER_MASK = 0x10;
 
+	public static final int PLAYER_SKIN_PARTS_IDX = 17;
+
 	public static final int CREEPER_STATE_IDX = 16;
 	public static final int CREEPER_CHARGED_IDX = 17;
 	public static final int CREEPER_IGNITED_IDX = 18;
@@ -75,6 +77,21 @@ public class MetaIndex
 	public static final WrappedDataWatcherObject ARMOR_STAND_BITFIELD_OBJ;
 	public static final WrappedDataWatcherObject ARMOR_STAND_LEFT_LEG_POSE;
 	public static final WrappedDataWatcherObject ARMOR_STAND_RIGHT_LEG_POSE;
+
+	public static final WrappedDataWatcherObject PLAYER_SKIN_PARTS_OBJ;
+	public enum SkinPart {
+		CAPE(0x01),
+		JACKET(0x02),
+		LEFT_SLEEVE(0x04),
+		RIGHT_SLEEVE(0x08),
+		LEFT_PANTS(0x10),
+		RIGHT_PANTS(0x20),
+		HAT(0x40);
+
+		private final byte mask;
+		SkinPart(int val) { this.mask = (byte) val; }
+		public byte getMask() { return this.mask; }
+	}
 
 	public static final WrappedDataWatcherObject CREEPER_STATE_OBJ;
 	public static final WrappedDataWatcherObject CREEPER_CHARGED_OBJ;
@@ -139,6 +156,9 @@ public class MetaIndex
 
 		ARMOR_STAND_RIGHT_LEG_POSE = new WrappedDataWatcherObject(ArmorStand.DATA_RIGHT_LEG_POSE);
 		addMapping(ARMOR_STAND_RIGHT_LEG_POSE);
+
+		PLAYER_SKIN_PARTS_OBJ = new WrappedDataWatcherObject(PLAYER_SKIN_PARTS_IDX, WrappedDataWatcher.Registry.get(Byte.class));
+		addMapping(PLAYER_SKIN_PARTS_OBJ);
 
 		CREEPER_STATE_OBJ = new WrappedDataWatcherObject(CREEPER_STATE_IDX, WrappedDataWatcher.Registry.get(Integer.class));
 		addMapping(CREEPER_STATE_OBJ);

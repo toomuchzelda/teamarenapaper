@@ -91,6 +91,7 @@ public class KitTrigger extends Kit
 		public static final int COUNTDOWN_TIME = 7 * 20;
 		public static final float LOWER_BEEPING_BOUND = 0.15f;
 		public static final float UPPER_BEEPING_BOUND = 0.85f;
+		public static final double UNSTABLE_EXPLOSION_MIN_DAMAGE = 1d;
 
 		private enum TriggerMode {
 			NORMAL, COUNTDOWN, STALLING, BOOMING
@@ -295,7 +296,7 @@ public class KitTrigger extends Kit
 				DamageEvent selfKill = DamageEvent.newDamageEvent(player, 999999d, DamageType.TRIGGER_BOOM_SELF, null, false);
 				Main.getGame().queueDamage(selfKill);
 			}
-			else if (diff >= BOOM_TIME) {
+			else if (diff > BOOM_TIME) {
 				Main.logger().severe("Boom tick ran beyond user's boom tick");
 				Thread.dumpStack();
 			}
@@ -332,7 +333,8 @@ public class KitTrigger extends Kit
 
 			if(newExp <= 0f || newExp >= 0.99f) {
 				double damage = player.getHealth() * 1.5d;
-				TeamArenaExplosion explosion = new TeamArenaExplosion(null, 7f, 1f, damage, 1d, 0.4d,
+				double minDamage = Math.min(damage, UNSTABLE_EXPLOSION_MIN_DAMAGE);
+				TeamArenaExplosion explosion = new TeamArenaExplosion(null, 7f, 1f, damage, minDamage, 0.4d,
 						DamageType.TRIGGER_UNSTABLE_EXPLODE, player);
 				explosion.explode();
 

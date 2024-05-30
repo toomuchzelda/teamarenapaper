@@ -23,6 +23,7 @@ public class SoundUtils {
                 OBNOXIOUS_SOUNDS.add(sound);
             }
         }
+		OBNOXIOUS_SOUNDS.trimToSize();
     }
 
     // very funny - toomuchzelda

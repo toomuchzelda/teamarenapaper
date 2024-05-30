@@ -1,15 +1,11 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
-import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.reflect.StructureModifier;
 import com.mojang.authlib.GameProfile;
 import me.toomuchzelda.teamarenapaper.Main;
-import net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket;
-import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
-import org.bukkit.Bukkit;
+import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
+import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
+import net.minecraft.world.entity.player.PlayerModelPart;
 import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 
 import java.util.*;
@@ -46,6 +42,7 @@ public class DisguiseManager
 		}
 
 		addDisguise(toDisguise, disguise);
+		disguise.updateViewedSkinParts();
 
 		for(Player viewer : couldSee) {
 			viewer.showPlayer(Main.getPlugin(), toDisguise);
@@ -65,7 +62,7 @@ public class DisguiseManager
 			while(iter.hasNext()) {
 				Disguise disg = iter.next();
 
-				List<Player> couldSee = new LinkedList<>();
+				List<Player> couldSee = new ArrayList<>(disg.viewers.size());
 
 				for(Player viewer : disg.viewers.keySet()) {
 					if(viewer.canSee(disg.disguisedPlayer)) {
@@ -75,6 +72,7 @@ public class DisguiseManager
 				}
 
 				iter.remove();
+				disg.clearSkinParts();
 
 				for(Player viewer : couldSee) {
 					viewer.showPlayer(Main.getPlugin(), disg.disguisedPlayer);
@@ -84,11 +82,11 @@ public class DisguiseManager
 	}
 
 
-	//TODO: fix
+	//TODO: untested
 	public static void removeDisguise(int disguisedPlayer, Disguise disguise) {
 		Set<Disguise> set = PLAYER_ID_TO_DISGUISE_LOOKUP.get(disguisedPlayer);
 		if(set != null) {
-			List<Player> couldSee = new LinkedList<>();
+			List<Player> couldSee = new ArrayList<>(disguise.viewers.size());
 			for (Player viewer : disguise.viewers.keySet()) {
 				if (viewer.canSee(disguise.disguisedPlayer)) {
 					viewer.hidePlayer(Main.getPlugin(), disguise.disguisedPlayer);
@@ -97,6 +95,7 @@ public class DisguiseManager
 			}
 
 			set.remove(disguise);
+			disguise.clearSkinParts();
 
 			for (Player viewer : couldSee) {
 				viewer.showPlayer(Main.getPlugin(), disguise.disguisedPlayer);
@@ -144,27 +143,14 @@ public class DisguiseManager
 	public static class Disguise
 	{
 		public Player disguisedPlayer;
-		public int tabListPlayerId;
 		public UUID tabListPlayerUuid;
 		public GameProfile disguisedGameProfile;
 		public GameProfile tabListGameProfile;
 		public Map<Player, Integer> viewers;
+		private final boolean[] skinParts;
 
-		//remove and spawn disguise can be used for real player too
-		public ClientboundRemoveEntitiesPacket removeDisguisedPlayerPacket;
-		public PacketContainer addDisguisedPlayerInfoPacket;
-		private PacketContainer spawnDisguisedPlayerPacket;
-
-		public PacketContainer removePlayerInfoPacket;
-
-		//public PacketContainer addTabListPlayerInfoPacket;
-		public PacketContainer removeTabListPlayerInfoPacket;
-
-		public PacketContainer addRealPlayerInfoPacket;
-
-		public Disguise(Player player, Collection<Player> viewers, Player toDisguiseAs) {
+		private Disguise(Player player, Collection<Player> viewers, Player toDisguiseAs) {
 			this.disguisedPlayer = player;
-			this.tabListPlayerId = Bukkit.getUnsafe().nextEntityId();
 			this.tabListPlayerUuid = UUID.randomUUID();
 			this.viewers = new HashMap<>(viewers.size());
 
@@ -177,68 +163,40 @@ public class DisguiseManager
 			this.disguisedGameProfile.getProperties().removeAll("textures");
 			this.disguisedGameProfile.getProperties().putAll("textures", disguiseAs.getProperties().get("textures"));
 
-			int latency = toDisguiseAs.getPing();
-
-			/*PacketContainer fakeInfoPacket = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);
-			StructureModifier<Object> disguisedInfoModifier = fakeInfoPacket.getModifier();
-			var fakePlayerUpdate = new ClientboundPlayerInfoPacket.PlayerUpdate(disguisedGameProfile, latency,
-					GameType.SURVIVAL, PaperAdventure.asVanilla(Component.text(" ")), null);
-			disguisedInfoModifier.write(0, ClientboundPlayerInfoPacket.Action.ADD_PLAYER);
-			disguisedInfoModifier.write(1, Collections.singletonList(fakePlayerUpdate));
-			addDisguisedPlayerInfoPacket = fakeInfoPacket;*/
-
-			spawnDisguisedPlayerPacket = new PacketContainer(PacketType.Play.Server.SPAWN_ENTITY);
-			StructureModifier<Object> modifier = spawnDisguisedPlayerPacket.getModifier();
-			modifier.write(0, disguisedPlayer.getEntityId());
-			modifier.write(1, disguisedPlayer.getUniqueId());
-			spawnDisguisedPlayerPacket.getEntityTypeModifier().write(0, EntityType.PLAYER);
-
-			//ServerPlayer nmsPlayer = ((CraftPlayer) disguisedPlayer).getHandle();
-			ClientboundPlayerInfoRemovePacket removeInfoPacket =
-					new ClientboundPlayerInfoRemovePacket(List.of(disguisedPlayer.getUniqueId()));
-			removePlayerInfoPacket = new PacketContainer(PacketType.Play.Server.PLAYER_INFO_REMOVE, removeInfoPacket);
-
-			removeDisguisedPlayerPacket = new ClientboundRemoveEntitiesPacket(disguisedPlayer.getEntityId());
-
-
-			//tab list player stuff-----
-
-			//======= Add tab list player packet
-			//addTabListPlayerInfoPacket = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);
-			//get this to copy the skin so the face appears in tab list
 			GameProfile realPlayerProifle = ((CraftPlayer) disguisedPlayer).getHandle().getGameProfile();
 			tabListGameProfile = new GameProfile(tabListPlayerUuid, disguisedPlayer.getName());
 			tabListGameProfile.getProperties().removeAll("textures");
 			tabListGameProfile.getProperties().putAll("textures", realPlayerProifle.getProperties().get("textures"));
 
-			//var tabListUpdate =
-			//		new ClientboundPlayerInfoUpdatePacket.Entry(tabListGameProfile, disguisedPlayer.getPing(),
-			//				GameType.SURVIVAL, PaperAdventure.asVanilla(disguisedPlayer.displayName()), null);
+			// Store once at time of disguise to keep consistent even if toDisguiseAs changes their skin layers
+			this.skinParts = new boolean[PlayerModelPart.values().length];
+			net.minecraft.world.entity.player.Player nmsToDisguiseAs = ((CraftPlayer) toDisguiseAs).getHandle();
+			for (PlayerModelPart part : PlayerModelPart.values()) {
+				if (nmsToDisguiseAs.isModelPartShown(part)) {
+					this.skinParts[part.getBit()] = true;
+				}
+			}
+		}
 
-			//StructureModifier<Object> modifier3 = addTabListPlayerInfoPacket.getModifier();
-			//modifier3.write(0, ClientboundPlayerInfoPacket.Action.ADD_PLAYER);
-			//modifier3.write(1, Collections.singletonList(tabListUpdate));
-			//====================================
+		private void updateViewedSkinParts() {
+			for (Player viewer : this.viewers.keySet()) {
+				MetadataViewer metadataViewer = Main.getPlayerInfo(viewer).getMetadataViewer();
+				for (int i = 0; i < this.skinParts.length; i++) {
+					metadataViewer.updateBitfieldValue(this.disguisedPlayer,
+						MetaIndex.PLAYER_SKIN_PARTS_IDX, i, this.skinParts[i]);
+				}
+			}
+		}
 
-			//========Remove tab list player packet
-			removeTabListPlayerInfoPacket = new PacketContainer(PacketType.Play.Server.PLAYER_INFO_REMOVE);
-			StructureModifier<Object> modifier4 = removeTabListPlayerInfoPacket.getModifier();
-			//GameProfile removeTabProfile = new GameProfile(tabListPlayerUuid, disguisedPlayer.getName());
+		private void clearSkinParts() {
+			for (Player p : this.viewers.keySet()) {
+				removeSkinParts(p);
+			}
+		}
 
-			//var removeUpdate = new ClientboundPlayerInfoPacket.PlayerUpdate(removeTabProfile, 1, null,
-			//		null, null);
-
-			modifier4.write(0, List.of(tabListPlayerUuid));
-			//==================================
-
-			/*addRealPlayerInfoPacket = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);
-			//get this to copy the skin so the face appears in tab list
-			var realPlayerUpdate = new ClientboundPlayerInfoPacket.PlayerUpdate(realPlayerProifle,
-					disguisedPlayer.getPing(), GameType.SURVIVAL, null, null);
-
-			StructureModifier<Object> modifier5 = addTabListPlayerInfoPacket.getModifier();
-			modifier5.write(0, ClientboundPlayerInfoPacket.Action.ADD_PLAYER);
-			modifier5.write(1, Collections.singletonList(realPlayerUpdate));*/
+		private void removeSkinParts(Player viewer) {
+			MetadataViewer metadataViewer = Main.getPlayerInfo(viewer).getMetadataViewer();
+			metadataViewer.removeViewedValue(this.disguisedPlayer, MetaIndex.PLAYER_SKIN_PARTS_IDX);
 		}
 	}
 }

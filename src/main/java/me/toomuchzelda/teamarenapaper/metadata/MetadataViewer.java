@@ -386,7 +386,10 @@ public class MetadataViewer
 						}
 
 						valueMap.put(dataVal.getIndex(), MetaIndex.copyWithValue(dataVal, newValue));
-					} // else keep the vanilla value
+					}
+					else { // keep the vanilla value
+						valueMap.put(dataVal.getIndex(), dataVal);
+					}
 				}
 				else {
 					valueMap.put(dataVal.getIndex(), dataVal);

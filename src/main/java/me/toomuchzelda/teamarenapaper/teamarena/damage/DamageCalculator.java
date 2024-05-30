@@ -1,6 +1,8 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
+import me.toomuchzelda.teamarenapaper.Main;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
@@ -26,8 +28,20 @@ public class DamageCalculator
 		//recalculate the damage done by the item
 		double itemDamage;
 		if(weapon.getType().isAir()) // If not item held, get the mob's own attack damage
-			itemDamage = attacker.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE).getValue();
-		else
+		{
+			AttributeInstance attribute = attacker.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE);
+			if (attribute != null)
+				itemDamage = attribute.getValue();
+			else {
+				Main.logger().warning(attacker + " " + attacker.getName() +
+					" does not have GENERIC_ATTACK_DAMAGE attribute for weapon=" + weapon + ", damageType=" +
+					damageType + ", critical=" + critical+ ", victim=" + victim.getName()
+				);
+				Thread.dumpStack();
+
+				itemDamage = 1d; // not sure
+			}
+		} else
 			itemDamage = DamageNumbers.getMaterialBaseDamage(weapon.getType());
 		//add damage from potion effects (strength and weakness)
 		for(PotionEffect potEffect : attacker.getActivePotionEffects()) {
