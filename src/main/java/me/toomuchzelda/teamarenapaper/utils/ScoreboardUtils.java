@@ -12,7 +12,6 @@ import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 import org.bukkit.craftbukkit.entity.CraftEntity;
-import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.craftbukkit.scoreboard.CraftScoreboardTranslations;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.DisplaySlot;
@@ -152,7 +151,7 @@ public class ScoreboardUtils {
 
 	public static void sendSetScorePacket(Player player, String objective, String entry, int score,
 										  @Nullable Component numberFormat) {
-		sendPacket(player, new ClientboundSetScorePacket(entry, objective, score, null,
-			numberFormat == null ? BlankFormat.INSTANCE : new FixedFormat(PaperAdventure.asVanilla(numberFormat))));
+		sendPacket(player, new ClientboundSetScorePacket(entry, objective, score, Optional.empty(),
+			numberFormat == null ? Optional.of(BlankFormat.INSTANCE) : Optional.of(new FixedFormat(PaperAdventure.asVanilla(numberFormat)))));
 	}
 }

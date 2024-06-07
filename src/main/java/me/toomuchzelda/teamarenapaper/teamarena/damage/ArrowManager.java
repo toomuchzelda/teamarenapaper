@@ -43,7 +43,7 @@ public class ArrowManager {
 		Method temp;
 		try {
 			temp = net.minecraft.world.entity.projectile.AbstractArrow.class
-				.getDeclaredMethod("N");
+				.getDeclaredMethod("resetPiercedEntities");
 			temp.setAccessible(true);
 		}
 		catch (NoSuchMethodException e) {
@@ -54,7 +54,7 @@ public class ArrowManager {
 		NMS_AA_RESET_PIERCED_ENTITIES = temp;
 
 		try {
-			temp = net.minecraft.world.entity.projectile.AbstractArrow.class.getDeclaredMethod("a", BlockHitResult.class);
+			temp = net.minecraft.world.entity.projectile.AbstractArrow.class.getDeclaredMethod("onHitBlock", BlockHitResult.class);
 			temp.setAccessible(true);
 		}
 		catch (NoSuchMethodException e) {
