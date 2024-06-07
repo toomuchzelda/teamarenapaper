@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.medic;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
+import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
@@ -12,6 +13,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.*;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.SpeechBubbleHologram;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
@@ -131,6 +133,38 @@ public class KitMedic extends Kit
 
 		private static final double KILLSTREAK_MULT = 0.067d;
 
+		private static final int THANK_LIMIT_TICKS = 3 * 20;
+		private static final Component[] THANKS;
+		static {
+			final String[] thankMessages = {
+				"Thanks!", "TY", "Cheers", "ty medic", "thx doc", "Thanks Medic", "ily medic"
+			};
+			final String[] emoticons = {
+				" :)", " <3", " xD", "", " ^-^", " uwu"
+			};
+			final NamedTextColor[] colors = {
+				NamedTextColor.YELLOW, NamedTextColor.AQUA, NamedTextColor.LIGHT_PURPLE, NamedTextColor.WHITE
+			};
+
+			ArrayList<Component> list = new ArrayList<>(thankMessages.length * emoticons.length * colors.length * colors.length);
+			for (String thank : thankMessages) {
+				for (String em : emoticons) {
+					for (NamedTextColor color1 : colors) {
+						for (NamedTextColor color2 : colors) {
+							list.add(
+								Component.textOfChildren(
+									Component.text(thank, color1),
+									Component.text(em, color2)
+								)
+							);
+						}
+					}
+				}
+			}
+
+			THANKS = list.toArray(new Component[0]);
+		}
+
 		private record HealInfo(LivingEntity healed, int startTime, AttachedMedicGuardian guardian, AttachedMedicGuardian selfGuardian) {}
 		private final Map<Player, HealInfo> currentHeals = new LinkedHashMap<>();
 		private final Map<Player, Double> playerTotalHeals = new HashMap<>();
@@ -143,6 +177,11 @@ public class KitMedic extends Kit
 			}
 
 			medic.sendMessage(getTotalHealedMessage(playerTotalHeals.remove(medic)));
+
+			// Needs to be done manually
+			FishHook hook = medic.getFishHook();
+			if (hook != null)
+				hook.setHookedEntity(null);
 		}
 
 		@Override
@@ -153,6 +192,8 @@ public class KitMedic extends Kit
 				stopGlowing(entry.getKey(), entry.getValue());
 				iter.remove();
 			}
+
+			assert CompileAsserts.OMIT || playerTotalHeals.isEmpty();
 		}
 
 		/** Prevent losing the potion when drinking it */
@@ -255,6 +296,8 @@ public class KitMedic extends Kit
 							new PacketContainer(PacketType.Play.Server.ENTITY_DESTROY, EntityUtils.getRemoveEntitiesPacket(hook))
 						);
 				});
+
+				thankTheDoc(hookedPlayer);
 			}
 		}
 
@@ -333,9 +376,18 @@ public class KitMedic extends Kit
 				// or something. So check the item every tick here and stop healing appropriately
 				// The PlayerFishEvent is also not called when the hook is released by moving out of range,
 				// so check for that here too
-				final boolean stopHealing = !medic.getEquipment().getItemInMainHand().isSimilar(WAND) ||
+				final boolean stopHealing;
+				if (Main.getGame().isDead(hinfo.healed())) {
+					stopHealing = true;
+					if (medic.getFishHook() != null)
+						medic.getFishHook().setHookedEntity(null);
+				}
+				else {
+					stopHealing = !medic.getEquipment().getItemInMainHand().isSimilar(WAND) ||
 						medic.getFishHook() == null || medic.getFishHook().getHookedEntity() != hinfo.healed() ||
 						lineOfSightCheck(medic, healed) != LineOfSight.CAN_HEAL;
+				}
+
 				if (stopHealing) {
 					iter.remove();
 					stopGlowing(medic, hinfo);
@@ -442,6 +494,17 @@ public class KitMedic extends Kit
 			}
 
 			return Component.text("You healed " + MathUtils.round(amountHealed / 2, 2) + " hearts this life.", ITEM_NAME_COLOUR);
+		}
+
+		private static void thankTheDoc(Player healed) {
+			assert CompileAsserts.OMIT || !Main.getGame().isDead(healed);
+			if (!healed.isSneaking() && Main.getPlayerInfo(healed).messageHasCooldowned("medicthx", THANK_LIMIT_TICKS)) {
+				SpeechBubbleHologram bubble = new SpeechBubbleHologram(healed, MathUtils.randomElement(THANKS),
+					new SpeechBubbleHologram.DamageIndicatorMovementFunc(6d, 0.5d)
+				);
+				bubble.setLiveTime(30);
+				bubble.respawn();
+			}
 		}
 	}
 }

@@ -5,6 +5,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.SpeechBubbleHologram;
 import org.bukkit.Material;
 import org.bukkit.Registry;
 import org.bukkit.Sound;
@@ -166,4 +167,9 @@ public class Preferences {
 		"If you want to hear the announcer say swear words", false)
 		.setIcon(Material.GOAT_HORN)
 		.setCategory(PreferenceCategory.ANNOUNCER);
+
+	public static final Preference<SpeechBubbleHologram.ViewOptions> SEE_SPEECH_POPUPS = SimplePreference.ofEnum("see_speech_popups",
+		"See players speech bubbles for things like thanking medics", SpeechBubbleHologram.ViewOptions.class, SpeechBubbleHologram.ViewOptions.ALL)
+		.setIcon(Material.FLOWERING_AZALEA_LEAVES)
+		.setCategory(PreferenceCategory.VISUAL_EFFECTS);
 }

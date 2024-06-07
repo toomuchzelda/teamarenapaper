@@ -39,6 +39,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.rewind.KitRewind;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.trigger.KitTrigger;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.SpeechBubbleHologram;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -767,7 +768,7 @@ public abstract class TeamArena
 					Component damageText = Component.text(MathUtils.round(event.getFinalDamage() / 2, 2), NamedTextColor.YELLOW, TextDecoration.BOLD);
 					Location spawnLoc = p.getLocation();
 					spawnLoc.add(0, MathUtils.randomRange(1.4, 2), 0);
-					var hologram = new DamageIndicatorHologram(spawnLoc, PlayerUtils.getDamageIndicatorViewers(p, playerCause), damageText);
+					var hologram = new SpeechBubbleHologram(spawnLoc, PlayerUtils.getDamageIndicatorViewers(p, playerCause), damageText);
 					hologram.respawn();
 
 					//add to their damage log
