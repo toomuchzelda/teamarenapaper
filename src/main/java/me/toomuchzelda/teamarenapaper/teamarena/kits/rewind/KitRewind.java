@@ -248,6 +248,7 @@ public class KitRewind extends Kit {
 						if (KitOptions.rewindClockPhases)
 							rewindBuff(player, info, currTick);
 
+						player.setFallDistance(0f);
 						world.playSound(player, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
 						player.teleport(dest);
 						world.playSound(player, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1.5f);
