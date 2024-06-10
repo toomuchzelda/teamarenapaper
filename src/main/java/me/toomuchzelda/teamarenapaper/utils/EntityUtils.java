@@ -39,7 +39,7 @@ import java.util.*;
 import java.util.function.Predicate;
 
 public class EntityUtils {
-    public static void cacheReflection() {
+	public static void cacheReflection() {
 	}
 
 	@NotNull
@@ -381,5 +381,15 @@ public class EntityUtils {
 		}
 
 		return null;
+	}
+
+	private static final List<EquipmentSlot> playerSlots = List.of(
+		EquipmentSlot.HAND, EquipmentSlot.OFF_HAND, EquipmentSlot.FEET, EquipmentSlot.LEGS, EquipmentSlot.CHEST, EquipmentSlot.HEAD
+	);
+	public static List<EquipmentSlot> getEquipmentSlots(LivingEntity livent) {
+		if (livent instanceof Wolf || livent instanceof Horse) // May be more entities
+			return List.of(EquipmentSlot.values());
+		else
+			return playerSlots;
 	}
 }

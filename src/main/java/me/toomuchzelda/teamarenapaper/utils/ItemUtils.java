@@ -214,7 +214,7 @@ public class ItemUtils {
         PlayerInventory inv = player.getInventory();
         inv.remove(item);
         EntityEquipment equipment = player.getEquipment();
-        for (EquipmentSlot slot : EquipmentSlot.values()) {
+        for (EquipmentSlot slot : EntityUtils.getEquipmentSlots(player)) {
             ItemStack slotItem = equipment.getItem(slot);
             if (slotItem == null) continue;
             if (slotItem.isSimilar(item)) {

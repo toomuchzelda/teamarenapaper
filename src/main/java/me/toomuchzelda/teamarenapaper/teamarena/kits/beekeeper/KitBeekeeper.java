@@ -181,7 +181,7 @@ public class KitBeekeeper extends Kit
 
 				// Beekeeper sees their bees' name and glowing
 				// Teammates see the bees glowing
-				// Other players see the bee's name
+				// Other players see the owner's name
 				beeEntity.customName(this.owner.displayName());
 
 				Optional<?> nameComponent = Optional.of(AdventureComponentConverter.fromComponent(

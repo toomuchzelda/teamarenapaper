@@ -8,6 +8,7 @@ import io.papermc.paper.entity.TeleportFlag;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.GlowUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
@@ -487,7 +488,7 @@ public sealed class BuildingOutline extends PacketEntity {
 					EntityEquipment equipment = livingEntity.getEquipment();
 					if (equipment != null) {
 						var equipmentMap = new EnumMap<EquipmentSlot, ItemStack>(EquipmentSlot.class);
-						for (EquipmentSlot slot : EquipmentSlot.values()) {
+						for (EquipmentSlot slot : EntityUtils.getEquipmentSlots(livingEntity)) {
 							equipmentMap.put(slot, equipment.getItem(slot));
 						}
 						setEquipment(equipmentMap);
