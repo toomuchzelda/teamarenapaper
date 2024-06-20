@@ -769,9 +769,9 @@ public class EventListeners implements Listener
 	//stop players from messing with the armor of CTF Flags
 	@EventHandler
 	public void playerArmorStandManipulate(PlayerArmorStandManipulateEvent event) {
-		if(Main.getGame() instanceof CaptureTheFlag ctf && ctf.flagStands.containsKey(event.getRightClicked())) {
+		//if(Main.getGame() instanceof CaptureTheFlag ctf && ctf.flagStands.containsKey(event.getRightClicked())) {
 			event.setCancelled(true);
-		}
+		//}
 	}
 
 	@EventHandler(ignoreCancelled = true) // might be handled by custom inventories

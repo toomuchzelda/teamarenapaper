@@ -474,7 +474,7 @@ public class KitBeekeeper extends Kit
 										   LivingEntity clickedEntity) {
 
 			if (clickedEntity != null) {
-				if (Main.getPlayerInfo(beekeeper).team.hasMember(clickedEntity)) {
+				if (!(clickedEntity instanceof Bee) && Main.getPlayerInfo(beekeeper).team.hasMember(clickedEntity)) {
 					// Clicked teammate: give honey
 					BeekeeperBee freeBee = BEEKEEPERS.get(beekeeper).getNextAvailableBee();
 					if (freeBee != null) {

@@ -45,7 +45,7 @@ public class Sentry extends EntityBuilding implements PreviewableBuilding {
 	//degree rotation = how much the sentry will rotate
 	//yaw and pitch view = the sentry's cone of vision
 	public static final int SENTRY_DEGREE_ROTATION = 90;
-	public static final double SENTRY_YAW_VIEW = 15.0;
+	public static final double SENTRY_YAW_VIEW = 20.0;
 	public static final double SENTRY_PITCH_VIEW = 70.0;
 	//Fire every SENTRY_FIRE_RATE ticks
 	public static final int SENTRY_FIRE_RATE = 12;
@@ -360,8 +360,8 @@ public class Sentry extends EntityBuilding implements PreviewableBuilding {
 
 	@Override
 	public boolean onDamage(DamageEvent e) {
-		if (e.getAttacker() instanceof Player attacker && !Main.getGame().canAttack(attacker, owner))
-			e.setCancelled(true); // ally damage
+		if (e.getFinalAttacker() instanceof LivingEntity living && !Main.getGame().canAttack(owner, living))
+			e.setCancelled(true);
 		return false; // continue handling
 	}
 

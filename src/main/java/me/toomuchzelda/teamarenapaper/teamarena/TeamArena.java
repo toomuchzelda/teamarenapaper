@@ -544,6 +544,13 @@ public abstract class TeamArena
 
 				setGameState(GameState.PREGAME);
 
+				for (Player speccer : new ArrayList<>(this.spectators)) {
+					setSpectator(speccer, false, false);
+					for (Player viewer : Bukkit.getOnlinePlayers()) {
+						viewer.showPlayer(Main.getPlugin(), speccer);
+					}
+				}
+
 				noTeamTeam.addMembers(Bukkit.getOnlinePlayers().toArray(new Player[0]));
 				showTeamColours = false;
 				for (TeamArenaTeam team : teams) {
@@ -1182,8 +1189,6 @@ public abstract class TeamArena
 
 		for(Player p : spectators) {
 			makeSpectator(p);
-
-			p.getInventory().setItem(8, miniMap.getMapItem());
 		}
 
 		sendCountdown(true);
@@ -1524,6 +1529,9 @@ public abstract class TeamArena
 					if (isRespawningGame()) {
 						respawnTimers.remove(player); //if respawning game remove them from respawn queue
 					}
+				}
+
+				if (gameState == GameState.TEAMS_CHOSEN || gameState == GameState.LIVE) {
 					makeSpectator(player);
 				}
 
@@ -2025,7 +2033,7 @@ public abstract class TeamArena
 
 	public void sendGameAndMapInfo(Player player) {
 		player.sendMessage(gameAndMapMessage);
-		PlayerUtils.sendTitle(player, this.gameTitle, this.gameSubTitle, 0, 60, 20);
+		PlayerUtils.sendTitle(player, this.gameTitle, this.gameSubTitle, 0, 120, 20);
 	}
 
 	protected void loadConfig(TeamArenaMap map) {
