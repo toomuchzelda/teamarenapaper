@@ -172,6 +172,10 @@ public class KitPorcupine extends Kit {
 			final Player porc = (Player) projectileEvent.getHitEntity();
 			final Projectile projectile = projectileEvent.getEntity();
 
+			// fishhooks are buggy
+			if (projectile instanceof FishHook)
+				return;
+
 			// No projectile may be reflected twice
 			if (this.reflectedProjLookup.containsKey(projectile)) return;
 
