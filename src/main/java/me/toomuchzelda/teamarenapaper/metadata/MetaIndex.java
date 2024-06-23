@@ -6,6 +6,7 @@ import me.toomuchzelda.teamarenapaper.Main;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.decoration.ArmorStand;
+import org.joml.Vector3f;
 
 import java.util.*;
 
@@ -189,10 +190,10 @@ public class MetaIndex
 		DISPLAY_POSROT_INTERPOLATION_DURATION_OBJ = new WrappedDataWatcherObject(DISPLAY_POSROT_INTERPOLATION_DURATION_IDX, WrappedDataWatcher.Registry.get(Integer.class));
 		addMapping(DISPLAY_POSROT_INTERPOLATION_DURATION_OBJ);
 
-		DISPLAY_TRANSLATION_OBJ = new WrappedDataWatcherObject(DISPLAY_TRANSLATION_IDX, WrappedDataWatcher.Registry.getVectorSerializer());
+		DISPLAY_TRANSLATION_OBJ = new WrappedDataWatcherObject(DISPLAY_TRANSLATION_IDX, WrappedDataWatcher.Registry.get(Vector3f.class));
 		addMapping(DISPLAY_TRANSLATION_OBJ);
 
-		DISPLAY_SCALE_OBJ = new WrappedDataWatcherObject(DISPLAY_SCALE_IDX, WrappedDataWatcher.Registry.getVectorSerializer());
+		DISPLAY_SCALE_OBJ = new WrappedDataWatcherObject(DISPLAY_SCALE_IDX, WrappedDataWatcher.Registry.get(Vector3f.class));
 		addMapping(DISPLAY_SCALE_OBJ);
 
 		DISPLAY_BILLBOARD_OBJ = new WrappedDataWatcherObject(DISPLAY_BILLBOARD_IDX, WrappedDataWatcher.Registry.get(Byte.class));

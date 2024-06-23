@@ -181,6 +181,9 @@ public class GameScheduler
 
 		GameType gameType = typeAndMap.type;
 		TeamArenaMap map = typeAndMap.map;
+		if (map == null) { // can be null if admin left unspecified
+			map = GAME_TYPE_MAP_QUEUE.get(gameType).poll();
+		}
 		//the chosen map's GameType can conflict with what was picked above
 		// just have the map's one override
 		if(!map.hasGameType(gameType)) {

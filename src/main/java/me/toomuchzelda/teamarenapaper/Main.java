@@ -59,6 +59,8 @@ public final class Main extends JavaPlugin
 		FileUtils.init();
 		try { // Hack for avoiding NoClassDefFound after hot-reloading jar
 			Class.forName("me.toomuchzelda.teamarenapaper.sql.DBSetPreferences");
+			// Debug: Load at the beginning to catch serializer problems sooner
+			Class.forName("me.toomuchzelda.teamarenapaper.metadata.MetaIndex");
 		} catch (Exception ignored) {
 
 		}

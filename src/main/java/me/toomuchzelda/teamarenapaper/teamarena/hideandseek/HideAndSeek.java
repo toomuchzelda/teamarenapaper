@@ -135,6 +135,11 @@ public class HideAndSeek extends TeamArena {
 	}
 
 	@Override
+	protected boolean canJoinMidGame() {
+		return false;
+	}
+
+	@Override
 	public Component getGameName() {
 		return GAME_NAME;
 	}
