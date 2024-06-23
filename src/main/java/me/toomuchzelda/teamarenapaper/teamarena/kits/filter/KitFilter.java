@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.filter;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
@@ -23,8 +24,7 @@ import java.util.stream.Stream;
  * By convention, kit filters are lowercase.
  */
 public class KitFilter {
-
-	private static final Set<String> DEFAULT_BLOCKED_KITS = Set.of("sniper", "longbow");
+	public static final Set<String> DEFAULT_BLOCKED_KITS = Set.of("sniper", "longbow");
 	private static FilterPreset preset;
 	private static Set<String> blockedKits = DEFAULT_BLOCKED_KITS;
 
@@ -66,9 +66,9 @@ public class KitFilter {
 		));
 
 
-	public static Kit filterKit(Kit kit) {
+	public static Kit filterKit(TeamArena game, Kit kit) {
 		if (!isAllowed(kit))
-			return Main.getGame().getKits().stream()
+			return game.getKits().stream()
 					.filter(KitFilter::isAllowed)
 					.findFirst().orElse(null);
 		else
@@ -84,19 +84,19 @@ public class KitFilter {
 		return preset;
 	}
 
-	public static void setPreset(@NotNull FilterPreset preset) {
+	public static void setPreset(@NotNull TeamArena game, FilterPreset preset) {
 		if (preset.allow) {
-			setAllowed(preset.blockedKits);
+			setAllowed(game, preset.blockedKits);
 		} else {
-			setBlocked(preset.blockedKits);
+			setBlocked(game, preset.blockedKits);
 		}
 		KitFilter.preset = preset;
 	}
 
-	public static void setAllowed(Collection<String> allowed) throws IllegalArgumentException {
+	public static void setAllowed(TeamArena game, Collection<String> allowed) throws IllegalArgumentException {
 		var allowedKits = new HashSet<>(allowed);
 
-		setBlocked(Main.getGame().getKits().stream()
+		setBlocked(game, game.getKits().stream()
 			.map(Kit::getName)
 			.map(name -> name.toLowerCase(Locale.ENGLISH))
 			.filter(name -> !allowedKits.contains(name))
@@ -104,11 +104,11 @@ public class KitFilter {
 		);
 	}
 
-	public static void setBlocked(Collection<String> blocked) throws IllegalArgumentException {
+	public static void setBlocked(TeamArena game, Collection<String> blocked) throws IllegalArgumentException {
 		preset = null;
 		blockedKits = Set.copyOf(blocked);
 		// For anyone not using an allowed kit, set it to a fallback one.
-		Optional<Kit> fallbackOpt = Main.getGame().getKits().stream()
+		Optional<Kit> fallbackOpt = game.getKits().stream()
 			.filter(KitFilter::isAllowed)
 			.findFirst();
 
@@ -147,17 +147,17 @@ public class KitFilter {
 		return blockedKits;
 	}
 
-	public static void allowKit(String kitName) {
+	public static void allowKit(TeamArena game, String kitName) {
 		var set = new HashSet<>(blockedKits);
-		if (set.remove(kitName)) {
-			setBlocked(set);
+		if (set.remove(kitName.toLowerCase(Locale.ENGLISH))) {
+			setBlocked(game, set);
 		}
 	}
 
-	public static void blockKit(String kitName) {
+	public static void blockKit(TeamArena game, String kitName) {
 		var set = new HashSet<>(blockedKits);
-		if (set.add(kitName)) {
-			setBlocked(set);
+		if (set.add(kitName.toLowerCase(Locale.ENGLISH))) {
+			setBlocked(game, set);
 		}
 	}
 

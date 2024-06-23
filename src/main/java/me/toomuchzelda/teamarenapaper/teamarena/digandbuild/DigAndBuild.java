@@ -1036,11 +1036,6 @@ public class DigAndBuild extends TeamArena
 	}
 
 	@Override
-	public boolean canTeamChatNow(Player player) {
-		return gameState != GameState.PREGAME && gameState != GameState.DEAD;
-	}
-
-	@Override
 	public boolean isRespawningGame() {
 		return true;
 	}

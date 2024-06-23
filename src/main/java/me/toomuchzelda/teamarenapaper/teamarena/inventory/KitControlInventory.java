@@ -192,7 +192,7 @@ public class KitControlInventory extends KitInventory {
 				}
 			});
 			try {
-				KitFilter.setBlocked(blockedKits);
+				KitFilter.setBlocked(Main.getGame(), blockedKits);
 			} catch (IllegalArgumentException ex) {
 				player.sendMessage(Component.text(ex.getMessage(), NamedTextColor.DARK_RED));
 				Inventories.closeInventory(player, KitControlInventory.class);
@@ -282,7 +282,7 @@ public class KitControlInventory extends KitInventory {
 						.toList())
 					.toClickableItem(e -> {
 						if (checkPermissions((Player) e.getWhoClicked())) {
-							KitFilter.setPreset(preset);
+							KitFilter.setPreset(Main.getGame(), preset);
 							Inventories.closeInventory((Player) e.getWhoClicked(), KitControlInventory.class);
 						}
 					}), 9, 45, true);

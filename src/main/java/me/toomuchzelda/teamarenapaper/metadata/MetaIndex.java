@@ -61,6 +61,8 @@ public class MetaIndex
 	public static final int DISPLAY_SCALE_IDX = 12;
 	public static final int DISPLAY_BILLBOARD_IDX = 15;
 
+	public static final int BLOCK_DISPLAY_BLOCK_IDX = 23;
+
 	public static final int ITEM_DISPLAY_ITEM_IDX = 23;
 
 	public static final WrappedDataWatcher.Serializer BITFIELD_SERIALIZER = WrappedDataWatcher.Registry.get(Byte.class);
@@ -119,6 +121,8 @@ public class MetaIndex
 		DisplayBillboardOption(int value) { b = (byte) value; }
 		public byte get() { return this.b; }
 	}
+
+	public static final WrappedDataWatcherObject BLOCK_DISPLAY_BLOCK_OBJ;
 
 	public static final WrappedDataWatcherObject ITEM_DISPLAY_ITEM_OBJ;
 
@@ -193,6 +197,9 @@ public class MetaIndex
 
 		DISPLAY_BILLBOARD_OBJ = new WrappedDataWatcherObject(DISPLAY_BILLBOARD_IDX, WrappedDataWatcher.Registry.get(Byte.class));
 		addMapping(DISPLAY_BILLBOARD_OBJ);
+
+		BLOCK_DISPLAY_BLOCK_OBJ = new WrappedDataWatcherObject(BLOCK_DISPLAY_BLOCK_IDX, WrappedDataWatcher.Registry.getBlockDataSerializer(false));
+		addMapping(BLOCK_DISPLAY_BLOCK_OBJ);
 
 		ITEM_DISPLAY_ITEM_OBJ = new WrappedDataWatcherObject(ITEM_DISPLAY_ITEM_IDX, WrappedDataWatcher.Registry.getItemStackSerializer(false));
 		addMapping(ITEM_DISPLAY_ITEM_OBJ);

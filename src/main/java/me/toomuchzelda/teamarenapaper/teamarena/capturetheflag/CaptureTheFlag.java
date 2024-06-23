@@ -858,11 +858,6 @@ public class CaptureTheFlag extends TeamArena
 	}
 
 	@Override
-	public boolean canTeamChatNow(Player player) {
-		return gameState != GameState.PREGAME && gameState != GameState.DEAD;
-	}
-
-	@Override
 	public boolean canHeal(Player medic, LivingEntity target) {
 		if(flagStands.containsKey(target))
 			return false;

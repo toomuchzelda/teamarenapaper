@@ -34,6 +34,8 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.KitDemolitions;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.engineer.KitEngineer;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.explosive.KitExplosive;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitFilter;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitHider;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitSeeker;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.medic.KitMedic;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.rewind.KitRewind;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.trigger.KitTrigger;
@@ -295,10 +297,16 @@ public abstract class TeamArena
 		this.defaultKits.addAll(List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(), new KitBurst(),
 			new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(), new KitNone(),
 			new KitVenom(), new KitRewind(), new KitValkyrie(), new KitExplosive(), new KitTrigger(), new KitMedic(this.killStreakManager),
-			new KitBerserker(), new KitEngineer(), new KitPorcupine(), new KitLongbow(), new KitSniper(), new KitBeekeeper())
+			new KitBerserker(), new KitEngineer(), new KitPorcupine(), new KitLongbow(), new KitSniper(), new KitBeekeeper(),
+			new KitHider(), new KitSeeker())
 		);
 
 		registerKits();
+
+		KitFilter.setBlocked(this, KitFilter.DEFAULT_BLOCKED_KITS);
+		// Hide Hide and Seek kits
+		KitFilter.blockKit(this, KitHider.NAME);
+		KitFilter.blockKit(this, KitSeeker.NAME);
 
 		DamageTimes.clear();
 		DamageType.updateDamageSources(this);
@@ -329,7 +337,7 @@ public abstract class TeamArena
 			CommandCallvote.instance.cancelVote(); // 5 seconds later, in preGameTick(), next one is started
 
 		//init all the players online at time of construction
-		Kit fallbackKit = KitFilter.filterKit(kits.values().iterator().next());
+		Kit fallbackKit = KitFilter.filterKit(this, kits.values().iterator().next());
 		for (var entry : Main.getPlayerInfoMap().entrySet()) {
 			Player p = entry.getKey();
 			PlayerInfo pinfo = entry.getValue();
@@ -340,7 +348,7 @@ public abstract class TeamArena
 			}
 			players.add(p);
 
-			Kit kit = findKit(pinfo.defaultKit), filteredKit = KitFilter.filterKit(kit);
+			Kit kit = findKit(pinfo.defaultKit), filteredKit = KitFilter.filterKit(this, kit);
 			pinfo.kit = filteredKit;
 			if (kit != filteredKit) {
 				p.sendMessage(KitFilter.getSelectedKitMessage(filteredKit));
@@ -1365,25 +1373,7 @@ public abstract class TeamArena
 		}
 
 		Collections.shuffle(shuffledPlayers, MathUtils.random);
-
 		shuffledPlayers.forEach(player -> this.addToLowestTeam(player, true));
-
-		//theoretically playerIdx shouldn't become larger than the number of players so i don't need to modulus
-		/*int playerIdx = 0;
-		for(TeamArenaTeam team : shuffledTeams) {
-			while(team.getPlayerMembers().size() < maxOnTeam) {
-				team.addMembers(shuffledPlayers.get(playerIdx));
-				playerIdx++;
-			}
-		}
-
-		int numOfRemainders = players.size() % teams.length;
-		if(numOfRemainders > 0) {
-			for(int i = 0; i < numOfRemainders; i++) {
-				shuffledTeams[i].addMembers(shuffledPlayers.get(playerIdx));
-				playerIdx++;
-			}
-		}*/
 
 		for(TeamArenaTeam team : teams) {
 			team.updateNametags();
@@ -1446,7 +1436,9 @@ public abstract class TeamArena
 
 	public abstract boolean canSelectTeamNow();
 
-	public abstract boolean canTeamChatNow(Player player);
+	public boolean canTeamChatNow(Player player) {
+		return gameState != GameState.PREGAME && gameState != GameState.DEAD;
+	}
 
 	public void selectKit(@NotNull Player player, @NotNull Kit kit) {
 		if (!canSelectKitNow()) {
@@ -1835,7 +1827,7 @@ public abstract class TeamArena
 		}
 
 		if (playerInfo.kit == null) {
-			Kit kit = findKit(playerInfo.defaultKit), filteredKit = KitFilter.filterKit(kit);
+			Kit kit = findKit(playerInfo.defaultKit), filteredKit = KitFilter.filterKit(this, kit);
 			playerInfo.kit = filteredKit;
 			if (kit != filteredKit) {
 				Bukkit.getScheduler().runTask(Main.getPlugin(), () ->
@@ -1844,7 +1836,7 @@ public abstract class TeamArena
 
 			//default kit somehow invalid; maybe a kit was removed
 			if (playerInfo.kit == null) {
-				playerInfo.kit = KitFilter.filterKit(kits.values().iterator().next());
+				playerInfo.kit = KitFilter.filterKit(this, kits.values().iterator().next());
 				Main.logger().severe("PlayerInfo default kit somehow invalid in TeamArena#loggingInPlayer. Should" +
 					" have been handled in EventListeners playerLogin.");
 			}

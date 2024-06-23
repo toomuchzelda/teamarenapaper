@@ -7,7 +7,8 @@ public enum GameType {
     KOTH(Component.text("KOTH", NamedTextColor.YELLOW)),
 	CTF(Component.text("CTF", NamedTextColor.AQUA)),
 	SND(Component.text("SND", NamedTextColor.GOLD)),
-	DNB(Component.text("DNB", NamedTextColor.DARK_GREEN));
+	DNB(Component.text("DNB", NamedTextColor.DARK_GREEN)),
+	HNS(Component.text("HNS", NamedTextColor.LIGHT_PURPLE));
 
 	public final Component shortName;
 

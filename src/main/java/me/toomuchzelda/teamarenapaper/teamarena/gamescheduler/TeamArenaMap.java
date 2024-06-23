@@ -11,6 +11,7 @@ import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
+import org.bukkit.entity.EntityType;
 import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
 import org.yaml.snakeyaml.Yaml;
@@ -48,6 +49,8 @@ public class TeamArenaMap
 						  List<IntBoundingBox> noBuildZones, Map<StatusOreType, DNBStatusOreInfo> statusOres,
 						  Map<String, DNBTeamInfo> teams) {}
 
+	public record HNSInfo(List<Material> allowedBlocks, List<EntityType> allowedEntities, Vector seekerSpawn) {}
+
 	private final String name;
 	private final String authors;
 	private final String description;
@@ -72,6 +75,7 @@ public class TeamArenaMap
 	private final CTFInfo ctfInfo;
 	private final SNDInfo sndInfo;
 	private final DNBInfo dnbInfo;
+	private final HNSInfo hnsInfo;
 
 	private final File file;
 	//info about the map that gets sent to players when they join / map loads
@@ -94,7 +98,8 @@ public class TeamArenaMap
 				+ ", kothInfo: " + (kothInfo != null ? kothInfo.toString() : "null")
 				+ ", ctfInfo: " + (ctfInfo != null ? ctfInfo.toString() : "null")
 				+ ", sndInfo: " + (sndInfo != null ? sndInfo.toString() : "null")
-				+ ", dnbInfo: " + (dnbInfo != null ? dnbInfo.toString() : "null");
+				+ ", dnbInfo: " + (dnbInfo != null ? dnbInfo.toString() : "null")
+				+ ", hnsInfo: " + (hnsInfo != null ? hnsInfo.toString() : "null");
 	}
 
 	TeamArenaMap(File worldFolder) throws IOException {
@@ -479,6 +484,60 @@ public class TeamArenaMap
 		this.dnbInfo = dnbInfo;
 		if(dnbInfo != null)
 			this.gameTypes.add(GameType.DNB);
+
+		File hnsFile = new File(worldFolder, "HNSConfig.yml");
+		HNSInfo hnsInfo = null;
+		if (hnsFile.exists() && hnsFile.isFile()) {
+			try (FileInputStream hnsInput = new FileInputStream(hnsFile)) {
+				Map<String, Object> lists = yaml.load(hnsInput);
+
+				List<Material> blocks;
+				try {
+					List<String> allowedBlocks = (List<String>) lists.get("AllowedBlocks");
+					if (allowedBlocks != null) {
+						blocks = new ArrayList<>(allowedBlocks.size());
+						for (String s : allowedBlocks) blocks.add(Material.valueOf(s));
+					} else {
+						blocks = Collections.emptyList();
+					}
+				}
+				catch (NullPointerException | ClassCastException e) {
+					Main.logger().warning("Error in AllowedBlocks of HNS config of " + worldFolder.getName() + ". " + e);
+					blocks = Collections.emptyList();
+				}
+
+				List<EntityType> entities;
+				try {
+					List<String> allowedEntities = (List<String>) lists.get("AllowedEntities");
+					if (allowedEntities != null) {
+						entities = new ArrayList<>(allowedEntities.size());
+						for (String s : allowedEntities) entities.add(EntityType.valueOf(s));
+					}
+					else {
+						entities = Collections.emptyList();
+					}
+				}
+				catch (NullPointerException| ClassCastException e) {
+					Main.logger().warning("Error in AllowedEntities of HNS config of " + worldFolder.getName() + ". " + e);
+					entities = Collections.emptyList();
+				}
+
+				Vector spawn;
+				try {
+					String vec = (String) lists.get("SeekerSpawn");
+					spawn = BlockUtils.parseCoordsToVec(vec, 0.5, 0, 0.5);
+				}
+				catch (NullPointerException | ClassCastException e) {
+					Main.logger().severe("Error in HunterSpawn of HNS config of " + worldFolder.getName() + ". " + e);
+					throw e;
+				}
+
+				hnsInfo = new HNSInfo(blocks, entities, spawn);
+			}
+		}
+		this.hnsInfo = hnsInfo;
+		if (hnsInfo != null)
+			this.gameTypes.add(GameType.HNS);
 	}
 
 	public Component getMapInfoComponent() {
@@ -577,6 +636,10 @@ public class TeamArenaMap
 
 	public DNBInfo getDnbInfo() {
 		return this.dnbInfo;
+	}
+
+	public HNSInfo getHnsInfo() {
+		return this.hnsInfo;
 	}
 
 	public File getFile() {

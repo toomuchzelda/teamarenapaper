@@ -58,9 +58,9 @@ public class CommandKitControl extends CustomCommand {
 			// XOR
 			try {
 				if (block)
-					KitFilter.setBlocked(kitNames);
+					KitFilter.setBlocked(Main.getGame(), kitNames);
 				else
-					KitFilter.setAllowed(kitNames);
+					KitFilter.setAllowed(Main.getGame(), kitNames);
 				sender.sendMessage(Component.text("Set kit restrictions to: " +
 					args[0] + " " + kitNames, NamedTextColor.GREEN));
 			} catch (IllegalArgumentException ex) {
@@ -72,7 +72,7 @@ public class CommandKitControl extends CustomCommand {
 			KitFilter.FilterPreset preset = KitFilter.PRESETS.get(args[1]);
 			if (preset == null)
 				throw new IllegalArgumentException("Preset " + args[1] + " doesn't exist");
-			KitFilter.setPreset(preset);
+			KitFilter.setPreset(Main.getGame(), preset);
 		}
 	}
 
