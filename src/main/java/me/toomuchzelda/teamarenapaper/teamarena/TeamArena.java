@@ -75,6 +75,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.util.*;
+import java.util.function.BiConsumer;
 
 /**
  * TeamArena game class. Handles the vast majority of the game's state and mechanics.
@@ -241,28 +242,17 @@ public abstract class TeamArena
 		((CraftWorld) gameWorld).getHandle().paperConfig().misc.disableRelativeProjectileVelocity = true;
 
 		// Force load all the chunks that are within the playing area
-		{
-			final int chunkWidthX = ((int) (border.getWidthX() / 16d)) + 1;
-			final int chunkWidthZ = ((int) (border.getWidthZ() / 16d)) + 1;
+		this.forEachGameChunk((chunk, border) -> {
+			chunk.setForceLoaded(true);
 
-			final Location cornerLoc = border.getMin().toLocation(this.gameWorld);
-			for (int chunkX = 0; chunkX < chunkWidthX; chunkX++) {
-				for (int chunkZ = 0; chunkZ < chunkWidthZ; chunkZ++) {
-					Chunk chunk = this.gameWorld.getChunkAt(cornerLoc.getChunk().getX() +
-						chunkX, cornerLoc.getChunk().getZ() + chunkZ);
-
-					chunk.setForceLoaded(true);
-
-					// Remove almost all of the old Buy signs if any - leave a few at random for easter egg
-					Collection<BlockState> signs = chunk.getTileEntities(block -> ItemUtils.isOldBuySign(block.getState()), false);
-					for (BlockState state : signs) {
-						if (MathUtils.random.nextDouble() < 0.95d) {
-							state.getBlock().setType(Material.AIR);
-						}
-					}
+			// Remove almost all of the old Buy signs if any - leave a few at random for easter egg
+			Collection<BlockState> signs = chunk.getTileEntities(block -> ItemUtils.isOldBuySign(block.getState()), false);
+			for (BlockState state : signs) {
+				if (MathUtils.random.nextDouble() < 0.95d) {
+					state.getBlock().setType(Material.AIR);
 				}
 			}
-		}
+		});
 
 		gameCreationTime = gameTick;
 		waitingSince = gameTick;
@@ -298,7 +288,7 @@ public abstract class TeamArena
 			new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(), new KitNone(),
 			new KitVenom(), new KitRewind(), new KitValkyrie(), new KitExplosive(), new KitTrigger(), new KitMedic(this.killStreakManager),
 			new KitBerserker(), new KitEngineer(), new KitPorcupine(), new KitLongbow(), new KitSniper(), new KitBeekeeper(),
-			new KitHider(), new KitSeeker())
+			new KitHider(this), new KitSeeker())
 		);
 
 		registerKits();
@@ -2279,6 +2269,21 @@ public abstract class TeamArena
 
 	public GameState getGameState() {
 		return gameState;
+	}
+
+	public void forEachGameChunk(BiConsumer<Chunk, BoundingBox> func) {
+		final int chunkWidthX = ((int) (border.getWidthX() / 16d)) + 1;
+		final int chunkWidthZ = ((int) (border.getWidthZ() / 16d)) + 1;
+
+		final Location cornerLoc = border.getMin().toLocation(this.gameWorld);
+		for (int chunkX = 0; chunkX < chunkWidthX; chunkX++) {
+			for (int chunkZ = 0; chunkZ < chunkWidthZ; chunkZ++) {
+				Chunk chunk = this.gameWorld.getChunkAt(cornerLoc.getChunk().getX() +
+					chunkX, cornerLoc.getChunk().getZ() + chunkZ);
+
+				func.accept(chunk, border);
+			}
+		}
 	}
 
 	@ApiStatus.Internal

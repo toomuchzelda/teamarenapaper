@@ -12,6 +12,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
 import org.yaml.snakeyaml.Yaml;
@@ -511,7 +512,14 @@ public class TeamArenaMap
 					List<String> allowedEntities = (List<String>) lists.get("AllowedEntities");
 					if (allowedEntities != null) {
 						entities = new ArrayList<>(allowedEntities.size());
-						for (String s : allowedEntities) entities.add(EntityType.valueOf(s));
+						for (String s : allowedEntities) {
+							EntityType type = EntityType.valueOf(s);
+							if (LivingEntity.class.isAssignableFrom(type.getEntityClass()))
+								entities.add(type);
+							else {
+								Main.logger().severe(s + " is not a valid EntityType. In HNS config of " + worldFolder.getName());
+							}
+						}
 					}
 					else {
 						entities = Collections.emptyList();

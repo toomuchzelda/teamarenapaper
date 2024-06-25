@@ -7,6 +7,8 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitFilter;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitHider;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitSeeker;
+import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
+import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -14,6 +16,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
@@ -22,7 +25,7 @@ public class HideAndSeek extends TeamArena {
 
 	private static final Component GAME_NAME = Component.text("Hide and Seek", GameType.HNS.shortName.color());
 	private static final Component HOW_TO_PLAY = Component.text(
-		"Hunters have to find and kill the Hiders, who look like blocks and animals before time is up",
+		"Seekers have to find and kill the Hiders, who look like blocks and animals before time is up",
 		GameType.HNS.shortName.color()
 	);
 
@@ -34,6 +37,8 @@ public class HideAndSeek extends TeamArena {
 	private Location seekerSpawnLoc;
 	private Set<Material> allowedBlocks;
 	private Set<EntityType> allowedEntities;
+
+	private final ArrayList<BlockCoords> allowedBlockCoords;
 
 	public HideAndSeek(TeamArenaMap map) {
 		super(map);
@@ -49,6 +54,20 @@ public class HideAndSeek extends TeamArena {
 		}
 
 		KitFilter.setAllowed(this, Set.of("hider", "seeker"));
+
+		this.allowedBlockCoords = BlockUtils.getAllBlocks(this.allowedBlocks, this);
+	}
+
+	public boolean isAllowedBlockType(Material mat) {
+		return this.allowedBlocks.contains(mat);
+	}
+
+	public boolean isAllowedEntityType(EntityType type) {
+		return this.allowedEntities.contains(type);
+	}
+
+	public ArrayList<BlockCoords> getAllowedBlockCoords() {
+		return this.allowedBlockCoords;
 	}
 
 	@Override

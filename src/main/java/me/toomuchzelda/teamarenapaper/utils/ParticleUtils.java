@@ -7,6 +7,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.craftbukkit.v1_20_R3.CraftParticle;
 import org.bukkit.entity.Player;
 
 public class ParticleUtils {
@@ -23,6 +24,34 @@ public class ParticleUtils {
 			count,
 			offX, offY, offZ,
 			brightness, options);
+	}
+
+	public static <T> void batchParticles(Player viewer, PlayerUtils.PacketCache cache,
+										  Particle particle, T data, Location loc,
+										  double maxDistance, int count,
+										  float offX, float offY, float offZ,
+										  float speed,
+										  boolean force) {
+
+		if (data != null && !particle.getDataType().isInstance(data)) {
+			throw new IllegalArgumentException("Particle and data mismatch");
+		}
+
+		maxDistance = Math.min(maxDistance, (force ? 512d : 32d));
+		if (viewer.getEyeLocation().distance(loc) > maxDistance) return;
+
+		ParticleOptions nmsParticleOptions = CraftParticle.createParticleParam(particle, data);
+		ClientboundLevelParticlesPacket packet = new ClientboundLevelParticlesPacket(
+			nmsParticleOptions,
+			force,
+			loc.getX(), loc.getY(), loc.getZ(),
+			offX, offY, offZ,
+			speed,
+			count
+		);
+
+		PacketContainer pLibPacket = new PacketContainer(PacketType.Play.Server.WORLD_PARTICLES, packet);
+		PlayerUtils.sendPacket(viewer, cache, pLibPacket);
 	}
 
 	public static void playExplosionParticle(Location location, float offX, float offY, float offZ, boolean large) {

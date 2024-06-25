@@ -41,7 +41,9 @@ public class AttachedPacketEntity extends PacketEntity
 			else
 				viewingPlayer = viewer -> EntityUtils.isTrackingEntity(viewer, entity);
 
-			this.viewerRule = viewingPlayer.and(viewerRule);
+			this.viewerRule = viewingPlayer;
+			if (viewerRule != PacketEntity.VISIBLE_TO_ALL)
+				this.viewerRule = this.viewerRule.and(viewerRule);
 		}
 		this.selfSee = selfSee;
 		this.reEvaluateViewers(false);

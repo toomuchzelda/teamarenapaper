@@ -57,6 +57,16 @@ public record BlockCoords(int x, int y, int z) {
 		return add(face.getModX() * distance, face.getModY() * distance, face.getModZ());
 	}
 
+	public double distanceSqr(Location other) {
+		double dx = x - other.getX(), dy = y - other.getY(), dz = z - other.getZ();
+		return dx * dx + dy * dy + dz * dz;
+	}
+
+	public double distanceSqr(Vector other) {
+		double dx = x - other.getX(), dy = y - other.getY(), dz = z - other.getZ();
+		return dx * dx + dy * dy + dz * dz;
+	}
+
 	public static BlockCoords getMin(BlockCoords one, BlockCoords two) {
 		int minX = two.x();
 		int minY = two.y();
