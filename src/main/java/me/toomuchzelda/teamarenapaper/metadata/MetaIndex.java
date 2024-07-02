@@ -25,6 +25,7 @@ public class MetaIndex
 	public static final int NO_GRAVITY_IDX = 5;
 	public static final int POSE_IDX = 6;
 
+	public static final byte BASE_BITFIELD_ZERO_MASK = 0;
 	public static final int BASE_BITFIELD_ON_FIRE_IDX = 0;
 	public static final byte BASE_BITFIELD_ON_FIRE_MASK = 0x01;
 	public static final int BASE_BITFIELD_SNEAKING_IDX = 1;

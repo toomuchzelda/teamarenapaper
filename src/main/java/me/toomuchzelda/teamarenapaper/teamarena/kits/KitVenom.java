@@ -153,7 +153,7 @@ public class KitVenom extends Kit {
 					//Leap Ability Implementation
 					World world = player.getWorld();
 					Vector direction = player.getLocation().getDirection();
-					direction.multiply(new Vector(1.5, 0.75, 1.5));
+					direction.multiply(new Vector(1.4, 0.75, 1.4));
 					player.setCooldown(Material.CHICKEN, LEAP_CD);
 					player.setCooldown(Material.COOKED_CHICKEN, 4 * 20);
 					//world.playSound to play sound for all players

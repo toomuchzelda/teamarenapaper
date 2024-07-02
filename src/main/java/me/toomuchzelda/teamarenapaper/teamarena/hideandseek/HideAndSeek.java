@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.hideandseek;
 
+import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
@@ -9,17 +10,16 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitHider;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitSeeker;
 import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
 import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.Component;
-import org.bukkit.Location;
-import org.bukkit.Material;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
+import org.bukkit.*;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Locale;
-import java.util.Set;
+import java.util.*;
 
 public class HideAndSeek extends TeamArena {
 
@@ -28,6 +28,9 @@ public class HideAndSeek extends TeamArena {
 		"Seekers have to find and kill the Hiders, who look like blocks and animals before time is up",
 		GameType.HNS.shortName.color()
 	);
+	private static final Component SEEKERS_RELEASED_CHAT = Component.text("Ready or not, here I come!", NamedTextColor.GOLD);
+	private static final Component SEEKERS_RELEASED_TITLE = Component.text("Seekers released", NamedTextColor.GOLD);
+	private static final Component SEEKERS_RELEASED_IN_CHAT = Component.text("Seekers will be released in ", NamedTextColor.GOLD);
 
 	private static final double HIDER_SEEKER_RATIO = 2d; // 2 Hiders for every seeker
 
@@ -35,13 +38,18 @@ public class HideAndSeek extends TeamArena {
 	private TeamArenaTeam seekerTeam;
 
 	private Location seekerSpawnLoc;
+	private final int hideTimeTicks;
 	private Set<Material> allowedBlocks;
 	private Set<EntityType> allowedEntities;
 
 	private final ArrayList<BlockCoords> allowedBlockCoords;
 
+	private boolean isHidingTime;
+
 	public HideAndSeek(TeamArenaMap map) {
 		super(map);
+
+		this.gameWorld.setGameRule(GameRule.RANDOM_TICK_SPEED, 0);
 
 		for (TeamArenaTeam team : this.teams) {
 			if (team.getName().equals("Hiders"))
@@ -56,6 +64,8 @@ public class HideAndSeek extends TeamArena {
 		KitFilter.setAllowed(this, Set.of("hider", "seeker"));
 
 		this.allowedBlockCoords = BlockUtils.getAllBlocks(this.allowedBlocks, this);
+		this.hideTimeTicks = this.gameMap.getHnsInfo().hideTime() * 20;
+		this.isHidingTime = true;
 	}
 
 	public boolean isAllowedBlockType(Material mat) {
@@ -88,20 +98,52 @@ public class HideAndSeek extends TeamArena {
 	@Override
 	public void prepLive() {
 		super.prepLive();
+	}
 
-		for (Player seeker : this.seekerTeam.getPlayerMembers()) {
-			seeker.teleport(seekerSpawnLoc);
+	@Override
+	public void liveTick() {
+		super.liveTick();
+
+		final int currentTick = TeamArena.getGameTick();
+		if (isHidingTime) {
+			if (currentTick >= this.gameLiveTime + this.hideTimeTicks) {
+				assert CompileAsserts.OMIT || currentTick == this.gameLiveTime + this.hideTimeTicks;
+				this.isHidingTime = false;
+
+				this.seekerTeam.getPlayerMembers().forEach(player -> player.teleport(this.seekerSpawnLoc));
+
+				Bukkit.broadcast(SEEKERS_RELEASED_CHAT);
+				PlayerUtils.sendOptionalTitle(Component.empty(), SEEKERS_RELEASED_TITLE, 5, 40, 20);
+				Bukkit.getOnlinePlayers().forEach(player -> player.playSound(player, Sound.ITEM_GOAT_HORN_SOUND_0, SoundCategory.PLAYERS, 1f, 2f));
+			}
+			else { // Countdown
+				final int timeDiff = (this.gameLiveTime + this.hideTimeTicks) - currentTick;
+				final int secs = timeDiff / 20;
+				if (timeDiff % 20 == 0 &&
+					(secs % 60 == 0 || secs % 30 == 0 || secs == 15 || secs <= 5)) {
+
+					Bukkit.broadcast(
+						SEEKERS_RELEASED_IN_CHAT.append(Component.text(secs + "s", NamedTextColor.GOLD, TextDecoration.BOLD))
+					);
+					Bukkit.getOnlinePlayers().forEach(player -> player.playSound(player, Sound.BLOCK_NOTE_BLOCK_HARP, SoundCategory.PLAYERS, 1f, 1f));
+				}
+			}
+		}
+		else {
+			assert CompileAsserts.OMIT || currentTick >= this.gameLiveTime + this.hideTimeTicks;
+
+
 		}
 	}
 
 	@Override
 	public TeamArenaTeam addToLowestTeam(Player player, boolean add) {
 		double hiderCount = (double) this.hiderTeam.getPlayerMembers().size();
-		double seekerCount = (double) this.seekerTeam.getPlayerMembers().size() / HIDER_SEEKER_RATIO;
+		double seekerCount = ((double) this.seekerTeam.getPlayerMembers().size()) / HIDER_SEEKER_RATIO;
 
 		TeamArenaTeam chosenTeam;
 		if (hiderCount <= seekerCount)
-			chosenTeam = hiderTeam;
+			chosenTeam = this.hiderTeam;
 		else
 			chosenTeam = this.seekerTeam;
 

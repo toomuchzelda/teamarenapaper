@@ -50,7 +50,8 @@ public class TeamArenaMap
 						  List<IntBoundingBox> noBuildZones, Map<StatusOreType, DNBStatusOreInfo> statusOres,
 						  Map<String, DNBTeamInfo> teams) {}
 
-	public record HNSInfo(List<Material> allowedBlocks, List<EntityType> allowedEntities, Vector seekerSpawn) {}
+	public record HNSInfo(List<Material> allowedBlocks, List<EntityType> allowedEntities, Vector seekerSpawn,
+						  int hideTime) {}
 
 	private final String name;
 	private final String authors;
@@ -540,7 +541,16 @@ public class TeamArenaMap
 					throw e;
 				}
 
-				hnsInfo = new HNSInfo(blocks, entities, spawn);
+				int hideTime;
+				try {
+					hideTime = (int) (Integer) lists.get("HideTime");
+				}
+				catch (NullPointerException | ClassCastException e) {
+					Main.logger().severe("Error in HideTime of HNS config of " + worldFolder.getName() + e);
+					throw e;
+				}
+
+				hnsInfo = new HNSInfo(blocks, entities, spawn, hideTime);
 			}
 		}
 		this.hnsInfo = hnsInfo;

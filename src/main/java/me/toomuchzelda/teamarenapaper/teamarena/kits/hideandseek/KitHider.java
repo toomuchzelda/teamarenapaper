@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.hideandseek.HideAndSeek;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
@@ -12,24 +13,21 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
 import org.bukkit.block.Block;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class KitHider extends Kit {
 
 	public static final String NAME = "Hider";
 
-	private static final int TRANSFORM_CD = 2 * 20;
-	private static final Component TRANSFORM_WAIT_MSG = Component.text("You can't do this yet", TextColors.ERROR_RED);
+	private static final int TRANSFORM_CD = 30;
+	private static final Component TRANSFORM_WAIT_MSG = Component.text("Transform is cooling down", TextColors.ERROR_RED);
 	private static final ItemStack TRANSFORM_WAND = ItemBuilder.of(Material.WOODEN_SHOVEL)
 		.displayName(Component.text("Transformer", TextColor.color(119, 168, 50)))
 		.lore(List.of(
@@ -51,7 +49,7 @@ public class KitHider extends Kit {
 		public static final double BLOCK_PARTICLE_DISTANCE = 15d;
 		public static final double BLOCK_PARTICLE_DISTANCE_SQR = BLOCK_PARTICLE_DISTANCE * BLOCK_PARTICLE_DISTANCE;
 		private final TeamArena game;
-		private final Map<Player, HiderInfo> disguiseMap = new HashMap<>(Bukkit.getMaxPlayers());
+		private final Map<Player, HiderDisguise> disguiseMap = new HashMap<>(Bukkit.getMaxPlayers());
 
 		private HiderAbility(TeamArena game) {
 			this.game = game;
@@ -59,18 +57,27 @@ public class KitHider extends Kit {
 
 		@Override
 		public void giveAbility(Player player) {
-			disguiseMap.put(player, new HiderInfo(player));
+			disguiseMap.put(player, new HiderDisguise(player));
+			PlayerUtils.setInvisible(player, true);
 		}
 
 		@Override
 		public void removeAbility(Player player) {
 			disguiseMap.remove(player).remove();
+			PlayerUtils.setInvisible(player, false);
+
+			HACK_MAP.remove(player);
 		}
 
 		@Override
 		public void unregisterAbility() {
-			this.disguiseMap.forEach((player, hiderInfo) -> hiderInfo.remove());
+			this.disguiseMap.forEach((player, hiderDisguise) -> {
+				PlayerUtils.setInvisible(player, false);
+				hiderDisguise.remove();
+			});
 			this.disguiseMap.clear();
+
+			HACK_MAP.clear();
 		}
 
 		@Override
@@ -78,12 +85,14 @@ public class KitHider extends Kit {
 			final int currentTick = TeamArena.getGameTick();
 			PlayerUtils.PacketCache particleBundler = new PlayerUtils.PacketCache();
 
-			// Get now to avoid allocating in the loop
+			// Lazy allocate
 			List<LivingEntity> livents = this.game instanceof HideAndSeek ?
-				this.game.getWorld().getLivingEntities() :
+				null :
 				Collections.emptyList();
 
-			this.disguiseMap.forEach((player, hiderInfo) -> {
+			for (Map.Entry<Player, HiderDisguise> entry : this.disguiseMap.entrySet()) {
+				final Player player = entry.getKey();
+				final HiderDisguise hiderInfo = entry.getValue();
 				hiderInfo.tick();
 
 				if (this.game instanceof HideAndSeek hns &&
@@ -99,6 +108,8 @@ public class KitHider extends Kit {
 						}
 					}
 
+					if (livents == null) livents = this.game.getWorld().getLivingEntities();
+
 					for (LivingEntity living : livents) {
 						final Location livingLoc = living.getLocation();
 						if (hns.isAllowedEntityType(living.getType()) &&
@@ -111,7 +122,7 @@ public class KitHider extends Kit {
 
 					// TODO play for disguised players too
 				}
-			});
+			}
 
 			particleBundler.flush();
 			particleBundler.clear();
@@ -125,14 +136,20 @@ public class KitHider extends Kit {
 				BLOCK_PARTICLE_DISTANCE,
 				1,
 				0.25f, 0.15f, 0.25f,
-				1, false
+				10, false
 			);
 		}
 
+		// Hack to stop cancelled entity interactions causing an interaction on the block
+		// behind them
+		private final HashMap<Player, Integer> HACK_MAP = new HashMap<>();
 		@Override
 		public void onInteract(PlayerInteractEvent event) {
 			final Player clicker = event.getPlayer();
 			if (event.getAction().isRightClick() && TRANSFORM_WAND.isSimilar(event.getItem())) {
+				Integer clickTick = HACK_MAP.remove(clicker);
+				if (clickTick != null && clickTick == TeamArena.getGameTick()) return;
+
 				if (clicker.getCooldown(TRANSFORM_WAND.getType()) == 0) {
 					final Block clickedBlock = event.getClickedBlock();
 					if (clickedBlock != null) {
@@ -143,14 +160,59 @@ public class KitHider extends Kit {
 							event.setUseInteractedBlock(Event.Result.DENY);
 						}
 						else if (Main.getPlayerInfo(clicker).messageHasCooldowned("kithiderbadblock" + clickedBlock.getType(), 10)) {
-							clicker.playSound(clicker, Sound.BLOCK_NOTE_BLOCK_HARP, SoundCategory.BLOCKS, 0.5f, 1f);
+							clicker.playSound(clicker, Sound.BLOCK_NOTE_BLOCK_HARP, SoundCategory.BLOCKS, 1f, 0.5f);
 							clicker.spawnParticle(Particle.VILLAGER_ANGRY, event.getInteractionPoint(), 1);
 						}
 					}
 				}
-				else if (Main.getPlayerInfo(clicker).messageHasCooldowned("kithiderinteracttransform", 20)){
-					clicker.sendMessage(TRANSFORM_WAIT_MSG);
+				else {
+					transformCooldownMsg(clicker);
 				}
+			}
+		}
+
+		@Override
+		public void onInteractEntity(PlayerInteractEntityEvent event) {
+			final Player clicker = event.getPlayer();
+			if (event.getRightClicked() instanceof LivingEntity livent &&
+				TRANSFORM_WAND.isSimilar(event.getPlayer().getInventory().getItem(event.getHand()))) {
+				if (clicker.getCooldown(TRANSFORM_WAND.getType()) == 0) {
+					if (!(this.game instanceof HideAndSeek hns) || hns.isAllowedEntityType(livent.getType())) {
+						this.disguiseMap.get(clicker).disguise(livent);
+						clicker.setCooldown(TRANSFORM_WAND.getType(), TRANSFORM_CD);
+						clicker.playSound(clicker, Sound.BLOCK_NOTE_BLOCK_HARP, SoundCategory.BLOCKS, 1f, 1f);
+						event.setCancelled(true);
+						HACK_MAP.put(clicker, TeamArena.getGameTick());
+					}
+					else if (Main.getPlayerInfo(clicker).messageHasCooldowned("kithiderbadblock" + livent.getType(), 10)) {
+						clicker.playSound(clicker, Sound.BLOCK_NOTE_BLOCK_HARP, SoundCategory.BLOCKS, 1f, 0.5f);
+						clicker.spawnParticle(Particle.VILLAGER_ANGRY, livent.getEyeLocation(), 1);
+					}
+				}
+				else {
+					transformCooldownMsg(clicker);
+				}
+			}
+		}
+
+		private static void transformCooldownMsg(Player clicker) {
+			if (Main.getPlayerInfo(clicker).messageHasCooldowned("kithiderinteracttransform", 20)){
+				clicker.sendMessage(TRANSFORM_WAIT_MSG);
+			}
+		}
+
+		@Override
+		public void onAttemptedAttack(DamageEvent event) {
+			if (this.game instanceof HideAndSeek hns && hns.isAllowedEntityType(event.getVictim().getType())) {
+				final Player finalAttacker = (Player) event.getFinalAttacker();
+				if (Main.getPlayerInfo(finalAttacker).messageHasCooldowned("hiderouch", 50)) {
+					Component msg = Component.textOfChildren(
+						Component.text("[" + event.getVictim().getName() + " -> me]", NamedTextColor.GRAY),
+						Component.text(" Ouch! I'm your ally ;(", NamedTextColor.WHITE)
+					);
+					finalAttacker.sendMessage(msg);
+				}
+				event.setCancelled(true);
 			}
 		}
 	}

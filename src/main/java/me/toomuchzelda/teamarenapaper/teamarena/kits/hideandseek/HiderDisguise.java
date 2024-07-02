@@ -2,7 +2,10 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek;
 
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
+import com.comphenix.protocol.wrappers.WrappedDataWatcher;
+import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import me.toomuchzelda.teamarenapaper.CompileAsserts;
+import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.*;
@@ -17,7 +20,6 @@ import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.block.Block;
-import org.bukkit.block.data.BlockData;
 import org.bukkit.craftbukkit.v1_20_R3.block.CraftBlockState;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
@@ -25,7 +27,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.joml.Vector3f;
 
-public class HiderInfo {
+public class HiderDisguise {
 
 	public static final int BLOCK_SOLIDIFY_TICKS = 40;
 
@@ -46,13 +48,12 @@ public class HiderInfo {
 
 	// Used if disguised as a block
 	private BlockState nmsBlockState;
+	private static final BlockState nmsAirBlockState = ((CraftBlockState) Material.AIR.createBlockData().createBlockState()).getHandle();
 	private BlockCoords occupiedBlock;
 	private int blockChangeTick;
 
-	HiderInfo(final Player hider) {
-		final int hiderId = hider.getEntityId();
-
-		this.hitbox = new AttachedHiderEntity(EntityType.INTERACTION, hider, hiderId);
+	HiderDisguise(final Player hider) {
+		this.hitbox = new AttachedHiderEntity(EntityType.INTERACTION, hider);
 		// TODO scale larger
 
 
@@ -76,11 +77,17 @@ public class HiderInfo {
 
 		this.nmsBlockState = ((CraftBlockState) clicked.getState()).getHandle();
 
-		boolean wasNull = false; // need to refresh meta manually if already existed
-		if (this.disguise == null) {
-			wasNull = true;
-			this.disguise = new AttachedHiderEntity(EntityType.BLOCK_DISPLAY, this.hider,
-				this.hider.getEntityId());
+		boolean respawn = false; // need to refresh meta manually if already existed
+		if (this.disguise == null || this.disguise.getEntityType() != EntityType.BLOCK_DISPLAY) {
+			if (this.disguise != null) {
+				this.disguise.remove();
+			}
+
+			respawn = true;
+			this.disguise = new AttachedHiderEntity(EntityType.BLOCK_DISPLAY, this.hider);
+
+			// Invis makes clients not render the blue line when viewing hitboxes
+			this.disguise.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK);
 
 			this.disguise.setMetadata(MetaIndex.DISPLAY_POSROT_INTERPOLATION_DURATION_OBJ, 2);
 			this.disguise.setMetadata(MetaIndex.DISPLAY_TRANSLATION_OBJ, nmsVector);
@@ -89,8 +96,9 @@ public class HiderInfo {
 		this.disguise.setMetadata(MetaIndex.BLOCK_DISPLAY_BLOCK_OBJ, nmsBlockState);
 		this.disguise.updateMetadataPacket();
 
-		this.disguise.respawn();
-		if (!wasNull)
+		if (respawn)
+			this.disguise.respawn();
+		else
 			this.disguise.refreshViewerMetadata();
 
 		BlockCoords coords = this.getCoords();
@@ -100,7 +108,21 @@ public class HiderInfo {
 	}
 
 	void disguise(LivingEntity clicked) {
+		if (this.nmsBlockState != null)
+			this.resetBlockTimer(null);
 
+		this.nmsBlockState = null;
+
+		if (this.disguise != null) {
+			this.disguise.remove();
+		}
+
+		this.disguise = new AttachedHiderEntity(clicked.getType(), this.hider);
+		for (WrappedWatchableObject obj : WrappedDataWatcher.getEntityWatcher(clicked).getWatchableObjects()) {
+			this.disguise.setMetadata(obj.getWatcherObject(), obj.getValue());
+		}
+		this.disguise.updateMetadataPacket();
+		this.disguise.respawn();
 	}
 
 	void undisguise() {
@@ -130,11 +152,49 @@ public class HiderInfo {
 
 	private void breakExistingSolid() {
 		if (TeamArena.getGameTick() >= this.blockChangeTick + BLOCK_SOLIDIFY_TICKS) {
-			assert CompileAsserts.OMIT || this.occupiedBlock.toBlock(this.hider.getWorld()).getType() == this.nmsBlockState.getBukkitMaterial();
+			if (!CompileAsserts.OMIT &&
+				this.occupiedBlock.toBlock(this.hider.getWorld()).getType() != this.nmsBlockState.getBukkitMaterial()) {
+				Main.logger().severe("Hider block and actual block didn't match. " +
+					this.nmsBlockState.toString() + ", " + this.occupiedBlock.toBlock(this.hider.getWorld()));
+				Thread.dumpStack();
+			}
+
+			this.setBlockDisplayData(false, true);
+
 			this.hider.getWorld().setBlockData(this.occupiedBlock.x(), this.occupiedBlock.y(), this.occupiedBlock.z(),
 				Material.AIR.createBlockData());
 			this.visualBlockEffect();
 		}
+	}
+
+	private void setBlockDisplayData(boolean air, boolean refresh) {
+		if (air)
+			this.disguise.setMetadata(MetaIndex.BLOCK_DISPLAY_BLOCK_OBJ, nmsAirBlockState);
+		else
+			this.disguise.setMetadata(MetaIndex.BLOCK_DISPLAY_BLOCK_OBJ, nmsBlockState);
+
+		if (refresh)
+			this.disguise.refreshViewerMetadata();
+		else
+			this.disguise.updateMetadataPacket();
+	}
+
+	private void placeSolid() {
+		this.nmsBlockState.createCraftBlockData().createBlockState().update(false, false);
+
+		// Avoid causing block updates (like wheat on stone is invalid)
+		Block toReplace = this.occupiedBlock.toBlock(this.hider.getWorld());
+		org.bukkit.block.BlockState bukkitState = toReplace.getState();
+		bukkitState.setBlockData(this.nmsBlockState.createCraftBlockData());
+		bukkitState.update(true, false);
+
+		//hider.getWorld().setBlockData(this.occupiedBlock.x(), this.occupiedBlock.y(), this.occupiedBlock.z(),
+		//	this.nmsBlockState.createCraftBlockData());
+
+		this.setBlockDisplayData(true, true);
+
+		this.hider.playSound(this.hider, Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.BLOCKS, 2f, 1.5f);
+		visualBlockEffect();
 	}
 
 	void tick() {
@@ -168,12 +228,7 @@ public class HiderInfo {
 					this.bossbar.color(SOLID_COLOUR);
 					this.bossbar.progress(1f);
 
-					// TODO set the physical block
-					hider.getWorld().setBlockData(this.occupiedBlock.x(), this.occupiedBlock.y(), this.occupiedBlock.z(),
-						this.nmsBlockState.createCraftBlockData());
-
-					this.hider.playSound(this.hider, Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.BLOCKS, 2f, 1.5f);
-					visualBlockEffect();
+					this.placeSolid();
 				}
 			}
 		}
@@ -194,13 +249,16 @@ public class HiderInfo {
 	private static class AttachedHiderEntity extends AttachedPacketEntity {
 		private final int hiderId;
 
-		public AttachedHiderEntity(EntityType type, Player hider, int hiderId) {
-			super(PacketEntity.NEW_ID, type, hider, null, PacketEntity.VISIBLE_TO_ALL, true, false);
-			this.hiderId = hiderId;
+		public AttachedHiderEntity(EntityType type, Player hider) {
+			super(PacketEntity.NEW_ID, type, hider, null, PacketEntity.VISIBLE_TO_ALL, true,
+				type != EntityType.BLOCK_DISPLAY);
+
+			this.hiderId = hider.getEntityId();
 		}
 
 		@Override
 		public void onInteract(Player player, EquipmentSlot hand, boolean attack) {
+			if (player.getEntityId() == this.hiderId) return; // Don't interact with self!
 			// Just redirect the interaction to the hider
 			PacketContainer packet = PlayerUtils.createUseEntityPacket(player, hiderId, hand, attack);
 			ProtocolLibrary.getProtocolManager().receiveClientPacket(player, packet, false);
@@ -208,7 +266,7 @@ public class HiderInfo {
 
 		@Override
 		public double getYOffset() {
-			return 0.5d;
+			return this.getEntityType() == EntityType.BLOCK_DISPLAY ? 0.5d : 0d;
 		}
 	}
 }
