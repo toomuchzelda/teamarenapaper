@@ -305,6 +305,16 @@ public class TeamArenaTeam
 		return playerMembers.keySet();
 	}
 
+	public Player getRandomPlayer() {
+		final int index = MathUtils.randomMax(this.playerMembers.size() - 1);
+		int i = 0;
+		for (Player p : this.playerMembers.keySet()) {
+			if (i++ == index) return p;
+		}
+
+		return null;
+	}
+
 	public Player getLastJoinedPlayer() {
 		Player last = null;
 		//LinkedHashSet doesn't ahve a getter for last element

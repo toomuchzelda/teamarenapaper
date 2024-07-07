@@ -893,7 +893,7 @@ public abstract class TeamArena
 			event.setUseItemInHand(Event.Result.DENY);
 			assert CompileAsserts.OMIT || isDead(player);
 			if (canRespawn(player))
-				setToRespawn(player);
+				setToRespawn(player, true);
 			else
 				player.sendMessage(Component.text("You can't respawn right now", NamedTextColor.RED));
 		} else if (kitMenuItem.isSimilar(item)) {
@@ -1557,6 +1557,12 @@ public abstract class TeamArena
 		}
 	}
 
+	// For HNS to override
+	protected Location getSpawnPoint(PlayerInfo pinfo) {
+		assert CompileAsserts.OMIT || this.gameState == GameState.LIVE;
+		return pinfo.team.getNextSpawnpoint();
+	}
+
 	public void respawnPlayer(final Player player) {
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
 
@@ -1564,7 +1570,7 @@ public abstract class TeamArena
 			SpectatorAngelManager.removeAngel(player);
 		}
 
-		player.teleport(pinfo.team.getNextSpawnpoint());
+		player.teleport(this.getSpawnPoint(pinfo));
 		player.getWorld().playSound(player.getLocation(), Sound.ENTITY_ALLAY_AMBIENT_WITH_ITEM, 1f, 1f);
 
 		players.add(player);
@@ -1770,11 +1776,21 @@ public abstract class TeamArena
 	}
 
 	//set a player to respawn when their respawn time is up, only really needed if the respawn was interrupted
-	public void setToRespawn(Player player) {
-		RespawnInfo rinfo = respawnTimers.get(player);
+	public void setToRespawn(Player player, boolean respawn) {
+		RespawnInfo rinfo;
+		if (respawn)
+			rinfo = respawnTimers.get(player);
+		else
+			rinfo = respawnTimers.remove(player);
+
 		if(rinfo != null) {
-			rinfo.interrupted = false;
-			player.getInventory().removeItem(respawnItem);
+			if (respawn) {
+				rinfo.interrupted = false;
+				player.getInventory().removeItem(respawnItem);
+			}
+			else {
+				player.getInventory().remove(respawnItem);
+			}
 		}
 	}
 

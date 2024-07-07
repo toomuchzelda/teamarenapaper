@@ -58,13 +58,11 @@ public class KitHider extends Kit {
 		@Override
 		public void giveAbility(Player player) {
 			disguiseMap.put(player, new HiderDisguise(player));
-			PlayerUtils.setInvisible(player, true);
 		}
 
 		@Override
 		public void removeAbility(Player player) {
 			disguiseMap.remove(player).remove();
-			PlayerUtils.setInvisible(player, false);
 
 			HACK_MAP.remove(player);
 		}

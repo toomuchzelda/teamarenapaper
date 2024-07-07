@@ -187,7 +187,7 @@ public class KitInventory implements InventoryProvider {
 
 	@Override
 	public boolean close(Player player, InventoryCloseEvent.Reason reason) {
-		Main.getGame().setToRespawn(player);
+		Main.getGame().setToRespawn(player, true);
 		return true;
 	}
 

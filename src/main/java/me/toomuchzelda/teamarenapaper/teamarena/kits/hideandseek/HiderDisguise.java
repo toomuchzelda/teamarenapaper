@@ -105,6 +105,8 @@ public class HiderDisguise {
 		this.occupiedBlock = coords;
 		this.blockChangeTick = TeamArena.getGameTick();
 		this.resetBlockTimer(coords);
+
+		PlayerUtils.setInvisible(this.hider, true);
 	}
 
 	void disguise(LivingEntity clicked) {
@@ -123,6 +125,8 @@ public class HiderDisguise {
 		}
 		this.disguise.updateMetadataPacket();
 		this.disguise.respawn();
+
+		PlayerUtils.setInvisible(this.hider, true);
 	}
 
 	void undisguise() {
@@ -131,6 +135,8 @@ public class HiderDisguise {
 
 		this.resetBlockTimer(null);
 		this.nmsBlockState = null;
+
+		PlayerUtils.setInvisible(this.hider, false);
 	}
 
 	private void resetBlockTimer(BlockCoords newCoords) {
@@ -244,6 +250,8 @@ public class HiderDisguise {
 			this.disguise.remove();
 
 		this.hider.hideBossBar(this.bossbar);
+
+		PlayerUtils.setInvisible(this.hider, false);
 	}
 
 	private static class AttachedHiderEntity extends AttachedPacketEntity {
