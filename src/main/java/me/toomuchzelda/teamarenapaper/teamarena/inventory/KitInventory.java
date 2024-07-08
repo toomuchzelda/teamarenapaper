@@ -38,6 +38,7 @@ import java.util.stream.Collectors;
 public class KitInventory implements InventoryProvider {
 
 	protected final List<Kit> kits;
+	protected Set<Kit> allowedKits;
 	protected final EnumMap<KitCategory, List<Kit>> kitsByCategory;
 	protected final TabBar<KitCategory> categoryTab = new TabBar<>(null);
 	protected final Pagination pagination = new Pagination();
@@ -71,8 +72,8 @@ public class KitInventory implements InventoryProvider {
 	protected static final Style LORE_STYLE = Style.style(NamedTextColor.YELLOW);
 	protected static final TextComponent SELECTED_COMPONENT = Component.text("Currently selected!", NamedTextColor.GREEN, TextDecoration.BOLD);
 
-	private static ClickableItem kitToItem(Kit kit, boolean selected) {
-		boolean disabled = !KitFilter.isAllowed(kit);
+	private ClickableItem kitToItem(Kit kit, boolean selected) {
+		boolean disabled = !allowedKits.contains(kit);
 		Style nameStyle = Style.style(kit.getCategory().textColor());
 		String desc = kit.getDescription();
 		// word wrapping
@@ -100,9 +101,11 @@ public class KitInventory implements InventoryProvider {
 				})
 				.build(),
 			e -> {
-				if (!KitFilter.isAllowed(kit))
-					return;
+				// recalculate allowed kit
 				Player player = (Player) e.getWhoClicked();
+				if (!KitFilter.canUseKit(Main.getGame(), player, kit)) {
+					return;
+				}
 				Main.getGame().selectKit(player, kit);
 				Inventories.closeInventory(player, KitInventory.class);
 			}
@@ -119,6 +122,8 @@ public class KitInventory implements InventoryProvider {
 	@Override
 	public void init(Player player, InventoryAccessor inventory) {
 		Main.getGame().interruptRespawn(player);
+		// calculate allowed kits
+		allowedKits = KitFilter.calculateKits(Main.getGame(), player);
 
 		categoryTab.showTabs(inventory, Arrays.asList(KitCategory.values()), KitCategory::display, 0, 9, true);
 		KitCategory categoryFilter = categoryTab.getCurrentTab();
@@ -179,7 +184,7 @@ public class KitInventory implements InventoryProvider {
 
 		Kit selected = playerInfo.kit;
 		List<Kit> shownKits = (categoryFilter == null ? kits : kitsByCategory.get(categoryFilter)).stream()
-			.filter(KitFilter::isAllowed) // no reason to show kits the player can't choose
+			.filter(allowedKits::contains) // no reason to show kits the player can't choose
 			.toList();
 		pagination.showPageItems(inventory, shownKits, kit -> kitToItem(kit, kit == selected),
 			9, 45, true);

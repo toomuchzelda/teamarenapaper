@@ -97,7 +97,7 @@ public class SearchAndDestroy extends TeamArena
 	private static final DamageType FUSE_KILL = new DamageType(DamageType.MELEE, "%Killed% was pummelled to death by %Killer%'s Bomb Fuse");
 
 	//===========MESSAGE STUFF
-	//<editor-fold desc="Messages">
+	//<editor-fold description="Messages">
 	public static final Component SHORT_OBFUSCATED = Component.text("ab", NamedTextColor.GOLD, TextDecoration.OBFUSCATED);
 	public static final Component LONG_OBFUSCATED = Component.text("Herobrine", NamedTextColor.DARK_RED, TextDecoration.OBFUSCATED);
 

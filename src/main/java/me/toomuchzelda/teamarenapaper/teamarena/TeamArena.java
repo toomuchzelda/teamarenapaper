@@ -17,11 +17,13 @@ import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandCallvote;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandTeamChat;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.GraffitiManager;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.GameMenu;
-import me.toomuchzelda.teamarenapaper.teamarena.inventory.KitControlInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.KitInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.IronGolemKillStreak;
@@ -34,8 +36,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.KitDemolitions;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.engineer.KitEngineer;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.explosive.KitExplosive;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitFilter;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitHider;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitSeeker;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.medic.KitMedic;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.rewind.KitRewind;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.trigger.KitTrigger;
@@ -73,6 +73,7 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.annotation.OverridingMethodsMustInvokeSuper;
 import java.io.File;
 import java.util.*;
 import java.util.function.BiConsumer;
@@ -133,8 +134,6 @@ public abstract class TeamArena
 			.displayName(Component.text("Right click to respawn", NamedTextColor.RED))
 			.build();
 	public static final int RESPAWN_SECONDS = 6;
-
-	protected final List<Kit> defaultKits;
 
 	protected Map<String, Kit> kits = new LinkedHashMap<>();
 	protected static ItemStack kitMenuItem = ItemBuilder.of(Material.FEATHER)
@@ -283,20 +282,7 @@ public abstract class TeamArena
 		graffiti = new GraffitiManager(this);
 		killStreakManager = new KillStreakManager();
 
-		this.defaultKits = new ArrayList<>();
-		this.defaultKits.addAll(List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(), new KitBurst(),
-			new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(), new KitNone(),
-			new KitVenom(), new KitRewind(), new KitValkyrie(), new KitExplosive(), new KitTrigger(), new KitMedic(this.killStreakManager),
-			new KitBerserker(), new KitEngineer(), new KitPorcupine(), new KitLongbow(), new KitSniper(), new KitBeekeeper(),
-			new KitHider(this), new KitSeeker())
-		);
-
 		registerKits();
-
-		KitFilter.setBlocked(this, KitFilter.DEFAULT_BLOCKED_KITS);
-		// Hide Hide and Seek kits
-		KitFilter.blockKit(this, KitHider.NAME);
-		KitFilter.blockKit(this, KitSeeker.NAME);
 
 		DamageTimes.clear();
 		DamageType.updateDamageSources(this);
@@ -327,7 +313,8 @@ public abstract class TeamArena
 			CommandCallvote.instance.cancelVote(); // 5 seconds later, in preGameTick(), next one is started
 
 		//init all the players online at time of construction
-		Kit fallbackKit = KitFilter.filterKit(this, kits.values().iterator().next());
+		Map<Player, Set<Kit>> playerAllowedKits = KitFilter.calculateKits(this, Main.getPlayerInfoMap().keySet());
+		Kit fallbackKit = kits.values().iterator().next();
 		for (var entry : Main.getPlayerInfoMap().entrySet()) {
 			Player p = entry.getKey();
 			PlayerInfo pinfo = entry.getValue();
@@ -338,11 +325,23 @@ public abstract class TeamArena
 			}
 			players.add(p);
 
-			Kit kit = findKit(pinfo.defaultKit), filteredKit = KitFilter.filterKit(this, kit);
-			pinfo.kit = filteredKit;
-			if (kit != filteredKit) {
-				p.sendMessage(KitFilter.getSelectedKitMessage(filteredKit));
+			Kit preferredKit = findKit(pinfo.defaultKit);
+			if (preferredKit == null) // kit not available
+				preferredKit = fallbackKit;
+			var allowedKits = playerAllowedKits.get(p);
+			if (allowedKits.contains(preferredKit)) {
+				pinfo.kit = preferredKit;
+			} else {
+				if (allowedKits.isEmpty()) {
+
+					pinfo.kit = preferredKit;
+				} else {
+					pinfo.kit = allowedKits.iterator().next();
+				}
 			}
+			// notify kit change
+			if (!pinfo.kit.getName().equalsIgnoreCase(pinfo.defaultKit))
+				p.sendMessage(KitFilter.getSelectedKitMessage(pinfo.kit));
 
 			pinfo.team = noTeamTeam;
 			pinfo.clearDamageReceivedLog();
@@ -351,9 +350,6 @@ public abstract class TeamArena
 			pinfo.totalKills = 0;
 			pinfo.deaths = 0;
 			noTeamTeam.addMembers(p);
-
-			if(pinfo.kit == null)
-				pinfo.kit = fallbackKit;
 
 			PlayerUtils.resetState(p);
 			p.setAllowFlight(true);
@@ -374,7 +370,16 @@ public abstract class TeamArena
 	}
 
 	protected void registerKits() {
-		defaultKits.forEach(this::registerKit);
+		var defaultKits = new Kit[] {
+			new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(), new KitBurst(),
+			new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(), new KitNone(),
+			new KitVenom(), new KitRewind(), new KitValkyrie(), new KitExplosive(), new KitTrigger(), new KitMedic(this.killStreakManager),
+			new KitBerserker(), new KitEngineer(), new KitPorcupine(), new KitLongbow(), new KitSniper(), new KitBeekeeper(),
+		};
+
+		for (Kit kit : defaultKits) {
+			registerKit(kit);
+		}
 	}
 
 	protected void registerKit(Kit kit) {
@@ -397,6 +402,7 @@ public abstract class TeamArena
 		info.kit.giveKit(player, true, info);
 	}
 
+	@OverridingMethodsMustInvokeSuper
 	public void cleanUp() {
 		if (Main.getGame() != null) {
 			//teleport everyone to new world before unloading: worlds must have no players in them to be unloaded
@@ -901,7 +907,7 @@ public abstract class TeamArena
 			Inventories.openInventory(player, new KitInventory());
 		} else if (kitControlMenuItem.isSimilar(item) && Main.getPlayerInfo(player).hasPermission(PermissionLevel.MOD)) {
 			event.setUseItemInHand(Event.Result.DENY);
-			Inventories.openInventory(player, new KitControlInventory());
+//			Inventories.openInventory(player, new KitControlInventory());
 		} else if (gameMenuItem.isSimilar(item)) {
 			event.setUseItemInHand(Event.Result.DENY);
 			Inventories.openInventory(player, new GameMenu());
@@ -1164,6 +1170,7 @@ public abstract class TeamArena
 		}
 	}
 
+	@OverridingMethodsMustInvokeSuper
 	public void prepTeamsDecided() {
 		//set teams here
 		showTeamColours = true;
@@ -1192,6 +1199,7 @@ public abstract class TeamArena
 		sendCountdown(true);
 	}
 
+	@OverridingMethodsMustInvokeSuper
 	public void prepGameStarting() {
 		//teleport players to team spawns
 		for(TeamArenaTeam team : teams) {
@@ -1208,6 +1216,7 @@ public abstract class TeamArena
 	}
 
 
+	@OverridingMethodsMustInvokeSuper
 	public void prepLive() {
 		setGameState(GameState.LIVE);
 		gameLiveTime = gameTick;
@@ -1240,6 +1249,7 @@ public abstract class TeamArena
 		Bukkit.broadcast(this.getHowToPlayBrief());
 	}
 
+	@OverridingMethodsMustInvokeSuper
 	public void prepEnd() {
 		waitingSince = gameTick;
 
@@ -1319,6 +1329,7 @@ public abstract class TeamArena
 	}
 
 
+	@OverridingMethodsMustInvokeSuper
 	public void prepDead() {
 		for(var entry : Main.getPlayerInfoMap().entrySet()) {
 			final Player p = entry.getKey();
@@ -1832,20 +1843,22 @@ public abstract class TeamArena
 			setSpectator(player, true, false);
 		}
 
-		if (playerInfo.kit == null) {
-			Kit kit = findKit(playerInfo.defaultKit), filteredKit = KitFilter.filterKit(this, kit);
-			playerInfo.kit = filteredKit;
-			if (kit != filteredKit) {
-				Bukkit.getScheduler().runTask(Main.getPlugin(), () ->
-					player.sendMessage(KitFilter.getSelectedKitMessage(filteredKit)));
-			}
+		Kit preferredKit = findKit(playerInfo.defaultKit);
+		if (preferredKit == null)
+			preferredKit = kits.values().iterator().next();
 
-			//default kit somehow invalid; maybe a kit was removed
-			if (playerInfo.kit == null) {
-				playerInfo.kit = KitFilter.filterKit(this, kits.values().iterator().next());
-				Main.logger().severe("PlayerInfo default kit somehow invalid in TeamArena#loggingInPlayer. Should" +
-					" have been handled in EventListeners playerLogin.");
-			}
+		Kit kit = KitFilter.filterKit(this, playerInfo.team, player, preferredKit);
+		if (kit != preferredKit) {
+			Bukkit.getScheduler().runTask(Main.getPlugin(), () ->
+				player.sendMessage(KitFilter.getSelectedKitMessage(kit)));
+		}
+		playerInfo.kit = kit;
+
+		//default kit somehow invalid; maybe a kit was removed
+		if (playerInfo.kit == null) {
+			playerInfo.kit = KitFilter.calculateKits(this, player).iterator().next();
+			Main.logger().severe("PlayerInfo default kit somehow invalid in TeamArena#loggingInPlayer. Should" +
+				" have been handled in EventListeners playerLogin.");
 		}
 
 		player.teleport(toTeleport);

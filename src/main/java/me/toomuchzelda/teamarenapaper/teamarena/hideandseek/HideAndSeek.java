@@ -6,6 +6,8 @@ import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.FilterAction;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.FilterRule;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitFilter;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitHider;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitSeeker;
@@ -64,8 +66,6 @@ public class HideAndSeek extends TeamArena {
 			}
 		}
 
-		KitFilter.setAllowed(this, Set.of("hider", "seeker"));
-
 		this.allowedBlockCoords = BlockUtils.getAllBlocks(this.allowedBlocks, this);
 		this.hideTimeTicks = this.gameMap.getHnsInfo().hideTime() * 20;
 		this.isHidingTime = true;
@@ -81,6 +81,24 @@ public class HideAndSeek extends TeamArena {
 
 	public ArrayList<BlockCoords> getAllowedBlockCoords() {
 		return this.allowedBlockCoords;
+	}
+
+	private static final FilterRule SEEKER_RULE = new FilterRule("hide_and_seek/seeker", "Seeker team restrictions", FilterAction.allow("seeker"));
+	private static final FilterRule HIDER_RULE = new FilterRule("hide_and_seek/hider", "Hider team restrictions", FilterAction.allow("hider"));
+	@Override
+	protected void registerKits() {
+		registerKit(new KitHider(this));
+		registerKit(new KitSeeker());
+
+		KitFilter.addTeamRule("Hiders", HIDER_RULE);
+		KitFilter.addTeamRule("Seekers", SEEKER_RULE);
+	}
+
+	@Override
+	public void prepDead() {
+		super.prepDead();
+		KitFilter.removeTeamRule("Hiders", HIDER_RULE.key());
+		KitFilter.removeTeamRule("Seekers", SEEKER_RULE.key());
 	}
 
 	@Override
