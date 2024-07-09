@@ -7,7 +7,6 @@ import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
-import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.statusorebuffactions.HasteOreAction;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy.SearchAndDestroy;
@@ -21,9 +20,7 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.util.Ticks;
 import org.bukkit.*;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
-import org.bukkit.block.data.BlockData;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
@@ -1010,8 +1007,8 @@ public class DigAndBuild extends TeamArena
 	}
 
 	@Override
-	public void givePlayerItems(Player player, PlayerInfo pinfo, boolean clear) {
-		super.givePlayerItems(player, pinfo, true);
+	public void giveKitAndGameItems(Player player, PlayerInfo pinfo, boolean clear) {
+		super.giveKitAndGameItems(player, pinfo, true);
 
 		player.getInventory().addItem(this.tools);
 		player.getInventory().addItem(this.blocks);
@@ -1026,7 +1023,7 @@ public class DigAndBuild extends TeamArena
 	}
 
 	@Override
-	public boolean canSelectKitNow() {
+	public boolean canSelectKitNow(Player player) {
 		return !this.gameState.isEndGame();
 	}
 

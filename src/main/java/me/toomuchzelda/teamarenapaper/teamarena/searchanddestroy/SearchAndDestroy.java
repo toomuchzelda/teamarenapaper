@@ -572,12 +572,12 @@ public class SearchAndDestroy extends TeamArena
 	}
 
 	@Override
-	public void givePlayerItems(Player player, PlayerInfo pinfo, boolean clear) {
+	public void giveKitAndGameItems(Player player, PlayerInfo pinfo, boolean clear) {
 		//need to clear and give the fuse first to put it in 1st slot
 		if(clear)
 			player.getInventory().clear();
 
-		super.givePlayerItems(player, pinfo, false);
+		super.giveKitAndGameItems(player, pinfo, false);
 		player.getInventory().addItem(createFuse(pinfo.kit.getFuseEnchantmentLevel()));
 	}
 
@@ -955,7 +955,7 @@ public class SearchAndDestroy extends TeamArena
 	}
 
 	@Override
-	public boolean canSelectKitNow() {
+	public boolean canSelectKitNow(Player player) {
 		return this.gameState.isPreGame();
 	}
 

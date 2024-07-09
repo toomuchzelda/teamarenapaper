@@ -848,7 +848,7 @@ public class CaptureTheFlag extends TeamArena
 	}
 
 	@Override
-	public boolean canSelectKitNow() {
+	public boolean canSelectKitNow(Player player) {
 		return !gameState.isEndGame();
 	}
 

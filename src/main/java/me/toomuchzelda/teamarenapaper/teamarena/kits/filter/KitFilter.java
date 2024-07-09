@@ -276,7 +276,7 @@ public class KitFilter {
 				// also change active kit, very safe operation!
 				info.activeKit.removeKit(player, info);
 				// selected kit is guaranteed to be available
-				Main.getGame().givePlayerItems(player, info, true);
+				Main.getGame().giveKitAndGameItems(player, info, true);
 			}
 
 			Component message = null;

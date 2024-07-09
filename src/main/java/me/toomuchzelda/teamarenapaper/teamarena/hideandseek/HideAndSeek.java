@@ -11,6 +11,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.FilterAction;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.FilterRule;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitFilter;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitHider;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitRadarSeeker;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitSeeker;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
@@ -20,6 +21,7 @@ import org.bukkit.*;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
@@ -38,8 +40,8 @@ public class HideAndSeek extends TeamArena {
 
 	private static final double HIDER_SEEKER_RATIO = 2d; // 2 Hiders for every seeker
 
-	private TeamArenaTeam hiderTeam;
-	private TeamArenaTeam seekerTeam;
+	public TeamArenaTeam hiderTeam;
+	public TeamArenaTeam seekerTeam;
 
 	private Location seekerSpawnLoc;
 	private final int hideTimeTicks;
@@ -89,13 +91,16 @@ public class HideAndSeek extends TeamArena {
 		return this.president;
 	}
 
-	private static final FilterRule SEEKER_RULE = new FilterRule("hide_and_seek/seeker", "Seeker team restrictions", FilterAction.allow("seeker"));
+	private static final FilterRule SEEKER_RULE = new FilterRule("hide_and_seek/seeker", "Seeker team restrictions", FilterAction.allow("seeker", "radar"));
 	private static final FilterRule HIDER_RULE = new FilterRule("hide_and_seek/hider", "Hider team restrictions", FilterAction.allow("hider"));
 	@Override
 	protected void registerKits() {
 		registerKit(new KitHider(this));
 		registerKit(new KitSeeker());
+		registerKit(new KitRadarSeeker());
 
+		// rules must be removed in prepDead
+		// or it will affect the next game
 		KitFilter.addTeamRule("Hiders", HIDER_RULE);
 		KitFilter.addTeamRule("Seekers", SEEKER_RULE);
 	}
@@ -276,8 +281,25 @@ public class HideAndSeek extends TeamArena {
 	}
 
 	@Override
-	public boolean canSelectKitNow() { // Kits forced onto players
-		return false;
+	public boolean canSelectKitNow(Player player) {
+		return gameState.teamsChosen() || (gameState == GameState.LIVE && isHidingTime);
+	}
+
+	@Override
+	public void selectKit(@NotNull Player player, @NotNull Kit kit) {
+		if (canSelectKitNow(player)) {
+			super.selectKit(player, kit);
+
+			if (gameState == GameState.LIVE && isHidingTime) {
+				// let players swap kits. very safe!
+				PlayerInfo playerInfo = Main.getPlayerInfo(player);
+				if (playerInfo.activeKit != null) {
+					playerInfo.activeKit.removeKit(player);
+				}
+				playerInfo.kit = kit;
+				giveKitAndGameItems(player, playerInfo, true);
+			}
+		}
 	}
 
 	@Override

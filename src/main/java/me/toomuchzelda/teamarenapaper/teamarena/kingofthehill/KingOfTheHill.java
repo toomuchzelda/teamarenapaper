@@ -556,7 +556,7 @@ public class KingOfTheHill extends TeamArena
 
 	//respawning game, can change kit at any time (change takes effect on respawn doe)
 	@Override
-	public boolean canSelectKitNow() {
+	public boolean canSelectKitNow(Player player) {
 		return !gameState.isEndGame();
 	}
 

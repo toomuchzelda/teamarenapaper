@@ -392,7 +392,7 @@ public abstract class TeamArena
 	}
 
 	// player as in players in the players set
-	public void givePlayerItems(Player player, PlayerInfo info, boolean clear) {
+	public void giveKitAndGameItems(Player player, PlayerInfo info, boolean clear) {
 		PlayerInventory inventory = player.getInventory();
 		if(clear)
 			inventory.clear();
@@ -1242,7 +1242,7 @@ public abstract class TeamArena
 			player.setSaturatedRegenRate(0);
 			PlayerListScoreManager.setKills(player, 0);
 
-			givePlayerItems(player, Main.getPlayerInfo(player), true);
+			giveKitAndGameItems(player, Main.getPlayerInfo(player), true);
 
 			player.playSound(player.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.AMBIENT, 2, 1);
 		}
@@ -1422,7 +1422,7 @@ public abstract class TeamArena
 		PlayerInventory inventory = player.getInventory();
 		inventory.setItem(0, kitMenuItem.clone());
 		if (Main.getPlayerInfo(player).hasPermission(PermissionLevel.MOD)) {
-			inventory.setItem(2, kitControlMenuItem.clone());
+//			inventory.setItem(2, kitControlMenuItem.clone());
 		}
 		inventory.setItem(4, gameMenuItem.clone());
 		inventory.setItem(8, miniMap.getMapItem());
@@ -1444,7 +1444,7 @@ public abstract class TeamArena
 		return this.killStreakManager;
 	}
 
-	public abstract boolean canSelectKitNow();
+	public abstract boolean canSelectKitNow(Player player);
 
 	public abstract boolean canSelectTeamNow();
 
@@ -1453,8 +1453,8 @@ public abstract class TeamArena
 	}
 
 	public void selectKit(@NotNull Player player, @NotNull Kit kit) {
-		if (!canSelectKitNow()) {
-			player.sendMessage(Component.text("You can't choose a kit right now").color(NamedTextColor.RED));
+		if (!canSelectKitNow(player)) {
+			player.sendMessage(Component.text("You can't choose a kit right now", NamedTextColor.RED));
 			return;
 		}
 		final PlayerInfo pinfo = Main.getPlayerInfo(player);
@@ -1601,7 +1601,7 @@ public abstract class TeamArena
 		player.setAllowFlight(false);
 		PlayerUtils.resetState(player);
 
-		givePlayerItems(player, pinfo, true);
+		giveKitAndGameItems(player, pinfo, true);
 		pinfo.kills = 0;
 		PlayerListScoreManager.setKills(player, 0);
 
