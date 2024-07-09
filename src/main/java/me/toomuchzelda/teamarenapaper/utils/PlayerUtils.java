@@ -24,6 +24,7 @@ import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.craftbukkit.v1_20_R3.CraftWorldBorder;
 import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.inventory.EntityEquipment;
@@ -179,7 +180,7 @@ public class PlayerUtils {
 		return PacketContainer.fromPacket(nmsPacket);
 	}
 
-	public static LinkedHashSet<Player> getDamageIndicatorViewers(Player takingDamage, Player attacker) {
+	public static LinkedHashSet<Player> getDamageIndicatorViewers(Entity takingDamage, Player attacker) {
 		LinkedHashSet<Player> set = new LinkedHashSet<>();
 		var iter = Main.getPlayersIter();
 		PlayerInfo pinfo;

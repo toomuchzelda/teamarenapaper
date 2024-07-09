@@ -767,22 +767,15 @@ public abstract class TeamArena
 			playerCause = p;
 		}
 		if(!event.isCancelled()) {
-			if (event.getVictim() instanceof final Player p) {
+			final Entity victim = event.getVictim();
+			if (victim instanceof final Player p) {
 				for (Ability ability : Kit.getAbilities(p)) {
 					ability.onReceiveDamage(event);
 				}
 
 				if (!event.isCancelled() && event.getFinalDamage() > 0) {
-					PlayerInfo pinfo = Main.getPlayerInfo(p);
-					//spawn damage indicator hologram
-					// divide by two to display as hearts
-					Component damageText = Component.text(MathUtils.round(event.getFinalDamage() / 2, 2), NamedTextColor.YELLOW, TextDecoration.BOLD);
-					Location spawnLoc = p.getLocation();
-					spawnLoc.add(0, MathUtils.randomRange(1.4, 2), 0);
-					var hologram = new SpeechBubbleHologram(spawnLoc, PlayerUtils.getDamageIndicatorViewers(p, playerCause), damageText);
-					hologram.respawn();
-
 					//add to their damage log
+					PlayerInfo pinfo = Main.getPlayerInfo(p);
 					pinfo.logDamageReceived(event.getDamageType(), event.getFinalDamage(), event.getFinalAttacker(), gameTick);
 
 					//give kill assist credit
@@ -791,8 +784,18 @@ public abstract class TeamArena
 					}
 				}
 			}
-			else if (event.getVictim() instanceof Bee) {
+			else if (victim instanceof Bee) {
 				KitBeekeeper.BeekeeperAbility.handleBeeConfirmedDamage(event);
+			}
+
+			if (!event.isCancelled() && event.getFinalDamage() > 0) {
+				//spawn damage indicator hologram
+				// divide by two to display as hearts
+				Component damageText = Component.text(MathUtils.round(event.getFinalDamage() / 2, 2), NamedTextColor.YELLOW, TextDecoration.BOLD);
+				Location spawnLoc = victim.getLocation();
+				spawnLoc.add(0, MathUtils.randomRange(1.4, 2), 0);
+				var hologram = new SpeechBubbleHologram(spawnLoc, PlayerUtils.getDamageIndicatorViewers(victim, playerCause), damageText);
+				hologram.respawn();
 			}
 		}
 	}
@@ -965,10 +968,18 @@ public abstract class TeamArena
 	}
 
 	public void setViewingGlowingTeammates(PlayerInfo pinfo, boolean glow, boolean message) {
+		setViewingGlowingTeammates(pinfo, glow, message, null);
+	}
+
+	public void setViewingGlowingTeammates(PlayerInfo pinfo, boolean glow, boolean message,
+										   @Nullable Set<Player> exceptions) {
 		MetadataViewer meta = pinfo.getMetadataViewer();
 		pinfo.viewingGlowingTeammates = glow;
 
 		for (Player viewed : pinfo.team.getPlayerMembers()) {
+			if (exceptions != null && exceptions.contains(viewed))
+				continue;
+
 			if(glow) {
 				meta.updateBitfieldValue(viewed, MetaIndex.BASE_BITFIELD_IDX,
 						MetaIndex.BASE_BITFIELD_GLOWING_IDX, glow);
@@ -1936,7 +1947,7 @@ public abstract class TeamArena
 			text = text.append(startConniving);
 		}
 		p.sendMessage(text);
-		p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.AMBIENT, 2f, 0.5f);
+		p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.AMBIENT, 2f, 0.5f);
 	}
 
 	private void informKillsDeaths(Player player, PlayerInfo pinfo) {

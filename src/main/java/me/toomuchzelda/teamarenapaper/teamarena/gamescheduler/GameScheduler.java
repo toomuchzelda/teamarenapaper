@@ -87,11 +87,11 @@ public class GameScheduler
 		}
 
 		//setup gametype queue. Exclude DNB
-		GAMETYPE_Q = new GameType[3];
+		GAMETYPE_Q = new GameType[1];
 		//GAMETYPE_Q[0] = GameType.KOTH;
-		GAMETYPE_Q[0] = GameType.CTF;
-		GAMETYPE_Q[1] = GameType.SND;
-		GAMETYPE_Q[2] = GameType.HNS;
+		//GAMETYPE_Q[0] = GameType.CTF;
+		//GAMETYPE_Q[1] = GameType.SND;
+		GAMETYPE_Q[0] = GameType.HNS;
 		MathUtils.shuffleArray(GAMETYPE_Q);
 
 		//setup map queues

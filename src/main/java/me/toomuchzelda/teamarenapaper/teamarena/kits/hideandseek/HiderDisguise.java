@@ -8,6 +8,8 @@ import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BlockBuilding;
+import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.AttachedPacketEntity;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
@@ -51,6 +53,7 @@ public class HiderDisguise {
 	private static final BlockState nmsAirBlockState = ((CraftBlockState) Material.AIR.createBlockData().createBlockState()).getHandle();
 	private BlockCoords occupiedBlock;
 	private int blockChangeTick;
+	private BlockBuilding building; // Register to prevent overlaps
 
 	HiderDisguise(final Player hider) {
 		this.hitbox = new AttachedHiderEntity(EntityType.INTERACTION, hider);
@@ -133,7 +136,8 @@ public class HiderDisguise {
 		this.disguise.remove();
 		this.disguise = null;
 
-		this.resetBlockTimer(null);
+		if (this.nmsBlockState != null)
+			this.resetBlockTimer(null);
 		this.nmsBlockState = null;
 
 		PlayerUtils.setInvisible(this.hider, false);
@@ -165,6 +169,14 @@ public class HiderDisguise {
 				Thread.dumpStack();
 			}
 
+			if (this.building == null) {
+				Main.logger().severe("breakExistingSolid() building was null");
+				Thread.dumpStack();
+			}
+			else {
+				BuildingManager.destroyBuilding(this.building);
+				this.building = null;
+			}
 			this.setBlockDisplayData(false, true);
 
 			this.hider.getWorld().setBlockData(this.occupiedBlock.x(), this.occupiedBlock.y(), this.occupiedBlock.z(),
@@ -187,15 +199,25 @@ public class HiderDisguise {
 
 	private void placeSolid() {
 		this.nmsBlockState.createCraftBlockData().createBlockState().update(false, false);
+		Block toReplace = this.occupiedBlock.toBlock(this.hider.getWorld());
+
+		if (this.building != null) {
+			Main.logger().severe("");
+			Thread.dumpStack();
+			BuildingManager.destroyBuilding(this.building);
+		}
+		this.building = new BlockBuilding(this.hider, this.occupiedBlock.toLocation(this.hider.getWorld())) {};
+		if (BuildingManager.canPlaceAt(toReplace)) {
+			BuildingManager.placeBuilding(this.building);
+		}
+		else {
+			assert CompileAsserts.OMIT || false : "placeSolid(): BuildingManager.canPlaceAt returned false";
+		}
 
 		// Avoid causing block updates (like wheat on stone is invalid)
-		Block toReplace = this.occupiedBlock.toBlock(this.hider.getWorld());
 		org.bukkit.block.BlockState bukkitState = toReplace.getState();
 		bukkitState.setBlockData(this.nmsBlockState.createCraftBlockData());
 		bukkitState.update(true, false);
-
-		//hider.getWorld().setBlockData(this.occupiedBlock.x(), this.occupiedBlock.y(), this.occupiedBlock.z(),
-		//	this.nmsBlockState.createCraftBlockData());
 
 		this.setBlockDisplayData(true, true);
 
@@ -206,21 +228,33 @@ public class HiderDisguise {
 	void tick() {
 		if (this.nmsBlockState != null) {
 			BlockCoords currentCoords = this.getCoords();
+			// Use BuildingManager to prevent 2 solidifications in 1 block
 			if (!currentCoords.equals(this.occupiedBlock)) {
 				this.resetBlockTimer(currentCoords);
 			}
 			else {
 				final int currentTick = TeamArena.getGameTick();
 				assert CompileAsserts.OMIT || currentTick >= this.blockChangeTick;
-				if (currentTick < this.blockChangeTick + BLOCK_SOLIDIFY_TICKS) {
+
+				if (currentTick <= this.blockChangeTick + BLOCK_SOLIDIFY_TICKS &&
+					!BuildingManager.canPlaceAt(currentCoords.toBlock(this.hider.getWorld()))) {
+
+					assert CompileAsserts.OMIT || (this.building == null);
+
+					this.blockChangeTick = currentTick;
+
+					this.bossbar.name(CANT_SOLID_HERE);
+					this.bossbar.color(CANT_SOLID_HERE_COLOUR);
+					this.bossbar.progress(0f);
+				}
+				else if (currentTick < this.blockChangeTick + BLOCK_SOLIDIFY_TICKS) {
 					if (!this.occupiedBlock.toBlock(this.hider.getWorld()).getType().isAir()) {
 						this.blockChangeTick = currentTick;
 
 						this.bossbar.name(CANT_SOLID_HERE);
 						this.bossbar.color(CANT_SOLID_HERE_COLOUR);
 						this.bossbar.progress(0f);
-					}
-					else {
+					} else {
 						this.bossbar.name(SOLIDIFYING_COMP);
 						this.bossbar.color(SOLIDIFYING_COLOUR);
 
@@ -229,7 +263,8 @@ public class HiderDisguise {
 						progress = MathUtils.clamp(0f, 1f, progress);
 						this.bossbar.progress(progress);
 					}
-				} else if (currentTick == this.blockChangeTick + BLOCK_SOLIDIFY_TICKS) {
+				}
+				else if (currentTick == this.blockChangeTick + BLOCK_SOLIDIFY_TICKS) {
 					this.bossbar.name(SOLID_COMP);
 					this.bossbar.color(SOLID_COLOUR);
 					this.bossbar.progress(1f);
@@ -245,6 +280,10 @@ public class HiderDisguise {
 	}
 
 	void remove() {
+		if (this.nmsBlockState != null) {
+			this.resetBlockTimer(null);
+		}
+
 		this.hitbox.remove();
 		if (this.disguise != null)
 			this.disguise.remove();

@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.hideandseek;
 
 import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
@@ -50,6 +51,7 @@ public class HideAndSeek extends TeamArena {
 	private boolean isHidingTime;
 
 	private Player president;
+	private Set<Player> presidentSet; // cache
 
 	public HideAndSeek(TeamArenaMap map) {
 		super(map);
@@ -83,6 +85,10 @@ public class HideAndSeek extends TeamArena {
 		return this.allowedBlockCoords;
 	}
 
+	public Player getPresident() {
+		return this.president;
+	}
+
 	private static final FilterRule SEEKER_RULE = new FilterRule("hide_and_seek/seeker", "Seeker team restrictions", FilterAction.allow("seeker"));
 	private static final FilterRule HIDER_RULE = new FilterRule("hide_and_seek/hider", "Hider team restrictions", FilterAction.allow("hider"));
 	@Override
@@ -95,13 +101,6 @@ public class HideAndSeek extends TeamArena {
 	}
 
 	@Override
-	public void prepDead() {
-		super.prepDead();
-		KitFilter.removeTeamRule("Hiders", HIDER_RULE.key());
-		KitFilter.removeTeamRule("Seekers", SEEKER_RULE.key());
-	}
-
-	@Override
 	public void prepTeamsDecided() {
 		super.prepTeamsDecided();
 
@@ -109,13 +108,43 @@ public class HideAndSeek extends TeamArena {
 		Kit seekerKit = this.kits.get(KitSeeker.NAME.toLowerCase(Locale.ENGLISH));
 
 		this.president = this.hiderTeam.getRandomPlayer();
+		this.presidentSet = Collections.singleton(this.president);
+
+		Component hiderKing = Component.text(" Hider King", this.hiderTeam.getRGBTextColor());
+		Component presIsPres = Component.textOfChildren(
+			this.president.displayName(),
+			Component.text(" is the", NamedTextColor.GOLD),
+			hiderKing
+		);
+
+		Component youArePres = Component.text("You are the ", NamedTextColor.GOLD)
+			.append(hiderKing);
+
 		for (Player hider : this.hiderTeam.getPlayerMembers()) {
-			Main.getPlayerInfo(hider).kit = hiderKit;
+			PlayerInfo pinfo = Main.getPlayerInfo(hider);
+			pinfo.kit = hiderKit;
+			if (hider == this.president) {
+				hider.sendMessage(youArePres);
+			}
+			else {
+				hider.sendMessage(presIsPres);
+				pinfo.getMetadataViewer().updateBitfieldValue(this.president,
+					MetaIndex.BASE_BITFIELD_IDX, MetaIndex.BASE_BITFIELD_GLOWING_IDX, true);
+			}
 		}
 		for (Player seeker : this.seekerTeam.getPlayerMembers()) {
 			Main.getPlayerInfo(seeker).kit = seekerKit;
 		}
 	}
+
+	@Override
+	public void setViewingGlowingTeammates(PlayerInfo pinfo, boolean glow, boolean message) {
+		this.setViewingGlowingTeammates(pinfo, glow, message, this.presidentSet);
+	}
+
+	// Hack - don't have super.prepTeamsDecided() call this
+	@Override
+	public void informOfTeam(Player p) {}
 
 	@Override
 	public void prepLive() {
@@ -225,6 +254,18 @@ public class HideAndSeek extends TeamArena {
 			}
 		}
 		super.onDamage(event);
+	}
+
+	@Override
+	public void prepDead() {
+		super.prepDead();
+		KitFilter.removeTeamRule("Hiders", HIDER_RULE.key());
+		KitFilter.removeTeamRule("Seekers", SEEKER_RULE.key());
+
+		for (Player hider : this.hiderTeam.getPlayerMembers()) {
+			Main.getPlayerInfo(hider).getMetadataViewer().removeBitfieldValue(this.president,
+				MetaIndex.BASE_BITFIELD_IDX, MetaIndex.BASE_BITFIELD_GLOWING_IDX);
+		}
 	}
 
 	// Can't break any blocks including foliage
