@@ -399,6 +399,7 @@ public abstract class TeamArena
 
 		inventory.setItem(8, miniMap.getMapItem(info.team));
 		inventory.setItem(7, info.team.getHotbarItem());
+
 		info.kit.giveKit(player, true, info);
 	}
 
@@ -1696,11 +1697,8 @@ public abstract class TeamArena
 					}
 					playerVictim.teleport(toTele);
 				}
-				SpectatorAngelManager.spawnAngel(playerVictim, false);
 			}
 			else {
-				SpectatorAngelManager.spawnAngel(playerVictim, true);
-
 				PlayerInventory playerInventory = playerVictim.getInventory();
 				respawnTimers.put(playerVictim, new RespawnInfo(gameTick, playerInventory.getHeldItemSlot()));
 				// prevent players from opening kit menu
@@ -1709,6 +1707,8 @@ public abstract class TeamArena
 				// use specialized minimap item
 				playerInventory.setItem(8, miniMap.getMapItem(Main.getPlayerInfo(playerVictim).team));
 			}
+
+			SpectatorAngelManager.spawnAngel(playerVictim, this.spawnLockingAngel(playerVictim, event));
 		}
 		else if(victim instanceof Damageable dam) {
 			dam.setHealth(0);
@@ -1771,6 +1771,14 @@ public abstract class TeamArena
 
 	//todo: make a settable and changeable option (GameOption maybe)
 	public abstract boolean isRespawningGame();
+
+	protected boolean spawnLockingAngel(Player p, @Nullable DamageEvent killer) {
+		if (killer != null && killer.getDamageType().is(DamageType.SPECTATE)) {
+			return false;
+		}
+
+		return this.isRespawningGame();
+	}
 
 	public boolean canRespawn(Player player) {
 		if(gameState != GameState.LIVE)

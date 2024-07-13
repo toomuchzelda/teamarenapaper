@@ -24,10 +24,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.util.Vector;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 public class KitRadarSeeker extends Kit {
 	private static final ItemStack RADAR = ItemBuilder.of(Material.WARPED_FUNGUS_ON_A_STICK)
@@ -35,13 +32,13 @@ public class KitRadarSeeker extends Kit {
 		.lore(TextUtils.wrapString("Note: Questioning your equipment is in violation of your contract " +
 			"with Hiders Enforcement LLC and may result in a termination.", Style.style(TextColors.ERROR_RED)))
 		.build();
-	public KitRadarSeeker() {
-		super("Radar", "Hunt down Hiders with your Radar.", Material.RECOVERY_COMPASS);
+	public KitRadarSeeker(TeamArena game) {
+		super("Radar", "Seek out the sneakier Hiders with your Radar", Material.RECOVERY_COMPASS);
 
-		this.setItems(new ItemStack(Material.WOODEN_AXE), RADAR);
+		this.setItems(new ItemStack(Material.WOODEN_SWORD), RADAR);
 		this.setArmor(new ItemStack(Material.LEATHER_HELMET), new ItemStack(Material.LEATHER_CHESTPLATE),
 			new ItemStack(Material.LEATHER_LEGGINGS), new ItemStack(Material.LEATHER_BOOTS));
-		this.setAbilities(new RadarSeekerAbility());
+		this.setAbilities(new RadarSeekerAbility(game));
 	}
 
 	private static class RadarSeekerAbility extends Ability {
@@ -56,6 +53,10 @@ public class KitRadarSeeker extends Kit {
 				RADAR_LOCATIONS[i] = new Location(null, Math.sin(theta) * 10000, 0, Math.cos(theta) * 10000);
 			}
 		}
+
+		private final TeamArena game;
+
+		public RadarSeekerAbility(TeamArena game) { this.game = game; }
 
 		@Override
 		protected void giveAbility(Player player) {
@@ -80,7 +81,7 @@ public class KitRadarSeeker extends Kit {
 
 		@Override
 		public void onPlayerTick(Player player) {
-			if (!(Main.getGame() instanceof HideAndSeek hideAndSeek))
+			if (!(this.game instanceof HideAndSeek hideAndSeek))
 				return;
 			// update player location
 			EvictingQueue<Vector> locations = playerMovement.get(player);
@@ -125,7 +126,9 @@ public class KitRadarSeeker extends Kit {
 			// play sound every 2 seconds
 			if (TeamArena.getGameTick() % RADAR_PERIOD != 0)
 				return;
-			Player closest = getClosestPlayer(hideAndSeek.hiderTeam.getPlayerMembers(), playerLocation);
+			ArrayList<Player> candidates = new ArrayList<>(hideAndSeek.hiderTeam.getPlayerMembers());
+			candidates.removeIf(this.game::isDead);
+			Player closest = getClosestPlayer(candidates, playerLocation);
 			if (closest == null)
 				return;
 			Location inaccurateLocation = addInaccuracy(closest.getLocation(), inaccuracy);

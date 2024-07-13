@@ -4,6 +4,7 @@ import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
@@ -19,9 +20,11 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -55,6 +58,9 @@ public class HideAndSeek extends TeamArena {
 	private Player president;
 	private Set<Player> presidentSet; // cache
 
+	private final Kit hiderKit;
+	private final Kit seekerKit;
+
 	public HideAndSeek(TeamArenaMap map) {
 		super(map);
 
@@ -73,6 +79,9 @@ public class HideAndSeek extends TeamArena {
 		this.allowedBlockCoords = BlockUtils.getAllBlocks(this.allowedBlocks, this);
 		this.hideTimeTicks = this.gameMap.getHnsInfo().hideTime() * 20;
 		this.isHidingTime = true;
+
+		this.hiderKit = this.kits.get(KitHider.NAME.toLowerCase(Locale.ENGLISH));
+		this.seekerKit = this.kits.get(KitSeeker.NAME.toLowerCase(Locale.ENGLISH));
 	}
 
 	public boolean isAllowedBlockType(Material mat) {
@@ -97,7 +106,7 @@ public class HideAndSeek extends TeamArena {
 	protected void registerKits() {
 		registerKit(new KitHider(this));
 		registerKit(new KitSeeker());
-		registerKit(new KitRadarSeeker());
+		registerKit(new KitRadarSeeker(this));
 
 		// rules must be removed in prepDead
 		// or it will affect the next game
@@ -109,25 +118,22 @@ public class HideAndSeek extends TeamArena {
 	public void prepTeamsDecided() {
 		super.prepTeamsDecided();
 
-		Kit hiderKit = this.kits.get(KitHider.NAME.toLowerCase(Locale.ENGLISH));
-		Kit seekerKit = this.kits.get(KitSeeker.NAME.toLowerCase(Locale.ENGLISH));
-
 		this.president = this.hiderTeam.getRandomPlayer();
 		this.presidentSet = Collections.singleton(this.president);
 
-		Component hiderKing = Component.text(" Hider King", this.hiderTeam.getRGBTextColor());
+		Component hiderKing = Component.text(" Hider King", this.hiderTeam.getRGBTextColor(), TextDecoration.BOLD);
 		Component presIsPres = Component.textOfChildren(
 			this.president.displayName(),
 			Component.text(" is the", NamedTextColor.GOLD),
 			hiderKing
 		);
 
-		Component youArePres = Component.text("You are the ", NamedTextColor.GOLD)
+		Component youArePres = Component.text("You are the", NamedTextColor.GOLD)
 			.append(hiderKing);
 
 		for (Player hider : this.hiderTeam.getPlayerMembers()) {
 			PlayerInfo pinfo = Main.getPlayerInfo(hider);
-			pinfo.kit = hiderKit;
+			pinfo.kit = this.hiderKit;
 			if (hider == this.president) {
 				hider.sendMessage(youArePres);
 			}
@@ -137,8 +143,29 @@ public class HideAndSeek extends TeamArena {
 					MetaIndex.BASE_BITFIELD_IDX, MetaIndex.BASE_BITFIELD_GLOWING_IDX, true);
 			}
 		}
+
 		for (Player seeker : this.seekerTeam.getPlayerMembers()) {
-			Main.getPlayerInfo(seeker).kit = seekerKit;
+			Main.getPlayerInfo(seeker).kit = this.seekerKit;
+		}
+	}
+
+	// for debug changing teams
+	@Override
+	public void onTeamSwitch(Player player, @Nullable TeamArenaTeam oldTeam, @Nullable TeamArenaTeam newTeam) {
+		super.onTeamSwitch(player, oldTeam, newTeam);
+
+		PlayerInfo pinfo = Main.getPlayerInfo(player);
+		if (newTeam == this.hiderTeam) {
+			pinfo.kit = this.hiderKit;
+		}
+		else if (newTeam == this.seekerTeam) {
+			Kit kit = KitFilter.filterKit(this, newTeam, player, this.seekerKit);
+			if (kit != null)
+				pinfo.kit = kit;
+		}
+
+		if (this.gameState == GameState.LIVE && !isDead(player)) {
+			this.giveKitAndGameItems(player, pinfo, true);
 		}
 	}
 
@@ -146,10 +173,6 @@ public class HideAndSeek extends TeamArena {
 	public void setViewingGlowingTeammates(PlayerInfo pinfo, boolean glow, boolean message) {
 		this.setViewingGlowingTeammates(pinfo, glow, message, this.presidentSet);
 	}
-
-	// Hack - don't have super.prepTeamsDecided() call this
-	@Override
-	public void informOfTeam(Player p) {}
 
 	@Override
 	public void prepLive() {
@@ -168,10 +191,16 @@ public class HideAndSeek extends TeamArena {
 	}
 
 	@Override
+	protected boolean spawnLockingAngel(Player p, @Nullable DamageEvent killer) {
+		if (this.hiderTeam.getPlayerMembers().contains(p)) return false;
+		return super.spawnLockingAngel(p, killer);
+	}
+
+	@Override
 	public void liveTick() {
 		assert CompileAsserts.OMIT || this.president != null;
 
-		if (this.isDead(this.president)) {
+		if (!CommandDebug.ignoreWinConditions && this.isDead(this.president)) {
 			Bukkit.broadcast(PRESIDENT_DIED);
 			this.winningTeam = seekerTeam;
 			prepEnd();
@@ -185,7 +214,10 @@ public class HideAndSeek extends TeamArena {
 				assert CompileAsserts.OMIT || currentTick == this.gameLiveTime + this.hideTimeTicks;
 				this.isHidingTime = false;
 
-				this.seekerTeam.getPlayerMembers().forEach(player -> player.teleport(this.seekerSpawnLoc));
+				this.seekerTeam.getPlayerMembers().forEach(player -> {
+					player.getInventory().remove(kitMenuItem);
+					player.teleport(this.seekerSpawnLoc);
+				});
 
 				Bukkit.broadcast(SEEKERS_RELEASED_CHAT);
 				PlayerUtils.sendOptionalTitle(Component.empty(), SEEKERS_RELEASED_TITLE, 5, 40, 20);
@@ -259,6 +291,12 @@ public class HideAndSeek extends TeamArena {
 			}
 		}
 		super.onDamage(event);
+
+		if (event.getDamageType().isProjectile() && event.getVictim() instanceof LivingEntity living &&
+			this.hiderTeam.hasMember(living)) {
+
+			living.setArrowsInBody(0, false);
+		}
 	}
 
 	@Override
@@ -290,7 +328,7 @@ public class HideAndSeek extends TeamArena {
 		if (canSelectKitNow(player)) {
 			super.selectKit(player, kit);
 
-			if (gameState == GameState.LIVE && isHidingTime) {
+			if (gameState == GameState.LIVE && isHidingTime && !isDead(player)) {
 				// let players swap kits. very safe!
 				PlayerInfo playerInfo = Main.getPlayerInfo(player);
 				if (playerInfo.activeKit != null) {
@@ -299,6 +337,15 @@ public class HideAndSeek extends TeamArena {
 				playerInfo.kit = kit;
 				giveKitAndGameItems(player, playerInfo, true);
 			}
+		}
+	}
+
+	@Override
+	public void giveKitAndGameItems(Player player, PlayerInfo info, boolean clear) {
+		super.giveKitAndGameItems(player, info, clear);
+
+		if (this.seekerTeam.getPlayerMembers().contains(player) && this.gameState == GameState.LIVE && this.isHidingTime) {
+			player.getInventory().addItem(kitMenuItem);
 		}
 	}
 
@@ -334,7 +381,7 @@ public class HideAndSeek extends TeamArena {
 
 	@Override
 	public String getDebugAntiStall() {
-		return "";
+		return "hideandseek debugAntiStall xd";
 	}
 
 	@Override
