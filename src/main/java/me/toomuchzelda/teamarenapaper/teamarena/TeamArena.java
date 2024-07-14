@@ -892,6 +892,11 @@ public abstract class TeamArena
 	}
 
 	public void onInteract(PlayerInteractEvent event) {
+		if (event.getAction() == Action.PHYSICAL) { // Prevent trampling farmland
+			Block block = event.getClickedBlock();
+			if (block != null && block.getType() == Material.FARMLAND)
+				event.setUseInteractedBlock(Event.Result.DENY);
+		}
 		if (event.useItemInHand() == Event.Result.DENY)
 			return;
 
@@ -1947,9 +1952,13 @@ public abstract class TeamArena
 	}
 
 	public void informOfTeam(Player p) {
+		this.informOfTeam(p, Component.empty());
+	}
+
+	public void informOfTeam(Player p, Component title) {
 		TeamArenaTeam team = Main.getPlayerInfo(p).team;
 		Component text = Component.text("You are on ", NamedTextColor.GOLD).append(team.getComponentName());
-		PlayerUtils.sendTitle(p, Component.empty(), text, 10, 70, 20);
+		PlayerUtils.sendTitle(p, title, text, 10, 70, 20);
 		if(gameState == GameState.TEAMS_CHOSEN) {
 			final Component startConniving = Component.text("! Start scheming a game plan with /t!", NamedTextColor.GOLD);
 			text = text.append(startConniving);

@@ -13,6 +13,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
@@ -40,7 +41,12 @@ public class KitHider extends Kit {
 	public KitHider(TeamArena game) {
 		super(NAME, "Take the form of blocks and animals to hide from seekers", Material.HAY_BLOCK);
 
-		this.setItems(TRANSFORM_WAND);
+		this.setItems(
+			TRANSFORM_WAND,
+			ItemBuilder.of(Material.BOW).enchant(Enchantment.ARROW_INFINITE, 1)
+				.enchant(Enchantment.ARROW_DAMAGE, 1).build(),
+			new ItemStack(Material.ARROW)
+		);
 		this.setAbilities(new HiderAbility(game));
 	}
 
@@ -119,6 +125,10 @@ public class KitHider extends Kit {
 					}
 
 					// TODO play for disguised players too
+				}
+
+				if (player.getArrowsInBody() > 0) {
+					player.setArrowsInBody(0, false);
 				}
 			}
 

@@ -123,8 +123,8 @@ public class HideAndSeek extends TeamArena {
 
 		Component hiderKing = Component.text(" Hider King", this.hiderTeam.getRGBTextColor(), TextDecoration.BOLD);
 		Component presIsPres = Component.textOfChildren(
-			this.president.displayName(),
-			Component.text(" is the", NamedTextColor.GOLD),
+			this.president.playerListName(),
+			Component.text(" is ", NamedTextColor.GOLD),
 			hiderKing
 		);
 
@@ -136,9 +136,11 @@ public class HideAndSeek extends TeamArena {
 			pinfo.kit = this.hiderKit;
 			if (hider == this.president) {
 				hider.sendMessage(youArePres);
+				this.informOfTeam(hider, youArePres);
 			}
 			else {
 				hider.sendMessage(presIsPres);
+				this.informOfTeam(hider, presIsPres);
 				pinfo.getMetadataViewer().updateBitfieldValue(this.president,
 					MetaIndex.BASE_BITFIELD_IDX, MetaIndex.BASE_BITFIELD_GLOWING_IDX, true);
 			}
@@ -146,7 +148,13 @@ public class HideAndSeek extends TeamArena {
 
 		for (Player seeker : this.seekerTeam.getPlayerMembers()) {
 			Main.getPlayerInfo(seeker).kit = this.seekerKit;
+			this.informOfTeam(seeker, Component.empty()); // hack
 		}
+	}
+
+	@Override
+	public void informOfTeam(Player p) {
+		// Override to not use the default behaviour.
 	}
 
 	// for debug changing teams
@@ -245,8 +253,8 @@ public class HideAndSeek extends TeamArena {
 
 	@Override
 	public TeamArenaTeam addToLowestTeam(Player player, boolean add) {
-		double hiderCount = (double) this.hiderTeam.getPlayerMembers().size();
-		double seekerCount = ((double) this.seekerTeam.getPlayerMembers().size()) / HIDER_SEEKER_RATIO;
+		double hiderCount = (double) this.hiderTeam.getPlayerMembers().size() / HIDER_SEEKER_RATIO;
+		double seekerCount = (double) this.seekerTeam.getPlayerMembers().size();
 
 		TeamArenaTeam chosenTeam;
 		if (hiderCount <= seekerCount)
@@ -291,12 +299,6 @@ public class HideAndSeek extends TeamArena {
 			}
 		}
 		super.onDamage(event);
-
-		if (event.getDamageType().isProjectile() && event.getVictim() instanceof LivingEntity living &&
-			this.hiderTeam.hasMember(living)) {
-
-			living.setArrowsInBody(0, false);
-		}
 	}
 
 	@Override

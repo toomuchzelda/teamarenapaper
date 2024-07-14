@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena;
 
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Color;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
 
@@ -48,7 +49,7 @@ public class LegacyTeams
 			case "AQUA" -> new TeamArenaTeam("Aqua Team", "Aqua", TeamArenaTeam.convert(NamedTextColor.AQUA),
 					null, DyeColor.LIGHT_BLUE, BossBar.Color.BLUE, Material.DIAMOND_BLOCK);
 			// For HNS
-			case "SEEKERS" -> new TeamArenaTeam("Seekers", "Seekers", TeamArenaTeam.convert(NamedTextColor.AQUA),
+			case "SEEKERS" -> new TeamArenaTeam("Seekers", "Seekers", Color.fromRGB(0x9208FA),
 				null, DyeColor.LIGHT_BLUE, BossBar.Color.BLUE, Material.TARGET);
 			case "HIDERS" -> new TeamArenaTeam("Hiders", "Hiders", TeamArenaTeam.convert(NamedTextColor.GREEN),
 				null, DyeColor.GREEN, BossBar.Color.GREEN, Material.HAY_BLOCK);
