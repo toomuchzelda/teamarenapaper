@@ -280,7 +280,10 @@ public class HideAndSeek extends TeamArena {
 						pitch = 1.7f;
 					}
 					Bukkit.broadcast(timeLeft);
-					Bukkit.getOnlinePlayers().forEach(player -> player.playSound(player, Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.PLAYERS, 1f, pitch));
+					Bukkit.getOnlinePlayers().forEach(player -> {
+						PlayerUtils.sendOptionalTitle(Component.empty(), timeLeft, 15, 30, 30);
+						player.playSound(player, Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.PLAYERS, 1f, pitch);
+					});
 				}
 			}
 		}
