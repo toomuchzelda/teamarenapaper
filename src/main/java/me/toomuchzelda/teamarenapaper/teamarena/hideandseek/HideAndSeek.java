@@ -7,6 +7,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
+import me.toomuchzelda.teamarenapaper.teamarena.killstreak.KillStreakManager;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.FilterAction;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.FilterRule;
@@ -85,6 +86,11 @@ public class HideAndSeek extends TeamArena {
 
 		this.hiderKit = this.kits.get(KitHider.NAME.toLowerCase(Locale.ENGLISH));
 		this.seekerKit = this.kits.get(KitSeeker.NAME.toLowerCase(Locale.ENGLISH));
+
+		KillStreakManager ksManager = this.getKillStreakManager();
+		ksManager.disableKillStreak(KillStreakManager.KillStreakID.COMPASS);
+		ksManager.disableKillStreak(KillStreakManager.KillStreakID.WOLVES);
+		ksManager.disableKillStreak(KillStreakManager.KillStreakID.IRON_GOLEM);
 	}
 
 	public boolean isAllowedBlockType(Material mat) {

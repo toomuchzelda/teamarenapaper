@@ -32,7 +32,7 @@ public class IronGolemKillStreak extends CratedKillStreak
 	);
 
 	IronGolemKillStreak() {
-		super("Iron Golem", "An Iron Golem that will stay at the position where you summoned it and defend it with its life"
+		super(KillStreakManager.KillStreakID.IRON_GOLEM, "Iron Golem", "An Iron Golem that will stay at the position where you summoned it and defend it with its life"
 				, color, null, Material.IRON_BLOCK, new GolemAbility());
 	}
 

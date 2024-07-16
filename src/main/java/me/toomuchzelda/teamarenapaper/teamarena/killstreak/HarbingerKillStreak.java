@@ -36,7 +36,7 @@ public class HarbingerKillStreak extends CratedKillStreak
 	private static final double WARNING_DIST_SQR = 22d * 22d;
 
 	HarbingerKillStreak() {
-		super("Harbinger", "Rain hellish destruction on your enemies", color, null, Material.TNT, new HarbingerAbility());
+		super(KillStreakManager.KillStreakID.HARBINGER, "Harbinger", "Rain hellish destruction on your enemies", color, null, Material.TNT, new HarbingerAbility());
 	}
 
 	private static final Map<Player, Location> crateLocs = new HashMap<>();

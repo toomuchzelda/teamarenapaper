@@ -28,6 +28,14 @@ import java.util.*;
  */
 public class KillStreakManager
 {
+	public enum KillStreakID {
+		PAYLOAD_TEST,
+		COMPASS,
+		WOLVES,
+		IRON_GOLEM,
+		HARBINGER
+	}
+
 	private static final boolean ANNOUNCE_SUCCESSIVE_KILLS = false;
 	// The amount of time since the last kill that each announcer line can play when getting a kill.
 	// Index is the amount of kills - 2 (sounds start at 2 kills), value is the time in ticks and sound
@@ -42,6 +50,7 @@ public class KillStreakManager
 	private final Map<String, KillStreak> allKillstreaks;
 	private final Map<Integer, List<KillStreak>> killstreaksByKills;
 	private final Map<ItemStack, CratedKillStreak> crateItemLookup;
+	private final Set<KillStreakID> disabledKillstreaks; // Will still be processed but not awarded to players upon kills
 
 	private final List<Crate> allCrates;
 
@@ -52,6 +61,7 @@ public class KillStreakManager
 		this.allKillstreaks = new LinkedHashMap<>();
 		this.killstreaksByKills = new HashMap<>();
 		this.crateItemLookup = new HashMap<>();
+		this.disabledKillstreaks = Collections.newSetFromMap(new EnumMap<>(KillStreakID.class));
 
 		// KillStreak map keys must not have spaces in them
 		addKillStreak(-1, new PayloadTestKillstreak());
@@ -71,6 +81,14 @@ public class KillStreakManager
 		return allKillstreaks.get(name);
 	}
 
+	public void disableKillStreak(KillStreakID id) {
+		this.disabledKillstreaks.add(id);
+	}
+
+	public boolean isDisabled(KillStreak streak) {
+		return this.disabledKillstreaks.contains(streak.getIdentifier());
+	}
+
 	private void addKillStreak(int killCount, KillStreak killStreak) {
 		allKillstreaks.put(killStreak.getName().replaceAll(" ", ""), killStreak);
 
@@ -86,6 +104,8 @@ public class KillStreakManager
 		List<KillStreak> streaks = killstreaksByKills.get(newKills);
 		if(streaks != null) {
 			for (KillStreak streak : streaks) {
+				if (this.isDisabled(streak)) continue;
+
 				if(streak instanceof CratedKillStreak cratedStreak)
 					killer.getInventory().addItem(cratedStreak.getCrateItem());
 				else {

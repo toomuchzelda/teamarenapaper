@@ -16,7 +16,7 @@ import java.util.*;
 
 public class PayloadTestKillstreak extends CratedKillStreak {
 	PayloadTestKillstreak() {
-		super("Amogus", "amogus", TextColor.color(216, 212, 213), null, Material.BOOKSHELF);
+		super(KillStreakManager.KillStreakID.PAYLOAD_TEST, "Amogus", "amogus", TextColor.color(216, 212, 213), null, Material.BOOKSHELF);
 	}
 
 	private static final BlockData RED = Material.RED_CONCRETE.createBlockData();

@@ -44,7 +44,7 @@ public class WolvesKillStreak extends CratedKillStreak
 	);
 
 	WolvesKillStreak() {
-		super("Attack wolves", "A pack of wolves that will follow at your command and chew up enemies", color, null,
+		super(KillStreakManager.KillStreakID.WOLVES, "Attack wolves", "A pack of wolves that will follow at your command and chew up enemies", color, null,
 				Material.WOLF_SPAWN_EGG, new WolvesAbility());
 	}
 
