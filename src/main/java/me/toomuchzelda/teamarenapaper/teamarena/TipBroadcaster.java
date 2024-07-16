@@ -42,7 +42,7 @@ public class TipBroadcaster
 		Component.text("An Engineer's Sentry will only see you if it looks directly at you", COLOR),
 		Component.text("Confused about the combat? Spam click like it's 1.8, and get sweep attacks and crits like it's 1.9", COLOR),
 		Component.text("Be careful! As kit Ghost, enemies can see you hold items, sprint on the ground, when you're on fire and when arrows are sticking out of you", COLOR),
-		Component.text("Don't get overwhelmed! Kit Ninja can attack super fast, but you can fight back if you focus", COLOR),
+		//Component.text("Don't get overwhelmed! Kit Ninja can attack super fast, but you can fight back if you focus", COLOR),
 		Component.text("Kit Venom's poison will stop enemies from eating", COLOR),
 		Component.text("Kit Trigger will light up when they're about to explode. When lightning strikes and they get charged, run!", COLOR),
 		Component.text("The colour of Trigger's vest shows how stable it is. Green means safe, while red means about they're to explode.", COLOR),

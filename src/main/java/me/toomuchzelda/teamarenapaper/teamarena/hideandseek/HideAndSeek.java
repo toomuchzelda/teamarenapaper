@@ -20,7 +20,6 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.entity.EntityType;
-import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.jetbrains.annotations.NotNull;
@@ -39,9 +38,12 @@ public class HideAndSeek extends TeamArena {
 	private static final Component SEEKERS_RELEASED_TITLE = Component.text("Seekers released", NamedTextColor.GOLD);
 	private static final Component SEEKERS_RELEASED_IN_CHAT = Component.text("Seekers will be released in ", NamedTextColor.GOLD);
 	private static final Component PRESIDENT_DIED = Component.text("Hider King has been killed!", NamedTextColor.GOLD);
+	private static final Component HIDERS_WIN = Component.text("Time's up!", NamedTextColor.GOLD, TextDecoration.BOLD);
 	private static final Component NO_RESPAWNING = Component.text("Hiders don't respawn", TextColors.ERROR_RED);
 
 	private static final double HIDER_SEEKER_RATIO = 2d; // 2 Hiders for every seeker
+
+	private static final int DEFAULT_SEEK_TIME = 3 * 60 * 20; // 3 minutes?
 
 	public TeamArenaTeam hiderTeam;
 	public TeamArenaTeam seekerTeam;
@@ -54,6 +56,7 @@ public class HideAndSeek extends TeamArena {
 	private final ArrayList<BlockCoords> allowedBlockCoords;
 
 	private boolean isHidingTime;
+	private int remainingSeekTime; // Assigned in prepLive
 
 	private Player president;
 	private Set<Player> presidentSet; // cache
@@ -220,7 +223,9 @@ public class HideAndSeek extends TeamArena {
 		if (isHidingTime) {
 			if (currentTick >= this.gameLiveTime + this.hideTimeTicks) {
 				assert CompileAsserts.OMIT || currentTick == this.gameLiveTime + this.hideTimeTicks;
+
 				this.isHidingTime = false;
+				this.remainingSeekTime = DEFAULT_SEEK_TIME;
 
 				this.seekerTeam.getPlayerMembers().forEach(player -> {
 					player.getInventory().remove(kitMenuItem);
@@ -246,6 +251,38 @@ public class HideAndSeek extends TeamArena {
 		}
 		else {
 			assert CompileAsserts.OMIT || currentTick >= this.gameLiveTime + this.hideTimeTicks;
+
+			if (--this.remainingSeekTime <= 0) {
+				assert CompileAsserts.OMIT || this.remainingSeekTime == 0;
+
+				Bukkit.broadcast(HIDERS_WIN);
+				this.winningTeam = hiderTeam;
+				prepEnd();
+
+				return;
+			}
+			else {
+				final int secs = this.remainingSeekTime / 20;
+				if (remainingSeekTime % 20 == 0 &&
+					(secs % DEFAULT_SEEK_TIME == 0 || secs % (DEFAULT_SEEK_TIME / 2) == 0 ||
+						secs % 60 == 0 || secs == 30 || secs == 15 || secs <= 5)) {
+
+					Component timeLeft;
+					float pitch;
+					if (secs > 60) {
+						int min = secs / 60;
+						int secsOfTheMin = secs % 60;
+						timeLeft = Component.text(min + "m " + secsOfTheMin + "s remaining", NamedTextColor.GOLD, TextDecoration.BOLD);
+						pitch = 1f;
+					}
+					else {
+						timeLeft = Component.text(secs + " seconds remaining", NamedTextColor.GOLD, TextDecoration.BOLD);
+						pitch = 1.7f;
+					}
+					Bukkit.broadcast(timeLeft);
+					Bukkit.getOnlinePlayers().forEach(player -> player.playSound(player, Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.PLAYERS, 1f, pitch));
+				}
+			}
 		}
 
 		super.liveTick();
@@ -298,6 +335,7 @@ public class HideAndSeek extends TeamArena {
 				event.setBroadcastDeathMessage(false);
 			}
 		}
+
 		super.onDamage(event);
 	}
 
