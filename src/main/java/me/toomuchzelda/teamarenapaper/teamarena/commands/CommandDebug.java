@@ -16,6 +16,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.hideandseek.PacketFlyingPoint;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
@@ -479,13 +480,27 @@ public class CommandDebug extends CustomCommand {
 			case "arrowMarker" -> {
 				ArrowManager.spawnArrowMarkers = !ArrowManager.spawnArrowMarkers;
 			}
-			case "packetCache" -> {
+			case "packetcache" -> {
 				if (args.length < 2)
 					throw throwUsage("packetCache boolean");
 
 				boolean bool = Boolean.parseBoolean(args[1]);
 				PacketEntityManager.toggleCache(bool);
 				sender.sendMessage(Component.text("Toggle cache to " + bool));
+			}
+			case "flyingpoint" -> {
+				if (args.length >= 2 && "toggle".equalsIgnoreCase(args[1])) {
+					PacketFlyingPoint.VISIBLE = !PacketFlyingPoint.VISIBLE;
+				}
+				else {
+					for (int i = 0; i < 10; i++) {
+						new PacketFlyingPoint(player, 5d, 5d,
+							MathUtils.randomRange(0, 0.5d), MathUtils.randomRange(0.85, 1.0),
+							MathUtils.randomRange(0.2, 1),
+							Math.max(1, MathUtils.randomMax(5 * 20))
+						).respawn();
+					}
+				}
 			}
 			default -> showUsage(sender);
 		}
@@ -495,7 +510,8 @@ public class CommandDebug extends CustomCommand {
 	public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
 		if (args.length == 1) {
 			return Arrays.asList("hide", "gui", "guitest", "signtest", "game", "setrank", "setteam", "setkit",
-				"votetest", "draw", "graffititest", "respawn", "fakehitbox", "testmotd", "arrowMarker", "packetCache", "showSpawns");
+				"votetest", "draw", "graffititest", "respawn", "fakehitbox", "testmotd", "arrowMarker", "packetcache", "showSpawns",
+				"flyingpoint");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");
@@ -510,6 +526,7 @@ public class CommandDebug extends CustomCommand {
 				case "graffititest" -> CosmeticsManager.getLoadedCosmetics(CosmeticType.GRAFFITI).stream().map(NamespacedKey::toString).toList();
 				case "respawn" -> Bukkit.getOnlinePlayers().stream().map(Player::getName).toList();
 				case "packetcache" -> List.of("true", "false");
+				case "flyingpoint" -> List.of("toggle");
 				default -> Collections.emptyList();
 			};
 		} else if (args.length == 3) {

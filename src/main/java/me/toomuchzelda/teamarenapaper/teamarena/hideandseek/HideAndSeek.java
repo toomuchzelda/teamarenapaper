@@ -21,6 +21,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.jetbrains.annotations.NotNull;
@@ -91,6 +92,22 @@ public class HideAndSeek extends TeamArena {
 		ksManager.disableKillStreak(KillStreakManager.KillStreakID.COMPASS);
 		ksManager.disableKillStreak(KillStreakManager.KillStreakID.WOLVES);
 		ksManager.disableKillStreak(KillStreakManager.KillStreakID.IRON_GOLEM);
+
+		// Make some animals look around randomly so they are not all looking straight ahead,
+		//  making Hiders stand out because they look slightly up/down
+		for (LivingEntity living : this.gameWorld.getLivingEntities()) {
+			if (this.allowedEntities.contains(living.getType())) {
+				if (MathUtils.randomRange(0, 7) == 0) continue;
+
+				new PacketFlyingPoint(
+					living,
+					MathUtils.randomRange(2d, 13d), MathUtils.randomRange(3d, 10d),
+					MathUtils.randomRange(0.02d, 0.5d), MathUtils.randomRange(0.85, 1d),
+					MathUtils.randomRange(0.2, 1),
+					Math.max(1, MathUtils.randomMax(5 * 20))
+				).respawn();
+			}
+		}
 	}
 
 	public boolean isAllowedBlockType(Material mat) {
@@ -291,6 +308,33 @@ public class HideAndSeek extends TeamArena {
 						player.playSound(player, Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.PLAYERS, 1f, pitch);
 					});
 				}
+
+				/*for (LivingEntity living : this.gameWorld.getLivingEntities()) {
+					if (!this.allowedEntities.contains(living.getType())) continue;
+
+					// TODO maybe do with packets
+					net.minecraft.world.entity.LivingEntity nmsLiving = ((CraftLivingEntity) living).getHandle();
+					RandomSource random = nmsLiving.random;
+					final double doChange = random.nextDouble();
+					if (doChange <= 0.025) {
+						Location loc = living.getLocation();
+						Vector eyeLoc = living.getEyeLocation().toVector();
+						Block block = living.getTargetBlock(null, 100);
+
+						final double maxOffDist = 15d;
+						double distX = ((random.nextDouble() - 0.5) * 2d) * maxOffDist;
+						double distY = ((random.nextDouble() - 0.5) * 2d) * maxOffDist;
+						double distZ = ((random.nextDouble() - 0.5) * 2d) * maxOffDist;
+
+						Vector targetPoint = block.getLocation().toVector().add(new Vector(distX, distY, distZ));
+						targetPoint.subtract(eyeLoc);
+
+						loc.setDirection(targetPoint);
+
+						living.teleport(loc, TeleportFlag.Relative.X,
+							TeleportFlag.Relative.Y, TeleportFlag.Relative.Z);
+					}
+				}*/
 			}
 		}
 
