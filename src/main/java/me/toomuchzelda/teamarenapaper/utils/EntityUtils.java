@@ -226,6 +226,12 @@ public class EntityUtils {
 			entity.setHealth(newHealth);
 	}
 
+	public static void addAttribute(AttributeInstance instance, AttributeModifier modifier) {
+		if (instance.getModifier(modifier.getUniqueId()) == null) {
+			instance.addModifier(modifier);
+		}
+	}
+
 	public static void removeAllModifiers(LivingEntity living) {
 		for(Attribute attribute : Attribute.values()) {
 			AttributeInstance instance = living.getAttribute(attribute);

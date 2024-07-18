@@ -211,7 +211,7 @@ public class CaptureTheFlag extends TeamArena
             announcementTitle = SPEED_NOW_TITLE;
 
             for (Player carrier : flagHolders.keySet()) {
-                carrier.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).addModifier(SPEED_ATTR);
+				EntityUtils.addAttribute(carrier.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED), SPEED_ATTR);
                 currentSpeeders.add(carrier);
             }
         }
@@ -456,7 +456,8 @@ public class CaptureTheFlag extends TeamArena
 
 		//give speed boost if appropriate
 		if(this.timeToSpeed <= 0) {
-			player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).addModifier(SPEED_ATTR);
+			AttributeInstance attributeInstance = player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
+			EntityUtils.addAttribute(attributeInstance, SPEED_ATTR);
 			currentSpeeders.add(player);
 		}
 
