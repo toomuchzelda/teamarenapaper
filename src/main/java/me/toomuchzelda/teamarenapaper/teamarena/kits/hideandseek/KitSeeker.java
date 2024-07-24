@@ -16,7 +16,7 @@ public class KitSeeker extends Kit {
 
 		this.setItems(
 			new ItemStack(Material.IRON_SWORD),
-			ItemBuilder.of(Material.BOW).enchant(Enchantment.ARROW_INFINITE, 1).build(),
+			ItemBuilder.of(Material.BOW).enchant(Enchantment.INFINITY, 1).build(),
 			new ItemStack(Material.ARROW)
 		);
 

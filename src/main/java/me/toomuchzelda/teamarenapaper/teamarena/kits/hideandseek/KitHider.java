@@ -43,8 +43,8 @@ public class KitHider extends Kit {
 
 		this.setItems(
 			TRANSFORM_WAND,
-			ItemBuilder.of(Material.BOW).enchant(Enchantment.ARROW_INFINITE, 1)
-				.enchant(Enchantment.ARROW_DAMAGE, 1).build(),
+			ItemBuilder.of(Material.BOW).enchant(Enchantment.INFINITY, 1)
+				.enchant(Enchantment.POWER, 1).build(),
 			new ItemStack(Material.ARROW)
 		);
 		this.setAbilities(new HiderAbility(game));
@@ -139,7 +139,7 @@ public class KitHider extends Kit {
 		private static void playSparkleParticles(Player player, Location loc,
 												 PlayerUtils.PacketCache particleBundler) {
 			ParticleUtils.batchParticles(player, particleBundler,
-				Particle.VILLAGER_HAPPY, null,
+				Particle.HAPPY_VILLAGER, null,
 				loc,
 				BLOCK_PARTICLE_DISTANCE,
 				1,
@@ -169,7 +169,7 @@ public class KitHider extends Kit {
 						}
 						else if (Main.getPlayerInfo(clicker).messageHasCooldowned("kithiderbadblock" + clickedBlock.getType(), 10)) {
 							clicker.playSound(clicker, Sound.BLOCK_NOTE_BLOCK_HARP, SoundCategory.BLOCKS, 1f, 0.5f);
-							clicker.spawnParticle(Particle.VILLAGER_ANGRY, event.getInteractionPoint(), 1);
+							clicker.spawnParticle(Particle.ANGRY_VILLAGER, event.getInteractionPoint(), 1);
 						}
 					}
 				}
@@ -194,7 +194,7 @@ public class KitHider extends Kit {
 					}
 					else if (Main.getPlayerInfo(clicker).messageHasCooldowned("kithiderbadblock" + livent.getType(), 10)) {
 						clicker.playSound(clicker, Sound.BLOCK_NOTE_BLOCK_HARP, SoundCategory.BLOCKS, 1f, 0.5f);
-						clicker.spawnParticle(Particle.VILLAGER_ANGRY, livent.getEyeLocation(), 1);
+						clicker.spawnParticle(Particle.ANGRY_VILLAGER, livent.getEyeLocation(), 1);
 					}
 				}
 				else {

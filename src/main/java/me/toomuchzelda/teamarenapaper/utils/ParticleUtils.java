@@ -7,7 +7,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket;
 import org.bukkit.*;
 import org.bukkit.block.Block;
-import org.bukkit.craftbukkit.v1_20_R3.CraftParticle;
+import org.bukkit.craftbukkit.CraftParticle;
 import org.bukkit.entity.Player;
 
 public class ParticleUtils {

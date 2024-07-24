@@ -20,9 +20,8 @@ dependencies {
     // https://mvnrepository.com/artifact/org.xerial/sqlite-jdbc
     //paper has a sqlite driver at runtime
     implementation("org.xerial:sqlite-jdbc:3.41.2.2")
-    compileOnly("io.papermc.paper:paper-api:1.20.6-R0.1-SNAPSHOT")
-    paperweight.paperDevBundle("1.20.6-R0.1-SNAPSHOT")
-    compileOnly("com.comphenix.protocol:ProtocolLib:5.2.0-SNAPSHOT")
+    paperweight.paperDevBundle("1.21-R0.1-SNAPSHOT")
+    compileOnly("com.comphenix.protocol:ProtocolLib:5.3.0-SNAPSHOT")
 }
 
 java {

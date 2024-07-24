@@ -39,8 +39,6 @@ import org.bukkit.Sound;
 import org.bukkit.craftbukkit.CraftSound;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
-import org.bukkit.entity.AbstractArrow;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -519,7 +517,7 @@ public class PacketListeners
 								Pair<EquipmentSlot, net.minecraft.world.item.ItemStack> pair = iter.next();
 
 								//don't touch the hand slots, and don't change it if it's air (taking an armor piece off)
-								if(pair.getFirst().getType() == EquipmentSlot.Type.ARMOR && !pair.getSecond().isEmpty()) {
+								if(pair.getFirst().getType() == EquipmentSlot.Type.HUMANOID_ARMOR && !pair.getSecond().isEmpty()) {
 									ItemStack armorPiece = kitArmour[pair.getFirst().getIndex()];
 									net.minecraft.world.item.ItemStack nmsArmor = CraftItemStack.asNMSCopy(armorPiece);
 									// paper avoids sending unnecessary metadata in NMS, so do that here too

@@ -2,7 +2,6 @@ package me.toomuchzelda.teamarenapaper;
 
 import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
-import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
 import me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy.SearchAndDestroy;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
@@ -109,7 +108,7 @@ public class ServerListPingManager
 	}
 
 	public static void handleEvent(PaperServerListPingEvent event) {
-		event.getPlayerSample().clear();
+		event.getListedPlayers().clear();
 
 		synchronized (lastRefreshTimeLock) { // Lazily update the MOTD to reflect the new countdown every while
 			final long currentTime = System.currentTimeMillis();

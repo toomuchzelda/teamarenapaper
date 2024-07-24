@@ -7,9 +7,8 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
-import net.minecraft.world.item.enchantment.ProtectionEnchantment;
 import org.bukkit.*;
-import org.bukkit.craftbukkit.entity.CraftLivingEntity;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
@@ -230,8 +229,7 @@ public class CustomExplosion
 		kbStrength = this.knockbackStrength * kbStrength;
 
 		if(victim instanceof LivingEntity living) {
-			kbStrength = ProtectionEnchantment.getExplosionKnockbackAfterDampener(
-					((CraftLivingEntity) living).getHandle(), kbStrength);
+			kbStrength *= living.getAttribute(Attribute.GENERIC_EXPLOSION_KNOCKBACK_RESISTANCE).getValue();
 		}
 
 		Vector currentVel = victim.getVelocity();

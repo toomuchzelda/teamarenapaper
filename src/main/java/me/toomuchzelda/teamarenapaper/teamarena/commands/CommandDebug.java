@@ -36,15 +36,12 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.map.MapPalette;
-import org.bukkit.map.MinecraftFont;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.InetSocketAddress;
 import java.util.*;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -276,51 +273,6 @@ public class CommandDebug extends CustomCommand {
 		} else if ("disable".equalsIgnoreCase(args[1])) {
 			disableMiniMapInCaseSomethingTerribleHappens = !disableMiniMapInCaseSomethingTerribleHappens;
 			sender.sendMessage(Component.text("Minimap is now " + (disableMiniMapInCaseSomethingTerribleHappens ? "disabled" : "enabled")));
-		} else {
-			if (args.length < 4)
-				throw throwUsage("/debug draw clear/disable/<text/area> <x> <z> ...");
-			int x = Integer.parseInt(args[2]), z = Integer.parseInt(args[3]);
-			if ("text".equalsIgnoreCase(args[1])) {
-				if (args.length < 5)
-					throw throwUsage("/debug draw text <x> <z> <text>");
-
-				// white by default
-				String text = "§34;" + MAP_COLOR.matcher(
-					String.join(" ", Arrays.copyOfRange(args, 4, args.length))
-						.replace('&', ChatColor.COLOR_CHAR)
-				).replaceAll(result -> {
-					int hex = Integer.parseInt(result.group(1), 16);
-					//noinspection removal
-					return "§" + MapPalette.matchColor(new java.awt.Color(hex)) + ";";
-				});
-				canvasOperations.add((viewer, ignored, canvas, renderer) ->
-					canvas.drawText((renderer.convertX(x) + 128) / 2, (renderer.convertZ(z) + 128) / 2,
-						MinecraftFont.Font, text));
-			} else if ("area".equalsIgnoreCase(args[1])) {
-				if (args.length < 7)
-					throw throwUsage("/debug draw area <x> <z> <x2> <z2> <color>");
-				int x2 = Integer.parseInt(args[4]), z2 = Integer.parseInt(args[5]);
-				byte color;
-				Matcher matcher = MAP_COLOR.matcher(args[6]);
-				if (matcher.matches()) {
-					int hex = Integer.parseInt(matcher.group(1), 16);
-					//noinspection removal
-					color = MapPalette.matchColor(new java.awt.Color(hex));
-				} else {
-					color = Byte.parseByte(args[6]);
-				}
-				int minX = Math.min(x, x2), maxX = Math.max(x, x2), minY = Math.min(z, z2), maxY = Math.max(z, z2);
-				canvasOperations.add((viewer, ignored, canvas, renderer) -> {
-					int startX = (renderer.convertX(minX) + 128) / 2, endX = (renderer.convertX(maxX) + 128) / 2;
-					int startY = (renderer.convertZ(minY) + 128) / 2, endY = (renderer.convertZ(maxY) + 128) / 2;
-					for (int i = startX; i < endX; i++)
-						for (int j = startY; j < endY; j++)
-							canvas.setPixel(i, j, color);
-				});
-			}
-		}
-		if (!Main.getGame().miniMap.hasCanvasOperation(operationExecutor)) {
-			Main.getGame().miniMap.registerCanvasOperation(operationExecutor);
 		}
 	}
 

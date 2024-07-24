@@ -10,13 +10,15 @@ import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import net.minecraft.world.entity.LivingEntity;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.craftbukkit.entity.CraftLivingEntity;
+import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.entity.CraftArmorStand;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -30,6 +32,7 @@ import org.bukkit.util.EulerAngle;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 public class Flag
 {
@@ -194,9 +197,11 @@ public class Flag
 		return normalMetadataPacket;
 	}
 
-	public ClientboundAddEntityPacket getSpawnPacket() {
-		LivingEntity nmsLivingStand = ((CraftLivingEntity) stand).getHandle();
-		return new ClientboundAddEntityPacket(nmsLivingStand);
+	public Packet<ClientGamePacketListener> getSpawnPacket() {
+		LivingEntity nmsLivingStand = ((CraftArmorStand) stand).getHandle();
+		var world = ((CraftWorld) stand.getWorld()).getHandle();
+		var tracker = Objects.requireNonNull(world.getChunkSource().chunkMap.entityMap.get(stand.getEntityId()));
+		return nmsLivingStand.getAddEntityPacket(tracker.serverEntity);
 	}
 
 	public ClientboundRemoveEntitiesPacket getRemovePacket() {

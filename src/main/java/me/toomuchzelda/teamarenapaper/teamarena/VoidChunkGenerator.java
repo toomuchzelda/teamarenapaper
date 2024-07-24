@@ -2,12 +2,10 @@ package me.toomuchzelda.teamarenapaper.teamarena;
 
 import org.bukkit.*;
 import org.bukkit.block.Biome;
-import org.bukkit.block.data.BlockData;
 import org.bukkit.generator.BiomeProvider;
 import org.bukkit.generator.BlockPopulator;
 import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.generator.WorldInfo;
-import org.bukkit.material.MaterialData;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -25,7 +23,6 @@ public class VoidChunkGenerator extends ChunkGenerator
 {
 	public static final VoidChunkGenerator INSTANCE = new VoidChunkGenerator();
 
-	private static final VoidChunkData voidChunkData = new VoidChunkData();
 	private static final SnowyBiomeProvider biomeProvider = new SnowyBiomeProvider();
 
 	public VoidChunkGenerator() {
@@ -107,69 +104,6 @@ public class VoidChunkGenerator extends ChunkGenerator
 	@Override
 	public boolean shouldGenerateStructures() {
 		return false;
-	}
-
-	@Override
-	public @NotNull ChunkData createVanillaChunkData(@NotNull World world, int x, int z) {
-		return voidChunkData;
-	}
-
-	private static class VoidChunkData implements ChunkData {
-		private static final MaterialData melonData = Material.LEGACY_MELON.getNewData((byte) 0);
-		private static final BlockData coalData = Material.COAL_BLOCK.createBlockData();
-
-		@Override
-		public int getMinHeight() {
-			return 0;
-		}
-
-		@Override
-		public int getMaxHeight() {
-			return 2;
-		}
-
-		@Override
-		public @NotNull Biome getBiome(int x, int y, int z) {
-			return Biome.SNOWY_TAIGA;
-		}
-
-		@Override
-		public void setBlock(int x, int y, int z, @NotNull Material material) {}
-
-		@Override
-		public void setBlock(int x, int y, int z, @NotNull MaterialData material) {}
-
-		@Override
-		public void setBlock(int x, int y, int z, @NotNull BlockData blockData) {}
-
-		@Override
-		public void setRegion(int xMin, int yMin, int zMin, int xMax, int yMax, int zMax, @NotNull Material material) {}
-
-		@Override
-		public void setRegion(int xMin, int yMin, int zMin, int xMax, int yMax, int zMax, @NotNull MaterialData material) {}
-
-		@Override
-		public void setRegion(int xMin, int yMin, int zMin, int xMax, int yMax, int zMax, @NotNull BlockData blockData) {}
-
-		@Override
-		public @NotNull Material getType(int x, int y, int z) {
-			return Material.CARVED_PUMPKIN;
-		}
-
-		@Override
-		public @NotNull MaterialData getTypeAndData(int x, int y, int z) {
-			return melonData;
-		}
-
-		@Override
-		public @NotNull BlockData getBlockData(int x, int y, int z) {
-			return coalData;
-		}
-
-		@Override
-		public byte getData(int x, int y, int z) {
-			return 0;
-		}
 	}
 
 	private static class SnowyBiomeProvider extends BiomeProvider {

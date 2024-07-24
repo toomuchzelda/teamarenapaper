@@ -2,7 +2,6 @@ package me.toomuchzelda.teamarenapaper.utils;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.reflect.StructureModifier;
 import com.mojang.datafixers.util.Pair;
 import io.netty.buffer.Unpooled;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
@@ -14,14 +13,19 @@ import net.minecraft.network.protocol.game.*;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerPlayerConnection;
 import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.phys.*;
-import org.bukkit.*;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.craftbukkit.CraftEquipmentSlot;
 import org.bukkit.craftbukkit.CraftWorld;
-import org.bukkit.craftbukkit.entity.*;
+import org.bukkit.craftbukkit.entity.CraftEntity;
+import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.craftbukkit.util.CraftVector;
 import org.bukkit.entity.*;
@@ -227,7 +231,7 @@ public class EntityUtils {
 	}
 
 	public static void addAttribute(AttributeInstance instance, AttributeModifier modifier) {
-		if (instance.getModifier(modifier.getUniqueId()) == null) {
+		if (instance.getModifier(modifier.getKey()) == null) {
 			instance.addModifier(modifier);
 		}
 	}

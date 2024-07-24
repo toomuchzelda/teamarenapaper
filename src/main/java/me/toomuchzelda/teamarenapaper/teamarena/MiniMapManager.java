@@ -520,6 +520,7 @@ public class MiniMapManager {
             int maxZ = (convertZ(Math.max(from.getBlockZ(), to.getBlockZ())) + 128) / 2;
             double slope = (double) (maxZ - minZ) / (maxX - minX);
             for (int i = minX; i <= maxX; i++) {
+				//noinspection deprecation
                 canvas.setPixel(i, (int) (minZ + (i - minX) * slope), color);
             }
         }
@@ -535,7 +536,8 @@ public class MiniMapManager {
                     if (actualColor == TRANSPARENT)
 						//noinspection removal
 						actualColor = canvas.getBasePixel(i, j);
-                    canvas.setPixel(i, j, actualColor);
+					//noinspection deprecation
+					canvas.setPixel(i, j, actualColor);
                 }
             }
         }

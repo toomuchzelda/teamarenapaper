@@ -15,7 +15,6 @@ import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.network.ServerPlayerConnection;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
@@ -251,8 +250,7 @@ public class DamageEvent {
 						}
 
 						if(sweep) {
-							float sweepingEdgeDmg = (float) (1f + EnchantmentHelper.getSweepingDamageRatio(nmsPlayer)
-									* finalDamage);
+							float sweepingEdgeDmg = (float) (1f + p.getAttribute(Attribute.PLAYER_SWEEPING_DAMAGE_RATIO).getValue() * finalDamage);
 
 							List<LivingEntity> list = p.getWorld().getLivingEntities();
 							Iterator<LivingEntity> iter = list.iterator();
