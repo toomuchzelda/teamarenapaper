@@ -116,7 +116,7 @@ public class KitRewind extends Kit {
 
 		setArmor(new ItemStack(Material.CHAINMAIL_HELMET),
 				ItemBuilder.of(Material.IRON_CHESTPLATE)
-						.enchant(Enchantment.PROTECTION_ENVIRONMENTAL, 1)
+						.enchant(Enchantment.PROTECTION, 1)
 						.build(),
 				new ItemStack(Material.IRON_LEGGINGS),
 				new ItemStack(Material.IRON_BOOTS));
@@ -328,7 +328,7 @@ public class KitRewind extends Kit {
 				} else {
 					//Add particle effect which will show where the stasis player is
 					// what???
-					player.getWorld().spawnParticle(Particle.REDSTONE, player.getLocation(), 8,
+					player.getWorld().spawnParticle(Particle.DUST, player.getLocation(), 8,
 						1,
 						1,
 						1,
@@ -420,8 +420,8 @@ public class KitRewind extends Kit {
 						if (victim instanceof Player pVictim && !game.canAttack(player, pVictim)) continue;
 						if (!game.isDead(victim)) {
 							//change to 3*20 tick duration, extended for testing purposes
-							victim.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, 3 * 20, 250, true));
-							victim.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 3 * 20, 2, true));
+							victim.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, 3 * 20, 250, true));
+							victim.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 3 * 20, 2, true));
 						}
 					}
 				}

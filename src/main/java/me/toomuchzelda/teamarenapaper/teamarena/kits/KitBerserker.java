@@ -41,11 +41,11 @@ public class KitBerserker extends Kit {
 		ItemMeta meta = item.getItemMeta();
 
 		if (kills > 0) {
-			meta.addEnchant(Enchantment.DAMAGE_ALL, kills, true);
+			meta.addEnchant(Enchantment.SHARPNESS, kills, true);
 		}
 		else {
 			// Bluff the enchanted visual effect for negative knockback
-			meta.addEnchant(Enchantment.DURABILITY, 1, true);
+			meta.addEnchant(Enchantment.UNBREAKING, 1, true);
 			meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
 		}
 

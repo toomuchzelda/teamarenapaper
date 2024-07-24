@@ -307,7 +307,7 @@ public class HarbingerKillStreak extends CratedKillStreak
 						CHANGED_BLOCKS.put(relativeCoords, relativeBlock.getState());
 						strike.changedBlocks.add(relativeCoords);
 						if (!relativeData.getMaterial().isAir()) {
-							world.spawnParticle(Particle.BLOCK_DUST, relativeBlock.getLocation(), 20, relativeData);
+							world.spawnParticle(Particle.BLOCK, relativeBlock.getLocation(), 20, relativeData);
 							world.playSound(relativeBlockLoc, relativeData.getSoundGroup().getBreakSound(), SoundCategory.BLOCKS, 2f, 1f);
 						}
 
@@ -341,11 +341,11 @@ public class HarbingerKillStreak extends CratedKillStreak
 
 				Location loc = new Location(world, vector.x(), vector.y(), vector.z());
 				if (MathUtils.random.nextBoolean()) { // poofy smokey particle effect
-					loc.getWorld().spawnParticle(Particle.EXPLOSION_NORMAL, loc, 7);
+					loc.getWorld().spawnParticle(Particle.EXPLOSION, loc, 7);
 				} else {
 					for (var entry : Main.getPlayerInfoMap().entrySet()) {
 						if (entry.getValue().getPreference(Preferences.VIEW_HARBINGER_PARTICLES)) {
-							entry.getKey().spawnParticle(Particle.SMOKE_LARGE, loc, 3);
+							entry.getKey().spawnParticle(Particle.LARGE_SMOKE, loc, 3);
 						}
 					}
 				}

@@ -197,8 +197,7 @@ public class MetadataViewer
 	public void removeViewedValues(Entity viewedEntity) {
 		// Set all nulldirty so the client is updated before records are removed
 		this.setAllNullDirty(viewedEntity);
-		if (EntityUtils.isTrackingEntity(this.player, viewedEntity))
-			this.refreshViewer(viewedEntity);
+		this.refreshViewer(viewedEntity);
 		this.entityValues.remove(viewedEntity.getEntityId());
 	}
 

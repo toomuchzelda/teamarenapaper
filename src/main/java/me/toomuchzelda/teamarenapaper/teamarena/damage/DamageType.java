@@ -14,8 +14,8 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageSources;
 import net.minecraft.world.level.Level;
 import org.bukkit.Material;
-import org.bukkit.craftbukkit.v1_20_R3.CraftWorld;
-import org.bukkit.craftbukkit.v1_20_R3.entity.CraftEntity;
+import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.entity.CraftEntity;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageByBlockEvent;
@@ -285,7 +285,7 @@ public class DamageType {
         _name = name;
         _deathMessages = deathMessages;
 		applicableEnchantments = new ArrayList<>(2);
-		applicableEnchantments.add(Enchantment.PROTECTION_ENVIRONMENTAL);
+		applicableEnchantments.add(Enchantment.PROTECTION);
 		trackedType = DamageTimes.TrackedDamageTypes.OTHER;
     }
 
@@ -660,7 +660,7 @@ public class DamageType {
     public DamageType setBurn() {
         _burn = true;
 
-		addApplicableEnchant(Enchantment.PROTECTION_FIRE);
+		addApplicableEnchant(Enchantment.FIRE_PROTECTION);
 		setTrackedDamageType(DamageTimes.TrackedDamageTypes.FIRE);
 
         return this;
@@ -669,7 +669,7 @@ public class DamageType {
     public DamageType setExplosion() {
         _explosion = true;
 
-		addApplicableEnchant(Enchantment.PROTECTION_EXPLOSIONS);
+		addApplicableEnchant(Enchantment.BLAST_PROTECTION);
 		setTrackedDamageType(DamageTimes.TrackedDamageTypes.ATTACK);
 
         return this;
@@ -679,7 +679,7 @@ public class DamageType {
         _fall = true;
         setIgnoreArmor();
         setIgnoreRate();
-		addApplicableEnchant(Enchantment.PROTECTION_FALL);
+		addApplicableEnchant(Enchantment.FEATHER_FALLING);
 		setTrackedDamageType(DamageTimes.TrackedDamageTypes.OTHER);
 
         return this;
@@ -689,7 +689,7 @@ public class DamageType {
         setBurn();
 
         _fire = true;
-		removeApplicableEnchant(Enchantment.PROTECTION_ENVIRONMENTAL);
+		removeApplicableEnchant(Enchantment.PROTECTION);
 		setTrackedDamageType(DamageTimes.TrackedDamageTypes.FIRE);
 
         return this;
@@ -730,7 +730,7 @@ public class DamageType {
     public DamageType setProjectile() {
         _projectile = true;
 
-		addApplicableEnchant(Enchantment.PROTECTION_PROJECTILE);
+		addApplicableEnchant(Enchantment.PROJECTILE_PROTECTION);
 		setTrackedDamageType(DamageTimes.TrackedDamageTypes.ATTACK);
 
 		return this;
@@ -787,7 +787,7 @@ public class DamageType {
         Pig entity = Main.getGame().getWorld().spawn(Main.getGame().getWorld().getSpawnLocation(), Pig.class);
 
         for (EntityDamageEvent.DamageCause cause : EntityDamageEvent.DamageCause.values()) {
-			EntityDamageEvent event = new EntityDamageEvent(entity, cause, 1);
+			EntityDamageEvent event = new EntityDamageEvent(entity, cause, 1d);
             DamageType attack = DamageType.getAttack(event);
 
             if (attack == null || attack == DamageType.UNKNOWN) {

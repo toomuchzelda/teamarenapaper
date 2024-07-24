@@ -5,7 +5,7 @@ import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.craftbukkit.v1_20_R3.block.CraftBlock;
+import org.bukkit.craftbukkit.block.CraftBlock;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
@@ -29,7 +29,7 @@ public class BlockUtils
 
 	public static int getBlockColor(Block block) {
 		//MaterialColor color = ((CraftBlock) block).getNMS().getMaterial().getColor();
-		return (((CraftBlock) block).getNMS().getBlock().defaultMapColor().col);
+		return ((CraftBlock) block).getNMS().getBlock().defaultMapColor().col;
 	}
 
 	public static Color getBlockBukkitColor(Block block) {

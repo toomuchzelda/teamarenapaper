@@ -1,6 +1,8 @@
+import io.papermc.paperweight.userdev.ReobfArtifactConfiguration
+
 plugins {
     id("java")
-    id("io.papermc.paperweight.userdev") version "1.6.3"
+    id("io.papermc.paperweight.userdev") version "1.7.1"
 }
 
 repositories {
@@ -18,8 +20,8 @@ dependencies {
     // https://mvnrepository.com/artifact/org.xerial/sqlite-jdbc
     //paper has a sqlite driver at runtime
     implementation("org.xerial:sqlite-jdbc:3.41.2.2")
-    compileOnly("io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT")
-    paperweight.paperDevBundle("1.20.4-R0.1-SNAPSHOT")
+    compileOnly("io.papermc.paper:paper-api:1.20.6-R0.1-SNAPSHOT")
+    paperweight.paperDevBundle("1.20.6-R0.1-SNAPSHOT")
     compileOnly("com.comphenix.protocol:ProtocolLib:5.2.0-SNAPSHOT")
 }
 
@@ -34,12 +36,11 @@ version = "1.0-FOREVER"
 description = "TeamArenaPaper"
 java.sourceCompatibility = JavaVersion.VERSION_21
 
-tasks.withType<JavaCompile> {
-    options.encoding = "UTF-8"
+paperweight {
+    reobfArtifactConfiguration.set(ReobfArtifactConfiguration.MOJANG_PRODUCTION)
 }
 
-tasks {
-    assemble {
-        dependsOn(reobfJar)
-    }
+
+tasks.withType<JavaCompile> {
+    options.encoding = "UTF-8"
 }

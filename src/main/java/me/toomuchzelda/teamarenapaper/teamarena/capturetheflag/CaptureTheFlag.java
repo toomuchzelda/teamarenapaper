@@ -815,7 +815,7 @@ public class CaptureTheFlag extends TeamArena
 					// display extra information for own flag
 					if (playerInfo.team == team) {
 						if (flag.holder != null && gameTick % 40 < 20) {
-							return new MiniMapManager.CursorInfo(flag.holder.getLocation(), true, MapCursor.Type.RED_POINTER, yourFlagText);
+							return new MiniMapManager.CursorInfo(flag.holder.getLocation(), true, MapCursor.Type.RED_MARKER, yourFlagText);
 						} else {
 							return new MiniMapManager.CursorInfo(stand.getLocation(), false, icon, yourFlagText);
 						}

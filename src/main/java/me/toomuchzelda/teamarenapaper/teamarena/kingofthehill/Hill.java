@@ -71,10 +71,10 @@ public class Hill {
 						continue;
 
                     if(TeamArena.getGameTick() % (11 - num) == 0) {
-                        p.spawnParticle(Particle.SPELL_MOB, location.getX(), location.getY(),
+                        p.spawnParticle(Particle.ENTITY_EFFECT, location.getX(), location.getY(),
                                 location.getZ(), 0, red, green, blue, 1);
 
-                        p.spawnParticle(Particle.SPELL_MOB, location.getX(), location.getY(),
+                        p.spawnParticle(Particle.ENTITY_EFFECT, location.getX(), location.getY(),
                                 location.getZ() + zLength, 0, red, green, blue, 1);
                     }
                 }
@@ -108,10 +108,10 @@ public class Hill {
 
 
                     if(TeamArena.getGameTick() % (11 - freq) == 0) {
-                        p.spawnParticle(Particle.SPELL_MOB, location.getX(), location.getY(),
+                        p.spawnParticle(Particle.ENTITY_EFFECT, location.getX(), location.getY(),
                                 location.getZ(), 0, red, green, blue, 1);
 
-                        p.spawnParticle(Particle.SPELL_MOB, location.getX() + xLength, location.getY(),
+                        p.spawnParticle(Particle.ENTITY_EFFECT, location.getX() + xLength, location.getY(),
                                 location.getZ(), 0, red, green, blue, 1);
                     }
                 }

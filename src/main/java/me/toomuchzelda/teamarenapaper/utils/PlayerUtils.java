@@ -6,6 +6,7 @@ import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.EnumWrappers;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
@@ -25,6 +26,8 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.craftbukkit.v1_20_R3.CraftWorldBorder;
 import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
 import org.bukkit.entity.Entity;
+import org.bukkit.craftbukkit.CraftWorldBorder;
+import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.inventory.EntityEquipment;
@@ -162,6 +165,8 @@ public class PlayerUtils {
 	}
 
 	public static PacketContainer createUseEntityPacket(Player user, int usedEntityId, EquipmentSlot hand, boolean attack) {
+		assert CompileAsserts.OMIT || hand.isHand();
+
 		ByteBuf buf = Unpooled.buffer();
 		FriendlyByteBuf friendly = new FriendlyByteBuf(buf);
 		friendly.writeVarInt(usedEntityId);
@@ -176,7 +181,7 @@ public class PlayerUtils {
 		}
 
 		friendly.writeBoolean(user.isSneaking());
-		ServerboundInteractPacket nmsPacket = new ServerboundInteractPacket(friendly);
+		ServerboundInteractPacket nmsPacket = ServerboundInteractPacket.STREAM_CODEC.decode(friendly);
 		return PacketContainer.fromPacket(nmsPacket);
 	}
 

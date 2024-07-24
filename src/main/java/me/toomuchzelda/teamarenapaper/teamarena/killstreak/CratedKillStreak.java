@@ -67,7 +67,7 @@ public abstract class CratedKillStreak extends KillStreak {
 				getComponentName()
 			))
 			.lore(lore)
-			.enchant(Enchantment.DURABILITY, 1)
+			.enchant(Enchantment.UNBREAKING, 1)
 			.hide(ItemFlag.HIDE_ENCHANTS)
 			.build();
 	}

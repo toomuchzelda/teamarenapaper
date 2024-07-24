@@ -459,7 +459,7 @@ public class KingOfTheHill extends TeamArena
 						(owningTeam != null ? owningTeam.getRGBTextColor() : NamedTextColor.WHITE) :
 						NamedTextColor.DARK_GRAY
 				);
-				MapCursor.Type icon = active ? MapCursor.Type.WHITE_CROSS : MapCursor.Type.SMALL_WHITE_CIRCLE;
+				MapCursor.Type icon = active ? MapCursor.Type.TARGET_X : MapCursor.Type.PLAYER_OFF_MAP;
 				return new MiniMapManager.CursorInfo(center, false, icon, currentHillText);
 			});
 		}

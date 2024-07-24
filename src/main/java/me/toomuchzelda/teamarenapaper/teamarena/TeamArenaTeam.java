@@ -441,7 +441,7 @@ public class TeamArenaTeam
 				colour2 = team.colour;
 			}
 
-			Firework firework = (Firework) e.getWorld().spawnEntity(e.getLocation(), EntityType.FIREWORK, CreatureSpawnEvent.SpawnReason.CUSTOM);
+			Firework firework = (Firework) e.getWorld().spawnEntity(e.getLocation(), EntityType.FIREWORK_ROCKET, CreatureSpawnEvent.SpawnReason.CUSTOM);
 			FireworkMeta meta = firework.getFireworkMeta();
 			meta.clearEffects();
 			FireworkEffect.Type type = FireworkEffect.Type.values()[MathUtils.randomMax(FireworkEffect.Type.values().length - 1)];

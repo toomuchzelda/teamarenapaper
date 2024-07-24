@@ -78,7 +78,7 @@ public class DigAndBuild extends TeamArena
 	private static final int EFF_TIME = 3 * 60 * 20; // Time until enchantments are given. Anti stall measure.
 	private static final int EFF_ACTIVE = 0;
 	private static final Map<Enchantment, Integer> DEFAULT_EFF_ENCHANTS = Map.of(
-		Enchantment.DIG_SPEED, 2
+		Enchantment.EFFICIENCY, 2
 	);
 
 	private static final int TICKS_PER_GAIN_BLOCK = 30;
@@ -192,7 +192,7 @@ public class DigAndBuild extends TeamArena
 			));
 		}
 
-		Component antiStallAction = Component.text("Faster tools", TextColor.color(PotionEffectType.FAST_DIGGING.getColor().asRGB()));
+		Component antiStallAction = Component.text("Faster tools", TextColor.color(PotionEffectType.HASTE.getColor().asRGB()));
 		return List.of(Component.text("Last to stand", NamedTextColor.GRAY),
 			effTime == EFF_ACTIVE ?
 				Component.textOfChildren(antiStallAction, Component.text(" active")) :
@@ -641,7 +641,7 @@ public class DigAndBuild extends TeamArena
 
 	private void playNoBuildEffect(Block block, Player player, IntBoundingBox noBuildZone) {
 		Location loc = block.getLocation().add(0.5d, 0.5d, 0.5d);
-		player.spawnParticle(Particle.VILLAGER_ANGRY, loc, 2);
+		player.spawnParticle(Particle.ANGRY_VILLAGER, loc, 2);
 		player.playSound(loc, Sound.ENTITY_ITEM_BREAK, SoundCategory.BLOCKS, 0.5f, 2f);
 
 		var min = noBuildZone.getMin();
@@ -655,8 +655,8 @@ public class DigAndBuild extends TeamArena
 			float yOffset = yInterval * (i / 10f);
 			for (int j = 0; j < 10; j++) {
 				float y = min.y() + yInterval * j + yOffset;
-				player.spawnParticle(Particle.REDSTONE, x, y, min.z(), 0, data);
-				player.spawnParticle(Particle.REDSTONE, x, y, max.z() + 1, 0, data);
+				player.spawnParticle(Particle.DUST, x, y, min.z(), 0, data);
+				player.spawnParticle(Particle.DUST, x, y, max.z() + 1, 0, data);
 			}
 		}
 		for (int k = 0; k < 10; k++) {
@@ -664,8 +664,8 @@ public class DigAndBuild extends TeamArena
 			float yOffset = yInterval * (k / 10f);
 			for (int j = 0; j < 10; j++) {
 				float y = min.y() + yInterval * j + yOffset;
-				player.spawnParticle(Particle.REDSTONE, min.x(), y, z, 0, data);
-				player.spawnParticle(Particle.REDSTONE, max.x() + 1, y, z, 0, data);
+				player.spawnParticle(Particle.DUST, min.x(), y, z, 0, data);
+				player.spawnParticle(Particle.DUST, max.x() + 1, y, z, 0, data);
 			}
 		}
 
@@ -687,8 +687,8 @@ public class DigAndBuild extends TeamArena
 			double minY = centerY - radius;
 			double maxY = centerY + radius;
 			// bottom and top
-			player.spawnParticle(Particle.REDSTONE, centerX, minY, centerZ, 0, data);
-			player.spawnParticle(Particle.REDSTONE, centerX, maxY, centerZ, 0, data);
+			player.spawnParticle(Particle.DUST, centerX, minY, centerZ, 0, data);
+			player.spawnParticle(Particle.DUST, centerX, maxY, centerZ, 0, data);
 			for (int j = 1; j <= 5; j++) {
 				double y1 = minY + sample * j;
 				double y2 = maxY - sample * j;
@@ -698,9 +698,9 @@ public class DigAndBuild extends TeamArena
 					double b = (360 / 10d) * i;
 					double x = centerX + effectiveRadius * Math.cos(b);
 					double z = centerZ + effectiveRadius * Math.sin(b);
-					player.spawnParticle(Particle.REDSTONE, x, y1, z, 0, data);
+					player.spawnParticle(Particle.DUST, x, y1, z, 0, data);
 					if (j != 5)
-						player.spawnParticle(Particle.REDSTONE, x, y2, z, 0, data);
+						player.spawnParticle(Particle.DUST, x, y2, z, 0, data);
 				}
 			}
 		}

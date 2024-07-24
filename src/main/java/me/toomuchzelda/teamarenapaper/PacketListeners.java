@@ -36,9 +36,11 @@ import net.minecraft.world.level.GameType;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Sound;
-import org.bukkit.craftbukkit.v1_20_R3.CraftSound;
-import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_20_R3.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.CraftSound;
+import org.bukkit.craftbukkit.entity.CraftPlayer;
+import org.bukkit.craftbukkit.inventory.CraftItemStack;
+import org.bukkit.entity.AbstractArrow;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -521,7 +523,8 @@ public class PacketListeners
 									ItemStack armorPiece = kitArmour[pair.getFirst().getIndex()];
 									net.minecraft.world.item.ItemStack nmsArmor = CraftItemStack.asNMSCopy(armorPiece);
 									// paper avoids sending unnecessary metadata in NMS, so do that here too
-									nmsArmor = nmsLiving.stripMeta(nmsArmor, false);
+									// TODO re-add this?
+									//nmsArmor = nmsLiving.stripMeta(nmsArmor, false);
 
 									Pair<EquipmentSlot, net.minecraft.world.item.ItemStack> newPair = Pair.of(pair.getFirst(), nmsArmor);
 									iter.set(newPair);

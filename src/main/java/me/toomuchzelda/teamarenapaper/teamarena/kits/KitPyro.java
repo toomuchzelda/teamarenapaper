@@ -63,13 +63,13 @@ public class KitPyro extends Kit
 					"And with explosion-proof armour, it's safer than Obama in his limousine.")
 				, Material.FLINT_AND_STEEL);
 
-		ItemStack boots = ItemBuilder.of(Material.CHAINMAIL_BOOTS).enchant(Enchantment.PROTECTION_FIRE, 5).build();
+		ItemStack boots = ItemBuilder.of(Material.CHAINMAIL_BOOTS).enchant(Enchantment.FIRE_PROTECTION, 5).build();
 
 		ItemStack leggings = ItemBuilder.of(Material.LEATHER_LEGGINGS)
-			.enchant(Enchantment.PROTECTION_EXPLOSIONS, KitOptions.pyroMolotov ? 3 : 8).build();
+			.enchant(Enchantment.BLAST_PROTECTION, KitOptions.pyroMolotov ? 3 : 8).build();
 
 		ItemStack chestplate = new ItemStack(Material.LEATHER_CHESTPLATE);
-		chestplate.addEnchantment(Enchantment.PROTECTION_PROJECTILE, 3);
+		chestplate.addEnchantment(Enchantment.PROJECTILE_PROTECTION, 3);
 
 		ItemStack helmet = new ItemStack(Material.LEATHER_HELMET);
 		ItemUtils.colourLeatherArmor(Color.RED, leggings);
@@ -84,8 +84,8 @@ public class KitPyro extends Kit
 
 		ItemStack bow = new ItemStack(Material.BOW);
 		ItemMeta bowMeta = bow.getItemMeta();
-		bowMeta.addEnchant(Enchantment.ARROW_FIRE, 1, true);
-		bowMeta.addEnchant(Enchantment.ARROW_INFINITE, 1, true);
+		bowMeta.addEnchant(Enchantment.FLAME, 1, true);
+		bowMeta.addEnchant(Enchantment.INFINITY, 1, true);
 		bow.setItemMeta(bowMeta);
 
 		if (KitOptions.pyroMolotov)
@@ -236,7 +236,7 @@ public class KitPyro extends Kit
 				}
 
 				location.add(velocity);
-				player.spawnParticle(Particle.REDSTONE, location, 1, 0, 0, 0, 0, dustOptions);
+				player.spawnParticle(Particle.DUST, location, 1, 0, 0, 0, 0, dustOptions);
 				velocity.multiply(0.99); // drag
 				velocity.subtract(acceleration);
 			}

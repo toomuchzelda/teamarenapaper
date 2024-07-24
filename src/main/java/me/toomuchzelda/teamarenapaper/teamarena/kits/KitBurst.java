@@ -397,7 +397,7 @@ public class KitBurst extends Kit
 				}
 				//If rocket is travelling through the air, so create particle trail
 				else if (tick % 2 == 0) {
-					world.spawnParticle(Particle.REDSTONE, loc, 1,
+					world.spawnParticle(Particle.DUST, loc, 1,
 							0, 0, 0, 5.5, particleOptions);
 				}
 			});

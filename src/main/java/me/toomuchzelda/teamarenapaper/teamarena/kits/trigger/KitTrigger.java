@@ -65,7 +65,7 @@ public class KitTrigger extends Kit
 
 		ItemStack helmet = new ItemStack(Material.NETHERITE_HELMET);
 		ItemMeta meta = helmet.getItemMeta();
-		meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 8, true);
+		meta.addEnchant(Enchantment.PROTECTION, 8, true);
 		helmet.setItemMeta(meta);
 
 		ItemStack chestplate = new ItemStack(Material.LEATHER_CHESTPLATE);
@@ -74,7 +74,7 @@ public class KitTrigger extends Kit
 
 		this.setArmor(helmet, chestplate, null, null);
 		ItemStack sword = new ItemStack(Material.IRON_SWORD);
-		sword.addEnchantment(Enchantment.DAMAGE_ALL, 3);
+		sword.addEnchantment(Enchantment.SHARPNESS, 3);
 		this.setItems(sword, DETONATOR_ITEM);
 
 		this.setAbilities(new TriggerAbility());

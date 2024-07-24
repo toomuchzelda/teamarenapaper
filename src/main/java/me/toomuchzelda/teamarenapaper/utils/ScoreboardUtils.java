@@ -11,94 +11,70 @@ import net.minecraft.network.protocol.game.*;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
-import org.bukkit.craftbukkit.v1_20_R3.entity.CraftEntity;
-import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_20_R3.scoreboard.CraftScoreboardTranslations;
+import org.bukkit.craftbukkit.scoreboard.CraftScoreboardTranslations;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.jetbrains.annotations.Nullable;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
 import java.util.Collection;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 
 /**
  * @author jacky
  */
 public class ScoreboardUtils {
-	private static MethodHandle TEAM_PACKET_CTOR;
 
-	public static void sendPacket(Player player, Packet<?> packet) {
+	private static void sendPacket(Player player, Packet<?> packet) {
 		PlayerUtils.sendPacket(player, packet);
-	}
-
-	private static void initTeamPacketConstructor() {
-		if (TEAM_PACKET_CTOR == null) {
-			try {
-				MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(ClientboundSetPlayerTeamPacket.class, MethodHandles.lookup());
-				TEAM_PACKET_CTOR = lookup.findConstructor(
-					ClientboundSetPlayerTeamPacket.class,
-					MethodType.methodType(void.class, String.class, int.class, Optional.class, Collection.class)
-				);
-			} catch (IllegalAccessException | NoSuchMethodException ex) {
-				throw new AssertionError("Constructor for SetPlayerTeamPacket not found", ex);
-			}
-		}
-	}
-
-	private static ClientboundSetPlayerTeamPacket.Parameters createParameter(Component displayName, NamedTextColor color,
-																			 Component prefix, Component suffix) {
-		// create a fake scoreboard team to return desired values
-		return new ClientboundSetPlayerTeamPacket.Parameters(new PlayerTeam(null, "") {
-			@Override
-			public net.minecraft.network.chat.Component getDisplayName() {
-				return PaperAdventure.asVanilla(displayName);
-			}
-
-			@Override
-			public int packOptions() {
-				return 3;
-			}
-
-			@Override
-			public Visibility getNameTagVisibility() {
-				return Visibility.NEVER;
-			}
-
-			@Override
-			public CollisionRule getCollisionRule() {
-				return CollisionRule.NEVER;
-			}
-
-			@Override
-			public ChatFormatting getColor() {
-				return ChatFormatting.valueOf(color.toString().toUpperCase(Locale.ENGLISH));
-			}
-
-			@Override
-			public net.minecraft.network.chat.Component getPlayerPrefix() {
-				return PaperAdventure.asVanilla(prefix);
-			}
-
-			@Override
-			public net.minecraft.network.chat.Component getPlayerSuffix() {
-				return PaperAdventure.asVanilla(suffix);
-			}
-		});
 	}
 
 	public static void sendTeamInfoPacket(Player player, String name, boolean update,
 										  Component displayName, NamedTextColor color,
 										  Component prefix, Component suffix, Collection<String> entries) {
-		initTeamPacketConstructor();
 		// that's crazy
-		var parameters = createParameter(displayName, color, prefix, suffix);
 		try {
-			var packet = (ClientboundSetPlayerTeamPacket) TEAM_PACKET_CTOR.invoke(name, update ? 2 : 0, Optional.of(parameters), entries);
+			var packet = ClientboundSetPlayerTeamPacket.createAddOrModifyPacket(new PlayerTeam(null, name) {
+				@Override
+				public net.minecraft.network.chat.Component getDisplayName() {
+					return PaperAdventure.asVanilla(displayName);
+				}
+
+				@Override
+				public int packOptions() {
+					return 3;
+				}
+
+				@Override
+				public Visibility getNameTagVisibility() {
+					return Visibility.NEVER;
+				}
+
+				@Override
+				public CollisionRule getCollisionRule() {
+					return CollisionRule.NEVER;
+				}
+
+				@Override
+				public ChatFormatting getColor() {
+					return PaperAdventure.asVanilla(color);
+				}
+
+				@Override
+				public net.minecraft.network.chat.Component getPlayerPrefix() {
+					return PaperAdventure.asVanilla(prefix);
+				}
+
+				@Override
+				public net.minecraft.network.chat.Component getPlayerSuffix() {
+					return PaperAdventure.asVanilla(suffix);
+				}
+
+				@Override
+				public Collection<String> getPlayers() {
+					return entries;
+				}
+			}, !update);
 			sendPacket(player, packet);
 		} catch (Throwable e) {
 			throw new RuntimeException("Failed to construct Team Info packet", e);
@@ -108,18 +84,18 @@ public class ScoreboardUtils {
 	public static void sendTeamPacket(Player player, String name, boolean leave, org.bukkit.entity.Entity... entities) {
 		String[] names = new String[entities.length];
 		for (int i = 0; i < entities.length; i++) {
-			names[i] = ((CraftEntity) entities[i]).getHandle().getScoreboardName();
+			names[i] = entities[i].getScoreboardEntryName();
 		}
 		sendTeamPacket(player, name, leave, names);
 	}
 
 
 	public static void sendTeamPacket(Player player, String name, boolean leave, String... names) {
-		initTeamPacketConstructor();
-
 		try {
 			Collection<String> collection = List.of(names);
-			var packet = (ClientboundSetPlayerTeamPacket) TEAM_PACKET_CTOR.invoke(name, leave ? 4 : 3, Optional.empty(), collection);
+			var packet = ClientboundSetPlayerTeamPacket.createMultiplePlayerPacket(
+				new PlayerTeam(null, name), // only team.getName() is used
+				collection, leave ? ClientboundSetPlayerTeamPacket.Action.REMOVE : ClientboundSetPlayerTeamPacket.Action.ADD);
 			sendPacket(player, packet);
 		} catch (Throwable e) {
 			throw new RuntimeException("Failed to construct Team packet", e);
@@ -129,7 +105,7 @@ public class ScoreboardUtils {
 	public static void sendObjectivePacket(Player player, String objective, Component displayName, boolean update) {
 		var fakeObjective = new Objective(null, objective, ObjectiveCriteria.DUMMY,
 				PaperAdventure.asVanilla(displayName), ObjectiveCriteria.RenderType.INTEGER, false ,null);
-		var packet = new ClientboundSetObjectivePacket(fakeObjective, update ? 2 : 0);
+		var packet = new ClientboundSetObjectivePacket(fakeObjective, update ? ClientboundSetObjectivePacket.METHOD_CHANGE : ClientboundSetObjectivePacket.METHOD_ADD);
 		sendPacket(player, packet);
 	}
 
@@ -152,7 +128,7 @@ public class ScoreboardUtils {
 
 	public static void sendSetScorePacket(Player player, String objective, String entry, int score,
 										  @Nullable Component numberFormat) {
-		sendPacket(player, new ClientboundSetScorePacket(entry, objective, score, null,
-			numberFormat == null ? BlankFormat.INSTANCE : new FixedFormat(PaperAdventure.asVanilla(numberFormat))));
+		sendPacket(player, new ClientboundSetScorePacket(entry, objective, score, Optional.empty(),
+			numberFormat == null ? Optional.of(BlankFormat.INSTANCE) : Optional.of(new FixedFormat(PaperAdventure.asVanilla(numberFormat)))));
 	}
 }
