@@ -72,11 +72,17 @@ public class CommandKit extends CustomCommand {
                 if (args.length == 1) {
                     Kit kit = Main.getGame().findKit(args[0]);
                     if (kit != null) {
+						if (!KitFilter.calculateKits(Main.getGame(), player).contains(kit)) {
+							player.sendMessage(Component.text("Kit " + kit.getName() + " has been disabled!", TextColors.ERROR_RED));
+							return;
+						}
                         //sender.sendMessage(Component.text("Did you mean: /kit set " + kit.getName() + "?").color(NamedTextColor.YELLOW));
 						Main.getGame().selectKit(player, kit);
                     }
                 }
-                showUsage(sender);
+				else {
+					showUsage(sender);
+				}
             }
         }
     }
