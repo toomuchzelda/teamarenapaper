@@ -154,6 +154,7 @@ public class PacketListeners
 									list.add(p);
 								list.add(packet);
 
+								// Hack - the packet that fired this listener is sent in the listener declared below
 								event.setCancelled(true);
 								PlayerUtils.sendPacket(viewer, null, PlayerUtils.PacketCache.createBundle(list));
 							}
@@ -183,23 +184,7 @@ public class PacketListeners
 				List<PacketContainer> toBundle = new ArrayList<>(attachedEntities.size());
 				final Player viewer = event.getPlayer();
 				for(AttachedPacketEntity attachedE : attachedEntities) {
-					if(attachedE.getRealViewers().contains(viewer)) {
-						if (!attachedE.sendHeadRotPackets && packet.getType() == PacketType.Play.Server.ENTITY_HEAD_ROTATION) {
-							continue;
-						}
-
-						PacketContainer entityPacket = packet.shallowClone();
-						entityPacket.getIntegers().write(0, attachedE.getId());
-
-						if(event.getPacketType() == PacketType.Play.Server.ENTITY_TELEPORT) {
-							//adjust the entity's Y position
-							double y = packet.getDoubles().read(1);
-							y += attachedE.getYOffset();
-							entityPacket.getDoubles().write(1, y);
-						}
-
-						toBundle.add(entityPacket);
-					}
+					attachedE.onPlayerMovePacket(packet, viewer, toBundle);
 				}
 
 				// Send immediately

@@ -101,7 +101,7 @@ public class HideAndSeek extends TeamArena {
 
 				new PacketFlyingPoint(
 					living,
-					MathUtils.randomRange(2d, 13d), MathUtils.randomRange(3d, 10d),
+					MathUtils.randomRange(2d, 13d),  MathUtils.randomRange(3d, 10d),
 					MathUtils.randomRange(0.02d, 0.5d), MathUtils.randomRange(0.85, 1d),
 					MathUtils.randomRange(0.2, 1),
 					Math.max(1, MathUtils.randomMax(5 * 20))
@@ -275,7 +275,7 @@ public class HideAndSeek extends TeamArena {
 		else {
 			assert CompileAsserts.OMIT || currentTick >= this.gameLiveTime + this.hideTimeTicks;
 
-			if (--this.remainingSeekTime <= 0) {
+			if (--this.remainingSeekTime <= 0 && !CommandDebug.ignoreWinConditions) {
 				assert CompileAsserts.OMIT || this.remainingSeekTime == 0;
 
 				Bukkit.broadcast(HIDERS_WIN);
@@ -308,33 +308,6 @@ public class HideAndSeek extends TeamArena {
 						player.playSound(player, Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.PLAYERS, 1f, pitch);
 					});
 				}
-
-				/*for (LivingEntity living : this.gameWorld.getLivingEntities()) {
-					if (!this.allowedEntities.contains(living.getType())) continue;
-
-					// TODO maybe do with packets
-					net.minecraft.world.entity.LivingEntity nmsLiving = ((CraftLivingEntity) living).getHandle();
-					RandomSource random = nmsLiving.random;
-					final double doChange = random.nextDouble();
-					if (doChange <= 0.025) {
-						Location loc = living.getLocation();
-						Vector eyeLoc = living.getEyeLocation().toVector();
-						Block block = living.getTargetBlock(null, 100);
-
-						final double maxOffDist = 15d;
-						double distX = ((random.nextDouble() - 0.5) * 2d) * maxOffDist;
-						double distY = ((random.nextDouble() - 0.5) * 2d) * maxOffDist;
-						double distZ = ((random.nextDouble() - 0.5) * 2d) * maxOffDist;
-
-						Vector targetPoint = block.getLocation().toVector().add(new Vector(distX, distY, distZ));
-						targetPoint.subtract(eyeLoc);
-
-						loc.setDirection(targetPoint);
-
-						living.teleport(loc, TeleportFlag.Relative.X,
-							TeleportFlag.Relative.Y, TeleportFlag.Relative.Z);
-					}
-				}*/
 			}
 		}
 

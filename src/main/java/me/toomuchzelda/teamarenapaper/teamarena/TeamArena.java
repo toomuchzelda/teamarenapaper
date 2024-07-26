@@ -157,6 +157,7 @@ public abstract class TeamArena
 	public final MiniMapManager miniMap;
 	public final GraffitiManager graffiti;
 	private final KillStreakManager killStreakManager;
+	protected final FakeBlockManager fakeBlockManager;
 
 	private static final String[] BUY_SIGN_MESSAGES = new String[] {
 		"The ancient relic of 2013 crumbles as you move your hand near it.",
@@ -281,6 +282,7 @@ public abstract class TeamArena
 		miniMap = new MiniMapManager(this);
 		graffiti = new GraffitiManager(this);
 		killStreakManager = new KillStreakManager();
+		this.fakeBlockManager = new FakeBlockManager(this);
 
 		registerKits();
 
@@ -1371,6 +1373,7 @@ public abstract class TeamArena
 		miniMap.onGameCleanup();
 
 		this.killStreakManager.unregister();
+		this.fakeBlockManager.removeAll(false);
 
 		BuildingManager.cleanUp();
 		BuildingOutlineManager.cleanUp();
@@ -2273,6 +2276,10 @@ public abstract class TeamArena
 
 	public Collection<String> getTabKitList() {
 		return kits.keySet();
+	}
+
+	public FakeBlockManager getFakeBlockManager() {
+		return this.fakeBlockManager;
 	}
 
 	public abstract Component getGameName();

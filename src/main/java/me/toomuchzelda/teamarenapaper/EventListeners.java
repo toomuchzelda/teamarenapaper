@@ -8,6 +8,7 @@ import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
+import io.papermc.paper.event.packet.PlayerChunkLoadEvent;
 import io.papermc.paper.event.player.*;
 import me.toomuchzelda.teamarenapaper.explosions.EntityExplosionInfo;
 import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
@@ -961,6 +962,11 @@ public class EventListeners implements Listener
 			MetadataViewer metadataViewer = pinfo.getMetadataViewer();
 			metadataViewer.setAllDirty(event.getEntity());
 		}
+	}
+
+	@EventHandler
+	public void playerChunkLoad(PlayerChunkLoadEvent event) {
+		Main.getGame().getFakeBlockManager().injectFakeBlocks(event);
 	}
 
 	/*@EventHandler

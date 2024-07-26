@@ -194,7 +194,7 @@ public class PacketEntity
 	}
 
 	public void setViewerRule(@Nullable Predicate<Player> rule) {
-		this.viewerRule = rule;
+		this.viewerRule = rule; // Re-evaluated on tick
 	}
 
 	private Component customNameCache;

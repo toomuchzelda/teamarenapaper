@@ -63,7 +63,7 @@ public class KitHider extends Kit {
 
 		@Override
 		public void giveAbility(Player player) {
-			disguiseMap.put(player, new HiderDisguise(player));
+			disguiseMap.put(player, new HiderDisguise(player, this.game));
 		}
 
 		@Override

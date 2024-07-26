@@ -18,10 +18,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.hideandseek.PacketFlyingPoint;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
-import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
-import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import me.toomuchzelda.teamarenapaper.utils.*;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
@@ -30,7 +27,9 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
 import net.minecraft.network.protocol.game.ClientboundHurtAnimationPacket;
 import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
+import org.bukkit.craftbukkit.v1_20_R3.block.data.CraftBlockData;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
@@ -454,6 +453,33 @@ public class CommandDebug extends CustomCommand {
 					}
 				}
 			}
+			case "fakeBlock" -> {
+				if (args.length < 3)
+					throw throwUsage("fakeBlock add/remove MATERIAL/KEY");
+
+				if (args[1].equalsIgnoreCase("add")) {
+
+					Block targetBlock = player.getTargetBlock(null, 5);
+					Material desiredMat = Material.valueOf(args[2]);
+					FakeBlockManager fbManager = Main.getGame().getFakeBlockManager();
+
+					long key = fbManager.setFakeBlock(new BlockCoords(targetBlock),
+						((CraftBlockData) desiredMat.createBlockData()).getState(), viewer -> viewer == player);
+
+					Bukkit.broadcastMessage("Key is " + key);
+				}
+				else if (args[1].equalsIgnoreCase("remove")) {
+
+					Block targetBlock = player.getTargetBlock(null, 5);
+					long key = Long.parseLong(args[2]);
+					FakeBlockManager fbManager = Main.getGame().getFakeBlockManager();
+
+					if(fbManager.removeFakeBlock(new BlockCoords(targetBlock), key))
+						player.sendMessage("Successfully removed");
+					else
+						player.sendMessage("Did not remove anything");
+				}
+			}
 			default -> showUsage(sender);
 		}
 	}
@@ -463,7 +489,7 @@ public class CommandDebug extends CustomCommand {
 		if (args.length == 1) {
 			return Arrays.asList("hide", "gui", "guitest", "signtest", "game", "setrank", "setteam", "setkit",
 				"votetest", "draw", "graffititest", "respawn", "fakehitbox", "testmotd", "arrowMarker", "packetcache", "showSpawns",
-				"flyingpoint");
+				"flyingpoint", "fakeBlock");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");
