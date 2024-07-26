@@ -31,13 +31,11 @@ import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.GameType;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.craftbukkit.CraftSound;
-import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -319,7 +317,8 @@ public class PacketListeners
 								disguise.disguisedGameProfile.getId(), entry.latency(), false,
 								nativeGameMode, WrappedGameProfile.fromHandle(disguise.disguisedGameProfile),
 								WrappedChatComponent.fromHandle(entry.displayName()),
-								(WrappedProfilePublicKey.WrappedProfileKeyData) null);
+								//(WrappedProfilePublicKey.WrappedProfileKeyData) null);
+								(WrappedRemoteChatSessionData) null);
 
 							newList.set(originalIndex, replacementData);
 
@@ -333,7 +332,8 @@ public class PacketListeners
 						PlayerInfoData tabListData = new PlayerInfoData(tabListProfile.getId(), entry.latency(),
 								entry.listed(), nativeGameMode, WrappedGameProfile.fromHandle(tabListProfile),
 								wrappedDisplayName,
-								(WrappedProfilePublicKey.WrappedProfileKeyData) null);
+								//(WrappedProfilePublicKey.WrappedProfileKeyData) null);
+								(WrappedRemoteChatSessionData) null);
 
 						newList.add(tabListData);
 					}
@@ -497,7 +497,7 @@ public class PacketListeners
 
 							//replace the items in the packet accordingly
 							var iter = packet.getSlots().listIterator();
-							LivingEntity nmsLiving = ((CraftPlayer) equippingPlayer).getHandle();
+							//LivingEntity nmsLiving = ((CraftPlayer) equippingPlayer).getHandle();
 							while(iter.hasNext()) {
 								Pair<EquipmentSlot, net.minecraft.world.item.ItemStack> pair = iter.next();
 
@@ -546,34 +546,6 @@ public class PacketListeners
 		//ProtocolLibrary.getProtocolManager().addPacketListener(new NoChatKeys());
 	}
 
-	private static class NoChatKeys extends PacketAdapter {
-		NoChatKeys() {
-			super(Main.getPlugin(), /*PacketType.Play.Server.PLAYER_INFO,*/
-					PacketType.Play.Client.CHAT,
-					PacketType.Play.Client.CHAT_COMMAND);
-		}
-
-		@Override
-		public void onPacketReceiving(PacketEvent event) {
-			var packet = event.getPacket();
-
-			if (packet.getType() == PacketType.Play.Client.CHAT ||
-					packet.getType() == PacketType.Play.Client.CHAT_COMMAND) {
-				event.setCancelled(true);
-
-				final String originalMessage;
-				if(event.getPacketType() == PacketType.Play.Client.CHAT)
-					originalMessage = event.getPacket().getStrings().read(0);
-				else
-					originalMessage = "/" + event.getPacket().getStrings().read(0);
-
-				Bukkit.getScheduler().runTask(Main.getPlugin(), bukkitTask -> {
-					event.getPlayer().chat(originalMessage);
-				});
-			}
-		}
-	}
-
 	public static PlayerInfoData copyPlayerInfoEntry(ClientboundPlayerInfoUpdatePacket.Entry entry, boolean stripChat) {
 		EnumWrappers.NativeGameMode nativeGameMode = getNativeGameMode(entry.gameMode());
 		WrappedGameProfile wrappedGameProfile = WrappedGameProfile.fromHandle(entry.profile());
@@ -584,7 +556,8 @@ public class PacketListeners
 
 		return new PlayerInfoData(entry.profileId(), entry.latency(), entry.listed(),
 				nativeGameMode, wrappedGameProfile, wrappedComponent,
-				stripChat ? null : new WrappedProfilePublicKey.WrappedProfileKeyData(entry.chatSession()));
+				//stripChat ? null : new WrappedProfilePublicKey.WrappedProfileKeyData(entry.chatSession()));
+				stripChat ? null : new WrappedRemoteChatSessionData(entry.chatSession()));
 	}
 
 	public static EnumWrappers.NativeGameMode getNativeGameMode(GameType nmsType) {

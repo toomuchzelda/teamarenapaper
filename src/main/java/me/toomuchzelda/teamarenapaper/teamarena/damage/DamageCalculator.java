@@ -1,15 +1,18 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.entity.CraftEntity;
+import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
-
-import java.util.Map;
 
 public class DamageCalculator
 {
@@ -56,7 +59,8 @@ public class DamageCalculator
 
 		//add enchantments
 		if(victim instanceof LivingEntity livingVictim) {
-			double enchDamage = DamageCalculator.calcItemEnchantDamage(weapon, livingVictim);
+			double enchDamage = DamageCalculator.calcItemEnchantDamage(attacker.getWorld(), weapon, livingVictim,
+				damageType, itemDamage);
 			results[1] = enchDamage;
 			itemDamage += enchDamage;
 
@@ -127,12 +131,20 @@ public class DamageCalculator
 		return calcEnchantDefensePointsForDamageTypeOnLivingEntity(type, victim) / 25d;
 	}
 
-	public static double calcItemEnchantDamage(ItemStack item, LivingEntity victim) {
-		double d = 0d;
+	public static double calcItemEnchantDamage(World world, ItemStack item, LivingEntity victim, DamageType type, double base) {
+		double d = EnchantmentHelper.modifyDamage(
+			((CraftWorld) world).getHandle(),
+			CraftItemStack.asNMSCopy(item),
+			((CraftEntity) victim).getHandle(),
+			type.getDamageSource(),
+			(float) base
+		);
 
-		for(Map.Entry<Enchantment, Integer> ench : item.getEnchantments().entrySet()) {
+		d = Math.max(0d, d - base); // modify damage returns itemBase + enchant
+
+		/*for(Map.Entry<Enchantment, Integer> ench : item.getEnchantments().entrySet()) {
 			d += DamageNumbers.getEnchantmentDamage(ench.getKey(), ench.getValue(), victim);
-		}
+		}*/
 
 		return d;
 	}

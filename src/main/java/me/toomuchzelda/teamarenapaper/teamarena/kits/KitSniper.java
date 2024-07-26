@@ -29,6 +29,7 @@ import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.EquipmentSlotGroup;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -62,9 +63,9 @@ public class KitSniper extends Kit {
 			.build();
 
 	public static final AttributeModifier KNIFE_SPEED = new AttributeModifier(
-			UUID.fromString("743e8aec-10f7-44c7-b0b0-cf1f32634c72"),
-			"Sniper Knife", 0.2, //20% = speed 1
-			AttributeModifier.Operation.ADD_SCALAR, EquipmentSlot.HAND);
+			new NamespacedKey(Main.getPlugin(), "sniper_knife_speed"),
+			0.2, //20% = speed 1
+			AttributeModifier.Operation.ADD_SCALAR, EquipmentSlotGroup.HAND);
 
 	public KitSniper() {
 		super("Sniper", "Be careful when sniping... Too much movement and your aim will worsen. " +
@@ -232,7 +233,7 @@ public class KitSniper extends Kit {
 					Main.getGame().queueDamage(dEvent);
 
 					//Hitmarker Sound effect
-					shooter.playSound(shooter.getLocation(), Sound.ENTITY_ITEM_FRAME_PLACE, 2f, 2.0f);
+					shooter.playSound(shooter, Sound.ENTITY_ITEM_FRAME_PLACE, 2f, 2.0f);
 				}
 			}
 		}

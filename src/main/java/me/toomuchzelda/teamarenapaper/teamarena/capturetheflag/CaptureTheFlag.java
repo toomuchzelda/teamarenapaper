@@ -48,7 +48,9 @@ public class CaptureTheFlag extends TeamArena
 	public HashMap<ArmorStand, Flag> flagStands; // this too
 	public HashMap<Player, Set<Flag>> flagHolders = new HashMap<>();
 	public HashSet<String> flagItems;
-	protected static final AttributeModifier SPEED_ATTR = new AttributeModifier("CTFSpeedBoost", 0.2d, AttributeModifier.Operation.ADD_SCALAR);
+	protected static final AttributeModifier SPEED_ATTR = new AttributeModifier(
+		new NamespacedKey(Main.getPlugin(), "ctf_speed_boost"),
+		0.2d, AttributeModifier.Operation.ADD_SCALAR);
 	protected Set<Player> currentSpeeders = new HashSet<>();
 	protected int capsToWin;
 	public static final int TIME_TO_SPEED_BOOST = 5 * 60 * 20;

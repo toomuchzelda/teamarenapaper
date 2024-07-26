@@ -9,10 +9,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
-import org.bukkit.Color;
-import org.bukkit.Material;
-import org.bukkit.Sound;
-import org.bukkit.SoundCategory;
+import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.enchantments.Enchantment;
@@ -41,8 +38,8 @@ public class KitDwarf extends Kit
 			if(slowness > 1)
 				slowness = 1;
 
-			AttributeModifier modifier = new AttributeModifier("DwarfSlowness" + i, slowness,
-					AttributeModifier.Operation.MULTIPLY_SCALAR_1);
+			AttributeModifier modifier = new AttributeModifier(new NamespacedKey(Main.getPlugin(), "dwarf_slowness" + i),
+				slowness, AttributeModifier.Operation.MULTIPLY_SCALAR_1);
 
 			LEVELS_TO_MODIFIER[i] = modifier;
 		}

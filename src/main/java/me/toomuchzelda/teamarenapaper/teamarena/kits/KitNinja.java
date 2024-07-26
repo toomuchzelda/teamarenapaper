@@ -14,6 +14,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
@@ -32,7 +33,8 @@ import java.util.Map;
 
 public class KitNinja extends Kit
 {
-	private static final AttributeModifier NINJA_SPEED_MODIFIER = new AttributeModifier("Ninja Speed", 0.4, AttributeModifier.Operation.MULTIPLY_SCALAR_1);
+	private static final AttributeModifier NINJA_SPEED_MODIFIER = new AttributeModifier(new NamespacedKey(Main.getPlugin(), "ninja_speed"),
+		0.4, AttributeModifier.Operation.MULTIPLY_SCALAR_1);
 	private static final Component NO_SPEED_WITH_FLAG = Component.text( "The weight of the flag bears down on you. You're no longer fast!", NamedTextColor.LIGHT_PURPLE);
 
 	private static final ItemStack PEARL = ItemBuilder.of(Material.ENDER_PEARL)

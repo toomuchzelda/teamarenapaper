@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.LivingEntity;
@@ -128,10 +129,6 @@ public class DamageNumbers
 
 	public static double getCritDamage(double d) {
 		return d * 1.5d;
-	}
-
-	public static double getEnchantmentDamage(Enchantment enchantment, int levels, LivingEntity victim) {
-		return (double) enchantment.getDamageIncrease(levels, victim.getType());
 	}
 
 	public static double getBaseDefensePoints(Material mat) {
