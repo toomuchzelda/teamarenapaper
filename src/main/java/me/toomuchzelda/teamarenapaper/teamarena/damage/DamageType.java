@@ -94,6 +94,9 @@ public class DamageType {
     public static final DamageType FIRE_TICK = new DamageType("Fire Tick", "%Killed% was burned alive").setNoKnockback().setFire()
             .setIgnoreArmor();
 
+	public static final DamageType CAMPFIRE = new DamageType("Campfire", "%Killed% got too cozy at a campfire")
+		.setNoKnockback().setBurn();
+
     public static final DamageType FISHING_HOOK = new DamageType("Fishing Hook", "%Killed% was killed by %Killer%'s... Fishing rod?");
 
     public static final DamageType FLY_INTO_WALL = new DamageType("Flew into Wall", "%Killed% still hadn't gotten the hang of flying")
@@ -354,6 +357,7 @@ public class DamageType {
 		FIRE_ASPECT.setDamageSource(nmsDamageSources.onFire());
 		FIRE_BOW.setDamageSource(nmsDamageSources.onFire());
 		FIRE_TICK.setDamageSource(nmsDamageSources.onFire());
+		CAMPFIRE.setDamageSource(nmsDamageSources.campfire());
 		FLY_INTO_WALL.setDamageSource(nmsDamageSources.flyIntoWall());
 		FREEZE.setDamageSource(nmsDamageSources.freeze());
 		LAVA.setDamageSource(nmsDamageSources.lava());
@@ -411,6 +415,8 @@ public class DamageType {
                 return FALL;
             case FIRE:
                 return FIRE;
+			case CAMPFIRE:
+				return CAMPFIRE;
             case FIRE_TICK:
                 return FIRE_TICK;
             case MELTING:

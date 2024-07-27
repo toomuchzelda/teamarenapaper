@@ -13,6 +13,8 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
+import net.minecraft.server.level.ChunkMap;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -199,8 +201,8 @@ public class Flag
 
 	public Packet<ClientGamePacketListener> getSpawnPacket() {
 		LivingEntity nmsLivingStand = ((CraftArmorStand) stand).getHandle();
-		var world = ((CraftWorld) stand.getWorld()).getHandle();
-		var tracker = Objects.requireNonNull(world.getChunkSource().chunkMap.entityMap.get(stand.getEntityId()));
+		ServerLevel world = ((CraftWorld) stand.getWorld()).getHandle();
+		ChunkMap.TrackedEntity tracker = Objects.requireNonNull(world.getChunkSource().chunkMap.entityMap.get(stand.getEntityId()));
 		return nmsLivingStand.getAddEntityPacket(tracker.serverEntity);
 	}
 

@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
@@ -8,10 +9,9 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.Style;
-import org.bukkit.Bukkit;
-import org.bukkit.EntityEffect;
-import org.bukkit.Material;
-import org.bukkit.Sound;
+import org.bukkit.*;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -51,15 +51,27 @@ public class KitJuggernaut extends Kit {
     }
 
     private static class JuggernautAbility extends Ability {
+		private static final AttributeModifier BIG_MODIFIER = new AttributeModifier(
+			new NamespacedKey(Main.getPlugin(), "jugg_big_scale"), 0.3333d, AttributeModifier.Operation.MULTIPLY_SCALAR_1
+		);
+		private static final AttributeModifier SNEAK_SPEED_MODIFIER = new AttributeModifier(
+			new NamespacedKey(Main.getPlugin(), "jugg_sneak_speed"), 0.3, AttributeModifier.Operation.ADD_NUMBER
+		);
 
         @Override
         public void giveAbility(Player player) {
             player.setFoodLevel(6);
+			player.getAttribute(Attribute.GENERIC_SCALE).addModifier(BIG_MODIFIER);
+			player.getAttribute(Attribute.PLAYER_SNEAKING_SPEED).addModifier(SNEAK_SPEED_MODIFIER);
+			FakeHitboxManager.setHidden(player, true);
         }
 
         @Override
         public void removeAbility(Player player) {
             player.setFoodLevel(20);
+			player.getAttribute(Attribute.GENERIC_SCALE).removeModifier(BIG_MODIFIER);
+			player.getAttribute(Attribute.PLAYER_SNEAKING_SPEED).removeModifier(SNEAK_SPEED_MODIFIER);
+			FakeHitboxManager.setHidden(player, false);
 			player.setCooldown(BATON.getType(), 0);
         }
 

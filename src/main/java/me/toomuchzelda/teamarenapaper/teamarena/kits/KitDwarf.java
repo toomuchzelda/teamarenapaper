@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
@@ -81,6 +82,7 @@ public class KitDwarf extends Kit
 	{
 		@Override
 		public void removeAbility(Player player) {
+			FakeHitboxManager.setHidden(player, false);
 			//they should only have 1 of these attributemodifiers on at a time, but admin abuse does things
 			for(AttributeModifier modifier : player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).getModifiers()) {
 				if(modifier.getName().startsWith(MODIFIER_NAME)) {

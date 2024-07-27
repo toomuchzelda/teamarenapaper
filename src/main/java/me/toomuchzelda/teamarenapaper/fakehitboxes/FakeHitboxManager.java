@@ -102,8 +102,10 @@ public class FakeHitboxManager
 	}
 
 	public static void tick() {
-		for (FakeHitbox box : FAKE_HITBOXES.values()) {
-			box.tick();
+		if (ACTIVE) {
+			for (FakeHitbox box : FAKE_HITBOXES.values()) {
+				box.tick();
+			}
 		}
 	}
 
@@ -122,7 +124,10 @@ public class FakeHitboxManager
 		}
 	}
 
+	// Whether they have the invisiblity effect
 	public static void setVisibility(boolean visibility) {
+		if (!ACTIVE) return;
+
 		if(show != visibility) {
 			show = visibility;
 			for(var entry : FAKE_HITBOXES.values()) {
@@ -130,5 +135,11 @@ public class FakeHitboxManager
 				entry.invalidateViewers();
 			}
 		}
+	}
+
+	// Whether they are spawned to clients
+	public static void setHidden(Player player, boolean hidden) {
+		if (ACTIVE)
+			FAKE_HITBOXES.get(player).setHidden(hidden);
 	}
 }

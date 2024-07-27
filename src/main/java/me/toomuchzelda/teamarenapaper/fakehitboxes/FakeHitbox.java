@@ -18,6 +18,8 @@ import net.minecraft.world.entity.Pose;
 import net.minecraft.world.phys.AABB;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.craftbukkit.CraftWorld;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.EntityType;
@@ -69,6 +71,7 @@ public class FakeHitbox
 	//if each of these fake players is colliding with a wall
 	private final boolean[] collidings;
 	private int lastPoseChangeTime;
+	private boolean hidden = false;
 
 	public FakeHitbox(Player owner) {
 		this.owner = owner;
@@ -164,7 +167,10 @@ public class FakeHitbox
 
 			if (fakeHitboxViewer.isSeeingRealPlayer) {
 				boolean seeHitboxes;
-				if (this.owner.getVehicle() != null)
+				if (this.hidden) {
+					seeHitboxes = false;
+				}
+				else if (this.owner.getVehicle() != null)
 					seeHitboxes = false;
 				else {
 					double distSqr = playerViewer.getLocation().distanceSquared(ownerLoc);
@@ -200,12 +206,13 @@ public class FakeHitbox
 		Vector currentPos = newLocation.toVector();
 		//get bounding box dimensions based on new, not current pose
 		EntityDimensions nmsDimensions = ((CraftPlayer) this.owner).getHandle().getDimensions(Pose.values()[bukkitPose.ordinal()]);
+		final double scale = getScale(this.owner);
 		boolean[] updateThisBox = new boolean[4];
 		boolean updateAny = updateClients;
 		int currentTick = TeamArena.getGameTick();
 		for(int i = 0; i < 4; i++) {
 			updateThisBox[i] = updateClients;
-			calcBoxPosition(newPos, boxPose, newLocation, direction, i);
+			calcBoxPosition(newPos, boxPose, newLocation, direction, scale, i);
 
 			//check for collision with blocks. put in same position as real player if there is a collision
 			// don't want fake hitboxes to peek through walls and such
@@ -252,13 +259,14 @@ public class FakeHitbox
 	 * Calculate new box number position. Take in Vectors from caller instead of constructing new ones to
 	 * reduce Object allocation.
 	 */
-	private static void calcBoxPosition(Vector container, HitboxPose pose, Location ownerLoc, Vector ownerDir, int boxNum) {
+	private static void calcBoxPosition(Vector container, HitboxPose pose, Location ownerLoc, Vector ownerDir, double scale,
+										int boxNum) {
 		if(pose == HitboxPose.OTHER) {
 			Vector offset = OFFSETS[boxNum];
 
-			container.setX(ownerLoc.getX() + offset.getX());
+			container.setX(ownerLoc.getX() + (offset.getX() * scale));
 			container.setY(ownerLoc.getY());
-			container.setZ(ownerLoc.getZ() + offset.getZ());
+			container.setZ(ownerLoc.getZ() + (offset.getZ() * scale));
 		}
 		else {
 			MathUtils.copyVector(container, ownerDir);
@@ -271,11 +279,11 @@ public class FakeHitbox
 				if(boxNum >= 2)
 					boxNum++;
 
-				mult = ((double) boxNum - 2) * 0.36d;
+				mult = ((double) boxNum - 2) * (0.36d * scale);
 			}
 			else { //riptiding
 				//player's real hitbox is at their feet.
-				mult = ((double) boxNum + 1) * 0.36d;
+				mult = ((double) boxNum + 1) * (0.36d * scale);
 			}
 
 			container.multiply(mult);
@@ -321,6 +329,10 @@ public class FakeHitbox
 			this.metadataList.get(0).setRawValue(MetaIndex.BASE_BITFIELD_INVIS_MASK);
 		}
 		this.updateMetadataPackets();
+	}
+
+	void setHidden(boolean hidden) {
+		this.hidden = hidden;
 	}
 
 	/**
@@ -431,6 +443,15 @@ public class FakeHitbox
 		else {
 			return Component.space();
 		}
+	}
+
+	private static double getScale(Player player) {
+		double scale = 1d;
+		AttributeInstance instance = player.getAttribute(Attribute.GENERIC_SCALE);
+		if (instance != null)
+			scale = instance.getValue();
+
+		return scale;
 	}
 
 	private static class FakePlayer {
