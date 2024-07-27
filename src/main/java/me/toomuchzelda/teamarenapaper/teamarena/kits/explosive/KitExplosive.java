@@ -455,7 +455,7 @@ public class KitExplosive extends Kit
 			//Throwing the grenade and activating it
 			Vector vel = thrower.getLocation().getDirection().multiply(0.8);
 			grenadeDrop.setVelocity(vel);
-			world.playSound(grenadeDrop, Sound.ENTITY_CREEPER_PRIMED, 1.0f, 1.1f);
+			world.playSound(grenadeDrop, Sound.ENTITY_CREEPER_PRIMED, 0.85f, 1.1f);
 
 			currActiveGrenades.add(new GrenadeInfo(grenadeDrop, teamColor, TeamArena.getGameTick()));
 

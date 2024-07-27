@@ -25,6 +25,7 @@ public class KitDwarf extends Kit
 	public static final int MAX_LEVELS = 20;
 	public static final int LEVELS_PER_ENCHANT = 3;
 	public static final int MAX_PROTECTION = 5;
+	private static final String MODIFIER_NAME = "dwarf_slowness";
 
 	private static final AttributeModifier[] LEVELS_TO_MODIFIER = new AttributeModifier[MAX_LEVELS + 1];
 
@@ -38,7 +39,7 @@ public class KitDwarf extends Kit
 			if(slowness > 1)
 				slowness = 1;
 
-			AttributeModifier modifier = new AttributeModifier(new NamespacedKey(Main.getPlugin(), "dwarf_slowness" + i),
+			AttributeModifier modifier = new AttributeModifier(new NamespacedKey(Main.getPlugin(), MODIFIER_NAME + i),
 				slowness, AttributeModifier.Operation.MULTIPLY_SCALAR_1);
 
 			LEVELS_TO_MODIFIER[i] = modifier;
@@ -82,7 +83,7 @@ public class KitDwarf extends Kit
 		public void removeAbility(Player player) {
 			//they should only have 1 of these attributemodifiers on at a time, but admin abuse does things
 			for(AttributeModifier modifier : player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).getModifiers()) {
-				if(modifier.getName().startsWith("DwarfSlowness")) {
+				if(modifier.getName().startsWith(MODIFIER_NAME)) {
 					player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).removeModifier(modifier);
 				}
 			}
@@ -92,7 +93,7 @@ public class KitDwarf extends Kit
 		@Override // Reduce knockback taken if shifting
 		public void onAttemptedDamage(DamageEvent event) {
 			if(event.hasKnockback() && event.getPlayerVictim().isSneaking()) {
-				event.setKnockback(event.getKnockback().multiply(0.6d));
+				event.setKnockback(event.getKnockback().multiply(0.7d));
 			}
 		}
 

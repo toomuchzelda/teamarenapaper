@@ -9,6 +9,7 @@ import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.entity.*;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
@@ -229,7 +230,18 @@ public class CustomExplosion
 		kbStrength = this.knockbackStrength * kbStrength;
 
 		if(victim instanceof LivingEntity living) {
-			kbStrength *= living.getAttribute(Attribute.GENERIC_EXPLOSION_KNOCKBACK_RESISTANCE).getValue();
+			double kbRes;
+			AttributeInstance explosionKbResAttr = living.getAttribute(Attribute.GENERIC_EXPLOSION_KNOCKBACK_RESISTANCE);
+			if (explosionKbResAttr != null) {
+				kbRes = explosionKbResAttr.getValue();
+				kbRes = MathUtils.clamp(0d, 1d, kbRes); // just to be safe
+				kbRes = 1 - kbRes;
+			}
+			else {
+				kbRes = 1d;
+			}
+
+			kbStrength *= kbRes;
 		}
 
 		Vector currentVel = victim.getVelocity();
