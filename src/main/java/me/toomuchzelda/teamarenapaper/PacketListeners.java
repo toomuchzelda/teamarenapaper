@@ -152,9 +152,9 @@ public class PacketListeners
 									list.add(p);
 								list.add(packet);
 
-								// Hack - the packet that fired this listener is sent in the listener declared below
+								// Hack - cancel this as we included this event packet in the bundle
 								event.setCancelled(true);
-								PlayerUtils.sendPacket(viewer, null, PlayerUtils.PacketCache.createBundle(list));
+								PlayerUtils.sendPacket(viewer, list);
 							}
 						}
 					}
@@ -186,12 +186,7 @@ public class PacketListeners
 				}
 
 				// Send immediately
-				if (toBundle.size() > 1) {
-					PlayerUtils.sendPacket(viewer, null, PlayerUtils.PacketCache.createBundle(toBundle));
-				}
-				else if (toBundle.size() == 1) {
-					PlayerUtils.sendPacket(viewer, null, toBundle.getFirst());
-				}
+				PlayerUtils.sendPacket(viewer, toBundle);
 			}
 		});
 

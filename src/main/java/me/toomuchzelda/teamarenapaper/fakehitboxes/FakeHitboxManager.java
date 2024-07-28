@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.fakehitboxes;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
+import me.toomuchzelda.teamarenapaper.utils.PacketSender;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -104,7 +105,7 @@ public class FakeHitboxManager
 
 	public static void tick() {
 		if (ACTIVE) {
-			PlayerUtils.PacketCache cache = new PlayerUtils.PacketCache();
+			PacketSender cache = new PacketSender.Cached(32);
 			try {
 				for (FakeHitbox box : FAKE_HITBOXES.values()) {
 					box.tick(cache);

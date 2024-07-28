@@ -26,7 +26,7 @@ public class ParticleUtils {
 			brightness, options);
 	}
 
-	public static <T> void batchParticles(Player viewer, PlayerUtils.PacketCache cache,
+	public static <T> void batchParticles(Player viewer, PacketSender cache,
 										  Particle particle, T data, Location loc,
 										  double maxDistance, int count,
 										  float offX, float offY, float offZ,
@@ -51,7 +51,7 @@ public class ParticleUtils {
 		);
 
 		PacketContainer pLibPacket = new PacketContainer(PacketType.Play.Server.WORLD_PARTICLES, packet);
-		PlayerUtils.sendPacket(viewer, cache, pLibPacket);
+		cache.enqueue(viewer, pLibPacket);
 	}
 
 	public static void playExplosionParticle(Location location, float offX, float offY, float offZ, boolean large) {

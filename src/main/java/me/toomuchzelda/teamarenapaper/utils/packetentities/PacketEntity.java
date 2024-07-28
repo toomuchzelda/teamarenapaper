@@ -711,7 +711,7 @@ public class PacketEntity
 	 * For PacketEntity, use this instead of PlayerUtils.sendPacket
 	 */
 	public void sendPacket(Player receiver, PacketContainer packet) {
-		PlayerUtils.sendPacket(receiver, PacketEntityManager.cache, packet);
+		PacketEntityManager.cache.enqueue(receiver, packet);
 	}
 
 	public void broadcastPacket(PacketContainer packet) {

@@ -87,7 +87,8 @@ public class KitHider extends Kit {
 		@Override
 		public void onTick() {
 			final int currentTick = TeamArena.getGameTick();
-			PlayerUtils.PacketCache particleBundler = new PlayerUtils.PacketCache();
+			PacketSender.Cached particleBundler = new PacketSender.Cached(Bukkit.getOnlinePlayers().size() * 2,
+				512);
 
 			// Lazy allocate
 			List<LivingEntity> livents = this.game instanceof HideAndSeek ?
@@ -137,7 +138,7 @@ public class KitHider extends Kit {
 		}
 
 		private static void playSparkleParticles(Player player, Location loc,
-												 PlayerUtils.PacketCache particleBundler) {
+												 PacketSender particleBundler) {
 			ParticleUtils.batchParticles(player, particleBundler,
 				Particle.HAPPY_VILLAGER, null,
 				loc,

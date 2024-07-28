@@ -9,7 +9,7 @@ import io.papermc.paper.adventure.PaperAdventure;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.PacketSender;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket;
@@ -169,7 +169,7 @@ public class FakeHitbox
 		this.scale = this.getScale();
 	}
 
-	void tick(final PlayerUtils.PacketCache cache) {
+	void tick(final PacketSender cache) {
 
 		double currentScale = this.getScale();
 		if (currentScale != this.scale) {
@@ -182,8 +182,10 @@ public class FakeHitbox
 			for (var entry : this.viewers.entrySet()) {
 				FakeHitboxViewer viewer = entry.getValue();
 				if (viewer.isSeeingHitboxes) {
-					PlayerUtils.sendPacket(entry.getKey(), cache, this.getAttributePackets());
-					PlayerUtils.sendPacket(entry.getKey(), cache, this.getTeleportPackets());
+					//PlayerUtils.sendPacket(entry.getKey(), cache, this.getAttributePackets());
+					//PlayerUtils.sendPacket(entry.getKey(), cache, this.getTeleportPackets());
+					cache.enqueue(entry.getKey(), this.getAttributePackets());
+					cache.enqueue(entry.getKey(), this.getTeleportPackets());
 				}
 			}
 		}
@@ -198,7 +200,8 @@ public class FakeHitbox
 
 			if(!playerViewer.isOnline()) {
 				if(fakeHitboxViewer.isSeeingHitboxes)
-					PlayerUtils.sendPacket(playerViewer, cache, getRemoveEntitiesPacket());
+					//PlayerUtils.sendPacket(playerViewer, cache, getRemoveEntitiesPacket());
+					cache.enqueue(playerViewer, getRemoveEntitiesPacket());
 
 				iter.remove();
 				continue;
@@ -221,11 +224,13 @@ public class FakeHitbox
 					//need to spawn / remove the hitboxes for viewer
 					if (seeHitboxes) {
 						fakeHitboxViewer.hitboxSpawnTime = currentTick;
-						PlayerUtils.sendPacket(playerViewer, cache, getSpawnAndMetadataPackets());
+						//PlayerUtils.sendPacket(playerViewer, cache, getSpawnAndMetadataPackets());
+						cache.enqueue(playerViewer, getSpawnAndMetadataPackets());
 						//Bukkit.broadcastMessage("sent spawn packets from " + this.owner.getName() + " to " + playerViewer.getName());
 					}
 					else {
-						PlayerUtils.sendPacket(playerViewer, cache, getRemoveEntitiesPacket());
+						//PlayerUtils.sendPacket(playerViewer, cache, getRemoveEntitiesPacket());
+						cache.enqueue(playerViewer, getRemoveEntitiesPacket());
 					}
 				}
 			}
@@ -233,14 +238,14 @@ public class FakeHitbox
 	}
 
 	public void updatePosition(Location newLocation, org.bukkit.entity.Pose bukkitPose, final boolean updateClients) {
-		updatePosition(newLocation, bukkitPose, updateClients, null);
+		updatePosition(newLocation, bukkitPose, updateClients, PacketSender.getImmediateInstance());
 	}
 
 	/**
 	 * Update position in packets and calculate position for swimming/riptide pose if needed.
 	 */
 	private void updatePosition(Location newLocation, org.bukkit.entity.Pose bukkitPose, final boolean updateClients,
-								PlayerUtils.PacketCache cache) {
+								PacketSender cache) {
 		HitboxPose boxPose = HitboxPose.getFromBukkit(bukkitPose);
 
 		Vector direction = newLocation.getDirection();
@@ -291,7 +296,8 @@ public class FakeHitbox
 				if (entry.getValue().isSeeingHitboxes) {
 					for (int i = 0; i < 4; i++) {
 						if (updateThisBox[i])
-							PlayerUtils.sendPacket(entry.getKey(), cache, teleportPackets);
+							//PlayerUtils.sendPacket(entry.getKey(), cache, teleportPackets);
+							cache.enqueue(entry.getKey(), teleportPackets);
 					}
 				}
 			}

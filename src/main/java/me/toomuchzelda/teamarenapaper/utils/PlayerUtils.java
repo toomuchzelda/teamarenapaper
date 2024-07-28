@@ -26,8 +26,6 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.craftbukkit.CraftWorldBorder;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Entity;
-import org.bukkit.craftbukkit.CraftWorldBorder;
-import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.inventory.EntityEquipment;
@@ -41,115 +39,67 @@ import javax.annotation.Nullable;
 import java.util.*;
 
 public class PlayerUtils {
-	// Use and lose, don't keep a reference unless you take care to clear()
-	public static class PacketCache {
-		private final Map<Player, List<PacketContainer>> cache = new HashMap<>(Bukkit.getMaxPlayers());
 
-		public void enqueue(Player player, PacketContainer packet) {
-			this.cache.computeIfAbsent(player, p -> new ArrayList<>()).add(packet);
-		}
-
-		public void enqueue(Player player, PacketContainer... packets) {
-			this.cache.computeIfAbsent(player, p -> new ArrayList<>(packets.length)).addAll(Arrays.asList(packets));
-		}
-
-		public void clear() { this.cache.clear(); }
-
-		public void flush() {
-			for (var entry : cache.entrySet()) {
-				List<PacketContainer> queuedPackets = entry.getValue();
-				if (queuedPackets.size() == 1) {
-					sendPacket(entry.getKey(), null, queuedPackets.getFirst());
-				}
-				else {
-					sendPacket(entry.getKey(), null, createBundle(queuedPackets));
-				}
-
-				queuedPackets.clear();
-			}
-		}
-
-		public static PacketContainer createBundle(List<PacketContainer> packets) {
-			PacketContainer bundle = new PacketContainer(PacketType.Play.Server.BUNDLE);
-			bundle.getPacketBundles().write(0, packets);
-			return bundle;
-		}
-	}
-
-	public static void sendPacket(Player player, @Nullable PacketCache cache, PacketContainer packet) {
-		if (cache != null)
-			cache.enqueue(player, packet);
-		else
-			ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet, false);
+	public static PacketContainer createBundle(Collection<PacketContainer> packets) {
+		PacketContainer bundle = new PacketContainer(PacketType.Play.Server.BUNDLE);
+		bundle.getPacketBundles().write(0, packets);
+		return bundle;
 	}
 
 	public static void sendPacket(Player player, PacketContainer packet) {
-		sendPacket(player, null, packet);
-	}
-
-	public static void sendPacket(Player player, @Nullable PacketCache cache, PacketContainer... packets) {
-		// Compile many packets into 1 if worth it
-		if (cache == null && packets.length > 1) {
-			PacketContainer bundle = PacketCache.createBundle(Arrays.asList(packets));
-			sendPacket(player, null, bundle);
-		}
-		else {
-			for (PacketContainer p : packets) {
-				sendPacket(player, cache, p);
-			}
-		}
+		ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet, false);
 	}
 
 	public static void sendPacket(Player player, PacketContainer... packets) {
-		sendPacket(player, null, packets);
+		// Compile many packets into 1 if worth it
+		if (packets.length > 1) {
+			PacketContainer bundle = createBundle(Arrays.asList(packets));
+			sendPacket(player, bundle);
+		}
+		else if (packets.length != 0) {
+			sendPacket(player, packets[0]);
+		}
 	}
 
-	public static void sendPacket(Collection<? extends Player> players, @Nullable PacketCache cache,
-								  PacketContainer packet) {
-		for (Player player : players) {
-			sendPacket(player, cache, packet);
+	public static void sendPacket(Player player, Collection<PacketContainer> packets) {
+		if (packets.size() > 1) {
+			PacketContainer bundle = createBundle(packets);
+			sendPacket(player, bundle);
+		}
+		else {
+			for (PacketContainer p : packets)
+				sendPacket(player, p);
 		}
 	}
 
 	public static void sendPacket(Collection<? extends Player> players, PacketContainer packet) {
-		sendPacket(players, null, packet);
-	}
-
-	public static void sendPacket(Collection<? extends Player> players, @Nullable PacketCache cache, PacketContainer... packets) {
-		// Can reduce allocations by compiling into 1 bundle, if worth it, and sending that
-		// to all players
-		if (cache == null && players.size() > 1 && packets.length > 1) {
-			PacketContainer bundle = PacketCache.createBundle(Arrays.asList(packets));
-			for (Player p : players)
-				sendPacket(p, null, bundle);
-		}
-		else {
-			for (Player player : players) {
-				sendPacket(player, cache, packets);
-			}
+		for (Player player : players) {
+			sendPacket(player, packet);
 		}
 	}
 
 	public static void sendPacket(Collection<? extends Player> players, PacketContainer... packets) {
-		sendPacket(players, null, packets);
+		// Can reduce allocations by compiling into 1 bundle, if worth it, and sending that
+		// to all players
+		if (players.size() > 1 && packets.length > 1) {
+			PacketContainer bundle = createBundle(Arrays.asList(packets));
+			for (Player p : players)
+				sendPacket(p, bundle);
+		}
+		else {
+			for (Player player : players) {
+				sendPacket(player, packets);
+			}
+		}
 	}
 
 	// NMS packets
-	public static void sendPacket(Player player, @Nullable PacketCache cache, PacketType type, Packet<?> packet) {
-		sendPacket(player, cache, new PacketContainer(type, packet));
-	}
-
 	public static void sendPacket(Player player, PacketType type, Packet<?> packet) {
-		sendPacket(player, null, new PacketContainer(type, packet));
+		sendPacket(player, new PacketContainer(type, packet));
 	}
 
 	@Deprecated
 	public static void sendPacket(Player player, Packet<?>... packets) {
-		sendPacket(player, Arrays.asList(packets));
-	}
-
-	@Deprecated
-	public static void sendPacket(Player player, Collection<? extends Packet<?>> packets) {
 		ServerGamePacketListenerImpl connection = ((CraftPlayer) player).getHandle().connection;
 		for (Packet<?> p : packets) {
 			connection.send(p);
