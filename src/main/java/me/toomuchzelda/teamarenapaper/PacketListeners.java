@@ -543,6 +543,25 @@ public class PacketListeners
 			}
 		});
 
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(Main.getPlugin(),
+			PacketType.Play.Server.UPDATE_ATTRIBUTES)
+		{
+			@Override
+			public void onPacketSending(PacketEvent event) {
+				if (FakeHitboxManager.ACTIVE) {
+					PacketContainer packet = event.getPacket();
+
+					FakeHitbox hitbox = FakeHitboxManager.getByPlayerId(packet.getIntegers().read(0));
+					if (hitbox != null) {
+						final Player viewer = event.getPlayer();
+						if (hitbox.getOwner() != viewer && hitbox.getFakeViewer(viewer).isSeeingHitboxes()) {
+							PlayerUtils.sendPacket(viewer, hitbox.getAttributePackets());
+						}
+					}
+				}
+			}
+		});
+
 		//ProtocolLibrary.getProtocolManager().addPacketListener(new NoChatKeys());
 	}
 

@@ -3,8 +3,10 @@ package me.toomuchzelda.teamarenapaper.metadata;
 import com.comphenix.protocol.wrappers.*;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher.WrappedDataWatcherObject;
 import me.toomuchzelda.teamarenapaper.Main;
+import net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import org.joml.Vector3f;
 
@@ -285,5 +287,13 @@ public class MetaIndex
 			case SHOOTING -> Pose.SHOOTING;
 			case INHALING -> Pose.INHALING;
 		};
+	}
+
+	public static ClientboundUpdateAttributesPacket.AttributeSnapshot attributeInstanceToSnapshot(AttributeInstance nmsAi) {
+		ClientboundUpdateAttributesPacket.AttributeSnapshot snapshot = new ClientboundUpdateAttributesPacket.AttributeSnapshot(
+			nmsAi.getAttribute(), nmsAi.getBaseValue(), nmsAi.getModifiers()
+		);
+
+		return snapshot;
 	}
 }
