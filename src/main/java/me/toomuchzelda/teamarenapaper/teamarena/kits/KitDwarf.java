@@ -1,7 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
@@ -80,9 +79,20 @@ public class KitDwarf extends Kit
 
 	public static class DwarfAbility extends Ability
 	{
+
+		private static final AttributeModifier SMALL_ATTRIBUTE = new AttributeModifier(
+			new NamespacedKey(Main.getPlugin(), "dwarf_small"),
+			-0.5d, AttributeModifier.Operation.MULTIPLY_SCALAR_1
+		);
+
+		@Override
+		protected void giveAbility(Player player) {
+			player.getAttribute(Attribute.GENERIC_SCALE).addModifier(SMALL_ATTRIBUTE);
+		}
+
 		@Override
 		public void removeAbility(Player player) {
-			FakeHitboxManager.setHidden(player, false);
+			player.getAttribute(Attribute.GENERIC_SCALE).removeModifier(SMALL_ATTRIBUTE);
 			//they should only have 1 of these attributemodifiers on at a time, but admin abuse does things
 			for(AttributeModifier modifier : player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).getModifiers()) {
 				if(modifier.getName().startsWith(MODIFIER_NAME)) {
