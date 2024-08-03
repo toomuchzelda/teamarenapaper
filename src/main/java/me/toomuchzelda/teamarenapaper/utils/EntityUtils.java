@@ -10,6 +10,8 @@ import net.kyori.adventure.text.event.HoverEvent;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.*;
+import net.minecraft.server.level.ChunkMap;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerPlayerConnection;
 import net.minecraft.world.level.ClipContext;
@@ -318,12 +320,13 @@ public class EntityUtils {
 	// Following 3 methods exist because paper Entity.getTrackedPlayers() is really slow
 	@Deprecated
 	public static Set<ServerPlayerConnection> getTrackedPlayers0(Entity viewedEntity) {
-		net.minecraft.world.entity.Entity nmsEntity = ((CraftEntity) viewedEntity).getHandle();
-		if (nmsEntity.tracker == null) {
+		ServerLevel nmsWorld = ((CraftWorld) viewedEntity.getWorld()).getHandle();
+		ChunkMap.TrackedEntity tracker = nmsWorld.getChunkSource().chunkMap.entityMap.get(viewedEntity.getEntityId());
+		if (tracker == null) {
 			return Collections.emptySet();
 		}
 
-		return nmsEntity.tracker.seenBy;
+		return tracker.seenBy;
 	}
 
 	public static boolean isTrackingEntity(Player viewer, Entity viewedEntity) {

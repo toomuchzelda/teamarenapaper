@@ -45,6 +45,8 @@ public class AnnouncerManager
 
 	public static void playSound(Player player, AnnouncerSound sound) {
 		if (sound == null) return;
+		// HACK - these sounds don't work right in 1.21. Prevent a client leak
+		if (sound.type != AnnouncerSound.Type.NAME) return;
 
 		if (hasResourcePack(player)) {
 			PlayerInfo pinfo = Main.getPlayerInfo(player);
