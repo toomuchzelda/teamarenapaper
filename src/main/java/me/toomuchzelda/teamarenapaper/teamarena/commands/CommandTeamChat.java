@@ -30,7 +30,7 @@ public class CommandTeamChat extends CustomCommand
 
 	public CommandTeamChat() {
 		super("teamchat", "Send a message only your teammates can see (or to global depending on your preference)",
-				"/teamchat [message]", PermissionLevel.ALL, "t");
+				"/teamchat [message]", PermissionLevel.ALL, "t", "teammsg");
 	}
 
 	@Override

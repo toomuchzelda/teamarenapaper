@@ -20,6 +20,10 @@ public interface PacketSender {
 
 	PacketSender.Immediate IMMEDIATE_INSTANCE = new Immediate();
 
+	static PacketSender getDefault(int listSize) {
+		return new Cached(listSize);
+	}
+
 	static PacketSender.Immediate getImmediateInstance() {
 		return PacketSender.IMMEDIATE_INSTANCE;
 	}

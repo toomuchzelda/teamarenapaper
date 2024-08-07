@@ -289,16 +289,17 @@ public class KitTrigger extends Kit
 			player.setExp(expProgress);
 
 			//esplode
-			if(diff == BOOM_TIME) {
+			if(diff >= BOOM_TIME) {
 				TeamArenaExplosion boom = new TeamArenaExplosion(null, 10d, 2d, 42d, 2d, 0.7d, DamageType.TRIGGER_BOOM, player);
 				boom.explode();
 
 				DamageEvent selfKill = DamageEvent.newDamageEvent(player, 999999d, DamageType.TRIGGER_BOOM_SELF, null, false);
 				Main.getGame().queueDamage(selfKill);
-			}
-			else if (diff > BOOM_TIME) {
-				Main.logger().severe("Boom tick ran beyond user's boom tick");
-				Thread.dumpStack();
+
+				if (diff > BOOM_TIME) {
+					Main.logger().severe("Boom tick ran beyond user's boom tick");
+					Thread.dumpStack();
+				}
 			}
 			else {
 				if(diff % 10 == 0) {
