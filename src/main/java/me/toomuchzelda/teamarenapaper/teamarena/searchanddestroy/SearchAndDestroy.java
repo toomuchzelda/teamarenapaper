@@ -955,6 +955,14 @@ public class SearchAndDestroy extends TeamArena
 	}
 
 	@Override
+	public boolean isVandalisableBlock(Block block) {
+		if (this.bombPositions.get(block.getLocation().toVector().toBlockVector()) == null) {
+			return super.isVandalisableBlock(block);
+		}
+		else return false;
+	}
+
+	@Override
 	public boolean canSelectKitNow(Player player) {
 		return this.gameState.isPreGame();
 	}

@@ -20,6 +20,8 @@ import org.bukkit.event.Event;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
 import java.util.*;
 
@@ -54,6 +56,8 @@ public class KitHider extends Kit {
 
 		public static final double BLOCK_PARTICLE_DISTANCE = 15d;
 		public static final double BLOCK_PARTICLE_DISTANCE_SQR = BLOCK_PARTICLE_DISTANCE * BLOCK_PARTICLE_DISTANCE;
+		private static final int HIDER_SLOWNESS_DURATION = 5 * 20;
+		private static final int HIDER_SLOWNESS_STRENGTH = 2;
 		private final TeamArena game;
 		private final Map<Player, HiderDisguise> disguiseMap = new HashMap<>(Bukkit.getMaxPlayers());
 
@@ -222,6 +226,20 @@ public class KitHider extends Kit {
 					finalAttacker.sendMessage(msg);
 				}
 				event.setCancelled(true);
+			}
+		}
+
+		@Override
+		public void onReceiveDamage(DamageEvent event) {
+			if (event.getFinalAttacker() instanceof Player finalAttacker) {
+				Player hider = (Player) event.getVictim();
+				hider.addPotionEffect(
+					new PotionEffect(
+						PotionEffectType.SLOWNESS,
+						HIDER_SLOWNESS_DURATION, HIDER_SLOWNESS_STRENGTH,
+						false, false, true
+					)
+				);
 			}
 		}
 	}

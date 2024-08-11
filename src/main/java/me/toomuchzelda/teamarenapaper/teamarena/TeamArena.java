@@ -50,6 +50,7 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.command.CommandSender;
@@ -151,6 +152,9 @@ public abstract class TeamArena
 
 	public static final Component OWN_TEAM_PREFIX = Component.text("▶ ");
 	public static final Component OWN_TEAM_PREFIX_DANGER = OWN_TEAM_PREFIX.color(NamedTextColor.RED);
+	private static final AttributeModifier SPECTATOR_SCALE = new AttributeModifier(
+		new NamespacedKey(Main.getPlugin(), "spectator_scale"), -0.9d, AttributeModifier.Operation.MULTIPLY_SCALAR_1
+	);
 
 	protected Queue<DamageEvent> damageQueue;
 
@@ -1307,6 +1311,9 @@ public abstract class TeamArena
 
 		//reveal everyone to everyone just to be safe
 		for(Player p : Bukkit.getOnlinePlayers()) {
+			try {
+				p.getAttribute(Attribute.GENERIC_SCALE).removeModifier(SPECTATOR_SCALE);
+			} catch (Exception e) { e.printStackTrace(); }
 			for(Player pp : Bukkit.getOnlinePlayers()) {
 				p.showPlayer(Main.getPlugin(), pp);
 			}
@@ -1581,6 +1588,7 @@ public abstract class TeamArena
 		player.getInventory().clear();
 		giveSpectatorItems(player);
 		player.setAllowFlight(true);
+		EntityUtils.addAttribute(player.getAttribute(Attribute.GENERIC_SCALE), SPECTATOR_SCALE);
 
 		//hide all the spectators from everyone else
 		for(Player p : Bukkit.getOnlinePlayers()) {
@@ -2251,6 +2259,10 @@ public abstract class TeamArena
 
 	public boolean isWearableArmorPiece(ItemStack item) {
 		return !isTeamHotbarItem(item);
+	}
+
+	public boolean isVandalisableBlock(Block block) {
+		return BuildingManager.getBuildingAt(block) == null;
 	}
 
 	public void queueDamage(DamageEvent event) {

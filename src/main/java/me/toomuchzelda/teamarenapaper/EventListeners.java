@@ -700,9 +700,15 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void entityPoseChange(EntityPoseChangeEvent event) {
-		if(FakeHitboxManager.ACTIVE && event.getEntity() instanceof Player player) {
-			FakeHitbox hitbox = FakeHitboxManager.getFakeHitbox(player);
-			hitbox.handlePoseChange(event);
+		if (event.getEntity() instanceof Player player) {
+			if (FakeHitboxManager.ACTIVE) {
+				FakeHitbox hitbox = FakeHitboxManager.getFakeHitbox(player);
+				hitbox.handlePoseChange(event);
+			}
+
+			for (Ability a : Kit.getAbilities(player)) {
+				a.onPoseChange(event);
+			}
 		}
 	}
 

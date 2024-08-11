@@ -248,10 +248,8 @@ public class EntityUtils {
 	}
 
 	public static void removeAllModifiers(AttributeInstance attributeInstance) {
-		Iterator<AttributeModifier> iter = attributeInstance.getModifiers().iterator();
-		while(iter.hasNext()) {
-			iter.next();
-			iter.remove();
+		for (AttributeModifier modifier : attributeInstance.getModifiers()) {
+			attributeInstance.removeModifier(modifier);
 		}
 	}
 

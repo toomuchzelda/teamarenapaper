@@ -6,6 +6,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
@@ -14,10 +15,15 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Pose;
+import org.bukkit.event.entity.EntityPoseChangeEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
+
+import java.util.HashMap;
+import java.util.Map;
 
 
 public class KitDwarf extends Kit
@@ -84,14 +90,14 @@ public class KitDwarf extends Kit
 			new NamespacedKey(Main.getPlugin(), "dwarf_small"),
 			-0.5d, AttributeModifier.Operation.MULTIPLY_SCALAR_1
 		);
+		private static final int SNEAK_TOGGLE_CD = 10;
+		public static final String SNEAK_CD_KEY = "dwarfsneak";
 
-		@Override
-		protected void giveAbility(Player player) {
-			player.getAttribute(Attribute.GENERIC_SCALE).addModifier(SMALL_ATTRIBUTE);
-		}
+		private final Map<Player, Integer> sneakTimes = new HashMap<>();
 
 		@Override
 		public void removeAbility(Player player) {
+			sneakTimes.remove(player);
 			player.getAttribute(Attribute.GENERIC_SCALE).removeModifier(SMALL_ATTRIBUTE);
 			//they should only have 1 of these attributemodifiers on at a time, but admin abuse does things
 			for(AttributeModifier modifier : player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).getModifiers()) {
@@ -110,8 +116,38 @@ public class KitDwarf extends Kit
 		}
 
 		@Override
+		public void onPoseChange(EntityPoseChangeEvent event) {
+			final Pose currentPose = event.getEntity().getPose();
+			final Pose newPose = event.getPose();
+			final Player player = (Player) event.getEntity();
+
+			if (currentPose != newPose && (currentPose == Pose.SNEAKING || newPose == Pose.SNEAKING)) {
+				Integer lastSneakTime = sneakTimes.get(player);
+				final int currentTick = TeamArena.getGameTick();
+				if (lastSneakTime == null || currentTick > lastSneakTime + SNEAK_TOGGLE_CD) {
+					sneakTimes.put(player, currentTick);
+					updateScale(newPose, player);
+				}
+			}
+		}
+
+		private static void updateScale(Pose newPose, Player player) {
+			if (newPose == Pose.SNEAKING) {
+				EntityUtils.addAttribute(player.getAttribute(Attribute.GENERIC_SCALE), SMALL_ATTRIBUTE);
+			} else {
+				player.getAttribute(Attribute.GENERIC_SCALE).removeModifier(SMALL_ATTRIBUTE);
+			}
+		}
+
+		@Override
 		public void onPlayerTick(Player player) {
 			float expToGain; //perTick
+
+			Integer lastPoseChange = sneakTimes.get(player);
+			if (lastPoseChange != null && TeamArena.getGameTick() > lastPoseChange + SNEAK_TOGGLE_CD) {
+				updateScale(player.getPose(), player);
+				sneakTimes.remove(player);
+			}
 
 			if (player.isSprinting()) {
 				expToGain = -0.03f;
@@ -119,8 +155,9 @@ public class KitDwarf extends Kit
 			else if (player.isSneaking()) {
 				expToGain = 0.01f;
 			}
-			else
+			else {
 				expToGain = -0.005f;
+			}
 
 			expToGain *= 1 + player.getExp() / 20; // slight acceleration at higher levels
 

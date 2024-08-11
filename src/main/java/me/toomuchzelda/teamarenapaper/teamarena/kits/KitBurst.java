@@ -49,7 +49,7 @@ public class KitBurst extends Kit
 		armour[0] = new ItemStack(Material.CHAINMAIL_BOOTS);
 		this.setArmour(armour);
 
-		ItemStack sword = new ItemStack(Material.WOODEN_SWORD);
+		ItemStack sword = new ItemStack(Material.STONE_SWORD);
 
 		ItemStack crossbow = new ItemStack(Material.CROSSBOW);
 		ItemMeta bowMeta = crossbow.getItemMeta();

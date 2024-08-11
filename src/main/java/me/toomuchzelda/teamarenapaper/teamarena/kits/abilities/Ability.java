@@ -9,6 +9,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DetailedProjectileHitEvent;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.EntityPoseChangeEvent;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -136,6 +137,8 @@ public abstract class Ability {
 	public void onPlaceBlock(BlockPlaceEvent event) {}
 
 	public void onMove(PlayerMoveEvent event) {}
+
+	public void onPoseChange(EntityPoseChangeEvent event) {}
 
 	/**
 	 * When ability user consumes an item. May be cancelled at this point.
