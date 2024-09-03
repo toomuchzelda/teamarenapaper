@@ -234,7 +234,7 @@ public class Bomb
 			}
 
 			if(currentTick % 2 == 1) {
-				loc.getWorld().spawnParticle(Particle.SMOKE_LARGE, loc.clone().add(0, 1, 0), 1, 0d, 0d, 0d, 0d);
+				loc.getWorld().spawnParticle(Particle.LARGE_SMOKE, loc.clone().add(0, 1, 0), 1, 0d, 0d, 0d, 0d);
 			}
 		}
 

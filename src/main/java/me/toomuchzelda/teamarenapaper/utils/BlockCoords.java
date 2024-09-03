@@ -1,9 +1,13 @@
 package me.toomuchzelda.teamarenapaper.utils;
 
+import io.papermc.paper.math.BlockPosition;
+import io.papermc.paper.math.Position;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.entity.Player;
 import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
@@ -38,6 +42,19 @@ public record BlockCoords(int x, int y, int z) {
 	}
 
 	@NotNull
+	public BlockPosition toPaperBlockPos() {
+		return Position.block(x, y, z);
+	}
+
+	public boolean isInChunk(Chunk chunk) {
+		return this.x / 16 == chunk.getX() && this.z / 16 == chunk.getZ();
+	}
+
+	public boolean hasLoaded(Player viewer) {
+		return viewer.isChunkSent(this.toBlock(viewer.getWorld()).getChunk());
+	}
+
+	@NotNull
 	public BlockCoords add(int x, int y, int z) {
 		return new BlockCoords(this.x + x, this.y + y, this.z + z);
 	}
@@ -55,6 +72,16 @@ public record BlockCoords(int x, int y, int z) {
 	@NotNull
 	public BlockCoords getRelative(@NotNull BlockFace face, int distance) {
 		return add(face.getModX() * distance, face.getModY() * distance, face.getModZ());
+	}
+
+	public double distanceSqr(Location other) {
+		double dx = x - other.getX(), dy = y - other.getY(), dz = z - other.getZ();
+		return dx * dx + dy * dy + dz * dz;
+	}
+
+	public double distanceSqr(Vector other) {
+		double dx = x - other.getX(), dy = y - other.getY(), dz = z - other.getZ();
+		return dx * dx + dy * dy + dz * dz;
 	}
 
 	public static BlockCoords getMin(BlockCoords one, BlockCoords two) {

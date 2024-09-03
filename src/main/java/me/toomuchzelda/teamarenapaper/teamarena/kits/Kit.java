@@ -79,6 +79,9 @@ public abstract class Kit {
     }
 
     public void giveKit(Player player, boolean update, PlayerInfo pinfo) {
+		if (pinfo.activeKit != null) {
+			pinfo.activeKit.removeKit(player, pinfo);
+		}
         activeUsers.add(player);
 
         PlayerInventory inventory = player.getInventory();

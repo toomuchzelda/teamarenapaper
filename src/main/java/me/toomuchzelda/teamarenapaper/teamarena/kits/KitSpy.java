@@ -80,7 +80,7 @@ public class KitSpy extends Kit
 				new ItemStack(Material.IRON_LEGGINGS), boots);
 
 		ItemStack sword = new ItemStack(Material.IRON_SWORD);
-		sword.addEnchantment(Enchantment.DAMAGE_ALL, 1);
+		sword.addEnchantment(Enchantment.SHARPNESS, 1);
 
 		ItemStack menu = new ItemStack(DISGUISE_MENU_MATERIAL);
 		ItemMeta menuMeta = menu.getItemMeta();
@@ -246,9 +246,9 @@ public class KitSpy extends Kit
 							BlockData blockData = Material.REDSTONE_BLOCK.createBlockData();
 							World world = loc.getWorld();
 							for(byte i = 0; i < 4; i++) {
-								world.spawnParticle(Particle.BLOCK_CRACK, loc, 2, blockData);
-								world.spawnParticle(Particle.BLOCK_CRACK, two, 2, blockData);
-								world.spawnParticle(Particle.BLOCK_CRACK, three, 2, blockData);
+								world.spawnParticle(Particle.BLOCK, loc, 2, blockData);
+								world.spawnParticle(Particle.BLOCK, two, 2, blockData);
+								world.spawnParticle(Particle.BLOCK, three, 2, blockData);
 							}
 						}
 

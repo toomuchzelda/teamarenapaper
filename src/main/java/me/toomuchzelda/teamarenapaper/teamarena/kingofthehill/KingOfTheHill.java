@@ -459,7 +459,7 @@ public class KingOfTheHill extends TeamArena
 						(owningTeam != null ? owningTeam.getRGBTextColor() : NamedTextColor.WHITE) :
 						NamedTextColor.DARK_GRAY
 				);
-				MapCursor.Type icon = active ? MapCursor.Type.WHITE_CROSS : MapCursor.Type.SMALL_WHITE_CIRCLE;
+				MapCursor.Type icon = active ? MapCursor.Type.TARGET_X : MapCursor.Type.PLAYER_OFF_MAP;
 				return new MiniMapManager.CursorInfo(center, false, icon, currentHillText);
 			});
 		}
@@ -556,18 +556,13 @@ public class KingOfTheHill extends TeamArena
 
 	//respawning game, can change kit at any time (change takes effect on respawn doe)
 	@Override
-	public boolean canSelectKitNow() {
+	public boolean canSelectKitNow(Player player) {
 		return !gameState.isEndGame();
 	}
 
 	@Override
 	public boolean canSelectTeamNow() {
 		return gameState == GameState.PREGAME;
-	}
-
-	@Override
-	public boolean canTeamChatNow(Player player) {
-		return gameState != GameState.PREGAME && gameState != GameState.DEAD;
 	}
 
 	@Override

@@ -34,7 +34,10 @@ public class GraffitiManager {
 
 	final Map<ItemFrame, Graffiti> animatedGraffiti = new LinkedHashMap<>();
 
+	private final TeamArena game;
+
 	public GraffitiManager(TeamArena game) {
+		this.game = game;
 	}
 
 	public boolean spawnGraffiti(Player player, NamespacedKey graffiti) {
@@ -44,6 +47,8 @@ public class GraffitiManager {
 		if (result == null || result.getHitBlock() == null || result.getHitBlockFace() == null)
 			return false;
 		var block = result.getHitBlock();
+		if (!this.game.isVandalisableBlock(block))
+			return false;
 		var blockData = block.getBlockData();
 		var blockFace = result.getHitBlockFace();
 		if (blockData instanceof Door) // disallowed at zelda's request

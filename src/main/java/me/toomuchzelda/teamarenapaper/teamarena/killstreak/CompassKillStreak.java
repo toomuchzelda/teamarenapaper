@@ -40,7 +40,7 @@ public class CompassKillStreak extends KillStreak
 	}
 
 	CompassKillStreak() {
-		super("Tracker Compass", "Get some intel on nearby enemies.....", COLOUR, COMPASS, new CompassAbility());
+		super(KillStreakManager.KillStreakID.COMPASS, "Tracker Compass", "Get some intel on nearby enemies.....", COLOUR, COMPASS, new CompassAbility());
 	}
 
 	static class CompassAbility extends Ability {

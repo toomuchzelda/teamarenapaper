@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.LivingEntity;
@@ -95,11 +96,11 @@ public class DamageNumbers
 		//******ENCHANTMENTS
 		Enchantment[] enchs = Enchantment.values();
 		ENCHANTMENT_VALUES = new HashMap<>(enchs.length, 0.5f);
-		ENCHANTMENT_VALUES.put(Enchantment.PROTECTION_ENVIRONMENTAL, 1d);
-		ENCHANTMENT_VALUES.put(Enchantment.PROTECTION_FIRE, 2d);
-		ENCHANTMENT_VALUES.put(Enchantment.PROTECTION_EXPLOSIONS, 2d);
-		ENCHANTMENT_VALUES.put(Enchantment.PROTECTION_PROJECTILE, 2d);
-		ENCHANTMENT_VALUES.put(Enchantment.PROTECTION_FALL, 3d);
+		ENCHANTMENT_VALUES.put(Enchantment.PROTECTION, 1d);
+		ENCHANTMENT_VALUES.put(Enchantment.FIRE_PROTECTION, 2d);
+		ENCHANTMENT_VALUES.put(Enchantment.BLAST_PROTECTION, 2d);
+		ENCHANTMENT_VALUES.put(Enchantment.PROJECTILE_PROTECTION, 2d);
+		ENCHANTMENT_VALUES.put(Enchantment.FEATHER_FALLING, 3d);
 	}
 
 	private static void setBaseDamage(Material mat, double d) {
@@ -112,7 +113,7 @@ public class DamageNumbers
 
 	public static double getPotionEffectDamage(PotionEffect effect) {
 		double damage = 0d;
-		if(effect.getType() == PotionEffectType.INCREASE_DAMAGE) {
+		if(effect.getType() == PotionEffectType.STRENGTH) {
 			damage = DAMAGE_PER_STRENGTH_LEVEL;
 		}
 		else if(effect.getType() == PotionEffectType.WEAKNESS) {
@@ -128,10 +129,6 @@ public class DamageNumbers
 
 	public static double getCritDamage(double d) {
 		return d * 1.5d;
-	}
-
-	public static double getEnchantmentDamage(Enchantment enchantment, int levels, LivingEntity victim) {
-		return (double) enchantment.getDamageIncrease(levels, victim.getCategory());
 	}
 
 	public static double getBaseDefensePoints(Material mat) {

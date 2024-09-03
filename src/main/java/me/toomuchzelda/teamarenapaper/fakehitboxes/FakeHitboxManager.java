@@ -2,6 +2,8 @@ package me.toomuchzelda.teamarenapaper.fakehitboxes;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
+import me.toomuchzelda.teamarenapaper.utils.PacketSender;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Team;
@@ -102,8 +104,16 @@ public class FakeHitboxManager
 	}
 
 	public static void tick() {
-		for (FakeHitbox box : FAKE_HITBOXES.values()) {
-			box.tick();
+		if (ACTIVE) {
+			PacketSender cache = new PacketSender.Cached(32);
+			try {
+				for (FakeHitbox box : FAKE_HITBOXES.values()) {
+					box.tick(cache);
+				}
+			}
+			finally {
+				cache.flush();
+			}
 		}
 	}
 
@@ -122,7 +132,10 @@ public class FakeHitboxManager
 		}
 	}
 
+	// Whether they have the invisiblity effect
 	public static void setVisibility(boolean visibility) {
+		if (!ACTIVE) return;
+
 		if(show != visibility) {
 			show = visibility;
 			for(var entry : FAKE_HITBOXES.values()) {
@@ -130,5 +143,11 @@ public class FakeHitboxManager
 				entry.invalidateViewers();
 			}
 		}
+	}
+
+	// Whether they are spawned to clients
+	public static void setHidden(Player player, boolean hidden) {
+		if (ACTIVE)
+			FAKE_HITBOXES.get(player).setHidden(hidden);
 	}
 }

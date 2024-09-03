@@ -48,7 +48,9 @@ public class CaptureTheFlag extends TeamArena
 	public HashMap<ArmorStand, Flag> flagStands; // this too
 	public HashMap<Player, Set<Flag>> flagHolders = new HashMap<>();
 	public HashSet<String> flagItems;
-	protected static final AttributeModifier SPEED_ATTR = new AttributeModifier("CTFSpeedBoost", 0.2d, AttributeModifier.Operation.ADD_SCALAR);
+	protected static final AttributeModifier SPEED_ATTR = new AttributeModifier(
+		new NamespacedKey(Main.getPlugin(), "ctf_speed_boost"),
+		0.2d, AttributeModifier.Operation.ADD_SCALAR);
 	protected Set<Player> currentSpeeders = new HashSet<>();
 	protected int capsToWin;
 	public static final int TIME_TO_SPEED_BOOST = 5 * 60 * 20;
@@ -211,7 +213,7 @@ public class CaptureTheFlag extends TeamArena
             announcementTitle = SPEED_NOW_TITLE;
 
             for (Player carrier : flagHolders.keySet()) {
-                carrier.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).addModifier(SPEED_ATTR);
+				EntityUtils.addAttribute(carrier.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED), SPEED_ATTR);
                 currentSpeeders.add(carrier);
             }
         }
@@ -456,7 +458,8 @@ public class CaptureTheFlag extends TeamArena
 
 		//give speed boost if appropriate
 		if(this.timeToSpeed <= 0) {
-			player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).addModifier(SPEED_ATTR);
+			AttributeInstance attributeInstance = player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
+			EntityUtils.addAttribute(attributeInstance, SPEED_ATTR);
 			currentSpeeders.add(player);
 		}
 
@@ -814,7 +817,7 @@ public class CaptureTheFlag extends TeamArena
 					// display extra information for own flag
 					if (playerInfo.team == team) {
 						if (flag.holder != null && gameTick % 40 < 20) {
-							return new MiniMapManager.CursorInfo(flag.holder.getLocation(), true, MapCursor.Type.RED_POINTER, yourFlagText);
+							return new MiniMapManager.CursorInfo(flag.holder.getLocation(), true, MapCursor.Type.RED_MARKER, yourFlagText);
 						} else {
 							return new MiniMapManager.CursorInfo(stand.getLocation(), false, icon, yourFlagText);
 						}
@@ -848,18 +851,13 @@ public class CaptureTheFlag extends TeamArena
 	}
 
 	@Override
-	public boolean canSelectKitNow() {
+	public boolean canSelectKitNow(Player player) {
 		return !gameState.isEndGame();
 	}
 
 	@Override
 	public boolean canSelectTeamNow() {
 		return gameState == GameState.PREGAME;
-	}
-
-	@Override
-	public boolean canTeamChatNow(Player player) {
-		return gameState != GameState.PREGAME && gameState != GameState.DEAD;
 	}
 
 	@Override

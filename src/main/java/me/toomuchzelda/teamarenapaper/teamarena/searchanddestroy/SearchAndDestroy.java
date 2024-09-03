@@ -97,7 +97,7 @@ public class SearchAndDestroy extends TeamArena
 	private static final DamageType FUSE_KILL = new DamageType(DamageType.MELEE, "%Killed% was pummelled to death by %Killer%'s Bomb Fuse");
 
 	//===========MESSAGE STUFF
-	//<editor-fold desc="Messages">
+	//<editor-fold description="Messages">
 	public static final Component SHORT_OBFUSCATED = Component.text("ab", NamedTextColor.GOLD, TextDecoration.OBFUSCATED);
 	public static final Component LONG_OBFUSCATED = Component.text("Herobrine", NamedTextColor.DARK_RED, TextDecoration.OBFUSCATED);
 
@@ -513,7 +513,7 @@ public class SearchAndDestroy extends TeamArena
 		}
 		else if (this.poisonTimeLeft < POISON_ANNOUNCEMENT || isPoison) {
 			if (currentTick % (10 * 20) == 0) {
-				Firework firework = (Firework) gameWorld.spawnEntity(this.spawnPos.clone().add(0, 1, 0), EntityType.FIREWORK);
+				Firework firework = (Firework) gameWorld.spawnEntity(this.spawnPos.clone().add(0, 1, 0), EntityType.FIREWORK_ROCKET);
 				FireworkMeta meta = firework.getFireworkMeta();
 				meta.setPower(3);
 				meta.clearEffects();
@@ -572,12 +572,12 @@ public class SearchAndDestroy extends TeamArena
 	}
 
 	@Override
-	public void givePlayerItems(Player player, PlayerInfo pinfo, boolean clear) {
+	public void giveKitAndGameItems(Player player, PlayerInfo pinfo, boolean clear) {
 		//need to clear and give the fuse first to put it in 1st slot
 		if(clear)
 			player.getInventory().clear();
 
-		super.givePlayerItems(player, pinfo, false);
+		super.giveKitAndGameItems(player, pinfo, false);
 		player.getInventory().addItem(createFuse(pinfo.kit.getFuseEnchantmentLevel()));
 	}
 
@@ -589,7 +589,7 @@ public class SearchAndDestroy extends TeamArena
 		ItemMeta fuseMeta = fuse.getItemMeta();
 
 		//we are storing the actual level in the unbreaking enchantment which should be hidden
-		fuseMeta.addEnchant(Enchantment.DURABILITY, levels, true);
+		fuseMeta.addEnchant(Enchantment.UNBREAKING, levels, true);
 
 		List<Component> lore = fuseMeta.lore();
 		Component enchantLore = getFuseEnchantLore(levels);
@@ -607,7 +607,7 @@ public class SearchAndDestroy extends TeamArena
 
 	public int getFuseEnchantmentLevel(ItemStack fuse) {
 		if(fuse.getType() == BASE_FUSE.getType())
-			return fuse.getEnchantmentLevel(Enchantment.DURABILITY);
+			return fuse.getEnchantmentLevel(Enchantment.UNBREAKING);
 		else
 			return 0;
 	}
@@ -629,7 +629,7 @@ public class SearchAndDestroy extends TeamArena
 		}
 
 		List<Component> lore = fuseMeta.lore();
-		if(fuseMeta.hasEnchant(Enchantment.DURABILITY)) { //had bomb tech enchantment
+		if(fuseMeta.hasEnchant(Enchantment.UNBREAKING)) { //had bomb tech enchantment
 			if(level == 0) {
 				lore.remove(0);
 			}
@@ -643,10 +643,10 @@ public class SearchAndDestroy extends TeamArena
 
 		// Add the enchantment.
 		if(level == 0) {
-			fuseMeta.removeEnchant(Enchantment.DURABILITY);
+			fuseMeta.removeEnchant(Enchantment.UNBREAKING);
 		}
 		else if (level > 0) {
-			fuseMeta.addEnchant(Enchantment.DURABILITY, level, true);
+			fuseMeta.addEnchant(Enchantment.UNBREAKING, level, true);
 		}
 
 		fuseMeta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
@@ -955,7 +955,15 @@ public class SearchAndDestroy extends TeamArena
 	}
 
 	@Override
-	public boolean canSelectKitNow() {
+	public boolean isVandalisableBlock(Block block) {
+		if (this.bombPositions.get(block.getLocation().toVector().toBlockVector()) == null) {
+			return super.isVandalisableBlock(block);
+		}
+		else return false;
+	}
+
+	@Override
+	public boolean canSelectKitNow(Player player) {
 		return this.gameState.isPreGame();
 	}
 

@@ -16,11 +16,10 @@ import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.hideandseek.PacketFlyingPoint;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
-import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
-import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import me.toomuchzelda.teamarenapaper.utils.*;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketDisplay;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
@@ -28,22 +27,22 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
 import net.minecraft.network.protocol.game.ClientboundHurtAnimationPacket;
+import net.minecraft.world.level.block.state.BlockState;
 import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
+import org.bukkit.craftbukkit.block.data.CraftBlockData;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.map.MapPalette;
-import org.bukkit.map.MinecraftFont;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.InetSocketAddress;
 import java.util.*;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -183,7 +182,7 @@ public class CommandDebug extends CustomCommand {
 					}
 					info.kit = kit;
 					if (game.getGameState() == GameState.LIVE) {
-						game.givePlayerItems(target, info, true);
+						game.giveKitAndGameItems(target, info, true);
 					}
 					target.sendMessage(Component.textOfChildren(
 							Component.text("Your kit has been updated to ", NamedTextColor.GREEN),
@@ -275,51 +274,6 @@ public class CommandDebug extends CustomCommand {
 		} else if ("disable".equalsIgnoreCase(args[1])) {
 			disableMiniMapInCaseSomethingTerribleHappens = !disableMiniMapInCaseSomethingTerribleHappens;
 			sender.sendMessage(Component.text("Minimap is now " + (disableMiniMapInCaseSomethingTerribleHappens ? "disabled" : "enabled")));
-		} else {
-			if (args.length < 4)
-				throw throwUsage("/debug draw clear/disable/<text/area> <x> <z> ...");
-			int x = Integer.parseInt(args[2]), z = Integer.parseInt(args[3]);
-			if ("text".equalsIgnoreCase(args[1])) {
-				if (args.length < 5)
-					throw throwUsage("/debug draw text <x> <z> <text>");
-
-				// white by default
-				String text = "§34;" + MAP_COLOR.matcher(
-					String.join(" ", Arrays.copyOfRange(args, 4, args.length))
-						.replace('&', ChatColor.COLOR_CHAR)
-				).replaceAll(result -> {
-					int hex = Integer.parseInt(result.group(1), 16);
-					//noinspection deprecation
-					return "§" + MapPalette.matchColor(new java.awt.Color(hex)) + ";";
-				});
-				canvasOperations.add((viewer, ignored, canvas, renderer) ->
-					canvas.drawText((renderer.convertX(x) + 128) / 2, (renderer.convertZ(z) + 128) / 2,
-						MinecraftFont.Font, text));
-			} else if ("area".equalsIgnoreCase(args[1])) {
-				if (args.length < 7)
-					throw throwUsage("/debug draw area <x> <z> <x2> <z2> <color>");
-				int x2 = Integer.parseInt(args[4]), z2 = Integer.parseInt(args[5]);
-				byte color;
-				Matcher matcher = MAP_COLOR.matcher(args[6]);
-				if (matcher.matches()) {
-					int hex = Integer.parseInt(matcher.group(1), 16);
-					//noinspection deprecation
-					color = MapPalette.matchColor(new java.awt.Color(hex));
-				} else {
-					color = Byte.parseByte(args[6]);
-				}
-				int minX = Math.min(x, x2), maxX = Math.max(x, x2), minY = Math.min(z, z2), maxY = Math.max(z, z2);
-				canvasOperations.add((viewer, ignored, canvas, renderer) -> {
-					int startX = (renderer.convertX(minX) + 128) / 2, endX = (renderer.convertX(maxX) + 128) / 2;
-					int startY = (renderer.convertZ(minY) + 128) / 2, endY = (renderer.convertZ(maxY) + 128) / 2;
-					for (int i = startX; i < endX; i++)
-						for (int j = startY; j < endY; j++)
-							canvas.setPixel(i, j, color);
-				});
-			}
-		}
-		if (!Main.getGame().miniMap.hasCanvasOperation(operationExecutor)) {
-			Main.getGame().miniMap.registerCanvasOperation(operationExecutor);
 		}
 	}
 
@@ -479,13 +433,95 @@ public class CommandDebug extends CustomCommand {
 			case "arrowMarker" -> {
 				ArrowManager.spawnArrowMarkers = !ArrowManager.spawnArrowMarkers;
 			}
-			case "packetCache" -> {
+			case "packetcache" -> {
 				if (args.length < 2)
 					throw throwUsage("packetCache boolean");
 
 				boolean bool = Boolean.parseBoolean(args[1]);
 				PacketEntityManager.toggleCache(bool);
 				sender.sendMessage(Component.text("Toggle cache to " + bool));
+			}
+			case "flyingpoint" -> {
+				if (args.length >= 2 && "toggle".equalsIgnoreCase(args[1])) {
+					PacketFlyingPoint.VISIBLE = !PacketFlyingPoint.VISIBLE;
+				}
+				else {
+					for (int i = 0; i < 10; i++) {
+						new PacketFlyingPoint(player, 5d, 5d,
+							MathUtils.randomRange(0, 0.5d), MathUtils.randomRange(0.85, 1.0),
+							MathUtils.randomRange(0.2, 1),
+							Math.max(1, MathUtils.randomMax(5 * 20))
+						).respawn();
+					}
+				}
+			}
+			case "fakeBlock" -> {
+				if (args.length < 3)
+					throw throwUsage("fakeBlock add/remove MATERIAL/KEY");
+
+				if (args[1].equalsIgnoreCase("add")) {
+
+					Block targetBlock = player.getTargetBlock(null, 5);
+					Material desiredMat = Material.valueOf(args[2]);
+					FakeBlockManager fbManager = Main.getGame().getFakeBlockManager();
+
+					long key = fbManager.setFakeBlock(new BlockCoords(targetBlock),
+						((CraftBlockData) desiredMat.createBlockData()).getState(), viewer -> viewer == player);
+
+					Bukkit.broadcastMessage("Key is " + key);
+				}
+				else if (args[1].equalsIgnoreCase("remove")) {
+
+					Block targetBlock = player.getTargetBlock(null, 5);
+					long key = Long.parseLong(args[2]);
+					FakeBlockManager fbManager = Main.getGame().getFakeBlockManager();
+
+					if(fbManager.removeFakeBlock(new BlockCoords(targetBlock), key))
+						player.sendMessage("Successfully removed");
+					else
+						player.sendMessage("Did not remove anything");
+				}
+			}
+			case "elevator" -> {
+				final Location loc = player.getLocation();
+
+				List<PacketDisplay> displays = new ArrayList<>();
+				BlockState nmsBlockState = ((CraftBlockData) Material.OAK_PLANKS.createBlockData()).getState();
+				for (int x = 0; x < 4; x++) {
+					for (int y = 0; y < 4; y++) {
+						for (int z = 0; z < 4; z++) {
+							if ((x == 1 || x == 2) && (y == 1 || y == 2 || y == 3) && (z == 1 || z == 2)) {
+								continue;
+							}
+
+							PacketDisplay pdisplay = new PacketDisplay(PacketEntity.NEW_ID, EntityType.BLOCK_DISPLAY,
+								loc.clone().add(x, y, z), null, viewer -> true);
+
+							pdisplay.setMetadata(MetaIndex.DISPLAY_POSROT_INTERPOLATION_DURATION_OBJ, 2);
+							pdisplay.setMetadata(MetaIndex.BLOCK_DISPLAY_BLOCK_OBJ, nmsBlockState);
+							pdisplay.updateMetadataPacket();
+							pdisplay.respawn();
+							displays.add(pdisplay);
+						}
+					}
+				}
+
+				final PacketEntity pig = new PacketEntity(PacketEntity.NEW_ID, EntityType.PIG, loc.clone().add(1.5, 1.5, 1.5),
+					null, viewer -> true);
+				pig.respawn();
+
+				Bukkit.getScheduler().runTaskTimer(Main.getPlugin(), () -> {
+					final double thing = ((double) System.currentTimeMillis()) / 2000d;
+					final double y = Math.sin(thing) * 10d;
+					for (PacketDisplay display : displays) {
+						Location xz = display.getLocation();
+						xz.setY(loc.getY() + y);
+						display.move(xz);
+					}
+
+					pig.move(loc.clone().add(0, y, 0));
+				}, 1L, 1L);
+
 			}
 			default -> showUsage(sender);
 		}
@@ -495,7 +531,8 @@ public class CommandDebug extends CustomCommand {
 	public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
 		if (args.length == 1) {
 			return Arrays.asList("hide", "gui", "guitest", "signtest", "game", "setrank", "setteam", "setkit",
-				"votetest", "draw", "graffititest", "respawn", "fakehitbox", "testmotd", "arrowMarker", "packetCache", "showSpawns");
+				"votetest", "draw", "graffititest", "respawn", "fakehitbox", "testmotd", "arrowMarker", "packetcache", "showSpawns",
+				"flyingpoint", "fakeBlock", "elevator");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");
@@ -510,6 +547,7 @@ public class CommandDebug extends CustomCommand {
 				case "graffititest" -> CosmeticsManager.getLoadedCosmetics(CosmeticType.GRAFFITI).stream().map(NamespacedKey::toString).toList();
 				case "respawn" -> Bukkit.getOnlinePlayers().stream().map(Player::getName).toList();
 				case "packetcache" -> List.of("true", "false");
+				case "flyingpoint" -> List.of("toggle");
 				default -> Collections.emptyList();
 			};
 		} else if (args.length == 3) {

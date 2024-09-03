@@ -8,6 +8,7 @@ import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
+import io.papermc.paper.event.packet.PlayerChunkLoadEvent;
 import io.papermc.paper.event.player.*;
 import me.toomuchzelda.teamarenapaper.explosions.EntityExplosionInfo;
 import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
@@ -41,7 +42,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.command.Command;
-import org.bukkit.craftbukkit.v1_20_R3.CraftWorldBorder;
+import org.bukkit.craftbukkit.CraftWorldBorder;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -699,9 +700,15 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void entityPoseChange(EntityPoseChangeEvent event) {
-		if(FakeHitboxManager.ACTIVE && event.getEntity() instanceof Player player) {
-			FakeHitbox hitbox = FakeHitboxManager.getFakeHitbox(player);
-			hitbox.handlePoseChange(event);
+		if (event.getEntity() instanceof Player player) {
+			if (FakeHitboxManager.ACTIVE) {
+				FakeHitbox hitbox = FakeHitboxManager.getFakeHitbox(player);
+				hitbox.handlePoseChange(event);
+			}
+
+			for (Ability a : Kit.getAbilities(player)) {
+				a.onPoseChange(event);
+			}
 		}
 	}
 
@@ -961,6 +968,11 @@ public class EventListeners implements Listener
 			MetadataViewer metadataViewer = pinfo.getMetadataViewer();
 			metadataViewer.setAllDirty(event.getEntity());
 		}
+	}
+
+	@EventHandler
+	public void playerChunkLoad(PlayerChunkLoadEvent event) {
+		Main.getGame().getFakeBlockManager().injectFakeBlocks(event);
 	}
 
 	/*@EventHandler

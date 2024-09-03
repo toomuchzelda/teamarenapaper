@@ -31,7 +31,7 @@ import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.craftbukkit.v1_20_R3.entity.CraftBee;
+import org.bukkit.craftbukkit.entity.CraftBee;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Bee;
 import org.bukkit.entity.Entity;
@@ -93,12 +93,12 @@ public class KitBeekeeper extends Kit
 
 		ItemStack helmet = ItemUtils.colourLeatherArmor(Color.BLACK, new ItemStack(Material.LEATHER_HELMET));
 		ItemStack boots = ItemUtils.colourLeatherArmor(Color.BLACK, new ItemStack(Material.LEATHER_BOOTS));
-		helmet.addEnchantment(Enchantment.PROTECTION_ENVIRONMENTAL, 1);
-		boots.addEnchantment(Enchantment.PROTECTION_ENVIRONMENTAL, 1);
+		helmet.addEnchantment(Enchantment.PROTECTION, 1);
+		boots.addEnchantment(Enchantment.PROTECTION, 1);
 
 		this.setArmor(helmet, new ItemStack(Material.GOLDEN_CHESTPLATE), new ItemStack(Material.GOLDEN_LEGGINGS), boots);
 		ItemStack sword = ItemBuilder.of(Material.WOODEN_SHOVEL).displayName(Component.text("Honey dipper"))
-			.enchant(Enchantment.DAMAGE_ALL, 1).build();
+			.enchant(Enchantment.SHARPNESS, 1).build();
 		this.setItems(sword, BEE_WAND, REGROUP_ITEM);
 
 		this.setAbilities(new BeekeeperAbility());
@@ -181,7 +181,7 @@ public class KitBeekeeper extends Kit
 
 				// Beekeeper sees their bees' name and glowing
 				// Teammates see the bees glowing
-				// Other players see the bee's name
+				// Other players see the owner's name
 				beeEntity.customName(this.owner.displayName());
 
 				Optional<?> nameComponent = Optional.of(AdventureComponentConverter.fromComponent(

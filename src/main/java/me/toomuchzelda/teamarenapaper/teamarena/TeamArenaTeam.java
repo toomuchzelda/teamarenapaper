@@ -305,6 +305,16 @@ public class TeamArenaTeam
 		return playerMembers.keySet();
 	}
 
+	public Player getRandomPlayer() {
+		final int index = MathUtils.randomMax(this.playerMembers.size() - 1);
+		int i = 0;
+		for (Player p : this.playerMembers.keySet()) {
+			if (i++ == index) return p;
+		}
+
+		return null;
+	}
+
 	public Player getLastJoinedPlayer() {
 		Player last = null;
 		//LinkedHashSet doesn't ahve a getter for last element
@@ -431,7 +441,7 @@ public class TeamArenaTeam
 				colour2 = team.colour;
 			}
 
-			Firework firework = (Firework) e.getWorld().spawnEntity(e.getLocation(), EntityType.FIREWORK, CreatureSpawnEvent.SpawnReason.CUSTOM);
+			Firework firework = (Firework) e.getWorld().spawnEntity(e.getLocation(), EntityType.FIREWORK_ROCKET, CreatureSpawnEvent.SpawnReason.CUSTOM);
 			FireworkMeta meta = firework.getFireworkMeta();
 			meta.clearEffects();
 			FireworkEffect.Type type = FireworkEffect.Type.values()[MathUtils.randomMax(FireworkEffect.Type.values().length - 1)];

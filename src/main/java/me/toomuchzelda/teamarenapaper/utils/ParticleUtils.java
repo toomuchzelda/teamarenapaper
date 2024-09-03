@@ -7,22 +7,51 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.craftbukkit.CraftParticle;
 import org.bukkit.entity.Player;
 
 public class ParticleUtils {
 	public static void colouredRedstone(Location location, Color colour, double brightness, float size) {
 		Particle.DustOptions options = new Particle.DustOptions(colour, size);
-		location.getWorld().spawnParticle(Particle.REDSTONE, location.getX(), location.getY(), location.getZ(), 1, 0, 0, 0,
+		location.getWorld().spawnParticle(Particle.DUST, location.getX(), location.getY(), location.getZ(), 1, 0, 0, 0,
 				brightness, options);
 	}
 
 	public static void colouredRedstone(Location location, int count, double offX, double offY, double offZ, Color colour,
 										double brightness, float size) {
 		Particle.DustOptions options = new Particle.DustOptions(colour, size);
-		location.getWorld().spawnParticle(Particle.REDSTONE, location,
+		location.getWorld().spawnParticle(Particle.DUST, location,
 			count,
 			offX, offY, offZ,
 			brightness, options);
+	}
+
+	public static <T> void batchParticles(Player viewer, PacketSender cache,
+										  Particle particle, T data, Location loc,
+										  double maxDistance, int count,
+										  float offX, float offY, float offZ,
+										  float speed,
+										  boolean force) {
+
+		if (data != null && !particle.getDataType().isInstance(data)) {
+			throw new IllegalArgumentException("Particle and data mismatch");
+		}
+
+		maxDistance = Math.min(maxDistance, (force ? 512d : 32d));
+		if (viewer.getEyeLocation().distance(loc) > maxDistance) return;
+
+		ParticleOptions nmsParticleOptions = CraftParticle.createParticleParam(particle, data);
+		ClientboundLevelParticlesPacket packet = new ClientboundLevelParticlesPacket(
+			nmsParticleOptions,
+			force,
+			loc.getX(), loc.getY(), loc.getZ(),
+			offX, offY, offZ,
+			speed,
+			count
+		);
+
+		PacketContainer pLibPacket = new PacketContainer(PacketType.Play.Server.WORLD_PARTICLES, packet);
+		cache.enqueue(viewer, pLibPacket);
 	}
 
 	public static void playExplosionParticle(Location location, float offX, float offY, float offZ, boolean large) {

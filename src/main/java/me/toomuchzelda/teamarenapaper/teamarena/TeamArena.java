@@ -17,11 +17,13 @@ import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandCallvote;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandTeamChat;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.GraffitiManager;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.GameMenu;
-import me.toomuchzelda.teamarenapaper.teamarena.inventory.KitControlInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.KitInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.IronGolemKillStreak;
@@ -48,10 +50,11 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.command.CommandSender;
-import org.bukkit.craftbukkit.v1_20_R3.CraftWorld;
+import org.bukkit.craftbukkit.CraftWorld;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.*;
@@ -71,8 +74,10 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.annotation.OverridingMethodsMustInvokeSuper;
 import java.io.File;
 import java.util.*;
+import java.util.function.BiConsumer;
 
 /**
  * TeamArena game class. Handles the vast majority of the game's state and mechanics.
@@ -131,8 +136,6 @@ public abstract class TeamArena
 			.build();
 	public static final int RESPAWN_SECONDS = 6;
 
-	protected final List<Kit> defaultKits;
-
 	protected Map<String, Kit> kits = new LinkedHashMap<>();
 	protected static ItemStack kitMenuItem = ItemBuilder.of(Material.FEATHER)
 		.displayName(Component.text("Select a Kit", NamedTextColor.BLUE))
@@ -149,12 +152,16 @@ public abstract class TeamArena
 
 	public static final Component OWN_TEAM_PREFIX = Component.text("▶ ");
 	public static final Component OWN_TEAM_PREFIX_DANGER = OWN_TEAM_PREFIX.color(NamedTextColor.RED);
+	private static final AttributeModifier SPECTATOR_SCALE = new AttributeModifier(
+		new NamespacedKey(Main.getPlugin(), "spectator_scale"), -0.9d, AttributeModifier.Operation.MULTIPLY_SCALAR_1
+	);
 
 	protected Queue<DamageEvent> damageQueue;
 
 	public final MiniMapManager miniMap;
 	public final GraffitiManager graffiti;
 	private final KillStreakManager killStreakManager;
+	protected final FakeBlockManager fakeBlockManager;
 
 	private static final String[] BUY_SIGN_MESSAGES = new String[] {
 		"The ancient relic of 2013 crumbles as you move your hand near it.",
@@ -239,28 +246,17 @@ public abstract class TeamArena
 		((CraftWorld) gameWorld).getHandle().paperConfig().misc.disableRelativeProjectileVelocity = true;
 
 		// Force load all the chunks that are within the playing area
-		{
-			final int chunkWidthX = ((int) (border.getWidthX() / 16d)) + 1;
-			final int chunkWidthZ = ((int) (border.getWidthZ() / 16d)) + 1;
+		this.forEachGameChunk((chunk, border) -> {
+			chunk.setForceLoaded(true);
 
-			final Location cornerLoc = border.getMin().toLocation(this.gameWorld);
-			for (int chunkX = 0; chunkX < chunkWidthX; chunkX++) {
-				for (int chunkZ = 0; chunkZ < chunkWidthZ; chunkZ++) {
-					Chunk chunk = this.gameWorld.getChunkAt(cornerLoc.getChunk().getX() +
-						chunkX, cornerLoc.getChunk().getZ() + chunkZ);
-
-					chunk.setForceLoaded(true);
-
-					// Remove almost all of the old Buy signs if any - leave a few at random for easter egg
-					Collection<BlockState> signs = chunk.getTileEntities(block -> ItemUtils.isOldBuySign(block.getState()), false);
-					for (BlockState state : signs) {
-						if (MathUtils.random.nextDouble() < 0.95d) {
-							state.getBlock().setType(Material.AIR);
-						}
-					}
+			// Remove almost all of the old Buy signs if any - leave a few at random for easter egg
+			Collection<BlockState> signs = chunk.getTileEntities(block -> ItemUtils.isOldBuySign(block.getState()), false);
+			for (BlockState state : signs) {
+				if (MathUtils.random.nextDouble() < 0.95d) {
+					state.getBlock().setType(Material.AIR);
 				}
 			}
-		}
+		});
 
 		gameCreationTime = gameTick;
 		waitingSince = gameTick;
@@ -290,13 +286,7 @@ public abstract class TeamArena
 		miniMap = new MiniMapManager(this);
 		graffiti = new GraffitiManager(this);
 		killStreakManager = new KillStreakManager();
-
-		this.defaultKits = new ArrayList<>();
-		this.defaultKits.addAll(List.of(new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(), new KitBurst(),
-			new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(), new KitNone(),
-			new KitVenom(), new KitRewind(), new KitValkyrie(), new KitExplosive(), new KitTrigger(), new KitMedic(this.killStreakManager),
-			new KitBerserker(), new KitEngineer(), new KitPorcupine(), new KitLongbow(), new KitSniper(), new KitBeekeeper())
-		);
+		this.fakeBlockManager = new FakeBlockManager(this);
 
 		registerKits();
 
@@ -329,7 +319,8 @@ public abstract class TeamArena
 			CommandCallvote.instance.cancelVote(); // 5 seconds later, in preGameTick(), next one is started
 
 		//init all the players online at time of construction
-		Kit fallbackKit = KitFilter.filterKit(kits.values().iterator().next());
+		Map<Player, Set<Kit>> playerAllowedKits = KitFilter.calculateKits(this, Main.getPlayerInfoMap().keySet());
+		Kit fallbackKit = kits.values().iterator().next();
 		for (var entry : Main.getPlayerInfoMap().entrySet()) {
 			Player p = entry.getKey();
 			PlayerInfo pinfo = entry.getValue();
@@ -340,11 +331,23 @@ public abstract class TeamArena
 			}
 			players.add(p);
 
-			Kit kit = findKit(pinfo.defaultKit), filteredKit = KitFilter.filterKit(kit);
-			pinfo.kit = filteredKit;
-			if (kit != filteredKit) {
-				p.sendMessage(KitFilter.getSelectedKitMessage(filteredKit));
+			Kit preferredKit = findKit(pinfo.defaultKit);
+			if (preferredKit == null) // kit not available
+				preferredKit = fallbackKit;
+			var allowedKits = playerAllowedKits.get(p);
+			if (allowedKits.contains(preferredKit)) {
+				pinfo.kit = preferredKit;
+			} else {
+				if (allowedKits.isEmpty()) {
+
+					pinfo.kit = preferredKit;
+				} else {
+					pinfo.kit = allowedKits.iterator().next();
+				}
 			}
+			// notify kit change
+			if (!pinfo.kit.getName().equalsIgnoreCase(pinfo.defaultKit))
+				p.sendMessage(KitFilter.getSelectedKitMessage(pinfo.kit));
 
 			pinfo.team = noTeamTeam;
 			pinfo.clearDamageReceivedLog();
@@ -353,9 +356,6 @@ public abstract class TeamArena
 			pinfo.totalKills = 0;
 			pinfo.deaths = 0;
 			noTeamTeam.addMembers(p);
-
-			if(pinfo.kit == null)
-				pinfo.kit = fallbackKit;
 
 			PlayerUtils.resetState(p);
 			p.setAllowFlight(true);
@@ -376,7 +376,16 @@ public abstract class TeamArena
 	}
 
 	protected void registerKits() {
-		defaultKits.forEach(this::registerKit);
+		var defaultKits = new Kit[] {
+			new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(), new KitBurst(),
+			new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(), new KitNone(),
+			new KitVenom(), new KitRewind(), new KitValkyrie(), new KitExplosive(), new KitTrigger(), new KitMedic(this.killStreakManager),
+			new KitBerserker(), new KitEngineer(), new KitPorcupine(), new KitLongbow(), new KitSniper(), new KitBeekeeper(),
+		};
+
+		for (Kit kit : defaultKits) {
+			registerKit(kit);
+		}
 	}
 
 	protected void registerKit(Kit kit) {
@@ -389,16 +398,18 @@ public abstract class TeamArena
 	}
 
 	// player as in players in the players set
-	public void givePlayerItems(Player player, PlayerInfo info, boolean clear) {
+	public void giveKitAndGameItems(Player player, PlayerInfo info, boolean clear) {
 		PlayerInventory inventory = player.getInventory();
 		if(clear)
 			inventory.clear();
 
 		inventory.setItem(8, miniMap.getMapItem(info.team));
 		inventory.setItem(7, info.team.getHotbarItem());
+
 		info.kit.giveKit(player, true, info);
 	}
 
+	@OverridingMethodsMustInvokeSuper
 	public void cleanUp() {
 		if (Main.getGame() != null) {
 			//teleport everyone to new world before unloading: worlds must have no players in them to be unloaded
@@ -763,22 +774,15 @@ public abstract class TeamArena
 			playerCause = p;
 		}
 		if(!event.isCancelled()) {
-			if (event.getVictim() instanceof final Player p) {
+			final Entity victim = event.getVictim();
+			if (victim instanceof final Player p) {
 				for (Ability ability : Kit.getAbilities(p)) {
 					ability.onReceiveDamage(event);
 				}
 
 				if (!event.isCancelled() && event.getFinalDamage() > 0) {
-					PlayerInfo pinfo = Main.getPlayerInfo(p);
-					//spawn damage indicator hologram
-					// divide by two to display as hearts
-					Component damageText = Component.text(MathUtils.round(event.getFinalDamage() / 2, 2), NamedTextColor.YELLOW, TextDecoration.BOLD);
-					Location spawnLoc = p.getLocation();
-					spawnLoc.add(0, MathUtils.randomRange(1.4, 2), 0);
-					var hologram = new SpeechBubbleHologram(spawnLoc, PlayerUtils.getDamageIndicatorViewers(p, playerCause), damageText);
-					hologram.respawn();
-
 					//add to their damage log
+					PlayerInfo pinfo = Main.getPlayerInfo(p);
 					pinfo.logDamageReceived(event.getDamageType(), event.getFinalDamage(), event.getFinalAttacker(), gameTick);
 
 					//give kill assist credit
@@ -787,8 +791,18 @@ public abstract class TeamArena
 					}
 				}
 			}
-			else if (event.getVictim() instanceof Bee) {
+			else if (victim instanceof Bee) {
 				KitBeekeeper.BeekeeperAbility.handleBeeConfirmedDamage(event);
+			}
+
+			if (!event.isCancelled() && event.getFinalDamage() > 0) {
+				//spawn damage indicator hologram
+				// divide by two to display as hearts
+				Component damageText = Component.text(MathUtils.round(event.getFinalDamage() / 2, 2), NamedTextColor.YELLOW, TextDecoration.BOLD);
+				Location spawnLoc = victim.getLocation();
+				spawnLoc.add(0, MathUtils.randomRange(1.4, 2), 0);
+				var hologram = new SpeechBubbleHologram(spawnLoc, PlayerUtils.getDamageIndicatorViewers(victim, playerCause), damageText);
+				hologram.respawn();
 			}
 		}
 	}
@@ -884,6 +898,11 @@ public abstract class TeamArena
 	}
 
 	public void onInteract(PlayerInteractEvent event) {
+		if (event.getAction() == Action.PHYSICAL) { // Prevent trampling farmland
+			Block block = event.getClickedBlock();
+			if (block != null && block.getType() == Material.FARMLAND)
+				event.setUseInteractedBlock(Event.Result.DENY);
+		}
 		if (event.useItemInHand() == Event.Result.DENY)
 			return;
 
@@ -895,7 +914,7 @@ public abstract class TeamArena
 			event.setUseItemInHand(Event.Result.DENY);
 			assert CompileAsserts.OMIT || isDead(player);
 			if (canRespawn(player))
-				setToRespawn(player);
+				setToRespawn(player, true);
 			else
 				player.sendMessage(Component.text("You can't respawn right now", NamedTextColor.RED));
 		} else if (kitMenuItem.isSimilar(item)) {
@@ -903,7 +922,7 @@ public abstract class TeamArena
 			Inventories.openInventory(player, new KitInventory());
 		} else if (kitControlMenuItem.isSimilar(item) && Main.getPlayerInfo(player).hasPermission(PermissionLevel.MOD)) {
 			event.setUseItemInHand(Event.Result.DENY);
-			Inventories.openInventory(player, new KitControlInventory());
+//			Inventories.openInventory(player, new KitControlInventory());
 		} else if (gameMenuItem.isSimilar(item)) {
 			event.setUseItemInHand(Event.Result.DENY);
 			Inventories.openInventory(player, new GameMenu());
@@ -961,10 +980,18 @@ public abstract class TeamArena
 	}
 
 	public void setViewingGlowingTeammates(PlayerInfo pinfo, boolean glow, boolean message) {
+		setViewingGlowingTeammates(pinfo, glow, message, null);
+	}
+
+	public void setViewingGlowingTeammates(PlayerInfo pinfo, boolean glow, boolean message,
+										   @Nullable Set<Player> exceptions) {
 		MetadataViewer meta = pinfo.getMetadataViewer();
 		pinfo.viewingGlowingTeammates = glow;
 
 		for (Player viewed : pinfo.team.getPlayerMembers()) {
+			if (exceptions != null && exceptions.contains(viewed))
+				continue;
+
 			if(glow) {
 				meta.updateBitfieldValue(viewed, MetaIndex.BASE_BITFIELD_IDX,
 						MetaIndex.BASE_BITFIELD_GLOWING_IDX, glow);
@@ -1166,6 +1193,7 @@ public abstract class TeamArena
 		}
 	}
 
+	@OverridingMethodsMustInvokeSuper
 	public void prepTeamsDecided() {
 		//set teams here
 		showTeamColours = true;
@@ -1194,6 +1222,7 @@ public abstract class TeamArena
 		sendCountdown(true);
 	}
 
+	@OverridingMethodsMustInvokeSuper
 	public void prepGameStarting() {
 		//teleport players to team spawns
 		for(TeamArenaTeam team : teams) {
@@ -1210,6 +1239,7 @@ public abstract class TeamArena
 	}
 
 
+	@OverridingMethodsMustInvokeSuper
 	public void prepLive() {
 		setGameState(GameState.LIVE);
 		gameLiveTime = gameTick;
@@ -1224,7 +1254,7 @@ public abstract class TeamArena
 			player.setSaturatedRegenRate(0);
 			PlayerListScoreManager.setKills(player, 0);
 
-			givePlayerItems(player, Main.getPlayerInfo(player), true);
+			giveKitAndGameItems(player, Main.getPlayerInfo(player), true);
 
 			player.playSound(player.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.AMBIENT, 2, 1);
 		}
@@ -1242,6 +1272,7 @@ public abstract class TeamArena
 		Bukkit.broadcast(this.getHowToPlayBrief());
 	}
 
+	@OverridingMethodsMustInvokeSuper
 	public void prepEnd() {
 		waitingSince = gameTick;
 
@@ -1280,6 +1311,9 @@ public abstract class TeamArena
 
 		//reveal everyone to everyone just to be safe
 		for(Player p : Bukkit.getOnlinePlayers()) {
+			try {
+				p.getAttribute(Attribute.GENERIC_SCALE).removeModifier(SPECTATOR_SCALE);
+			} catch (Exception e) { e.printStackTrace(); }
 			for(Player pp : Bukkit.getOnlinePlayers()) {
 				p.showPlayer(Main.getPlugin(), pp);
 			}
@@ -1321,6 +1355,7 @@ public abstract class TeamArena
 	}
 
 
+	@OverridingMethodsMustInvokeSuper
 	public void prepDead() {
 		for(var entry : Main.getPlayerInfoMap().entrySet()) {
 			final Player p = entry.getKey();
@@ -1345,6 +1380,7 @@ public abstract class TeamArena
 		miniMap.onGameCleanup();
 
 		this.killStreakManager.unregister();
+		this.fakeBlockManager.removeAll(false);
 
 		BuildingManager.cleanUp();
 		BuildingOutlineManager.cleanUp();
@@ -1365,25 +1401,7 @@ public abstract class TeamArena
 		}
 
 		Collections.shuffle(shuffledPlayers, MathUtils.random);
-
 		shuffledPlayers.forEach(player -> this.addToLowestTeam(player, true));
-
-		//theoretically playerIdx shouldn't become larger than the number of players so i don't need to modulus
-		/*int playerIdx = 0;
-		for(TeamArenaTeam team : shuffledTeams) {
-			while(team.getPlayerMembers().size() < maxOnTeam) {
-				team.addMembers(shuffledPlayers.get(playerIdx));
-				playerIdx++;
-			}
-		}
-
-		int numOfRemainders = players.size() % teams.length;
-		if(numOfRemainders > 0) {
-			for(int i = 0; i < numOfRemainders; i++) {
-				shuffledTeams[i].addMembers(shuffledPlayers.get(playerIdx));
-				playerIdx++;
-			}
-		}*/
 
 		for(TeamArenaTeam team : teams) {
 			team.updateNametags();
@@ -1420,7 +1438,7 @@ public abstract class TeamArena
 		PlayerInventory inventory = player.getInventory();
 		inventory.setItem(0, kitMenuItem.clone());
 		if (Main.getPlayerInfo(player).hasPermission(PermissionLevel.MOD)) {
-			inventory.setItem(2, kitControlMenuItem.clone());
+//			inventory.setItem(2, kitControlMenuItem.clone());
 		}
 		inventory.setItem(4, gameMenuItem.clone());
 		inventory.setItem(8, miniMap.getMapItem());
@@ -1442,15 +1460,17 @@ public abstract class TeamArena
 		return this.killStreakManager;
 	}
 
-	public abstract boolean canSelectKitNow();
+	public abstract boolean canSelectKitNow(Player player);
 
 	public abstract boolean canSelectTeamNow();
 
-	public abstract boolean canTeamChatNow(Player player);
+	public boolean canTeamChatNow(Player player) {
+		return gameState != GameState.PREGAME && gameState != GameState.DEAD;
+	}
 
 	public void selectKit(@NotNull Player player, @NotNull Kit kit) {
-		if (!canSelectKitNow()) {
-			player.sendMessage(Component.text("You can't choose a kit right now").color(NamedTextColor.RED));
+		if (!canSelectKitNow(player)) {
+			player.sendMessage(Component.text("You can't choose a kit right now", NamedTextColor.RED));
 			return;
 		}
 		final PlayerInfo pinfo = Main.getPlayerInfo(player);
@@ -1568,11 +1588,18 @@ public abstract class TeamArena
 		player.getInventory().clear();
 		giveSpectatorItems(player);
 		player.setAllowFlight(true);
+		EntityUtils.addAttribute(player.getAttribute(Attribute.GENERIC_SCALE), SPECTATOR_SCALE);
 
 		//hide all the spectators from everyone else
 		for(Player p : Bukkit.getOnlinePlayers()) {
 			p.hidePlayer(Main.getPlugin(), player);
 		}
+	}
+
+	// For HNS to override
+	protected Location getSpawnPoint(PlayerInfo pinfo) {
+		assert CompileAsserts.OMIT || this.gameState == GameState.LIVE;
+		return pinfo.team.getNextSpawnpoint();
 	}
 
 	public void respawnPlayer(final Player player) {
@@ -1582,7 +1609,7 @@ public abstract class TeamArena
 			SpectatorAngelManager.removeAngel(player);
 		}
 
-		player.teleport(pinfo.team.getNextSpawnpoint());
+		player.teleport(this.getSpawnPoint(pinfo));
 		player.getWorld().playSound(player.getLocation(), Sound.ENTITY_ALLAY_AMBIENT_WITH_ITEM, 1f, 1f);
 
 		players.add(player);
@@ -1591,7 +1618,7 @@ public abstract class TeamArena
 		player.setAllowFlight(false);
 		PlayerUtils.resetState(player);
 
-		givePlayerItems(player, pinfo, true);
+		giveKitAndGameItems(player, pinfo, true);
 		pinfo.kills = 0;
 		PlayerListScoreManager.setKills(player, 0);
 
@@ -1686,11 +1713,8 @@ public abstract class TeamArena
 					}
 					playerVictim.teleport(toTele);
 				}
-				SpectatorAngelManager.spawnAngel(playerVictim, false);
 			}
 			else {
-				SpectatorAngelManager.spawnAngel(playerVictim, true);
-
 				PlayerInventory playerInventory = playerVictim.getInventory();
 				respawnTimers.put(playerVictim, new RespawnInfo(gameTick, playerInventory.getHeldItemSlot()));
 				// prevent players from opening kit menu
@@ -1699,6 +1723,8 @@ public abstract class TeamArena
 				// use specialized minimap item
 				playerInventory.setItem(8, miniMap.getMapItem(Main.getPlayerInfo(playerVictim).team));
 			}
+
+			SpectatorAngelManager.spawnAngel(playerVictim, this.spawnLockingAngel(playerVictim, event));
 		}
 		else if(victim instanceof Damageable dam) {
 			dam.setHealth(0);
@@ -1762,6 +1788,14 @@ public abstract class TeamArena
 	//todo: make a settable and changeable option (GameOption maybe)
 	public abstract boolean isRespawningGame();
 
+	protected boolean spawnLockingAngel(Player p, @Nullable DamageEvent killer) {
+		if (killer != null && killer.getDamageType().is(DamageType.SPECTATE)) {
+			return false;
+		}
+
+		return this.isRespawningGame();
+	}
+
 	public boolean canRespawn(Player player) {
 		if(gameState != GameState.LIVE)
 			return false;
@@ -1788,11 +1822,21 @@ public abstract class TeamArena
 	}
 
 	//set a player to respawn when their respawn time is up, only really needed if the respawn was interrupted
-	public void setToRespawn(Player player) {
-		RespawnInfo rinfo = respawnTimers.get(player);
+	public void setToRespawn(Player player, boolean respawn) {
+		RespawnInfo rinfo;
+		if (respawn)
+			rinfo = respawnTimers.get(player);
+		else
+			rinfo = respawnTimers.remove(player);
+
 		if(rinfo != null) {
-			rinfo.interrupted = false;
-			player.getInventory().removeItem(respawnItem);
+			if (respawn) {
+				rinfo.interrupted = false;
+				player.getInventory().removeItem(respawnItem);
+			}
+			else {
+				player.getInventory().remove(respawnItem);
+			}
 		}
 	}
 
@@ -1834,20 +1878,22 @@ public abstract class TeamArena
 			setSpectator(player, true, false);
 		}
 
-		if (playerInfo.kit == null) {
-			Kit kit = findKit(playerInfo.defaultKit), filteredKit = KitFilter.filterKit(kit);
-			playerInfo.kit = filteredKit;
-			if (kit != filteredKit) {
-				Bukkit.getScheduler().runTask(Main.getPlugin(), () ->
-					player.sendMessage(KitFilter.getSelectedKitMessage(filteredKit)));
-			}
+		Kit preferredKit = findKit(playerInfo.defaultKit);
+		if (preferredKit == null)
+			preferredKit = kits.values().iterator().next();
 
-			//default kit somehow invalid; maybe a kit was removed
-			if (playerInfo.kit == null) {
-				playerInfo.kit = KitFilter.filterKit(kits.values().iterator().next());
-				Main.logger().severe("PlayerInfo default kit somehow invalid in TeamArena#loggingInPlayer. Should" +
-					" have been handled in EventListeners playerLogin.");
-			}
+		Kit kit = KitFilter.filterKit(this, playerInfo.team, player, preferredKit);
+		if (kit != preferredKit) {
+			Bukkit.getScheduler().runTask(Main.getPlugin(), () ->
+				player.sendMessage(KitFilter.getSelectedKitMessage(kit)));
+		}
+		playerInfo.kit = kit;
+
+		//default kit somehow invalid; maybe a kit was removed
+		if (playerInfo.kit == null) {
+			playerInfo.kit = KitFilter.calculateKits(this, player).iterator().next();
+			Main.logger().severe("PlayerInfo default kit somehow invalid in TeamArena#loggingInPlayer. Should" +
+				" have been handled in EventListeners playerLogin.");
 		}
 
 		player.teleport(toTeleport);
@@ -1917,15 +1963,19 @@ public abstract class TeamArena
 	}
 
 	public void informOfTeam(Player p) {
+		this.informOfTeam(p, Component.empty());
+	}
+
+	public void informOfTeam(Player p, Component title) {
 		TeamArenaTeam team = Main.getPlayerInfo(p).team;
 		Component text = Component.text("You are on ", NamedTextColor.GOLD).append(team.getComponentName());
-		PlayerUtils.sendTitle(p, Component.empty(), text, 10, 70, 20);
+		PlayerUtils.sendTitle(p, title, text, 10, 70, 20);
 		if(gameState == GameState.TEAMS_CHOSEN) {
 			final Component startConniving = Component.text("! Start scheming a game plan with /t!", NamedTextColor.GOLD);
 			text = text.append(startConniving);
 		}
 		p.sendMessage(text);
-		p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.AMBIENT, 2f, 0.5f);
+		p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.AMBIENT, 2f, 0.5f);
 	}
 
 	private void informKillsDeaths(Player player, PlayerInfo pinfo) {
@@ -2211,6 +2261,10 @@ public abstract class TeamArena
 		return !isTeamHotbarItem(item);
 	}
 
+	public boolean isVandalisableBlock(Block block) {
+		return BuildingManager.getBuildingAt(block) == null;
+	}
+
 	public void queueDamage(DamageEvent event) {
 		if(this.gameState == GameState.LIVE && !isDead(event.getVictim()))
 			damageQueue.add(event);
@@ -2234,6 +2288,10 @@ public abstract class TeamArena
 
 	public Collection<String> getTabKitList() {
 		return kits.keySet();
+	}
+
+	public FakeBlockManager getFakeBlockManager() {
+		return this.fakeBlockManager;
 	}
 
 	public abstract Component getGameName();
@@ -2287,6 +2345,21 @@ public abstract class TeamArena
 
 	public GameState getGameState() {
 		return gameState;
+	}
+
+	public void forEachGameChunk(BiConsumer<Chunk, BoundingBox> func) {
+		final int chunkWidthX = ((int) (border.getWidthX() / 16d)) + 1;
+		final int chunkWidthZ = ((int) (border.getWidthZ() / 16d)) + 1;
+
+		final Location cornerLoc = border.getMin().toLocation(this.gameWorld);
+		for (int chunkX = 0; chunkX < chunkWidthX; chunkX++) {
+			for (int chunkZ = 0; chunkZ < chunkWidthZ; chunkZ++) {
+				Chunk chunk = this.gameWorld.getChunkAt(cornerLoc.getChunk().getX() +
+					chunkX, cornerLoc.getChunk().getZ() + chunkZ);
+
+				func.accept(chunk, border);
+			}
+		}
 	}
 
 	@ApiStatus.Internal

@@ -18,7 +18,7 @@ import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.data.BlockData;
-import org.bukkit.craftbukkit.v1_20_R3.block.data.CraftBlockData;
+import org.bukkit.craftbukkit.block.data.CraftBlockData;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
@@ -194,7 +194,7 @@ public class PacketEntity
 	}
 
 	public void setViewerRule(@Nullable Predicate<Player> rule) {
-		this.viewerRule = rule;
+		this.viewerRule = rule; // Re-evaluated on tick
 	}
 
 	private Component customNameCache;
@@ -711,7 +711,7 @@ public class PacketEntity
 	 * For PacketEntity, use this instead of PlayerUtils.sendPacket
 	 */
 	public void sendPacket(Player receiver, PacketContainer packet) {
-		PlayerUtils.sendPacket(receiver, PacketEntityManager.cache, packet);
+		PacketEntityManager.cache.enqueue(receiver, packet);
 	}
 
 	public void broadcastPacket(PacketContainer packet) {

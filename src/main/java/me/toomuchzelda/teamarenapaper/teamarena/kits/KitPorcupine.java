@@ -201,7 +201,8 @@ public class KitPorcupine extends Kit {
 			history.put(projectile, new ReflectedInfo(reflectEvent.cleanupFunc, reflectEvent.hitFunc, reflectEvent.attackFunc));
 			this.reflectedProjLookup.put(projectile, null);
 
-			projectile.setShooter(porc);
+			if (!(projectile instanceof EnderPearl)) // Don't take ownership of epearls
+				projectile.setShooter(porc);
 
 			Location hitLoc = projectile.getLocation();
 			Vector hitPos = detailedEvent.getEntityHitResult().getHitPosition();

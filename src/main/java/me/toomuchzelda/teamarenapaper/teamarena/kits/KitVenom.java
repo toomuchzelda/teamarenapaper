@@ -27,7 +27,6 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.PotionMeta;
-import org.bukkit.potion.PotionData;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.potion.PotionType;
@@ -56,8 +55,10 @@ import java.util.*;
 public class KitVenom extends Kit {
 	private static final ItemStack POTION_OF_POISON = ItemBuilder.of(Material.POTION)
 			.meta(PotionMeta.class, potionMeta -> {
-				potionMeta.setBasePotionData(new PotionData(PotionType.POISON));
-				potionMeta.addItemFlags(ItemFlag.HIDE_POTION_EFFECTS);
+				potionMeta.setBasePotionType(PotionType.POISON);
+				potionMeta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+				// TODO test this
+				//potionMeta.addItemFlags(ItemFlag.HIDE_POTION_EFFECTS);
 			})
 			.build();
 
@@ -153,7 +154,7 @@ public class KitVenom extends Kit {
 					//Leap Ability Implementation
 					World world = player.getWorld();
 					Vector direction = player.getLocation().getDirection();
-					direction.multiply(new Vector(1.5, 0.75, 1.5));
+					direction.multiply(new Vector(1.4, 0.75, 1.4));
 					player.setCooldown(Material.CHICKEN, LEAP_CD);
 					player.setCooldown(Material.COOKED_CHICKEN, 4 * 20);
 					//world.playSound to play sound for all players

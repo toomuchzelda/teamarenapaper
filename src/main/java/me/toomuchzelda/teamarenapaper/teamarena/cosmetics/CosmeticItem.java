@@ -37,7 +37,7 @@ public abstract class CosmeticItem {
 		}
 		this.name = name;
 		this.author = info.getString("author");
-		this.desc = info.getString("desc");
+		this.desc = info.getString("description");
 		var displayString = info.getString("display");
 		if (displayString == null) {
 			display = new ItemStack(Material.ARMOR_STAND);

@@ -17,7 +17,7 @@ public class PushMineExplosion extends TeamArenaExplosion
 	@Override
 	public void playExplosionEffect() {
 		Location loc = getCentre().add(0d, 0.1d, 0d);
-		loc.getWorld().spawnParticle(Particle.EXPLOSION_NORMAL, loc, 15);
+		loc.getWorld().spawnParticle(Particle.EXPLOSION, loc, 15);
 	}
 
 	@Override

@@ -2,7 +2,6 @@ package me.toomuchzelda.teamarenapaper.utils;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.reflect.StructureModifier;
 import com.mojang.datafixers.util.Pair;
 import io.netty.buffer.Unpooled;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
@@ -11,19 +10,26 @@ import net.kyori.adventure.text.event.HoverEvent;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.*;
+import net.minecraft.server.level.ChunkMap;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerPlayerConnection;
 import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.phys.*;
-import org.bukkit.*;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
-import org.bukkit.craftbukkit.v1_20_R3.CraftEquipmentSlot;
-import org.bukkit.craftbukkit.v1_20_R3.CraftWorld;
-import org.bukkit.craftbukkit.v1_20_R3.entity.*;
-import org.bukkit.craftbukkit.v1_20_R3.inventory.CraftItemStack;
-import org.bukkit.craftbukkit.v1_20_R3.util.CraftVector;
+import org.bukkit.craftbukkit.CraftEquipmentSlot;
+import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.entity.CraftEntity;
+import org.bukkit.craftbukkit.entity.CraftPlayer;
+import org.bukkit.craftbukkit.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.util.CraftVector;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
@@ -39,7 +45,7 @@ import java.util.*;
 import java.util.function.Predicate;
 
 public class EntityUtils {
-    public static void cacheReflection() {
+	public static void cacheReflection() {
 	}
 
 	@NotNull
@@ -226,6 +232,12 @@ public class EntityUtils {
 			entity.setHealth(newHealth);
 	}
 
+	public static void addAttribute(AttributeInstance instance, AttributeModifier modifier) {
+		if (instance.getModifier(modifier.getKey()) == null) {
+			instance.addModifier(modifier);
+		}
+	}
+
 	public static void removeAllModifiers(LivingEntity living) {
 		for(Attribute attribute : Attribute.values()) {
 			AttributeInstance instance = living.getAttribute(attribute);
@@ -236,10 +248,8 @@ public class EntityUtils {
 	}
 
 	public static void removeAllModifiers(AttributeInstance attributeInstance) {
-		Iterator<AttributeModifier> iter = attributeInstance.getModifiers().iterator();
-		while(iter.hasNext()) {
-			iter.next();
-			iter.remove();
+		for (AttributeModifier modifier : attributeInstance.getModifiers()) {
+			attributeInstance.removeModifier(modifier);
 		}
 	}
 
@@ -260,7 +270,7 @@ public class EntityUtils {
 		friendlyByteBuf.writeByte(newPitch);
 		friendlyByteBuf.writeBoolean(onGround);
 
-		return new ClientboundTeleportEntityPacket(friendlyByteBuf);
+		return ClientboundTeleportEntityPacket.STREAM_CODEC.decode(friendlyByteBuf);
 	}
 
 	public static Packet<?> createMovePacket(int id, Location location, double xDelta, double yDelta, double zDelta,
@@ -279,7 +289,7 @@ public class EntityUtils {
 			friendlyByteBuf.writeByte(newPitch);
 			friendlyByteBuf.writeBoolean(onGround);
 
-			return new ClientboundTeleportEntityPacket(friendlyByteBuf);
+			return ClientboundTeleportEntityPacket.STREAM_CODEC.decode(friendlyByteBuf);
 		} else {
 			short deltaX = (short) (xDelta * 4096d);
 			short deltaY = (short) (yDelta * 4096d);
@@ -308,12 +318,13 @@ public class EntityUtils {
 	// Following 3 methods exist because paper Entity.getTrackedPlayers() is really slow
 	@Deprecated
 	public static Set<ServerPlayerConnection> getTrackedPlayers0(Entity viewedEntity) {
-		net.minecraft.world.entity.Entity nmsEntity = ((CraftEntity) viewedEntity).getHandle();
-		if (nmsEntity.tracker == null) {
+		ServerLevel nmsWorld = ((CraftWorld) viewedEntity.getWorld()).getHandle();
+		ChunkMap.TrackedEntity tracker = nmsWorld.getChunkSource().chunkMap.entityMap.get(viewedEntity.getEntityId());
+		if (tracker == null) {
 			return Collections.emptySet();
 		}
 
-		return nmsEntity.tracker.seenBy;
+		return tracker.seenBy;
 	}
 
 	public static boolean isTrackingEntity(Player viewer, Entity viewedEntity) {
@@ -381,5 +392,15 @@ public class EntityUtils {
 		}
 
 		return null;
+	}
+
+	private static final List<EquipmentSlot> playerSlots = List.of(
+		EquipmentSlot.HAND, EquipmentSlot.OFF_HAND, EquipmentSlot.FEET, EquipmentSlot.LEGS, EquipmentSlot.CHEST, EquipmentSlot.HEAD
+	);
+	public static List<EquipmentSlot> getEquipmentSlots(LivingEntity livent) {
+		if (livent instanceof Wolf || livent instanceof Horse) // May be more entities
+			return List.of(EquipmentSlot.values());
+		else
+			return playerSlots;
 	}
 }

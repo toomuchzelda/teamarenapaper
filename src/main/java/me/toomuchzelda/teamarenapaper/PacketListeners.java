@@ -31,14 +31,12 @@ import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.GameType;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Sound;
-import org.bukkit.craftbukkit.v1_20_R3.CraftSound;
-import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_20_R3.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.CraftSound;
+import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -154,8 +152,9 @@ public class PacketListeners
 									list.add(p);
 								list.add(packet);
 
+								// Hack - cancel this as we included this event packet in the bundle
 								event.setCancelled(true);
-								PlayerUtils.sendPacket(viewer, null, PlayerUtils.PacketCache.createBundle(list));
+								PlayerUtils.sendPacket(viewer, list);
 							}
 						}
 					}
@@ -183,32 +182,11 @@ public class PacketListeners
 				List<PacketContainer> toBundle = new ArrayList<>(attachedEntities.size());
 				final Player viewer = event.getPlayer();
 				for(AttachedPacketEntity attachedE : attachedEntities) {
-					if(attachedE.getRealViewers().contains(viewer)) {
-						if (!attachedE.sendHeadRotPackets && packet.getType() == PacketType.Play.Server.ENTITY_HEAD_ROTATION) {
-							continue;
-						}
-
-						PacketContainer entityPacket = packet.shallowClone();
-						entityPacket.getIntegers().write(0, attachedE.getId());
-
-						if(event.getPacketType() == PacketType.Play.Server.ENTITY_TELEPORT) {
-							//adjust the entity's Y position
-							double y = packet.getDoubles().read(1);
-							y += attachedE.getYOffset();
-							entityPacket.getDoubles().write(1, y);
-						}
-
-						toBundle.add(entityPacket);
-					}
+					attachedE.onPlayerMovePacket(packet, viewer, toBundle);
 				}
 
 				// Send immediately
-				if (toBundle.size() > 1) {
-					PlayerUtils.sendPacket(viewer, null, PlayerUtils.PacketCache.createBundle(toBundle));
-				}
-				else if (toBundle.size() == 1) {
-					PlayerUtils.sendPacket(viewer, null, toBundle.getFirst());
-				}
+				PlayerUtils.sendPacket(viewer, toBundle);
 			}
 		});
 
@@ -334,7 +312,8 @@ public class PacketListeners
 								disguise.disguisedGameProfile.getId(), entry.latency(), false,
 								nativeGameMode, WrappedGameProfile.fromHandle(disguise.disguisedGameProfile),
 								WrappedChatComponent.fromHandle(entry.displayName()),
-								(WrappedProfilePublicKey.WrappedProfileKeyData) null);
+								//(WrappedProfilePublicKey.WrappedProfileKeyData) null);
+								(WrappedRemoteChatSessionData) null);
 
 							newList.set(originalIndex, replacementData);
 
@@ -348,7 +327,8 @@ public class PacketListeners
 						PlayerInfoData tabListData = new PlayerInfoData(tabListProfile.getId(), entry.latency(),
 								entry.listed(), nativeGameMode, WrappedGameProfile.fromHandle(tabListProfile),
 								wrappedDisplayName,
-								(WrappedProfilePublicKey.WrappedProfileKeyData) null);
+								//(WrappedProfilePublicKey.WrappedProfileKeyData) null);
+								(WrappedRemoteChatSessionData) null);
 
 						newList.add(tabListData);
 					}
@@ -512,16 +492,17 @@ public class PacketListeners
 
 							//replace the items in the packet accordingly
 							var iter = packet.getSlots().listIterator();
-							LivingEntity nmsLiving = ((CraftPlayer) equippingPlayer).getHandle();
+							//LivingEntity nmsLiving = ((CraftPlayer) equippingPlayer).getHandle();
 							while(iter.hasNext()) {
 								Pair<EquipmentSlot, net.minecraft.world.item.ItemStack> pair = iter.next();
 
 								//don't touch the hand slots, and don't change it if it's air (taking an armor piece off)
-								if(pair.getFirst().getType() == EquipmentSlot.Type.ARMOR && !pair.getSecond().isEmpty()) {
+								if(pair.getFirst().getType() == EquipmentSlot.Type.HUMANOID_ARMOR && !pair.getSecond().isEmpty()) {
 									ItemStack armorPiece = kitArmour[pair.getFirst().getIndex()];
 									net.minecraft.world.item.ItemStack nmsArmor = CraftItemStack.asNMSCopy(armorPiece);
 									// paper avoids sending unnecessary metadata in NMS, so do that here too
-									nmsArmor = nmsLiving.stripMeta(nmsArmor, false);
+									// TODO re-add this?
+									//nmsArmor = nmsLiving.stripMeta(nmsArmor, false);
 
 									Pair<EquipmentSlot, net.minecraft.world.item.ItemStack> newPair = Pair.of(pair.getFirst(), nmsArmor);
 									iter.set(newPair);
@@ -557,35 +538,26 @@ public class PacketListeners
 			}
 		});
 
-		//ProtocolLibrary.getProtocolManager().addPacketListener(new NoChatKeys());
-	}
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(Main.getPlugin(),
+			PacketType.Play.Server.UPDATE_ATTRIBUTES)
+		{
+			@Override
+			public void onPacketSending(PacketEvent event) {
+				if (FakeHitboxManager.ACTIVE) {
+					PacketContainer packet = event.getPacket();
 
-	private static class NoChatKeys extends PacketAdapter {
-		NoChatKeys() {
-			super(Main.getPlugin(), /*PacketType.Play.Server.PLAYER_INFO,*/
-					PacketType.Play.Client.CHAT,
-					PacketType.Play.Client.CHAT_COMMAND);
-		}
-
-		@Override
-		public void onPacketReceiving(PacketEvent event) {
-			var packet = event.getPacket();
-
-			if (packet.getType() == PacketType.Play.Client.CHAT ||
-					packet.getType() == PacketType.Play.Client.CHAT_COMMAND) {
-				event.setCancelled(true);
-
-				final String originalMessage;
-				if(event.getPacketType() == PacketType.Play.Client.CHAT)
-					originalMessage = event.getPacket().getStrings().read(0);
-				else
-					originalMessage = "/" + event.getPacket().getStrings().read(0);
-
-				Bukkit.getScheduler().runTask(Main.getPlugin(), bukkitTask -> {
-					event.getPlayer().chat(originalMessage);
-				});
+					FakeHitbox hitbox = FakeHitboxManager.getByPlayerId(packet.getIntegers().read(0));
+					if (hitbox != null) {
+						final Player viewer = event.getPlayer();
+						if (hitbox.getOwner() != viewer && hitbox.getFakeViewer(viewer).isSeeingHitboxes()) {
+							PlayerUtils.sendPacket(viewer, hitbox.getAttributePackets());
+						}
+					}
+				}
 			}
-		}
+		});
+
+		//ProtocolLibrary.getProtocolManager().addPacketListener(new NoChatKeys());
 	}
 
 	public static PlayerInfoData copyPlayerInfoEntry(ClientboundPlayerInfoUpdatePacket.Entry entry, boolean stripChat) {
@@ -598,7 +570,8 @@ public class PacketListeners
 
 		return new PlayerInfoData(entry.profileId(), entry.latency(), entry.listed(),
 				nativeGameMode, wrappedGameProfile, wrappedComponent,
-				stripChat ? null : new WrappedProfilePublicKey.WrappedProfileKeyData(entry.chatSession()));
+				//stripChat ? null : new WrappedProfilePublicKey.WrappedProfileKeyData(entry.chatSession()));
+				stripChat ? null : new WrappedRemoteChatSessionData(entry.chatSession()));
 	}
 
 	public static EnumWrappers.NativeGameMode getNativeGameMode(GameType nmsType) {

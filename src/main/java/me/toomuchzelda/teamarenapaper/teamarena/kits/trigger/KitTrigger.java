@@ -65,7 +65,7 @@ public class KitTrigger extends Kit
 
 		ItemStack helmet = new ItemStack(Material.NETHERITE_HELMET);
 		ItemMeta meta = helmet.getItemMeta();
-		meta.addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 8, true);
+		meta.addEnchant(Enchantment.PROTECTION, 8, true);
 		helmet.setItemMeta(meta);
 
 		ItemStack chestplate = new ItemStack(Material.LEATHER_CHESTPLATE);
@@ -74,7 +74,7 @@ public class KitTrigger extends Kit
 
 		this.setArmor(helmet, chestplate, null, null);
 		ItemStack sword = new ItemStack(Material.IRON_SWORD);
-		sword.addEnchantment(Enchantment.DAMAGE_ALL, 3);
+		sword.addEnchantment(Enchantment.SHARPNESS, 3);
 		this.setItems(sword, DETONATOR_ITEM);
 
 		this.setAbilities(new TriggerAbility());
@@ -289,16 +289,17 @@ public class KitTrigger extends Kit
 			player.setExp(expProgress);
 
 			//esplode
-			if(diff == BOOM_TIME) {
+			if(diff >= BOOM_TIME) {
 				TeamArenaExplosion boom = new TeamArenaExplosion(null, 10d, 2d, 42d, 2d, 0.7d, DamageType.TRIGGER_BOOM, player);
 				boom.explode();
 
 				DamageEvent selfKill = DamageEvent.newDamageEvent(player, 999999d, DamageType.TRIGGER_BOOM_SELF, null, false);
 				Main.getGame().queueDamage(selfKill);
-			}
-			else if (diff > BOOM_TIME) {
-				Main.logger().severe("Boom tick ran beyond user's boom tick");
-				Thread.dumpStack();
+
+				if (diff > BOOM_TIME) {
+					Main.logger().severe("Boom tick ran beyond user's boom tick");
+					Thread.dumpStack();
+				}
 			}
 			else {
 				if(diff % 10 == 0) {

@@ -31,10 +31,10 @@ public abstract class CratedKillStreak extends KillStreak {
 
 	private final ItemStack crateSummonItem;
 
-	CratedKillStreak(String name, String description, TextColor color, ItemStack item, Material crateSummonItemMaterial,
+	CratedKillStreak(KillStreakManager.KillStreakID id, String name, String description, TextColor color, ItemStack item, Material crateSummonItemMaterial,
 					 Ability... abilities) {
 
-		super(name, description, color, item, abilities);
+		super(id, name, description, color, item, abilities);
 		this.crateSummonItem = this.createCrateItem(crateSummonItemMaterial);
 	}
 
@@ -67,7 +67,7 @@ public abstract class CratedKillStreak extends KillStreak {
 				getComponentName()
 			))
 			.lore(lore)
-			.enchant(Enchantment.DURABILITY, 1)
+			.enchant(Enchantment.UNBREAKING, 1)
 			.hide(ItemFlag.HIDE_ENCHANTS)
 			.build();
 	}

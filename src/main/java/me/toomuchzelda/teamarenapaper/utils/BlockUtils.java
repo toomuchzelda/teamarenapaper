@@ -1,13 +1,17 @@
 package me.toomuchzelda.teamarenapaper.utils;
 
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import org.bukkit.Color;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.craftbukkit.v1_20_R3.block.CraftBlock;
+import org.bukkit.craftbukkit.block.CraftBlock;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Set;
 
 public class BlockUtils
 {
@@ -25,7 +29,7 @@ public class BlockUtils
 
 	public static int getBlockColor(Block block) {
 		//MaterialColor color = ((CraftBlock) block).getNMS().getMaterial().getColor();
-		return (((CraftBlock) block).getNMS().getBlock().defaultMapColor().col);
+		return ((CraftBlock) block).getNMS().getBlock().defaultMapColor().col;
 	}
 
 	public static Color getBlockBukkitColor(Block block) {
@@ -73,5 +77,30 @@ public class BlockUtils
 		}
 
 		return null;
+	}
+
+	/* For hide and seek */
+	public static ArrayList<BlockCoords> getAllBlocks(Set<Material> mats, TeamArena game) {
+		final ArrayList<BlockCoords> list = new ArrayList<>(512);
+
+		final int minHeight = game.getWorld().getMinHeight();
+		final int maxHeight = game.getWorld().getMaxHeight();
+		game.forEachGameChunk((chunk, border) -> {
+			for (int x = 0; x < 16; x++) {
+				for (int y = minHeight; y < maxHeight; y++) {
+					for (int z = 0; z < 16; z++) {
+						Block block = chunk.getBlock(x, y, z);
+						if (border.contains(block.getLocation().toVector())) {
+							if (mats.contains(block.getType())) {
+								list.add(new BlockCoords(block.getX(), block.getY(), block.getZ()));
+							}
+						}
+					}
+				}
+			}
+		});
+
+		list.trimToSize();
+		return list;
 	}
 }

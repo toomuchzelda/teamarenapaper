@@ -14,8 +14,8 @@ import net.kyori.adventure.text.Component;
 import net.minecraft.world.phys.BlockHitResult;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.craftbukkit.v1_20_R3.entity.CraftArrow;
-import org.bukkit.craftbukkit.v1_20_R3.util.CraftVector;
+import org.bukkit.craftbukkit.entity.CraftArrow;
+import org.bukkit.craftbukkit.util.CraftVector;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
 import org.bukkit.entity.AbstractArrow;
@@ -43,7 +43,7 @@ public class ArrowManager {
 		Method temp;
 		try {
 			temp = net.minecraft.world.entity.projectile.AbstractArrow.class
-				.getDeclaredMethod("N");
+				.getDeclaredMethod("resetPiercedEntities");
 			temp.setAccessible(true);
 		}
 		catch (NoSuchMethodException e) {
@@ -54,7 +54,7 @@ public class ArrowManager {
 		NMS_AA_RESET_PIERCED_ENTITIES = temp;
 
 		try {
-			temp = net.minecraft.world.entity.projectile.AbstractArrow.class.getDeclaredMethod("a", BlockHitResult.class);
+			temp = net.minecraft.world.entity.projectile.AbstractArrow.class.getDeclaredMethod("onHitBlock", BlockHitResult.class);
 			temp.setAccessible(true);
 		}
 		catch (NoSuchMethodException e) {
@@ -118,7 +118,8 @@ public class ArrowManager {
 				// Hacky, but all the arrow calculation code has already been written, so just fake it
 				// Damage will be calculated by DamageEvent's handler
 				EntityDamageByEntityEvent bukkitEvent = new EntityDamageByEntityEvent(arrow, hitEntity, EntityDamageEvent.DamageCause.PROJECTILE,
-					DamageSource.builder(DamageType.ARROW).build(), modifiers, modifierFuncs, arrow.isCritical());
+					DamageSource.builder(DamageType.ARROW).build(),
+					modifiers, modifierFuncs, arrow.isCritical());
 				Bukkit.getPluginManager().callEvent(bukkitEvent);
 			}
 		}

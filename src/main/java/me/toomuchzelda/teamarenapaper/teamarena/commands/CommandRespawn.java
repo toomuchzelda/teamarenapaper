@@ -34,7 +34,7 @@ public class CommandRespawn extends CustomCommand {
 		} else if (sender instanceof Player p) {
 			if (Main.getGame().canRespawn(p)) {
 				// the player is dead and the respawn timer has expired
-				Main.getGame().setToRespawn(p);
+				Main.getGame().setToRespawn(p, true);
 			} else {
 				// suicide
 				//DamageEvent.createFromBukkitEvent(new EntityDamageEvent(p, EntityDamageEvent.DamageCause.VOID,

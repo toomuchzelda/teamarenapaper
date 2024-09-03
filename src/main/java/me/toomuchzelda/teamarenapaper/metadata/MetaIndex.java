@@ -3,9 +3,12 @@ package me.toomuchzelda.teamarenapaper.metadata;
 import com.comphenix.protocol.wrappers.*;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher.WrappedDataWatcherObject;
 import me.toomuchzelda.teamarenapaper.Main;
+import net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.decoration.ArmorStand;
+import org.joml.Vector3f;
 
 import java.util.*;
 
@@ -24,6 +27,7 @@ public class MetaIndex
 	public static final int NO_GRAVITY_IDX = 5;
 	public static final int POSE_IDX = 6;
 
+	public static final byte BASE_BITFIELD_ZERO_MASK = 0;
 	public static final int BASE_BITFIELD_ON_FIRE_IDX = 0;
 	public static final byte BASE_BITFIELD_ON_FIRE_MASK = 0x01;
 	public static final int BASE_BITFIELD_SNEAKING_IDX = 1;
@@ -60,6 +64,8 @@ public class MetaIndex
 	public static final int DISPLAY_TRANSLATION_IDX = 11;
 	public static final int DISPLAY_SCALE_IDX = 12;
 	public static final int DISPLAY_BILLBOARD_IDX = 15;
+
+	public static final int BLOCK_DISPLAY_BLOCK_IDX = 23;
 
 	public static final int ITEM_DISPLAY_ITEM_IDX = 23;
 
@@ -119,6 +125,8 @@ public class MetaIndex
 		DisplayBillboardOption(int value) { b = (byte) value; }
 		public byte get() { return this.b; }
 	}
+
+	public static final WrappedDataWatcherObject BLOCK_DISPLAY_BLOCK_OBJ;
 
 	public static final WrappedDataWatcherObject ITEM_DISPLAY_ITEM_OBJ;
 
@@ -185,14 +193,17 @@ public class MetaIndex
 		DISPLAY_POSROT_INTERPOLATION_DURATION_OBJ = new WrappedDataWatcherObject(DISPLAY_POSROT_INTERPOLATION_DURATION_IDX, WrappedDataWatcher.Registry.get(Integer.class));
 		addMapping(DISPLAY_POSROT_INTERPOLATION_DURATION_OBJ);
 
-		DISPLAY_TRANSLATION_OBJ = new WrappedDataWatcherObject(DISPLAY_TRANSLATION_IDX, WrappedDataWatcher.Registry.getVectorSerializer());
+		DISPLAY_TRANSLATION_OBJ = new WrappedDataWatcherObject(DISPLAY_TRANSLATION_IDX, WrappedDataWatcher.Registry.get(Vector3f.class));
 		addMapping(DISPLAY_TRANSLATION_OBJ);
 
-		DISPLAY_SCALE_OBJ = new WrappedDataWatcherObject(DISPLAY_SCALE_IDX, WrappedDataWatcher.Registry.getVectorSerializer());
+		DISPLAY_SCALE_OBJ = new WrappedDataWatcherObject(DISPLAY_SCALE_IDX, WrappedDataWatcher.Registry.get(Vector3f.class));
 		addMapping(DISPLAY_SCALE_OBJ);
 
 		DISPLAY_BILLBOARD_OBJ = new WrappedDataWatcherObject(DISPLAY_BILLBOARD_IDX, WrappedDataWatcher.Registry.get(Byte.class));
 		addMapping(DISPLAY_BILLBOARD_OBJ);
+
+		BLOCK_DISPLAY_BLOCK_OBJ = new WrappedDataWatcherObject(BLOCK_DISPLAY_BLOCK_IDX, WrappedDataWatcher.Registry.getBlockDataSerializer(false));
+		addMapping(BLOCK_DISPLAY_BLOCK_OBJ);
 
 		ITEM_DISPLAY_ITEM_OBJ = new WrappedDataWatcherObject(ITEM_DISPLAY_ITEM_IDX, WrappedDataWatcher.Registry.getItemStackSerializer(false));
 		addMapping(ITEM_DISPLAY_ITEM_OBJ);
@@ -276,5 +287,13 @@ public class MetaIndex
 			case SHOOTING -> Pose.SHOOTING;
 			case INHALING -> Pose.INHALING;
 		};
+	}
+
+	public static ClientboundUpdateAttributesPacket.AttributeSnapshot attributeInstanceToSnapshot(AttributeInstance nmsAi) {
+		ClientboundUpdateAttributesPacket.AttributeSnapshot snapshot = new ClientboundUpdateAttributesPacket.AttributeSnapshot(
+			nmsAi.getAttribute(), nmsAi.getBaseValue(), nmsAi.getModifiers()
+		);
+
+		return snapshot;
 	}
 }

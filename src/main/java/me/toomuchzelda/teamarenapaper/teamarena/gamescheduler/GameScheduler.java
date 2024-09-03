@@ -6,6 +6,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandCallvote;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.DigAndBuild;
+import me.toomuchzelda.teamarenapaper.teamarena.hideandseek.HideAndSeek;
 import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
 import me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy.SearchAndDestroy;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
@@ -66,6 +67,7 @@ public class GameScheduler
 		GAMETYPE_MAPS.put(GameType.CTF, new ArrayList<>(oneThird));
 		GAMETYPE_MAPS.put(GameType.SND, new ArrayList<>(oneThird));
 		GAMETYPE_MAPS.put(GameType.DNB, new ArrayList<>(oneThird));
+		GAMETYPE_MAPS.put(GameType.HNS, new ArrayList<>(oneThird));
 
 		for(File mapFolder : maps) {
 			if (mapFolder.isDirectory()) {
@@ -89,6 +91,7 @@ public class GameScheduler
 		//GAMETYPE_Q[0] = GameType.KOTH;
 		GAMETYPE_Q[0] = GameType.CTF;
 		GAMETYPE_Q[1] = GameType.SND;
+		//GAMETYPE_Q[0] = GameType.HNS;
 		MathUtils.shuffleArray(GAMETYPE_Q);
 
 		//setup map queues
@@ -98,6 +101,7 @@ public class GameScheduler
 		GAME_TYPE_MAP_QUEUE.put(GameType.KOTH, new ShufflingQueue<>(GAMETYPE_MAPS.get(GameType.KOTH)));
 		GAME_TYPE_MAP_QUEUE.put(GameType.SND, new ShufflingQueue<>(GAMETYPE_MAPS.get(GameType.SND)));
 		GAME_TYPE_MAP_QUEUE.put(GameType.DNB, new ShufflingQueue<>(GAMETYPE_MAPS.get(GameType.DNB)));
+		GAME_TYPE_MAP_QUEUE.put(GameType.HNS, new ShufflingQueue<>(GAMETYPE_MAPS.get(GameType.HNS)));
 
 		gameTypeCtr = 0;
 
@@ -105,9 +109,7 @@ public class GameScheduler
 	}
 
 	public static void updateOptions() { updateOptions(NUM_OPTIONS); }
-	/** No real queue exists, this just makes a "list view" of the underlying data structures.
-	 *  Results won't be accurate if `amount` is too large.
-	 *  */
+
 	public static void updateOptions(int amount) {
 		GameQueueMember[] arr = new GameQueueMember[amount];
 
@@ -179,6 +181,9 @@ public class GameScheduler
 
 		GameType gameType = typeAndMap.type;
 		TeamArenaMap map = typeAndMap.map;
+		if (map == null) { // can be null if admin left unspecified
+			map = GAME_TYPE_MAP_QUEUE.get(gameType).poll();
+		}
 		//the chosen map's GameType can conflict with what was picked above
 		// just have the map's one override
 		if(!map.hasGameType(gameType)) {
@@ -193,6 +198,8 @@ public class GameScheduler
 			newGame = new CaptureTheFlag(map);
 		else if (gameType == GameType.SND)
 			newGame = new SearchAndDestroy(map);
+		else if (gameType == GameType.HNS)
+			newGame = new HideAndSeek(map);
 		else
 			newGame = new DigAndBuild(map);
 

@@ -14,8 +14,8 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageSources;
 import net.minecraft.world.level.Level;
 import org.bukkit.Material;
-import org.bukkit.craftbukkit.v1_20_R3.CraftWorld;
-import org.bukkit.craftbukkit.v1_20_R3.entity.CraftEntity;
+import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.entity.CraftEntity;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageByBlockEvent;
@@ -93,6 +93,9 @@ public class DamageType {
      */
     public static final DamageType FIRE_TICK = new DamageType("Fire Tick", "%Killed% was burned alive").setNoKnockback().setFire()
             .setIgnoreArmor();
+
+	public static final DamageType CAMPFIRE = new DamageType("Campfire", "%Killed% got too cozy at a campfire")
+		.setNoKnockback().setBurn();
 
     public static final DamageType FISHING_HOOK = new DamageType("Fishing Hook", "%Killed% was killed by %Killer%'s... Fishing rod?");
 
@@ -285,7 +288,7 @@ public class DamageType {
         _name = name;
         _deathMessages = deathMessages;
 		applicableEnchantments = new ArrayList<>(2);
-		applicableEnchantments.add(Enchantment.PROTECTION_ENVIRONMENTAL);
+		applicableEnchantments.add(Enchantment.PROTECTION);
 		trackedType = DamageTimes.TrackedDamageTypes.OTHER;
     }
 
@@ -354,6 +357,7 @@ public class DamageType {
 		FIRE_ASPECT.setDamageSource(nmsDamageSources.onFire());
 		FIRE_BOW.setDamageSource(nmsDamageSources.onFire());
 		FIRE_TICK.setDamageSource(nmsDamageSources.onFire());
+		CAMPFIRE.setDamageSource(nmsDamageSources.campfire());
 		FLY_INTO_WALL.setDamageSource(nmsDamageSources.flyIntoWall());
 		FREEZE.setDamageSource(nmsDamageSources.freeze());
 		LAVA.setDamageSource(nmsDamageSources.lava());
@@ -411,6 +415,8 @@ public class DamageType {
                 return FALL;
             case FIRE:
                 return FIRE;
+			case CAMPFIRE:
+				return CAMPFIRE;
             case FIRE_TICK:
                 return FIRE_TICK;
             case MELTING:
@@ -660,7 +666,7 @@ public class DamageType {
     public DamageType setBurn() {
         _burn = true;
 
-		addApplicableEnchant(Enchantment.PROTECTION_FIRE);
+		addApplicableEnchant(Enchantment.FIRE_PROTECTION);
 		setTrackedDamageType(DamageTimes.TrackedDamageTypes.FIRE);
 
         return this;
@@ -669,7 +675,7 @@ public class DamageType {
     public DamageType setExplosion() {
         _explosion = true;
 
-		addApplicableEnchant(Enchantment.PROTECTION_EXPLOSIONS);
+		addApplicableEnchant(Enchantment.BLAST_PROTECTION);
 		setTrackedDamageType(DamageTimes.TrackedDamageTypes.ATTACK);
 
         return this;
@@ -679,7 +685,7 @@ public class DamageType {
         _fall = true;
         setIgnoreArmor();
         setIgnoreRate();
-		addApplicableEnchant(Enchantment.PROTECTION_FALL);
+		addApplicableEnchant(Enchantment.FEATHER_FALLING);
 		setTrackedDamageType(DamageTimes.TrackedDamageTypes.OTHER);
 
         return this;
@@ -689,7 +695,7 @@ public class DamageType {
         setBurn();
 
         _fire = true;
-		removeApplicableEnchant(Enchantment.PROTECTION_ENVIRONMENTAL);
+		removeApplicableEnchant(Enchantment.PROTECTION);
 		setTrackedDamageType(DamageTimes.TrackedDamageTypes.FIRE);
 
         return this;
@@ -730,7 +736,7 @@ public class DamageType {
     public DamageType setProjectile() {
         _projectile = true;
 
-		addApplicableEnchant(Enchantment.PROTECTION_PROJECTILE);
+		addApplicableEnchant(Enchantment.PROJECTILE_PROTECTION);
 		setTrackedDamageType(DamageTimes.TrackedDamageTypes.ATTACK);
 
 		return this;
@@ -787,7 +793,7 @@ public class DamageType {
         Pig entity = Main.getGame().getWorld().spawn(Main.getGame().getWorld().getSpawnLocation(), Pig.class);
 
         for (EntityDamageEvent.DamageCause cause : EntityDamageEvent.DamageCause.values()) {
-			EntityDamageEvent event = new EntityDamageEvent(entity, cause, 1);
+			EntityDamageEvent event = new EntityDamageEvent(entity, cause, 1d);
             DamageType attack = DamageType.getAttack(event);
 
             if (attack == null || attack == DamageType.UNKNOWN) {

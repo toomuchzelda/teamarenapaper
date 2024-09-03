@@ -337,9 +337,9 @@ public class KitValkyrie extends Kit {
 						if (distance < 1) {
 
 						} else if (distance < 2.6 && meta != null) {
-							meta.addEnchant(Enchantment.DAMAGE_ALL, NORMAL_BONUS, true);
+							meta.addEnchant(Enchantment.SHARPNESS, NORMAL_BONUS, true);
 						} else if (distance >= 2.6 && meta != null) {
-							meta.addEnchant(Enchantment.DAMAGE_ALL, SWEET_SPOT_BONUS, true);
+							meta.addEnchant(Enchantment.SHARPNESS, SWEET_SPOT_BONUS, true);
 							player.playSound(player, Sound.BLOCK_GRINDSTONE_USE, 1.0f, 1.9f);
 						}
 
@@ -357,11 +357,11 @@ public class KitValkyrie extends Kit {
 			PlayerInventory inv = player.getInventory();
 			inv.all(VALK_AXE_MAT).forEach(
 					(k, v) -> { v.removeEnchantment(Enchantment.KNOCKBACK);
-								v.removeEnchantment(Enchantment.DAMAGE_ALL);
+								v.removeEnchantment(Enchantment.SHARPNESS);
 					});
 			if(inv.getItemInOffHand().getType() == VALK_AXE_MAT) {
 				inv.getItemInOffHand().removeEnchantment(Enchantment.KNOCKBACK);
-				inv.getItemInOffHand().removeEnchantment(Enchantment.DAMAGE_ALL);
+				inv.getItemInOffHand().removeEnchantment(Enchantment.SHARPNESS);
 			}
 		}
 
@@ -421,13 +421,14 @@ public class KitValkyrie extends Kit {
 					//Grenade Particles when it is thrown
 					//In Motion
 					if(activeGrenade.getVelocity().length() > 0){
-						world.spawnParticle(Particle.REDSTONE, activeGrenade.getLocation(), 1, new Particle.DustOptions(teamColor, 2f));
-						world.spawnParticle(Particle.ENCHANTMENT_TABLE, activeGrenade.getLocation(), 8, 0,0,0, 0.5f);
+						world.spawnParticle(Particle.DUST, activeGrenade.getLocation(), 1, new Particle.DustOptions(teamColor, 2f));
+						// TODO check particle
+						world.spawnParticle(Particle.ENCHANT, activeGrenade.getLocation(), 8, 0,0,0, 0.5f);
 					}
 					else{
 						//On the ground
 						world.spawnParticle(Particle.DUST_COLOR_TRANSITION, activeGrenade.getLocation().add(Vector.getRandom().subtract(new Vector(-0.5,-0.5,-0.5)).multiply(4)), 2, particle);
-						world.spawnParticle(Particle.ENCHANTMENT_TABLE, activeGrenade.getLocation(), 20,  1,1,1, 1.5f);
+						world.spawnParticle(Particle.ENCHANT, activeGrenade.getLocation(), 20,  1,1,1, 1.5f);
 					}
 					timer--;
 					if(timer <= 0){
@@ -475,7 +476,7 @@ public class KitValkyrie extends Kit {
 										double x = radius * Math.sin(rad);
 										double z = radius * Math.cos(rad);
 										locClone.add(x, 0, z);
-										world.spawnParticle(Particle.REDSTONE, locClone, 1, new Particle.DustOptions(teamColor, 2f));
+										world.spawnParticle(Particle.DUST, locClone, 1, new Particle.DustOptions(teamColor, 2f));
 									}
 									duration--;
 								}

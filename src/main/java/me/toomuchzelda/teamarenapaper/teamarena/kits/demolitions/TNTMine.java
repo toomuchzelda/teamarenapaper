@@ -93,7 +93,7 @@ public class TNTMine extends DemoMine
 		markInvalid();
 
 		TNTPrimed tnt = (TNTPrimed) baseLoc.getWorld().spawnEntity(hitboxEntity.getLocation().subtract(0d, 0.35d, 0d),
-				EntityType.PRIMED_TNT);
+				EntityType.TNT);
 		tnt.setFuseTicks(this.timeToDetonate);
 		tnt.setSource(this.owner);
 		tnt.setVelocity(new Vector(0, 0.45d, 0));

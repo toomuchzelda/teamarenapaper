@@ -6,20 +6,24 @@ import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.*;
 import com.mojang.authlib.GameProfile;
 import io.papermc.paper.adventure.PaperAdventure;
-import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.PacketSender;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.phys.AABB;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.craftbukkit.v1_20_R3.CraftWorld;
-import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityPoseChangeEvent;
@@ -58,6 +62,7 @@ public class FakeHitbox
 	private final PacketContainer[] spawnPlayerPackets;
 	private final PacketContainer[] teleportPackets;
 	private final PacketContainer[] metadataPackets;
+	private final PacketContainer[] attributePackets;
 	private final PacketContainer[] spawnAndMetaPackets;
 	private final PacketContainer removeEntitiesPacket;
 	private final int[] fakePlayerIds;
@@ -69,6 +74,8 @@ public class FakeHitbox
 	//if each of these fake players is colliding with a wall
 	private final boolean[] collidings;
 	private int lastPoseChangeTime;
+	private boolean hidden;
+	private double scale; // detect scale change by checking every tick
 
 	public FakeHitbox(Player owner) {
 		this.owner = owner;
@@ -83,12 +90,20 @@ public class FakeHitbox
 		spawnPlayerPackets = new PacketContainer[4];
 		teleportPackets = new PacketContainer[4];
 		metadataPackets = new PacketContainer[4];
-		spawnAndMetaPackets = new PacketContainer[8];
+		attributePackets = new PacketContainer[4];
+		spawnAndMetaPackets = new PacketContainer[12];
 
 		removeEntitiesPacket = new PacketContainer(PacketType.Play.Server.ENTITY_DESTROY);
 		fakePlayerIds = new int[4];
 
 		List<PlayerInfoData> playerUpdates = new ArrayList<>(4);
+
+		net.minecraft.world.entity.ai.attributes.AttributeInstance nmsAi =
+			((CraftPlayer) this.owner).getHandle().getAttribute(Attributes.SCALE);
+		assert nmsAi != null; // For Intellij
+
+		ClientboundUpdateAttributesPacket.AttributeSnapshot attrSnapshot =
+			MetaIndex.attributeInstanceToSnapshot(nmsAi);
 
 		Location loc = owner.getLocation();
 		for(int i = 0; i < 4; i++) {
@@ -102,7 +117,7 @@ public class FakeHitbox
 			// Unlisted playerinfo entry.
 			PlayerInfoData wrappedEntry = new PlayerInfoData(fPlayer.uuid, 1, false, EnumWrappers.NativeGameMode.SURVIVAL,
 				WrappedGameProfile.fromHandle(authLibProfile), WrappedChatComponent.fromHandle(nmsComponent),
-				(WrappedProfilePublicKey.WrappedProfileKeyData) null);
+				(WrappedRemoteChatSessionData) null);
 
 			playerUpdates.add(wrappedEntry);
 
@@ -126,6 +141,13 @@ public class FakeHitbox
 			metadataPackets[i] = metadataPacket;
 			spawnAndMetaPackets[i + 4] = metadataPacket;
 
+			PacketContainer attributeScalePacket = new PacketContainer(PacketType.Play.Server.UPDATE_ATTRIBUTES);
+			attributeScalePacket.getIntegers().write(0, fPlayer.entityId);
+			attributeScalePacket.getAttributeCollectionModifier().write(0,
+				List.of(WrappedAttribute.fromHandle(attrSnapshot)));
+			attributePackets[i] = attributeScalePacket;
+			spawnAndMetaPackets[i + 8] = attributeScalePacket;
+
 			fakePlayerIds[i] = fPlayer.entityId;
 			coordinates[i] = loc.toVector();
 			collidings[i] = false;
@@ -143,9 +165,31 @@ public class FakeHitbox
 
 		this.updatePosition(loc, owner.getPose(), false);
 		this.lastPoseChangeTime = 0;
+		this.hidden = false;
+		this.scale = this.getScale();
 	}
 
-	void tick() {
+	void tick(final PacketSender cache) {
+
+		double currentScale = this.getScale();
+		if (currentScale != this.scale) {
+			this.scale = currentScale;
+
+			this.updateAttributePackets();
+			// spacing of boxes will change with different scale
+			this.updatePosition(this.getOwner().getLocation(), this.owner.getPose(), true, cache);
+
+			for (var entry : this.viewers.entrySet()) {
+				FakeHitboxViewer viewer = entry.getValue();
+				if (viewer.isSeeingHitboxes) {
+					//PlayerUtils.sendPacket(entry.getKey(), cache, this.getAttributePackets());
+					//PlayerUtils.sendPacket(entry.getKey(), cache, this.getTeleportPackets());
+					cache.enqueue(entry.getKey(), this.getAttributePackets());
+					cache.enqueue(entry.getKey(), this.getTeleportPackets());
+				}
+			}
+		}
+
 		var iter = this.viewers.entrySet().iterator();
 		Location ownerLoc = this.owner.getLocation();
 		final int currentTick = TeamArena.getGameTick();
@@ -156,7 +200,8 @@ public class FakeHitbox
 
 			if(!playerViewer.isOnline()) {
 				if(fakeHitboxViewer.isSeeingHitboxes)
-					PlayerUtils.sendPacket(playerViewer, getRemoveEntitiesPacket());
+					//PlayerUtils.sendPacket(playerViewer, cache, getRemoveEntitiesPacket());
+					cache.enqueue(playerViewer, getRemoveEntitiesPacket());
 
 				iter.remove();
 				continue;
@@ -164,7 +209,10 @@ public class FakeHitbox
 
 			if (fakeHitboxViewer.isSeeingRealPlayer) {
 				boolean seeHitboxes;
-				if (this.owner.getVehicle() != null)
+				if (this.hidden) {
+					seeHitboxes = false;
+				}
+				else if (this.owner.getVehicle() != null)
 					seeHitboxes = false;
 				else {
 					double distSqr = playerViewer.getLocation().distanceSquared(ownerLoc);
@@ -176,36 +224,43 @@ public class FakeHitbox
 					//need to spawn / remove the hitboxes for viewer
 					if (seeHitboxes) {
 						fakeHitboxViewer.hitboxSpawnTime = currentTick;
-						PlayerUtils.PacketCache cache = new PlayerUtils.PacketCache();
-						PlayerUtils.sendPacket(playerViewer, cache, getSpawnAndMetadataPackets());
-						cache.flush();
+						//PlayerUtils.sendPacket(playerViewer, cache, getSpawnAndMetadataPackets());
+						cache.enqueue(playerViewer, getSpawnAndMetadataPackets());
 						//Bukkit.broadcastMessage("sent spawn packets from " + this.owner.getName() + " to " + playerViewer.getName());
 					}
 					else {
-						PlayerUtils.sendPacket(playerViewer, getRemoveEntitiesPacket());
+						//PlayerUtils.sendPacket(playerViewer, cache, getRemoveEntitiesPacket());
+						cache.enqueue(playerViewer, getRemoveEntitiesPacket());
 					}
 				}
 			}
 		}
 	}
 
+	public void updatePosition(Location newLocation, org.bukkit.entity.Pose bukkitPose, final boolean updateClients) {
+		updatePosition(newLocation, bukkitPose, updateClients, PacketSender.getImmediateInstance());
+	}
+
 	/**
 	 * Update position in packets and calculate position for swimming/riptide pose if needed.
 	 */
-	public void updatePosition(Location newLocation, org.bukkit.entity.Pose bukkitPose, final boolean updateClients) {
+	private void updatePosition(Location newLocation, org.bukkit.entity.Pose bukkitPose, final boolean updateClients,
+								PacketSender cache) {
 		HitboxPose boxPose = HitboxPose.getFromBukkit(bukkitPose);
 
 		Vector direction = newLocation.getDirection();
 		Vector newPos = new Vector();
 		Vector currentPos = newLocation.toVector();
 		//get bounding box dimensions based on new, not current pose
+		// accounts for scale
 		EntityDimensions nmsDimensions = ((CraftPlayer) this.owner).getHandle().getDimensions(Pose.values()[bukkitPose.ordinal()]);
+		final double scale = this.getScale();
 		boolean[] updateThisBox = new boolean[4];
 		boolean updateAny = updateClients;
 		int currentTick = TeamArena.getGameTick();
 		for(int i = 0; i < 4; i++) {
 			updateThisBox[i] = updateClients;
-			calcBoxPosition(newPos, boxPose, newLocation, direction, i);
+			calcBoxPosition(newPos, boxPose, newLocation, direction, scale, i);
 
 			//check for collision with blocks. put in same position as real player if there is a collision
 			// don't want fake hitboxes to peek through walls and such
@@ -241,7 +296,8 @@ public class FakeHitbox
 				if (entry.getValue().isSeeingHitboxes) {
 					for (int i = 0; i < 4; i++) {
 						if (updateThisBox[i])
-							PlayerUtils.sendPacket(entry.getKey(), teleportPackets);
+							//PlayerUtils.sendPacket(entry.getKey(), cache, teleportPackets);
+							cache.enqueue(entry.getKey(), teleportPackets);
 					}
 				}
 			}
@@ -252,13 +308,14 @@ public class FakeHitbox
 	 * Calculate new box number position. Take in Vectors from caller instead of constructing new ones to
 	 * reduce Object allocation.
 	 */
-	private static void calcBoxPosition(Vector container, HitboxPose pose, Location ownerLoc, Vector ownerDir, int boxNum) {
+	private static void calcBoxPosition(Vector container, HitboxPose pose, Location ownerLoc, Vector ownerDir, double scale,
+										int boxNum) {
 		if(pose == HitboxPose.OTHER) {
 			Vector offset = OFFSETS[boxNum];
 
-			container.setX(ownerLoc.getX() + offset.getX());
+			container.setX(ownerLoc.getX() + (offset.getX() * scale));
 			container.setY(ownerLoc.getY());
-			container.setZ(ownerLoc.getZ() + offset.getZ());
+			container.setZ(ownerLoc.getZ() + (offset.getZ() * scale));
 		}
 		else {
 			MathUtils.copyVector(container, ownerDir);
@@ -271,11 +328,11 @@ public class FakeHitbox
 				if(boxNum >= 2)
 					boxNum++;
 
-				mult = ((double) boxNum - 2) * 0.36d;
+				mult = ((double) boxNum - 2) * (0.36d * scale);
 			}
 			else { //riptiding
 				//player's real hitbox is at their feet.
-				mult = ((double) boxNum + 1) * 0.36d;
+				mult = ((double) boxNum + 1) * (0.36d * scale);
 			}
 
 			container.multiply(mult);
@@ -321,6 +378,10 @@ public class FakeHitbox
 			this.metadataList.get(0).setRawValue(MetaIndex.BASE_BITFIELD_INVIS_MASK);
 		}
 		this.updateMetadataPackets();
+	}
+
+	void setHidden(boolean hidden) {
+		this.hidden = hidden;
 	}
 
 	/**
@@ -395,6 +456,7 @@ public class FakeHitbox
 		PacketContainer[] newPackets = null;
 		for (WrappedDataValue dataValue : packet.getDataValueCollectionModifier().read(0)) {
 			if (dataValue.getIndex() == MetaIndex.POSE_IDX) { //if the metadata has pose
+				//Pose pose = (Pose) dataValue.getValue();
 				newPackets = new PacketContainer[4];
 				List<WrappedDataValue> hitboxValueList = List.of(dataValue);
 				for(int i = 0; i < 4; i++) {
@@ -411,8 +473,21 @@ public class FakeHitbox
 		return newPackets;
 	}
 
+	public PacketContainer[] getAttributePackets() {
+		/*PacketContainer[] copy = new PacketContainer[this.attributePackets.length];
+		for (int i = 0; i < attributePackets.length; i++) {
+			copy[i] = this.attributePackets[i].deepClone();
+		}
+		return copy;*/
+		return this.attributePackets;
+	}
+
 	public PacketContainer getRemoveEntitiesPacket() {
 		return this.removeEntitiesPacket;
+	}
+
+	public Player getOwner() {
+		return this.owner;
 	}
 
 	public int[] getFakePlayerIds() {
@@ -429,6 +504,26 @@ public class FakeHitbox
 		}
 		else {
 			return Component.space();
+		}
+	}
+
+	private double getScale() {
+		double scale = 1d;
+		AttributeInstance instance = this.owner.getAttribute(Attribute.GENERIC_SCALE);
+		if (instance != null)
+			scale = instance.getValue();
+
+		return scale;
+	}
+
+	private void updateAttributePackets() {
+		ServerPlayer nmsPlayer = ((CraftPlayer) this.owner).getHandle();
+		net.minecraft.world.entity.ai.attributes.AttributeInstance ai = nmsPlayer.getAttribute(Attributes.SCALE);
+		assert ai != null;
+		ClientboundUpdateAttributesPacket.AttributeSnapshot snapshot = MetaIndex.attributeInstanceToSnapshot(ai);
+
+		for (int i = 0; i < attributePackets.length; i++) { // Must mutate the existing ones as spawnAndMeta points to them
+			attributePackets[i].getAttributeCollectionModifier().write(0, List.of(WrappedAttribute.fromHandle(snapshot)));
 		}
 	}
 

@@ -19,7 +19,7 @@ public class HasteOreAction implements StatusOreType.BuffAction
 {
 	public static final String HASTE_EFFECT_KEY = "dnbhst";
 	private static int compositeKeyCounter = 0; // Ensure all keys are unique to allow stacking of haste effect.
-	private static final PotionEffect HASTE_EFFECT = new PotionEffect(PotionEffectType.FAST_DIGGING, 30 * 20, 0, false, true);
+	private static final PotionEffect HASTE_EFFECT = new PotionEffect(PotionEffectType.HASTE, 30 * 20, 0, false, true);
 	@Override
 	public int buff(Player redeemer, int required, int itemsUsed, LifeOre ore, DigAndBuild gameInstance) {
 		if (itemsUsed >= required) {

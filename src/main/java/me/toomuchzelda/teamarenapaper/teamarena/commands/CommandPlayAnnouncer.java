@@ -22,11 +22,8 @@ public class CommandPlayAnnouncer extends CustomCommand
 	@Override
 	public void run(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) throws CommandException {
 		if (args.length > 0) {
-			AnnouncerSound sound;
-			try {
-				sound = AnnouncerSound.getByTypedName(args[0]);
-			}
-			catch (IllegalArgumentException e) {
+			AnnouncerSound sound = AnnouncerSound.getByTypedName(args[0]);
+			if (sound == null) {
 				throw new CommandException("Unknown sound");
 			}
 

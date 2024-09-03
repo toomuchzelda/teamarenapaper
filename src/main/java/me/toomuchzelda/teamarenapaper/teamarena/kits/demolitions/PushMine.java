@@ -21,6 +21,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class PushMine extends DemoMine
 {
@@ -54,7 +55,7 @@ public class PushMine extends DemoMine
 		ItemStack leatherHelmet = new ItemStack(Material.LEATHER_HELMET);
 		ItemUtils.colourLeatherArmor(color, leatherHelmet);
 
-		org.bukkit.util.Consumer<ArmorStand> propApplier = stand -> {
+		Consumer<ArmorStand> propApplier = stand -> {
 			stand.setGlowing(false);
 			stand.setSilent(true);
 			stand.setMarker(true);

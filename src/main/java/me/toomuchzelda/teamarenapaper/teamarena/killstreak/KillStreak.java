@@ -25,6 +25,7 @@ import java.util.List;
  */
 public abstract class KillStreak
 {
+	private final KillStreakManager.KillStreakID identifier;
 	private final String name;
 	private final String description;
 	private final TextColor textColor;
@@ -33,7 +34,8 @@ public abstract class KillStreak
 
 	private final List<Ability> abilities;
 
-	KillStreak(String name, String description, TextColor color, ItemStack item, Ability... abilities) {
+	KillStreak(KillStreakManager.KillStreakID id, String name, String description, TextColor color, ItemStack item, Ability... abilities) {
+		this.identifier = id;
 		this.name = name;
 		this.description = description;
 		this.textColor = color;
@@ -52,6 +54,11 @@ public abstract class KillStreak
 			Ability.giveAbility(player, ability, pinfo);
 		});
 	}
+
+	public KillStreakManager.KillStreakID getIdentifier() {
+		return this.identifier;
+	}
+
 	public String getName() {
 		return name;
 	}

@@ -267,7 +267,7 @@ public class KitExplosive extends Kit
 			else {
 				final int currentTick = TeamArena.getGameTick();
 				if ((currentTick - rpgInfo.spawnTime()) % 5 == 0) {
-					world.spawnParticle(Particle.EXPLOSION_LARGE, arrowLoc, 1);
+					world.spawnParticle(Particle.EXPLOSION, arrowLoc, 1);
 				}
 
 				if((currentTick - rpgInfo.spawnTime()) % 2 == 0) {
@@ -302,11 +302,11 @@ public class KitExplosive extends Kit
 						//Particles for when grenade has landed
 						World world = entry.getKey().getWorld();
 						if (grenade.isOnGround()) {
-							world.spawnParticle(Particle.REDSTONE, grenade.getLocation(), 1, 0.25, 0.25, 0.25, particleOptions);
+							world.spawnParticle(Particle.DUST, grenade.getLocation(), 1, 0.25, 0.25, 0.25, particleOptions);
 						}
 						//Particles for when grenade is in motion
 						else {
-							world.spawnParticle(Particle.REDSTONE, grenade.getLocation(), 1, particleOptions);
+							world.spawnParticle(Particle.DUST, grenade.getLocation(), 1, particleOptions);
 						}
 					}
 				}
@@ -455,7 +455,7 @@ public class KitExplosive extends Kit
 			//Throwing the grenade and activating it
 			Vector vel = thrower.getLocation().getDirection().multiply(0.8);
 			grenadeDrop.setVelocity(vel);
-			world.playSound(grenadeDrop, Sound.ENTITY_CREEPER_PRIMED, 1.0f, 1.1f);
+			world.playSound(grenadeDrop, Sound.ENTITY_CREEPER_PRIMED, 0.85f, 1.1f);
 
 			currActiveGrenades.add(new GrenadeInfo(grenadeDrop, teamColor, TeamArena.getGameTick()));
 

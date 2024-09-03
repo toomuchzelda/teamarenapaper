@@ -3,8 +3,8 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.beekeeper;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.animal.Bee;
 import org.bukkit.World;
-import org.bukkit.craftbukkit.v1_20_R3.CraftWorld;
-import org.bukkit.craftbukkit.v1_20_R3.entity.CraftBee;
+import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.entity.CraftBee;
 
 /**
  * Extend Bee class to be able to set our own flying speed.

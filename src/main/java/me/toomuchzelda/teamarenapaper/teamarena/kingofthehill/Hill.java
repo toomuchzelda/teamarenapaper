@@ -2,6 +2,8 @@ package me.toomuchzelda.teamarenapaper.teamarena.kingofthehill;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.PacketSender;
+import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
 import me.toomuchzelda.teamarenapaper.utils.RealHologram;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
@@ -9,7 +11,6 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.util.BoundingBox;
-import org.bukkit.util.Vector;
 
 public class Hill {
 
@@ -21,11 +22,13 @@ public class Hill {
     private final int time;
 
     private RealHologram hologram;
+	private final World world;
 
     public Hill(String name, BoundingBox border, int time, World world) {
         this.name = name;
         this.border = border;
         this.time = time;
+		this.world = world;
 
         hologram = new RealHologram(border.getCenter().toLocation(world), RealHologram.Alignment.TOP, Component.text("Hill: " + name));
     }
@@ -33,18 +36,19 @@ public class Hill {
     public void playParticles(Color... colors) {
         //ParticleBuilder doesn't support coloured SPELL_MOB Particles
 
-        //https://www.spigotmc.org/wiki/colored-particles/
-
         MathUtils.shuffleArray(colors);
 
         //draw x lines
-        Vector location = border.getMin();
+        Location location = border.getMin().toLocation(world);
+		Location otherSide = location.clone();
         double xLength = border.getWidthX();
         double zLength = border.getWidthZ();
 
-        double red;
-        double green;
-        double blue;
+        int red;
+        int green;
+        int blue;
+
+		PacketSender sender = PacketSender.getDefault((int) (xLength + zLength + 1) * 2);
 
         for(int x = 0; x <= xLength; x++)
         {
@@ -53,32 +57,25 @@ public class Hill {
             red = colors[index].getRed();
             green = colors[index].getGreen();
             blue = colors[index].getBlue();
-            red /= 255;
-            green /= 255;
-            blue /= 255;
-            //apparently must not be 0 for colours to work
-            if(red == 0)
-                red = 0.0001;
 
+			Color bukkitColor = Color.fromRGB(red, green, blue);
             location.setX(border.getMinX() + x);
+			otherSide.set(location.getX(), location.getY(), location.getZ() + zLength);
 
-            for(Player p : Bukkit.getOnlinePlayers()) {
-                //if player is within 35 blocks
-                if(p.getLocation().toVector().distanceSquared(border.getCenter()) < VIEW_DISTANCE * VIEW_DISTANCE) {
+			for(Player p : Bukkit.getOnlinePlayers()) {
+				int num = Main.getPlayerInfo(p).getPreference(Preferences.KOTH_HILL_PARTICLES);
+				if (num == 0)
+					continue;
 
-                    int num = Main.getPlayerInfo(p).getPreference(Preferences.KOTH_HILL_PARTICLES);
-					if (num == 0)
-						continue;
+				if(TeamArena.getGameTick() % (11 - num) == 0) {
+					// Also does distance check
+					ParticleUtils.batchParticles(p, sender, Particle.ENTITY_EFFECT, bukkitColor, location,
+						VIEW_DISTANCE, 0, 0, 0, 0, 1f, true);
 
-                    if(TeamArena.getGameTick() % (11 - num) == 0) {
-                        p.spawnParticle(Particle.SPELL_MOB, location.getX(), location.getY(),
-                                location.getZ(), 0, red, green, blue, 1);
-
-                        p.spawnParticle(Particle.SPELL_MOB, location.getX(), location.getY(),
-                                location.getZ() + zLength, 0, red, green, blue, 1);
-                    }
-                }
-            }
+					ParticleUtils.batchParticles(p, sender, Particle.ENTITY_EFFECT, bukkitColor, otherSide,
+						VIEW_DISTANCE, 0, 0, 0, 0, 1f, true);
+				}
+			}
         }
 
         //draw z lines
@@ -90,33 +87,27 @@ public class Hill {
             red = colors[index].getRed();
             green = colors[index].getGreen();
             blue = colors[index].getBlue();
-            red /= 255;
-            green /= 255;
-            blue /= 255;
-            //apparently must not be 0 for colours to work
-            if(red == 0)
-                red = 0.0001;
 
+			Color bukkitColor = Color.fromRGB(red, green, blue);
             location.setZ(border.getMinZ() + z);
+			otherSide.set(location.getX() + xLength, location.getY(), location.getZ());
 
             for(Player p : Bukkit.getOnlinePlayers()) {
 				int freq = Main.getPlayerInfo(p).getPreference(Preferences.KOTH_HILL_PARTICLES);
 				if (freq == 0)
 					continue;
-                //if player is within 35 blocks
-                if(p.getLocation().toVector().distanceSquared(border.getCenter()) < VIEW_DISTANCE * VIEW_DISTANCE) {
 
+				if(TeamArena.getGameTick() % (11 - freq) == 0) {
+					ParticleUtils.batchParticles(p, sender, Particle.ENTITY_EFFECT, bukkitColor, location,
+						VIEW_DISTANCE, 0, 0, 0, 0, 1f, true);
 
-                    if(TeamArena.getGameTick() % (11 - freq) == 0) {
-                        p.spawnParticle(Particle.SPELL_MOB, location.getX(), location.getY(),
-                                location.getZ(), 0, red, green, blue, 1);
+					ParticleUtils.batchParticles(p, sender, Particle.ENTITY_EFFECT, bukkitColor, otherSide,
+						VIEW_DISTANCE, 0, 0, 0, 0, 1f, true);
+				}
+			}
+		}
 
-                        p.spawnParticle(Particle.SPELL_MOB, location.getX() + xLength, location.getY(),
-                                location.getZ(), 0, red, green, blue, 1);
-                    }
-                }
-            }
-        }
+		sender.flush();
     }
 
     public void setHologram(Component... text) {

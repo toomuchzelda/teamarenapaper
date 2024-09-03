@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.utils.packetentities;
 
+import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
@@ -12,6 +13,7 @@ import org.bukkit.entity.Pose;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.function.Predicate;
 
 /**
@@ -41,7 +43,9 @@ public class AttachedPacketEntity extends PacketEntity
 			else
 				viewingPlayer = viewer -> EntityUtils.isTrackingEntity(viewer, entity);
 
-			this.viewerRule = viewingPlayer.and(viewerRule);
+			this.viewerRule = viewingPlayer;
+			if (viewerRule != PacketEntity.VISIBLE_TO_ALL)
+				this.viewerRule = this.viewerRule.and(viewerRule);
 		}
 		this.selfSee = selfSee;
 		this.reEvaluateViewers(false);
@@ -125,6 +129,27 @@ public class AttachedPacketEntity extends PacketEntity
 				this.sendPacket(viewer, this.getTeleportPacket());
 			}
 			this.oldPose = entitysPose;
+		}
+	}
+
+	/** Called when the packets for the attached player's movement are sent to other players */
+	public void onPlayerMovePacket(PacketContainer packet, Player viewer, List<PacketContainer> packetsOut) {
+		if(this.getRealViewers().contains(viewer)) {
+			if (!this.sendHeadRotPackets && packet.getType() == PacketType.Play.Server.ENTITY_HEAD_ROTATION) {
+				return;
+			}
+
+			PacketContainer entityPacket = packet.shallowClone();
+			entityPacket.getIntegers().write(0, this.getId());
+
+			if(packet.getType() == PacketType.Play.Server.ENTITY_TELEPORT) {
+				//adjust the entity's Y position
+				double y = packet.getDoubles().read(1);
+				y += this.getYOffset();
+				entityPacket.getDoubles().write(1, y);
+			}
+
+			packetsOut.add(entityPacket);
 		}
 	}
 }

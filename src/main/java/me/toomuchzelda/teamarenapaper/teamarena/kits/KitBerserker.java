@@ -33,19 +33,19 @@ public class KitBerserker extends Kit {
 	private static final ItemStack FOOD_ITEM = ItemBuilder.of(Material.COOKED_BEEF).displayName(Component.text("Insta-Steak"))
 		.build();
 
-	private static final ItemStack TEMPLATE_AXE = createAxe(0);
 	private static final Component AXE_LORE = Component.text("Feed me kills...", NamedTextColor.DARK_RED);
+	private static final ItemStack TEMPLATE_AXE = createAxe(0);
 
 	private static ItemStack createAxe(int kills) {
 		ItemStack item = new ItemStack(Material.DIAMOND_AXE);
 		ItemMeta meta = item.getItemMeta();
 
 		if (kills > 0) {
-			meta.addEnchant(Enchantment.DAMAGE_ALL, kills, true);
+			meta.addEnchant(Enchantment.SHARPNESS, kills, true);
 		}
 		else {
 			// Bluff the enchanted visual effect for negative knockback
-			meta.addEnchant(Enchantment.DURABILITY, 1, true);
+			meta.addEnchant(Enchantment.UNBREAKING, 1, true);
 			meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
 		}
 
@@ -79,7 +79,7 @@ public class KitBerserker extends Kit {
 	private static class BerserkerAbility extends Ability {
 		private static final double HEAL_AMOUNT = 8d;
 		private static final double KB_LOSS_STEPS = 6d;
-		private static final double HEAL_LOSS_STEPS = 9d;
+		private static final double HEAL_LOSS_STEPS = 12d;
 
 		private static final Component BOSSBAR_TITLE = Component.text("Rage!!!", NamedTextColor.DARK_RED);
 		private final Map<Player, BossBar> bossBars = new HashMap<>(Bukkit.getMaxPlayers());

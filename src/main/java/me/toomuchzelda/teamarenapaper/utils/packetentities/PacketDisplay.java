@@ -21,6 +21,7 @@ public class PacketDisplay extends PacketEntity {
         return new Vector3F((float) vec.getX(), (float) vec.getY(), (float) vec.getZ());
 	}
 
+	// Not sure how this works with joml Vector3f serializer
 	public void translate(Vector translation) {
 		this.setMetadata(MetaIndex.DISPLAY_TRANSLATION_OBJ, bukkitToPLibVec(translation));
 	}

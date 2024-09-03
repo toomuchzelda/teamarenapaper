@@ -24,8 +24,8 @@ import net.minecraft.world.level.material.MapColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.craftbukkit.v1_20_R3.CraftWorld;
-import org.bukkit.craftbukkit.v1_20_R3.map.CraftMapView;
+import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.map.CraftMapView;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.MapMeta;
@@ -520,6 +520,7 @@ public class MiniMapManager {
             int maxZ = (convertZ(Math.max(from.getBlockZ(), to.getBlockZ())) + 128) / 2;
             double slope = (double) (maxZ - minZ) / (maxX - minX);
             for (int i = minX; i <= maxX; i++) {
+				//noinspection deprecation
                 canvas.setPixel(i, (int) (minZ + (i - minX) * slope), color);
             }
         }
@@ -533,8 +534,10 @@ public class MiniMapManager {
                 for (int j = minZ; j <= maxZ; j++) {
                     byte actualColor = i == minX || i == maxX || j == minZ || j == maxZ ? borderColor : color;
                     if (actualColor == TRANSPARENT)
-                        actualColor = canvas.getBasePixel(i, j);
-                    canvas.setPixel(i, j, actualColor);
+						//noinspection removal
+						actualColor = canvas.getBasePixel(i, j);
+					//noinspection deprecation
+					canvas.setPixel(i, j, actualColor);
                 }
             }
         }
@@ -545,14 +548,14 @@ public class MiniMapManager {
                 // spectator view
                 teammateCursors = Main.getGame().getPlayers().stream()
                         .filter(other -> !other.isInvisible())
-                        .map(other -> new CursorInfo(other.getLocation(), true, MapCursor.Type.GREEN_POINTER,
+                        .map(other -> new CursorInfo(other.getLocation(), true, MapCursor.Type.FRAME,
                                 Main.getPlayerInfo(other).team.colourWord(other.getName())))
                         .toArray(CursorInfo[]::new);
             } else {
                 // teammates view
                 teammateCursors = playerInfo.team.getPlayerMembers().stream()
                         .filter(teammate -> teammate != player) // don't show viewer
-                        .map(teammate -> new CursorInfo(teammate.getLocation(), true, MapCursor.Type.BLUE_POINTER,
+                        .map(teammate -> new CursorInfo(teammate.getLocation(), true, MapCursor.Type.BLUE_MARKER,
                                 player.isSneaking() ? teammate.name() : null)) // display teammate names if sneaking
                         .toArray(CursorInfo[]::new);
             }
@@ -560,7 +563,7 @@ public class MiniMapManager {
                 collection.addCursor(cursor.toMapCursor(this));
             }
             // green pointer
-            collection.addCursor(new CursorInfo(player.getLocation(), true, MapCursor.Type.WHITE_POINTER)
+            collection.addCursor(new CursorInfo(player.getLocation(), true, MapCursor.Type.PLAYER)
                     .toMapCursor(this));
         }
     }
