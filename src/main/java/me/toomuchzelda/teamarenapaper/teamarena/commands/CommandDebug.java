@@ -19,6 +19,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.hideandseek.PacketFlyingPoint;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.utils.*;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketDisplay;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
@@ -26,6 +27,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
 import net.minecraft.network.protocol.game.ClientboundHurtAnimationPacket;
+import net.minecraft.world.level.block.state.BlockState;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
@@ -480,6 +482,47 @@ public class CommandDebug extends CustomCommand {
 						player.sendMessage("Did not remove anything");
 				}
 			}
+			case "elevator" -> {
+				final Location loc = player.getLocation();
+
+				List<PacketDisplay> displays = new ArrayList<>();
+				BlockState nmsBlockState = ((CraftBlockData) Material.OAK_PLANKS.createBlockData()).getState();
+				for (int x = 0; x < 4; x++) {
+					for (int y = 0; y < 4; y++) {
+						for (int z = 0; z < 4; z++) {
+							if ((x == 1 || x == 2) && (y == 1 || y == 2 || y == 3) && (z == 1 || z == 2)) {
+								continue;
+							}
+
+							PacketDisplay pdisplay = new PacketDisplay(PacketEntity.NEW_ID, EntityType.BLOCK_DISPLAY,
+								loc.clone().add(x, y, z), null, viewer -> true);
+
+							pdisplay.setMetadata(MetaIndex.DISPLAY_POSROT_INTERPOLATION_DURATION_OBJ, 2);
+							pdisplay.setMetadata(MetaIndex.BLOCK_DISPLAY_BLOCK_OBJ, nmsBlockState);
+							pdisplay.updateMetadataPacket();
+							pdisplay.respawn();
+							displays.add(pdisplay);
+						}
+					}
+				}
+
+				final PacketEntity pig = new PacketEntity(PacketEntity.NEW_ID, EntityType.PIG, loc.clone().add(1.5, 1.5, 1.5),
+					null, viewer -> true);
+				pig.respawn();
+
+				Bukkit.getScheduler().runTaskTimer(Main.getPlugin(), () -> {
+					final double thing = ((double) System.currentTimeMillis()) / 2000d;
+					final double y = Math.sin(thing) * 10d;
+					for (PacketDisplay display : displays) {
+						Location xz = display.getLocation();
+						xz.setY(loc.getY() + y);
+						display.move(xz);
+					}
+
+					pig.move(loc.clone().add(0, y, 0));
+				}, 1L, 1L);
+
+			}
 			default -> showUsage(sender);
 		}
 	}
@@ -489,7 +532,7 @@ public class CommandDebug extends CustomCommand {
 		if (args.length == 1) {
 			return Arrays.asList("hide", "gui", "guitest", "signtest", "game", "setrank", "setteam", "setkit",
 				"votetest", "draw", "graffititest", "respawn", "fakehitbox", "testmotd", "arrowMarker", "packetcache", "showSpawns",
-				"flyingpoint", "fakeBlock");
+				"flyingpoint", "fakeBlock", "elevator");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");

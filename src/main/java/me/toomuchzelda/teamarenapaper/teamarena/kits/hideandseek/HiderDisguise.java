@@ -42,7 +42,7 @@ public class HiderDisguise {
 	private final Player hider;
 	final int timerSeed;
 
-	private AttachedHiderEntity hitbox;
+	private final AttachedHiderEntity hitbox;
 	private AttachedHiderEntity disguise;
 
 	private final BossBar bossbar;
@@ -64,6 +64,7 @@ public class HiderDisguise {
 
 	HiderDisguise(final Player hider, TeamArena game) {
 		this.hitbox = new AttachedHiderEntity(EntityType.INTERACTION, hider);
+		this.hitbox.respawn();
 		// TODO scale larger
 
 
@@ -197,11 +198,14 @@ public class HiderDisguise {
 		if (solid) { // Hider doesn't see their own solid block, so we use this display instead
 			//this.disguise.setMetadata(MetaIndex.BLOCK_DISPLAY_BLOCK_OBJ, nmsAirBlockState);
 			this.disguise.setViewerRule(viewer -> viewer == this.hider);
-			this.disguise.setSolid(coords.toLocation(this.game.getWorld()).add(0.5, 0.5, 0.5));
+			final Location loc = coords.toLocation(this.game.getWorld());
+			this.hitbox.setSolid(loc.add(0.5, 0d, 0.5));
+			this.disguise.setSolid(loc.add(0d, 0.5, 0d));
 		}
 		else {
 			//this.disguise.setMetadata(MetaIndex.BLOCK_DISPLAY_BLOCK_OBJ, nmsBlockState);
 			this.disguise.setViewerRule(PacketEntity.VISIBLE_TO_ALL);
+			this.hitbox.setSolid(null);
 			this.disguise.setSolid(null);
 		}
 
@@ -348,6 +352,7 @@ public class HiderDisguise {
 				//this.setMetadata(MetaIndex.DISPLAY_SCALE_OBJ, nmsFullScaleVec);
 				//this.setMetadata(MetaIndex.DISPLAY_TRANSLATION_OBJ, defaultTranslateVec);
 				this.solid = false;
+				this.move(this.getLocation(), true); // Hack
 			}
 		}
 
