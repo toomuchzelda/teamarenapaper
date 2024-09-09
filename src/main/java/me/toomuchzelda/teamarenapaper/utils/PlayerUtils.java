@@ -198,17 +198,12 @@ public class PlayerUtils {
 	public static void heal(Player player, double amount, EntityRegainHealthEvent.RegainReason reason) {
 		final double maxHealth = player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
 		final double oldHealth = player.getHealth();
-		double newHealth = oldHealth + amount;
-		if (newHealth > maxHealth) {
-			newHealth = maxHealth;
-			amount = newHealth - oldHealth;
-		}
 
 		EntityRegainHealthEvent event = new EntityRegainHealthEvent(player, amount, reason);
 		Bukkit.getPluginManager().callEvent(event);
 
 		if (!event.isCancelled()) {
-			newHealth = oldHealth + event.getAmount();
+			double newHealth = oldHealth + event.getAmount();
 			if (newHealth > maxHealth)
 				newHealth = maxHealth;
 

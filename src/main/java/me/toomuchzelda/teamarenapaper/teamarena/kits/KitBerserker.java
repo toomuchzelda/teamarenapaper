@@ -78,7 +78,7 @@ public class KitBerserker extends Kit {
 
 	private static class BerserkerAbility extends Ability {
 		private static final double HEAL_AMOUNT = 8d;
-		private static final double KB_LOSS_STEPS = 6d;
+		private static final double KB_LOSS_STEPS = 12d;
 		private static final double HEAL_LOSS_STEPS = 12d;
 
 		private static final Component BOSSBAR_TITLE = Component.text("Rage!!!", NamedTextColor.DARK_RED);
@@ -179,6 +179,7 @@ public class KitBerserker extends Kit {
 			}
 
 			// Blood visual effect
+			// For full kills only
 			if (amount == 1.0f) {
 				final Location location = victim.getLocation();
 				final Location up1 = location.clone().add(0d, 1d, 0d);
@@ -186,6 +187,8 @@ public class KitBerserker extends Kit {
 					ParticleUtils.blockBreakEffect(player, Material.REDSTONE_BLOCK, location);
 					ParticleUtils.blockBreakEffect(player, Material.REDSTONE_BLOCK, up1);
 				});
+
+				berserker.getInventory().addItem(FOOD_ITEM);
 			}
 		}
 
