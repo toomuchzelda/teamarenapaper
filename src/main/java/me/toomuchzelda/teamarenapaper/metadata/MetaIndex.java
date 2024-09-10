@@ -37,6 +37,9 @@ public class MetaIndex
 	public static final int BASE_BITFIELD_GLOWING_IDX = 6;
 	public static final byte BASE_BITFIELD_GLOWING_MASK = 0x40;
 
+	public static final int INTERACTION_WIDTH_IDX = 8;
+	public static final int INTERACTION_HEIGHT_IDX = 9;
+
 	public static final int ABSTRACT_ARROW_BITFIELD_IDX = 8;
 	public static final int ABSTRACT_ARROW_PIERCING_LEVEL_IDX = 9;
 
@@ -76,6 +79,9 @@ public class MetaIndex
 	public static final WrappedDataWatcherObject CUSTOM_NAME_VISIBLE_OBJ;
 	public static final WrappedDataWatcherObject NO_GRAVITY_OBJ;
 	public static final WrappedDataWatcherObject POSE_OBJ;
+
+	public static final WrappedDataWatcherObject INTERACTION_WIDTH_OBJ;
+	public static final WrappedDataWatcherObject INTERACTION_HEIGHT_OBJ;
 
 	public static final WrappedDataWatcherObject ABSTRACT_ARROW_BITFIELD_OBJ;
 	public static final WrappedDataWatcherObject ABSTRACT_ARROW_PIERCING_LEVEL_OBJ;
@@ -149,6 +155,12 @@ public class MetaIndex
 
 		POSE_OBJ = new WrappedDataWatcherObject(POSE_IDX, WrappedDataWatcher.Registry.get(EnumWrappers.getEntityPoseClass()));
 		addMapping(POSE_OBJ);
+
+		INTERACTION_WIDTH_OBJ = new WrappedDataWatcherObject(INTERACTION_WIDTH_IDX, WrappedDataWatcher.Registry.get(Float.class));
+		addMapping(INTERACTION_WIDTH_OBJ);
+
+		INTERACTION_HEIGHT_OBJ = new WrappedDataWatcherObject(INTERACTION_HEIGHT_IDX, WrappedDataWatcher.Registry.get(Float.class));
+		addMapping(INTERACTION_HEIGHT_OBJ);
 
 		ABSTRACT_ARROW_BITFIELD_OBJ = new WrappedDataWatcherObject(ABSTRACT_ARROW_BITFIELD_IDX, WrappedDataWatcher.Registry.get(Byte.class));
 		addMapping(ABSTRACT_ARROW_BITFIELD_OBJ);

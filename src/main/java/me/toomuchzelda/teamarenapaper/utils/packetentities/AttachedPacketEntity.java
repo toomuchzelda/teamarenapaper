@@ -71,15 +71,15 @@ public class AttachedPacketEntity extends PacketEntity
 			return;
 
 		newLocation = newLocation.clone();
+		this.updateTeleportPacket(newLocation);
 		if(this.isAlive() && this.selfSee && this.entity instanceof Player player) {
 			final boolean sendYaw = this.sendHeadRotPackets && this.updateRotateHeadPacket(newLocation.getYaw());
 
 			PacketContainer movePacket = getRelativePosPacket(this.location, newLocation);
-			if(movePacket == null || (
+			if(movePacket == null || force || (
 					this.dirtyRelativePacketTime != HASNT_MOVED &&
 					TeamArena.getGameTick() - this.dirtyRelativePacketTime >= PacketEntity.TICKS_PER_TELEPORT_UPDATE)) {
 
-				updateTeleportPacket(newLocation);
 				this.sendPacket(player, this.getTeleportPacket());
 				this.sendPacket(player, this.getRotateHeadPacket());
 			}
@@ -96,6 +96,15 @@ public class AttachedPacketEntity extends PacketEntity
 
 		this.updateSpawnPacket(newLocation);
 		this.location = newLocation;
+
+		if (force) {
+			for (Player realViewer : this.realViewers) {
+				this.sendPacket(realViewer, this.getTeleportPacket());
+				if (this.sendHeadRotPackets) {
+					this.sendPacket(realViewer, this.getRotateHeadPacket());
+				}
+			}
+		}
 	}
 
 	@Override

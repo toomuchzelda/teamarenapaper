@@ -63,10 +63,13 @@ public class HiderDisguise {
 	private long fbManagerKey;
 
 	HiderDisguise(final Player hider, TeamArena game) {
-		this.hitbox = new AttachedHiderEntity(EntityType.INTERACTION, hider);
+		this.hitbox = new AttachedHiderEntity(EntityType.INTERACTION, hider, false);
+		this.hitbox.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK);
+		// Slightly over 1.0 to wrap blocks
+		this.hitbox.setMetadata(MetaIndex.INTERACTION_WIDTH_OBJ, 1.05f);
+		this.hitbox.setMetadata(MetaIndex.INTERACTION_HEIGHT_OBJ, 1.05f);
+		this.hitbox.updateMetadataPacket();
 		this.hitbox.respawn();
-		// TODO scale larger
-
 
 		bossbar = BossBar.bossBar(SOLIDIFYING_COMP, 0f, SOLIDIFYING_COLOUR,
 			BossBar.Overlay.PROGRESS);
@@ -96,7 +99,7 @@ public class HiderDisguise {
 			}
 
 			respawn = true;
-			this.disguise = new AttachedHiderEntity(EntityType.BLOCK_DISPLAY, this.hider);
+			this.disguise = new AttachedHiderEntity(EntityType.BLOCK_DISPLAY, this.hider, true);
 
 			// Invis makes clients not render the blue line when viewing hitboxes
 			this.disguise.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK);
@@ -131,8 +134,9 @@ public class HiderDisguise {
 			this.disguise.remove();
 		}
 
-		this.disguise = new AttachedHiderEntity(clicked.getType(), this.hider);
+		this.disguise = new AttachedHiderEntity(clicked.getType(), this.hider, true);
 		for (WrappedWatchableObject obj : WrappedDataWatcher.getEntityWatcher(clicked).getWatchableObjects()) {
+			if (obj.getIndex() == MetaIndex.BASE_BITFIELD_IDX) continue;
 			this.disguise.setMetadata(obj.getWatcherObject(), obj.getValue());
 		}
 		this.disguise.updateMetadataPacket();
@@ -316,8 +320,8 @@ public class HiderDisguise {
 		private final int hiderId;
 		private boolean solid;
 
-		public AttachedHiderEntity(EntityType type, Player hider) {
-			super(PacketEntity.NEW_ID, type, hider, null, PacketEntity.VISIBLE_TO_ALL, true,
+		public AttachedHiderEntity(EntityType type, Player hider, boolean selfSee) {
+			super(PacketEntity.NEW_ID, type, hider, null, PacketEntity.VISIBLE_TO_ALL, selfSee,
 				type != EntityType.BLOCK_DISPLAY);
 
 			this.hiderId = hider.getEntityId();
