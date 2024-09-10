@@ -14,6 +14,7 @@ import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -45,6 +46,12 @@ public class KitRadarSeeker extends Kit {
 
 		public static final TextComponent ACCURACY = Component.text("Signal Strength: ", TextColor.color(0x138c97));
 		public static final TextComponent ACCURACY_HINT = Component.text(" (Stand still for better signal)", NamedTextColor.GRAY);
+		private static final TextComponent KING_NEAR_HINT = Component.textOfChildren(
+			Component.text(" (", NamedTextColor.GOLD),
+			Component.text("King", NamedTextColor.GREEN),
+			Component.text(" nearby)", NamedTextColor.GOLD)
+		).decorate(TextDecoration.BOLD);
+
 		public static final int RADAR_PERIOD = 40;
 		public static final Location[] RADAR_LOCATIONS = new Location[RADAR_PERIOD];
 		static {
@@ -116,33 +123,45 @@ public class KitRadarSeeker extends Kit {
 			}
 			double inaccuracy = Math.min(5, totalMovement / 3);
 			int accuracyBlocks = (int) ((1 - inaccuracy / 5d) * 10 * (radarPenalty ? 0.5 : 1));
-			player.sendActionBar(Component.textOfChildren(
+			Component actionBar = Component.textOfChildren(
 				ACCURACY,
 				Component.text("|".repeat(accuracyBlocks), NamedTextColor.GREEN),
-				Component.text("|".repeat(10 - accuracyBlocks), NamedTextColor.DARK_GRAY),
-				ACCURACY_HINT
-			));
+				Component.text("|".repeat(10 - accuracyBlocks), NamedTextColor.DARK_GRAY)
+			);
 
+			boolean appendAccuracy = true;
 			// play sound every 2 seconds
-			if (TeamArena.getGameTick() % RADAR_PERIOD != 0)
-				return;
-			ArrayList<Player> candidates = new ArrayList<>(hideAndSeek.hiderTeam.getPlayerMembers());
-			candidates.removeIf(this.game::isDead);
-			Player closest = getClosestPlayer(candidates, playerLocation);
-			if (closest == null)
-				return;
-			Location inaccurateLocation = addInaccuracy(closest.getLocation(), inaccuracy);
+			if (TeamArena.getGameTick() % RADAR_PERIOD == 0) {
+				ArrayList<Player> candidates = new ArrayList<>(hideAndSeek.hiderTeam.getPlayerMembers());
+				candidates.removeIf(this.game::isDead);
+				Player closest = getClosestPlayer(candidates, playerLocation);
+				if (closest == null)
+					return;
+				Location inaccurateLocation = addInaccuracy(closest.getLocation(), inaccuracy);
 
-			double distance = inaccurateLocation.distance(playerLocation);
-			float pitch;
-			if (distance < 3) {
-				pitch = 2;
-			} else if (distance > 15) {
-				pitch = 0;
-			} else {
-				pitch = (float) (2 * (1 - (distance - 3) / (15 - 3)));
+				double distance = inaccurateLocation.distance(playerLocation);
+				float pitch;
+				if (distance < 3) {
+					pitch = 2;
+				} else if (distance > 15) {
+					pitch = 0;
+				} else {
+					pitch = (float) (2 * (1 - (distance - 3) / (15 - 3)));
+				}
+
+				player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, SoundCategory.PLAYERS, 1f, pitch);
+				if (distance <= 6 && closest == hideAndSeek.getPresident()) {
+					player.playSound(player, Sound.BLOCK_NOTE_BLOCK_SNARE, SoundCategory.PLAYERS, 1f, 1f);
+					appendAccuracy = false;
+				}
 			}
-			player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BIT, SoundCategory.PLAYERS, 1f, pitch);
+
+			if (appendAccuracy)
+				actionBar = actionBar.append(ACCURACY_HINT);
+			else
+				actionBar = actionBar.append(KING_NEAR_HINT);
+
+			player.sendActionBar(actionBar);
 		}
 
 		private static Player getClosestPlayer(Collection<? extends Player> players, Location location) {

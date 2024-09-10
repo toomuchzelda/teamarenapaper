@@ -45,7 +45,7 @@ public class HideAndSeek extends TeamArena {
 
 	private static final double HIDER_SEEKER_RATIO = 2d; // 2 Hiders for every seeker
 
-	private static final int DEFAULT_SEEK_TIME = 3 * 60 * 20; // 3 minutes?
+	private static final int DEFAULT_SEEK_TIME = 4 * 60 * 20; // 3 minutes?
 
 	public TeamArenaTeam hiderTeam;
 	public TeamArenaTeam seekerTeam;
