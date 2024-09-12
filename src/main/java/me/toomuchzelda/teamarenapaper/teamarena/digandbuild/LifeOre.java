@@ -9,6 +9,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 
 import java.util.*;
@@ -16,8 +17,8 @@ import java.util.*;
 public class LifeOre
 {
 	/** Number of times ore must be broken to disqualify the team */
-	public static final int STARTING_HEALTH = 12;
-	public static final int MAX_HEALTH = 15;
+	public static final int STARTING_HEALTH = 25;
+	public static final int MAX_HEALTH = 30;
 	private static final double HEAL_PARTICLE_DIST = 1d;
 	public static final int HEAL_PARTICLE_COUNT = 20;
 
@@ -58,7 +59,9 @@ public class LifeOre
 		this.hologram = new PointMarker(this.coordsAsLoc.clone().add(0.5d, 1.5d, 0.5d), displayText,
 			this.owningTeam.getColour(), Material.ALLAY_SPAWN_EGG);
 
-		world.setBlockData(coords.x(), coords.y(), coords.z(), mat.createBlockData());
+		Block block = world.getBlockAt(coords.x(), coords.y(), coords.z());
+		block.setType(mat);
+		block.getState().update(true, false);
 
 		this.currentMiners = new HashSet<>();
 	}

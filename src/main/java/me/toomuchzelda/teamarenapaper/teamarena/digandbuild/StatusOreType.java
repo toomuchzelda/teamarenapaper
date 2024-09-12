@@ -11,13 +11,13 @@ import org.bukkit.entity.Player;
 public enum StatusOreType
 {
 	HEAL(Color.GREEN, Component.text("LifeOre Heal"),
-		"Trade at the canteen to repair your Life Ore",
+		"Use on your Life Ore to repair it",
 		6 * 20,
 		new HealOreAction()),
 
 
 	HASTE(Color.ORANGE, Component.text("Team Haste"),
-		"Trade at the canteen to speed up your team's digging",
+		"Use on your Life Ore to speed up your team's digging",
 		10 * 20,
 		new HasteOreAction());
 

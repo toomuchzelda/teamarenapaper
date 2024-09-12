@@ -16,6 +16,9 @@ import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.DigAndBuild;
+import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.StatusOreType;
+import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.hideandseek.PacketFlyingPoint;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.utils.*;
@@ -523,6 +526,17 @@ public class CommandDebug extends CustomCommand {
 				}, 1L, 1L);
 
 			}
+			case "showores" -> {
+				if (Main.getGame() instanceof DigAndBuild dnb) {
+					Map<StatusOreType, TeamArenaMap.DNBStatusOreInfo> map = dnb.gameMap.getDnbInfo().statusOres();
+					for (var entry : map.entrySet()) {
+						String text = entry.getKey().name();
+						for (BlockCoords coords : entry.getValue().coords()) {
+							new PacketHologram(coords.toLocation(dnb.getWorld()).add(0.5, 0.5, 0.5), null, viewer -> true, Component.text(text)).respawn();
+						}
+					}
+				}
+			}
 			default -> showUsage(sender);
 		}
 	}
@@ -532,7 +546,7 @@ public class CommandDebug extends CustomCommand {
 		if (args.length == 1) {
 			return Arrays.asList("hide", "gui", "guitest", "signtest", "game", "setrank", "setteam", "setkit",
 				"votetest", "draw", "graffititest", "respawn", "fakehitbox", "testmotd", "arrowMarker", "packetcache", "showSpawns",
-				"flyingpoint", "fakeBlock", "elevator");
+				"flyingpoint", "fakeBlock", "elevator", "showores");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");
