@@ -11,8 +11,13 @@ import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
@@ -26,16 +31,30 @@ public class TicTacToe {
         this.player2 = cross;
     }
 
-    enum State {
-        CIRCLE, CROSS, DRAW
-    }
-    State[] board = new State[9];
-    State currentPlayer = State.CIRCLE;
-    State winner = null;
-    int[] winnerSlots = null;
-    int moves = 0;
+	@ApiStatus.Internal
+	public static boolean UNIT_TEST = false;
+	@ApiStatus.Internal
+	public TicTacToe(TicTacToeAudience circle, TicTacToeAudience cross, State[] board) {
+		if (!UNIT_TEST) throw new IllegalStateException();
+		if (board.length != 9) throw new IllegalArgumentException("board");
+		this.player1 = circle;
+		this.player2 = cross;
+		this.board = board.clone();
+	}
 
-    void getWinner() {
+    public enum State {
+        CIRCLE, CROSS, DRAW;
+		public State getOpposite() {
+			return this == CIRCLE ? CROSS : CIRCLE;
+		}
+    }
+    public State[] board = new State[9];
+    public State currentPlayer = State.CIRCLE;
+    public State winner = null;
+    public int[] winnerSlots = null;
+    public int moves = 0;
+
+    public void checkWinner() {
         for (int i = 0; i < 3; i++) {
             // horizontals
             if (board[i * 3] != null && board[i * 3] == board[i * 3 + 1] && board[i * 3] == board[i * 3 + 2]) {
@@ -57,17 +76,19 @@ public class TicTacToe {
             winnerSlots = new int[] {2, 4, 6};
         }
 
-        // check for any empty slot
-        for (int i = 0; i < 9; i++) {
-            if (board[i] == null)
-                return;
-        }
-        winner = State.DRAW;
+		if (winner == null) {
+			// check for any empty slot
+			for (int i = 0; i < 9; i++) {
+				if (board[i] == null)
+					return;
+			}
+			winner = State.DRAW;
+		}
     }
 
     public void run() {
         // check for wins first
-        getWinner();
+        checkWinner();
         if (winner != null)
             return;
 
@@ -79,7 +100,7 @@ public class TicTacToe {
         action.thenAccept(num -> {
             board[num] = currentPlayer;
             moves++;
-            currentPlayer = currentPlayer == State.CIRCLE ? State.CROSS : State.CIRCLE;
+            currentPlayer = currentPlayer.getOpposite();
             Bukkit.getScheduler().runTask(Main.getPlugin(), this::run);
         });
     }
@@ -92,17 +113,23 @@ public class TicTacToe {
         EASY, IMPOSSIBLE
     }
 
-    private static CompletableFuture<Integer> getDelayedResponse(int response, int delay) {
+    private static CompletableFuture<Integer> delay(Integer response, int delay) {
+		if (response == null) return null;
+		if (UNIT_TEST) return CompletableFuture.completedFuture(response);
         CompletableFuture<Integer> ret = new CompletableFuture<>();
         Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> ret.complete(response), delay);
         return ret;
     }
 
-    private static CompletableFuture<Integer> getRandomNumber(TicTacToe ticTacToe) {
+	private static CompletableFuture<Integer> delay(Integer response) {
+		return delay(response, MathUtils.random.nextInt(5, 35));
+	}
+
+    private static Integer getRandomNumber(TicTacToe ticTacToe) {
         while (true) {
             int num = MathUtils.randomMax(8);
             if (ticTacToe.board[num] == null) {
-                return getDelayedResponse(num, 10);
+                return num;
             }
         }
     }
@@ -121,29 +148,39 @@ public class TicTacToe {
         return -1;
     }
 
-    private static CompletableFuture<Integer> getWinningMove(TicTacToe ticTacToe, State player) {
+	private static Integer pickRandomAvailable(TicTacToe ticTacToe, Integer... slots) {
+		List<Integer> target = Arrays.asList(slots);
+		Collections.shuffle(target);
+		for (int i : target) {
+			if (ticTacToe.board[i] == null)
+				return i;
+		}
+		return null;
+	}
+
+    private static Integer getWinningMove(TicTacToe ticTacToe, State player) {
         State[] board = ticTacToe.board;
         int response;
         for (int i = 0; i < 3; i++) {
             // horizontals
             response = checkPairs(board, player, i * 3, i * 3 + 1, i * 3 + 2);
             if (response != -1) {
-                return getDelayedResponse(response, 10);
+                return response;
             }
             // verticals
             response = checkPairs(board, player, i, i + 3, i + 6);
             if (response != -1) {
-                return getDelayedResponse(response, 10);
+                return response;
             }
         }
         // diagonals
         response = checkPairs(board, player, 0, 4, 8);
         if (response != -1) {
-            return getDelayedResponse(response, 10);
+            return response;
         }
         response = checkPairs(board, player, 2, 4, 6);
         if (response != -1) {
-            return getDelayedResponse(response, 10);
+            return response;
         }
 
         if (ticTacToe.currentPlayer != player) {
@@ -153,66 +190,98 @@ public class TicTacToe {
             if (response == 3 && board[2] == null) {
                 // .X!
                 // ..X
-                return getDelayedResponse(2, 10);
+                return 2;
             } else if (response == 5 && board[0] == null) {
                 // !X.
                 // X..
-                return getDelayedResponse(0, 10);
+                return 0;
             }
             response = checkPairs(board, player, 7, 3, 5);
             if (response == 3 && board[8] == null) {
                 // ..X
                 // .X!
-                return getDelayedResponse(8, 10);
+                return 8;
             } else if (response == 5 && board[6] == null) {
                 // X..
                 // !X.
-                return getDelayedResponse(6, 10);
+                return 6;
             }
         }
         return null;
     }
 
-    private static CompletableFuture<Integer> getWinningMove(TicTacToe ticTacToe) {
+    private static Integer getWinningMove(TicTacToe ticTacToe) {
         // prioritize winning in 1 move, then try preventing the enemy from winning
-        CompletableFuture<Integer> future;
+        Integer future;
         future = getWinningMove(ticTacToe, ticTacToe.currentPlayer);
         if (future != null)
             return future;
-        future = getWinningMove(ticTacToe, ticTacToe.currentPlayer == State.CIRCLE ? State.CROSS : State.CIRCLE);
+        future = getWinningMove(ticTacToe, ticTacToe.currentPlayer.getOpposite());
         if (future != null)
             return future;
 
         // no winning move, just do something random
+		// but slots 1, 3, 5, 7 are prioritized
+		future = pickRandomAvailable(ticTacToe, 1, 3, 5, 7);
+		if (future != null)
+			return future;
         return getRandomNumber(ticTacToe);
     }
 
     public static TicTacToeAudience getBot(BotDifficulty difficulty) {
         return switch (difficulty) {
-            case EASY -> TicTacToe::getRandomNumber;
-            case IMPOSSIBLE -> ticTacToe -> {
-                State[] board = ticTacToe.board;
-                // special moves
-                return switch (ticTacToe.moves) {
-                    case 0 -> // take one of the corners
-						getDelayedResponse(0, 10);
-                    case 1 -> // take middle or one of the corners
-						getDelayedResponse(board[4] == null ? 4 : 0, 10);
-                    case 2, 4 -> {
-                        // strategy
-                        if (board[1] == null && board[2] == null) {
-                            yield getDelayedResponse(2, 10);
-                        } else if (board[3] == null && board[6] == null) {
-                            yield getDelayedResponse(6, 10);
-                        } else if ((board[5] == null || board[7] == null) && board[8] == null) {
-                            yield getDelayedResponse(8, 10);
-                        } else {
-                            yield getWinningMove(ticTacToe);
-                        }
-                    }
+            case EASY -> ticTacToe -> delay(getRandomNumber(ticTacToe));
+			case IMPOSSIBLE -> ticTacToe -> {
+				State[] board = ticTacToe.board;
+				// special moves
+				return delay(switch (ticTacToe.moves) {
+					case 0 -> // take one of the corners
+						pickRandomAvailable(ticTacToe, 0, 2, 6, 8);
+					case 1 -> // take middle or one of the corners
+						board[4] == null ?
+							4 :
+							Objects.requireNonNull(pickRandomAvailable(ticTacToe, 0, 2, 6, 8));
+					case 2, 4 -> {
+						Integer ourWinningMove = getWinningMove(ticTacToe, ticTacToe.currentPlayer);
+						if (ourWinningMove != null)
+							yield ourWinningMove;
+						Integer theirWinningMove = getWinningMove(ticTacToe, ticTacToe.currentPlayer.getOpposite());
+						if (theirWinningMove != null)
+							yield theirWinningMove;
+						// try occupying two other corners (0, 2, 6, 8)
+						// by checking if the cells between them (1, 3, 5, 7) is empty
+						// 012
+						// 345
+						// 678
+						if (board[1] == null) {
+							if (board[2] == null)
+								yield 2;
+							else if (board[0] == null)
+								yield 0;
+						}
+						if (board[3] == null) {
+							if (board[6] == null)
+								yield 6;
+							else if (board[0] == null)
+								yield 0;
+						}
+						if (board[5] == null) {
+							if (board[2] == null)
+								yield 2;
+							else if (board[8] == null)
+								yield 8;
+						}
+						if (board[7] == null) {
+							if (board[8] == null)
+								yield 8;
+							else if (board[6] == null)
+								yield 6;
+						}
+						yield getWinningMove(ticTacToe);
+					}
 					default -> getWinningMove(ticTacToe);
-                };
-            };
+				});
+			};
         };
     }
 

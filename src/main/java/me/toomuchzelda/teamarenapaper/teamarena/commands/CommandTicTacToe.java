@@ -43,13 +43,18 @@ public class CommandTicTacToe extends CustomCommand {
             TicTacToe game = new TicTacToe(TicTacToe.getPlayer(player), TicTacToe.getBot(difficulty));
             game.schedule();
         } else if ("botfirst".equalsIgnoreCase(target)) {
-            TicTacToe.BotDifficulty difficulty = TicTacToe.BotDifficulty.EASY;
-            if (args.length == 2) {
-                difficulty = TicTacToe.BotDifficulty.valueOf(args[1].toUpperCase(Locale.ENGLISH));
-            }
-            TicTacToe game = new TicTacToe(TicTacToe.getBot(difficulty), TicTacToe.getPlayer(player));
-            game.schedule();
-        } else {
+			TicTacToe.BotDifficulty difficulty = TicTacToe.BotDifficulty.EASY;
+			if (args.length == 2) {
+				difficulty = TicTacToe.BotDifficulty.valueOf(args[1].toUpperCase(Locale.ENGLISH));
+			}
+			TicTacToe game = new TicTacToe(TicTacToe.getBot(difficulty), TicTacToe.getPlayer(player));
+			game.schedule();
+		} else if ("bvb".equalsIgnoreCase(target)) {
+			TicTacToe game = new TicTacToe(TicTacToe.getBot(TicTacToe.BotDifficulty.IMPOSSIBLE), TicTacToe.getBot(TicTacToe.BotDifficulty.IMPOSSIBLE));
+			TicTacToe.TicTacToeAudience viewer = TicTacToe.getPlayer(player);
+			viewer.apply(game);
+			game.schedule();
+		} else {
             long now = System.currentTimeMillis();
             Player targetPlayer = Bukkit.getPlayer(target);
             if (targetPlayer == null || targetPlayer == player) {
