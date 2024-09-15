@@ -1024,13 +1024,16 @@ public class EventListeners implements Listener
 	 */
 	@EventHandler
 	public void entityRemoveFromWorld(EntityRemoveFromWorldEvent event) {
-		if (event.getEntity() instanceof AbstractArrow arrow && !avoidCME) {
+		final Entity entity = event.getEntity();
+		if (entity instanceof AbstractArrow arrow && !avoidCME) {
 			ArrowManager.remove(arrow);
 		}
 
-		if (event.getEntity() instanceof LivingEntity living) {
+		if (entity instanceof LivingEntity living) {
 			DamageTimes.remove(living);
 		}
+
+		ExplosionManager.removeEntityInfo(entity);
 	}
 
 	@EventHandler

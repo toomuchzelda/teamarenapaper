@@ -2,8 +2,8 @@ package me.toomuchzelda.teamarenapaper.explosions;
 
 import org.bukkit.entity.Entity;
 
+import java.util.HashMap;
 import java.util.Map;
-import java.util.WeakHashMap;
 
 /**
  * Class to exempt certain explosions from not doing anything in EventListeners handlers.
@@ -14,7 +14,7 @@ import java.util.WeakHashMap;
  */
 public class ExplosionManager {
 
-	private static final Map<Entity, EntityExplosionInfo> ENTITY_EXPLOSION_MAP = new WeakHashMap<>();
+	private static final Map<Entity, EntityExplosionInfo> ENTITY_EXPLOSION_MAP = new HashMap<>();
 
 	public static void setEntityInfo(Entity entity, EntityExplosionInfo info) {
 		ENTITY_EXPLOSION_MAP.put(entity, info);
@@ -24,7 +24,7 @@ public class ExplosionManager {
 		return ENTITY_EXPLOSION_MAP.get(entity);
 	}
 
-	public static EntityExplosionInfo getAndRemoveEntityInfo(Entity entity) {
-		return ENTITY_EXPLOSION_MAP.remove(entity);
+	public static void removeEntityInfo(Entity entity) {
+		ENTITY_EXPLOSION_MAP.remove(entity);
 	}
 }
