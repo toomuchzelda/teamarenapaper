@@ -43,7 +43,7 @@ public class TextUtils {
 		long days = duration.toDaysPart();
 		int hours = duration.toHoursPart();
 		int minutes = duration.toMinutesPart();
-		double remainingSeconds = duration.toSecondsPart() + duration.getNano() / 1_000_000_000d;
+		double remainingSeconds = duration.toSecondsPart();
 		var string = new StringBuilder();
 		if (days != 0)
 			string.append(days).append('d');

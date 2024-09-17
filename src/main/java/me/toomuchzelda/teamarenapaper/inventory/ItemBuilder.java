@@ -144,6 +144,11 @@ public final class ItemBuilder {
 		return hide(ItemFlag.values());
 	}
 
+	public ItemBuilder hideTooltip() {
+		meta.setHideTooltip(true);
+		return this;
+	}
+
 	private static final NamespacedKey UNIQUE_KEY = new NamespacedKey(Main.getPlugin(), "item_id");
 	public ItemBuilder unique() {
 		meta.getPersistentDataContainer().set(UNIQUE_KEY, PersistentDataType.INTEGER, ItemUtils._uniqueName++);

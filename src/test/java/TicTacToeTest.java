@@ -1,9 +1,13 @@
+import com.google.common.collect.Collections2;
 import me.toomuchzelda.teamarenapaper.inventory.TicTacToe;
 import me.toomuchzelda.teamarenapaper.inventory.TicTacToe.State;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -13,6 +17,26 @@ public class TicTacToeTest {
 	@BeforeAll
 	static void ensureUnitTest() {
 		TicTacToe.UNIT_TEST = true;
+	}
+
+	private static char formatState(State state) {
+		return switch (state) {
+			case CIRCLE -> 'O';
+			case CROSS -> 'X';
+			case null, default -> '.';
+		};
+	}
+
+	private static String formatBoard(TicTacToe.State[] board) {
+		var sb = new StringBuilder(11);
+		for (int i = 0; i < 3; i++) {
+			sb.append(formatState(board[i * 3]))
+				.append(formatState(board[i * 3 + 1]))
+				.append(formatState(board[i * 3 + 2]));
+			if (i != 2)
+				sb.append('\n');
+		}
+		return sb.toString();
 	}
 
 	private static void assertWinner(State winner, String board) {
@@ -94,12 +118,12 @@ public class TicTacToeTest {
 			if (move == i)
 				return;
 		}
-		fail("Expected one of: " + Arrays.toString(allowed) + ", got: " + move);
+		fail("Expected one of: " + Arrays.toString(allowed) + ", got: " + move + "\nBoard:\n" + formatBoard(game.board));
 	}
 
 	@Test
 	void testNextMoves() {
-		TicTacToe.TicTacToeAudience bot = TicTacToe.getBot(TicTacToe.BotDifficulty.IMPOSSIBLE);
+		TicTacToe.TicTacToeAudience bot = TicTacToe.getBot(TicTacToe.StandardBots.IMPOSSIBLE);
 
 		int[] corners = {0, 2, 6, 8};
 		// moves: 0
@@ -161,6 +185,10 @@ public class TicTacToeTest {
 			...
 			.O.
 			OO."""), bot, 1, 2);
+		assertMove(buildGame('X', """
+			O..
+			.X.
+			.O."""), bot, 6);
 		// move to win
 		assertMove(buildGame('O', """
 			OO."""), bot, 2);
@@ -172,5 +200,64 @@ public class TicTacToeTest {
 			...
 			.O.
 			OO."""), bot, 1, 2);
+		// move to avoid cornering ourselves
+		assertMove(buildGame('X', """
+			OX.
+			X..
+			O.."""), bot, 8);
+	}
+
+	private static TicTacToe.TicTacToeAudience buildBot(List<Integer> moves) {
+		var deque = new ArrayDeque<>(moves);
+		return ticTacToe -> {
+			int value = deque.remove();
+			while (ticTacToe.board[value] != null)
+				value = deque.remove();
+			return CompletableFuture.completedFuture(value);
+		};
+	}
+
+	private static void assertWin(TicTacToe game, TicTacToe.TicTacToeAudience circle, TicTacToe.TicTacToeAudience cross, State winner, boolean allowDraw) {
+		TicTacToe.State[] initial = game.board.clone();
+		List<State[]> steps = new ArrayList<>();
+		while (game.checkWinner() == null) {
+			CompletableFuture<Integer> action = switch (game.currentPlayer) {
+				case CIRCLE -> circle.apply(game);
+				case CROSS -> cross.apply(game);
+				case DRAW -> throw new IllegalStateException("Draw");
+			};
+			action.thenAccept(num -> {
+				game.board[num] = game.currentPlayer;
+				game.moves++;
+				game.currentPlayer = game.currentPlayer.getOpposite();
+				steps.add(game.board.clone());
+			});
+		}
+		State actualWinner = game.winner;
+		if (actualWinner != winner && !(allowDraw && actualWinner == State.DRAW)) {
+			var sb = new StringBuilder();
+			sb.append("Initial:\n").append(formatBoard(initial));
+			for (int i = 0; i < steps.size(); i++) {
+				sb.append("\nStep ").append(i + 1).append(":\n").append(formatBoard(steps.get(i)));
+			}
+			fail("Expected " + winner + (allowDraw ? " or draw" : "") + ", got: " + actualWinner + "\n" + sb);
+		}
+	}
+
+	@Test
+	public void testImpossibleBot() {
+		TicTacToe.TicTacToeAudience bot = TicTacToe.getBot(TicTacToe.StandardBots.IMPOSSIBLE);
+		// for battles between two impossible bots, the only allowed outcome is a draw
+		for (int i = 0; i < 100; i++) {
+			assertWin(buildGame('O', """
+				...
+				...
+				..."""), bot, bot, null, true);
+		}
+		// the impossible bot must win or draw against all permutations of input
+		for (var permutation : Collections2.permutations(List.of(0, 1, 2, 3, 4, 5, 6, 7, 8))) {
+			assertWin(new TicTacToe(null, null), buildBot(permutation), bot, State.CROSS, true);
+			assertWin(new TicTacToe(null, null), bot, buildBot(permutation), State.CIRCLE, true);
+		}
 	}
 }
