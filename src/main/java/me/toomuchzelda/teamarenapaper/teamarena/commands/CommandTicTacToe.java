@@ -73,19 +73,24 @@ public class CommandTicTacToe extends CustomCommand {
 			Inventories.openInventory(player, inventory);
 			game.schedule();
 		} else {
-			sendInvitation(player, getPlayerOrThrow(sender, args, 1));
+			sendInvitation(player, getPlayerOrThrow(sender, args, 0));
 		}
 	}
 
 	private void sendInvitation(Player player, Player targetPlayer) {
-		if (player == targetPlayer) {
+		if (player.equals(targetPlayer)) {
 			player.sendMessage(Component.text("Player not found!", TextColors.ERROR_RED));
+			return;
 		}
 		long now = System.currentTimeMillis();
 		// check for incoming invitation
 		Invitation invitation = requests.remove(targetPlayer.getUniqueId());
 		if (invitation != null && now - invitation.timestamp() <= 60000 && invitation.uuid().equals(player.getUniqueId())) {
-			TicTacToe game = new TicTacToe(TicTacToe.getPlayer(targetPlayer), TicTacToe.getPlayer(player));
+			var player1 = TicTacToe.getPlayer(targetPlayer);
+			var player2 = TicTacToe.getPlayer(player);
+			TicTacToe game = new TicTacToe(player1, player2);
+			player1.getInventory().initGame(game, TicTacToe.State.CIRCLE);
+			player2.getInventory().initGame(game, TicTacToe.State.CROSS);
 			game.schedule();
 			if (!invitation.task.isCancelled())
 				invitation.task().cancel();

@@ -383,14 +383,18 @@ public class TicTacToe {
 		}
 	}
 
-	public static TicTacToeAudience getBot(StandardBots difficulty) {
+	public static StandardBots getBot(StandardBots difficulty) {
 		return difficulty;
 	}
 
-	public static TicTacToeAudience getPlayer(Player player) {
+	public interface PlayerAudience extends TicTacToeAudience {
+		TicTacToe.Inventory getInventory();
+	}
+
+	public static PlayerAudience getPlayer(Player player) {
 		Inventory inventory = new Inventory();
 		Inventories.openInventory(player, inventory);
-		return new TicTacToeAudience() {
+		return new PlayerAudience() {
 			@Override
 			public ItemStack getDisplayItem() {
 				return ItemBuilder.of(Material.PLAYER_HEAD)
@@ -407,6 +411,11 @@ public class TicTacToe {
 				var future = new CompletableFuture<Integer>();
 				inventory.enableMove(future);
 				return future;
+			}
+
+			@Override
+			public Inventory getInventory() {
+				return inventory;
 			}
 		};
 	}
@@ -524,7 +533,8 @@ public class TicTacToe {
 				.build();
 		}
 
-		private static final ItemStack ACTIVE_PLAYER = ItemBuilder.of(Material.ORANGE_STAINED_GLASS_PANE).hideTooltip().build();
+		private static final ItemStack ACTIVE_PLAYER_CIRCLE = ItemBuilder.of(Material.LIGHT_BLUE_STAINED_GLASS_PANE).hideTooltip().build();
+		private static final ItemStack ACTIVE_PLAYER_CROSS = ItemBuilder.of(Material.PINK_STAINED_GLASS_PANE).hideTooltip().build();
 
 		@Override
 		public void update(Player player, InventoryAccessor inventory) {
@@ -566,16 +576,17 @@ public class TicTacToe {
 
 			drawBoard(player, inventory);
 			int animationSlot = playerAnimationSlot(activePlayerAnimation);
+			if (lastAnimationSlot != -1)
+				inventory.set(lastAnimationSlot, (ItemStack) null);
 			if (game.currentPlayer == State.CIRCLE) {
 				inventory.set(2, 1, formatTimeTaken(player1Time++));
+				inventory.set(animationSlot, ACTIVE_PLAYER_CIRCLE);
 			} else {
 				inventory.set(2, 7, formatTimeTaken(player2Time++));
 				animationSlot += 6; // offset 6 slots to player 2
+				inventory.set(animationSlot, ACTIVE_PLAYER_CROSS);
 			}
-			if (lastAnimationSlot != -1)
-				inventory.set(lastAnimationSlot, (ItemStack) null);
 			lastAnimationSlot = animationSlot;
-			inventory.set(animationSlot, ACTIVE_PLAYER);
 			activePlayerAnimation++;
 		}
 
