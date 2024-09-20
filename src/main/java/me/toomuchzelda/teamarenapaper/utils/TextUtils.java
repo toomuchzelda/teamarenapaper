@@ -485,10 +485,6 @@ public class TextUtils {
 		return split(component, LINE);
 	}
 
-	/*public static Component forEachComponent(Component comp, Function<Component, Component> replacementFunc) {
-		return replacementFunc.apply(forEachComponentR(comp, replacementFunc)); // manually apply to root
-	}*/
-
 	public static Component forEachComponent(Component comp, Function<Component, Component> replacementFunc) {
 		List<Component> children = comp.children();
 		ArrayList<Component> replacement = new ArrayList<>(children.size());

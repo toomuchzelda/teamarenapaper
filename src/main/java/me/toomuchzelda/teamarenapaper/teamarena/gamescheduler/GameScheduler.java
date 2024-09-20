@@ -113,23 +113,28 @@ public class GameScheduler
 	public static void updateOptions(int amount) {
 		GameQueueMember[] arr = new GameQueueMember[amount];
 
-		for (int i = 0; i < amount; i++) {
-			GameType type = GAMETYPE_Q[(i + gameTypeCtr) % GAMETYPE_Q.length];
-			ShufflingQueue<TeamArenaMap> mapQueue = GAME_TYPE_MAP_QUEUE.get(type);
+		if (nextGame == null) {
+			for (int i = 0; i < amount; i++) {
+				GameType type = GAMETYPE_Q[(i + gameTypeCtr) % GAMETYPE_Q.length];
+				ShufflingQueue<TeamArenaMap> mapQueue = GAME_TYPE_MAP_QUEUE.get(type);
 
-			TeamArenaMap map = mapQueue.poll();
-			// If there aren't enough players for the chosen map pick another one.
-			// Give up when the queue has been exhausted to avoid infinite loop.
-			int mapCtr = 0;
-			final int playerCount = Bukkit.getOnlinePlayers().size(); // flaw; includes potential spectators
-			while ((!map.isInRotation() || playerCount < map.getMinPlayers()) && mapCtr < mapQueue.size()) {
-				mapCtr++;
-				map = mapQueue.poll();
+				TeamArenaMap map = mapQueue.poll();
+				// If there aren't enough players for the chosen map pick another one.
+				// Give up when the queue has been exhausted to avoid infinite loop.
+				int mapCtr = 0;
+				final int playerCount = Bukkit.getOnlinePlayers().size(); // flaw; includes potential spectators
+				while ((!map.isInRotation() || playerCount < map.getMinPlayers() || playerCount > map.getMaxPlayers()) && mapCtr < mapQueue.size()) {
+					mapCtr++;
+					map = mapQueue.poll();
+				}
+
+				arr[i] = new GameQueueMember(type, map);
 			}
-
-			arr[i] = new GameQueueMember(type, map);
+			gameTypeCtr++;
 		}
-		gameTypeCtr++;
+		else {
+			Arrays.fill(arr, nextGame);
+		}
 
 		NEXT_OPTIONS = arr;
 	}
@@ -212,5 +217,19 @@ public class GameScheduler
 
 	public static List<TeamArenaMap> getMaps(GameType gameType) {
 		return GAMETYPE_MAPS.get(gameType);
+	}
+
+	public static GameType getGameTypeWithMapsAvailable() {
+		GameType[] allTypes = GameType.values();
+		List<GameType> candidates = new ArrayList<>(allTypes.length);
+
+		for (GameType g : allTypes) {
+			if (!getMaps(g).isEmpty()) {
+				candidates.add(g);
+			}
+		}
+
+		if (candidates.isEmpty()) return null;
+		return candidates.get(MathUtils.randomMax(candidates.size() - 1));
 	}
 }

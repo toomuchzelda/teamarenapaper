@@ -7,6 +7,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
@@ -48,11 +49,15 @@ public class CommandGame extends CustomCommand {
 			if (args.length < 2)
 				throw throwUsage("/game setnext <gameType> [map]");
 			// /game setnext <gameType> [map...]
-			GameType type = null;
-			TeamArenaMap newMap = null;
+			GameType type;
+			TeamArenaMap newMap;
 			if (!args[1].equals("any")) {
 				type = GameType.valueOf(args[1]);
 			}
+			else {
+				type = null;
+			}
+
 			if (args.length > 2) {
 				List<TeamArenaMap> eligibleMaps = type != null ? GameScheduler.getMaps(type) : GameScheduler.getAllMaps();
 				String mapName = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
@@ -63,10 +68,17 @@ public class CommandGame extends CustomCommand {
 				if (type == null)
 					type = newMap.getRandomGameType();
 			}
+			else {
+				if (type == null)
+					type = GameScheduler.getGameTypeWithMapsAvailable();
+
+				List<TeamArenaMap> eligibleMaps = GameScheduler.getMaps(type);
+				newMap = eligibleMaps.get(MathUtils.randomMax(eligibleMaps.size() - 1));
+			}
 
 			GameScheduler.setNextMap(new GameScheduler.GameQueueMember(type, newMap));
 			sender.sendMessage(Component.textOfChildren(
-				Component.text("Set game type to "), Component.text(args[1], NamedTextColor.GOLD),
+				Component.text("Set game type to "), type.shortName,
 				Component.text(" and map to "), (newMap != null ?
 					Component.text(newMap.getName(), NamedTextColor.YELLOW) :
 					Component.text("random", NamedTextColor.GRAY))

@@ -69,6 +69,7 @@ public class TeamArenaMap
 
 	private final boolean inRotation;
 	private final int minPlayers;
+	private final int maxPlayers;
 
 	private final Map<String, Vector[]> teamSpawns;
 
@@ -93,6 +94,7 @@ public class TeamArenaMap
 				+ ", tntPrimable: " + tntPrimable
 				+ ", inRotation: " + inRotation
 				+ ", minPlayers: " + minPlayers
+				+ ", maxPlayers: " + maxPlayers
 				+ ", minBorderCorner: " + minBorderCorner.toString()
 				+ ", maxBorderCorner: " + maxBorderCorner.toString()
 				+ ", noVerticalBorder: " + noVerticalBorder
@@ -175,6 +177,19 @@ public class TeamArenaMap
 				minPlayers = 0;
 			}
 			this.minPlayers = minPlayers;
+
+			int maxPlayers;
+			try {
+				maxPlayers = (int) mainMap.get("MaxPlayers");
+			}
+			catch (NullPointerException e) {
+				maxPlayers = Integer.MAX_VALUE;
+			}
+			catch (ClassCastException e) {
+				Main.logger().warning("Bad MaxPlayers for " + this.name);
+				maxPlayers = Integer.MAX_VALUE;
+			}
+			this.maxPlayers = maxPlayers;
 
 			//Map border
 			// Only supports rectangular prism borders as of now
@@ -610,6 +625,10 @@ public class TeamArenaMap
 
 	public int getMinPlayers() {
 		return this.minPlayers;
+	}
+
+	public int getMaxPlayers() {
+		return this.maxPlayers;
 	}
 
 	public Vector getMinBorderCorner() {
