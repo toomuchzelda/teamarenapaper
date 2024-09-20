@@ -4,12 +4,11 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
-import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.*;
+import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundDamageEventPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.network.ServerPlayerConnection;
@@ -830,6 +829,34 @@ public class DamageEvent {
 
 	public void setBroadcastDeathMessage(boolean broadcastsDeathMessage) {
 		this.broadcastsDeathMessage = broadcastsDeathMessage;
+	}
+
+	public enum DeathMessageGrayOption {
+		ALL,
+		ENEMIES_ONLY,
+		NONE
+	}
+	public void broadcastDeathMessage() {
+		if (this.broadcastsDeathMessage()) {
+			final Component deathMessage = this.getDamageType().getDeathMessage(this.getVictim(), this.getFinalAttacker(), this.getDamageTypeCause());
+			if (deathMessage != null) {
+				final Component darkened = TextUtils.darken(deathMessage);
+				var iter = Main.getPlayersIter();
+				while (iter.hasNext()) {
+					var entry = iter.next();
+					Player viewer = entry.getKey();
+					PlayerInfo pinfo = entry.getValue();
+					DeathMessageGrayOption option = pinfo.getPreference(Preferences.DARKEN_DEATH_MESSAGES);
+					if (option == DeathMessageGrayOption.ALL ||
+						(option == DeathMessageGrayOption.ENEMIES_ONLY && !pinfo.team.hasMember(this.getVictim()))) {
+						viewer.sendMessage(darkened);
+					}
+					else {
+						viewer.sendMessage(deathMessage);
+					}
+				}
+			}
+		}
 	}
 
 	public boolean isCancelled() {

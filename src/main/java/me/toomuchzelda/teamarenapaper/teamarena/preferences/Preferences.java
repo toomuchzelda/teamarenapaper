@@ -172,4 +172,9 @@ public class Preferences {
 		"See players speech bubbles for things like thanking medics", SpeechBubbleHologram.ViewOptions.class, SpeechBubbleHologram.ViewOptions.ALL)
 		.setIcon(Material.FLOWERING_AZALEA_LEAVES)
 		.setCategory(PreferenceCategory.VISUAL_EFFECTS);
+
+	public static final Preference<DamageEvent.DeathMessageGrayOption> DARKEN_DEATH_MESSAGES = SimplePreference.ofEnum("death_messages_darken", "Darken selected death messages to make chat easier to read",
+		DamageEvent.DeathMessageGrayOption.class, DamageEvent.DeathMessageGrayOption.ALL)
+		.setIcon(Material.DARK_OAK_SIGN)
+		.setCategory(PreferenceCategory.VISUAL_EFFECTS);
 }

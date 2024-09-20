@@ -28,6 +28,7 @@ import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
 import net.minecraft.network.protocol.game.ClientboundHurtAnimationPacket;
 import net.minecraft.world.level.block.state.BlockState;
@@ -243,6 +244,14 @@ public class CommandDebug extends CustomCommand {
 						new PacketHologram(spawnLoc.toLocation(game.getWorld()), null, PacketEntity.VISIBLE_TO_ALL,
 							Component.text(entry.getKey() + ctr++)).respawn();
 					}
+				}
+			}
+			case "darken" -> {
+				if (args.length >= 2) {
+					Component text = MiniMessage.miniMessage().deserialize(args[1]);
+					sender.sendMessage(text);
+
+					sender.sendMessage(TextUtils.darken(text));
 				}
 			}
 			default -> {
@@ -546,7 +555,7 @@ public class CommandDebug extends CustomCommand {
 		if (args.length == 1) {
 			return Arrays.asList("hide", "gui", "guitest", "signtest", "game", "setrank", "setteam", "setkit",
 				"votetest", "draw", "graffititest", "respawn", "fakehitbox", "testmotd", "arrowMarker", "packetcache", "showSpawns",
-				"flyingpoint", "fakeBlock", "elevator", "showores");
+				"flyingpoint", "fakeBlock", "elevator", "showores", "darken");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");

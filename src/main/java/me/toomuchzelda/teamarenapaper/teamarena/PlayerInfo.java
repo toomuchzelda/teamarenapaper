@@ -43,7 +43,7 @@ public final class PlayerInfo
 	private final Map<CosmeticType, NamespacedKey> selectedCosmetic = new EnumMap<>(CosmeticType.class);
 
 	private final Map<String, Integer> messageCooldowns = new HashMap<>();
-	private final LinkedList<DamageLogEntry> damageReceivedLog;
+	private final List<DamageLogEntry> damageReceivedLog;
 	private final KillAssistTracker killAssistTracker;
 	private final PlayerScoreboard scoreboard; //scoreboard they view
 	private final MetadataViewer metadataViewer; //custom entity metadata tracker
@@ -80,7 +80,7 @@ public final class PlayerInfo
 
 		this.permissionLevel = permissionLevel;
 		this.displayPermissionLevel = false;
-		damageReceivedLog = new LinkedList<>();
+		damageReceivedLog = new ArrayList<>(128);
 
 		killAssistTracker = new KillAssistTracker(player);
 		kills = 0;

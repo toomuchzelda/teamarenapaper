@@ -24,6 +24,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.List;
 import java.util.*;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 public class TextUtils {
@@ -482,5 +483,38 @@ public class TextUtils {
 	 */
 	public static List<Component> splitLines(Component component) {
 		return split(component, LINE);
+	}
+
+	/*public static Component forEachComponent(Component comp, Function<Component, Component> replacementFunc) {
+		return replacementFunc.apply(forEachComponentR(comp, replacementFunc)); // manually apply to root
+	}*/
+
+	public static Component forEachComponent(Component comp, Function<Component, Component> replacementFunc) {
+		List<Component> children = comp.children();
+		ArrayList<Component> replacement = new ArrayList<>(children.size());
+
+		for (Component c : children) {
+			replacement.add(forEachComponent(c, replacementFunc));
+		}
+
+		comp = replacementFunc.apply(comp);
+		comp = comp.children(replacement);
+		//Bukkit.broadcastMessage(comp.toString());
+		return comp;
+	}
+
+	public static Component darken(Component comp) {
+		return forEachComponent(comp, component -> {
+			TextColor c = component.color();
+			if (c == null) return component;
+			final NamedTextColor gray = NamedTextColor.GRAY;
+			c = TextColor.color(
+				(c.red() + gray.red()) / 2,
+				(c.green() + gray.green()) / 2,
+				(c.blue() + gray.blue()) / 2
+			);
+
+			return component.color(c);
+		});
 	}
 }
