@@ -73,7 +73,7 @@ public class SpectatorAngelManager
 		}
 	}
 
-	static void removeAngel(Player respawnedPlayer) {
+	public static void removeAngel(Player respawnedPlayer) {
 		RestrictInfo rinfo = RESTRICTED_PLAYERS.remove(respawnedPlayer);
 		if(rinfo != null) {
 			if(rinfo.baseLoc() != null) {

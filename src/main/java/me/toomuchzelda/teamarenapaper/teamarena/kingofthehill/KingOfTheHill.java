@@ -46,7 +46,7 @@ public class KingOfTheHill extends TeamArena
 	// and score is cleared
 	public static final float INITIAL_CAP_TIME = 10 * 20;
 	// Amount that owning players on hill reduces other team's cap progress from -1 to 0
-	private static final float KING_REDUCE_RATIO = -0.4f;
+	private static final float KING_REDUCE_RATIO = -0.2f;
 	public float ticksAndPlayersToCaptureHill = INITIAL_CAP_TIME;
 	//the total score u need to get to win
 	public final int TICKS_TO_WIN;
@@ -101,7 +101,7 @@ public class KingOfTheHill extends TeamArena
 				}
 			}
 
-			float max = (float) (owningTeam.getPlayerMembers().size() * 0.7);
+			float max = (float) (owningTeam.getPlayerMembers().size() * 0.5);
 			if(numOwningPlayers > max)
 				numOwningPlayers = max;
 		}
@@ -146,8 +146,8 @@ public class KingOfTheHill extends TeamArena
 					else
 						coloursList.add(team.getColour());
 
-					//70% of the team be on Hill for max points, any more doesn't grant more
-					toEarn = numPlayers / ((float) team.getPlayerMembers().size() * 0.7f);
+					//50% of the team be on Hill for max points, any more doesn't grant more
+					toEarn = numPlayers / ((float) team.getPlayerMembers().size() * 0.5f);
 
 					if(toEarn > 1f)
 						toEarn = 1f;

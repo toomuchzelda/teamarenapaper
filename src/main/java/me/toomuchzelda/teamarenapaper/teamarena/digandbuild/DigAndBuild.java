@@ -417,6 +417,7 @@ public class DigAndBuild extends TeamArena
 					if (this.respawnTimers.remove(loser) != null) {
 						loser.sendActionBar(YOU_WONT_RESPAWN);
 					}
+					SpectatorAngelManager.removeAngel(loser);
 				}
 				this.announceOreKilled(ore);
 
@@ -1020,6 +1021,15 @@ public class DigAndBuild extends TeamArena
 
 		this.blockTimes.remove(player);
 		//LoadedChunkTracker.removeTrackedChunks(player);
+	}
+
+	@Override
+	public boolean isVandalisableBlock(Block block) {
+		BlockCoords coords = new BlockCoords(block);
+		if (this.oreLookup.containsKey(coords) || this.statusOreLookup.containsKey(coords) || this.chestLookup.containsKey(coords)) {
+			return false;
+		}
+		else return super.isVandalisableBlock(block);
 	}
 
 	@Override
