@@ -148,6 +148,7 @@ public final class Main extends JavaPlugin
 		commandMap.register(fallbackPrefix, new CommandMenu());
 		commandMap.register(fallbackPrefix, new CommandMapInfo());
 		commandMap.register(fallbackPrefix, new CommandKitControl());
+		commandMap.register(fallbackPrefix, new CommandItem());
 	}
 
 	public static PlayerInfo getPlayerInfo(Player player) {

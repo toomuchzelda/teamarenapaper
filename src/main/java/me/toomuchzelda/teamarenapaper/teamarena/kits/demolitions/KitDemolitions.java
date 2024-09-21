@@ -226,8 +226,8 @@ public class KitDemolitions extends Kit
 			if(!event.getAction().isRightClick())
 				return;
 
-			Material mat = event.getMaterial();
-			if (mat == REMOTE_DETONATOR_ITEM.getType()) {
+			final ItemStack usedItem = event.getItem();
+			if (REMOTE_DETONATOR_ITEM.isSimilar(usedItem)) {
 				Player demo = event.getPlayer();
 				event.setUseItemInHand(Event.Result.DENY);
 				event.setUseInteractedBlock(Event.Result.DENY); //prevent arming tnt
@@ -236,14 +236,13 @@ public class KitDemolitions extends Kit
 					mine.trigger(demo);
 				}
 			} else {
-				ItemStack stack = event.getItem();
 				Block clicked = event.getClickedBlock();
-				if (clicked == null || stack == null)
+				if (clicked == null || usedItem == null)
 					return;
 				Block base = getMineBaseBlock(clicked, event.getBlockFace());
 				Block block = base.getRelative(BlockFace.UP);
 
-				MineType type = MineType.getFromMaterial(stack.getType());
+				MineType type = MineType.getFromItemStack(usedItem);
 				if (type == null) // not valid mine
 					return;
 

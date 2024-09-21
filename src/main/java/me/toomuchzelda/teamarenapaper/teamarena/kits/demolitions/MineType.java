@@ -54,9 +54,9 @@ public enum MineType
 	}
 
 	@Nullable
-	public static MineType getFromMaterial(Material mat) {
+	public static MineType getFromItemStack(ItemStack item) {
 		for (MineType type : values()) {
-			if (type.item.getType() == mat)
+			if (type.item.isSimilar(item))
 				return type;
 		}
 		return null;
