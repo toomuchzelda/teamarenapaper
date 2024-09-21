@@ -1034,6 +1034,8 @@ public class EventListeners implements Listener
 		}
 
 		ExplosionManager.removeEntityInfo(entity);
+
+		MetadataViewer.removeAllValues(entity);
 	}
 
 	@EventHandler

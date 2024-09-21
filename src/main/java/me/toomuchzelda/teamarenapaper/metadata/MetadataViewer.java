@@ -195,6 +195,7 @@ public class MetadataViewer
 	}
 
 	public void removeViewedValues(Entity viewedEntity) {
+		if (!this.hasMetadataFor(viewedEntity.getEntityId())) return;
 		// Set all nulldirty so the client is updated before records are removed
 		this.setAllNullDirty(viewedEntity);
 		this.refreshViewer(viewedEntity);
@@ -203,6 +204,7 @@ public class MetadataViewer
 
 	public void removeViewedValue(Entity viewedEntity, int index) {
 		EntityMetaValues values = entityValues.get(viewedEntity.getEntityId());
+		if (values == null) return;
 		//values.indexedValues().remove(index);
 		MetadataValueStatus status = values.indexedValues().get(index);
 		if(status != null) {
@@ -236,12 +238,16 @@ public class MetadataViewer
 
 	/**
 	 * Clean up custom metadata for non-existent entities.
+	 * @deprecated Entity cleanup should be done by EntityRemove event
 	 */
 	public void cleanUp() {
 		var iter = entityValues.entrySet().iterator();
 		while(iter.hasNext()) {
 			var entry = iter.next();
 			if(!entry.getValue().entity().isValid()) {
+				Main.logger().warning("MetadataViewer cleanup() found an invalid, yet not removed entity" +
+					" viewer:" + this.player.getName() +
+					", viewed entity:" + entry.getValue().entity().getType() + entry.getValue().entity().getName());
 				iter.remove();
 			}
 			else {
