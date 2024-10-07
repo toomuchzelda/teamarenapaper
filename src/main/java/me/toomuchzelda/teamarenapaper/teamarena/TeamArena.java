@@ -1528,8 +1528,6 @@ public abstract class TeamArena
 		for(Ability ability : Kit.getAbilities(player)) {
 			ability.onTeamSwitch(player, oldTeam, newTeam);
 		}
-
-		KitBeekeeper.BeekeeperAbility.teamSwitch(player, oldTeam, newTeam);
 	}
 
 	//switch a player between spectator and player
