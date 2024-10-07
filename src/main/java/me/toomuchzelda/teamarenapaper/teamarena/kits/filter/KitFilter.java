@@ -66,30 +66,34 @@ public class KitFilter {
 		globalRules.put(rule.key(), rule);
 	}
 
-	public static void removeGlobalRule(NamespacedKey key) {
-		globalRules.remove(key);
+	public static boolean removeGlobalRule(NamespacedKey key) {
+		return globalRules.remove(key) != null;
 	}
 
 	public static void addTeamRule(String team, FilterRule rule) {
 		teamRules.computeIfAbsent(team, key -> new HashMap<>()).put(rule.key(), rule);
 	}
 
-	public static void removeTeamRule(String team, NamespacedKey key) {
+	public static boolean removeTeamRule(String team, NamespacedKey key) {
+		boolean[] removed = {false};
 		teamRules.computeIfPresent(team, (ignored, value) -> {
-			value.remove(key);
+			removed[0] = value.remove(key) != null;
 			return value.isEmpty() ? null : value;
 		});
+		return removed[0];
 	}
 
 	public static void addPlayerRule(String playerName, FilterRule rule) {
 		playerRules.computeIfAbsent(playerName, key -> new HashMap<>()).put(rule.key(), rule);
 	}
 
-	public static void removePlayerRule(String playerName, NamespacedKey key) {
+	public static boolean removePlayerRule(String playerName, NamespacedKey key) {
+		boolean[] removed = {false};
 		playerRules.computeIfPresent(playerName, (ignored, value) -> {
-			value.remove(key);
+			removed[0] = value.remove(key) != null;
 			return value.isEmpty() ? null : value;
 		});
+		return removed[0];
 	}
 
 	public static Collection<NamespacedKey> getGlobalRules() {
@@ -141,7 +145,7 @@ public class KitFilter {
 
 
 	public static Kit filterKit(TeamArena game, TeamArenaTeam team, Player player, Kit kit) {
-		String name = kit.getName().toLowerCase(Locale.ENGLISH);
+		String name = kit.getKey();
 		Predicate<FilterRule> predicate = rule -> rule.action().filter(name);
 		if (globalRules.values().stream().allMatch(predicate)) {
 			if (teamRules.getOrDefault(team.getSimpleName(), Map.of()).values().stream().allMatch(predicate)) {
@@ -156,8 +160,7 @@ public class KitFilter {
 
 	public static Map<Player, Set<Kit>> calculateKits(TeamArena game, Collection<? extends Player> players) {
 		Set<String> allKits = game.getKits().stream()
-			.map(Kit::getName)
-			.map(kitName -> kitName.toLowerCase(Locale.ENGLISH))
+			.map(Kit::getKey)
 			.collect(Collectors.toSet());
 		// 1. apply global rules
 		mutateSet(globalRules.values(), allKits);
@@ -223,7 +226,7 @@ public class KitFilter {
 
 	public static void setAdminAllowed(TeamArena game, Collection<String> allowed) throws IllegalArgumentException {
 		Optional<Kit> fallbackOpt = game.getKits().stream()
-			.filter(kit -> allowed.contains(kit.getName().toLowerCase(Locale.ENGLISH)))
+			.filter(kit -> allowed.contains(kit.getKey()))
 			.findFirst();
 
 		if (fallbackOpt.isEmpty()) {
@@ -239,7 +242,7 @@ public class KitFilter {
 		preset = null;
 		// For anyone not using an allowed kit, set it to a fallback one.
 		Optional<Kit> fallbackOpt = game.getKits().stream()
-			.filter(kit -> !blocked.contains(kit.getName().toLowerCase(Locale.ENGLISH)))
+			.filter(kit -> !blocked.contains(kit.getKey()))
 			.findFirst();
 
 		if (fallbackOpt.isEmpty()) {
@@ -362,7 +365,7 @@ public class KitFilter {
 			Component.text("Kit Filter Rules:\n", NamedTextColor.YELLOW),
 			KitFilter.inspectRules(Main.getPlayerInfo(player).team.getSimpleName(), player.getName()),
 			Component.text("\nAll kits:\n", NamedTextColor.GOLD),
-			Component.text(game.getKits().stream().map(kit -> kit.getName().toLowerCase(Locale.ENGLISH)).collect(Collectors.joining(", ")), NamedTextColor.YELLOW),
+			Component.text(game.getKits().stream().map(Kit::getKey).collect(Collectors.joining(", ")), NamedTextColor.YELLOW),
 			Component.text("\nFalling back to kit " + fallbackKit.getName(), NamedTextColor.DARK_RED)
 		);
 	}

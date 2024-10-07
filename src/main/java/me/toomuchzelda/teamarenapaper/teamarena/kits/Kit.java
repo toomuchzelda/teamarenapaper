@@ -12,11 +12,7 @@ import org.bukkit.inventory.PlayerInventory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.LinkedHashSet;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
 
 public abstract class Kit {
     public static final Comparator<Kit> COMPARATOR = Comparator.comparing(Kit::getName);
@@ -24,6 +20,7 @@ public abstract class Kit {
     private static final Ability[] EMPTY_ABILITIES = new Ability[0];
 
 	private final String name;
+	private final String key; // used in commands
     private final String description;
     private final ItemStack display;
 	@NotNull
@@ -43,6 +40,7 @@ public abstract class Kit {
 
     public Kit(String name, String description, ItemStack display) {
         this.name = name;
+		this.key = name.toLowerCase(Locale.ENGLISH);
         this.description = description;
         this.display = display.clone();
 
@@ -68,8 +66,11 @@ public abstract class Kit {
 		return category;
 	}
 
+	private Component displayName;
 	public Component getDisplayName() {
-		return Component.text(getName(), category.textColor());
+		if (displayName == null)
+			displayName = Component.text(getName(), category.textColor());
+		return displayName;
 	}
 
     //clearInventory and updateInventory happens outside the following two methods
@@ -190,6 +191,14 @@ public abstract class Kit {
     public String getName() {
         return name;
     }
+
+	/**
+	 * Gets the key of this kit, to be used in commands
+	 * @return The key of this kit
+	 */
+	public String getKey() {
+		return key;
+	}
 
     public String getDescription() {
         return description;

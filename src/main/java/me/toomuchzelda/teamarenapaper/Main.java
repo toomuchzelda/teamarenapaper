@@ -1,6 +1,8 @@
 package me.toomuchzelda.teamarenapaper;
 
 import com.comphenix.protocol.ProtocolLibrary;
+import io.papermc.paper.command.brigadier.Commands;
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.sql.DBSetPreferences;
 import me.toomuchzelda.teamarenapaper.sql.DatabaseManager;
@@ -121,7 +123,7 @@ public final class Main extends JavaPlugin
 		DatabaseManager.close();
 	}
 
-	private static void registerCommands() {
+	private void registerCommands() {
 		CommandMap commandMap = Bukkit.getCommandMap();
 		String fallbackPrefix = "tma";
 
@@ -147,8 +149,14 @@ public final class Main extends JavaPlugin
 		commandMap.register(fallbackPrefix, new CommandTime());
 		commandMap.register(fallbackPrefix, new CommandMenu());
 		commandMap.register(fallbackPrefix, new CommandMapInfo());
-		commandMap.register(fallbackPrefix, new CommandKitControl());
+//		commandMap.register(fallbackPrefix, new CommandKitControl());
 		commandMap.register(fallbackPrefix, new CommandItem());
+
+		// register brigadier commands
+		getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, e -> {
+			Commands commands = e.registrar();
+			CommandKitControlNew.register(commands);
+		});
 	}
 
 	public static PlayerInfo getPlayerInfo(Player player) {

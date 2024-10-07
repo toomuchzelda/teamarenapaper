@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper;
 
+import com.destroystokyo.paper.event.brigadier.AsyncPlayerSendCommandsEvent;
 import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
 import com.destroystokyo.paper.event.player.PlayerAdvancementCriterionGrantEvent;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
@@ -21,8 +22,8 @@ import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.ChatAnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingListeners;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.BrigadierCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
-import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.DigAndBuild;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
@@ -32,7 +33,10 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.KitReach;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitVenom;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.*;
+import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -61,7 +65,9 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import static me.toomuchzelda.teamarenapaper.teamarena.GameState.DEAD;
@@ -212,6 +218,22 @@ public class EventListeners implements Listener
 				return !pinfo.hasPermission(customCommand.permissionLevel);
 			} else if (command.getPermission() != null) {
 				return !player.hasPermission(command.getPermission());
+			}
+			return false;
+		});
+	}
+
+	@EventHandler
+	public void asyncPlayerSendBrigadierCommands(AsyncPlayerSendCommandsEvent<?> event) {
+		// command requirements may be evaluated before the player fully joins
+		// such workaround much wow
+		if (event.isAsynchronous()) // only listen to the sync event
+			return;
+		PlayerInfo playerInfo = Main.getPlayerInfo(event.getPlayer());
+		event.getCommandNode().getChildren().removeIf(node -> {
+			if (node.getRequirement() instanceof BrigadierCommand.RequiresPermission(PermissionLevel level)) {
+				if (!playerInfo.hasPermission(level))
+					return true;
 			}
 			return false;
 		});
