@@ -21,6 +21,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.StatusOreType;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.hideandseek.PacketFlyingPoint;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
+import me.toomuchzelda.teamarenapaper.teamarena.killstreak.PayloadTestKillstreak;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketDisplay;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
@@ -546,6 +547,9 @@ public class CommandDebug extends CustomCommand {
 					}
 				}
 			}
+			case "amogus" -> {
+				PayloadTestKillstreak.playAmogus(player.getLocation(), player.getWorld());
+			}
 			default -> showUsage(sender);
 		}
 	}
@@ -555,7 +559,7 @@ public class CommandDebug extends CustomCommand {
 		if (args.length == 1) {
 			return Arrays.asList("hide", "gui", "guitest", "signtest", "game", "setrank", "setteam", "setkit",
 				"votetest", "draw", "graffititest", "respawn", "fakehitbox", "testmotd", "arrowMarker", "packetcache", "showSpawns",
-				"flyingpoint", "fakeBlock", "elevator", "showores", "darken");
+				"flyingpoint", "fakeBlock", "elevator", "showores", "darken", "amogus");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");

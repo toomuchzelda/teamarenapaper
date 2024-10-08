@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.killstreak;
 
+import com.google.common.io.LittleEndianDataInputStream;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.crate.CratePayload;
 import net.kyori.adventure.text.format.TextColor;
@@ -8,11 +9,14 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.*;
+import java.util.logging.Level;
 
 public class PayloadTestKillstreak extends CratedKillStreak {
 	PayloadTestKillstreak() {
@@ -34,43 +38,9 @@ public class PayloadTestKillstreak extends CratedKillStreak {
 		return CRATE_PAYLOAD;
 	}
 
-	record Note(int delay, int uses, Instrument instrument) {}
-	private static Note note(int delay, int uses) {
-		return new Note(delay, uses, Instrument.PIANO);
-	}
-	private static final List<Note> SONG = List.of(
-			new Note(0, 6, Instrument.BASS_GUITAR),
-			note(6, 6),
-			note(6, 9),
-			note(6, 11),
-			note(6, 12),
-			note(6, 11),
-			note(6, 9),
-			note(6, 6),
-			note(18, 4),
-			note(3, 8),
-			note(3, 6),
-			new Note(12, 1, Instrument.BASS_GUITAR),
-			new Note(12, 6, Instrument.BASS_GUITAR),
-			note(12, 6),
-			note(6, 9),
-			note(6, 11),
-			note(6, 12),
-			note(6, 11),
-			note(6, 9),
-			note(6, 12),
-			note(24, 12),
-			note(3, 11),
-			note(3, 9),
-			note(3, 12),
-			note(3, 11),
-			note(3, 9)
-	);
-
 	@Override
 	public void onCrateLand(Player player, Location destination) {
 		World world = destination.getWorld();
-		Iterator<Note> iterator = SONG.iterator();
 
 		List<BlockState> modifiedBlocks = new ArrayList<>();
 		CRATE_PAYLOAD.children().forEach((offset, blockPayload) -> {
@@ -80,35 +50,100 @@ public class PayloadTestKillstreak extends CratedKillStreak {
 			block.setBlockData(((CratePayload.SimpleBlock) blockPayload).blockData(), false);
 		});
 
-		new BukkitRunnable() {
-			Note nextNote;
-			int ticksElapsed;
-			@Override
-			public void run() {
-				if (nextNote == null) {
-					if (!iterator.hasNext()) {
-						// end of song
-//						for (BlockState state : modifiedBlocks) {
-//							state.update(true, false);
-//						}
+		playAmogus(destination, world);
+	}
 
-						cancel();
-						return;
+	public static void playAmogus(Location destination, World world) {
+		try {
+			TreeMap<Integer, List<NbsNote>> song = loadSong(Main.getPlugin().getResource("sus.nbs"));
+			BukkitScheduler scheduler = Bukkit.getScheduler();
+			song.forEach((ticks, notes) -> {
+				scheduler.runTaskLater(Main.getPlugin(), () -> {
+					for (NbsNote note : notes) {
+						note.play(world, destination);
 					}
-					nextNote = iterator.next();
-				}
-				if (ticksElapsed >= nextNote.delay) {
-					Sound sound = nextNote.instrument() == Instrument.BASS_GUITAR ? Sound.BLOCK_NOTE_BLOCK_BASS : Sound.BLOCK_NOTE_BLOCK_HARP;
-					double pitch = Math.pow(2, (-12 + nextNote.uses) / 12d);
-					world.playSound(destination, sound, 1f, (float) pitch);
+				}, ticks);
+			});
+		} catch (IOException ex) {
+			Main.logger().log(Level.SEVERE, "Failed to load amogus song :(", ex);
+		}
+	}
 
-					ticksElapsed = 1;
-					nextNote = null;
-				} else {
-					ticksElapsed++;
+	public record NbsNote(byte instrument, byte key, byte velocity) {
+		private static final Instrument[] INSTRUMENT_MAP = {
+			Instrument.PIANO,
+			Instrument.BASS_GUITAR,
+			Instrument.BASS_DRUM,
+			Instrument.SNARE_DRUM,
+			Instrument.STICKS,
+			Instrument.GUITAR,
+			Instrument.FLUTE,
+			Instrument.BELL,
+			Instrument.CHIME,
+			Instrument.XYLOPHONE,
+			Instrument.IRON_XYLOPHONE,
+			Instrument.COW_BELL,
+			Instrument.DIDGERIDOO,
+			Instrument.BIT,
+			Instrument.BANJO,
+			Instrument.PLING
+		};
+		public Instrument getInstrument() {
+			return INSTRUMENT_MAP[instrument % 16];
+		}
+
+		public float getPitch() {
+			return (float) Math.pow(2, (key - 45) / 12f);
+		}
+
+		public void play(World world, Location location) {
+			world.playSound(location, getInstrument().getSound(), SoundCategory.PLAYERS, 1, getPitch());
+		}
+	}
+
+	/**
+	 * Simple .nbs loader
+	 * @param inputStream The input stream
+	 * @return A map of delay in ticks to a list of notes to play in that tick
+	 * @author jacky
+	 */
+	public static TreeMap<Integer, List<NbsNote>> loadSong(InputStream inputStream) throws IOException {
+		TreeMap<Integer, List<NbsNote>> map = new TreeMap<>();
+		try (var is = new LittleEndianDataInputStream(inputStream)) {
+			// part 1: header
+			is.skipNBytes(8);
+			// name, author, original author, description
+			for (int i = 0; i < 4; i++) {
+				int length = is.readInt();
+				is.skipNBytes(length);
+			}
+			short tempo = is.readShort();
+			double tickMultiplier = 20d / (tempo / 100d);
+			is.skipNBytes(3 + 20);
+			int length = is.readInt();
+			is.skipNBytes(length);
+			is.skipNBytes(4);
+			// part 2: note blocks
+			int ticks = -1;
+			while (true) {
+				short nextTick = is.readShort();
+				if (nextTick == 0)
+					break;
+				ticks += nextTick;
+				int actualTicks = (int) Math.round(ticks * tickMultiplier);
+
+				while (true) {
+					short nextLayer = is.readShort();
+					if (nextLayer == 0)
+						break;
+					map.computeIfAbsent(actualTicks, ignored -> new ArrayList<>()).add(
+						new NbsNote(is.readByte(), is.readByte(), is.readByte())
+					);
+					is.skipNBytes(3);
 				}
 			}
-		}.runTaskTimer(Main.getPlugin(), 0, 1);
+		}
+		return map;
 	}
 
 	public static CratePayload.Group createPayloadFromString(String string, Map<Character, BlockData> mappings) {
