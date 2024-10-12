@@ -146,6 +146,11 @@ public class KitBerserker extends Kit {
 			}
 
 			kills = 1d - (kills / HEAL_LOSS_STEPS);
+
+			if (Double.isNaN(kills)) {
+				Main.logger().warning("NaN in berserker heal");
+				Thread.dumpStack();
+			}
 			event.setAmount(event.getAmount() * kills);
 		}
 

@@ -12,6 +12,9 @@ import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+
+import java.util.Map;
 
 public class KitNone extends Kit {
 
@@ -34,7 +37,7 @@ public class KitNone extends Kit {
 			do {
 				chosenMat = MathUtils.randomElement(ALL_MATS);
 			}
-			while (!chosenMat.isItem());
+			while (!chosenMat.isItem() || chosenMat.isAir());
 
 			ItemBuilder builder = ItemBuilder.of(chosenMat);
 
@@ -44,7 +47,25 @@ public class KitNone extends Kit {
 				}
 			}
 
-			player.getInventory().addItem(builder.build());
+			ItemStack item = builder.build();
+			Map<Enchantment, Integer> ench = item.getEnchantments();
+			if (ench.containsKey(Enchantment.FEATHER_FALLING) ||
+				ench.containsKey(Enchantment.DEPTH_STRIDER) ||
+				ench.containsKey(Enchantment.SWIFT_SNEAK) ||
+				ench.containsKey(Enchantment.FROST_WALKER)) {
+
+				player.getEquipment().setBoots(item);
+			}
+			else if (ench.containsKey(Enchantment.PROTECTION) ||
+				ench.containsKey(Enchantment.BLAST_PROTECTION) ||
+				ench.containsKey(Enchantment.PROJECTILE_PROTECTION) ||
+				ench.containsKey(Enchantment.FIRE_PROTECTION)) {
+
+				player.getEquipment().setHelmet(item);
+			}
+			else {
+				player.getInventory().addItem(item);
+			}
 		}
 
 		/** User takes no damage from Kit Sniper */

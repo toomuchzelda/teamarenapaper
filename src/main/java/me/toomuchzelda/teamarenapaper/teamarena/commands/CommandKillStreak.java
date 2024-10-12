@@ -37,26 +37,24 @@ public class CommandKillStreak extends CustomCommand
 			throw new CommandException("Unknown killstreak " + ksArg);
 		}
 
-		String playerName = args[1];
-		Player player = Bukkit.getPlayer(playerName);
-		if(player == null) {
-			throw new CommandException("Unknown player " + playerName);
-		}
+		Collection<Player> players = selectPlayersOrThrow(sender, args, 1);
 
-		if (args.length >= 3) {
-			if (Boolean.parseBoolean(args[2])) {
-				if (streak instanceof CratedKillStreak cratedKillStreak) {
-					player.getInventory().addItem(cratedKillStreak.getCrateItem());
-					return;
-				}
-				else {
-					throw new CommandException(streak.getName() + " cannot be delivered in a crate");
+		for (Player player : players) {
+			if (args.length >= 3) {
+				if (Boolean.parseBoolean(args[2])) {
+					if (streak instanceof CratedKillStreak cratedKillStreak) {
+						player.getInventory().addItem(cratedKillStreak.getCrateItem());
+						continue;
+					}
+					else {
+						throw new CommandException(streak.getName() + " cannot be delivered in a crate");
+					}
 				}
 			}
+			streak.giveStreak(player, Main.getPlayerInfo(player));
 		}
 
-		sender.sendMessage(Component.text("Gave " + player.getName() + " " + streak.getName(), NamedTextColor.BLUE));
-		streak.giveStreak(player, Main.getPlayerInfo(player));
+		sender.sendMessage(Component.text("Gave " + players.size() + " players " + streak.getName(), NamedTextColor.BLUE));
 	}
 
 	@Override
@@ -65,10 +63,7 @@ public class CommandKillStreak extends CustomCommand
 			return Main.getGame().getKillStreakManager().getKillStreakNames();
 		}
 		else if(args.length == 2) {
-			Collection<? extends Player> players = Bukkit.getOnlinePlayers();
-			List<String> playerList = new ArrayList<>(players.size());
-			players.forEach(player -> playerList.add(player.getName()));
-			return playerList;
+			return suggestPlayerSelectors();
 		}
 		else if(args.length == 3) {
 			KillStreak streak = Main.getGame().getKillStreakManager().getKillStreak(args[0]);

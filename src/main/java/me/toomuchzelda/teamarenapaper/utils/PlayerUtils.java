@@ -207,6 +207,12 @@ public class PlayerUtils {
 			if (newHealth > maxHealth)
 				newHealth = maxHealth;
 
+			if (Double.isNaN(newHealth)) {
+				Main.logger().warning(player.getName() + " was about to be healed NaN. amount=" + amount + ", reason=" + reason);
+				Thread.dumpStack();
+				return;
+			}
+
 			player.setHealth(newHealth);
 			if (Main.getPlayerInfo(player).getPreference(Preferences.HEARTS_FLASH_REGEN))
 				sendHealth(player);
