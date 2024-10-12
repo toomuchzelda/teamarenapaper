@@ -46,7 +46,12 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -547,8 +552,27 @@ public class CommandDebug extends CustomCommand {
 					}
 				}
 			}
-			case "amogus" -> {
-				PayloadTestKillstreak.playAmogus(player.getLocation(), player.getWorld());
+			case "amogus" -> PayloadTestKillstreak.playAmogus(player.getWorld(), player);
+			case "loadsong" -> {
+				if (args.length == 1)
+					throw throwUsage("/debug loadsong <songPath...>");
+				String songPath = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
+				if (!songPath.endsWith(".nbs"))
+					throw new CommandException("File name must end in .nbs");
+				Path songFolder = Paths.get("songs").toAbsolutePath();
+				Path filePath = songFolder.resolve(songPath).toAbsolutePath();
+				if (!filePath.startsWith(songFolder))
+					throw new CommandException("real");
+				try (var is = Files.newInputStream(filePath)) {
+					var song = PayloadTestKillstreak.loadSong(is);
+					new PayloadTestKillstreak.NbsSongPlayer(song, player).schedule();
+					Duration duration = Duration.ofSeconds(Math.round(song.length()));
+					player.sendMessage(Component.text("Loaded \"" + songPath + "\" (" +
+						duration.toMinutesPart() + ":" + duration.toSecondsPart() +
+						")"));
+				} catch (IOException e) {
+					throw new CommandException("Failed to load song: " + e.getMessage(), e);
+				}
 			}
 			default -> showUsage(sender);
 		}
@@ -559,7 +583,7 @@ public class CommandDebug extends CustomCommand {
 		if (args.length == 1) {
 			return Arrays.asList("hide", "gui", "guitest", "signtest", "game", "setrank", "setteam", "setkit",
 				"votetest", "draw", "graffititest", "respawn", "fakehitbox", "testmotd", "arrowMarker", "packetcache", "showSpawns",
-				"flyingpoint", "fakeBlock", "elevator", "showores", "darken", "amogus");
+				"flyingpoint", "fakeBlock", "elevator", "showores", "darken", "amogus", "loadsong");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");
