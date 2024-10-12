@@ -27,6 +27,8 @@ import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
@@ -191,7 +193,10 @@ public class DamageEvent {
 			//damageEvent.isCritical = dEvent.isCritical();
 			if(attacker instanceof Projectile projectile) {
 				if(attacker instanceof AbstractArrow aa) {
-					knockbackLevels += aa.getKnockbackStrength();
+					weapon = aa.getWeapon();
+					if (weapon != null) {
+						knockbackLevels += weapon.getEnchantmentLevel(Enchantment.PUNCH);
+					}
 				}
 
 				if (projectile.getShooter() instanceof LivingEntity living) {
@@ -491,6 +496,11 @@ public class DamageEvent {
 		nmsEntity.hasImpulse = true;
 
 		//damager stuff
+		if (this.attacker instanceof SpectralArrow sa && this.damageType.isProjectile()) {
+			if (this.victim instanceof LivingEntity livingVictim) {
+				livingVictim.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, sa.getGlowingTicks(), 0));
+			}
+		}
 		// If melee, always use the direct attacker, else use direct or real attacker
 		LivingEntity livingDamager = null;
 		if(damageType.isMelee() && this.attacker instanceof LivingEntity)

@@ -7,14 +7,13 @@ import me.toomuchzelda.teamarenapaper.EventListeners;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
-import me.toomuchzelda.teamarenapaper.metadata.SimpleMetadataValue;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
 import net.kyori.adventure.text.Component;
 import net.minecraft.world.phys.BlockHitResult;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.craftbukkit.entity.CraftArrow;
+import org.bukkit.craftbukkit.entity.CraftAbstractArrow;
 import org.bukkit.craftbukkit.util.CraftVector;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
@@ -140,7 +139,7 @@ public class ArrowManager {
 				}
 
 				// Order of these ops is important as onHitBlock changes pierce level of arrow
-				final net.minecraft.world.entity.projectile.AbstractArrow nmsAa = ((CraftArrow) arrow).getHandle();
+				final net.minecraft.world.entity.projectile.AbstractArrow nmsAa = ((CraftAbstractArrow) arrow).getHandle();
 				if (ainfo.hitBlock != null) { // Assigned by handleBlockCollision
 					ainfo.clearHit();
 					Location loc = arrow.getLocation();
