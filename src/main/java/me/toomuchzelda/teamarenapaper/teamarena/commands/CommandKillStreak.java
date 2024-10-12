@@ -6,7 +6,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.killstreak.CratedKillStreak;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.KillStreak;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -22,7 +21,7 @@ import java.util.List;
 public class CommandKillStreak extends CustomCommand
 {
 	public CommandKillStreak() {
-		super("killstreak", "Give killstreaks to player", "/killstreak [streak] [player] [crated]", PermissionLevel.MOD);
+		super("killstreak", "Give killstreaks to player", "/killstreak [streak|amount] [player] [crated|victim]", PermissionLevel.MOD);
 	}
 
 	@Override
@@ -33,42 +32,73 @@ public class CommandKillStreak extends CustomCommand
 
 		String ksArg = args[0];
 		KillStreak streak = Main.getGame().getKillStreakManager().getKillStreak(ksArg);
+		double amount = 0;
 		if(streak == null) {
-			throw new CommandException("Unknown killstreak " + ksArg);
+			try {
+				double d = Double.parseDouble(args[0]);
+				if (d <= 0) {
+					throw throwUsage("Amount larger than 0");
+				}
+				amount = d;
+			}
+			catch (NumberFormatException e) {
+				throw throwUsage("Streak or amount");
+			}
 		}
 
 		Collection<Player> players = selectPlayersOrThrow(sender, args, 1);
 
-		for (Player player : players) {
-			if (args.length >= 3) {
-				if (Boolean.parseBoolean(args[2])) {
-					if (streak instanceof CratedKillStreak cratedKillStreak) {
-						player.getInventory().addItem(cratedKillStreak.getCrateItem());
-						continue;
-					}
-					else {
-						throw new CommandException(streak.getName() + " cannot be delivered in a crate");
+		if (streak != null) {
+			for (Player player : players) {
+				if (args.length >= 3) {
+					if (Boolean.parseBoolean(args[2])) {
+						if (streak instanceof CratedKillStreak cratedKillStreak) {
+							player.getInventory().addItem(cratedKillStreak.getCrateItem());
+						}
+						else {
+							throw new CommandException(streak.getName() + " cannot be delivered in a crate");
+						}
 					}
 				}
+				else {
+					streak.giveStreak(player, Main.getPlayerInfo(player));
+				}
 			}
-			streak.giveStreak(player, Main.getPlayerInfo(player));
-		}
 
-		sender.sendMessage(Component.text("Gave " + players.size() + " players " + streak.getName(), NamedTextColor.BLUE));
+			sender.sendMessage(Component.text("Gave " + players.size() + " players " + streak.getName(), NamedTextColor.BLUE));
+		}
+		else {
+			List<Player> selected = selectPlayersOrThrow(sender, args, 2);
+			if (selected.isEmpty()) {
+				throw throwUsage("invalid victim");
+			}
+
+			for (Player player : players) {
+				Main.getGame().addKillAmount(player, amount, selected.getFirst());
+			}
+		}
 	}
 
 	@Override
 	public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
 		if(args.length == 1) {
-			return Main.getGame().getKillStreakManager().getKillStreakNames();
+			var list = new ArrayList<>(Main.getGame().getKillStreakManager().getKillStreakNames());
+			list.add("1.0");
+			return list;
 		}
 		else if(args.length == 2) {
 			return suggestPlayerSelectors();
 		}
 		else if(args.length == 3) {
-			KillStreak streak = Main.getGame().getKillStreakManager().getKillStreak(args[0]);
-			if (streak instanceof CratedKillStreak) {
-				return CustomCommand.BOOLEAN_SUGGESTIONS;
+			try {
+				double amount = Double.parseDouble(args[0]);
+				return suggestPlayerSelectors();
+			}
+			catch (NumberFormatException e) {
+				KillStreak streak = Main.getGame().getKillStreakManager().getKillStreak(args[0]);
+				if (streak instanceof CratedKillStreak) {
+					return CustomCommand.BOOLEAN_SUGGESTIONS;
+				}
 			}
 		}
 

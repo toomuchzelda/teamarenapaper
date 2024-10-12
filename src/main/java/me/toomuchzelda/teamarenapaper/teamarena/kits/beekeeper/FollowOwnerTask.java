@@ -6,6 +6,7 @@ import com.destroystokyo.paper.entity.ai.GoalType;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -56,7 +57,7 @@ public class FollowOwnerTask extends BeeTask
 
 		loc.add(direction);
 
-		if (!loc.getBlock().getType().isAir() || !loc.getBlock().getRelative(BlockFace.UP).getType().isAir()) {
+		if (!BlockUtils.isAir(loc.getBlock().getType()) || !BlockUtils.isAir(loc.getBlock().getRelative(BlockFace.UP).getType())) {
 			loc = beeOwner.getLocation();
 		}
 

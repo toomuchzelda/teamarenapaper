@@ -134,7 +134,7 @@ public abstract class CustomCommand extends Command {
 		}
 	}
 
-	protected static @NotNull Collection<Player> selectPlayersOrThrow(CommandSender sender, String[] args, int index) throws CommandException {
+	protected static @NotNull List<Player> selectPlayersOrThrow(CommandSender sender, String[] args, int index) throws CommandException {
 		if (args.length > index) {
 			try {
 				return Bukkit.selectEntities(sender, args[index]).stream()

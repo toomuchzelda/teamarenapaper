@@ -458,7 +458,7 @@ public class KitMedic extends Kit
 						direction.length(), FluidCollisionMode.NEVER, true);
 
 				// A ray didn't hit any blocks, meaning there is a LOS to the target
-				if(result == null || result.getHitBlock().getType().isAir())
+				if(result == null || BlockUtils.isAir(result.getHitBlock().getType()))
 					return LineOfSight.CAN_HEAL;
 			}
 

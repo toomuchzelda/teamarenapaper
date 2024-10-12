@@ -1748,7 +1748,7 @@ public abstract class TeamArena
 	 * give a player some kill assist amount or kill(s)
 	 * relies on being called one at a time for each kill/death, and relies on amount not being greater than 1
 	 */
-	protected void addKillAmount(Player player, double amount, Player victim) {
+	public void addKillAmount(Player player, double amount, Player victim) {
 
 		if(amount < 1)
 			player.sendMessage(Component.text("Scored a kill assist of " + MathUtils.round(amount, 2) + "!", NamedTextColor.RED));

@@ -8,10 +8,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.crate.CratePayload;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
-import me.toomuchzelda.teamarenapaper.utils.TextColors;
+import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
@@ -306,7 +303,7 @@ public class HarbingerKillStreak extends CratedKillStreak
 					if (CHANGED_BLOCKS.get(relativeCoords) == null) {
 						CHANGED_BLOCKS.put(relativeCoords, relativeBlock.getState());
 						strike.changedBlocks.add(relativeCoords);
-						if (!relativeData.getMaterial().isAir()) {
+						if (!BlockUtils.isAir(relativeData.getMaterial())) {
 							world.spawnParticle(Particle.BLOCK, relativeBlock.getLocation(), 20, relativeData);
 							world.playSound(relativeBlockLoc, relativeData.getSoundGroup().getBreakSound(), SoundCategory.BLOCKS, 2f, 1f);
 						}

@@ -103,4 +103,8 @@ public class BlockUtils
 		list.trimToSize();
 		return list;
 	}
+
+	public static boolean isAir(Material mat) {
+		return mat.isAir() || mat == Material.LIGHT;
+	}
 }

@@ -5,8 +5,10 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerSound;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Material;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Firework;
@@ -146,7 +148,8 @@ public class KillStreakManager
 		// Validate it's a good position to drop a crate.
 		if(event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
 		if(event.getBlockFace() != BlockFace.UP) return;
-		if(!event.getClickedBlock().getRelative(BlockFace.UP).getType().isAir()) return;
+		Material type = event.getClickedBlock().getRelative(BlockFace.UP).getType();
+		if(!BlockUtils.isAir(type)) return;
 
 		// Decrement stack size by one
 		PlayerInventory inventory = event.getPlayer().getInventory();
