@@ -55,6 +55,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.command.CommandSender;
 import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.*;
@@ -834,8 +835,18 @@ public abstract class TeamArena
 			}
 			//reduce knockback done by projectiles
 			else if(event.getDamageType().isProjectile()) {
-				if(event.getAttacker() instanceof Projectile) {
-					event.getKnockback().multiply(0.8);
+				if(event.getAttacker() instanceof Projectile proj) {
+					boolean suppress = true;
+
+					if (proj instanceof AbstractArrow aa) {
+						ItemStack weapon = aa.getWeapon();
+						if (weapon != null && weapon.getEnchantmentLevel(Enchantment.PUNCH) > 0) {
+							suppress = false;
+						}
+					}
+
+					if (suppress)
+						event.getKnockback().multiply(0.8);
 				}
 			}
 		}

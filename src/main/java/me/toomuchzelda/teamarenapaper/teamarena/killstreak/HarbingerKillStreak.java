@@ -303,7 +303,7 @@ public class HarbingerKillStreak extends CratedKillStreak
 					if (CHANGED_BLOCKS.get(relativeCoords) == null) {
 						CHANGED_BLOCKS.put(relativeCoords, relativeBlock.getState());
 						strike.changedBlocks.add(relativeCoords);
-						if (!BlockUtils.isAir(relativeData.getMaterial())) {
+						if (!BlockUtils.isAirToTheNakedEye(relativeData.getMaterial())) {
 							world.spawnParticle(Particle.BLOCK, relativeBlock.getLocation(), 20, relativeData);
 							world.playSound(relativeBlockLoc, relativeData.getSoundGroup().getBreakSound(), SoundCategory.BLOCKS, 2f, 1f);
 						}

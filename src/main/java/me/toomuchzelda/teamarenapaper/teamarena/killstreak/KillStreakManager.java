@@ -149,7 +149,7 @@ public class KillStreakManager
 		if(event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
 		if(event.getBlockFace() != BlockFace.UP) return;
 		Material type = event.getClickedBlock().getRelative(BlockFace.UP).getType();
-		if(!BlockUtils.isAir(type)) return;
+		if(!BlockUtils.isAirToTheNakedEye(type)) return;
 
 		// Decrement stack size by one
 		PlayerInventory inventory = event.getPlayer().getInventory();

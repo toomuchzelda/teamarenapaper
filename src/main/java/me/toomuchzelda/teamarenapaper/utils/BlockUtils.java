@@ -104,7 +104,7 @@ public class BlockUtils
 		return list;
 	}
 
-	public static boolean isAir(Material mat) {
+	public static boolean isAirToTheNakedEye(Material mat) {
 		return mat.isAir() || mat == Material.LIGHT;
 	}
 }

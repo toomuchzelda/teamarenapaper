@@ -57,7 +57,7 @@ public class FollowOwnerTask extends BeeTask
 
 		loc.add(direction);
 
-		if (!BlockUtils.isAir(loc.getBlock().getType()) || !BlockUtils.isAir(loc.getBlock().getRelative(BlockFace.UP).getType())) {
+		if (!BlockUtils.isAirToTheNakedEye(loc.getBlock().getType()) || !BlockUtils.isAirToTheNakedEye(loc.getBlock().getRelative(BlockFace.UP).getType())) {
 			loc = beeOwner.getLocation();
 		}
 
