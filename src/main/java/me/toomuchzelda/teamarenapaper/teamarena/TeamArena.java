@@ -1746,12 +1746,17 @@ public abstract class TeamArena
 		var iter = victimInfo.getKillAssistTracker().getIterator();
 		while(iter.hasNext()) {
 			Map.Entry<Player, Double> entry = iter.next();
+			iter.remove();
+
+			// player may be offline by the time they ge tkill credit
+			Player damager = entry.getKey();
+			if (!damager.isOnline())
+				continue;
 			//convert the raw damage into decimal range 0 to 1
 			// eg 10 damage (on player with 20 max health) = 0.5 kills
 			double damageAmount = entry.getValue();
 			damageAmount /= victim.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
-			addKillAmount(entry.getKey(), damageAmount, victim);
-			iter.remove();
+			addKillAmount(damager, damageAmount, victim);
 		}
 	}
 
@@ -1760,6 +1765,8 @@ public abstract class TeamArena
 	 * relies on being called one at a time for each kill/death, and relies on amount not being greater than 1
 	 */
 	public void addKillAmount(Player player, double amount, Player victim) {
+		if (!player.isOnline())
+			return;
 
 		if(amount < 1)
 			player.sendMessage(Component.text("Scored a kill assist of " + MathUtils.round(amount, 2) + "!", NamedTextColor.RED));
