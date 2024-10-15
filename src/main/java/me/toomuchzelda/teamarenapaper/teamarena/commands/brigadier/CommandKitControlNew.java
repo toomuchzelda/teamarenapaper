@@ -1,4 +1,4 @@
-package me.toomuchzelda.teamarenapaper.teamarena.commands;
+package me.toomuchzelda.teamarenapaper.teamarena.commands.brigadier;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
@@ -25,7 +25,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
-import org.bukkit.command.CommandSender;
 
 import java.util.Objects;
 import java.util.Set;
@@ -48,7 +47,7 @@ public class CommandKitControlNew extends BrigadierCommand {
 		builder
 			.then(literal("clear").executes(ctx -> {
 				KitFilter.resetFilter();
-				ctx.getSource().getSender().sendMessage(Component.text("Allowing all kits", NamedTextColor.YELLOW));
+				sendFeedback(ctx, Component.text("Allowing all kits", NamedTextColor.YELLOW));
 				return SINGLE_SUCCESS;
 			}))
 			.then(literal("option")
@@ -57,7 +56,7 @@ public class CommandKitControlNew extends BrigadierCommand {
 					.executes(ctx -> {
 						String option = getString(ctx, "option");
 						if (KitOptions.toggleOption(option)) {
-							ctx.getSource().getSender().sendMessage(Component.text("Toggled option", NamedTextColor.BLUE));
+							sendFeedback(ctx, Component.text("Toggled option", NamedTextColor.BLUE));
 							return SINGLE_SUCCESS;
 						} else {
 							throw BUILT_IN_EXCEPTIONS.dispatcherUnknownArgument().create();
@@ -74,7 +73,7 @@ public class CommandKitControlNew extends BrigadierCommand {
 						if (preset == null)
 							throw BUILT_IN_EXCEPTIONS.dispatcherUnknownArgument().create();
 						KitFilter.setPreset(Main.getGame(), preset);
-						ctx.getSource().getSender().sendMessage(Component.textOfChildren(
+						sendFeedback(ctx, Component.textOfChildren(
 							Component.text("Changed the preset to ", NamedTextColor.BLUE),
 							Component.text(preset.name(), NamedTextColor.GOLD)
 						));
@@ -99,20 +98,19 @@ public class CommandKitControlNew extends BrigadierCommand {
 					))
 				)
 			);
-		registrar.register(builder.build());
+		registrar.register(builder.build(), "Configure and control kit usage.");
 	}
 
 	private static final SimpleCommandExceptionType CANNOT_BLOCK_ALL = new SimpleCommandExceptionType(
 		MessageComponentSerializer.message().serialize(Component.text("Cannot block all kits! Resetting to all kits allowed", TextColors.ERROR_RED)));
 	private static int doAllowBlock(CommandContext<CommandSourceStack> ctx, boolean block) throws CommandSyntaxException {
-		CommandSender sender = ctx.getSource().getSender();
 		Set<String> kitNames = KitNamesArgument.getKitNames(ctx, "kits");
 		try {
 			if (block)
 				KitFilter.setAdminBlocked(Main.getGame(), kitNames);
 			else
 				KitFilter.setAdminAllowed(Main.getGame(), kitNames);
-			sender.sendMessage(Component.textOfChildren(
+			sendFeedback(ctx, Component.textOfChildren(
 				Component.text("Set kit restrictions to: ", NamedTextColor.YELLOW),
 				Component.text((block ? "block " : "allow ") + kitNames, block ? NamedTextColor.GREEN : NamedTextColor.RED)
 			));
@@ -134,7 +132,7 @@ public class CommandKitControlNew extends BrigadierCommand {
 			case Target.Player(String playerName) -> KitFilter.addPlayerRule(playerName, rule);
 		}
 		KitFilter.updateKitsFor(Main.getGame(), Bukkit.getOnlinePlayers());
-		ctx.getSource().getSender().sendMessage(Component.text("Added rule " + key, NamedTextColor.YELLOW));
+		sendFeedback(ctx, Component.text("Added rule " + key, NamedTextColor.YELLOW));
 		return SINGLE_SUCCESS;
 	}
 
@@ -170,7 +168,7 @@ public class CommandKitControlNew extends BrigadierCommand {
 							case Target.Player(String playerTeam) -> KitFilter.removePlayerRule(playerTeam, key);
 						};
 						if (success) {
-							ctx.getSource().getSender().sendMessage(Component.text("Removed rule " + key, NamedTextColor.YELLOW));
+							sendFeedback(ctx, Component.text("Removed rule " + key, NamedTextColor.YELLOW));
 							return SINGLE_SUCCESS;
 						} else {
 							throw RULE_NOT_FOUND.create(key);
@@ -190,7 +188,7 @@ public class CommandKitControlNew extends BrigadierCommand {
 						yield KitFilter.inspectRules(teamName, playerName);
 					}
 				};
-				ctx.getSource().getSender().sendMessage(message);
+				sendFeedback(ctx, message);
 				return SINGLE_SUCCESS;
 			}));
 	}

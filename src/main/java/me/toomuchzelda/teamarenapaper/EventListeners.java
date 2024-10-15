@@ -22,7 +22,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.ChatAnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingListeners;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
-import me.toomuchzelda.teamarenapaper.teamarena.commands.BrigadierCommand;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.brigadier.BrigadierCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.DigAndBuild;

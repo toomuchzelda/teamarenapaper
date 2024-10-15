@@ -1,4 +1,4 @@
-package me.toomuchzelda.teamarenapaper.teamarena.commands;
+package me.toomuchzelda.teamarenapaper.teamarena.commands.brigadier;
 
 import com.mojang.brigadier.Message;
 import com.mojang.brigadier.context.CommandContext;
@@ -64,5 +64,9 @@ public abstract class BrigadierCommand {
 			}
 			return builder.buildFuture();
 		};
+	}
+
+	protected static void sendFeedback(CommandContext<CommandSourceStack> ctx, Component message) {
+		ctx.getSource().getSender().sendMessage(message);
 	}
 }

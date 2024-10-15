@@ -21,7 +21,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import static me.toomuchzelda.teamarenapaper.teamarena.commands.BrigadierCommand.message;
+import static me.toomuchzelda.teamarenapaper.teamarena.commands.brigadier.BrigadierCommand.message;
 
 public class KitNamesArgument implements CustomArgumentType<Set<String>, String> {
 	public static KitNamesArgument INSTANCE = new KitNamesArgument();
