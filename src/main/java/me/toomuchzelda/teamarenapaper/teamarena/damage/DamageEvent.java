@@ -368,6 +368,7 @@ public class DamageEvent {
 			int ndt;
 
 			boolean doHurtEffect = true;
+			final double originalDamage = this.finalDamage; // for NDT record-keeping
 			if(!damageType.isIgnoreRate() && !ignoreInvulnerability) {
 				ndt = TeamArena.getGameTick() - dTimes.getLastTimeDamaged();
 
@@ -402,7 +403,8 @@ public class DamageEvent {
 			if(cancelled)
 				return;
 
-			updateNDT(dTimes);
+			updateNDT(dTimes, originalDamage,
+				doHurtEffect ? TeamArena.getGameTick() : dTimes.getLastTimeDamaged()); // don't update time if this is a "stronger hit in 1 ndt period" hit
 
 			//knockback
 			if(knockback != null && damageType.isKnockback()) {
@@ -593,8 +595,8 @@ public class DamageEvent {
 		}
 	}
 
-	private void updateNDT(DamageTimes.DamageTime dTime) {
-		dTime.update(getFinalAttacker(), dTime.getTimeGiven(), TeamArena.getGameTick(), this.finalDamage, this.damageType);
+	private void updateNDT(DamageTimes.DamageTime dTime, double damage, int hitTime) {
+		dTime.update(getFinalAttacker(), dTime.getTimeGiven(), hitTime, damage, this.damageType);
 	}
 
 	/**

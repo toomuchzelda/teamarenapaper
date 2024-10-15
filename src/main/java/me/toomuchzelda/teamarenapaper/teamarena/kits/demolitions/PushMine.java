@@ -26,7 +26,7 @@ import java.util.function.Consumer;
 public class PushMine extends DemoMine
 {
 	//time in ticks
-	public static final double BLAST_RADIUS = 4.5;
+	public static final double BLAST_RADIUS = 5;
 	public static final double BLAST_STRENGTH = 1.575d;
 
 	private int triggerTime;

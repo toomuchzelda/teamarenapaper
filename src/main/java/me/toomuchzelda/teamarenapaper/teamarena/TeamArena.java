@@ -1553,7 +1553,8 @@ public abstract class TeamArena
 				if (gameState == GameState.LIVE) {
 					//EntityDamageEvent event = new EntityDamageEvent(player, EntityDamageEvent.DamageCause.VOID, 9999d);
 					//DamageEvent dEvent = DamageEvent.createFromBukkitEvent(event, DamageType.SUICIDE);
-					this.processDamageEvent(DamageEvent.newDamageEvent(player, 99999d, DamageType.SPECTATE, null, false));
+					if (!this.isDead(player))
+						this.processDamageEvent(DamageEvent.newDamageEvent(player, 99999d, DamageType.SPECTATE, null, false));
 
 					if (isRespawningGame()) {
 						respawnTimers.remove(player); //if respawning game remove them from respawn queue
@@ -1936,6 +1937,13 @@ public abstract class TeamArena
 
 			// Apply the spectator effects
 			makeSpectator(player);
+		}
+
+		if (this.gameState == GameState.TEAMS_CHOSEN || this.gameState == GameState.GAME_STARTING || this.gameState == GameState.LIVE) {
+			// Hide other spectators from them
+			for (Player spec : spectators) {
+				player.hidePlayer(Main.getPlugin(), spec);
+			}
 		}
 	}
 

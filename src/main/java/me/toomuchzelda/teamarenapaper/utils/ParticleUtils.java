@@ -26,19 +26,15 @@ public class ParticleUtils {
 			brightness, options);
 	}
 
-	public static <T> void batchParticles(Player viewer, PacketSender cache,
-										  Particle particle, T data, Location loc,
-										  double maxDistance, int count,
-										  float offX, float offY, float offZ,
-										  float speed,
-										  boolean force) {
+	public static <T> PacketContainer batchParticles(Particle particle, T data,
+													 Location loc, int count,
+													 float offX, float offY, float offZ,
+													 float speed,
+													 boolean force) {
 
 		if (data != null && !particle.getDataType().isInstance(data)) {
 			throw new IllegalArgumentException("Particle and data mismatch");
 		}
-
-		maxDistance = Math.min(maxDistance, (force ? 512d : 32d));
-		if (viewer.getEyeLocation().distance(loc) > maxDistance) return;
 
 		ParticleOptions nmsParticleOptions = CraftParticle.createParticleParam(particle, data);
 		ClientboundLevelParticlesPacket packet = new ClientboundLevelParticlesPacket(
@@ -50,7 +46,21 @@ public class ParticleUtils {
 			count
 		);
 
-		PacketContainer pLibPacket = new PacketContainer(PacketType.Play.Server.WORLD_PARTICLES, packet);
+		return new PacketContainer(PacketType.Play.Server.WORLD_PARTICLES, packet);
+	}
+
+	public static <T> void batchParticles(Player viewer, PacketSender cache,
+										  Particle particle, T data, Location loc,
+										  double maxDistance, int count,
+										  float offX, float offY, float offZ,
+										  float speed,
+										  boolean force) {
+
+		maxDistance = Math.min(maxDistance, (force ? 512d : 32d));
+		if (viewer.getEyeLocation().distance(loc) > maxDistance) return;
+
+		PacketContainer pLibPacket = batchParticles(particle, data, loc, count, offX, offY, offZ, speed, force);
+
 		cache.enqueue(viewer, pLibPacket);
 	}
 
