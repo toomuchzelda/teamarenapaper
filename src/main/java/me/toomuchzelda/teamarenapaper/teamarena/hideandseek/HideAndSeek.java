@@ -6,7 +6,7 @@ import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
-import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
+import me.toomuchzelda.teamarenapaper.teamarena.map.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.KillStreakManager;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.FilterAction;

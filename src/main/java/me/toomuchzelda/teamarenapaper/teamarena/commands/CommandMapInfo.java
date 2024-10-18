@@ -1,8 +1,8 @@
 package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
-import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
-import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
+import me.toomuchzelda.teamarenapaper.teamarena.map.GameScheduler;
+import me.toomuchzelda.teamarenapaper.teamarena.map.TeamArenaMap;
 import net.kyori.adventure.text.Component;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;

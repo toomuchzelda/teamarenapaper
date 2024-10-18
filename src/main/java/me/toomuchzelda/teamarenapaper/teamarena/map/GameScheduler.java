@@ -1,4 +1,4 @@
-package me.toomuchzelda.teamarenapaper.teamarena.gamescheduler;
+package me.toomuchzelda.teamarenapaper.teamarena.map;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.GameType;
@@ -13,10 +13,13 @@ import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.ShufflingQueue;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.logging.Level;
 
 /**
  * @author toomuchzelda
@@ -42,7 +45,7 @@ public class GameScheduler
 
 	private static final Map<GameType, ShufflingQueue<TeamArenaMap>> GAME_TYPE_MAP_QUEUE;
 
-	public record GameQueueMember(GameType type, TeamArenaMap map) {}
+	public record GameQueueMember(GameType type, @Nullable TeamArenaMap map) {}
 	private static final int NUM_OPTIONS = 3; // Must not be <= 0
 	// Options for next game. Must never be written except by updateOptions()
 	private static GameQueueMember[] NEXT_OPTIONS;
@@ -80,8 +83,7 @@ public class GameScheduler
 					}
 				}
 				catch (Exception e) {
-					Main.logger().warning("Exception for: " + mapFolder.getName() + " " + e.getMessage());
-					e.printStackTrace();
+					Main.logger().log(Level.WARNING, "Failed to parse map " + mapFolder.getName(), e);
 				}
 			}
 		}
@@ -106,6 +108,31 @@ public class GameScheduler
 		gameTypeCtr = 0;
 
 		updateOptions(NUM_OPTIONS);
+
+		// check for starting map configuration file
+		File startingMap = new File("starting_map.yml");
+		if (startingMap.isFile()) {
+			YamlConfiguration yaml = YamlConfiguration.loadConfiguration(startingMap);
+			try {
+				GameType game = GameType.valueOf(
+					Objects.requireNonNull(yaml.getString("game"), "'game' not defined")
+						.toUpperCase(Locale.ROOT));
+				String mapName = yaml.getString("map");
+				GameQueueMember member = new GameQueueMember(
+					game,
+					mapName != null ?
+						getMaps(game).stream()
+							.filter(map -> map.getName().equalsIgnoreCase(mapName))
+							.findAny()
+							.orElseThrow(() -> new IllegalArgumentException(mapName + " is not a valid map!")) :
+						null
+				);
+				setNextMap(member);
+				Main.logger().info("Set starting mode to " + game + " and map to " + mapName);
+			} catch (Exception ex) {
+				Main.logger().log(Level.WARNING, "Failed to read starting_map.yml", ex);
+			}
+		}
 	}
 
 	public static void updateOptions() { updateOptions(NUM_OPTIONS); }
@@ -145,7 +172,7 @@ public class GameScheduler
 		final HashMap<String, GameQueueMember> idLookup = new HashMap<>();
 		for (GameQueueMember game : NEXT_OPTIONS) {
 
-			String key = game.type.name() + game.map.getName();
+			String key = game.type.name() + Objects.requireNonNull(game.map).getName();
 			key = key.replace(" ", "");
 
 			Component display = game.type.shortName.append(Component.text(" " + game.map.getName()));
@@ -196,19 +223,13 @@ public class GameScheduler
 			gameType = map.getRandomGameType();
 		}
 
-		TeamArena newGame;
-		if(gameType == GameType.KOTH)
-			newGame = new KingOfTheHill(map);
-		else if(gameType == GameType.CTF)
-			newGame = new CaptureTheFlag(map);
-		else if (gameType == GameType.SND)
-			newGame = new SearchAndDestroy(map);
-		else if (gameType == GameType.HNS)
-			newGame = new HideAndSeek(map);
-		else
-			newGame = new DigAndBuild(map);
-
-		return newGame;
+		return switch (gameType) {
+			case KOTH -> new KingOfTheHill(map);
+			case CTF -> new CaptureTheFlag(map);
+			case SND -> new SearchAndDestroy(map);
+			case HNS -> new HideAndSeek(map);
+			case DNB -> new DigAndBuild(map);
+		};
 	}
 
 	public static List<TeamArenaMap> getAllMaps() {

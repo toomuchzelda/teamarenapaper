@@ -18,7 +18,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.DigAndBuild;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.StatusOreType;
-import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
+import me.toomuchzelda.teamarenapaper.teamarena.map.DigAndBuildInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.hideandseek.PacketFlyingPoint;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.PayloadTestKillstreak;
@@ -548,7 +548,7 @@ public class CommandDebug extends CustomCommand {
 			}
 			case "showores" -> {
 				if (Main.getGame() instanceof DigAndBuild dnb) {
-					Map<StatusOreType, TeamArenaMap.DNBStatusOreInfo> map = dnb.gameMap.getDnbInfo().statusOres();
+					Map<StatusOreType, DigAndBuildInfo.DNBStatusOreInfo> map = dnb.gameMap.getDnbInfo().statusOres();
 					for (var entry : map.entrySet()) {
 						String text = entry.getKey().name();
 						for (BlockCoords coords : entry.getValue().coords()) {

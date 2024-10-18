@@ -26,7 +26,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.commands.brigadier.BrigadierComm
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.DigAndBuild;
-import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
+import me.toomuchzelda.teamarenapaper.teamarena.map.GameScheduler;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitGhost;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitReach;

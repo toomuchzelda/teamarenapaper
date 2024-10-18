@@ -1,9 +1,9 @@
-package me.toomuchzelda.teamarenapaper.teamarena.gamescheduler;
+package me.toomuchzelda.teamarenapaper.teamarena.map;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.GameType;
-import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.StatusOreType;
-import me.toomuchzelda.teamarenapaper.utils.*;
+import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.ComponentBuilder;
 import net.kyori.adventure.text.TextComponent;
@@ -17,7 +17,6 @@ import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
 import org.yaml.snakeyaml.Yaml;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -42,14 +41,6 @@ public class TeamArenaMap
 
 	public record SNDInfo(boolean randomBases, Map<String, List<BlockVector>> teamBombs) {}
 
-	/** Info per team for dnb */
-	public record DNBTeamInfo(BlockCoords oreCoords, double protectionRadius, @Nullable BlockCoords teamChest) {}
-	public record DNBStatusOreInfo(Material oreType, Material itemType, int required, List<Vector> hologramLocs,
-								   List<BlockCoords> coords) {}
-	public record DNBInfo(Vector middle, Material oreType, List<Material> tools, List<Material> blocks,
-						  List<IntBoundingBox> noBuildZones, Map<StatusOreType, DNBStatusOreInfo> statusOres,
-						  Map<String, DNBTeamInfo> teams) {}
-
 	public record HNSInfo(List<Material> allowedBlocks, List<EntityType> allowedEntities, Vector seekerSpawn,
 						  int hideTime) {}
 
@@ -71,13 +62,13 @@ public class TeamArenaMap
 	private final int minPlayers;
 	private final int maxPlayers;
 
-	private final Map<String, Vector[]> teamSpawns;
+	final Map<String, Vector[]> teamSpawns;
 
 	private final List<GameType> gameTypes;
 	private final KOTHInfo kothInfo;
 	private final CTFInfo ctfInfo;
 	private final SNDInfo sndInfo;
-	private final DNBInfo dnbInfo;
+	private final DigAndBuildInfo dnbInfo;
 	private final HNSInfo hnsInfo;
 
 	private final File file;
@@ -356,149 +347,7 @@ public class TeamArenaMap
 		if(sndInfo != null)
 			this.gameTypes.add(GameType.SND);
 
-		File dnbFile = new File(worldFolder, "DNBConfig.yml");
-		DNBInfo dnbInfo = null;
-		if (dnbFile.exists() && dnbFile.isFile()) {
-			try (FileInputStream dnbInput = new FileInputStream(dnbFile)) {
-				Map<String, Object> dnbMap = yaml.load(dnbInput);
-
-				Vector middle;
-				try {
-					middle = BlockUtils.parseCoordsToVec((String) dnbMap.get("Middle"), 0.5, 0.5, 0.5);
-				}
-				catch (NullPointerException | ClassCastException e) {
-					Main.logger().warning("Invalid Middle value in DNB config for " + worldFolder.getName() + ". " + e.getMessage());
-					throw e;
-				}
-
-				Material oreType;
-				try {
-					String oreTypeStr = (String) dnbMap.get("OreType");
-					oreType = Material.valueOf(oreTypeStr);
-				}
-				catch (ClassCastException | NullPointerException e) {
-					Main.logger().warning("Invalid OreType value in DNB config for " + worldFolder.getName() + ". " + e.getMessage());
-					throw e;
-				}
-
-				List<Material> tools;
-				try {
-					List<String> toolsStrList = (List<String>) dnbMap.get("Tools");
-					tools = new ArrayList<>(toolsStrList.size());
-					for (String s : toolsStrList) {
-						tools.add(Material.valueOf(s));
-					}
-				}
-				catch (ClassCastException | NullPointerException e) {
-					Main.logger().warning("Invalid Tools value in DNB config for " + worldFolder.getName() + ". " + e.getMessage());
-					tools = new ArrayList<>(0); // Default to no tools
-				}
-
-				List<Material> blocks;
-				try {
-					List<String> blocksStrList = (List<String>) dnbMap.get("Blocks");
-					blocks = new ArrayList<>(blocksStrList.size());
-					for (String s : blocksStrList) {
-						blocks.add(Material.valueOf(s));
-					}
-				}
-				catch (ClassCastException | NullPointerException e) {
-					Main.logger().warning("Invalid Blocks value in DNB config for " + worldFolder.getName() + ". " + e.getMessage());
-					blocks = new ArrayList<>(0); // Default to no tools
-				}
-
-				List<IntBoundingBox> noBuildZones;
-				try {
-					List<List<String>> cornersList = (List<List<String>>) dnbMap.get("NoBuildZones");
-					noBuildZones = new ArrayList<>(cornersList.size());
-					for (List<String> corners : cornersList) {
-						if (corners.size() != 2) {
-							Main.logger().warning("Bad NoBuildZone entry on DNBConfig of " + worldFolder.getName()
-								+ ". Found not 2 corners in an entry of the NoBuildZones");
-							continue;
-						}
-
-						BlockCoords cornerOne = BlockUtils.parseCoordsToBlockCoords(corners.get(0));
-						BlockCoords cornerTwo = BlockUtils.parseCoordsToBlockCoords(corners.get(1));
-
-						noBuildZones.add(new IntBoundingBox(cornerOne, cornerTwo));
-					}
-				}
-				catch (ClassCastException | NullPointerException e) {
-					Main.logger().warning("Invalid value for NoBuildZones in DNBConfig of " + worldFolder.getName() + ". Defaulting to no no-build-zones."
-						+ e.getMessage());
-					noBuildZones = new ArrayList<>();
-				}
-
-				Map<StatusOreType, DNBStatusOreInfo> statusOres;
-				try {
-					Map<String, Map<String, Object>> oresConfig = (Map<String, Map<String, Object>>) dnbMap.get("StatusOres");
-					statusOres = new EnumMap<>(StatusOreType.class);
-					for (var entry : oresConfig.entrySet()) {
-
-						StatusOreType type = StatusOreType.valueOf(entry.getKey().toUpperCase(Locale.ENGLISH));
-						Material statusOreType = Material.valueOf(((String) entry.getValue().get("OreType")).toUpperCase(Locale.ENGLISH));
-						Material itemType = Material.valueOf(((String) entry.getValue().get("Item")).toUpperCase(Locale.ENGLISH));
-						int required = (Integer) entry.getValue().get("Required");
-
-						List<String> holograms = (List<String>) entry.getValue().get("Holograms");
-						List<Vector> hologramCoords = new ArrayList<>(holograms.size());
-						for (String hologramCoordStr : holograms) {
-							hologramCoords.add(BlockUtils.parseCoordsToVec(hologramCoordStr, 0.5d, 0.5d, 0.5d));
-						}
-
-						List<String> coords = (List<String>) entry.getValue().get("Locations");
-						List<BlockCoords> oreStatusBlockCoordsList = new ArrayList<>(coords.size());
-						for (String oreStatusCoordStr : coords) {
-							BlockCoords oreStatusBlockCoords = BlockUtils.parseCoordsToBlockCoords(oreStatusCoordStr);
-							oreStatusBlockCoordsList.add(oreStatusBlockCoords);
-						}
-
-						DNBStatusOreInfo statusOreInfo = new DNBStatusOreInfo(statusOreType, itemType, required, hologramCoords,
-							oreStatusBlockCoordsList);
-						statusOres.put(type, statusOreInfo);
-					}
-				}
-				catch (ClassCastException | NullPointerException | IllegalArgumentException e) {
-					Main.logger().warning("Bad value in DNB status ore config of " + worldFolder.getName() + ". " + e.getMessage());
-					statusOres = Collections.emptyMap();
-				}
-
-				Map<String, DNBTeamInfo> teamInfo;
-				try {
-					Map<String, Map<String, Object>> teamConfigs = (Map<String, Map<String, Object>>) dnbMap.get("Teams");
-					teamInfo = new HashMap<>();
-					for (var entry : teamConfigs.entrySet()) {
-						if (this.teamSpawns.containsKey(entry.getKey())) {
-							BlockCoords oreCoords = BlockUtils.parseCoordsToBlockCoords((String) entry.getValue().get("Ore"));
-							double radius = (double) entry.getValue().get("Radius");
-							String chestCoordStr = (String) entry.getValue().get("Chest");
-							BlockCoords chestCoords;
-							if (chestCoordStr != null)
-								 chestCoords = BlockUtils.parseCoordsToBlockCoords(chestCoordStr);
-							else
-								chestCoords = null;
-
-							DNBTeamInfo tinfo = new DNBTeamInfo(oreCoords, radius, chestCoords);
-							teamInfo.put(entry.getKey(), tinfo);
-						}
-						else {
-							Main.logger().warning("Unknown team " + entry.getKey() + " in DNBConfig of " + worldFolder.getName() + ". Team is not declared in MainConfig");
-						}
-					}
-				}
-				catch (NullPointerException | ClassCastException e) {
-					Main.logger().warning("Invalid Teams value in DNB config of " + worldFolder.getName() + ". " + e.getMessage());
-					throw e;
-				}
-
-				dnbInfo = new DNBInfo(middle, oreType, tools, blocks, noBuildZones, statusOres, teamInfo);
-			}
-			catch (Exception e) {
-				Main.logger().warning("Error when parsing DNB config for " + worldFolder.getName() + ": " + e);
-			}
-		}
-		this.dnbInfo = dnbInfo;
+		this.dnbInfo = DigAndBuildInfo.parse(this, worldFolder.toPath());
 		if(dnbInfo != null)
 			this.gameTypes.add(GameType.DNB);
 
@@ -671,7 +520,7 @@ public class TeamArenaMap
 		return this.sndInfo;
 	}
 
-	public DNBInfo getDnbInfo() {
+	public DigAndBuildInfo getDnbInfo() {
 		return this.dnbInfo;
 	}
 

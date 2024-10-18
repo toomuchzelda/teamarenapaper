@@ -13,7 +13,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.commands.*;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.brigadier.CommandKitControlNew;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
-import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
+import me.toomuchzelda.teamarenapaper.teamarena.map.GameScheduler;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.FileUtils;

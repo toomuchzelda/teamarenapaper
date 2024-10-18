@@ -7,7 +7,8 @@ import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
-import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
+import me.toomuchzelda.teamarenapaper.teamarena.map.DigAndBuildInfo;
+import me.toomuchzelda.teamarenapaper.teamarena.map.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy.SearchAndDestroy;
 import me.toomuchzelda.teamarenapaper.utils.*;
@@ -107,7 +108,7 @@ public class DigAndBuild extends TeamArena
 	private Map<BlockCoords, TeamArenaTeam> chestLookup;
 
 	private List<PointMarker> pointMarkers;
-	private Map<StatusOreType, TeamArenaMap.DNBStatusOreInfo> statusOreInfos;
+	private Map<StatusOreType, DigAndBuildInfo.DNBStatusOreInfo> statusOreInfos;
 	private Map<StatusOreType, ItemStack> statusOreItems;
 	private Map<ItemStack, StatusOreType> statusItemLookup;
 	private Map<BlockCoords, StatusOre> statusOreLookup;
@@ -227,7 +228,7 @@ public class DigAndBuild extends TeamArena
 	protected void loadConfig(TeamArenaMap map) {
 		super.loadConfig(map);
 
-		TeamArenaMap.DNBInfo mapInfo = map.getDnbInfo();
+		DigAndBuildInfo mapInfo = map.getDnbInfo();
 
 		this.middle = mapInfo.middle();
 		this.spawnPos = mapInfo.middle().toLocation(this.gameWorld);
@@ -264,7 +265,7 @@ public class DigAndBuild extends TeamArena
 		this.chestLookup = new HashMap<>();
 		for (var entry : mapInfo.teams().entrySet()) {
 			TeamArenaTeam team = this.getTeamByLegacyConfigName(entry.getKey());
-			final TeamArenaMap.DNBTeamInfo tinfo = entry.getValue();
+			final DigAndBuildInfo.DNBTeamInfo tinfo = entry.getValue();
 
 			LifeOre lifeOre = new LifeOre(team, mapInfo.oreType(), tinfo.oreCoords(), tinfo.protectionRadius(),
 				this.gameWorld);
@@ -309,7 +310,7 @@ public class DigAndBuild extends TeamArena
 		}
 	}
 
-	private static ItemStack createItemStack(StatusOreType type, TeamArenaMap.DNBStatusOreInfo info) {
+	private static ItemStack createItemStack(StatusOreType type, DigAndBuildInfo.DNBStatusOreInfo info) {
 		Component name = createOreItemName(info.required(), type.displayName);
 		List<Component> lore = TextUtils.wrapString(type.description, Style.style(TextUtils.RIGHT_CLICK_TO));
 

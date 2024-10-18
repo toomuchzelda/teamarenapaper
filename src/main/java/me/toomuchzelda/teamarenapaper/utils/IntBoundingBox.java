@@ -8,8 +8,8 @@ package me.toomuchzelda.teamarenapaper.utils;
  */
 public class IntBoundingBox
 {
-	private int minX, minY, minZ;
-	private int maxX, maxY, maxZ;
+	private final int minX, minY, minZ;
+	private final int maxX, maxY, maxZ;
 
 	public IntBoundingBox(BlockCoords cornerOne, BlockCoords cornerTwo) {
 		BlockCoords min = BlockCoords.getMin(cornerOne, cornerTwo);
@@ -70,5 +70,13 @@ public class IntBoundingBox
 			"maxX=" + this.maxX + "," +
 			"maxY=" + this.maxY + "," +
 			"maxZ=" + this.maxZ + ")";
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		return obj instanceof IntBoundingBox other &&
+			other.minX == minX && other.maxX == maxX &&
+			other.minY == minY && other.maxY == maxY &&
+			other.minZ == minZ && other.maxZ == maxZ;
 	}
 }
