@@ -169,7 +169,9 @@ public class SpectatorAngelManager
 			setPassengersPacket.getIntegers().write(0, this.getId());
 			int[] mountedEnts = mount ? new int[] {this.owner.getEntityId()} : EMPTY_ARR;
 			setPassengersPacket.getIntegerArrays().write(0, mountedEnts);
-			this.sendPacket(this.owner, setPassengersPacket);
+			// Need to send this one now to avoid desyncs with the teleport that comes immediately after
+			//this.sendPacket(this.owner, setPassengersPacket);
+			PlayerUtils.sendPacket(this.owner, setPassengersPacket);
 		}
 
 		public void setDancing(boolean dance) {

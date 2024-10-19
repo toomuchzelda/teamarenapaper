@@ -116,7 +116,7 @@ public class DamageEvent {
 			else if (damageCause == EntityDamageEvent.DamageCause.PROJECTILE && dEvent.getDamager() instanceof AbstractArrow aa) {
 				//fix arrow damage - no random crits
 				//  arrow damage is the vanilla formula without the random crit part
-				double damage = DamageNumbers.calcArrowDamage(aa.getDamage(), aa.getVelocity().length());
+				double damage = DamageNumbers.calcArrowDamage(aa, aa.getVelocity().length());
 				dEvent.setDamage(damage);
 			}
 			// Stop ender-pearls from doing fall damage
@@ -852,6 +852,7 @@ public class DamageEvent {
 		if (this.broadcastsDeathMessage()) {
 			final Component deathMessage = this.getDamageType().getDeathMessage(this.getVictim(), this.getFinalAttacker(), this.getDamageTypeCause());
 			if (deathMessage != null) {
+				Main.componentLogger().info(deathMessage);
 				final Component darkened = TextUtils.darken(deathMessage);
 				var iter = Main.getPlayersIter();
 				while (iter.hasNext()) {

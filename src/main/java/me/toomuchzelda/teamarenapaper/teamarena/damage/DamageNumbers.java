@@ -1,10 +1,9 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.AbstractArrow;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
@@ -162,7 +161,17 @@ public class DamageNumbers
 		return getEnchantedDefensePointsForDamageType(type, enchantments) / 25d;
 	}
 
-	public static double calcArrowDamage(double arrowDamage, double arrowSpeed) {
-		return MathUtils.clamp(0, 2.147483647E9d, arrowDamage * arrowSpeed);
+	public static double calcArrowDamage(AbstractArrow arrow, double arrowSpeed) {
+		double damage;
+		ItemStack weapon = arrow.getWeapon();
+		int power = weapon != null ? weapon.getEnchantmentLevel(Enchantment.POWER) : 0;
+		if (power > 0) {
+			damage = 2.5d + ((double) power) / 2d;
+		}
+		else {
+			damage = 2.0d;
+		}
+
+		return Math.ceil(damage * arrowSpeed);
 	}
 }

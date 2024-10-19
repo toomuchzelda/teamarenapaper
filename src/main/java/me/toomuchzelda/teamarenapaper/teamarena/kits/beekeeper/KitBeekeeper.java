@@ -459,12 +459,12 @@ public class KitBeekeeper extends Kit
 					event.setCancelled(true);
 				}
 				// Direct melee with stronger weapons insta-kills bee
-				else if (event.getDamageType().is(DamageType.MELEE) &&
+				/*else if (event.getDamageType().is(DamageType.MELEE) &&
 					(!(event.getFinalAttacker() instanceof LivingEntity) ||
 					DamageNumbers.getMaterialBaseDamage(event.getMeleeWeapon().getType()) > 4d)) {
 
 					event.setFinalDamage(1984 * 2);
-				}
+				}*/
 			}
 		}
 
