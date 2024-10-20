@@ -7,6 +7,7 @@ import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
+import me.toomuchzelda.teamarenapaper.teamarena.abilities.AbilityManager;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerSound;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.ChatAnnouncerManager;
@@ -163,6 +164,7 @@ public abstract class TeamArena
 	public final GraffitiManager graffiti;
 	private final KillStreakManager killStreakManager;
 	protected final FakeBlockManager fakeBlockManager;
+	private final AbilityManager abilityManager;
 
 	private static final String[] BUY_SIGN_MESSAGES = new String[] {
 		"The ancient relic of 2013 crumbles as you move your hand near it.",
@@ -288,6 +290,7 @@ public abstract class TeamArena
 		graffiti = new GraffitiManager(this);
 		killStreakManager = new KillStreakManager();
 		this.fakeBlockManager = new FakeBlockManager(this);
+		this.abilityManager = new AbilityManager();
 
 		registerKits();
 
@@ -614,6 +617,7 @@ public abstract class TeamArena
 				a.onPlayerTick(entry.getKey());
 			}
 		}
+		this.abilityManager.tick();
 
 		// Killstreak tick events
 		this.killStreakManager.tick();
@@ -1267,6 +1271,8 @@ public abstract class TeamArena
 
 			giveKitAndGameItems(player, Main.getPlayerInfo(player), true);
 
+			this.abilityManager.give(player);
+
 			player.playSound(player.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.AMBIENT, 2, 1);
 		}
 
@@ -1350,6 +1356,7 @@ public abstract class TeamArena
 				ability.unregisterAbility();
 			}
 		}
+		this.abilityManager.unregisterAll();
 
 		miniMap.onGameEnd();
 
@@ -1629,6 +1636,7 @@ public abstract class TeamArena
 		PlayerUtils.resetState(player);
 
 		giveKitAndGameItems(player, pinfo, true);
+		this.abilityManager.give(player);
 		pinfo.kills = 0;
 		PlayerListScoreManager.setKills(player, 0);
 
@@ -1687,6 +1695,7 @@ public abstract class TeamArena
 				a.onDeath(event);
 			}
 			pinfo.activeKit.removeKit(playerVictim, pinfo);
+			this.abilityManager.remove(playerVictim);
 
 			this.killStreakManager.removeKillStreaks(playerVictim, pinfo);
 
