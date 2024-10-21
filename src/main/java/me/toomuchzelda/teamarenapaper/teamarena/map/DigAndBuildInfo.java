@@ -2,11 +2,10 @@ package me.toomuchzelda.teamarenapaper.teamarena.map;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.StatusOreType;
-import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
-import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
-import me.toomuchzelda.teamarenapaper.utils.IntBoundingBox;
+import me.toomuchzelda.teamarenapaper.utils.*;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
-import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.Nullable;
 import org.yaml.snakeyaml.Yaml;
@@ -17,24 +16,66 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.logging.Level;
 
-public record DigAndBuildInfo(Vector middle, Material oreType, List<Material> tools, List<Material> blocks,
-							  List<IntBoundingBox> noBuildZones, Map<StatusOreType, DNBStatusOreInfo> statusOres,
-							  Map<String, DNBTeamInfo> teams) {
+public class DigAndBuildInfo {
 	/** Info per team for dnb */
 	public record DNBTeamInfo(BlockCoords oreCoords, double protectionRadius, @Nullable BlockCoords teamChest) {}
 
 	public record DNBStatusOreInfo(Material oreType, Material itemType, int required, List<Vector> hologramLocs,
 								   List<BlockCoords> coords) {}
 
+	public int configVersion;
+	public Vector middle;
+	public BlockData defaultLifeOreBlock;
+	public record LifeOreInfo(BlockCoords location, double protectionRadius, @Nullable @ConfigOptional BlockData block, boolean showHologram) {}
+	public record TeamInfo(@Nullable @ConfigOptional BlockCoords chest, List<LifeOreInfo> lifeOres) {}
+
+	public Map<String, TeamInfo> teams;
+
+	public List<IntBoundingBox> noBuildZones;
+
+	public sealed interface UpgradeBase {
+		Material item();
+		@Nullable @ConfigOptional
+		Component customName();
+		int required();
+	}
+	public record UpgradeSpawning(
+		List<Vector> holograms,
+		@ConfigPath("as") BlockData spawnAs,
+		@ConfigPath("at") List<BlockCoords> spawnAt) {}
+
+	public record HealUpgrade(Material item, @Nullable @ConfigOptional Component customName, int required, UpgradeSpawning spawns) implements UpgradeBase {}
+	@ConfigPath("team-upgrades.heal")
+	public HealUpgrade teamHealUpgrade;
+
+	public record TrapUpgrade(Material item, @Nullable @ConfigOptional Component customName, int required, int max, double triggerRadius) implements UpgradeBase {}
+	@ConfigPath("team-upgrades.trap")
+	public TrapUpgrade teamTrapUpgrade;
+
+	public record HasteUpgrade(Material item, @Nullable @ConfigOptional Component customName, int required, UpgradeSpawning spawns) implements UpgradeBase {}
+	@ConfigPath("team-upgrades.haste")
+	public HasteUpgrade teamHasteUpgrade;
+
+	public record ItemFountain(Vector at, int interval, List<Material> sequence) {}
+	public List<ItemFountain> itemFountains;
+
+	public List<Material> defaultTools;
+	public List<Material> defaultBlocks;
+
+	@ConfigPath("__replace-wool-with-team-color")
+	public boolean specialReplaceWoolWithTeamColor;
+	@ConfigPath("__instantly-prime-tnt")
+	public boolean specialInstantlyPrimeTnt;
+
 	@Nullable
 	public static DigAndBuildInfo parse(TeamArenaMap teamArenaMap, Path worldFolder) {
 		Path config = worldFolder.resolve("map-config-dnb.yml");
 		if (Files.isRegularFile(config)) {
 			try (var br = Files.newBufferedReader(config)) {
-				YamlConfiguration yaml = YamlConfiguration.loadConfiguration(br);
-				int configVersion = yaml.getInt("config-version");
+				Map<String, Object> yaml = new Yaml().load(br);
+				int configVersion = (Integer) yaml.get("config-version");
 				return switch (configVersion) {
-					case 1 -> parseV1(teamArenaMap, yaml);
+					case 1 -> parseV1(yaml);
 					default -> throw new IllegalStateException("Invalid config version " + configVersion);
 				};
 			} catch (Exception ex) {
@@ -45,7 +86,9 @@ public record DigAndBuildInfo(Vector middle, Material oreType, List<Material> to
 		Path legacyConfig = worldFolder.resolve("DNBConfig.yml");
 		if (Files.isRegularFile(legacyConfig)) {
 			try (var br = Files.newBufferedReader(legacyConfig)) {
-				return parseLegacy(teamArenaMap, worldFolder.toFile(), new Yaml().load(br));
+				DigAndBuildInfo dnbInfo = new DigAndBuildInfo();
+				dnbInfo.loadLegacy(teamArenaMap, worldFolder.toFile(), new Yaml().load(br));
+				return dnbInfo;
 			} catch (Exception ex) {
 				Main.logger().log(Level.WARNING, "Failed to load DNBConfig.yml for " + teamArenaMap.getName(), ex);
 			}
@@ -53,12 +96,11 @@ public record DigAndBuildInfo(Vector middle, Material oreType, List<Material> to
 		return null;
 	}
 
-	public static DigAndBuildInfo parseV1(TeamArenaMap teamArenaMap, YamlConfiguration yamlConfiguration) {
-		return null;
+	public static DigAndBuildInfo parseV1(Map<String, Object> yaml) {
+		return ConfigUtils.parseConfig(yaml, DigAndBuildInfo.class);
 	}
 
-	public static DigAndBuildInfo parseLegacy(TeamArenaMap teamArenaMap, File worldFolder, Map<String, Object> dnbMap) {
-		Vector middle;
+	public void loadLegacy(TeamArenaMap teamArenaMap, File worldFolder, Map<String, Object> dnbMap) {
 		try {
 			middle = BlockUtils.parseCoordsToVec((String) dnbMap.get("Middle"), 0.5, 0.5, 0.5);
 		}
@@ -67,43 +109,39 @@ public record DigAndBuildInfo(Vector middle, Material oreType, List<Material> to
 			throw e;
 		}
 
-		Material oreType;
 		try {
 			String oreTypeStr = (String) dnbMap.get("OreType");
-			oreType = Material.valueOf(oreTypeStr);
+			defaultLifeOreBlock = Material.valueOf(oreTypeStr).createBlockData();
 		}
 		catch (ClassCastException | NullPointerException e) {
 			Main.logger().warning("Invalid OreType value in DNB config for " + worldFolder.getName() + ". " + e.getMessage());
 			throw e;
 		}
 
-		List<Material> tools;
 		try {
 			List<String> toolsStrList = (List<String>) dnbMap.get("Tools");
-			tools = new ArrayList<>(toolsStrList.size());
+			defaultTools = new ArrayList<>(toolsStrList.size());
 			for (String s : toolsStrList) {
-				tools.add(Material.valueOf(s));
+				defaultTools.add(Material.valueOf(s));
 			}
 		}
 		catch (ClassCastException | NullPointerException e) {
 			Main.logger().warning("Invalid Tools value in DNB config for " + worldFolder.getName() + ". " + e.getMessage());
-			tools = new ArrayList<>(0); // Default to no tools
+			defaultTools = new ArrayList<>(0); // Default to no tools
 		}
 
-		List<Material> blocks;
 		try {
 			List<String> blocksStrList = (List<String>) dnbMap.get("Blocks");
-			blocks = new ArrayList<>(blocksStrList.size());
+			defaultBlocks = new ArrayList<>(blocksStrList.size());
 			for (String s : blocksStrList) {
-				blocks.add(Material.valueOf(s));
+				defaultBlocks.add(Material.valueOf(s));
 			}
 		}
 		catch (ClassCastException | NullPointerException e) {
 			Main.logger().warning("Invalid Blocks value in DNB config for " + worldFolder.getName() + ". " + e.getMessage());
-			blocks = new ArrayList<>(0); // Default to no tools
+			defaultBlocks = new ArrayList<>(0); // Default to no tools
 		}
 
-		List<IntBoundingBox> noBuildZones;
 		try {
 			List<List<String>> cornersList = (List<List<String>>) dnbMap.get("NoBuildZones");
 			noBuildZones = new ArrayList<>(cornersList.size());
@@ -159,6 +197,18 @@ public record DigAndBuildInfo(Vector middle, Material oreType, List<Material> to
 			Main.logger().warning("Bad value in DNB status ore config of " + worldFolder.getName() + ". " + e.getMessage());
 			statusOres = Collections.emptyMap();
 		}
+		statusOres.forEach((statusOreType, statusOreInfo) -> {
+			switch (statusOreType) {
+				case HEAL -> teamHealUpgrade = new HealUpgrade(
+					statusOreInfo.itemType, null, statusOreInfo.required,
+					new UpgradeSpawning(statusOreInfo.hologramLocs, statusOreInfo.oreType.createBlockData(), statusOreInfo.coords)
+				);
+				case HASTE -> teamHasteUpgrade = new HasteUpgrade(
+					statusOreInfo.itemType, null, statusOreInfo.required,
+					new UpgradeSpawning(statusOreInfo.hologramLocs, statusOreInfo.oreType.createBlockData(), statusOreInfo.coords)
+				);
+			}
+		});
 
 		Map<String, DNBTeamInfo> teamInfo;
 		try {
@@ -187,7 +237,11 @@ public record DigAndBuildInfo(Vector middle, Material oreType, List<Material> to
 			Main.logger().warning("Invalid Teams value in DNB config of " + worldFolder.getName() + ". " + e.getMessage());
 			throw e;
 		}
-		return null;
-//		return new DigAndBuildInfo(middle, oreType, tools, blocks, noBuildZones, statusOres, teamInfo);
+		teams = new LinkedHashMap<>();
+		teamInfo.forEach((team, info) -> {
+			teams.put(team, new TeamInfo(info.teamChest, List.of(new LifeOreInfo(
+				info.oreCoords, info.protectionRadius, null, true
+			))));
+		});
 	}
 }
