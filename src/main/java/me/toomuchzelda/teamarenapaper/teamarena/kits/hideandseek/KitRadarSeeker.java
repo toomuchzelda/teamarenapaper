@@ -1,7 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek;
 
 import com.google.common.collect.EvictingQueue;
-import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.hideandseek.HideAndSeek;
@@ -15,7 +14,6 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -67,9 +65,15 @@ public class KitRadarSeeker extends Kit {
 
 		@Override
 		protected void giveAbility(Player player) {
-			player.sendMessage(MiniMessage.miniMessage().deserialize("""
-				<c:#138c97>Use your <c:green>Radar</c> to locate hiders and eliminate them.
-				<c:#138c97>Pay attention to the <c:yellow>pitch</c> of the sounds your radar emits."""));
+			player.sendMessage(Component.textOfChildren(
+				Component.text("Use your "),
+				Component.text("Radar", NamedTextColor.GREEN),
+				Component.text(" to locate hiders and eliminate them."),
+				Component.newline(),
+				Component.text("Pay attention to the "),
+				Component.text("pitch", NamedTextColor.YELLOW),
+				Component.text(" of the sounds your radar emits.")
+			).color(TextColor.color(0x138c97)));
 			player.sendMessage(Component.text("""
 				Note: Prolonged use of radar may result in negative health effects, \
 				Such as hair loss, eye damage, hallucinations, and seeing moving blocks. \

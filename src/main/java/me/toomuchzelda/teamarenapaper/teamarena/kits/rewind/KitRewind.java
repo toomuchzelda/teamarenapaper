@@ -18,7 +18,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -69,23 +68,46 @@ public class KitRewind extends Kit {
 		if (KitOptions.rewindClockPhases) {
 			TIME_MACHINE = ItemBuilder.of(Material.CLOCK)
 				.displayName(Component.text("Time Machine"))
-				.lore(TextUtils.toLoreList("""
-						Teleport to your location 15 seconds ago!
-						You get a buff based on your current State
-						The State changes every 5 seconds
-						<regeneration>: Regen II for 3.5 Seconds
-						<time_dilation>: Slowness III + Prevents
-							Jumping from enemies within 4 Blocks
-							for 3 Seconds
-						<knockback>: Blasts nearby enemies away
-						Note: <time_dilation> and <knockback>
-						    are applied at departure and arrival
-						    location""",
-					TextColors.LIGHT_YELLOW,
-					Placeholder.component("regeneration", Component.text("Regeneration", REGEN_COLOR)),
-					Placeholder.component("time_dilation", Component.text("Time Dilation", DILATE_COLOR)),
-					Placeholder.component("knockback", Component.text("Knockback", KB_COLOR))
-				))
+				.lore(
+					/*
+					Teleport to your location 15 seconds ago!
+					You get a buff based on your current State
+					The State changes every 5 seconds
+					<regeneration>: Regen II for 3.5 Seconds
+					<time_dilation>: Slowness III + Prevents
+						Jumping from enemies within 4 Blocks
+						for 3 Seconds
+					<knockback>: Blasts nearby enemies away
+					Note: <time_dilation> and <knockback>
+						are applied at departure and arrival
+						location
+					 */
+					Component.text("Teleport to your location 15 seconds ago!", TextColors.LIGHT_YELLOW),
+					Component.text("You get a buff based on your current State", TextColors.LIGHT_YELLOW),
+					Component.text("The State changes every 5 seconds", TextColors.LIGHT_YELLOW),
+					Component.textOfChildren(
+						Component.text("Regeneration", REGEN_COLOR),
+						Component.text(": Regen II for 3.5 Seconds", TextColors.LIGHT_YELLOW)
+					),
+					Component.textOfChildren(
+						Component.text("Time Dilation", DILATE_COLOR),
+						Component.text(": Slowness III + Prevents", TextColors.LIGHT_YELLOW)
+					),
+					Component.text("	Jumping from enemies within 4 Blocks", TextColors.LIGHT_YELLOW),
+					Component.text("	for 3 Seconds", TextColors.LIGHT_YELLOW),
+					Component.textOfChildren(
+						Component.text("Knockback", KB_COLOR),
+						Component.text(": Blasts nearby enemies away", TextColors.LIGHT_YELLOW)
+					),
+					Component.textOfChildren(
+						Component.text("Note: "),
+						Component.text("Time Dilation", DILATE_COLOR),
+						Component.text(" and "),
+						Component.text("Knockback", KB_COLOR)
+					).color(TextColors.LIGHT_YELLOW),
+					Component.text("	are applied at departure and arrival", TextColors.LIGHT_YELLOW),
+					Component.text("	location", TextColors.LIGHT_YELLOW)
+				)
 				.build();
 		}
 		else {

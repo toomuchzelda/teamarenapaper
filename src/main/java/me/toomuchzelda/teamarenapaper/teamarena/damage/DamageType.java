@@ -8,8 +8,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageSources;
 import net.minecraft.world.level.Level;
@@ -489,28 +487,20 @@ public class DamageType {
 	private static final Pattern LEGACY_REGEX = Pattern.compile("%(Kille[dr]|Cause)%");
 	private static final TextColor MESSAGE_COLOR = NamedTextColor.YELLOW;
 	private static Component doPlaceholders(String message, Component victim, Component killer, Component cause) {
-		if (message.contains("%")) {
-			// old message format
-			return Component.text(message, MESSAGE_COLOR)
-					.replaceText(TextReplacementConfig.builder()
-							.match(LEGACY_REGEX)
-							.replacement((result, builder) -> {
-								String arg = result.group(1);
-								return switch (arg) {
-									case "Killed" -> victim;
-									case "Killer" -> killer;
-									case "Cause" -> cause;
-									default -> throw new Error();
-								};
-							})
-							.build());
-		} else {
-			return MiniMessage.miniMessage().deserialize(message,
-					Placeholder.component("victim", victim),
-					Placeholder.component("killer", killer),
-					Placeholder.component("cause", cause)
-			);
-		}
+		// old message format
+		return Component.text(message, MESSAGE_COLOR)
+				.replaceText(TextReplacementConfig.builder()
+						.match(LEGACY_REGEX)
+						.replacement((result, builder) -> {
+							String arg = result.group(1);
+							return switch (arg) {
+								case "Killed" -> victim;
+								case "Killer" -> killer;
+								case "Cause" -> cause;
+								default -> throw new Error();
+							};
+						})
+						.build());
 	}
 
     public static DamageType getMelee(EntityDamageEvent event) {

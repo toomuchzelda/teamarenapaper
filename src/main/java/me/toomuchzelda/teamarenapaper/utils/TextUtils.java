@@ -9,8 +9,6 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import net.kyori.adventure.title.Title;
 import net.kyori.adventure.util.HSVLike;
 import org.bukkit.map.MinecraftFont;
@@ -392,31 +390,6 @@ public class TextUtils {
 		// final line
 		lines.add(Component.text(line.toString(), style));
 		return List.copyOf(lines);
-	}
-
-	public static List<Component> toLoreList(String string, Style style, TagResolver... tagResolvers) {
-		Style styleNoItalics = style.decorationIfAbsent(TextDecoration.ITALIC, TextDecoration.State.FALSE);
-		MiniMessage miniMessage = MiniMessage.builder()
-			.postProcessor(component -> component.compact().style(s -> s.merge(styleNoItalics,
-				Style.Merge.Strategy.IF_ABSENT_ON_TARGET))) // lets lines override the global style
-			.build();
-		return string.lines().map(line -> {
-				if (line.isEmpty())
-					return Component.empty();
-				else if (line.indexOf('<') > -1)
-					return miniMessage.deserialize(line, tagResolvers);
-				else
-					return Component.text(line, styleNoItalics);
-			})
-			.toList();
-	}
-
-	public static List<Component> toLoreList(String string, TextColor textColor, TagResolver... tagResolvers) {
-		return toLoreList(string, Style.style(textColor), tagResolvers);
-	}
-
-	public static List<Component> toLoreList(String string, TagResolver... tagResolvers) {
-		return toLoreList(string, Style.empty(), tagResolvers);
 	}
 
 	/**

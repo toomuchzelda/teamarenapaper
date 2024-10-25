@@ -5,6 +5,7 @@ import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
@@ -29,17 +30,17 @@ public enum KitCategory {
 	SUPPORT(NamedTextColor.YELLOW,
 			ItemBuilder.from(Banners.HEALER_BANNER)
 					.displayName(Component.text("Support", NamedTextColor.YELLOW))
-					.lore(TextUtils.toLoreList("""
+					.lore(TextUtils.wrapString("""
 							Kits that provide buffs for
 							teammates / defensive potential
-							""", NamedTextColor.GRAY))
+							""", Style.style(NamedTextColor.GRAY)))
 					.build(),
 			ItemBuilder.from(Banners.HEALER_BANNER_INVERTED)
 					.displayName(Component.text("Support", NamedTextColor.YELLOW))
-					.lore(TextUtils.toLoreList("""
+					.lore(TextUtils.wrapString("""
 							Kits that provide buffs for
 							teammates / defensive potential
-							""", NamedTextColor.GRAY))
+							""", Style.style(NamedTextColor.GRAY)))
 					.build()
 	),
 	STEALTH(NamedTextColor.GRAY, new ItemStack(Material.SPYGLASS), """
@@ -62,7 +63,7 @@ public enum KitCategory {
 		this.displayName = Component.text(stylizedName, color);
 		this.display = ItemBuilder.from(display)
 				.displayName(displayName)
-				.lore(TextUtils.toLoreList(description, NamedTextColor.GRAY))
+				.lore(TextUtils.wrapString(description, Style.style(NamedTextColor.GRAY)))
 				.hide(ItemFlag.values())
 				.build();
 		this.displaySelected = ItemUtils.highlight(this.display);

@@ -23,10 +23,8 @@ import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
@@ -69,22 +67,32 @@ public class KitBeekeeper extends Kit
 	private static final ItemStack BEE_WAND = ItemBuilder.of(Material.HONEYCOMB)
 		.displayName(Component.text("Bee Commander", NamedTextColor.YELLOW))
 		.lore(
-//			Component.text("Use this to command one bee at a time", BEE_YELLOW),
-//			Component.text("Right click a block to ", TextUtils.RIGHT_CLICK_TO).append(Component.text("defend", BEE_YELLOW)),
-//			Component.text("Right click a teammate to ", TextUtils.RIGHT_CLICK_TO)
-//				.append(Component.text("give honey", NamedTextColor.LIGHT_PURPLE))
-//				.append(Component.text(" (1❤)", NamedTextColor.YELLOW)),
-//			Component.text("Right click an enemy to ", TextUtils.RIGHT_CLICK_TO).append(Component.text("pursue", NamedTextColor.RED)),
-//			Component.text("Click any bee to return to following you")
-			TextUtils.toLoreList("""
-				Use this to command one bee at a time
-				<right_click>Right click</right_click> on:
-				  <c:#c09b61>A block ⏹</c>: defend
-				  <green>A teammate 🧑</green>: give honey <absorption>(1❤)</absorption>
-				  <red>An enemy ⚔</red>: pursue
-				""", Style.style(BEE_YELLOW),
-				Placeholder.styling("right_click", TextUtils.RIGHT_CLICK_TO, TextDecoration.BOLD),
-				Placeholder.styling("absorption", TextColors.ABSORPTION_HEART)
+			/*
+			Use this to command one bee at a time
+			<right_click>Right click</right_click> on:
+			  <c:#c09b61>A block ⏹</c>: defend
+			  <green>A teammate 🧑</green>: give honey <absorption>(1❤)</absorption>
+			  <red>An enemy ⚔</red>: pursue
+			 */
+			List.of(
+				Component.text("Use this to command one bee at a time", BEE_YELLOW),
+				Component.textOfChildren(
+					Component.text("Right click", TextUtils.RIGHT_CLICK_TO, TextDecoration.BOLD),
+					Component.text(" on:")
+				),
+				Component.textOfChildren(
+					Component.text("A block ⏹", TextColor.color(0xc09b61)),
+					Component.text(": defend", BEE_YELLOW)
+				),
+				Component.textOfChildren(
+					Component.text("A teammate 🧑", NamedTextColor.GREEN),
+					Component.text(": give honey ", BEE_YELLOW),
+					Component.text("(1❤)", TextColors.ABSORPTION_HEART)
+				),
+				Component.textOfChildren(
+					Component.text("An enemy ⚔", NamedTextColor.RED),
+					Component.text(": pursue", BEE_YELLOW)
+				)
 			)
 		)
 		.build();

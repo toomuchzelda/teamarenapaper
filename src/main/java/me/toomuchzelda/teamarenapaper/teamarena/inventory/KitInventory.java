@@ -17,7 +17,6 @@ import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -170,13 +169,21 @@ public class KitInventory implements InventoryProvider {
 							Component.text(" as your default kit")
 						).color(NamedTextColor.GOLD)
 					)
-					.lore(TextUtils.toLoreList("""
-							Your current default kit: <yellow><default_kit></yellow>
-							Your default kit will be selected when:
-							* This game ends
-							* You rejoin the server
-							""", Style.style(NamedTextColor.GRAY),
-						Placeholder.unparsed("default_kit", playerInfo.defaultKit)))
+					/*
+					Your current default kit: <yellow><default_kit></yellow>
+					Your default kit will be selected when:
+					* This game ends
+					* You rejoin the server
+					 */
+					.lore(
+						Component.textOfChildren(
+							Component.text("Your current default kit: "),
+							Component.text(playerInfo.defaultKit, NamedTextColor.YELLOW)
+						).color(NamedTextColor.GRAY),
+						Component.text("Your default kit will be selected when:", NamedTextColor.GRAY),
+						Component.text("* This game ends", NamedTextColor.GRAY),
+						Component.text("* You rejoin the server", NamedTextColor.GRAY)
+					)
 					.toClickableItem(KitInventory::saveDefaultKit));
 			else
 				inventory.set(i, MenuItems.BORDER);

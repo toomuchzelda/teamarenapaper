@@ -30,6 +30,7 @@ import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.ParsingException;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
 import net.minecraft.network.protocol.game.ClientboundHurtAnimationPacket;
 import net.minecraft.world.level.block.state.BlockState;
@@ -254,10 +255,14 @@ public class CommandDebug extends CustomCommand {
 			}
 			case "darken" -> {
 				if (args.length >= 2) {
-					Component text = MiniMessage.miniMessage().deserialize(args[1]);
-					sender.sendMessage(text);
+					try {
+						Component text = MiniMessage.miniMessage().deserialize(args[1]);
+						sender.sendMessage(text);
 
-					sender.sendMessage(TextUtils.darken(text));
+						sender.sendMessage(TextUtils.darken(text));
+					} catch (ParsingException ex) {
+						throw new CommandException("Unsafe MiniMessage input: " + args[1], ex);
+					}
 				}
 			}
 			default -> {
