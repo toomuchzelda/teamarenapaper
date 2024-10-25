@@ -152,6 +152,8 @@ public class DigAndBuild extends TeamArena
 
 	private List<UpgradeSpawnState> upgradeSpawners;
 
+	private List<ItemFountainState> itemFountains;
+
 	/** If players can join after the game has started.
 	 *  Players won't be allowed to join after an Ore has been broken */
 	private boolean canJoinMidGame = true;
@@ -195,9 +197,6 @@ public class DigAndBuild extends TeamArena
 		// unimportant teams
 		if (sidebarCache.size() != teamsShown)
 			sidebar.addEntry(Component.text("+ " + (sidebarCache.size() - teamsShown) + " teams", NamedTextColor.GRAY));
-		sidebar.addEntry(Component.empty());
-		sidebar.addEntry(Component.text("$ Team Resources", NamedTextColor.YELLOW));
-		sidebar.addEntry(Component.text("  ur team broke bro ☠", NamedTextColor.GRAY));
 	}
 
 	@Override
@@ -224,10 +223,10 @@ public class DigAndBuild extends TeamArena
 			var ore = entry.getValue();
 
 			sidebarCache.put(entry.getKey(), Component.textOfChildren(
-				team.getComponentName(),
+				team.getComponentSimpleName(),
 				Component.text(": "),
 				ore.getHealth() != 0 ?
-					formatOreHealth(ore.getHealth()) :
+					ore.formatHealth() :
 					Component.text(aliveCounts.get(team) + " alive", NamedTextColor.DARK_RED)
 			));
 		}
@@ -284,6 +283,7 @@ public class DigAndBuild extends TeamArena
 		defaultBlocks = mapInfo.defaultBlocks.stream()
 			.map(mat -> ItemBuilder.of(mat)
 				.lore(blockLore)
+				.amount(MAX_BLOCK_COUNT)
 				.setPdc(ITEM_MARKER, PersistentDataType.BOOLEAN, true)
 				.build())
 			.toList();
@@ -293,7 +293,7 @@ public class DigAndBuild extends TeamArena
 
 		this.pointMarkers = new ArrayList<>();
 
-		this.teamOres = new HashMap<>();
+		this.teamOres = new LinkedHashMap<>();
 		this.chestLookup = new HashMap<>();
 		this.oreToTeamLookup = new HashMap<>();
 		this.teamUpgrades = new HashMap<>();
@@ -340,6 +340,13 @@ public class DigAndBuild extends TeamArena
 				this.pointMarkers.add(marker);
 
 				this.chestLookup.put(chestCoords.toBlock(gameWorld), team);
+			}
+		}
+
+		itemFountains = new ArrayList<>();
+		if (mapInfo.itemFountains != null) {
+			for (DigAndBuildInfo.ItemFountain itemFountain : mapInfo.itemFountains) {
+				itemFountains.add(new ItemFountainState(this, gameWorld, itemFountain));
 			}
 		}
 	}
@@ -551,23 +558,36 @@ public class DigAndBuild extends TeamArena
 			ExplosionManager.setEntityInfo(tnt,
 				new VanillaExplosionInfo(false, VanillaExplosionInfo.FireMode.NO_FIRE,
 					VanillaExplosionInfo.DEFAULT_FLOAT_VALUE, VanillaExplosionInfo.DEFAULT_FLOAT_VALUE, true,
-					broken -> {
-						Location blockLocation = broken.getLocation();
-						for (TeamLifeOres teamLifeOres : teamOres.values()) {
-							Block ore = teamLifeOres.findNearbyProtectedLifeOre(blockLocation);
-							if (ore != null) {
-								return true;
-							}
-						}
-
-						IntBoundingBox noBuildZone = findNoBuildZone(new BlockCoords(broken));
-						return noBuildZone != null;
-					}));
+					this::canTntBreak));
 		} else if (mapInfo.specialReplaceWoolWithTeamColor && block.getType() == Material.WHITE_WOOL) {
 			DyeColor dyeColor = Main.getPlayerInfo(placer).team.getDyeColour();
 			Material teamWool = Objects.requireNonNull(Material.getMaterial(dyeColor.name() + "_WOOL"));
 			block.setType(teamWool);
 		}
+	}
+
+	private boolean canTntBreak(Block broken) {
+		Location blockLocation = broken.getLocation();
+		for (TeamLifeOres teamLifeOres : teamOres.values()) {
+			if (teamLifeOres.isLifeOre(broken))
+				return true;
+			Block ore = teamLifeOres.findNearbyProtectedLifeOre(blockLocation);
+			if (ore != null) {
+				return true;
+			}
+		}
+
+		IntBoundingBox noBuildZone = findNoBuildZone(new BlockCoords(broken));
+		if (noBuildZone != null)
+			return true;
+
+
+		for (UpgradeSpawnState upgradeSpawner : upgradeSpawners) {
+			if (upgradeSpawner.isOreBlock(broken)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	@Override
@@ -863,6 +883,10 @@ public class DigAndBuild extends TeamArena
 
 		for (UpgradeSpawnState upgradeSpawner : upgradeSpawners) {
 			upgradeSpawner.tick();
+		}
+
+		for (ItemFountainState itemFountain : itemFountains) {
+			itemFountain.tick();
 		}
 
 		// Anti stall

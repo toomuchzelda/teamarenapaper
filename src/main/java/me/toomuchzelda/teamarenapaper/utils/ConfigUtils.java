@@ -45,14 +45,23 @@ public class ConfigUtils {
 
 	@Nullable
 	private static Object parseObject(Map<?, ?> yaml, Type type, String path, boolean optional) {
-		Object raw = null;
+		Object raw = yaml;
 		if (path != null) { // path can only be null for the root object which is handled below
-			raw = yaml.get(path);
-			if (raw == null) {
-				if (optional)
-					return null;
-				else
-					throw new IllegalArgumentException(path + " is not optional");
+			// recursive @ConfigPath
+			String[] split = path.split("\\.");
+			for (int i = 0; i < split.length; i++) {
+				try {
+					raw = ((Map<?, ?>) raw).get(split[i]);
+				} catch (ClassCastException ex) { // i cannot be 0 because raw is initially yaml
+					throw new IllegalArgumentException("Expected map at " +
+							String.join(".", Arrays.copyOfRange(split, 0, i - 1)) + ", got " + raw.getClass().getName());
+				}
+				if (raw == null) {
+					if (optional)
+						return null;
+					else
+						throw new IllegalArgumentException(path + " is not optional");
+				}
 			}
 		}
 		// special generic types
@@ -75,18 +84,24 @@ public class ConfigUtils {
 				if (object != null)
 					return object;
 			}
-			// custom classes
-			if (clazz.isRecord()) {
-				Map<?, ?> map;
-				if (path == null) {
-					map = yaml; // ROOT
-				} else {
-					if (!(raw instanceof Map<?, ?> innerMap))
-						throw new IllegalArgumentException("Expected map at " + path + ", got " + raw.getClass().getName());
-					else
-						map = innerMap;
-				}
+			// complex objects, map is required
+			Map<?, ?> map;
+			if (path == null) {
+				map = yaml; // ROOT
+			} else {
+				if (!(raw instanceof Map<?, ?> innerMap))
+					throw new IllegalArgumentException("Expected map at " + path + ", got " + raw.getClass().getName() + "\nContext: " + raw);
+				else
+					map = innerMap;
+			}
+			// if the class has custom deserializers
+			Object deserialized = convertCustomSimpleObject(map, clazz);
+			if (deserialized != null)
+				return deserialized;
 
+			// custom classes
+			String realPath = (path != null ? path : "ROOT") + ".";
+			if (clazz.isRecord()) {
 				RecordComponent[] components = clazz.getRecordComponents();
 				Object[] values = new Object[components.length];
 				for (int i = 0; i < components.length; i++) {
@@ -96,7 +111,7 @@ public class ConfigUtils {
 						values[i] = parseObject(map, component.getGenericType(), configName,
 							component.getAnnotation(ConfigOptional.class) != null);
 					} catch (Exception ex) {
-						throw new IllegalArgumentException((path != null ? path : "$") + configName + ":" + ex.getMessage(), ex);
+						throw new IllegalArgumentException(realPath + configName + ": " + ex.getMessage() + "\nContext: " + map, ex);
 					}
 				}
 				try {
@@ -104,19 +119,9 @@ public class ConfigUtils {
 					constructor.setAccessible(true);
 					return constructor.newInstance(values);
 				} catch (ReflectiveOperationException e) {
-					throw new RuntimeException("Failed to instantiate record " + clazz.getName() + ": " + Arrays.toString(values), e);
+					throw new RuntimeException("Failed to instantiate record " + clazz.getName() + ": " + Arrays.toString(values) + "\nContext: " + map, e);
 				}
 			} else {
-				Map<?, ?> map;
-				if (path == null) {
-					map = yaml; // ROOT
-				} else {
-					if (!(raw instanceof Map<?, ?> innerMap))
-						throw new IllegalArgumentException("Expected map at " + path + ", got " + raw.getClass().getName());
-					else
-						map = innerMap;
-				}
-
 				Field[] fields = clazz.getFields();
 				Object[] values = new Object[fields.length];
 				for (int i = 0; i < fields.length; i++) {
@@ -125,7 +130,7 @@ public class ConfigUtils {
 					try {
 						values[i] = parseObject(map, field.getGenericType(), configName, field.getAnnotation(ConfigOptional.class) != null);
 					} catch (Exception ex) {
-						throw new IllegalArgumentException((path != null ? path : "$") + configName + ":" + ex.getMessage(), ex);
+						throw new IllegalArgumentException(realPath + configName + ": " + ex.getMessage() + "\nContext: " + map, ex);
 					}
 				}
 				try {
@@ -139,9 +144,9 @@ public class ConfigUtils {
 					}
 					return instance;
 				} catch (NoSuchMethodException e) {
-					throw new RuntimeException("Empty constructor not found on " + clazz.getName(), e);
+					throw new RuntimeException("Empty constructor not found on " + clazz.getName() + "(" + realPath + ")\nContext: " + map, e);
 				} catch (ReflectiveOperationException e) {
-					throw new RuntimeException("Failed to instantiate class " + clazz.getName() + ": " + Arrays.toString(values), e);
+					throw new RuntimeException("Failed to instantiate class " + clazz.getName() + ": " + Arrays.toString(values) + " (" + realPath + ")\nContext: " + map, e);
 				}
 			}
 		} else {
@@ -189,6 +194,7 @@ public class ConfigUtils {
 		return newMap;
 	}
 
+	// only classes that accept primitives should be put here
 	@SuppressWarnings("RedundantCast")
 	private static Object convertSimpleObject(Object object, Class<?> type) {
 		// primitives
@@ -222,9 +228,7 @@ public class ConfigUtils {
 			}
 		}
 		// team arena types
-		else if (type == IntBoundingBox.class) {
-			return parseIntBoundingBox(Objects.requireNonNull((Map<?, ?>) object));
-		} else if (type == BlockCoords.class) {
+		else if (type == BlockCoords.class) {
 			return parseBlockCoords(Objects.requireNonNull((String) object));
 		}
 		// enums
@@ -236,6 +240,30 @@ public class ConfigUtils {
 		}
 		return null;
 	}
+
+	private static Object convertCustomSimpleObject(Map<?, ?> map, Class<?> clazz) {
+		// public static void deserialize(Map<?, ?> map)
+		try {
+			Method deserialize = clazz.getMethod("deserialize", Map.class);
+			deserialize.setAccessible(true);
+			return deserialize.invoke(null, map);
+		} catch (NoSuchMethodException ignored) {
+
+		} catch (ReflectiveOperationException ex) {
+            throw new RuntimeException("Failed to deserialize " + clazz.getName(), ex);
+        }
+		// public <init>(Map<?, ?> map)
+		try {
+			Constructor<?> constructor = clazz.getConstructor(Map.class);
+			constructor.setAccessible(true);
+			return constructor.newInstance(map);
+		} catch (NoSuchMethodException ignored) {
+
+		} catch (ReflectiveOperationException ex) {
+			throw new RuntimeException("Failed to deserialize " + clazz.getName(), ex);
+		}
+		return null;
+    }
 
 	private static final Pattern UPPER_CASE = Pattern.compile("[A-Z]");
 	public static String getConfigName(Field field) {

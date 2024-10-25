@@ -63,7 +63,7 @@ public class TeamLifeOres {
 				lifeOreInfo.interactionRadius() * lifeOreInfo.interactionRadius()
 			));
 
-			if (lifeOreInfo.showHologram()) {
+			if (!lifeOreInfo.hideHologram()) {
 				holograms.add(new PointMarker(lifeOreInfo.location().toLocation(world).add(0.5d, 1.5d, 0.5d), displayText,
 					this.team.getColour(), Material.ALLAY_SPAWN_EGG));
 			}

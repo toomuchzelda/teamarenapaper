@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.digandbuild;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.upgrades.HasteUpgradeInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.upgrades.HealUpgradeInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.upgrades.TrapUpgradeInfo;
@@ -8,7 +9,11 @@ import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.upgrades.UpgradeSpaw
 import me.toomuchzelda.teamarenapaper.teamarena.map.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.Nullable;
 import org.yaml.snakeyaml.Yaml;
@@ -32,28 +37,68 @@ public class DigAndBuildInfo {
 	public BlockData defaultLifeOreBlock;
 	public record LifeOreInfo(BlockCoords location,
 							  double protectionRadius, @ConfigOptional Double interactionRadius,
-							  @Nullable @ConfigOptional BlockData block, boolean showHologram) {
+							  @Nullable @ConfigOptional BlockData block, @ConfigOptional Boolean hideHologram) {
 		public LifeOreInfo {
 			if (interactionRadius == null)
 				interactionRadius = protectionRadius;
+			if (hideHologram == null)
+				hideHologram = false;
 		}
 	}
 	public record TeamInfo(@Nullable @ConfigOptional BlockCoords chest, List<LifeOreInfo> lifeOres) {}
 
 	public Map<String, TeamInfo> teams;
 
-	public List<IntBoundingBox> noBuildZones;
+	@ConfigOptional
+	public List<IntBoundingBox> noBuildZones = List.of();
 
 	@ConfigPath("team-upgrades.heal")
+	@Nullable @ConfigOptional
 	public HealUpgradeInfo healUpgrade;
 
 	@ConfigPath("team-upgrades.trap")
+	@Nullable @ConfigOptional
 	public TrapUpgradeInfo trapUpgrade;
 
 	@ConfigPath("team-upgrades.haste")
+	@Nullable @ConfigOptional
 	public HasteUpgradeInfo hasteUpgrade;
 
-	public record ItemFountain(Vector at, int interval, List<Material> sequence) {}
+	public sealed interface CustomItemReference {
+		static CustomItemReference deserialize(Map<?, ?> map) {
+			if (map.get("upgrade") instanceof String string) {
+				return new UpgradeReference(string);
+			} else {
+				return new Item(Registry.MATERIAL.get(Objects.requireNonNull(NamespacedKey.fromString((String) map.get("item")))));
+			}
+		}
+
+		ItemStack resolve(DigAndBuild game);
+
+		record Item(Material material) implements CustomItemReference {
+			@Override
+			public ItemStack resolve(DigAndBuild game) {
+				return ItemBuilder.of(material)
+					.setPdc(DigAndBuild.ITEM_MARKER, PersistentDataType.BOOLEAN, true)
+					.build();
+			}
+		}
+		record UpgradeReference(String type) implements CustomItemReference {
+			@Override
+			public ItemStack resolve(DigAndBuild game) {
+				DigAndBuildInfo mapInfo = game.getMapInfo();
+				return switch (type) {
+					case "heal" -> mapInfo.healUpgrade.makeItemStack();
+					case "trap" -> mapInfo.trapUpgrade.makeItemStack();
+					case "haste" -> mapInfo.hasteUpgrade.makeItemStack();
+					default -> throw new IllegalArgumentException("Invalid upgrade reference: " + type);
+				};
+			}
+		}
+	}
+
+	public record ItemFountain(Vector at, int interval, List<CustomItemReference> sequence) {}
+	@Nullable @ConfigOptional
 	public List<ItemFountain> itemFountains;
 
 	public List<Material> defaultTools;
@@ -241,5 +286,25 @@ public class DigAndBuildInfo {
 				info.oreCoords, info.protectionRadius, null, null, true
 			))));
 		});
+	}
+
+	@Override
+	public String toString() {
+		return "DigAndBuildInfo{" +
+			"configVersion=" + configVersion +
+			", middle=" + middle +
+			", defaultLifeOreBlock=" + defaultLifeOreBlock +
+			", teams=" + teams +
+			", noBuildZones=" + noBuildZones +
+			", healUpgrade=" + healUpgrade +
+			", trapUpgrade=" + trapUpgrade +
+			", hasteUpgrade=" + hasteUpgrade +
+			", itemFountains=" + itemFountains +
+			", defaultTools=" + defaultTools +
+			", defaultBlocks=" + defaultBlocks +
+			", specialReplaceWoolWithTeamColor=" + specialReplaceWoolWithTeamColor +
+			", specialInstantlyPrimeTnt=" + specialInstantlyPrimeTnt +
+			", specialNoBlockRegeneration=" + specialNoBlockRegeneration +
+			'}';
 	}
 }

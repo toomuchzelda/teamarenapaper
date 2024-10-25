@@ -1,5 +1,8 @@
 package me.toomuchzelda.teamarenapaper.utils;
 
+import java.util.Map;
+import java.util.Objects;
+
 /**
  * A box using integers for representation
  * Good for block coordinates.
@@ -42,6 +45,13 @@ public class IntBoundingBox
 		this.maxX = toCopy.maxX;
 		this.maxY = toCopy.maxY;
 		this.maxZ = toCopy.maxZ;
+	}
+
+	public static IntBoundingBox deserialize(Map<?, ?> map) {
+		return new IntBoundingBox(
+			ConfigUtils.parseBlockCoords((String) Objects.requireNonNull(map.get("from"), "from cannot be empty")),
+			ConfigUtils.parseBlockCoords((String) Objects.requireNonNull(map.get("to"), "to cannot be empty"))
+		);
 	}
 
 	public BlockCoords getMin() {
