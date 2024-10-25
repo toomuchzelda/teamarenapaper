@@ -63,8 +63,8 @@ public class DigAndBuildInfo {
 	public boolean specialReplaceWoolWithTeamColor;
 	@ConfigPath("__instantly-prime-tnt")
 	public boolean specialInstantlyPrimeTnt;
-	@ConfigPath("__block-regeneration-rate")
-	public int specialBlockRegenerationRate;
+	@ConfigPath("__no-block-regeneration")
+	public boolean specialNoBlockRegeneration;
 
 	@Nullable
 	public static DigAndBuildInfo parse(TeamArenaMap teamArenaMap, Path worldFolder) {
@@ -163,13 +163,12 @@ public class DigAndBuildInfo {
 			noBuildZones = new ArrayList<>();
 		}
 
-		Map<StatusOreType, DNBStatusOreInfo> statusOres;
+		Map<String, DNBStatusOreInfo> statusOres;
 		try {
 			Map<String, Map<String, Object>> oresConfig = (Map<String, Map<String, Object>>) dnbMap.get("StatusOres");
-			statusOres = new EnumMap<>(StatusOreType.class);
+			statusOres = new HashMap<>();
 			for (var entry : oresConfig.entrySet()) {
-
-				StatusOreType type = StatusOreType.valueOf(entry.getKey().toUpperCase(Locale.ENGLISH));
+				String type = entry.getKey().toUpperCase(Locale.ENGLISH);
 				Material statusOreType = Material.valueOf(((String) entry.getValue().get("OreType")).toUpperCase(Locale.ENGLISH));
 				Material itemType = Material.valueOf(((String) entry.getValue().get("Item")).toUpperCase(Locale.ENGLISH));
 				int required = (Integer) entry.getValue().get("Required");
@@ -198,11 +197,11 @@ public class DigAndBuildInfo {
 		}
 		statusOres.forEach((statusOreType, statusOreInfo) -> {
 			switch (statusOreType) {
-				case HEAL -> healUpgrade = new HealUpgradeInfo(
+				case "HEAL" -> healUpgrade = new HealUpgradeInfo(
 					statusOreInfo.itemType, null, statusOreInfo.required, null,
 					new UpgradeSpawning(statusOreInfo.hologramLocs, statusOreInfo.oreType.createBlockData(), null, statusOreInfo.coords)
 				);
-				case HASTE -> hasteUpgrade = new HasteUpgradeInfo(
+				case "HASTE" -> hasteUpgrade = new HasteUpgradeInfo(
 					statusOreInfo.itemType, null, statusOreInfo.required,
 					new UpgradeSpawning(statusOreInfo.hologramLocs, statusOreInfo.oreType.createBlockData(), null, statusOreInfo.coords)
 				);

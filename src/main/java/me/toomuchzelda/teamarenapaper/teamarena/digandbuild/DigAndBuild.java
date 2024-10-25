@@ -2,12 +2,14 @@ package me.toomuchzelda.teamarenapaper.teamarena.digandbuild;
 
 import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
+import me.toomuchzelda.teamarenapaper.explosions.VanillaExplosionInfo;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
-//import me.toomuchzelda.teamarenapaper.potioneffects.PotionEffectManager;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.upgrades.TeamUpgrades;
+import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.upgrades.UpgradeBase;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.upgrades.UpgradeSpawnState;
 import me.toomuchzelda.teamarenapaper.teamarena.map.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
@@ -15,7 +17,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy.SearchAndDestro
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
-import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
@@ -28,6 +29,7 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.TNTPrimed;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.*;
 import org.bukkit.event.inventory.InventoryAction;
@@ -42,7 +44,8 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
-import org.intellij.lang.annotations.RegExp;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -68,24 +71,39 @@ public class DigAndBuild extends TeamArena
 	public static final Style CORE_STYLE = Style.style(TextColor.color(0x63bb83), TextDecoration.BOLD);
 	public static final Component CORE = Component.text("⭐ Core", CORE_STYLE);
 
-	@RegExp
-	private static final String MINER_KEY = "%miner%"; // The player mining, or the team's short name if > 1 player
-	@RegExp
-	private static final String TEAM_KEY = "%oreTeam"; // Team
+	private record YourOreMinedContext(@NotNull Component miner) {}
+	private static final CompileSafePlaceholder<YourOreMinedContext> YOUR_ORE_MINED_TITLE = ctx -> Component.textOfChildren(
+		ctx.miner, Component.text(" is mining your "),
+		CORE, Component.text("!")
+	).color(NamedTextColor.GOLD);
+	private static final CompileSafePlaceholder<YourOreMinedContext> YOUR_ORE_MINED_CHAT = ctx -> Component.textOfChildren(
+		Component.text("Your "), CORE,
+		Component.text(" is being mined by "), ctx.miner, Component.text("!")
+	).color(NamedTextColor.GOLD);
 
-	private static final Component CANT_BUILD_HERE = Component.text("You can't build here", TextColors.ERROR_RED);
-	private static final Component CANT_BREAK_YOUR_ORE = Component.text("You can't break your Life Ore", TextColors.ERROR_RED);
+	private record TeamsOreMinedContext(@NotNull Component miner, @NotNull Component team) {}
+	private static final CompileSafePlaceholder<TeamsOreMinedContext> TEAMS_ORE_MINED_CHAT = ctx -> Component.textOfChildren(
+		ctx.miner, Component.text(" damaged "),
+		ctx.team, Component.text("'s "),
+		CORE, Component.text("!")
+	).color(NamedTextColor.GOLD);
 
-	private static final Component YOUR_ORE_MINED_TITLE = Component.text(MINER_KEY + " is mining your ore!", NamedTextColor.GOLD);
-	private static final Component YOUR_ORE_MINED_CHAT = Component.text("Your ore is being mined by " + MINER_KEY + "!", NamedTextColor.GOLD);
+	private record TeamsOreDestroyedTitleContext(@NotNull Component miner, @NotNull Component minerTeamColoredPickaxe,
+												 @NotNull Component team, @NotNull Component teamColoredCore) {}
+	private static final CompileSafePlaceholder<TeamsOreDestroyedTitleContext> TEAMS_ORE_DESTROYED_TITLE = ctx -> Component.textOfChildren(
+		ctx.miner, Component.space(), ctx.minerTeamColoredPickaxe, Component.space(), ctx.team, Component.space(), ctx.teamColoredCore
+	);
+	private record TeamsOreDestroyedChatContext(@NotNull Component team, @NotNull Component miner) {}
+	private static final CompileSafePlaceholder<TeamsOreDestroyedChatContext> TEAMS_ORE_DESTROYED_CHAT = ctx -> Component.textOfChildren(
+		ctx.team, Component.text("'s "), CORE,
+		Component.text(" has been destroyed by "), ctx.miner,
+		Component.text("! They will no longer respawn!")
+	).color(NamedTextColor.GOLD);
 
-	private static final Component TEAMS_ORE_MINED_CHAT = Component.text(MINER_KEY + " damaged " +  TEAM_KEY + "'s Ore!", NamedTextColor.GOLD);
-
-	private static final Component TEAMS_ORE_DESTROYED_TITLE = Component.text(TEAM_KEY + "'s ore destroyed by " + MINER_KEY + "!", NamedTextColor.GOLD);
-	private static final Component TEAMS_ORE_DESTROYED_CHAT = Component.text(TEAM_KEY + "'s ore has been destroyed by " + MINER_KEY +
-		"! They will no longer respawn!", NamedTextColor.GOLD);
-
-	private static final Component TEAM_DEFEATED = Component.text(TEAM_KEY + " has been defeated!", NamedTextColor.GOLD);
+	private record TeamDefeatedContext(@NotNull Component team) {}
+	private static final CompileSafePlaceholder<TeamDefeatedContext> TEAM_DEFEATED = ctx -> Component.textOfChildren(
+		ctx.team, Component.text(" has been defeated!", NamedTextColor.GOLD)
+	);
 
 	private static final Component YOU_WONT_RESPAWN = Component.text("You will no longer respawn!", TextColors.ERROR_RED);
 
@@ -118,13 +136,18 @@ public class DigAndBuild extends TeamArena
 		int blockBreakTime;
 		public BlockTimes() { this.blockPlaceTime = NO_TIME; this.blockBreakTime = NO_TIME; }
 	}
-	private final Map<Player, BlockTimes> blockTimes;
+	private final Map<Player, @Nullable BlockTimes> blockTimes;
+
+	private DigAndBuildInfo mapInfo;
 
 	private Map<TeamArenaTeam, TeamLifeOres> teamOres;
+	private Map<Block, TeamArenaTeam> oreToTeamLookup;
 	private Map<Block, TeamArenaTeam> chestLookup;
 
 	private List<PointMarker> pointMarkers;
 
+	private List<UpgradeBase> upgrades;
+	// upgrade dispatcher and state manager for individual teams
 	private Map<TeamArenaTeam, TeamUpgrades> teamUpgrades;
 
 	private List<UpgradeSpawnState> upgradeSpawners;
@@ -245,6 +268,7 @@ public class DigAndBuild extends TeamArena
 		super.loadConfig(map);
 
 		DigAndBuildInfo mapInfo = map.getDnbInfo();
+		this.mapInfo = mapInfo;
 
 		this.middle = mapInfo.middle;
 		this.spawnPos = mapInfo.middle.toLocation(this.gameWorld);
@@ -253,7 +277,6 @@ public class DigAndBuild extends TeamArena
 		defaultTools = mapInfo.defaultTools.stream()
 			.map(mat -> ItemBuilder.of(mat)
 				.lore(toolLore)
-				.setPdc(ITEM_MARKER, PersistentDataType.BOOLEAN, true)
 				.build())
 			.toList();
 
@@ -272,15 +295,26 @@ public class DigAndBuild extends TeamArena
 
 		this.teamOres = new HashMap<>();
 		this.chestLookup = new HashMap<>();
+		this.oreToTeamLookup = new HashMap<>();
 		this.teamUpgrades = new HashMap<>();
 
+		this.upgrades = new ArrayList<>();
 		this.upgradeSpawners = new ArrayList<>();
 
-		if (mapInfo.healUpgrade != null && mapInfo.healUpgrade.spawns() != null) {
-			upgradeSpawners.add(new UpgradeSpawnState(gameWorld, mapInfo.healUpgrade.makeItemStack(), mapInfo.healUpgrade.spawns()));
+		if (mapInfo.healUpgrade != null) {
+			upgrades.add(mapInfo.healUpgrade);
+			if (mapInfo.healUpgrade.spawns() != null) {
+				upgradeSpawners.add(new UpgradeSpawnState(gameWorld, mapInfo.healUpgrade.makeItemStack(), mapInfo.healUpgrade.spawns()));
+			}
 		}
-		if (mapInfo.hasteUpgrade != null && mapInfo.hasteUpgrade.spawns() != null) {
-			upgradeSpawners.add(new UpgradeSpawnState(gameWorld, mapInfo.hasteUpgrade.makeItemStack(), mapInfo.hasteUpgrade.spawns()));
+		if (mapInfo.hasteUpgrade != null) {
+			upgrades.add(mapInfo.hasteUpgrade);
+			if (mapInfo.hasteUpgrade.spawns() != null) {
+				upgradeSpawners.add(new UpgradeSpawnState(gameWorld, mapInfo.hasteUpgrade.makeItemStack(), mapInfo.hasteUpgrade.spawns()));
+			}
+		}
+		if (mapInfo.trapUpgrade != null) {
+			upgrades.add(mapInfo.trapUpgrade);
 		}
 
 		BlockData defaultLifeOreBlock = mapInfo.defaultLifeOreBlock != null ? mapInfo.defaultLifeOreBlock : Material.BEACON.createBlockData();
@@ -291,6 +325,9 @@ public class DigAndBuild extends TeamArena
 
 			TeamLifeOres lifeOre = new TeamLifeOres(gameWorld, team, defaultLifeOreBlock, teamInfo.lifeOres());
 			this.teamOres.put(team, lifeOre);
+			for (Block block : lifeOre.getLifeOres().keySet()) {
+				oreToTeamLookup.put(block, team);
+			}
 
 			TeamUpgrades upgrades = new TeamUpgrades(this, team, mapInfo);
 			this.teamUpgrades.put(team, upgrades);
@@ -305,6 +342,26 @@ public class DigAndBuild extends TeamArena
 				this.chestLookup.put(chestCoords.toBlock(gameWorld), team);
 			}
 		}
+	}
+
+	public boolean isUpgradeItem(ItemStack stack) {
+		return getUpgradeFromItem(stack) != null;
+	}
+
+	@Contract("null -> null")
+	public UpgradeBase getUpgradeFromItem(ItemStack stack) {
+		if (stack == null)
+			return null;
+		Material material = stack.getType();
+		for (UpgradeBase upgrade : upgrades) {
+			if (upgrade.item() == material)
+				return upgrade;
+		}
+		return null;
+	}
+
+	public DigAndBuildInfo getMapInfo() {
+		return mapInfo;
 	}
 
 	public TeamLifeOres getTeamLifeOre(TeamArenaTeam team) {
@@ -330,8 +387,14 @@ public class DigAndBuild extends TeamArena
 	public boolean canBuildAt(Block block) {
 		if (!super.canBuildAt(block))
 			return false;
+		Location blockLocation = block.getLocation();
+		for (TeamLifeOres teamLifeOres : teamOres.values()) {
+			if (teamLifeOres.findNearbyProtectedLifeOre(blockLocation) != null)
+				return false;
+		}
+
 		BlockCoords coords = new BlockCoords(block);
-		return findOreInRange(block.getLocation()) == null && findNoBuildZone(coords) == null;
+		return findNoBuildZone(coords) == null;
 	}
 
 	/**
@@ -349,18 +412,18 @@ public class DigAndBuild extends TeamArena
 		if (isDead(breaker))
 			return true;
 
+		Location blockLocation = block.getLocation();
 		for (TeamLifeOres teamLifeOres : teamOres.values()) {
 			if (teamLifeOres.isLifeOre(block)) {
 				event.setCancelled(true);
 				handleLifeOreBreak(event, block, teamLifeOres, breaker);
 				return true;
 			}
-		}
-
-		for (UpgradeSpawnState upgradeSpawner : upgradeSpawners) {
-			if (upgradeSpawner.isOreBlock(block)) {
+			Block ore = teamLifeOres.findNearbyProtectedLifeOre(blockLocation);
+			if (ore != null) {
 				event.setCancelled(true);
-				upgradeSpawner.onBreak(block, breaker);
+				teamLifeOres.playDenyBuildEffect(breaker, block, ore, true);
+				return true;
 			}
 		}
 
@@ -371,11 +434,12 @@ public class DigAndBuild extends TeamArena
 			return true;
 		}
 
-		TeamLifeOres oreInRange = findOreInRange(block.getLocation());
-		if (oreInRange != null) {
-			event.setCancelled(true);
-			playNoBuildEffect(block, event.getPlayer(), oreInRange, false);
-			return true;
+		for (UpgradeSpawnState upgradeSpawner : upgradeSpawners) {
+			if (upgradeSpawner.isOreBlock(block)) {
+				event.setCancelled(true);
+				upgradeSpawner.onBreak(block, breaker);
+				return true;
+			}
 		}
 
 		// Give them an extra block
@@ -396,7 +460,7 @@ public class DigAndBuild extends TeamArena
 			// no-ops
 			case null -> {}
 			case ALREADY_DEAD -> {}
-			case DAMAGED_BY_TEAMMATE -> playNoBuildEffect(block, breaker, ore, true);
+			case DAMAGED_BY_TEAMMATE -> ore.playDenyBuildEffect(breaker, block, block, true);
 			case DAMAGED_BY_ENEMY -> {
 				Location loc = block.getLocation();
 				for (Player p : Bukkit.getOnlinePlayers()) {
@@ -464,16 +528,46 @@ public class DigAndBuild extends TeamArena
 			return;
 		}
 
-		TeamLifeOres oreInRange = findOreInRange(block.getLocation());
-		if (oreInRange != null) {
-			event.setCancelled(true);
-			playNoBuildEffect(block, placer, oreInRange, false);
-			return;
+		Location location = block.getLocation();
+		for (TeamLifeOres teamLifeOres : teamOres.values()) {
+			Block ore = teamLifeOres.findNearbyProtectedLifeOre(location);
+			if (ore != null) {
+				event.setCancelled(true);
+				teamLifeOres.playDenyBuildEffect(placer, block, ore, false);
+				return;
+			}
 		}
 
 		// Event not cancelled if reached here
 		// Set the timer for next block regen
 		this.blockTimes.computeIfAbsent(placer, player -> new BlockTimes()).blockPlaceTime = TeamArena.getGameTick();
+
+		if (mapInfo.specialInstantlyPrimeTnt && block.getType() == Material.TNT) {
+			block.setType(Material.AIR);
+			var tnt = gameWorld.spawn(block.getLocation().add(0.5, 0, 0.5), TNTPrimed.class, tntPrimed -> {
+				tntPrimed.setFuseTicks(80);
+				tntPrimed.setSource(placer);
+			});
+			ExplosionManager.setEntityInfo(tnt,
+				new VanillaExplosionInfo(false, VanillaExplosionInfo.FireMode.NO_FIRE,
+					VanillaExplosionInfo.DEFAULT_FLOAT_VALUE, VanillaExplosionInfo.DEFAULT_FLOAT_VALUE, true,
+					broken -> {
+						Location blockLocation = broken.getLocation();
+						for (TeamLifeOres teamLifeOres : teamOres.values()) {
+							Block ore = teamLifeOres.findNearbyProtectedLifeOre(blockLocation);
+							if (ore != null) {
+								return true;
+							}
+						}
+
+						IntBoundingBox noBuildZone = findNoBuildZone(new BlockCoords(broken));
+						return noBuildZone != null;
+					}));
+		} else if (mapInfo.specialReplaceWoolWithTeamColor && block.getType() == Material.WHITE_WOOL) {
+			DyeColor dyeColor = Main.getPlayerInfo(placer).team.getDyeColour();
+			Material teamWool = Objects.requireNonNull(Material.getMaterial(dyeColor.name() + "_WOOL"));
+			block.setType(teamWool);
+		}
 	}
 
 	@Override
@@ -548,19 +642,12 @@ public class DigAndBuild extends TeamArena
 	private void announceOreDamaged(TeamLifeOres ore) {
 		final Component oreMinerShort = ore.getMinerComponent(true);
 		final Component oreMinerLong = ore.getMinerComponent(false);
+		Component teamName = ore.getTeam().getComponentSimpleName();
 
-		TextReplacementConfig minerShortReplacement =
-			TextReplacementConfig.builder().match(MINER_KEY).replacement(oreMinerShort).build();
-		TextReplacementConfig minerLongReplacement =
-			TextReplacementConfig.builder().match(MINER_KEY).replacement(oreMinerLong).build();
+		Component yourTitle = YOUR_ORE_MINED_TITLE.apply(new YourOreMinedContext(oreMinerShort));
+		Component yourChat = YOUR_ORE_MINED_CHAT.apply(new YourOreMinedContext(oreMinerLong));
 
-		TextReplacementConfig teamReplacement =
-			TextReplacementConfig.builder().match(TEAM_KEY).replacement(ore.owningTeam.getComponentName()).build();
-
-		Component yourTitle = YOUR_ORE_MINED_TITLE.replaceText(minerShortReplacement);
-		Component yourChat = YOUR_ORE_MINED_CHAT.replaceText(minerLongReplacement);
-
-		Component teamTitle = TEAMS_ORE_MINED_CHAT.replaceText(teamReplacement).replaceText(minerLongReplacement);
+		Component teamTitle = TEAMS_ORE_MINED_CHAT.apply(new TeamsOreMinedContext(oreMinerLong, teamName));
 
 		var iter = Main.getPlayersIter();
 		while (iter.hasNext()) {
@@ -568,7 +655,7 @@ public class DigAndBuild extends TeamArena
 			final Player p = entry.getKey();
 			final PlayerInfo pinfo = entry.getValue();
 
-			if (pinfo.team == ore.owningTeam) {
+			if (pinfo.team == ore.getTeam()) {
 				if (pinfo.getPreference(Preferences.RECEIVE_GAME_TITLES))
 					PlayerUtils.sendTitle(p, Component.empty(), yourTitle, 1, 10, 10);
 
@@ -585,17 +672,13 @@ public class DigAndBuild extends TeamArena
 
 	private void announceOreKilled(TeamLifeOres ore) {
 		final Component oreDestroyer = ore.getMinerComponent(false);
+		Component teamName = ore.getTeam().getComponentSimpleName();
 
-		TextReplacementConfig minerReplacementLong =
-			TextReplacementConfig.builder().match(MINER_KEY).replacement(oreDestroyer).build();
-		TextReplacementConfig minerReplacementShort =
-			TextReplacementConfig.builder().match(MINER_KEY).replacement(ore.getMinerComponent(true)).build();
-
-		TextReplacementConfig teamReplacement =
-			TextReplacementConfig.builder().match(TEAM_KEY).replacement(ore.owningTeam.getComponentName()).build();
-
-		final Component title = TEAMS_ORE_DESTROYED_TITLE.replaceText(teamReplacement).replaceText(minerReplacementShort);
-		final Component chat = TEAMS_ORE_DESTROYED_CHAT.replaceText(teamReplacement).replaceText(minerReplacementLong);
+		final Component title = TEAMS_ORE_DESTROYED_TITLE.apply(new TeamsOreDestroyedTitleContext(
+			oreDestroyer, Component.text("⛏️", oreDestroyer.color()),
+			teamName, ore.getTeam().colourWord("⭐")
+		));
+		final Component chat = TEAMS_ORE_DESTROYED_CHAT.apply(new TeamsOreDestroyedChatContext(teamName, oreDestroyer));
 
 		Bukkit.broadcast(chat);
 		PlayerUtils.sendOptionalTitle(Component.empty(), title, 1, 20, 10);
@@ -610,9 +693,10 @@ public class DigAndBuild extends TeamArena
 			}
 		}, 5);
 
-		this.gameWorld.strikeLightningEffect(ore.coordsAsLoc.clone().add(0.5, 0, 0.5));
+		this.gameWorld.strikeLightningEffect(ore.getLifeOres().keySet().iterator().next().getLocation().add(0.5, 0, 0.5));
 	}
 
+	private static final Component CANT_BUILD_HERE = Component.text("You can't build here", TextColors.ERROR_RED);
 	private void playNoBuildEffect(Block block, Player player, IntBoundingBox noBuildZone) {
 		Location loc = block.getLocation().add(0.5d, 0.5d, 0.5d);
 		player.spawnParticle(Particle.ANGRY_VILLAGER, loc, 2);
@@ -646,42 +730,6 @@ public class DigAndBuild extends TeamArena
 		player.sendMessage(CANT_BUILD_HERE);
 	}
 
-	private void playNoBuildEffect(Block block, Player player, TeamLifeOres source, boolean isBreaking) {
-		Location loc = block.getLocation().add(0.5d, 0.5d, 0.5d).subtract(player.getLocation().getDirection());
-		if (isBreaking) {
-			player.spawnParticle(Particle.BLOCK_MARKER, loc, 1, Material.BARRIER.createBlockData());
-		} else {
-			Particle.DustOptions data = new Particle.DustOptions(source.getTeam().getColour(), 1);
-			double radius = Math.sqrt(source.protectionRadiusSqr);
-			double sample = radius / 5;
-			var block = source.block;
-			double centerX = block.getX() + 0.5;
-			double centerY = block.getY() + 0.5;
-			double centerZ = block.getZ() + 0.5;
-			double minY = centerY - radius;
-			double maxY = centerY + radius;
-			// bottom and top
-			player.spawnParticle(Particle.DUST, centerX, minY, centerZ, 0, data);
-			player.spawnParticle(Particle.DUST, centerX, maxY, centerZ, 0, data);
-			for (int j = 1; j <= 5; j++) {
-				double y1 = minY + sample * j;
-				double y2 = maxY - sample * j;
-				double a = Math.acos((centerY - y1) / radius);
-				double effectiveRadius = radius * Math.sin(a);
-				for (int i = 0; i < 10; i++) {
-					double b = (360 / 10d) * i;
-					double x = centerX + effectiveRadius * Math.cos(b);
-					double z = centerZ + effectiveRadius * Math.sin(b);
-					player.spawnParticle(Particle.DUST, x, y1, z, 0, data);
-					if (j != 5)
-						player.spawnParticle(Particle.DUST, x, y2, z, 0, data);
-				}
-			}
-		}
-		player.playSound(loc, Sound.ENTITY_ITEM_BREAK, SoundCategory.BLOCKS, 0.5f, 2f);
-		player.sendMessage(isBreaking ? CANT_BREAK_YOUR_ORE : CANT_BUILD_HERE);
-	}
-
 	/** Add players to ore current miners when they start digging it */
 	@Override
 	public void onBlockDig(BlockDamageEvent event) {
@@ -692,23 +740,25 @@ public class DigAndBuild extends TeamArena
 		Player digger = event.getPlayer();
 		if (this.isDead(digger)) return;
 
-		BlockCoords coords = new BlockCoords(event.getBlock());
-		TeamLifeOres ore = this.oreLookup.get(coords);
+		TeamArenaTeam ore = this.oreToTeamLookup.get(event.getBlock());
 
 		if (ore != null) {
-			ore.addMiner(digger);
+			teamOres.get(ore).addMiner(digger);
 		}
 	}
 
 	@Override
 	public void onBlockStopDig(BlockDamageAbortEvent event) {
 		super.onBlockStopDig(event);
+		if (this.gameState != GameState.LIVE) return;
 
-		BlockCoords coords = new BlockCoords(event.getBlock());
-		TeamLifeOres ore = this.oreLookup.get(coords);
+		Player digger = event.getPlayer();
+		if (this.isDead(digger)) return;
+
+		TeamArenaTeam ore = this.oreToTeamLookup.get(event.getBlock());
 
 		if (ore != null) {
-			ore.removeMiner(event.getPlayer());
+			teamOres.get(ore).removeMiner(digger);
 		}
 	}
 
@@ -732,7 +782,7 @@ public class DigAndBuild extends TeamArena
 	public void onDropItem(PlayerDropItemEvent event) {
 		super.onDropItem(event);
 
-		if (this.getStatusOreByItem(event.getItemDrop().getItemStack()) != null) {
+		if (isUpgradeItem(event.getItemDrop().getItemStack())) {
 			event.setCancelled(false);
 		}
 	}
@@ -742,7 +792,7 @@ public class DigAndBuild extends TeamArena
 		super.onAttemptPickupItem(event);
 
 		if (!this.isDead(event.getPlayer()) &&
-			this.getStatusOreByItem(event.getItem().getItemStack()) != null) {
+			isUpgradeItem(event.getItem().getItemStack())) {
 
 			event.setCancelled(false);
 		}
@@ -755,8 +805,7 @@ public class DigAndBuild extends TeamArena
 			this.blockTimes.remove(playerVictim);
 
 			// Drop half of their status ores
-			List<ItemStack> items = ItemUtils.getItemsInInventory(itemStack ->
-				this.getStatusOreByItem(itemStack) != null, playerVictim.getInventory());
+			List<ItemStack> items = ItemUtils.getItemsInInventory(this::isUpgradeItem, playerVictim.getInventory());
 			for (ItemStack statusOreItem : items) {
 				int halfQty = (statusOreItem.getAmount() / 2) + MathUtils.randomMax(1);
 				if (halfQty != 0) {
@@ -804,9 +853,17 @@ public class DigAndBuild extends TeamArena
 	public void liveTick() {
 		super.liveTick();
 
-		this.statusOreLookup.forEach((blockCoords, statusOre) -> {
-			statusOre.tick();
-		});
+		for (TeamLifeOres lifeOres : teamOres.values()) {
+			lifeOres.tick();
+		}
+
+		for (TeamUpgrades teamUpgrades : teamUpgrades.values()) {
+			teamUpgrades.tick();
+		}
+
+		for (UpgradeSpawnState upgradeSpawner : upgradeSpawners) {
+			upgradeSpawner.tick();
+		}
 
 		// Anti stall
 		if (this.effTime != EFF_ACTIVE && TeamArena.getGameTick() - this.effTime >= 0) { // Activate
@@ -832,6 +889,8 @@ public class DigAndBuild extends TeamArena
 	}
 
 	private void doBlockCooldowns() {
+		if (mapInfo.specialNoBlockRegeneration) return;
+
 		final int currentTick = TeamArena.getGameTick();
 		// Block stack regeneration
 		for (Player player : this.players) {
@@ -842,11 +901,9 @@ public class DigAndBuild extends TeamArena
 				final PlayerInventory inventory = player.getInventory();
 				final int totalCount = ItemUtils.getItemCount(inventory, blockStack);
 				if (totalCount != MAX_BLOCK_COUNT) {
-					BlockTimes times = this.blockTimes.get(player); // Should never be null
-					if (times == null) {
-						Main.logger().warning(player.getName() + " has " + totalCount + " blocks and doesn't have lastPlaceTime cooldown");
+					BlockTimes times = this.blockTimes.get(player);
+					if (times == null)
 						continue;
-					}
 
 					if (!incremented && times.blockPlaceTime != BlockTimes.NO_TIME &&
 						currentTick - times.blockPlaceTime >= TICKS_PER_GAIN_BLOCK && totalCount < MAX_BLOCK_COUNT) {
@@ -892,10 +949,9 @@ public class DigAndBuild extends TeamArena
 		for (Player p : Bukkit.getOnlinePlayers()) {
 			if (this.isDead(p)) continue;
 
-			for (int i = 0; i < this.defaultTools.length; i++) {
-				final int index = i; // epic java
+			for (ItemStack defaultTool : defaultTools) {
 				List<ItemStack> tool = ItemUtils.getItemsInInventory(
-					itemStack -> this.defaultTools[index].isSimilar(itemStack),
+					defaultTool::isSimilar,
 					p.getInventory());
 
 				tool.forEach(toolStack -> {
@@ -947,8 +1003,7 @@ public class DigAndBuild extends TeamArena
 				else if (aliveTeamMemberCount == 0) {
 					team.score = TEAM_DEAD_SCORE;
 
-					TextReplacementConfig config = TextReplacementConfig.builder().match(TEAM_KEY).replacement(team.getComponentName()).build();
-					Component message = TEAM_DEFEATED.replaceText(config);
+					Component message = TEAM_DEFEATED.apply(new TeamDefeatedContext(team.getComponentName()));
 					Bukkit.broadcast(message);
 					PlayerUtils.sendOptionalTitle(Component.empty(), message, 1, 20, 10);
 				}
@@ -967,25 +1022,12 @@ public class DigAndBuild extends TeamArena
 		return this.canJoinMidGame;
 	}
 
-	/**
-	 * @return The LifeOre that loc is in range of, or null if none.
-	 */
-	private TeamLifeOres findOreInRange(Location loc) {
-		for (TeamLifeOres ore : teamOres.values()) {
-			if (loc.distanceSquared(ore.coordsAsLoc) <= ore.protectionRadiusSqr) {
-				return ore;
-			}
-		}
-
-		return null;
-	}
-
 	@Override
 	public void giveKitAndGameItems(Player player, PlayerInfo pinfo, boolean clear) {
 		super.giveKitAndGameItems(player, pinfo, true);
 
-		player.getInventory().addItem(this.defaultTools);
-		player.getInventory().addItem(this.defaultBlocks);
+		player.getInventory().addItem(defaultTools.toArray(new ItemStack[0]));
+		player.getInventory().addItem(defaultBlocks.toArray(new ItemStack[0]));
 	}
 
 	@Override
@@ -998,8 +1040,9 @@ public class DigAndBuild extends TeamArena
 
 	@Override
 	public boolean isVandalisableBlock(Block block) {
-		BlockCoords coords = new BlockCoords(block);
-		if (this.oreLookup.containsKey(coords) || this.statusOreLookup.containsKey(coords) || this.chestLookup.containsKey(coords)) {
+		if (this.oreToTeamLookup.containsKey(block) ||
+			upgradeSpawners.stream().anyMatch(spawner -> spawner.isOreBlock(block)) ||
+			this.chestLookup.containsKey(block)) {
 			return false;
 		}
 		else return super.isVandalisableBlock(block);

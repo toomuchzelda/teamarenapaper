@@ -5,8 +5,7 @@ import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.ExplosionPrimeEvent;
 
 import javax.annotation.Nullable;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.function.Predicate;
 
 /**
  * Used to modify Bukkit explosion events for an entity, using the vanilla explosion the event caused
@@ -20,7 +19,7 @@ public class VanillaExplosionInfo extends EntityExplosionInfo
 	private final float radius;
 	private final float yield;
 	private final boolean breakBlocks;
-	private final Set<Block> exemptions;
+	private final Predicate<Block> exemptions;
 
 	/**
 	 * boolean cancel: cancel the event. No other parameters will be considered if true
@@ -32,7 +31,7 @@ public class VanillaExplosionInfo extends EntityExplosionInfo
 	 * provided by the Event Handler)
 	 */
 	public VanillaExplosionInfo(boolean cancel, FireMode fireMode, float radius, float yield, boolean breakBlocks,
-							   @Nullable HashSet<Block> exemptions) {
+							   @Nullable Predicate<Block> exemptions) {
 		super();
 
 		this.cancel = cancel;
@@ -69,8 +68,7 @@ public class VanillaExplosionInfo extends EntityExplosionInfo
 
 		boolean breakBlocks = this.breakBlocks;
 		if(this.exemptions != null) {
-			Set<Block> exemptions = this.exemptions;
-			event.blockList().removeIf(block -> exemptions.contains(block) == breakBlocks);
+			event.blockList().removeIf(exemptions);
 		}
 		else if(!breakBlocks) {
 			event.blockList().clear();

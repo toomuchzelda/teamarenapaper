@@ -11,53 +11,22 @@ import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
-import org.jetbrains.annotations.Contract;
-import org.jetbrains.annotations.Nullable;
 
 public class TeamUpgrades {
 	private final DigAndBuild game;
 
 	private final TeamArenaTeam team;
 
-	@Nullable
-	private final HealUpgradeInfo healUpgrade;
-	@Nullable
-	private final HasteUpgradeInfo hasteUpgrade;
-	@Nullable
-	private final TrapUpgradeInfo trapUpgrade;
-
 	private int traps = 0;
 
 	public TeamUpgrades(DigAndBuild game, TeamArenaTeam team, DigAndBuildInfo dnbInfo) {
 		this.game = game;
 		this.team = team;
-		this.healUpgrade = dnbInfo.healUpgrade;
-		this.hasteUpgrade = dnbInfo.hasteUpgrade;
-		this.trapUpgrade = dnbInfo.trapUpgrade;
-	}
-
-	public boolean isUpgradeItem(ItemStack stack) {
-		return getUpgrade(stack) != null;
-	}
-
-	@Contract("null -> null")
-	public UpgradeBase getUpgrade(ItemStack stack) {
-		if (stack == null)
-			return null;
-		Material material = stack.getType();
-		if (healUpgrade != null && healUpgrade.item() == material)
-			return healUpgrade;
-		if (hasteUpgrade != null && hasteUpgrade.item() == material)
-			return hasteUpgrade;
-		if (trapUpgrade != null && trapUpgrade.item() == material)
-			return trapUpgrade;
-		return null;
 	}
 
 	/**
@@ -71,7 +40,7 @@ public class TeamUpgrades {
 		if (info.team != team)
 			return false;
 		ItemStack item = e.getItem();
-		UpgradeBase upgrade = getUpgrade(item);
+		UpgradeBase upgrade = game.getUpgradeFromItem(item);
 		if (upgrade == null)
 			return false;
 		// check item amount
@@ -130,17 +99,5 @@ public class TeamUpgrades {
 	}
 
 	public void tick() {
-	}
-
-	public @Nullable TrapUpgradeInfo getTrapUpgrade() {
-		return trapUpgrade;
-	}
-
-	public @Nullable HasteUpgradeInfo getHasteUpgrade() {
-		return hasteUpgrade;
-	}
-
-	public @Nullable HealUpgradeInfo getHealUpgrade() {
-		return healUpgrade;
 	}
 }

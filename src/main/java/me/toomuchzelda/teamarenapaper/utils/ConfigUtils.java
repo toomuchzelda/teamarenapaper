@@ -4,7 +4,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.*;
 import org.bukkit.block.data.BlockData;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -32,10 +31,10 @@ public class ConfigUtils {
 		);
 	}
 
-	public static IntBoundingBox parseIntBoundingBox(@NotNull ConfigurationSection yaml) {
+	public static IntBoundingBox parseIntBoundingBox(@NotNull Map<?, ?> yaml) {
 		return new IntBoundingBox(
-			parseBlockCoords(Objects.requireNonNull(yaml.getString("from"), "from cannot be empty")),
-			parseBlockCoords(Objects.requireNonNull(yaml.getString("to"), "to cannot be empty"))
+			parseBlockCoords((String) Objects.requireNonNull(yaml.get("from"), "from cannot be empty")),
+			parseBlockCoords((String) Objects.requireNonNull(yaml.get("to"), "to cannot be empty"))
 		);
 	}
 
@@ -78,16 +77,26 @@ public class ConfigUtils {
 			}
 			// custom classes
 			if (clazz.isRecord()) {
+				Map<?, ?> map;
+				if (path == null) {
+					map = yaml; // ROOT
+				} else {
+					if (!(raw instanceof Map<?, ?> innerMap))
+						throw new IllegalArgumentException("Expected map at " + path + ", got " + raw.getClass().getName());
+					else
+						map = innerMap;
+				}
+
 				RecordComponent[] components = clazz.getRecordComponents();
 				Object[] values = new Object[components.length];
 				for (int i = 0; i < components.length; i++) {
 					RecordComponent component = components[i];
-					String configName = getConfigName(component, path);
+					String configName = getConfigName(component);
 					try {
-						values[i] = parseObject(yaml, component.getGenericType(), configName,
+						values[i] = parseObject(map, component.getGenericType(), configName,
 							component.getAnnotation(ConfigOptional.class) != null);
 					} catch (Exception ex) {
-						throw new IllegalArgumentException(path, ex);
+						throw new IllegalArgumentException((path != null ? path : "$") + configName + ":" + ex.getMessage(), ex);
 					}
 				}
 				try {
@@ -98,15 +107,25 @@ public class ConfigUtils {
 					throw new RuntimeException("Failed to instantiate record " + clazz.getName() + ": " + Arrays.toString(values), e);
 				}
 			} else {
+				Map<?, ?> map;
+				if (path == null) {
+					map = yaml; // ROOT
+				} else {
+					if (!(raw instanceof Map<?, ?> innerMap))
+						throw new IllegalArgumentException("Expected map at " + path + ", got " + raw.getClass().getName());
+					else
+						map = innerMap;
+				}
+
 				Field[] fields = clazz.getFields();
 				Object[] values = new Object[fields.length];
 				for (int i = 0; i < fields.length; i++) {
 					Field field = fields[i];
-					String configName = getConfigName(field, path);
+					String configName = getConfigName(field);
 					try {
-						values[i] = parseObject(yaml, field.getGenericType(), configName, field.getAnnotation(ConfigOptional.class) != null);
+						values[i] = parseObject(map, field.getGenericType(), configName, field.getAnnotation(ConfigOptional.class) != null);
 					} catch (Exception ex) {
-						throw new IllegalArgumentException(path, ex);
+						throw new IllegalArgumentException((path != null ? path : "$") + configName + ":" + ex.getMessage(), ex);
 					}
 				}
 				try {
@@ -204,7 +223,7 @@ public class ConfigUtils {
 		}
 		// team arena types
 		else if (type == IntBoundingBox.class) {
-			return parseIntBoundingBox(Objects.requireNonNull((ConfigurationSection) object));
+			return parseIntBoundingBox(Objects.requireNonNull((Map<?, ?>) object));
 		} else if (type == BlockCoords.class) {
 			return parseBlockCoords(Objects.requireNonNull((String) object));
 		}
@@ -219,22 +238,22 @@ public class ConfigUtils {
 	}
 
 	private static final Pattern UPPER_CASE = Pattern.compile("[A-Z]");
-	public static String getConfigName(Field field, @Nullable String path) {
+	public static String getConfigName(Field field) {
 		String ownPath;
 		if (field.getAnnotation(ConfigPath.class) instanceof ConfigPath configPath) {
 			ownPath = configPath.value();
 		} else {
 			ownPath = UPPER_CASE.matcher(field.getName()).replaceAll(match -> "-" + match.group().toLowerCase(Locale.ENGLISH));
 		}
-		return path != null ? path + "." + ownPath : ownPath;
+		return ownPath;
 	}
-	public static String getConfigName(RecordComponent field, @Nullable String path) {
+	public static String getConfigName(RecordComponent field) {
 		String ownPath;
 		if (field.getAnnotation(ConfigPath.class) instanceof ConfigPath configPath) {
 			ownPath = configPath.value();
 		} else {
 			ownPath = UPPER_CASE.matcher(field.getName()).replaceAll(match -> "-" + match.group().toLowerCase(Locale.ENGLISH));
 		}
-		return path != null ? path + "." + ownPath : ownPath;
+		return ownPath;
 	}
 }

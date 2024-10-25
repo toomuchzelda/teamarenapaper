@@ -33,19 +33,19 @@ public class TeamLifeOres {
 		}
 
 		public boolean isInteractable(Location ore, Location target) {
-			return ore.distanceSquared(target) < interactionDistanceSquared;
+			return ore.equals(target) || ore.distanceSquared(target) < interactionDistanceSquared;
 		}
 	}
 	private final Map<Block, LifeOreProperties> oreIntances;
 
-	private final TeamArenaTeam owningTeam;
+	private final TeamArenaTeam team;
 	private int health;
 
 	private final List<PointMarker> holograms;
 	private final Set<Player> currentMiners;
 
-	TeamLifeOres(World world, TeamArenaTeam owningTeam, BlockData defaultBlock, List<DigAndBuildInfo.LifeOreInfo> lifeOreInfos) {
-		this.owningTeam = owningTeam;
+	TeamLifeOres(World world, TeamArenaTeam team, BlockData defaultBlock, List<DigAndBuildInfo.LifeOreInfo> lifeOreInfos) {
+		this.team = team;
 
 		this.health = STARTING_HEALTH;
 
@@ -61,11 +61,11 @@ public class TeamLifeOres {
 			oreIntances.put(block, new LifeOreProperties(
 				lifeOreInfo.protectionRadius() * lifeOreInfo.protectionRadius(),
 				lifeOreInfo.interactionRadius() * lifeOreInfo.interactionRadius()
-				));
+			));
 
 			if (lifeOreInfo.showHologram()) {
 				holograms.add(new PointMarker(lifeOreInfo.location().toLocation(world).add(0.5d, 1.5d, 0.5d), displayText,
-					this.owningTeam.getColour(), Material.ALLAY_SPAWN_EGG));
+					this.team.getColour(), Material.ALLAY_SPAWN_EGG));
 			}
 		}
 		this.oreIntances = Map.copyOf(oreIntances); // returns an optimized implementation for size = 1
@@ -78,7 +78,7 @@ public class TeamLifeOres {
 	}
 
 	void addMiner(Player miner) {
-		if (Main.getPlayerInfo(miner).team != this.owningTeam)
+		if (Main.getPlayerInfo(miner).team != this.team)
 			this.currentMiners.add(miner);
 	}
 
@@ -95,7 +95,7 @@ public class TeamLifeOres {
 	}
 
 	public TeamArenaTeam getTeam() {
-		return owningTeam;
+		return team;
 	}
 
 	public Map<Block, LifeOreProperties> getLifeOres() {
@@ -146,8 +146,8 @@ public class TeamLifeOres {
 
 	private Component getTextDisplayComponent() {
 		return Component.textOfChildren(
-			owningTeam.getComponentName(),
-			Component.text("'s Core", owningTeam.getRGBTextColor()),
+			team.getComponentName(),
+			Component.text("'s Core", team.getRGBTextColor()),
 			Component.newline(),
 			formatHealth()
 		);
@@ -162,13 +162,25 @@ public class TeamLifeOres {
 	}
 
 	@Nullable
+	public Block findNearbyProtectedLifeOre(Location location) {
+		Location temp = location.clone();
+		for (Map.Entry<Block, LifeOreProperties> entry : oreIntances.entrySet()) {
+			Block block = entry.getKey();
+			LifeOreProperties properties = entry.getValue();
+			if (properties.isProtected(block.getLocation(temp), location))
+				return block;
+		}
+		return null;
+	}
+
+	@Nullable
 	OreBreakResult onBreak(Player breaker, Block block) {
 		if (!isLifeOre(block)) return null;
 
 		if (this.health == 0) return OreBreakResult.ALREADY_DEAD;
 
 		final PlayerInfo pinfo = Main.getPlayerInfo(breaker);
-		if (CommandDebug.ignoreObjectiveTeamChecks || pinfo.team != this.owningTeam) {
+		if (CommandDebug.ignoreObjectiveTeamChecks || pinfo.team != this.team) {
 			setHealth(this.health - 1);
 
 			// Issue where after breaking, but the player continues mining, the BlockDamageEvent isn't re-called
@@ -197,7 +209,7 @@ public class TeamLifeOres {
 	}
 
 	public int getTotalMaxHealth(DigAndBuild game) {
-		HealUpgradeInfo healUpgrade = game.getTeamUpgrades(owningTeam).getHealUpgrade();
+		HealUpgradeInfo healUpgrade = game.getMapInfo().healUpgrade;
 		return STARTING_HEALTH + (healUpgrade != null ? healUpgrade.maxShield() : 0);
 	}
 
@@ -219,7 +231,7 @@ public class TeamLifeOres {
 
 	public TextComponent formatHealth() {
 		if (health == 0)
-			return Component.text("🪦 " + owningTeam.getName(), NamedTextColor.DARK_RED);
+			return Component.text("🪦 " + team.getName(), NamedTextColor.DARK_RED);
 
 		if (health < TeamLifeOres.STARTING_HEALTH) {
 			float percentage = (float) health / TeamLifeOres.STARTING_HEALTH;
@@ -238,5 +250,49 @@ public class TeamLifeOres {
 			else
 				return Component.text(TeamLifeOres.STARTING_HEALTH + "⛏", NamedTextColor.BLUE);
 		}
+	}
+
+
+	private static final Component CANT_BUILD_HERE = Component.text("You can't build here", TextColors.ERROR_RED);
+	private static final Component CANT_BREAK_YOUR_ORE = Component.textOfChildren(
+			Component.text("You can't break your ", TextColors.ERROR_RED), DigAndBuild.CORE
+	);
+	public void playDenyBuildEffect(Player player, Block affected, Block protectionSource, boolean isBreaking) {
+		Location loc = affected.getLocation().add(0.5d, 0.5d, 0.5d).subtract(player.getLocation().getDirection());
+		if (isBreaking) {
+			player.spawnParticle(Particle.BLOCK_MARKER, loc, 1, Material.BARRIER.createBlockData());
+		} else {
+			Particle.DustOptions data = new Particle.DustOptions(team.getColour(), 1);
+			double radius = Math.sqrt(getLifeOreProtectionRadius(protectionSource));
+			double sample = radius / 5;
+			double centerX = protectionSource.getX() + 0.5;
+			double centerY = protectionSource.getY() + 0.5;
+			double centerZ = protectionSource.getZ() + 0.5;
+			double minY = centerY - radius;
+			double maxY = centerY + radius;
+			// bottom and top
+			player.spawnParticle(Particle.DUST, centerX, minY, centerZ, 0, data);
+			player.spawnParticle(Particle.DUST, centerX, maxY, centerZ, 0, data);
+			for (int j = 1; j <= 5; j++) {
+				double y1 = minY + sample * j;
+				double y2 = maxY - sample * j;
+				double a = Math.acos((centerY - y1) / radius);
+				double effectiveRadius = radius * Math.sin(a);
+				for (int i = 0; i < 10; i++) {
+					double b = (360 / 10d) * i;
+					double x = centerX + effectiveRadius * Math.cos(b);
+					double z = centerZ + effectiveRadius * Math.sin(b);
+					player.spawnParticle(Particle.DUST, x, y1, z, 0, data);
+					if (j != 5)
+						player.spawnParticle(Particle.DUST, x, y2, z, 0, data);
+				}
+			}
+		}
+		player.playSound(loc, Sound.ENTITY_ITEM_BREAK, SoundCategory.BLOCKS, 0.5f, 2f);
+		player.sendMessage(isBreaking ? CANT_BREAK_YOUR_ORE : CANT_BUILD_HERE);
+	}
+
+	public void tick() {
+
 	}
 }
