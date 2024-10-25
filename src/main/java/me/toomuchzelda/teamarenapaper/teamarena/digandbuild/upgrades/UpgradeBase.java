@@ -49,11 +49,11 @@ public sealed interface UpgradeBase permits HasteUpgradeInfo, HealUpgradeInfo, T
 				  <effect>
 				  <red>(<required> <display_name> required)</red>
 				 */
-				Component.newline(),
+				Component.empty(),
 				Component.textOfChildren(
 					Component.text("Right click near your "),
 					DigAndBuild.CORE,
-					Component.text(" to:")
+					Component.text(":")
 				).color(TextUtils.RIGHT_CLICK_TO),
 				Component.textOfChildren(
 					Component.text("  "),

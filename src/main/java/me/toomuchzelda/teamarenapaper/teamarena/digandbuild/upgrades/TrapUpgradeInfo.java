@@ -50,26 +50,26 @@ public record TrapUpgradeInfo(Material item, @Nullable @ConfigOptional Component
 		<yellow>Warning: Ghosts are not real.
 		 */
 		var lore = List.of(
-			Component.text("Have you ever seen your teammates swing"),
-			Component.text("their weapons like they're schizophrenic?"),
-			Component.text("Are you deeply concerned that non-existent"),
+			Component.text("Have you ever seen your teammates swing", NamedTextColor.GRAY),
+			Component.text("their weapons like they're schizophrenic?", NamedTextColor.GRAY),
+			Component.text("Are you deeply concerned that non-existent", NamedTextColor.GRAY),
 			Component.textOfChildren(
 				Component.text("ghosts are a threat to your "),
 				DigAndBuild.CORE,
 				Component.text("?")
-			),
+			).color(NamedTextColor.GRAY),
 			Component.textOfChildren(
 				Component.text("Fear not! With the "),
 				customName != null ? customName : DEFAULT_NAME,
 				Component.text(",")
-			),
+			).color(NamedTextColor.GRAY),
 			Component.textOfChildren(
 				Component.text("your "),
 				DigAndBuild.CORE,
 				Component.text(" can now alert you of the")
-			),
-			Component.text("presence of all hostiles, visible or not."),
-			Component.newline(),
+			).color(NamedTextColor.GRAY),
+			Component.text("presence of all hostiles, visible or not.", NamedTextColor.GRAY),
+			Component.empty(),
 			Component.text("Warning: Ghosts are not real.", NamedTextColor.YELLOW)
 		);
 		// <#b19e8f>Detects enemies (Can be installed up to " + max + " times)

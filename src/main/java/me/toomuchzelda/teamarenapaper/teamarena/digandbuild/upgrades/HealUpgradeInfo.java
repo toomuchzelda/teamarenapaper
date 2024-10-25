@@ -6,6 +6,7 @@ import me.toomuchzelda.teamarenapaper.utils.ConfigOptional;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -40,15 +41,15 @@ public record HealUpgradeInfo(Material item, @Nullable @ConfigOptional Component
 		var lore = List.of(
 			Component.textOfChildren(
 				Component.text("A strange mineral capable of "),
-				Component.text("repairing"),
+				Component.text("repairing", TextColors.HEALTH),
 				Component.text(" your "),
 				DigAndBuild.CORE
-			),
+			).color(NamedTextColor.GRAY),
 			Component.textOfChildren(
-				Component.text("or provide up to"),
+				Component.text("or provide up to "),
 				Component.text(maxShield + " Shield", TextColors.ABSORPTION_HEART),
 				Component.text(" if already repaired.")
-			)
+			).color(NamedTextColor.GRAY)
 		);
 		// <regen>Repairs</regen> your <core>, or provide up to <absorption><shield> Shield</absorption>
 		var effect = Component.textOfChildren(
@@ -57,7 +58,7 @@ public record HealUpgradeInfo(Material item, @Nullable @ConfigOptional Component
 			DigAndBuild.CORE,
 			Component.text(", or provide up to "),
 			Component.text(maxShield + " Shield", TextColors.ABSORPTION_HEART)
-		);
+		).color(NamedTextColor.WHITE);
 		return UpgradeBase.makeItemStackBaseCompileSafelyAndSecurely(this,
 			lore, effect);
 	}

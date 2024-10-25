@@ -255,8 +255,8 @@ public class TeamLifeOres {
 
 	private static final Component CANT_BUILD_HERE = Component.text("You can't build here", TextColors.ERROR_RED);
 	private static final Component CANT_BREAK_YOUR_ORE = Component.textOfChildren(
-			Component.text("You can't break your ", TextColors.ERROR_RED), DigAndBuild.CORE
-	);
+			Component.text("You can't break blocks near "), DigAndBuild.CORE, Component.text("s")
+	).color(TextColors.ERROR_RED);
 	public void playDenyBuildEffect(Player player, Block affected, Block protectionSource, boolean isBreaking) {
 		Location loc = affected.getLocation().add(0.5d, 0.5d, 0.5d).subtract(player.getLocation().getDirection());
 		if (isBreaking) {

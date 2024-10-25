@@ -5,6 +5,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.DigAndBuild;
 import me.toomuchzelda.teamarenapaper.utils.ConfigOptional;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -49,19 +50,19 @@ public record HasteUpgradeInfo(Material item, @Nullable @ConfigOptional Componen
 		Note: License is valid for 30 seconds
 		 */
 		var lore = List.of(
-			Component.text("Unlock the full potential of your tools with"),
+			Component.text("Unlock the full potential of your tools with", NamedTextColor.GRAY),
 			Component.textOfChildren(
-				Component.text("the "),
+				Component.text("the ", NamedTextColor.GRAY),
 				Component.text("MineSoft (R) Tool Drill Attachment 365 (TM)", toolStyle)
 			),
 			Component.textOfChildren(
 				Component.text("Volume License Activation", toolStyle),
-				Component.text(".")
+				Component.text(".", NamedTextColor.GRAY)
 			),
-			Component.text("This attachment drastically enhances your mining speed"),
-			Component.text("and overall company productivity."),
+			Component.text("This attachment drastically enhances your mining speed", NamedTextColor.GRAY),
+			Component.text("and overall company productivity.", NamedTextColor.GRAY),
 			Component.empty(),
-			Component.text("Note: License is valid for 30 seconds")
+			Component.text("Note: License is valid for 30 seconds", NamedTextColor.GRAY)
 		);
 		// <#9ff8e5>Gives teammates <c:#D9C043>Haste II</c> for 30 seconds
 		var effect = Component.textOfChildren(

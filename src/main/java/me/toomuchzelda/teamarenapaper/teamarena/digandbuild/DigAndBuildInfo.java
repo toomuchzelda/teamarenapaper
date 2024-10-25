@@ -283,7 +283,7 @@ public class DigAndBuildInfo {
 		teams = new LinkedHashMap<>();
 		teamInfo.forEach((team, info) -> {
 			teams.put(team, new TeamInfo(info.teamChest, List.of(new LifeOreInfo(
-				info.oreCoords, info.protectionRadius, null, null, true
+				info.oreCoords, info.protectionRadius, null, null, false
 			))));
 		});
 	}

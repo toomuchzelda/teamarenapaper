@@ -304,13 +304,13 @@ public class DigAndBuild extends TeamArena
 		if (mapInfo.healUpgrade != null) {
 			upgrades.add(mapInfo.healUpgrade);
 			if (mapInfo.healUpgrade.spawns() != null) {
-				upgradeSpawners.add(new UpgradeSpawnState(gameWorld, mapInfo.healUpgrade.makeItemStack(), mapInfo.healUpgrade.spawns()));
+				upgradeSpawners.add(new UpgradeSpawnState(this, gameWorld, mapInfo.healUpgrade, mapInfo.healUpgrade.spawns()));
 			}
 		}
 		if (mapInfo.hasteUpgrade != null) {
 			upgrades.add(mapInfo.hasteUpgrade);
 			if (mapInfo.hasteUpgrade.spawns() != null) {
-				upgradeSpawners.add(new UpgradeSpawnState(gameWorld, mapInfo.hasteUpgrade.makeItemStack(), mapInfo.hasteUpgrade.spawns()));
+				upgradeSpawners.add(new UpgradeSpawnState(this, gameWorld, mapInfo.hasteUpgrade, mapInfo.hasteUpgrade.spawns()));
 			}
 		}
 		if (mapInfo.trapUpgrade != null) {
@@ -377,6 +377,10 @@ public class DigAndBuild extends TeamArena
 
 	public TeamUpgrades getTeamUpgrades(TeamArenaTeam team) {
 		return teamUpgrades.get(team);
+	}
+
+	public void registerPointMarker(PointMarker pointMarker) {
+		pointMarkers.add(pointMarker);
 	}
 
 	@Nullable
@@ -695,7 +699,7 @@ public class DigAndBuild extends TeamArena
 		Component teamName = ore.getTeam().getComponentSimpleName();
 
 		final Component title = TEAMS_ORE_DESTROYED_TITLE.apply(new TeamsOreDestroyedTitleContext(
-			oreDestroyer, Component.text("⛏️", oreDestroyer.color()),
+			oreDestroyer, Component.text("⛏", oreDestroyer.color()),
 			teamName, ore.getTeam().colourWord("⭐")
 		));
 		final Component chat = TEAMS_ORE_DESTROYED_CHAT.apply(new TeamsOreDestroyedChatContext(teamName, oreDestroyer));
