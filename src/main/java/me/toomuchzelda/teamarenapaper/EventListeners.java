@@ -822,18 +822,8 @@ public class EventListeners implements Listener
 		InventoryView view = event.getView();
 		InventoryAction action = event.getAction();
 
-		if (game instanceof DigAndBuild dnb) {
-			ItemStack item;
-			if (action == InventoryAction.HOTBAR_SWAP) {
-				assert CompileAsserts.OMIT || event.getHotbarButton() != -1;
-				item = view.getBottomInventory().getItem(event.getHotbarButton());
-			}
-			else
-				item = event.getCurrentItem();
-
-			if (dnb.canMoveToInventory(player, item, event.getInventory())) {
-				return; // Operation allowed, no further checks.
-			}
+		if (game instanceof DigAndBuild dnb && dnb.handleInventoryClick(event)) {
+			return; // Operation allowed, no further checks.
 		}
 
 		// check for external inventories and cancel if it is

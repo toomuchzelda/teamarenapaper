@@ -1,10 +1,9 @@
 package me.toomuchzelda.teamarenapaper.teamarena.digandbuild;
 
-import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.statusorebuffactions.HasteOreAction;
-import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.statusorebuffactions.HealOreAction;
+import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.upgrades.HasteOreAction;
+import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.upgrades.HealOreAction;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
-import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.entity.Player;
 
@@ -44,6 +43,6 @@ public enum StatusOreType
 	/** Determines what the StatusOreType actually does */
 	public interface BuffAction {
 		/** Return number of the items used in the action. 0 if not used at all / nothing applied */
-		int buff(final Player redeemer, int required, int itemsUsed, LifeOre ore, DigAndBuild gameInstance);
+		int buff(final Player redeemer, int required, int itemsUsed, TeamLifeOres ore, DigAndBuild gameInstance);
 	}
 }

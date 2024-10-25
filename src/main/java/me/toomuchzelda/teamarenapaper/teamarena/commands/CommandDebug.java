@@ -16,9 +16,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
-import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.DigAndBuild;
-import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.StatusOreType;
-import me.toomuchzelda.teamarenapaper.teamarena.map.DigAndBuildInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.hideandseek.PacketFlyingPoint;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.PayloadTestKillstreak;
@@ -62,6 +59,7 @@ public class CommandDebug extends CustomCommand {
 
 	// TODO temporary feature
 	public static boolean ignoreWinConditions;
+	public static boolean ignoreObjectiveTeamChecks;
 	public static boolean disableMiniMapInCaseSomethingTerribleHappens;
 
 	public CommandDebug() {
@@ -116,6 +114,10 @@ public class CommandDebug extends CustomCommand {
 					ignoreWinConditions = args.length == 3 ? Boolean.parseBoolean(args[2]) : !ignoreWinConditions;
 					auditEvent(sender, "game ignoreWinConditions %s", ignoreWinConditions);
 					sender.sendMessage(Component.text("Set ignore win conditions to " + ignoreWinConditions, NamedTextColor.GREEN));
+				} else if (args[1].equals("ignoreobjectiveteamchecks")) {
+					ignoreObjectiveTeamChecks = args.length == 3 ? Boolean.parseBoolean(args[2]) : !ignoreObjectiveTeamChecks;
+					auditEvent(sender, "game ignoreObjectiveTeamChecks %s", ignoreObjectiveTeamChecks);
+					sender.sendMessage(Component.text("Set ignore objective team checks to " + ignoreObjectiveTeamChecks, NamedTextColor.GREEN));
 				} else if (args[1].equals("antistall")) {
 					doGameAntiStall(sender, args);
 				}
@@ -546,17 +548,6 @@ public class CommandDebug extends CustomCommand {
 				}, 1L, 1L);
 
 			}
-			case "showores" -> {
-				if (Main.getGame() instanceof DigAndBuild dnb) {
-					Map<StatusOreType, DigAndBuildInfo.DNBStatusOreInfo> map = dnb.gameMap.getDnbInfo().statusOres();
-					for (var entry : map.entrySet()) {
-						String text = entry.getKey().name();
-						for (BlockCoords coords : entry.getValue().coords()) {
-							new PacketHologram(coords.toLocation(dnb.getWorld()).add(0.5, 0.5, 0.5), null, viewer -> true, Component.text(text)).respawn();
-						}
-					}
-				}
-			}
 			case "amogus" -> PayloadTestKillstreak.playAmogus(player.getWorld(), player);
 			case "loadsong" -> {
 				if (args.length == 1)
@@ -588,12 +579,12 @@ public class CommandDebug extends CustomCommand {
 		if (args.length == 1) {
 			return Arrays.asList("hide", "gui", "guitest", "signtest", "game", "setrank", "setteam", "setkit",
 				"votetest", "draw", "graffititest", "respawn", "fakehitbox", "testmotd", "arrowMarker", "packetcache", "showSpawns",
-				"flyingpoint", "fakeBlock", "elevator", "showores", "darken", "amogus", "loadsong");
+				"flyingpoint", "fakeBlock", "elevator", "darken", "amogus", "loadsong");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");
 				case "guitest" -> Arrays.asList("tab", "spectate");
-				case "game" -> List.of("start", "ignorewinconditions", "antistall");
+				case "game" -> List.of("start", "ignorewinconditions", "ignoreobjectiveteamchecks", "antistall");
 				case "setrank" -> Arrays.stream(PermissionLevel.values()).map(Enum::name).toList();
 				case "setteam" -> Arrays.stream(Main.getGame().getTeams())
 						.map(team -> team.getSimpleName().replace(' ', '_'))

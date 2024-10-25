@@ -1,9 +1,12 @@
-package me.toomuchzelda.teamarenapaper.teamarena.map;
+package me.toomuchzelda.teamarenapaper.teamarena.digandbuild;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.StatusOreType;
+import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.upgrades.HasteUpgradeInfo;
+import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.upgrades.HealUpgradeInfo;
+import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.upgrades.TrapUpgradeInfo;
+import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.upgrades.UpgradeSpawning;
+import me.toomuchzelda.teamarenapaper.teamarena.map.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.utils.*;
-import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.util.Vector;
@@ -25,36 +28,30 @@ public class DigAndBuildInfo {
 
 	public int configVersion;
 	public Vector middle;
+	@Nullable @ConfigOptional
 	public BlockData defaultLifeOreBlock;
-	public record LifeOreInfo(BlockCoords location, double protectionRadius, @Nullable @ConfigOptional BlockData block, boolean showHologram) {}
+	public record LifeOreInfo(BlockCoords location,
+							  double protectionRadius, @ConfigOptional Double interactionRadius,
+							  @Nullable @ConfigOptional BlockData block, boolean showHologram) {
+		public LifeOreInfo {
+			if (interactionRadius == null)
+				interactionRadius = protectionRadius;
+		}
+	}
 	public record TeamInfo(@Nullable @ConfigOptional BlockCoords chest, List<LifeOreInfo> lifeOres) {}
 
 	public Map<String, TeamInfo> teams;
 
 	public List<IntBoundingBox> noBuildZones;
 
-	public sealed interface UpgradeBase {
-		Material item();
-		@Nullable @ConfigOptional
-		Component customName();
-		int required();
-	}
-	public record UpgradeSpawning(
-		List<Vector> holograms,
-		@ConfigPath("as") BlockData spawnAs,
-		@ConfigPath("at") List<BlockCoords> spawnAt) {}
-
-	public record HealUpgrade(Material item, @Nullable @ConfigOptional Component customName, int required, UpgradeSpawning spawns) implements UpgradeBase {}
 	@ConfigPath("team-upgrades.heal")
-	public HealUpgrade teamHealUpgrade;
+	public HealUpgradeInfo healUpgrade;
 
-	public record TrapUpgrade(Material item, @Nullable @ConfigOptional Component customName, int required, int max, double triggerRadius) implements UpgradeBase {}
 	@ConfigPath("team-upgrades.trap")
-	public TrapUpgrade teamTrapUpgrade;
+	public TrapUpgradeInfo trapUpgrade;
 
-	public record HasteUpgrade(Material item, @Nullable @ConfigOptional Component customName, int required, UpgradeSpawning spawns) implements UpgradeBase {}
 	@ConfigPath("team-upgrades.haste")
-	public HasteUpgrade teamHasteUpgrade;
+	public HasteUpgradeInfo hasteUpgrade;
 
 	public record ItemFountain(Vector at, int interval, List<Material> sequence) {}
 	public List<ItemFountain> itemFountains;
@@ -66,6 +63,8 @@ public class DigAndBuildInfo {
 	public boolean specialReplaceWoolWithTeamColor;
 	@ConfigPath("__instantly-prime-tnt")
 	public boolean specialInstantlyPrimeTnt;
+	@ConfigPath("__block-regeneration-rate")
+	public int specialBlockRegenerationRate;
 
 	@Nullable
 	public static DigAndBuildInfo parse(TeamArenaMap teamArenaMap, Path worldFolder) {
@@ -199,13 +198,13 @@ public class DigAndBuildInfo {
 		}
 		statusOres.forEach((statusOreType, statusOreInfo) -> {
 			switch (statusOreType) {
-				case HEAL -> teamHealUpgrade = new HealUpgrade(
-					statusOreInfo.itemType, null, statusOreInfo.required,
-					new UpgradeSpawning(statusOreInfo.hologramLocs, statusOreInfo.oreType.createBlockData(), statusOreInfo.coords)
+				case HEAL -> healUpgrade = new HealUpgradeInfo(
+					statusOreInfo.itemType, null, statusOreInfo.required, null,
+					new UpgradeSpawning(statusOreInfo.hologramLocs, statusOreInfo.oreType.createBlockData(), null, statusOreInfo.coords)
 				);
-				case HASTE -> teamHasteUpgrade = new HasteUpgrade(
+				case HASTE -> hasteUpgrade = new HasteUpgradeInfo(
 					statusOreInfo.itemType, null, statusOreInfo.required,
-					new UpgradeSpawning(statusOreInfo.hologramLocs, statusOreInfo.oreType.createBlockData(), statusOreInfo.coords)
+					new UpgradeSpawning(statusOreInfo.hologramLocs, statusOreInfo.oreType.createBlockData(), null, statusOreInfo.coords)
 				);
 			}
 		});
@@ -215,7 +214,7 @@ public class DigAndBuildInfo {
 			Map<String, Map<String, Object>> teamConfigs = (Map<String, Map<String, Object>>) dnbMap.get("Teams");
 			teamInfo = new HashMap<>();
 			for (var entry : teamConfigs.entrySet()) {
-				if (teamArenaMap.teamSpawns.containsKey(entry.getKey())) {
+				if (teamArenaMap.getTeamSpawns().containsKey(entry.getKey())) {
 					BlockCoords oreCoords = BlockUtils.parseCoordsToBlockCoords((String) entry.getValue().get("Ore"));
 					double radius = (double) entry.getValue().get("Radius");
 					String chestCoordStr = (String) entry.getValue().get("Chest");
@@ -240,7 +239,7 @@ public class DigAndBuildInfo {
 		teams = new LinkedHashMap<>();
 		teamInfo.forEach((team, info) -> {
 			teams.put(team, new TeamInfo(info.teamChest, List.of(new LifeOreInfo(
-				info.oreCoords, info.protectionRadius, null, true
+				info.oreCoords, info.protectionRadius, null, null, true
 			))));
 		});
 	}

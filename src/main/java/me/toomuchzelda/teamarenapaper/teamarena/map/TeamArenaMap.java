@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.map;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.GameType;
+import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.DigAndBuildInfo;
 import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import net.kyori.adventure.text.Component;

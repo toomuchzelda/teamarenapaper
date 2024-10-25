@@ -21,10 +21,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Predicate;
 
 public class ItemUtils {
@@ -329,5 +326,56 @@ public class ItemUtils {
 		}
 
 		return false;
+	}
+
+	private static int partial(ItemStack stack, int limit) {
+		return Math.min(stack.getAmount(), limit);
+	}
+
+	/**
+	 * Finds all matching items up to {@code limit}
+	 * @param inventory The inventory
+	 * @param stack The stack to look for
+	 * @param limit The total number of items
+	 * @return A map of slot indices to the number of items contained in the slot
+	 */
+	public static SequencedMap<Integer, Integer> findMatchingItems(PlayerInventory inventory, ItemStack stack, int limit) {
+		int remaining = limit;
+		var map = new LinkedHashMap<Integer, Integer>();
+		// main hand -> off hand -> hotbar -> remaining slots
+		ItemStack temp = inventory.getItemInMainHand();
+		int partial;
+		if (stack.isSimilar(temp)) {
+			partial = partial(temp, remaining);
+			map.put(inventory.getHeldItemSlot(), partial);
+			if ((remaining -= partial) <= 0) return map;
+		}
+		temp = inventory.getItemInOffHand();
+		if (stack.isSimilar(temp)) {
+			partial = partial(temp, remaining);
+			map.put(40, partial);
+			if ((remaining -= partial) <= 0) return map;
+		}
+		for (int i = 0; i < 36; i++) {
+			if (i == inventory.getHeldItemSlot()) continue;
+			temp = inventory.getItem(i);
+			if (temp != null && stack.isSimilar(temp)) {
+				partial = partial(temp, remaining);
+				if ((remaining -= partial) <= 0) return map;
+			}
+		}
+		return map;
+	}
+
+	public static SequencedMap<Integer, Integer> findMatchingItems(PlayerInventory inventory, ItemStack stack) {
+		return findMatchingItems(inventory, stack, Integer.MAX_VALUE);
+	}
+
+	public static void removeMatchingItems(PlayerInventory inventory, Map<Integer, Integer> slots) {
+		slots.forEach((idx, amount) -> {
+			ItemStack item = inventory.getItem(idx);
+			if (item != null)
+				inventory.setItem(idx, item.subtract(amount));
+		});
 	}
 }

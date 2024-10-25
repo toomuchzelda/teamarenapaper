@@ -1,10 +1,9 @@
-package me.toomuchzelda.teamarenapaper.teamarena.digandbuild.statusorebuffactions;
+package me.toomuchzelda.teamarenapaper.teamarena.digandbuild.upgrades;
 
 import me.toomuchzelda.teamarenapaper.Main;
 //import me.toomuchzelda.teamarenapaper.potioneffects.PotionEffectManager;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.DigAndBuild;
-import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.LifeOre;
+import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.TeamLifeOres;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.StatusOreType;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -21,7 +20,7 @@ public class HasteOreAction implements StatusOreType.BuffAction
 	private static int compositeKeyCounter = 0; // Ensure all keys are unique to allow stacking of haste effect.
 	private static final PotionEffect HASTE_EFFECT = new PotionEffect(PotionEffectType.HASTE, 30 * 20, 0, false, true);
 	@Override
-	public int buff(Player redeemer, int required, int itemsUsed, LifeOre ore, DigAndBuild gameInstance) {
+	public int buff(Player redeemer, int required, int itemsUsed, TeamLifeOres ore, DigAndBuild gameInstance) {
 		if (itemsUsed >= required) {
 			Component message = redeemer.playerListName().append(Component.text(" got your team Haste!", StatusOreType.HASTE.getTextColor()));
 			for (Player teammate : Main.getPlayerInfo(redeemer).team.getPlayerMembers()) {

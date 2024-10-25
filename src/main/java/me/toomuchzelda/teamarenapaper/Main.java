@@ -11,6 +11,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.*;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.brigadier.CommandKitControlNew;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.brigadier.CommandMore;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.map.GameScheduler;
@@ -157,6 +158,7 @@ public final class Main extends JavaPlugin
 		getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, e -> {
 			Commands commands = e.registrar();
 			CommandKitControlNew.register(commands);
+			CommandMore.register(commands);
 		});
 	}
 

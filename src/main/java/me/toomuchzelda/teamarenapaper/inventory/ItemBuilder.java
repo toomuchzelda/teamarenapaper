@@ -155,6 +155,11 @@ public final class ItemBuilder {
 		return this;
 	}
 
+	public <T> ItemBuilder setPdc(NamespacedKey key, PersistentDataType<?, T> persistentDataType, T value) {
+		meta.getPersistentDataContainer().set(key, persistentDataType, value);
+		return this;
+	}
+
     public ItemStack build() {
         stack.setItemMeta(meta);
         return stack;

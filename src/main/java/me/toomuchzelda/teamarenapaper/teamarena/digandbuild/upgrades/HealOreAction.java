@@ -1,7 +1,7 @@
-package me.toomuchzelda.teamarenapaper.teamarena.digandbuild.statusorebuffactions;
+package me.toomuchzelda.teamarenapaper.teamarena.digandbuild.upgrades;
 
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.DigAndBuild;
-import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.LifeOre;
+import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.TeamLifeOres;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.StatusOreType;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import net.kyori.adventure.text.Component;
@@ -16,7 +16,7 @@ public class HealOreAction implements StatusOreType.BuffAction
 	private static final Component CANNOT_HEAL_MAXED_HEALTH = Component.text("Your ore is too healthy!", TextColors.ERROR_RED);
 
 	@Override
-	public int buff(final Player redeemer, final int required, final int itemsUsed, final LifeOre ore,
+	public int buff(final Player redeemer, final int required, final int itemsUsed, final TeamLifeOres ore,
 					final DigAndBuild gameInstance) {
 		if (ore.isDead()) {
 			Component t = CANNOT_HEAL_DEAD_ORE;
@@ -25,13 +25,13 @@ public class HealOreAction implements StatusOreType.BuffAction
 			redeemer.sendMessage(t);
 			return 0;
 		}
-		else if (ore.getHealth() == LifeOre.MAX_HEALTH) {
+		else if (ore.getHealth() == TeamLifeOres.MAX_HEALTH) {
 			redeemer.sendMessage(CANNOT_HEAL_MAXED_HEALTH);
 			return 0;
 		}
 		else if (itemsUsed >= required) {
 			ore.playHealEffect();
-			boolean b = ore.setHealth(ore.getHealth() + 1); assert b;
+			ore.setHealth(ore.getHealth() + 1);
 
 			return required;
 		}
