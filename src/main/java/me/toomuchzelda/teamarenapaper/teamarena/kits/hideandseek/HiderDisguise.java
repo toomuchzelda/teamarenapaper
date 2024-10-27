@@ -299,7 +299,7 @@ public class HiderDisguise {
 	}
 
 	private void visualBlockEffect() {
-		ParticleUtils.blockBreakEffect(this.hider, this.nmsBlockState.getBukkitMaterial(), this.hider.getLocation());
+		ParticleUtils.blockBreakEffect(this.hider, this.nmsBlockState.createCraftBlockData(), this.hider.getLocation());
 	}
 
 	void remove() {

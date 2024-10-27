@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.digandbuild.upgrades;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.DigAndBuild;
 import me.toomuchzelda.teamarenapaper.utils.ConfigOptional;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -10,6 +11,8 @@ import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
+import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -82,17 +85,26 @@ public record HasteUpgradeInfo(Material item, @Nullable @ConfigOptional Componen
 			applier.playerListName(),
 			Component.text(" has given your team "),
 			Component.text("Haste II", HASTE_COLOR),
-			Component.text(" for 30 seconds")
+			Component.text(" for 30 seconds!")
 		).color(COLOR);
+		Component messageExisting = message.append(
+			Component.text("\nSince you already have Haste, the duration has been added onto your existing effect.", TextUtils.betterDarken(COLOR))
+		);
 		for (Player member : team.getPlayerMembers()) {
 			PotionEffect existing = member.getPotionEffect(PotionEffectType.HASTE);
 			if (existing != null && existing.getAmplifier() == HASTE_EFFECT.getAmplifier()) {
 				// increment duration
 				member.addPotionEffect(HASTE_EFFECT.withDuration(HASTE_EFFECT.getDuration() + existing.getDuration()));
+				member.sendMessage(messageExisting);
+				member.playSound(member, Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.PLAYERS, 1, 1);
 			} else {
 				member.addPotionEffect(HASTE_EFFECT);
+				member.sendMessage(message);
+				member.playSound(member, Sound.BLOCK_BEACON_ACTIVATE, SoundCategory.PLAYERS, 1, 1);
 			}
 		}
+
+		game.getTeamUpgrades(team).playSacrificeAnimation(makeItemStack(), core.getLocation().toCenterLocation());
 		return true;
 	}
 }

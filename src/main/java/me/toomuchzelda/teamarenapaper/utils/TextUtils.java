@@ -11,6 +11,7 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import net.kyori.adventure.util.HSVLike;
+import net.kyori.adventure.util.RGBLike;
 import org.bukkit.map.MinecraftFont;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -477,13 +478,21 @@ public class TextUtils {
 			TextColor c = component.color();
 			if (c == null) return component;
 			final NamedTextColor gray = NamedTextColor.GRAY;
-			c = TextColor.color(
-				(c.red() + gray.red()) / 2,
-				(c.green() + gray.green()) / 2,
-				(c.blue() + gray.blue()) / 2
-			);
+//			c = TextColor.color(
+//				(c.red() + gray.red()) / 2,
+//				(c.green() + gray.green()) / 2,
+//				(c.blue() + gray.blue()) / 2
+//			);
+			c = betterDarken(c);
 
 			return component.color(c);
 		});
+	}
+
+	private static final double FACTOR = 0.7;
+	public static TextColor betterDarken(RGBLike textColor) {
+		return TextColor.color(Math.max((int)(textColor.red() * FACTOR), 0),
+			Math.max((int)(textColor.green() * FACTOR), 0),
+			Math.max((int)(textColor.blue() * FACTOR), 0));
 	}
 }

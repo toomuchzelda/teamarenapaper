@@ -46,7 +46,9 @@ public interface PacketSender {
 
 		@Override
 		public void broadcast(PacketContainer packet) {
-			Bukkit.getOnlinePlayers().forEach(player -> PlayerUtils.sendPacket(player, packet));
+			for (Player player : Bukkit.getOnlinePlayers()) {
+				PlayerUtils.sendPacket(player, packet);
+			}
 		}
 
 		@Override
@@ -79,7 +81,7 @@ public interface PacketSender {
 		}
 
 		public Cached(int mapSize, int listSize) {
-			this.cache = new HashMap<>(mapSize);
+			this.cache = HashMap.newHashMap(mapSize);
 			this.newListSize = listSize;
 		}
 
@@ -95,7 +97,7 @@ public interface PacketSender {
 		@Override
 		public void enqueue(Player player, PacketContainer... packets) {
 			ArrayList<PacketContainer> list = getList(player, packets.length + (packets.length / 2));
-			for (PacketContainer p : packets) list.add(p);
+			Collections.addAll(list, packets);
 		}
 
 		@Override
@@ -106,17 +108,23 @@ public interface PacketSender {
 		// TODO fancy optimise broadcasts
 		@Override
 		public void broadcast(PacketContainer packet) {
-			Bukkit.getOnlinePlayers().forEach(player -> enqueue(player, packet));
+			for (Player player : Bukkit.getOnlinePlayers()) {
+				enqueue(player, packet);
+			}
 		}
 
 		@Override
 		public void broadcast(PacketContainer... packets) {
-			Bukkit.getOnlinePlayers().forEach(player -> enqueue(player, packets));
+			for (Player player : Bukkit.getOnlinePlayers()) {
+				enqueue(player, packets);
+			}
 		}
 
 		@Override
 		public void broadcast(Collection<PacketContainer> packets) {
-			Bukkit.getOnlinePlayers().forEach(player -> enqueue(player, packets));
+			for (Player player : Bukkit.getOnlinePlayers()) {
+				enqueue(player, packets);
+			}
 		}
 
 		@Override

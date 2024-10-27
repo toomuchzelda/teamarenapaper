@@ -7,7 +7,10 @@ import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -82,7 +85,9 @@ public record HealUpgradeInfo(Material item, @Nullable @ConfigOptional Component
 			return false;
 		}
 		ore.setHealth(ore.getHealth() + 1);
-		ore.playCoolUpgradeEffect(core, makeItemStack());
+		Location blockLocation = core.getLocation().toCenterLocation();
+		game.gameWorld.playSound(blockLocation, Sound.BLOCK_ANVIL_USE, SoundCategory.PLAYERS, 0.5f, 1);
+		game.getTeamUpgrades(team).playSacrificeAnimation(makeItemStack(), blockLocation);
 		return true;
 	}
 }

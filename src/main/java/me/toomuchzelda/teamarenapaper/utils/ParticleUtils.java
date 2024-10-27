@@ -7,6 +7,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.craftbukkit.CraftParticle;
 import org.bukkit.entity.Player;
 
@@ -26,11 +27,22 @@ public class ParticleUtils {
 			brightness, options);
 	}
 
+
 	public static <T> PacketContainer batchParticles(Particle particle, T data,
 													 Location loc, int count,
-													 float offX, float offY, float offZ,
+													 float offsetX, float offsetY, float offsetZ,
 													 float speed,
 													 boolean force) {
+
+		return batchParticles(particle, data, loc.getX(), loc.getY(), loc.getZ(), count, offsetX, offsetY, offsetZ, speed, force);
+	}
+
+
+	public static <T> PacketContainer batchParticles(Particle particle, T data,
+													 double x, double y, double z,
+													 int count,
+													 float offsetX, float offsetY, float offsetZ,
+													 float speed, boolean force) {
 
 		if (data != null && !particle.getDataType().isInstance(data)) {
 			throw new IllegalArgumentException("Particle and data mismatch");
@@ -40,14 +52,15 @@ public class ParticleUtils {
 		ClientboundLevelParticlesPacket packet = new ClientboundLevelParticlesPacket(
 			nmsParticleOptions,
 			force,
-			loc.getX(), loc.getY(), loc.getZ(),
-			offX, offY, offZ,
-			speed,
-			count
+			x, y, z,
+			offsetX, offsetY, offsetZ,
+			speed, count
 		);
 
 		return new PacketContainer(PacketType.Play.Server.WORLD_PARTICLES, packet);
 	}
+
+
 
 	public static <T> void batchParticles(Player viewer, PacketSender cache,
 										  Particle particle, T data, Location loc,
@@ -76,12 +89,15 @@ public class ParticleUtils {
 
 	/** Play the block destruction effect that happens when a player breaks a block */
 	public static void blockBreakEffect(Player player, Block block) {
-		Location loc = block.getLocation();
-		player.playEffect(loc, Effect.STEP_SOUND, block.getType());
+		blockBreakEffect(player, block.getBlockData(), block.getLocation());
 	}
 
 	/** Play the block destruction effect that happens when a player breaks a block */
 	public static void blockBreakEffect(Player player, Material mat, Location loc) {
 		player.playEffect(loc, Effect.STEP_SOUND, mat);
+	}
+
+	public static void blockBreakEffect(Player player, BlockData blockData, Location loc) {
+		player.playEffect(loc, Effect.STEP_SOUND, blockData);
 	}
 }

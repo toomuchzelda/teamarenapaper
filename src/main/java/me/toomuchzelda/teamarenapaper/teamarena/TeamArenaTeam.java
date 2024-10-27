@@ -5,6 +5,8 @@ import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import net.kyori.adventure.audience.Audience;
+import net.kyori.adventure.audience.ForwardingAudience;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -22,11 +24,12 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
 public class TeamArenaTeam
-{
+implements ForwardingAudience {
 	public static final Component SHOW_ALL_TEAMMATES = ItemUtils.noItalics(Component.text("Right click to see all your teammates", TextUtils.RIGHT_CLICK_TO));
 	public static final List<Component> HOTBAR_ITEM_LORE = List.of(SHOW_ALL_TEAMMATES); //PING1);
 
@@ -456,5 +459,10 @@ public class TeamArenaTeam
 			Vector velocity = new Vector(MathUtils.randomRange(-0.4, 0.4), 1, MathUtils.randomRange(-0.4, 0.4));
 			firework.setVelocity(velocity);
 		}
+	}
+
+	@Override
+	public @NotNull Iterable<? extends Audience> audiences() {
+		return getPlayerMembers();
 	}
 }

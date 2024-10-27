@@ -68,6 +68,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
@@ -90,6 +91,11 @@ public abstract class TeamArena
 	private final File tempWorldFile;
 	public World gameWorld;
 	public final TeamArenaMap gameMap;
+
+	/**
+	 * Tasks that will be cancelled when the game ends
+	 */
+	public List<BukkitTask> animationTasks = new ArrayList<>();
 
 	//ticks of wait time before teams are decided
 	protected static final int PRE_TEAMS_TIME = 30 * 20;
@@ -590,6 +596,8 @@ public abstract class TeamArena
 	}
 
 	public void liveTick() {
+		animationTasks.removeIf(BukkitTask::isCancelled);
+
 		BuildingManager.tick();
 		BuildingOutlineManager.tick();
 
@@ -1286,6 +1294,9 @@ public abstract class TeamArena
 	@OverridingMethodsMustInvokeSuper
 	public void prepEnd() {
 		waitingSince = gameTick;
+
+		animationTasks.forEach(BukkitTask::cancel);
+		animationTasks.clear();
 
 		if(winningTeam != null) {
 			Component winText = winningTeam.getComponentName().append(Component.text(" wins!!").color(winningTeam.getRGBTextColor()));

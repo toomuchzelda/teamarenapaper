@@ -7,7 +7,10 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -28,9 +31,13 @@ public record TrapUpgradeInfo(Material item, @Nullable @ConfigOptional Component
 
 	@Override
 	public boolean apply(DigAndBuild game, TeamArenaTeam team, Block core, Player applier) {
-		TeamUpgrades upgrades = game.getTeamUpgrades(team);
+		TeamUpgradeState upgrades = game.getTeamUpgrades(team);
 		if (upgrades.getTraps() < max) {
 			upgrades.addTrap();
+
+			Location blockLocation = core.getLocation().toCenterLocation();
+			game.gameWorld.playSound(blockLocation, Sound.BLOCK_TRIPWIRE_ATTACH, SoundCategory.PLAYERS, 0.5f, 1);
+			game.getTeamUpgrades(team).playSacrificeAnimation(makeItemStack(), blockLocation);
 			return true;
 		}
 		return false;

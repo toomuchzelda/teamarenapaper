@@ -8,6 +8,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.upgrades.TrapUpgrade
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.upgrades.UpgradeSpawning;
 import me.toomuchzelda.teamarenapaper.teamarena.map.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.utils.*;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
@@ -25,22 +26,17 @@ import java.util.*;
 import java.util.logging.Level;
 
 public class DigAndBuildInfo {
-	/** Info per team for dnb */
-	public record DNBTeamInfo(BlockCoords oreCoords, double protectionRadius, @Nullable BlockCoords teamChest) {}
-
-	public record DNBStatusOreInfo(Material oreType, Material itemType, int required, List<Vector> hologramLocs,
-								   List<BlockCoords> coords) {}
-
 	public int configVersion;
 	public Vector middle;
 	@Nullable @ConfigOptional
 	public BlockData defaultLifeOreBlock;
-	public record LifeOreInfo(BlockCoords location,
+	public record LifeOreInfo(BlockCoords location, @Nullable @ConfigOptional Component customName,
 							  double protectionRadius, @ConfigOptional Double interactionRadius,
 							  @Nullable @ConfigOptional BlockData block, @ConfigOptional Boolean hideHologram) {
 		public LifeOreInfo {
 			if (interactionRadius == null)
 				interactionRadius = protectionRadius;
+			interactionRadius = Math.max(interactionRadius, 5);
 			if (hideHologram == null)
 				hideHologram = false;
 		}
@@ -145,6 +141,12 @@ public class DigAndBuildInfo {
 	}
 
 	public void loadLegacy(TeamArenaMap teamArenaMap, File worldFolder, Map<String, Object> dnbMap) {
+		/** Info per team for dnb */
+		record DNBTeamInfo(BlockCoords oreCoords, double protectionRadius, @Nullable BlockCoords teamChest) {}
+
+		record DNBStatusOreInfo(Material oreType, Material itemType, int required, List<Vector> hologramLocs,
+									   List<BlockCoords> coords) {}
+
 		try {
 			middle = BlockUtils.parseCoordsToVec((String) dnbMap.get("Middle"), 0.5, 0.5, 0.5);
 		}
@@ -283,7 +285,7 @@ public class DigAndBuildInfo {
 		teams = new LinkedHashMap<>();
 		teamInfo.forEach((team, info) -> {
 			teams.put(team, new TeamInfo(info.teamChest, List.of(new LifeOreInfo(
-				info.oreCoords, info.protectionRadius, null, null, false
+				info.oreCoords, null, info.protectionRadius, null, null, false
 			))));
 		});
 	}
