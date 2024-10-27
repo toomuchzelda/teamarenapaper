@@ -22,7 +22,7 @@ import java.util.List;
 public record TrapUpgradeInfo(Material item, @Nullable @ConfigOptional Component customName, int required,
 							  int max, double triggerRadius) implements UpgradeBase {
 
-	public static final @NotNull TextComponent DEFAULT_NAME = Component.text("Enemy Detector 3000", TextColor.color(0xb19e8f));
+	public static final @NotNull TextComponent DEFAULT_NAME = Component.text("It's a... \uD83D\uDC26 Government UAV!", TextColor.color(0xb19e8f));
 
 	@Override
 	public @NotNull Component displayName() {

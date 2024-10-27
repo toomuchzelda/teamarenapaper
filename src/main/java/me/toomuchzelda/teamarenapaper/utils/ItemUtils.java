@@ -52,6 +52,39 @@ public class ItemUtils {
         return SWORD_ITEMS.isTagged(item.getType());
     }
 
+	private static final String[] COLORABLE_SUFFIXES = new String[]{
+		"_wool", "_terracotta", "_carpet", "_stained_glass", "_stained_glass_pane", "_glazed_terracotta", "_concrete",
+		"_powder", "_dye", "_bed", "_banner", "_candle",  "_shulker_box",
+	};
+	public static boolean isColorable(Material material) {
+		String key = material.getKey().getKey();
+		for (String suffix : COLORABLE_SUFFIXES) {
+			if (key.endsWith(suffix))
+				return true;
+		}
+		return false;
+	}
+
+	public static DyeColor getDyeColor(Material material) {
+		String key = material.getKey().getKey();
+		for (String suffix : COLORABLE_SUFFIXES) {
+			if (key.endsWith(suffix))
+				return DyeColor.valueOf(key.substring(0, key.length() - suffix.length()).toUpperCase(Locale.ENGLISH));
+		}
+		return null;
+	}
+
+	public static Material asDyeColor(Material material, DyeColor dyeColor) {
+		NamespacedKey namespacedKey = material.getKey();
+		String key = namespacedKey.getKey();
+		for (String suffix : COLORABLE_SUFFIXES) {
+			if (key.endsWith(suffix))
+				return Registry.MATERIAL.get(new NamespacedKey(namespacedKey.getNamespace(),
+					dyeColor.name().toLowerCase(Locale.ENGLISH) + suffix));
+		}
+		return null;
+	}
+
 	public static boolean isArmorSlotIndex(int index) {
 		return index > 35 && index < 40;
 	}
@@ -333,11 +366,12 @@ public class ItemUtils {
 	}
 
 	/**
-	 * Finds all matching items up to {@code limit}
+	 * Finds all matching items up to {@code limit}.
 	 * @param inventory The inventory
 	 * @param stack The stack to look for
 	 * @param limit The total number of items
 	 * @return A map of slot indices to the number of items contained in the slot
+	 * @see ItemUtils#removeMatchingItems(PlayerInventory, Map)
 	 */
 	public static SequencedMap<Integer, Integer> findMatchingItems(PlayerInventory inventory, ItemStack stack, int limit) {
 		int remaining = limit;
@@ -367,15 +401,67 @@ public class ItemUtils {
 		return map;
 	}
 
+	/**
+	 * Finds all matching items.
+	 * @param inventory The inventory
+	 * @param stack The stack to look for
+	 * @return A map of slot indices to the number of items contained in the slot
+	 * @see ItemUtils#removeMatchingItems(PlayerInventory, Map)
+	 */
 	public static SequencedMap<Integer, Integer> findMatchingItems(PlayerInventory inventory, ItemStack stack) {
 		return findMatchingItems(inventory, stack, Integer.MAX_VALUE);
 	}
 
+	/**
+	 * Finds all matching items up to the specified limits.
+	 * @param inventory The inventory
+	 * @param stackToLimits A map of the item stacks to look for and the respective limits
+	 * @return A map of slot indices to the number of items contained in the slot
+	 * @see ItemUtils#removeMatchingItems(PlayerInventory, Map)
+	 */
+	public static Map<Integer, Integer> findMultipleMatchingItems(PlayerInventory inventory, Map<ItemStack, Integer> stackToLimits) {
+		var slotToAmount = new LinkedHashMap<Integer, Integer>();
+		ItemStack temp = inventory.getItemInMainHand();
+		compareAndSetRemainder(inventory.getHeldItemSlot(), stackToLimits, temp, slotToAmount);
+		temp = inventory.getItemInOffHand();
+		compareAndSetRemainder(40, stackToLimits, temp, slotToAmount);
+		for (int i = 0; i < 36; i++) {
+			if (i == inventory.getHeldItemSlot()) continue;
+			temp = inventory.getItem(i);
+			compareAndSetRemainder(i, stackToLimits, temp, slotToAmount);
+		}
+		return slotToAmount;
+	}
+
+	private static void compareAndSetRemainder(int slot, Map<ItemStack, Integer> stackToLimits, ItemStack slotStack, LinkedHashMap<Integer, Integer> slotToAmount) {
+		int partial;
+		for (var entry : stackToLimits.entrySet()) {
+			int remaining = entry.getValue();
+			if (remaining <= 0) continue;
+			ItemStack stack = entry.getKey();
+			if (stack.isSimilar(slotStack)) {
+				partial = partial(slotStack, remaining);
+				slotToAmount.put(slot, partial);
+				entry.setValue(remaining - partial);
+			}
+		}
+	}
+
+	/**
+	 * Removes a number of items over multiple slots.
+	 * @param inventory The inventory
+	 * @param slots The slots and the amount to remove from
+	 * @see ItemUtils#findMatchingItems(PlayerInventory, ItemStack)
+	 * @see ItemUtils#findMultipleMatchingItems(PlayerInventory, Map)
+	 */
 	public static void removeMatchingItems(PlayerInventory inventory, Map<Integer, Integer> slots) {
-		slots.forEach((idx, amount) -> {
+		for (Map.Entry<Integer, Integer> entry : slots.entrySet()) {
+			int idx = entry.getKey();
+			int amount = entry.getValue();
 			ItemStack item = inventory.getItem(idx);
 			if (item != null)
 				inventory.setItem(idx, item.subtract(amount));
-		});
+		}
 	}
+
 }

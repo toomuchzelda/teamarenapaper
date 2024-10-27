@@ -10,8 +10,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.map.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
-import org.bukkit.Registry;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
@@ -63,18 +61,20 @@ public class DigAndBuildInfo {
 			if (map.get("upgrade") instanceof String string) {
 				return new UpgradeReference(string);
 			} else {
-				return new Item(Registry.MATERIAL.get(Objects.requireNonNull(NamespacedKey.fromString((String) map.get("item")))));
+				return new Item(ConfigUtils.parseItemStack(map));
 			}
 		}
 
 		ItemStack resolve(DigAndBuild game);
 
-		record Item(Material material) implements CustomItemReference {
+		record Item(ItemStack stack) implements CustomItemReference {
+			public Item {
+				stack = ItemBuilder.from(stack).setPdc(DigAndBuild.ITEM_MARKER, PersistentDataType.BOOLEAN, true).build();
+			}
+
 			@Override
 			public ItemStack resolve(DigAndBuild game) {
-				return ItemBuilder.of(material)
-					.setPdc(DigAndBuild.ITEM_MARKER, PersistentDataType.BOOLEAN, true)
-					.build();
+				return stack.clone();
 			}
 		}
 		record UpgradeReference(String type) implements CustomItemReference {
@@ -113,6 +113,15 @@ public class DigAndBuildInfo {
 	@ConfigPath("__no-block-regeneration")
 	@ConfigOptional
 	public boolean specialNoBlockRegeneration;
+	@ConfigPath("__no-block-regeneration")
+	@ConfigOptional
+	public boolean specialNoBlockRemoval;
+
+	public record ItemShopEntry(@ConfigOptional Integer row, @ConfigOptional Integer col,
+								List<CustomItemReference> trade, @ConfigPath("for") CustomItemReference _for,
+								@ConfigOptional ItemStack display) {}
+	@ConfigOptional
+	public List<ItemShopEntry> itemShop;
 
 	@Nullable
 	public static DigAndBuildInfo parse(TeamArenaMap teamArenaMap, Path worldFolder) {
@@ -314,6 +323,8 @@ public class DigAndBuildInfo {
 			", specialReplaceWoolWithTeamColor=" + specialReplaceWoolWithTeamColor +
 			", specialInstantlyPrimeTnt=" + specialInstantlyPrimeTnt +
 			", specialNoBlockRegeneration=" + specialNoBlockRegeneration +
+			", specialNoBlockRemoval=" + specialNoBlockRemoval +
+			", itemShop=" + itemShop +
 			'}';
 	}
 }

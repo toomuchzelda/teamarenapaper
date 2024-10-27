@@ -4,6 +4,8 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.*;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -31,11 +33,21 @@ public class ConfigUtils {
 		);
 	}
 
-	public static IntBoundingBox parseIntBoundingBox(@NotNull Map<?, ?> yaml) {
-		return new IntBoundingBox(
-			parseBlockCoords((String) Objects.requireNonNull(yaml.get("from"), "from cannot be empty")),
-			parseBlockCoords((String) Objects.requireNonNull(yaml.get("to"), "to cannot be empty"))
+	public static ItemStack parseItemStack(Map<?, ?> yaml) {
+		ItemStack stack = new ItemStack(
+			Objects.requireNonNull(Registry.MATERIAL.get(
+				Objects.requireNonNull(NamespacedKey.fromString((String) yaml.get("item")), "Expected item")),
+				"Item " + yaml.get("item") + " not found")
 		);
+		ItemMeta meta = stack.getItemMeta();
+		if (yaml.get("amount") instanceof Integer amount)
+			stack.setAmount(amount);
+		if (yaml.get("name") instanceof String name)
+			meta.itemName(MiniMessage.miniMessage().deserialize(name));
+		if (yaml.get("lore") instanceof String lore)
+			meta.lore(lore.lines().map(MiniMessage.miniMessage()::deserialize).toList());
+		stack.setItemMeta(meta);
+		return stack;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -85,7 +97,7 @@ public class ConfigUtils {
 				throw new RuntimeException("Failed to parse parameterized field " + parameterizedType + " " + path, ex);
 			}
 		} else if (type instanceof Class<?> clazz) {
-			if (path != null) {
+			if (raw != null) {
 				Object object = convertSimpleObject(raw, clazz);
 				if (object != null)
 					return object;
@@ -239,6 +251,8 @@ public class ConfigUtils {
 				// real registry
 				return registry.get(Objects.requireNonNull(NamespacedKey.fromString(Objects.requireNonNull((String) object))));
 			}
+		} else if (type == ItemStack.class) {
+			return parseItemStack((Map<?, ?>) object);
 		}
 		// team arena types
 		else if (type == BlockCoords.class) {

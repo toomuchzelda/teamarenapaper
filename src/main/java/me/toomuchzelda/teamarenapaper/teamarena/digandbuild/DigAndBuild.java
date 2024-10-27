@@ -4,6 +4,7 @@ import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
 import me.toomuchzelda.teamarenapaper.explosions.VanillaExplosionInfo;
+import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
@@ -28,15 +29,14 @@ import org.bukkit.block.Chest;
 import org.bukkit.block.Container;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.Item;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.TNTPrimed;
+import org.bukkit.entity.*;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.*;
 import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -154,6 +154,9 @@ public class DigAndBuild extends TeamArena
 	private List<UpgradeSpawnState> upgradeSpawners;
 
 	private List<ItemFountainState> itemFountains;
+
+	@Nullable
+	private DigAndBuildShopInventory shopInventory;
 
 	/** If players can join after the game has started.
 	 *  Players won't be allowed to join after an Ore has been broken */
@@ -359,6 +362,18 @@ public class DigAndBuild extends TeamArena
 				itemFountains.add(new ItemFountainState(this, gameWorld, itemFountain));
 			}
 		}
+
+		if (mapInfo.itemShop != null) {
+			shopInventory = new DigAndBuildShopInventory(this, mapInfo.itemShop);
+
+			for (Entity entity : gameWorld.getEntities()) {
+				if (entity instanceof AbstractVillager abstractVillager) {
+					abstractVillager.setAI(false);
+					abstractVillager.setInvulnerable(true);
+					abstractVillager.setNoPhysics(true);
+				}
+			}
+		}
 	}
 
 	public boolean isUpgradeItem(ItemStack stack) {
@@ -523,14 +538,28 @@ public class DigAndBuild extends TeamArena
 		BlockTimes times = this.blockTimes.computeIfAbsent(breaker, player -> new BlockTimes());
 		times.blockBreakTime = TeamArena.getGameTick();
 
+		DyeColor teamDyeColor = Main.getPlayerInfo(breaker).team.getDyeColour();
+
+		DyeColor brokenDyeColor = ItemUtils.getDyeColor(brokenBlockType);
+
 		for (ItemStack stack : this.defaultBlocks) {
-			if (stack.getType() == brokenBlockType) {
-				breaker.getInventory().addItem(stack.asOne());
+			Material type = stack.getType();
+			if (type == brokenBlockType || (brokenDyeColor != null && brokenDyeColor == ItemUtils.getDyeColor(type))) {
+				breaker.getInventory().addItem(tryDyeItem(stack.asOne(), teamDyeColor));
 				return;
 			}
 		}
 
-		breaker.getInventory().addItem(this.defaultBlocks.getFirst().asOne());
+		breaker.getInventory().addItem(tryDyeItem(this.defaultBlocks.getFirst().asOne(), teamDyeColor));
+	}
+
+	@Contract(pure = true)
+	static ItemStack tryDyeItem(ItemStack stack, DyeColor dyeColor) {
+		Material converted = ItemUtils.asDyeColor(stack.getType(), dyeColor);
+		if (converted != null) {
+			return stack.withType(converted);
+		}
+		return stack;
 	}
 
 	/**
@@ -573,10 +602,11 @@ public class DigAndBuild extends TeamArena
 				new VanillaExplosionInfo(false, VanillaExplosionInfo.FireMode.NO_FIRE,
 					VanillaExplosionInfo.DEFAULT_FLOAT_VALUE, VanillaExplosionInfo.DEFAULT_FLOAT_VALUE, true,
 					this::canTntBreak));
-		} else if (mapInfo.specialReplaceWoolWithTeamColor && block.getType() == Material.WHITE_WOOL) {
+		} else if (mapInfo.specialReplaceWoolWithTeamColor) {
 			DyeColor dyeColor = Main.getPlayerInfo(placer).team.getDyeColour();
-			Material teamWool = Objects.requireNonNull(Material.getMaterial(dyeColor.name() + "_WOOL"));
-			block.setType(teamWool);
+			Material replaced = ItemUtils.asDyeColor(block.getType(), dyeColor);
+			if (replaced != null)
+				block.setType(replaced);
 		}
 	}
 
@@ -633,6 +663,17 @@ public class DigAndBuild extends TeamArena
 
 		if (upgrades.onInteract(clicker, event)) {
 			//noinspection UnnecessaryReturnStatement // shut up
+			return;
+		}
+	}
+
+	@Override
+	public void onInteractEntity(PlayerInteractEntityEvent event) {
+		super.onInteractEntity(event);
+
+		if (shopInventory != null && !event.isCancelled() && event.getRightClicked() instanceof AbstractVillager) {
+			Inventories.openInventory(event.getPlayer(), shopInventory);
+			event.setCancelled(true);
 			return;
 		}
 	}
@@ -730,7 +771,7 @@ public class DigAndBuild extends TeamArena
 		this.gameWorld.strikeLightningEffect(ore.getLifeOres().keySet().iterator().next().getLocation().add(0.5, 0, 0.5));
 	}
 
-	private static final Component CANT_BUILD_HERE = Component.text("You can't build here", TextColors.ERROR_RED);
+	private static final Component CANT_BUILD_HERE = Component.text("You can't build here!", TextColors.ERROR_RED);
 	private void playNoBuildEffect(Block block, Player player, IntBoundingBox noBuildZone) {
 		Location loc = block.getLocation().add(0.5d, 0.5d, 0.5d);
 		player.spawnParticle(Particle.ANGRY_VILLAGER, loc, 2);
@@ -799,6 +840,13 @@ public class DigAndBuild extends TeamArena
 	@Override
 	public void onDamage(DamageEvent event) {
 		super.onDamage(event);
+		// merchants
+		if (shopInventory != null && event.getVictim() instanceof AbstractVillager) {
+			if (event.getFinalAttacker() instanceof Player player)
+				Inventories.openInventory(player, shopInventory);
+			event.setCancelled(true);
+			return;
+		}
 
 		// Nerf damage of tools to max(fist, tool_damage / 3)
 		if (event.getDamageType().isMelee() && event.getFinalAttacker() instanceof Player) {
@@ -927,17 +975,20 @@ public class DigAndBuild extends TeamArena
 	}
 
 	private void doBlockCooldowns() {
-		if (mapInfo.specialNoBlockRegeneration) return;
-
 		final int currentTick = TeamArena.getGameTick();
 		// Block stack regeneration
 		for (Player player : this.players) {
+			DyeColor dyeColor = Main.getPlayerInfo(player).team.getDyeColour();
 			// Only increment and decrement block stacks one at a time, priority in the order of this.blocks
-			boolean incremented = false;
-			boolean decremented = false;
+			boolean incremented = mapInfo.specialNoBlockRegeneration;
+			boolean decremented = mapInfo.specialNoBlockRemoval;
+			if (incremented && decremented)
+				return;
+
 			for (ItemStack blockStack : this.defaultBlocks) {
+				ItemStack adjusted = tryDyeItem(blockStack, dyeColor);
 				final PlayerInventory inventory = player.getInventory();
-				final int totalCount = ItemUtils.getItemCount(inventory, blockStack);
+				final int totalCount = ItemUtils.getItemCount(inventory, adjusted);
 				if (totalCount != MAX_BLOCK_COUNT) {
 					BlockTimes times = this.blockTimes.get(player);
 					if (times == null)
@@ -947,15 +998,15 @@ public class DigAndBuild extends TeamArena
 						currentTick - times.blockPlaceTime >= TICKS_PER_GAIN_BLOCK && totalCount < MAX_BLOCK_COUNT) {
 						incremented = true;
 						times.blockPlaceTime = currentTick;
-						inventory.addItem(blockStack.asOne());
+						inventory.addItem(adjusted.asOne());
 					}
 					else if (!decremented && times.blockBreakTime != BlockTimes.NO_TIME &&
 						currentTick - times.blockBreakTime >= TICKS_PER_LOSE_BLOCK && totalCount > MAX_BLOCK_COUNT) {
 						decremented = true;
 						times.blockBreakTime = currentTick;
-						ItemUtils.maxItemAmount(inventory, blockStack, totalCount - 1);
+						ItemUtils.maxItemAmount(inventory, adjusted, totalCount - 1);
 
-						assert ItemUtils.getItemCount(inventory, blockStack) == totalCount - 1;
+						assert ItemUtils.getItemCount(inventory, adjusted) == totalCount - 1;
 					}
 				}
 
@@ -1064,8 +1115,12 @@ public class DigAndBuild extends TeamArena
 	public void giveKitAndGameItems(Player player, PlayerInfo pinfo, boolean clear) {
 		super.giveKitAndGameItems(player, pinfo, true);
 
-		player.getInventory().addItem(defaultTools.toArray(new ItemStack[0]));
-		player.getInventory().addItem(defaultBlocks.toArray(new ItemStack[0]));
+		PlayerInventory inventory = player.getInventory();
+		inventory.addItem(defaultTools.toArray(new ItemStack[0]));
+		DyeColor dyeColor = pinfo.team.getDyeColour();
+		for (ItemStack defaultBlock : defaultBlocks) {
+			inventory.addItem(tryDyeItem(defaultBlock, dyeColor));
+		}
 	}
 
 	@Override
