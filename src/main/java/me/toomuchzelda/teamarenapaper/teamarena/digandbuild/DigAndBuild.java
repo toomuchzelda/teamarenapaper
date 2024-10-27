@@ -25,6 +25,7 @@ import net.kyori.adventure.util.Ticks;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
+import org.bukkit.block.Container;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Item;
@@ -334,12 +335,21 @@ public class DigAndBuild extends TeamArena
 
 			BlockCoords chestCoords = teamInfo.chest();
 			if (chestCoords != null) {
-				PointMarker marker = new PointMarker(chestCoords.toLocation(gameWorld).add(0.5d, 2.2d, 0.5d),
-					team.getComponentName().append(Component.text("'s chest", team.getRGBTextColor())),
-					team.getColour(), Material.CHEST, true);
-				this.pointMarkers.add(marker);
+				Block block = chestCoords.toBlock(gameWorld);
+				// ensure that it's actually a container
+				if (block.getState() instanceof Container container) {
+					Component name = team.getComponentName().append(Component.text("'s chest", team.getRGBTextColor()));
 
-				this.chestLookup.put(chestCoords.toBlock(gameWorld), team);
+					container.customName(name);
+					container.update();
+
+					PointMarker marker = new PointMarker(chestCoords.toLocation(gameWorld).add(0.5d, 2.2d, 0.5d),
+						name,
+						team.getColour(), container.getType(), true);
+					this.pointMarkers.add(marker);
+
+					this.chestLookup.put(block, team);
+				}
 			}
 		}
 
@@ -806,7 +816,7 @@ public class DigAndBuild extends TeamArena
 	public void onDropItem(PlayerDropItemEvent event) {
 		super.onDropItem(event);
 
-		if (isUpgradeItem(event.getItemDrop().getItemStack())) {
+		if (isDNBItem(event.getItemDrop().getItemStack())) {
 			event.setCancelled(false);
 		}
 	}
@@ -816,7 +826,7 @@ public class DigAndBuild extends TeamArena
 		super.onAttemptPickupItem(event);
 
 		if (!this.isDead(event.getPlayer()) &&
-			isUpgradeItem(event.getItem().getItemStack())) {
+			isDNBItem(event.getItem().getItemStack())) {
 
 			event.setCancelled(false);
 		}

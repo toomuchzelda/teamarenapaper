@@ -31,14 +31,12 @@ public class DigAndBuildInfo {
 	@Nullable @ConfigOptional
 	public BlockData defaultLifeOreBlock;
 	public record LifeOreInfo(BlockCoords location, @Nullable @ConfigOptional Component customName,
-							  double protectionRadius, @ConfigOptional Double interactionRadius,
-							  @Nullable @ConfigOptional BlockData block, @ConfigOptional Boolean hideHologram) {
+							  double protectionRadius, @ConfigOptional double interactionRadius,
+							  @Nullable @ConfigOptional BlockData block, @ConfigOptional boolean hideHologram) {
 		public LifeOreInfo {
-			if (interactionRadius == null)
+			if (interactionRadius == 0d)
 				interactionRadius = protectionRadius;
 			interactionRadius = Math.max(interactionRadius, 5);
-			if (hideHologram == null)
-				hideHologram = false;
 		}
 	}
 	public record TeamInfo(@Nullable @ConfigOptional BlockCoords chest, List<LifeOreInfo> lifeOres) {}
@@ -83,17 +81,23 @@ public class DigAndBuildInfo {
 			@Override
 			public ItemStack resolve(DigAndBuild game) {
 				DigAndBuildInfo mapInfo = game.getMapInfo();
-				return switch (type) {
-					case "heal" -> mapInfo.healUpgrade.makeItemStack();
-					case "trap" -> mapInfo.trapUpgrade.makeItemStack();
-					case "haste" -> mapInfo.hasteUpgrade.makeItemStack();
+				return Objects.requireNonNull(switch (type) {
+					case "heal" -> mapInfo.healUpgrade;
+					case "trap" -> mapInfo.trapUpgrade;
+					case "haste" -> mapInfo.hasteUpgrade;
 					default -> throw new IllegalArgumentException("Invalid upgrade reference: " + type);
-				};
+				}, "Invalid upgrade reference for this map: " + type).makeItemStack();
 			}
 		}
 	}
 
-	public record ItemFountain(Vector at, int interval, List<CustomItemReference> sequence) {}
+	public record ItemFountain(Vector at, int interval, @ConfigOptional int maxItems,
+							   List<CustomItemReference> sequence,
+							   @Nullable @ConfigOptional Vector hologram, @Nullable @ConfigOptional Component customName) {
+		public ItemFountain {
+			if (maxItems == 0) maxItems = 16;
+		}
+	}
 	@Nullable @ConfigOptional
 	public List<ItemFountain> itemFountains;
 
@@ -101,10 +105,13 @@ public class DigAndBuildInfo {
 	public List<Material> defaultBlocks;
 
 	@ConfigPath("__replace-wool-with-team-color")
+	@ConfigOptional
 	public boolean specialReplaceWoolWithTeamColor;
 	@ConfigPath("__instantly-prime-tnt")
+	@ConfigOptional
 	public boolean specialInstantlyPrimeTnt;
 	@ConfigPath("__no-block-regeneration")
+	@ConfigOptional
 	public boolean specialNoBlockRegeneration;
 
 	@Nullable
@@ -285,7 +292,7 @@ public class DigAndBuildInfo {
 		teams = new LinkedHashMap<>();
 		teamInfo.forEach((team, info) -> {
 			teams.put(team, new TeamInfo(info.teamChest, List.of(new LifeOreInfo(
-				info.oreCoords, null, info.protectionRadius, null, null, false
+				info.oreCoords, null, info.protectionRadius, 0, null, false
 			))));
 		});
 	}

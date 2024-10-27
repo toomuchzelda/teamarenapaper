@@ -43,6 +43,8 @@ public class ConfigUtils {
 		return (T) parseObject(yaml, clazz, null, false);
 	}
 
+	private static final Object PRIMITIVE_EMPTY = new Object();
+
 	@Nullable
 	private static Object parseObject(Map<?, ?> yaml, Type type, String path, boolean optional) {
 		Object raw = yaml;
@@ -57,10 +59,14 @@ public class ConfigUtils {
 							String.join(".", Arrays.copyOfRange(split, 0, i - 1)) + ", got " + raw.getClass().getName());
 				}
 				if (raw == null) {
-					if (optional)
-						return null;
-					else
+					if (optional) {
+						// SPECIAL CASE: return sentinel if primitive
+						return type instanceof Class<?> clazz && clazz.isPrimitive() ?
+							PRIMITIVE_EMPTY :
+							null;
+					} else {
 						throw new IllegalArgumentException(path + " is not optional");
+					}
 				}
 			}
 		}
@@ -108,8 +114,12 @@ public class ConfigUtils {
 					RecordComponent component = components[i];
 					String configName = getConfigName(component);
 					try {
-						values[i] = parseObject(map, component.getGenericType(), configName,
+						Object value = parseObject(map, component.getGenericType(), configName,
 							component.getAnnotation(ConfigOptional.class) != null);
+						// for records, fall back to defaults for primitives
+						if (value == PRIMITIVE_EMPTY)
+							value = getPrimitiveDefault((Class<?>) component.getGenericType());
+						values[i] = value;
 					} catch (Exception ex) {
 						throw new IllegalArgumentException(realPath + configName + ": " + ex.getMessage() + "\nContext: " + map, ex);
 					}
@@ -138,9 +148,12 @@ public class ConfigUtils {
 					constructor.setAccessible(true);
 					Object instance = constructor.newInstance();
 					for (int i = 0; i < fields.length; i++) {
+						Object value = values[i];
+						if (value == null || value == PRIMITIVE_EMPTY) // for classes, we can just not assign null fields
+							continue;
 						Field field = fields[i];
 						field.setAccessible(true);
-						field.set(instance, values[i]);
+						field.set(instance, value);
 					}
 					return instance;
 				} catch (NoSuchMethodException e) {
@@ -283,5 +296,27 @@ public class ConfigUtils {
 			ownPath = UPPER_CASE.matcher(field.getName()).replaceAll(match -> "-" + match.group().toLowerCase(Locale.ENGLISH));
 		}
 		return ownPath;
+	}
+
+	public static Object getPrimitiveDefault(Class<?> clazz) {
+		if (clazz == boolean.class) {
+			return false;
+		} else if (clazz == byte.class) {
+			return (byte) 0;
+		} else if (clazz == char.class) {
+			return '\0';
+		} else if (clazz == short.class) {
+			return (short) 0;
+		} else if (clazz == int.class) {
+			return 0;
+		} else if (clazz == long.class) {
+			return 0L;
+		} else if (clazz == float.class) {
+			return 0f;
+		} else if (clazz == double.class) {
+			return 0d;
+		} else {
+			throw new IllegalArgumentException(clazz + " is not a primitive");
+		}
 	}
 }
