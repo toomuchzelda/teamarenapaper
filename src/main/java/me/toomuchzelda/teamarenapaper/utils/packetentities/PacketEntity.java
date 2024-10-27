@@ -9,7 +9,6 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
@@ -393,7 +392,20 @@ public class PacketEntity
 		ints.write(0, this.getId());
 		ints.write(1, effect);
 
-		this.realViewers.forEach(player -> this.sendPacket(player, packet));
+		broadcastPacket(packet);
+	}
+
+	public static final int ENTITY_STATUS_DEATH = 3;
+	/**
+	 * Plays an entity status/event
+	 * @param status The status ID
+	 */
+	public void playStatus(int status) {
+		PacketContainer packet = new PacketContainer(PacketType.Play.Server.ENTITY_STATUS);
+		packet.getIntegers().write(0, getId());
+		packet.getBytes().write(0, (byte) status);
+
+		broadcastPacket(packet);
 	}
 
 	/**

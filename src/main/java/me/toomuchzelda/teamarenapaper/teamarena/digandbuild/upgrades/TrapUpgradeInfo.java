@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.digandbuild.upgrades;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.DigAndBuild;
 import me.toomuchzelda.teamarenapaper.utils.ConfigOptional;
+import me.toomuchzelda.teamarenapaper.utils.ConfigPath;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -20,7 +21,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 public record TrapUpgradeInfo(Material item, @Nullable @ConfigOptional Component customName, int required,
-							  int max, double triggerRadius) implements UpgradeBase {
+							  @ConfigOptional @ConfigPath("default") int _default, int max,
+							  double triggerRadius) implements UpgradeBase {
 
 	public static final @NotNull TextComponent DEFAULT_NAME = Component.text("It's a... \uD83D\uDC26 Government UAV!", TextColor.color(0xb19e8f));
 

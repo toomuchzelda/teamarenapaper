@@ -20,6 +20,11 @@ import java.util.*;
 public class MetaIndex
 {
 	private static final Map<Integer, WrappedDataWatcher.Serializer> INDEX_SERIALIZER_MAP = new HashMap<>();
+	private static WrappedDataWatcherObject dataWatcher(int index, WrappedDataWatcher.Serializer serializer) {
+		var wdwo = new WrappedDataWatcherObject(index, serializer);
+		addMapping(wdwo);
+		return wdwo;
+	}
 
 	public static final int BASE_BITFIELD_IDX = 0;
 	public static final int CUSTOM_NAME_IDX = 2;
@@ -135,6 +140,8 @@ public class MetaIndex
 	public static final WrappedDataWatcherObject BLOCK_DISPLAY_BLOCK_OBJ;
 
 	public static final WrappedDataWatcherObject ITEM_DISPLAY_ITEM_OBJ;
+
+	public static final WrappedDataWatcherObject PARROT_VARIANT_OBJ = dataWatcher(19, WrappedDataWatcher.Registry.get(Integer.class));
 
 	private static void addMapping(WrappedDataWatcherObject object) {
 		INDEX_SERIALIZER_MAP.put(object.getIndex(), object.getSerializer());

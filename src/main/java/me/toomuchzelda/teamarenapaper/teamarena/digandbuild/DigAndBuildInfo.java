@@ -113,7 +113,7 @@ public class DigAndBuildInfo {
 	@ConfigPath("__no-block-regeneration")
 	@ConfigOptional
 	public boolean specialNoBlockRegeneration;
-	@ConfigPath("__no-block-regeneration")
+	@ConfigPath("__no-block-removal")
 	@ConfigOptional
 	public boolean specialNoBlockRemoval;
 
