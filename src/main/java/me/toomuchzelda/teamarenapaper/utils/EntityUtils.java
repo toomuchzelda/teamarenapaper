@@ -42,6 +42,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 public class EntityUtils {
@@ -329,6 +330,15 @@ public class EntityUtils {
 
 	public static boolean isTrackingEntity(Player viewer, Entity viewedEntity) {
 		return getTrackedPlayers0(viewedEntity).contains(((CraftPlayer) viewer).getHandle().connection);
+	}
+
+	public static void forEachTrackedPlayer(Entity viewedEntity, Consumer<Player> func) {
+		Set<ServerPlayerConnection> trackers = getTrackedPlayers0(viewedEntity);
+		for (ServerPlayerConnection connection : trackers) {
+			Player player = connection.getPlayer().getBukkitEntity().getPlayer();
+			if (player != null)
+				func.accept(player);
+		}
 	}
 
 	public static ArrayList<Player> getTrackedPlayers(Entity viewedEntity) {

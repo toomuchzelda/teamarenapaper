@@ -587,7 +587,7 @@ public class DamageEvent {
 					//reset their attack cooldown
 					p.resetCooldown();
 				}
-				else if(damageType.is(DamageType.PROJECTILE)) {
+				else if(damageType.isProjectile()) {
 					Sound sound = Main.getPlayerInfo(p).getPreference(Preferences.BOW_HIT_SOUND);
 					p.playSound(p, sound, SoundCategory.PLAYERS, 2f, 1f);
 				}
@@ -802,13 +802,19 @@ public class DamageEvent {
 	 * to be re-done and the finalDamage to be re-assigned.
 	 * The DamageEvent's current DamageType is important! It will affect the outcome. */
 	public void setRawDamage(double rawDamage) {
-		if(this.victim instanceof LivingEntity living) {
-			this.finalDamage = DamageCalculator.calcArmorReducedDamage(this.damageType, rawDamage, living);
+		this.rawDamage = rawDamage;
+		if (this.victim instanceof LivingEntity) {
+			this.recalculateFinalDamage();
 		}
 		else {
 			this.finalDamage = rawDamage;
 		}
-		this.rawDamage = rawDamage;
+	}
+
+	public void recalculateFinalDamage() {
+		if (this.victim instanceof LivingEntity living) {
+			this.finalDamage = DamageCalculator.calcArmorReducedDamage(this.damageType, this.rawDamage, living);
+		}
 	}
 
 	public void setDamageType(DamageType damageType) {

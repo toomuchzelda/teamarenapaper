@@ -38,11 +38,11 @@ public class DamageType {
     public static final DamageType BERRY_BUSH = new DamageType("Berry Bush", "%Killed% ate one too many sweet berries").setNoKnockback();
 
 	public static final DamageType BORDER = new DamageType("Out of Bounds", "%Killed% went out of bounds")
-		.setIgnoreArmor().setIgnoreArmorEnchants().setIgnoreRate();
+		.setIgnoreArmor(true).setIgnoreRate();
 
     public static final DamageType CACTUS = new DamageType("Cactus", "%Killed% hugged a cactus").setNoKnockback();
 
-    public static final DamageType CRAMMING = new DamageType("Cramming", "%Killer% was crammed to death").setIgnoreArmor()
+    public static final DamageType CRAMMING = new DamageType("Cramming", "%Killer% was crammed to death")
             .setNoKnockback();
 
     public static final DamageType CUSTOM = new DamageType("Custom", "%Killed% fell over and died").setNoKnockback();
@@ -53,11 +53,11 @@ public class DamageType {
     public static final DamageType DRAGON_BREATH = new DamageType("Dragon Breath", "%Killed% sucked a lungful of dragon's breath")
             .setNoKnockback();
 
-    public static final DamageType DROWNED = new DamageType("Drowned", "%Killed% is swimming with the fishes").setIgnoreArmor()
-            .setNoKnockback();
+    public static final DamageType DROWNED = new DamageType("Drowned", "%Killed% is swimming with the fishes")
+		.setIgnoreArmor(true).setNoKnockback();
 
     public static final DamageType DRYOUT = new DamageType("Dryout", "%Killed% died of dehydration")
-            .setNoKnockback();
+		.setIgnoreArmor(true).setNoKnockback();
 
     public static final DamageType EXPLOSION = new DamageType("Explosion", "%Killed% was caught in an explosion")
 			.setExplosion();
@@ -82,17 +82,17 @@ public class DamageType {
     public static final DamageType FIRE = new DamageType("Direct Fire", "%Killed% stood inside flames and laughed").setNoKnockback()
             .setBurn();
 
-    public static final DamageType FIRE_ASPECT = new DamageType("Fire Aspect", "%Killed% was charred to a crisp by %Killer%").setFire()
-            .setNoKnockback().setIgnoreArmor();
+    public static final DamageType FIRE_ASPECT = new DamageType("Fire Aspect", "%Killed% was charred to a crisp by %Killer%")
+		.setFire().setNoKnockback().setIgnoreArmor(false);
 
-    public static final DamageType FIRE_BOW = new DamageType("Fire Bow", "%Killed% charred to a crisp by %Killer%'s bow").setFire()
-            .setNoKnockback().setIgnoreArmor();
+    public static final DamageType FIRE_BOW = new DamageType("Fire Bow", "%Killed% charred to a crisp by %Killer%'s bow")
+		.setFire().setNoKnockback().setIgnoreArmor(false);
 
     /**
      * Fire on the entity itself
      */
-    public static final DamageType FIRE_TICK = new DamageType("Fire Tick", "%Killed% was burned alive").setNoKnockback().setFire()
-            .setIgnoreArmor();
+    public static final DamageType FIRE_TICK = new DamageType("Fire Tick", "%Killed% was burned alive")
+		.setNoKnockback().setFire().setIgnoreArmor(false);
 
 	public static final DamageType CAMPFIRE = new DamageType("Campfire", "%Killed% got too cozy at a campfire")
 		.setNoKnockback().setBurn();
@@ -103,7 +103,7 @@ public class DamageType {
             .setNoKnockback();
 
     public static final DamageType FREEZE = new DamageType("Freeze", "%Killed% froze to death")
-            .setIgnoreArmor();
+            .setIgnoreArmor(false);
 
     public static final DamageType LAVA = new DamageType("Lava", "%Killed% tried to swim in lava").setNoKnockback().setBurn();
 
@@ -115,7 +115,7 @@ public class DamageType {
 
     public static final DamageType MELTING = new DamageType("Melting", "%Killed% melted in the hot sun").setNoKnockback();
 
-    public static final DamageType POISON = new DamageType("Poison", "%Killed% drank a flask of poison").setIgnoreArmor()
+    public static final DamageType POISON = new DamageType("Poison", "%Killed% drank a flask of poison").setIgnoreArmor(true)
             .setNoKnockback().setTrackedDamageType(DamageTimes.TrackedDamageTypes.POISON);
 
     public static final DamageType PROJECTILE = new DamageType("Projectile", "%Killed% was shot by %Killer%").setProjectile();
@@ -124,10 +124,10 @@ public class DamageType {
 		.setInstantDeath().setNoKnockback().setIgnoreRate();
 
 	public static final DamageType SONIC_BOOM = new DamageType("Sonic Boom", "%Killed% was killed by %Killer%'s sonic boom")
-			.setIgnoreArmor().setIgnoreArmorEnchants();
+			.setIgnoreArmor(true);
 
-    public static final DamageType STARVATION = new DamageType("Starvation", "%Killed% died from starvation").setIgnoreArmor()
-            .setNoKnockback();
+    public static final DamageType STARVATION = new DamageType("Starvation", "%Killed% died from starvation")
+		.setIgnoreArmor(true).setNoKnockback();
 
     public static final DamageType SUFFOCATION = new DamageType("Suffocation", "%Killed% choked on block").setNoKnockback();
 
@@ -151,16 +151,16 @@ public class DamageType {
 
     public static final DamageType UNKNOWN = new DamageType("Unknown", "%Killed% died from unknown causes").setNoKnockback();
 
-    public static final DamageType VOID = new DamageType("Void", "%Killed% fell into the void").setIgnoreArmor().setNoKnockback()
+    public static final DamageType VOID = new DamageType("Void", "%Killed% fell into the void").setIgnoreArmor(true).setNoKnockback()
             .setIgnoreRate();
 
     public static final DamageType VOID_PUSHED = new DamageType("Void Pushed", "%Killed% was knocked into the void by %Killer%")
-            .setIgnoreArmor().setNoKnockback().setIgnoreRate();
+            .setIgnoreArmor(true).setNoKnockback().setIgnoreRate();
 
 	public static final DamageType VOID_PUSHED_SELF = new DamageType(VOID_PUSHED, "%Killed% pushed themselves into the void");
 
     public static final DamageType VOID_SHOT = new DamageType("Void Shot", "%Killed% was shot into the void by %Killer%")
-            .setIgnoreArmor().setNoKnockback().setIgnoreRate();
+            .setIgnoreArmor(true).setNoKnockback().setIgnoreRate();
 
     public static final DamageType WITHER_POISON = new DamageType("Wither Poison", "%Killed% withered to death")
             .setNoKnockback();
@@ -170,7 +170,7 @@ public class DamageType {
      ******************************************************************************************/
 
     public static final DamageType PYRO_MOLOTOV = new DamageType("Pyro Incendiary", "%Killed% was burned to death by %Killer%'s incendiary")
-            .setFire().setIgnoreArmor().setNoKnockback();
+            .setFire().setIgnoreArmor(false).setNoKnockback();
 
 	public static final DamageType SNIPER_GRENADE_FAIL = new DamageType("Grenade Fail", "%Killed% forgot they pulled the pin.")
 			.setInstantDeath().setNoKnockback();
@@ -204,7 +204,7 @@ public class DamageType {
 			.setIgnoreRate().setProjectile().setNoKnockback();
 
 	public static final DamageType BURST_SHOTGUN_SELF = new DamageType("Burst Blast Self Harm", "%Killed% went trigger happy and blew their fingers off")
-			.setIgnoreRate().setIgnoreArmor().setExplosion();
+			.setIgnoreRate().setIgnoreArmor(true).setExplosion();
 
 	public static final DamageType EXPLOSIVE_RPG = new DamageType("Explosive RPG", "%Killed% was caught in %Killer%'s RPG")
 			.setExplosion();
@@ -245,7 +245,7 @@ public class DamageType {
 	public static final DamageType BOMB_EXPLODED = new DamageType("Team Bomb").setInstantDeath().setIgnoreRate();
 
 	public static final DamageType END_GAME_LIGHTNING = new DamageType("Herobrine", "%Killed% was killed by Herobrine")
-			.setIgnoreArmor().setIgnoreArmorEnchants().setNoKnockback().setIgnoreRate();
+			.setIgnoreArmor(true).setNoKnockback().setIgnoreRate();
 
 	/*******************************************************************************************
 	 * 									KILLSTREAK DAMAGETYPES
@@ -257,8 +257,14 @@ public class DamageType {
 			.setMelee();
 
 	public static final DamageType HARBINGER = new DamageType("Harbinger", "%Killed% was obliterated by %Killer%'s Harbinger")
-			.setIgnoreArmor().setIgnoreRate();
+			.setIgnoreArmor(true).setIgnoreRate();
 
+	/*********************************************************************************************
+	 * 									ITEM DAMAGETYPES
+	 *********************************************************************************************/
+
+	public static final DamageType RAILGUN = new DamageType("Railgun", "%Killed% was perforated by %Killer%'s Railgun")
+		.setIgnoreRate().setNoKnockback().setProjectile().setIgnoreArmor(true);
 
 	private static int idCounter = 0;
 	static DamageSources nmsDamageSources;
@@ -683,7 +689,7 @@ public class DamageType {
 
     public DamageType setFall() {
         _fall = true;
-        setIgnoreArmor();
+        setIgnoreArmor(false);
         setIgnoreRate();
 		addApplicableEnchant(Enchantment.FEATHER_FALLING);
 		setTrackedDamageType(DamageTimes.TrackedDamageTypes.OTHER);
@@ -701,8 +707,11 @@ public class DamageType {
         return this;
     }
 
-    public DamageType setIgnoreArmor() {
+    public DamageType setIgnoreArmor(boolean ignoreEnchants) {
         _ignoreArmor = true;
+
+		if (ignoreEnchants)
+			this.setIgnoreArmorEnchants();
 
         return this;
     }

@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.abilities.RailgunAbility;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.hideandseek.HideAndSeek;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
@@ -43,12 +44,7 @@ public class KitHider extends Kit {
 	public KitHider(TeamArena game) {
 		super(NAME, "Take the form of blocks and animals to hide from seekers", Material.HAY_BLOCK);
 
-		this.setItems(
-			TRANSFORM_WAND,
-			ItemBuilder.of(Material.BOW).enchant(Enchantment.INFINITY, 1)
-				.enchant(Enchantment.POWER, 1).build(),
-			new ItemStack(Material.ARROW)
-		);
+		this.setItems(TRANSFORM_WAND, RailgunAbility.RAILGUN, new ItemStack(Material.ARROW));
 		this.setAbilities(new HiderAbility(game));
 	}
 

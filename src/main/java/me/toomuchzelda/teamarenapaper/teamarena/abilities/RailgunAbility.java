@@ -1,20 +1,16 @@
 package me.toomuchzelda.teamarenapaper.teamarena.abilities;
 
 import com.comphenix.protocol.events.PacketContainer;
-import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
-import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.AbstractArrow;
-import org.bukkit.entity.Arrow;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
@@ -31,13 +27,11 @@ public class RailgunAbility extends Ability {
 		)
 		.enchant(Enchantment.INFINITY, 1)
 		.build();
-
-	private static final double PARTICLE_VIEW_DIST_SQR = 48d * 48d;
+	public static final int RAILGUN_COOLDOWN = 3 * 20;
 
 	private static class RailInfo {
 		private boolean hitGround = false;
 		private Location previousPosition;
-		private Color colour;
 	}
 
 	private final Map<AbstractArrow, RailInfo> rails = new HashMap<>();
@@ -51,9 +45,10 @@ public class RailgunAbility extends Ability {
 	@Override
 	public void onShootBow(EntityShootBowEvent event) {
 		final LivingEntity shooter = event.getEntity();
-		if (RAILGUN.isSimilar(event.getBow())) {
-			event.setCancelled(true);
+		if (RAILGUN.isSimilar(event.getBow()) && event.getProjectile() instanceof AbstractArrow aa) {
 			if (event.getForce() < 3.0f) {
+				event.setCancelled(true);
+
 				shooter.getWorld().playSound(shooter, Sound.ENTITY_ARROW_SHOOT, SoundCategory.PLAYERS, 1f, 2f);
 
 				final Location particleLoc = shooter.getEyeLocation();
@@ -63,27 +58,30 @@ public class RailgunAbility extends Ability {
 				shooter.getWorld().spawnParticle(Particle.FIREWORK, particleLoc, 1, 0.05d, 0.05d, 0.05d, 0.04d);
 			}
 			else {
-				fireRailgun(shooter);
+				fireRailgun(shooter, aa);
 			}
 		}
 	}
 
-	private void fireRailgun(LivingEntity shooter) {
+	private void fireRailgun(LivingEntity shooter, AbstractArrow aa) {
 		final Location eyeLocation = shooter.getEyeLocation();
-		AbstractArrow aa = shooter.getWorld().spawn(eyeLocation, Arrow.class, arrow -> {
-			arrow.setGlowing(true);
-			arrow.setShooter(shooter);
-			arrow.setGravity(false);
-			arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
-			arrow.setPierceLevel(127);
-			arrow.setVelocity(eyeLocation.getDirection().multiply(5d));
-		});
+		//aa.setGlowing(true);
+		aa.setGravity(false);
+		aa.setVelocity(eyeLocation.getDirection().multiply(5d));
+
+		aa.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
+		aa.setPierceLevel(127);
+		//aa.setWeapon(RAILGUN);
+		aa.setCritical(false);
 
 		RailInfo rinfo = new RailInfo();
 		rinfo.previousPosition = eyeLocation;
-		rinfo.colour = shooter instanceof Player pShooter ? Main.getPlayerInfo(pShooter).team.getColour() : Color.WHITE;
 
 		rails.put(aa, rinfo);
+
+		if (shooter instanceof Player pShooter) {
+			pShooter.setCooldown(RAILGUN.getType(), RAILGUN_COOLDOWN);
+		}
 	}
 
 	@Override
@@ -96,28 +94,37 @@ public class RailgunAbility extends Ability {
 
 			Location currentLoc = aa.getLocation();
 			if (!currentLoc.equals(rinfo.previousPosition)) {
-				particleTrail(currentLoc, rinfo);
+				particleTrail(aa, currentLoc, rinfo);
 
 				rinfo.previousPosition = currentLoc;
 			}
 
 			if (aa.isInBlock() || !aa.isValid()) {
 				iterator.remove();
-				aa.remove();
 
-				//ParticleUtils.playExplosionParticle(currentLoc, 0f, 0f, 0f, false);
 				currentLoc.getWorld().playSound(currentLoc, Sound.ENTITY_FIREWORK_ROCKET_BLAST, SoundCategory.HOSTILE, 1f, 2f);
-				particleBoom(currentLoc);
+				particleBoom(aa, currentLoc);
+
+				aa.remove();
+				// For some reason the arrow isn't being removed on clients
+				// probably the ArrowManager stuff. Just do it manually
+				//final PacketContainer removePacket = new PacketContainer(PacketType.Play.Server.ENTITY_DESTROY, EntityUtils.getRemoveEntitiesPacket(aa));
+				//EntityUtils.forEachTrackedPlayer(aa, player -> PlayerUtils.sendPacket(player, removePacket));
 			}
 		}
 	}
 
 	@Override
 	public void onAttemptedAttack(DamageEvent event) {
-		// TODO
+		if (event.getDamageType().is(DamageType.PROJECTILE) && event.getAttacker() instanceof AbstractArrow aa) {
+			if (RAILGUN.isSimilar(aa.getWeapon())) {
+				event.setDamageType(DamageType.RAILGUN);
+				event.recalculateFinalDamage(); // DamageType ignore armour needs recalc
+			}
+		}
 	}
 
-	private static void particleTrail(Location currentLoc, RailInfo rinfo) {
+	private static void particleTrail(Entity arrow, Location currentLoc, RailInfo rinfo) {
 		List<PacketContainer> packets = new ArrayList<>();
 		double distance = currentLoc.distance(rinfo.previousPosition);
 		for (double d = 0d; d <= distance; d += 0.9d) {
@@ -136,23 +143,15 @@ public class RailgunAbility extends Ability {
 		}
 
 		final PacketContainer bundle = PlayerUtils.createBundle(packets);
-		for (Player p : Bukkit.getOnlinePlayers()) {
-			if (EntityUtils.distanceSqr(p, rinfo.previousPosition) <= PARTICLE_VIEW_DIST_SQR) {
-				PlayerUtils.sendPacket(p, bundle);
-			}
-		}
+		EntityUtils.forEachTrackedPlayer(arrow, player -> PlayerUtils.sendPacket(player, bundle));
 	}
 
-	private static void particleBoom(Location loc) {
-		PacketContainer packet = ParticleUtils.batchParticles(
+	private static void particleBoom(Entity arrow, Location loc) {
+		final PacketContainer packet = ParticleUtils.batchParticles(
 			Particle.FIREWORK, null, loc, 5,
 			0f, 0f, 0f,
 			0.085f, true);
 
-		for (Player p : Bukkit.getOnlinePlayers()) {
-			if (EntityUtils.distanceSqr(p, loc) <= PARTICLE_VIEW_DIST_SQR) {
-				PlayerUtils.sendPacket(p, packet);
-			}
-		}
+		EntityUtils.forEachTrackedPlayer(arrow, player -> PlayerUtils.sendPacket(player, packet));
 	}
 }

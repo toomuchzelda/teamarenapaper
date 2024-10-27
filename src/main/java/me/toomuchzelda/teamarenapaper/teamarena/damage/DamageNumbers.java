@@ -162,14 +162,11 @@ public class DamageNumbers
 	}
 
 	public static double calcArrowDamage(AbstractArrow arrow, double arrowSpeed) {
-		double damage;
+		double damage = arrow.getDamage();
 		ItemStack weapon = arrow.getWeapon();
 		int power = weapon != null ? weapon.getEnchantmentLevel(Enchantment.POWER) : 0;
 		if (power > 0) {
-			damage = 2.5d + ((double) power) / 2d;
-		}
-		else {
-			damage = 2.0d;
+			damage += 0.5d * (1d + (double) power);
 		}
 
 		return Math.ceil(damage * arrowSpeed);

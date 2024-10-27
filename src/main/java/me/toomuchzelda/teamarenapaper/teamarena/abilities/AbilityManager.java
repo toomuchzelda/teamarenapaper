@@ -3,7 +3,6 @@ package me.toomuchzelda.teamarenapaper.teamarena.abilities;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import java.util.List;
@@ -43,6 +42,7 @@ public class AbilityManager {
 	}
 
 	public void unregisterAll() {
-		this.railgun.unregisterAbility();
+		for (Ability a : all)
+			a.unregisterAbility();
 	}
 }
