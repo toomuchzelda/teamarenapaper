@@ -53,8 +53,8 @@ public class ItemUtils {
     }
 
 	private static final String[] COLORABLE_SUFFIXES = new String[]{
-		"_wool", "_terracotta", "_carpet", "_stained_glass", "_stained_glass_pane", "_glazed_terracotta", "_concrete",
-		"_powder", "_dye", "_bed", "_banner", "_candle",  "_shulker_box",
+		"_wool", "_glazed_terracotta", "_terracotta", "_carpet", "_stained_glass", "_stained_glass_pane", "_concrete",
+		"_concrete_powder", "_dye", "_bed", "_banner", "_candle",  "_shulker_box",
 	};
 	public static boolean isColorable(Material material) {
 		String key = material.getKey().getKey();

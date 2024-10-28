@@ -17,7 +17,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy.SearchAndDestroy;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
@@ -60,17 +59,21 @@ public class DigAndBuild extends TeamArena
 	 */
 	public static final NamespacedKey ITEM_MARKER = new NamespacedKey(Main.getPlugin(), "dig_and_build_item");
 	public static boolean isDNBItem(ItemStack stack) {
-		return stack.getItemMeta().getPersistentDataContainer().has(ITEM_MARKER);
+		return stack != null && !stack.isEmpty() && stack.getItemMeta().getPersistentDataContainer().has(ITEM_MARKER);
 	}
 
 	private static final Component GAME_NAME = Component.text("Dig and Build", NamedTextColor.DARK_GREEN);
-	private static final Component HOW_TO_PLAY = Component.text("Make your way around the map and break the enemies' " +
-		"Life Ore!!", NamedTextColor.DARK_GREEN);
 
 	// MESSAGES
 
 	public static final Style CORE_STYLE = Style.style(TextColor.color(0x63bb83), TextDecoration.BOLD);
 	public static final Component CORE = Component.text("⭐ Core", CORE_STYLE);
+
+	private static final Component HOW_TO_PLAY = Component.textOfChildren(
+		Component.text("Make your way around the map, break enemies' "),
+		CORE,
+		Component.text("s, and defend yours!")
+	).color(NamedTextColor.DARK_GREEN);
 
 	private record YourOreMinedContext(@NotNull Component miner) {}
 	private static final CompileSafePlaceholder<YourOreMinedContext> YOUR_ORE_MINED_TITLE = ctx -> Component.textOfChildren(
@@ -236,7 +239,7 @@ public class DigAndBuild extends TeamArena
 		}
 
 		Component antiStallAction = Component.text("Faster tools", TextColor.color(PotionEffectType.HASTE.getColor().asRGB()));
-		return List.of(Component.text("Last to stand", NamedTextColor.GRAY),
+		return List.of(getGameObjective(),
 			effTime == EFF_ACTIVE ?
 				Component.textOfChildren(antiStallAction, Component.text(" active")) :
 				Component.textOfChildren(
@@ -244,26 +247,6 @@ public class DigAndBuild extends TeamArena
 					Component.text(" in "),
 					TextUtils.formatDurationMmSs(Ticks.duration(effTime - getGameTick()))
 				));
-	}
-
-	private static TextComponent formatOreHealth(int health) {
-		if (health < TeamCoreState.STARTING_HEALTH) {
-			float percentage = (float) health / TeamCoreState.STARTING_HEALTH;
-			return Component.text(health + "⛏",
-				percentage < 0.5f ?
-					TextColor.lerp(percentage * 2, NamedTextColor.DARK_RED, NamedTextColor.YELLOW) :
-					TextColor.lerp((percentage - 0.5f) * 2, NamedTextColor.YELLOW, NamedTextColor.GREEN));
-		} else {
-			int extra = health - TeamCoreState.STARTING_HEALTH;
-			if (extra != 0)
-				return Component.textOfChildren(
-					Component.text(TeamCoreState.STARTING_HEALTH, NamedTextColor.BLUE),
-					Component.text(" + ", NamedTextColor.GRAY),
-					Component.text(extra + "⛏", TextColors.ABSORPTION_HEART)
-				);
-			else
-				return Component.text(TeamCoreState.STARTING_HEALTH + "⛏", NamedTextColor.BLUE);
-		}
 	}
 
 	@Override
@@ -381,8 +364,9 @@ public class DigAndBuild extends TeamArena
 	}
 
 	@Contract("null -> null")
+	@Nullable
 	public UpgradeBase getUpgradeFromItem(ItemStack stack) {
-		if (stack == null)
+		if (!isDNBItem(stack))
 			return null;
 		Material material = stack.getType();
 		for (UpgradeBase upgrade : upgrades) {
@@ -601,7 +585,7 @@ public class DigAndBuild extends TeamArena
 			ExplosionManager.setEntityInfo(tnt,
 				new VanillaExplosionInfo(false, VanillaExplosionInfo.FireMode.NO_FIRE,
 					VanillaExplosionInfo.DEFAULT_FLOAT_VALUE, VanillaExplosionInfo.DEFAULT_FLOAT_VALUE, true,
-					this::canTntBreak));
+					this::isTntInvulnerable));
 		} else if (mapInfo.specialReplaceWoolWithTeamColor) {
 			DyeColor dyeColor = Main.getPlayerInfo(placer).team.getDyeColour();
 			Material replaced = ItemUtils.asDyeColor(block.getType(), dyeColor);
@@ -610,7 +594,10 @@ public class DigAndBuild extends TeamArena
 		}
 	}
 
-	private boolean canTntBreak(Block broken) {
+	private boolean isTntInvulnerable(Block broken) {
+		if (broken.getType().getKey().getKey().contains("glass"))
+			return true;
+
 		Location blockLocation = broken.getLocation();
 		for (TeamCoreState teamCoreState : teamOres.values()) {
 			if (teamCoreState.isLifeOre(broken))
@@ -638,32 +625,31 @@ public class DigAndBuild extends TeamArena
 	public void onInteract(final PlayerInteractEvent event) {
 		super.onInteract(event);
 
-		if (event.useItemInHand() == Event.Result.DENY) return;
-		if (event.useInteractedBlock() == Event.Result.DENY) return;
 		if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
 
 		final Player clicker = event.getPlayer();
 		if (this.isDead(clicker)) return;
 
 		// Clicked a team chest
-		TeamArenaTeam clickedChestTeam = this.chestLookup.get(event.getClickedBlock());
-		if (clickedChestTeam != null) {
-			// Checking if player is dead is done in super and sets useInteractedBlock to DENY
-			assert CompileAsserts.OMIT || !this.isDead(clicker);
-			if (Main.getPlayerInfo(clicker).team != clickedChestTeam) {
-				event.setUseInteractedBlock(Event.Result.DENY);
-				clicker.playSound(clicker, Sound.BLOCK_CHEST_LOCKED, SoundCategory.BLOCKS, 1f, 1.7f);
+		if (event.useInteractedBlock() != Event.Result.DENY) {
+			TeamArenaTeam clickedChestTeam = this.chestLookup.get(event.getClickedBlock());
+			if (clickedChestTeam != null) {
+				// Checking if player is dead is done in super and sets useInteractedBlock to DENY
+				assert CompileAsserts.OMIT || !this.isDead(clicker);
+				if (Main.getPlayerInfo(clicker).team != clickedChestTeam) {
+					event.setUseInteractedBlock(Event.Result.DENY);
+					clicker.playSound(clicker, Sound.BLOCK_CHEST_LOCKED, SoundCategory.BLOCKS, 1f, 1.7f);
+				}
+				return;
 			}
-
-			return;
 		}
 
-		TeamArenaTeam team = Main.getPlayerInfo(clicker).team;
-		TeamUpgradeState upgrades = teamUpgrades.get(team);
-
-		if (upgrades.onInteract(clicker, event)) {
-			//noinspection UnnecessaryReturnStatement // shut up
-			return;
+		if (event.useItemInHand() != Event.Result.DENY) {
+			TeamArenaTeam team = Main.getPlayerInfo(clicker).team;
+			TeamUpgradeState upgrades = teamUpgrades.get(team);
+			if (upgrades != null) {
+				upgrades.onInteract(clicker, event);
+			}
 		}
 	}
 
@@ -1159,6 +1145,11 @@ public class DigAndBuild extends TeamArena
 	@Override
 	public Component getGameName() {
 		return GAME_NAME;
+	}
+
+	@Override
+	public Component getGameObjective() {
+		return Component.text("Last to stand", NamedTextColor.GRAY);
 	}
 
 	@Override

@@ -39,8 +39,11 @@ public sealed interface UpgradeBase permits HasteUpgradeInfo, HealUpgradeInfo, T
 
 	static ItemStack makeItemStackBaseCompileSafelyAndSecurely(UpgradeBase upgradeBase, List<? extends Component> lore, Component effect) {
 		Component displayName = upgradeBase.displayName();
+		Component itemName = upgradeBase.required() != 1 ?
+			displayName.append(Component.text(" - " + upgradeBase.required() + " required", NamedTextColor.RED)) :
+			displayName;
 		return ItemBuilder.of(upgradeBase.item())
-			.displayName(displayName.append(Component.text(" - " + upgradeBase.required() + " required", NamedTextColor.RED)))
+			.displayName(itemName)
 			.setPdc(DigAndBuild.ITEM_MARKER, PersistentDataType.BOOLEAN, true)
 			.lore(lore)
 			.addLore(

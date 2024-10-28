@@ -319,7 +319,7 @@ public class KingOfTheHill extends TeamArena
 		}
 
 		return List.of(
-			Component.text("First to " + TICKS_TO_WIN / 20 + "s as King", NamedTextColor.GRAY),
+			getGameObjective(),
 			Component.textOfChildren(antiStallAction, Component.text(" in "), TextUtils.formatDurationMmSs(Ticks.duration(antiStallCountdown)))
 		);
 	}
@@ -573,6 +573,11 @@ public class KingOfTheHill extends TeamArena
 	@Override
 	public Component getGameName() {
 		return GAME_NAME;
+	}
+
+	@Override
+	public Component getGameObjective() {
+		return Component.text("First to " + TICKS_TO_WIN / 20 + "s as King", NamedTextColor.GRAY);
 	}
 
 	@Override

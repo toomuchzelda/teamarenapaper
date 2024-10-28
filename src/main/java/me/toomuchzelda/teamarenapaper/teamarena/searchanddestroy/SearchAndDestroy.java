@@ -988,6 +988,11 @@ public class SearchAndDestroy extends TeamArena
 	}
 
 	@Override
+	public Component getGameObjective() {
+		return LAST_TO_STAND;
+	}
+
+	@Override
 	public Component getHowToPlayBrief() {
 		return HOW_TO_PLAY;
 	}

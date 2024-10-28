@@ -35,13 +35,17 @@ public record TrapUpgradeInfo(Material item, @Nullable @ConfigOptional Component
 	public boolean apply(DigAndBuild game, TeamArenaTeam team, Block core, Player applier) {
 		TeamUpgradeState upgrades = game.getTeamUpgrades(team);
 		if (upgrades.getTraps() < max) {
-			upgrades.addTrap();
 
 			Location blockLocation = core.getLocation().toCenterLocation();
-			game.gameWorld.playSound(blockLocation, Sound.BLOCK_TRIPWIRE_ATTACH, SoundCategory.PLAYERS, 0.5f, 1);
-			game.getTeamUpgrades(team).playSacrificeAnimation(makeItemStack(), blockLocation);
+			game.getTeamUpgrades(team).playSacrificeAnimation(makeItemStack(), blockLocation, () -> {
+				upgrades.addTrap();
+				game.gameWorld.playSound(blockLocation, Sound.BLOCK_TRIPWIRE_ATTACH, SoundCategory.PLAYERS, 0.5f, 1);
+			});
 			return true;
 		}
+		applier.sendMessage(Component.textOfChildren(
+			Component.text("Your team already has the maximum amount of ")
+		));
 		return false;
 	}
 

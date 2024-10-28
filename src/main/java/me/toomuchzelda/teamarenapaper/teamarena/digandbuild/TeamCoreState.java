@@ -143,6 +143,9 @@ public class TeamCoreState {
 	}
 
 	private Component getTextDisplayComponent(@Nullable Component customName) {
+		if (health == 0)
+			return formatHealth();
+
 		var builder = Component.text().append(team.colourWord("⭐ "));
 		if (customName != null)
 			builder.append(customName);

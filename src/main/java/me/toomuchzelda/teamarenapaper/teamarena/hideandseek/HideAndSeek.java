@@ -441,6 +441,11 @@ public class HideAndSeek extends TeamArena {
 	}
 
 	@Override
+	public Component getGameObjective() {
+		return Component.text("Survive", NamedTextColor.GRAY);
+	}
+
+	@Override
 	public Component getHowToPlayBrief() {
 		return HOW_TO_PLAY;
 	}

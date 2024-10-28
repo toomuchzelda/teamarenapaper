@@ -81,6 +81,11 @@ public record HasteUpgradeInfo(Material item, @Nullable @ConfigOptional Componen
 	private static final PotionEffect HASTE_EFFECT = new PotionEffect(PotionEffectType.HASTE, 30 * 20, 0, false, true);
 	@Override
 	public boolean apply(DigAndBuild game, TeamArenaTeam team, Block core, Player applier) {
+		game.getTeamUpgrades(team).playSacrificeAnimation(makeItemStack(), core.getLocation().toCenterLocation(), () -> giveEffects(team, applier));
+		return true;
+	}
+
+	private static void giveEffects(TeamArenaTeam team, Player applier) {
 		Component message = Component.textOfChildren(
 			applier.playerListName(),
 			Component.text(" has given your team "),
@@ -103,8 +108,5 @@ public record HasteUpgradeInfo(Material item, @Nullable @ConfigOptional Componen
 				member.playSound(member, Sound.BLOCK_BEACON_ACTIVATE, SoundCategory.PLAYERS, 1, 1);
 			}
 		}
-
-		game.getTeamUpgrades(team).playSacrificeAnimation(makeItemStack(), core.getLocation().toCenterLocation());
-		return true;
 	}
 }

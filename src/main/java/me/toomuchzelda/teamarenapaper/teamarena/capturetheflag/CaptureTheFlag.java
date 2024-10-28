@@ -11,7 +11,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.map.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -312,10 +311,7 @@ public class CaptureTheFlag extends TeamArena
 		}
 
 
-		TextComponent objective = Component.textOfChildren(
-			Component.text("First to ", NamedTextColor.GRAY),
-			Component.text("⚑ " + capsToWin, NamedTextColor.GREEN)
-		);
+		Component objective = getGameObjective();
 		if (antiStallAction != null)
 			return List.of(
 				objective,
@@ -880,6 +876,14 @@ public class CaptureTheFlag extends TeamArena
 	@Override
 	public Component getGameName() {
 		return GAME_NAME;
+	}
+
+	@Override
+	public Component getGameObjective() {
+		return Component.textOfChildren(
+			Component.text("First to ", NamedTextColor.GRAY),
+			Component.text("⚑ " + capsToWin, NamedTextColor.GREEN)
+		);
 	}
 
 	@Override

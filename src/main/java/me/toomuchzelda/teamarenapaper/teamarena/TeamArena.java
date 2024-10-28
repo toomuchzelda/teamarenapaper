@@ -53,6 +53,7 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
+import org.bukkit.block.data.type.Bed;
 import org.bukkit.command.CommandSender;
 import org.bukkit.craftbukkit.CraftWorld;
 import org.bukkit.enchantments.Enchantment;
@@ -305,7 +306,7 @@ public abstract class TeamArena
 		{
 			this.gameTitle = this.getGameName();
 			var builder = Component.text()
-				.append(Component.text("GameType: ", NamedTextColor.GOLD))
+				.append(Component.text("Game mode: ", NamedTextColor.GOLD))
 				.append(this.getGameName());
 			if (!this.isRespawningGame()) {
 				TextComponent text = Component.text(" (No Respawning!)", NamedTextColor.RED);
@@ -464,15 +465,24 @@ public abstract class TeamArena
 			}
 
 			if (!showGameSidebar) {
-				sidebar.setTitle(player, Component.text("Teams", NamedTextColor.GOLD));
+				sidebar.setTitle(player, getGameName());
+				sidebar.addEntry(Component.text("Objective"));
+				sidebar.addEntry(Component.text().content("  ").append(getGameObjective()).build());
+				sidebar.addEntry(Component.text("Teams"));
 				for (var team : getTeams()) {
-					var builder = Component.text();
-					if (team.getPlayerMembers().contains(player)) {
-						builder.append(OWN_TEAM_PREFIX);
+					if (showTeamSize) {
+						var builder = Component.text();
+						if (team.getPlayerMembers().contains(player)) {
+							builder.append(OWN_TEAM_PREFIX);
+						} else {
+							builder.append(Component.text("  "));
+						}
+						builder.append(team.getComponentSimpleName());
+						sidebar.addEntry(builder.build(),
+							Component.text(team.getPlayerMembers().size() + "\uD83D\uDC64"));
+					} else {
+						sidebar.addEntry(Component.text().content("  ").append(team.getComponentName()).build());
 					}
-					builder.append(team.getComponentName());
-					sidebar.addEntry(builder.build(),
-						showTeamSize ? Component.text(team.getPlayerMembers().size() + "\uD83D\uDC64") : null);
 				}
 			} else {
 				sharedSidebar.forEach(sidebar::addEntry);
@@ -921,6 +931,10 @@ public abstract class TeamArena
 			Block block = event.getClickedBlock();
 			if (block != null && block.getType() == Material.FARMLAND)
 				event.setUseInteractedBlock(Event.Result.DENY);
+		} else if (event.getAction() == Action.RIGHT_CLICK_BLOCK &&
+			event.getClickedBlock() != null && event.getClickedBlock().getBlockData() instanceof Bed) {
+			event.setUseInteractedBlock(Event.Result.DENY);
+			event.setUseItemInHand(Event.Result.ALLOW);
 		}
 		if (event.useItemInHand() == Event.Result.DENY)
 			return;
@@ -2326,6 +2340,8 @@ public abstract class TeamArena
 	}
 
 	public abstract Component getGameName();
+
+	public abstract Component getGameObjective();
 
 	public abstract Component getHowToPlayBrief();
 

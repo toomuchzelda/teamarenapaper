@@ -110,7 +110,7 @@ public class GameScheduler
 		updateOptions(NUM_OPTIONS);
 
 		// check for starting map configuration file
-		File startingMap = new File("starting_map.yml");
+		File startingMap = new File("starting-map.yml");
 		if (startingMap.isFile()) {
 			YamlConfiguration yaml = YamlConfiguration.loadConfiguration(startingMap);
 			try {

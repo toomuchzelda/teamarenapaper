@@ -84,10 +84,11 @@ public record HealUpgradeInfo(Material item, @Nullable @ConfigOptional Component
 			).color(TextColors.ERROR_RED));
 			return false;
 		}
-		ore.setHealth(ore.getHealth() + 1);
 		Location blockLocation = core.getLocation().toCenterLocation();
-		game.gameWorld.playSound(blockLocation, Sound.BLOCK_ANVIL_USE, SoundCategory.PLAYERS, 0.5f, 1);
-		game.getTeamUpgrades(team).playSacrificeAnimation(makeItemStack(), blockLocation);
+		game.getTeamUpgrades(team).playSacrificeAnimation(makeItemStack(), blockLocation, () -> {
+			ore.setHealth(ore.getHealth() + 1);
+			game.gameWorld.playSound(blockLocation, Sound.BLOCK_ANVIL_USE, SoundCategory.PLAYERS, 0.5f, 1);
+		});
 		return true;
 	}
 }

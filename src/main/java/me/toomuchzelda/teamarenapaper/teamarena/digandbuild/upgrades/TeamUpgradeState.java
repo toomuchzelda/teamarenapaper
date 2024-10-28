@@ -129,6 +129,7 @@ public class TeamUpgradeState {
 
 		Location randomCore = MathUtils.randomElement(core.getLifeOres().keySet().toArray(new Block[0])).getLocation().toCenterLocation();
 		randomCore.add(MathUtils.random.nextGaussian(), UPGRADE_SACRIFICE_END_Y, MathUtils.random.nextGaussian());
+		randomCore.setYaw(MathUtils.random.nextInt(360)); // random yaw
 
 		EntityType entityType;
 		double random = MathUtils.random.nextDouble();
@@ -142,7 +143,6 @@ public class TeamUpgradeState {
 			entityType = EntityType.PARROT;
 
 		Location offsetLocation = randomCore.clone().add(0, 0, traps);
-		offsetLocation.setYaw(MathUtils.random.nextInt(360)); // random yaw
 		PacketEntity parrot = new PacketEntity(PacketEntity.NEW_ID, entityType,
 			offsetLocation, null, PacketEntity.VISIBLE_TO_ALL);
 		if (entityType == EntityType.PARROT)
@@ -171,6 +171,7 @@ public class TeamUpgradeState {
 					newLocation.setX(anchor.getX() + 3.5 * Math.sin(angle));
 					newLocation.setZ(anchor.getZ() + 3.5 * Math.cos(angle));
 					newLocation.setY(anchor.getY() + Math.sin(Math.TAU * (elapsed % 20d) / 20) / 2);
+					newLocation.setYaw((float) Math.toDegrees(angle + Math.PI / 2));
 					anchoredParrot.parrot.move(newLocation);
 				}
 			}
@@ -250,7 +251,8 @@ public class TeamUpgradeState {
 		triggeredBy.sendMessage(triggererAlert);
 	}
 
-	public void playSacrificeAnimation(ItemStack stack, Location location) {
+	public void playSacrificeAnimation(ItemStack stack, Location location, Runnable onAnimationEnd) {
+		int randomOffset = MathUtils.random.nextInt(20);
 		game.animationTasks.add(new BukkitRunnable() {
 			int elapsed = 0;
 			static final int DURATION = 40;
@@ -267,7 +269,7 @@ public class TeamUpgradeState {
 
 			public Location nextLocation(Location location) {
 				double yOffset = (double) (UPGRADE_SACRIFICE_END_Y * elapsed) / DURATION;
-				double xzAngle = Math.TAU * (elapsed % 20) / 20;
+				double xzAngle = Math.TAU * ((elapsed + randomOffset) % 20) / 20;
 				double xzRadius = (UPGRADE_SACRIFICE_END_Y - yOffset) / 2;
 				location.setX(baseLocation.getX() + xzRadius * Math.sin(xzAngle));
 				location.setZ(baseLocation.getZ() + xzRadius * Math.cos(xzAngle));
@@ -280,6 +282,7 @@ public class TeamUpgradeState {
 			public void run() {
 				if (elapsed == DURATION) {
 					world.spawnParticle(Particle.ITEM, currentLocation, 20, 0, 0, 0, 0.1, stack);
+					onAnimationEnd.run();
 					cancel();
 				}
 				display.teleport(nextLocation(currentLocation));
