@@ -36,6 +36,11 @@ public final class PlayerInfo
 	public Kit activeKit; // kit they've selected vs the kit they're currently using
 	public final Set<Ability> abilities;
 
+	/**
+	 * The game tick the player spawned/respawned at
+	 */
+	public int spawnedAt;
+
 	public String defaultKit;
 
 	private Map<Preference<?>, Object> preferences = new HashMap<>();

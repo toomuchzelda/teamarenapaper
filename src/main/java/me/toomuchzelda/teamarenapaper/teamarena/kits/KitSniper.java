@@ -1,31 +1,31 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
+import com.google.common.collect.EvictingQueue;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
-import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.*;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.DetailedProjectileHitEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.ProjectileReflectEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
+import me.toomuchzelda.teamarenapaper.utils.DisplayUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
-import org.bukkit.entity.AbstractArrow.PickupStatus;
-import org.bukkit.entity.Arrow;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Projectile;
 import org.bukkit.event.block.Action;
-import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -35,8 +35,11 @@ import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -85,39 +88,66 @@ public class KitSniper extends Kit {
 		setCategory(KitCategory.RANGED);
 	}
 
-	public static class SniperAbility extends Ability {
-		private final Set<UUID> RECEIVED_SNIPER_CHAT_MESSAGE = new HashSet<>();
+	public class SniperAbility extends Ability {
+		public static final @NotNull TextColor SNIPER_COLOR = TextColor.color(0xd28a37);
 		private final Set<UUID> RECEIVED_GRENADE_CHAT_MESSAGE = new HashSet<>();
-		public static final TextColor SNIPER_MSG_COLOR = TextColor.color(89, 237, 76);
 		public static final TextColor GRENADE_MSG_COLOR = TextColor.color(66, 245, 158);
-
-		private static final double MIN_HEIGHT_FOR_HEADHSHOT = 1.5d;
 
 		private static final DamageType REFLECTED_SNIPER = new DamageType(DamageType.SNIPER_HEADSHOT,
 			"%Cause% did not have enough map knowledge",
 			"%Killed% suffered from %Cause%'s skill issue");
 
-		final List<BukkitTask> GRENADE_TASKS = new ArrayList<>();
+		final List<BukkitTask> grenadeTasks = new ArrayList<>();
 		final Random gunInaccuracy = new Random();
+
+		public static final double MAX_SNIPER_RANGE = 128;
+
+		final Map<Player, EvictingQueue<Vector>> inaccuracyTracker = new HashMap<>();
+
+		public static final int SPAWN_PROTECTION_DURATION = 5 * 20;
+		final Set<Player> spawnProtectionExpired = new HashSet<>();
+
+		public enum ShieldType {
+			RESPAWN_SHIELD(Component.text("Sniper: Protective AURA", SNIPER_COLOR)),
+			KIT_REFLECTOR(Component.text("⚠ Reflector: Firing KILLS You ⚠", TextColors.ERROR_RED)),
+			KIT_NONE(Component.text("None: Invulnerable", NamedTextColor.GRAY));
+			public final Component message;
+			ShieldType(Component message) {
+				this.message = message;
+			}
+		}
+		@Nullable
+		public ShieldType getVictimShield(Player player) {
+			return switch (Kit.getActiveKit(player)) {
+				case KitSniper ignored when !spawnProtectionExpired.contains(player) -> ShieldType.RESPAWN_SHIELD;
+				case KitPorcupine ignored -> ShieldType.KIT_REFLECTOR;
+				case KitNone ignored -> ShieldType.KIT_NONE;
+				case null, default -> null;
+			};
+		}
 
 		@Override
 		public void unregisterAbility() {
-			GRENADE_TASKS.forEach(BukkitTask::cancel);
-			GRENADE_TASKS.clear();
+			grenadeTasks.forEach(BukkitTask::cancel);
+			grenadeTasks.clear();
 		}
 
 		@Override
 		public void giveAbility(Player player) {
 			player.setExp(0.999f);
+			inaccuracyTracker.put(player, EvictingQueue.create(3));
+			RewindablePlayerBoundingBoxManager.trackClientTick(player);
 		}
 
 		@Override
 		public void removeAbility(Player player) {
 			player.setExp(0);
 			player.getInventory().remove(Material.TURTLE_HELMET);
+			spawnProtectionExpired.remove(player);
+			inaccuracyTracker.remove(player);
 			var uuid = player.getUniqueId();
-			RECEIVED_SNIPER_CHAT_MESSAGE.remove(uuid);
 			RECEIVED_GRENADE_CHAT_MESSAGE.remove(uuid);
+			RewindablePlayerBoundingBoxManager.untrackClientTick(player);
 		}
 
 		public void throwGrenade(Player player, double amp) {
@@ -157,7 +187,7 @@ public class KitSniper extends Kit {
 					timer--;
 				}
 			}.runTaskTimer(Main.getPlugin(), 0, 0);
-			GRENADE_TASKS.add(runnable);
+			grenadeTasks.add(runnable);
 		}
 
 		@Override
@@ -202,105 +232,240 @@ public class KitSniper extends Kit {
 			}
 		}
 
-		//Headshot
-		@Override
-		public void onProjectileHit(DetailedProjectileHitEvent detEvent) {
-			final ProjectileHitEvent event = detEvent.projectileHitEvent;
-			if (event.isCancelled()) return;
-			// TODO use BlockHitResult
-			final Projectile projectile = event.getEntity();
-			if (!(projectile instanceof Arrow))
-				return;
+		public static final double MAX_INACCURACY = 0.4;
+		double calcInaccuracy(Player player) {
+			if (KitOptions.sniperAccuracy)
+				return 0;
+			EvictingQueue<Vector> queue = inaccuracyTracker.get(player);
+			if (queue.size() < 2)
+				return 0;
+			var iterator = queue.iterator();
+			Vector lastLocation = iterator.next();
+			double total = 0;
+			while (iterator.hasNext()) {
+				Vector location = iterator.next();
+				total += lastLocation.distance(location);
+				lastLocation = location;
+			}
+			return Math.min(MAX_INACCURACY, total / 3);
+		}
 
-			final Player shooter = (Player) projectile.getShooter();
-			if (event.getHitEntity() instanceof Player playerVictim) {
-				final Location victimLoc = playerVictim.getLocation();
-				final double minYForHeadshot = victimLoc.getY() + MIN_HEIGHT_FOR_HEADHSHOT;
+		Component buildInaccuracyMessage(double inaccuracy) {
+			inaccuracy = Math.min(inaccuracy, 0.4);
+			int spaces = (int) Math.ceil(inaccuracy * 10);
+			TextColor color = inaccuracy < 0.2 ?
+				TextColor.lerp((float) (inaccuracy / 0.2f), NamedTextColor.GREEN, NamedTextColor.YELLOW) :
+				TextColor.lerp((float) (inaccuracy - 0.2f) / 0.2f, NamedTextColor.YELLOW, NamedTextColor.RED);
+			var lb = Component.text(" ".repeat(4 - spaces) + "[" + " ".repeat(spaces), color);
+			var rb = Component.text(" ".repeat(spaces) + "]" + " ".repeat(4 - spaces), color);
+			return Component.textOfChildren(
+				Component.text("   Press "),
+				lb, Component.keybind("key.drop", NamedTextColor.YELLOW), rb,
+				Component.text(" to shoot")
+			);
+		}
 
-				final Location projectileCentreLoc = projectile.getLocation().add(0, projectile.getHeight() / 2d, 0);
+		public record SniperRayTrace(@Nullable List<EntityHit> entityHits,
+									 @Nullable RayTraceResult terminatingBlock) {}
+		public record EntityHit(Entity victim, Vector hitPosition, boolean isHeadshot, double damageMultiplier) {}
 
-				final Vector projVelocity = projectile.getVelocity();
-				final double speed = projVelocity.length(); // Distance it will travel in the next tick
+		public static @NotNull SniperRayTrace doRayTrace(Player player,
+														 Map<? extends Player, PlayerBoundingBox> playerHitboxes,
+														 List<? extends Entity> entities,
+														 Location start, Vector direction, double maxDistance) {
+			Vector startVec = start.toVector();
 
-				final RayTraceResult rayTrace = projectile.getWorld().rayTrace(projectileCentreLoc, projVelocity, speed,
-					FluidCollisionMode.NEVER, true, projectile.getWidth(), entity -> entity != shooter && entity != projectile && !Main.getGame().isDead(entity));
+			TreeMap<Double, EntityHit> hitEntities = new TreeMap<>();
 
-				if (rayTrace != null && rayTrace.getHitEntity() != null &&
-					rayTrace.getHitPosition().getY() > minYForHeadshot &&
-					projectile.getOrigin().distanceSquared(projectileCentreLoc) > 5 * 5) { // Min 5 blocks away to headshot
+			RayTraceResult blockHit = player.getWorld().rayTraceBlocks(start, direction, maxDistance, FluidCollisionMode.NEVER, true, null);
 
-					DamageEvent dEvent = DamageEvent.newDamageEvent(playerVictim, 999d, DamageType.SNIPER_HEADSHOT, shooter, false);
-					Main.getGame().queueDamage(dEvent);
+			double blockHitDistance = maxDistance;
+			// limiting the entity search range if we found a block hit:
+			if (blockHit != null) {
+				blockHitDistance = startVec.distance(blockHit.getHitPosition());
+			}
 
-					//Hitmarker Sound effect
-					shooter.playSound(shooter, Sound.ENTITY_ITEM_FRAME_PLACE, 2f, 2.0f);
+			BoundingBox boundingBox = new BoundingBox();
+
+			for (var entry : playerHitboxes.entrySet()) {
+				Player victim = entry.getKey();
+				PlayerBoundingBox boxTracker = entry.getValue();
+				boundingBox = boxTracker.getBoundingBox(boundingBox);
+
+				RayTraceResult hitResult = boundingBox.rayTrace(startVec, direction, blockHitDistance);
+				if (hitResult != null) {
+					double distance = startVec.distance(hitResult.getHitPosition());
+					// check for headshots
+					double headHeight = boxTracker.maxY() - boxTracker.eyeY();
+					boundingBox.resize(boxTracker.minX(), boxTracker.eyeY() - headHeight, boxTracker.minZ(),
+						boxTracker.maxX(), boxTracker.maxY(), boxTracker.maxZ());
+					// limit distance here to prevent the case where the bullet first enters the victim's body
+					// and subsequently hits the head hitbox
+					boolean headshot = boundingBox.rayTrace(startVec, direction, distance) != null;
+
+					hitEntities.put(distance, new EntityHit(victim, hitResult.getHitPosition(), headshot, 0));
 				}
 			}
-		}
 
-		@Override
-		public void onReflect(ProjectileReflectEvent event) {
-			final Player shooter = (Player) event.projectile.getShooter();
-			event.attackFunc = dEvent -> { // All reflected sniper shots are insta kill
-				dEvent.setDamageTypeCause(shooter);
-				dEvent.setDamageType(REFLECTED_SNIPER);
-			};
-		}
+			for (var entity : entities) {
+				BoundingBox entityBox = entity.getBoundingBox();
+				RayTraceResult hitResult = entityBox.rayTrace(startVec, direction, blockHitDistance);
 
-		static double calcInaccuracy(Player player) {
-			//Inaccuracy based on movement
-			//player.getVelocity() sux so i will base movement on the player's state
-			if (player.isSprinting() || player.isGliding() || player.isJumping() || !EntityUtils.isOnGround(player) ||
-				player.getVelocity().lengthSquared() > 1) {
-				return 0.2;
-			} else if (player.isInWater() || player.isSwimming()) {
-				return 0.1;
+				if (hitResult != null) {
+					double distance = startVec.distance(hitResult.getHitPosition());
+					// check for headshots
+					boolean headshot = false;
+					if (entity instanceof LivingEntity livingEntity) {
+						double eyeHeight = livingEntity.getEyeHeight();
+						double headHeight = entityBox.getHeight() - eyeHeight;
+						entityBox.expand(0, -(entityBox.getHeight() - headHeight), 0, 0, 0, 0);
+						// limit distance here to prevent the case where the bullet first enters the victim's body
+						// and subsequently hits the head hitbox
+						headshot = boundingBox.rayTrace(startVec, direction, distance) != null;
+					}
+					hitEntities.put(distance,
+						new EntityHit(entity, hitResult.getHitPosition(), headshot, 0));
+				}
 			}
-			return 0;
+
+			// calculate all damage reductions
+			List<EntityHit> entityHits = new ArrayList<>(hitEntities.values());
+			return new SniperRayTrace(hitEntities.isEmpty() ? null : entityHits, blockHit);
 		}
 
 		//Sniper Rifle Shooting
+		private void fireBullet(World world, Player player, int clientTick, TeamArenaTeam friendlyTeam, Location start, Vector velocity, boolean isReflected) {
+			int now = TeamArena.getGameTick();
+			var playerHitboxes = RewindablePlayerBoundingBoxManager.doRewind(2 + now - clientTick,
+				victim -> victim.getGameMode() == GameMode.SURVIVAL &&
+					Main.getPlayerInfo(victim).team != friendlyTeam);
+			var otherEntities = world.getLivingEntities().stream().filter(entity -> !(entity instanceof Player)).toList();
+
+			if (CommandDebug.sniperShowRewind) {
+				player.sendMessage(Component.text("Rewound 2 + " + (now - clientTick) + " ticks"));
+				RewindablePlayerBoundingBoxManager.showRewind(player, 2 + now - clientTick);
+			}
+
+			Vector startVector = start.toVector();
+			var rayTraceResult = doRayTrace(player, playerHitboxes, otherEntities, start, velocity, 128);
+			if (rayTraceResult.entityHits != null) {
+				player.playSound(player.getEyeLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.PLAYERS, 0.5f, 1);
+
+				for (EntityHit entityHit : rayTraceResult.entityHits) {
+					DamageEvent damageEvent;
+					if (entityHit.isHeadshot)
+						damageEvent = DamageEvent.newDamageEvent(entityHit.victim, 150 * entityHit.damageMultiplier, DamageType.SNIPER_HEADSHOT, player, true);
+					else
+						damageEvent = DamageEvent.newDamageEvent(entityHit.victim, 15 * entityHit.damageMultiplier, DamageType.SNIPER_SHOT, player, false);
+
+					if (entityHit.victim instanceof Player playerVictim) {
+						PlayerInfo victimInfo = Main.getPlayerInfo(playerVictim);
+						switch (getVictimShield(playerVictim)) {
+							case KIT_REFLECTOR -> {
+								if (!isReflected) { // can't reflect twice
+									// regulatory compliance
+									// reflect the bullet by firing another bullet as if the porcupine is a sniper
+									fireBullet(world, playerVictim, clientTick, victimInfo.team,
+										entityHit.hitPosition.toLocation(world), velocity.clone().multiply(-1), true);
+									return; // the sniper would definitely die
+								}
+							}
+							case KIT_NONE, RESPAWN_SHIELD -> {
+								continue; // no damage
+							}
+							case null -> {}
+						}
+					}
+
+					Main.getGame().queueDamage(damageEvent);
+				}
+			}
+			world.playSound(player, Sound.ENTITY_GENERIC_EXPLODE, 0.8f, 2.5f);
+
+			double distance = rayTraceResult.terminatingBlock != null ?
+				rayTraceResult.terminatingBlock.getHitPosition().distance(startVector) : 128;
+
+			showTracers(start, distance, velocity, player);
+		}
+
+		@Override
 		public void onPlayerDropItem(PlayerDropItemEvent event) {
 			Player player = event.getPlayer();
 			Item item = event.getItemDrop();
 			World world = player.getWorld();
+			int now = TeamArena.getGameTick();
 			if (item.getItemStack().getType() == Material.SPYGLASS && !player.hasCooldown(Material.SPYGLASS)) {
+				removeSpawnProtection(player, "because you fired a shot", SNIPER_COLOR);
+
 				double inaccuracy = calcInaccuracy(player);
-				if (KitOptions.sniperAccuracy) {
-					player.sendActionBar(Component.text("Inaccuracy: " + inaccuracy));
-				}
-				Vector velocity = player.getLocation().getDirection();
+				Location start = player.getEyeLocation();
+				Vector velocity = start.getDirection();
 				if (inaccuracy != 0) {
 					var random = new Vector(gunInaccuracy.nextGaussian(), gunInaccuracy.nextGaussian(), gunInaccuracy.nextGaussian());
 					random.normalize().multiply(inaccuracy);
 					velocity.add(random);
 				}
-				velocity.multiply(10);
-				//Shooting Rifle + Arrow Properties
-				Arrow arrow = player.launchProjectile(Arrow.class, velocity);
-				arrow.setShotFromCrossbow(true);
-				arrow.setGravity(false);
-				arrow.setKnockbackStrength(1);
-				arrow.setCritical(false);
-				arrow.setPickupStatus(PickupStatus.DISALLOWED);
-				arrow.setPierceLevel(100);
-				arrow.setDamage(0.65d);
-				world.playSound(player, Sound.ENTITY_GENERIC_EXPLODE, 0.8f, 2.5f);
+
+				TeamArenaTeam friendlyTeam = Main.getPlayerInfo(player).team;
+				int clientTick = RewindablePlayerBoundingBoxManager.getClientTickOrDefault(player, now);
+				fireBullet(world, player, clientTick, friendlyTeam, start, velocity, false);
 
 				//Sniper Cooldown + deleting the dropped sniper and returning a new one.
 				if (!KitOptions.sniperAccuracy) {
-					player.setCooldown(Material.SPYGLASS, 50);
+					player.setCooldown(Material.SPYGLASS, 25);
 				}
 				event.setCancelled(true);
 			}
 		}
 
+		private static final Vector UP = new Vector(0, 1, 0);
+		private static void showTracers(Location start, double distance, Vector bulletDirection, Player player) {
+			// for the shooter, move the line below their crosshair
+			Location tracerLocation = start.clone();
+			Vector direction = tracerLocation.getDirection();
+			if (distance > 2) {
+				tracerLocation.add(direction.clone().multiply(2));
+			}
+			Vector right = UP.getCrossProduct(direction).normalize();
+			Vector down = right.getCrossProduct(direction).normalize();
+			tracerLocation.add(down.multiply(0.15));
+
+			var displays = DisplayUtils.createLine(tracerLocation, bulletDirection,
+				(float) (distance > 2 ? distance - 2 : distance),
+				blockDisplay -> {
+					blockDisplay.setVisibleByDefault(false);
+					player.showEntity(Main.getPlugin(), blockDisplay);
+				}, null, Material.RED_CONCRETE.createBlockData());
+			DisplayUtils.ensureCleanup(displays, 50);
+
+			TeamArenaTeam team = Main.getPlayerInfo(player).team;
+			BlockData glass = Objects.requireNonNull(Registry.MATERIAL.get(NamespacedKey.minecraft(team.getDyeColour().name().toLowerCase(Locale.ENGLISH) + "_stained_glass"))).createBlockData();
+			var otherDisplays = DisplayUtils.createLine(start, bulletDirection, (float) distance, blockDisplay -> {
+				player.hideEntity(Main.getPlugin(), blockDisplay);
+			}, null, glass);
+			DisplayUtils.ensureCleanup(otherDisplays);
+		}
+
 		@Override
 		public void onPlayerTick(Player player) {
+			PlayerInfo pinfo = Main.getPlayerInfo(player);
 			var uuid = player.getUniqueId();
 			float exp = player.getExp();
 			World world = player.getWorld();
 			var inventory = player.getInventory();
+
+			// Update inaccuracy tracker
+			EvictingQueue<Vector> inaccuracyTracker = this.inaccuracyTracker.get(player);
+			Vector current = player.getLocation().toVector();
+			Vector lastLocation = inaccuracyTracker.peek();
+			if (lastLocation != null && current.distanceSquared(lastLocation) > 0.01) // remove spawn protection if moved
+				removeSpawnProtection(player, "because you moved", TextColor.color(0x46bd49));
+			inaccuracyTracker.add(current);
+
+			// check spawn protection timer
+			if (TeamArena.getGameTick() - pinfo.spawnedAt == SPAWN_PROTECTION_DURATION) {
+				removeSpawnProtection(player, "over time", TextColor.color(0xfaf25e));
+			}
 
 			//Grenade Cooldown
 			if (exp == 0.999f) {
@@ -313,17 +478,21 @@ public class KitSniper extends Kit {
 
 			//Sniper Information message
 			if (inventory.getItemInMainHand().getType() == Material.SPYGLASS) {
-				Component actionBar = KitOptions.sniperAccuracy ?
-					Component.text("Inaccuracy: " + calcInaccuracy(player)) :
-					Component.text("Drop Spyglass in hand to shoot", SNIPER_MSG_COLOR);
-				Component text = Component.text("Drop Spyglass in your main hand to shoot", SNIPER_MSG_COLOR);
-				PlayerInfo pinfo = Main.getPlayerInfo(player);
 				if (pinfo.getPreference(Preferences.KIT_ACTION_BAR)) {
-					player.sendActionBar(actionBar);
+					player.sendActionBar(buildInaccuracyMessage(calcInaccuracy(player)));
 				}
-				//Chat Message is only sent once per life
-				if (pinfo.getPreference(Preferences.KIT_CHAT_MESSAGES) && RECEIVED_SNIPER_CHAT_MESSAGE.add(uuid)) {
-					player.sendMessage(text);
+				// if scoping
+				if (player.getActiveItem().getType() == Material.SPYGLASS) {
+					// normal entity raytrace should be enough
+					Location eyeLocation = player.getEyeLocation();
+					RayTraceResult rayTraceResult = world.rayTrace(eyeLocation, eyeLocation.getDirection(),
+						MAX_SNIPER_RANGE, FluidCollisionMode.NEVER, true, 0,
+						entity -> entity instanceof Player victim && victim != player && getVictimShield(victim) != null);
+					if (rayTraceResult != null && rayTraceResult.getHitEntity() instanceof Player victim) {
+						ShieldType shieldType = Objects.requireNonNull(getVictimShield(victim));
+						Title warningTitle = TextUtils.createTitle(Component.empty(), shieldType.message, 0, 10, 0);
+						player.showTitle(warningTitle);
+					}
 				}
 			}
 
@@ -332,7 +501,6 @@ public class KitSniper extends Kit {
 
 				Component actionBar = Component.text("Left/Right Click to Arm", GRENADE_MSG_COLOR);
 				Component text = Component.text("Click to arm the grenade", GRENADE_MSG_COLOR);
-				PlayerInfo pinfo = Main.getPlayerInfo(player);
 				if (pinfo.getPreference(Preferences.KIT_ACTION_BAR)) {
 					player.sendActionBar(actionBar);
 				}
@@ -362,5 +530,13 @@ public class KitSniper extends Kit {
 				player.playSound(player, Sound.ITEM_ARMOR_EQUIP_CHAIN, 2f, 0.8f);
 			}
 		}
+
+		// spawn protection
+		public void removeSpawnProtection(Player player, String reason, TextColor textColor) {
+			if (spawnProtectionExpired.add(player)) {
+				player.sendMessage(Component.text("Your protective aura has faded " + reason + ".", textColor));
+			}
+		}
 	}
+
 }

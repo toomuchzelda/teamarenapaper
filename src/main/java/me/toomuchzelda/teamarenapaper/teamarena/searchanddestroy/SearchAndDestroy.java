@@ -572,7 +572,7 @@ public class SearchAndDestroy extends TeamArena
 	}
 
 	@Override
-	public void giveKitAndGameItems(Player player, PlayerInfo pinfo, boolean clear) {
+	protected void giveKitAndGameItems(Player player, PlayerInfo pinfo, boolean clear) {
 		//need to clear and give the fuse first to put it in 1st slot
 		if(clear)
 			player.getInventory().clear();

@@ -173,8 +173,11 @@ public class DamageType {
 	public static final DamageType SNIPER_GRENADE_FAIL = new DamageType("Grenade Fail", "%Killed% forgot they pulled the pin.")
 			.setInstantDeath().setNoKnockback();
 
-	public static final DamageType SNIPER_HEADSHOT = new DamageType("Headshot", "%Killed% was headshot by %Killer%")
-			.setProjectile().setInstantDeath();
+	public static final DamageType SNIPER_SHOT = new DamageType("Sniper Shot", "%Killed% was sniped by %Killer%")
+		.setProjectile();
+
+	public static final DamageType SNIPER_HEADSHOT = new DamageType("Sniper Headshot", "%Killed% was headshot by %Killer%")
+			.setProjectile();
 
     public static final DamageType DEMO_TNTMINE = new DamageType("Demolitions TNT Mine",
             "%Killed% stepped on %Killer%'s TNT Mine and blew up")

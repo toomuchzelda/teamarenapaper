@@ -23,10 +23,10 @@ import org.bukkit.command.CommandMap;
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.UnmodifiableView;
 import org.spigotmc.SpigotConfig;
 
 import java.util.*;
-import java.util.function.BiConsumer;
 import java.util.logging.Logger;
 
 public final class Main extends JavaPlugin
@@ -40,6 +40,8 @@ public final class Main extends JavaPlugin
 	private static Main plugin;
 
 	private static Map<Player, PlayerInfo> playerInfo;
+	@UnmodifiableView
+	private static Map<Player, PlayerInfo> playerInfoUnmodifiable;
 	public static Map<Integer, Player> playerIdLookup;
 
 	@Override
@@ -70,6 +72,7 @@ public final class Main extends JavaPlugin
 
 		int initialCapacity = Bukkit.getMaxPlayers();
 		playerInfo = Collections.synchronizedMap(new LinkedHashMap<>(initialCapacity));
+		playerInfoUnmodifiable = Collections.unmodifiableMap(playerInfo);
 		playerIdLookup = Collections.synchronizedMap(new LinkedHashMap<>(initialCapacity));
 
 		DatabaseManager.init();
@@ -164,21 +167,19 @@ public final class Main extends JavaPlugin
 		return playerInfo.get(player);
 	}
 
+	@UnmodifiableView
 	public static Collection<PlayerInfo> getPlayerInfos() {
-		return playerInfo.values();
+		return playerInfoUnmodifiable.values();
 	}
 
-	@Deprecated
+	@UnmodifiableView
 	public static Map<Player, PlayerInfo> getPlayerInfoMap() {
-		return playerInfo;
+		return playerInfoUnmodifiable;
 	}
 
-	public static void forEachPlayerInfo(BiConsumer<Player, PlayerInfo> function) {
-		playerInfo.forEach(function);
-	}
-
+	@UnmodifiableView
 	public static Iterator<Map.Entry<Player, PlayerInfo>> getPlayersIter() {
-		return playerInfo.entrySet().iterator();
+		return playerInfoUnmodifiable.entrySet().iterator();
 	}
 
 	public static void addPlayerInfo(Player player, PlayerInfo info) {

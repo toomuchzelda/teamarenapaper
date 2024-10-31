@@ -43,6 +43,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -63,6 +64,8 @@ public class CommandDebug extends CustomCommand {
 	// TODO temporary feature
 	public static boolean ignoreWinConditions;
 	public static boolean disableMiniMapInCaseSomethingTerribleHappens;
+
+	public static boolean sniperShowRewind;
 
 	public CommandDebug() {
 		super("debug", "", "/debug ...", PermissionLevel.OWNER, "abuse");
@@ -116,6 +119,10 @@ public class CommandDebug extends CustomCommand {
 					ignoreWinConditions = args.length == 3 ? Boolean.parseBoolean(args[2]) : !ignoreWinConditions;
 					auditEvent(sender, "game ignoreWinConditions %s", ignoreWinConditions);
 					sender.sendMessage(Component.text("Set ignore win conditions to " + ignoreWinConditions, NamedTextColor.GREEN));
+				} else if (args[1].equals("snipershowrewind")) {
+					sniperShowRewind = args.length == 3 ? Boolean.parseBoolean(args[2]) : !sniperShowRewind;
+					auditEvent(sender, "game sniperShowRewind %s", sniperShowRewind);
+					sender.sendMessage(Component.text("Set sniper show rewind to " + sniperShowRewind, NamedTextColor.GREEN));
 				} else if (args[1].equals("antistall")) {
 					doGameAntiStall(sender, args);
 				}
@@ -193,7 +200,7 @@ public class CommandDebug extends CustomCommand {
 					}
 					info.kit = kit;
 					if (game.getGameState() == GameState.LIVE) {
-						game.giveKitAndGameItems(target, info, true);
+						game.updateKitFor(target, info, true);
 					}
 					target.sendMessage(Component.textOfChildren(
 							Component.text("Your kit has been updated to ", NamedTextColor.GREEN),
@@ -355,6 +362,28 @@ public class CommandDebug extends CustomCommand {
 		}
 
 		switch (args[0]) {
+			case "movemaxxing" -> {
+				new BukkitRunnable() {
+					int ticks = 0;
+					@Override
+					public void run() {
+						if (!player.isOnline())
+							cancel();
+						Vector vector;
+						if (ticks < 10)
+							vector = new Vector(0.4, 0, 0);
+						else if (ticks < 20)
+							vector = new Vector(0, 0, 0.4);
+						else if (ticks < 30)
+							vector = new Vector(-0.4, 0, 0);
+						else
+							vector = new Vector(0, 0, -0.4);
+						ticks = (ticks + 1) % 40;
+						vector.setY(player.getVelocity().getY());
+						player.setVelocity(vector);
+					}
+				}.runTaskTimer(Main.getPlugin(), 0, 1);
+			}
 			case "guitest" -> {
 				if (args.length < 2)
 					throw throwUsage("/debug guitest <tab/spectate>");
@@ -588,7 +617,7 @@ public class CommandDebug extends CustomCommand {
 		if (args.length == 1) {
 			return Arrays.asList("hide", "gui", "guitest", "signtest", "game", "setrank", "setteam", "setkit",
 				"votetest", "draw", "graffititest", "respawn", "fakehitbox", "testmotd", "arrowMarker", "packetcache", "showSpawns",
-				"flyingpoint", "fakeBlock", "elevator", "showores", "darken", "amogus", "loadsong");
+				"flyingpoint", "fakeBlock", "elevator", "showores", "darken", "amogus", "loadsong", "movemaxxing");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");
