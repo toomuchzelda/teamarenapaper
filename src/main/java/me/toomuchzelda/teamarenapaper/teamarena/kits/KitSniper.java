@@ -267,7 +267,7 @@ public class KitSniper extends Kit {
 
 		public record SniperRayTrace(@Nullable List<EntityHit> entityHits,
 									 @Nullable RayTraceResult terminatingBlock) {}
-		public record EntityHit(Entity victim, Vector hitPosition, boolean isHeadshot, double damageMultiplier) {}
+		public record EntityHit(Entity victim, Vector hitPosition, boolean isHeadshot) {}
 
 		public static @NotNull SniperRayTrace doRayTrace(Player player,
 														 Map<? extends Player, PlayerBoundingBox> playerHitboxes,
@@ -277,7 +277,7 @@ public class KitSniper extends Kit {
 
 			TreeMap<Double, EntityHit> hitEntities = new TreeMap<>();
 
-			RayTraceResult blockHit = player.getWorld().rayTraceBlocks(start, direction, maxDistance, FluidCollisionMode.NEVER, true, null);
+			RayTraceResult blockHit = player.getWorld().rayTraceBlocks(start, direction, maxDistance, FluidCollisionMode.NEVER, true);
 
 			double blockHitDistance = maxDistance;
 			// limiting the entity search range if we found a block hit:
@@ -301,9 +301,9 @@ public class KitSniper extends Kit {
 						boxTracker.maxX(), boxTracker.maxY(), boxTracker.maxZ());
 					// limit distance here to prevent the case where the bullet first enters the victim's body
 					// and subsequently hits the head hitbox
-					boolean headshot = boundingBox.rayTrace(startVec, direction, distance) != null;
+					boolean headshot = boundingBox.rayTrace(startVec, direction, distance + headHeight / 2) != null;
 
-					hitEntities.put(distance, new EntityHit(victim, hitResult.getHitPosition(), headshot, 0));
+					hitEntities.put(distance, new EntityHit(victim, hitResult.getHitPosition(), headshot));
 				}
 			}
 
@@ -317,14 +317,14 @@ public class KitSniper extends Kit {
 					boolean headshot = false;
 					if (entity instanceof LivingEntity livingEntity) {
 						double eyeHeight = livingEntity.getEyeHeight();
-						double headHeight = entityBox.getHeight() - eyeHeight;
-						entityBox.expand(0, -(entityBox.getHeight() - headHeight), 0, 0, 0, 0);
+						double headHeight = (entityBox.getHeight() - eyeHeight) * 2;
+						entityBox.resize(entityBox.getMinX(), entityBox.getMaxY() - headHeight, entityBox.getMinZ(),
+							entityBox.getMaxX(), entityBox.getMaxY(), entityBox.getMaxZ());
 						// limit distance here to prevent the case where the bullet first enters the victim's body
 						// and subsequently hits the head hitbox
-						headshot = boundingBox.rayTrace(startVec, direction, distance) != null;
+						headshot = entityBox.rayTrace(startVec, direction, distance + headHeight / 2) != null;
 					}
-					hitEntities.put(distance,
-						new EntityHit(entity, hitResult.getHitPosition(), headshot, 0));
+					hitEntities.put(distance, new EntityHit(entity, hitResult.getHitPosition(), headshot));
 				}
 			}
 
@@ -337,9 +337,9 @@ public class KitSniper extends Kit {
 		private void fireBullet(World world, Player player, int clientTick, TeamArenaTeam friendlyTeam, Location start, Vector velocity, boolean isReflected) {
 			int now = TeamArena.getGameTick();
 			var playerHitboxes = RewindablePlayerBoundingBoxManager.doRewind(2 + now - clientTick,
-				victim -> victim.getGameMode() == GameMode.SURVIVAL &&
-					Main.getPlayerInfo(victim).team != friendlyTeam);
-			var otherEntities = world.getLivingEntities().stream().filter(entity -> !(entity instanceof Player)).toList();
+				victim -> victim.getGameMode() == GameMode.SURVIVAL && !friendlyTeam.hasMember(victim));
+			var otherEntities = world.getLivingEntities().stream()
+				.filter(entity -> !(entity instanceof Player) && !friendlyTeam.hasMember(entity)).toList();
 
 			if (CommandDebug.sniperShowRewind) {
 				player.sendMessage(Component.text("Rewound 2 + " + (now - clientTick) + " ticks"));
@@ -348,15 +348,18 @@ public class KitSniper extends Kit {
 
 			Vector startVector = start.toVector();
 			var rayTraceResult = doRayTrace(player, playerHitboxes, otherEntities, start, velocity, 128);
-			if (rayTraceResult.entityHits != null) {
-				player.playSound(player.getEyeLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.PLAYERS, 0.5f, 1);
 
+			world.playSound(player, Sound.ENTITY_GENERIC_EXPLODE, 0.8f, 2.5f);
+			double distance = rayTraceResult.terminatingBlock != null ?
+				rayTraceResult.terminatingBlock.getHitPosition().distance(startVector) : 128;
+			showTracers(start, distance, velocity, player);
+
+			if (rayTraceResult.entityHits != null) {
 				for (EntityHit entityHit : rayTraceResult.entityHits) {
-					DamageEvent damageEvent;
 					if (entityHit.isHeadshot)
-						damageEvent = DamageEvent.newDamageEvent(entityHit.victim, 150 * entityHit.damageMultiplier, DamageType.SNIPER_HEADSHOT, player, true);
+						player.playSound(player.getEyeLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.PLAYERS, 1, 2);
 					else
-						damageEvent = DamageEvent.newDamageEvent(entityHit.victim, 15 * entityHit.damageMultiplier, DamageType.SNIPER_SHOT, player, false);
+						player.playSound(player.getEyeLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.PLAYERS, 0.5f, 1);
 
 					if (entityHit.victim instanceof Player playerVictim) {
 						PlayerInfo victimInfo = Main.getPlayerInfo(playerVictim);
@@ -376,16 +379,14 @@ public class KitSniper extends Kit {
 							case null -> {}
 						}
 					}
-
+					DamageEvent damageEvent;
+					if (entityHit.isHeadshot)
+						damageEvent = DamageEvent.newDamageEvent(entityHit.victim, 150, DamageType.SNIPER_HEADSHOT, player, true);
+					else
+						damageEvent = DamageEvent.newDamageEvent(entityHit.victim, 15, DamageType.SNIPER_SHOT, player, false);
 					Main.getGame().queueDamage(damageEvent);
 				}
 			}
-			world.playSound(player, Sound.ENTITY_GENERIC_EXPLODE, 0.8f, 2.5f);
-
-			double distance = rayTraceResult.terminatingBlock != null ?
-				rayTraceResult.terminatingBlock.getHitPosition().distance(startVector) : 128;
-
-			showTracers(start, distance, velocity, player);
 		}
 
 		@Override
