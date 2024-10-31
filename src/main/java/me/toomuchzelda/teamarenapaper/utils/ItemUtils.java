@@ -158,7 +158,7 @@ public class ItemUtils {
 	}
 
 	/**
-	 * Based on the lastUsedTick, itemDist gives the player the desiredItem
+	 * Based on the lastUsedTick, addRechargedItem gives the player the desiredItem
 	 * @ rechargeTime until maxCount is reached
 	 * @author onett425
 	 */

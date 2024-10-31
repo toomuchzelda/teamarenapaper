@@ -8,6 +8,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DetailedProjectileHitEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityPoseChangeEvent;
@@ -41,6 +42,18 @@ public abstract class Ability {
 			Main.logger().warning("Tried to remove ability " + ability.getClass() + " from player " + player.getName() + " when they didn't have it");
 			Thread.dumpStack();
 		}
+	}
+
+	/**
+	 * @return the instance of Ability of type, or null
+	 */
+	public static <T extends Ability> T getAbility(Player player, Class<T> type) {
+		for (Ability a : Kit.getAbilities(player)) {
+			if (type.isInstance(a)) {
+				return (T) a;
+			}
+		}
+		return null;
 	}
 
 	//register all one-time-registered things for this ability
