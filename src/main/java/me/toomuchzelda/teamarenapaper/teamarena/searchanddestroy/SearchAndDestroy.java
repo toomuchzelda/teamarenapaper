@@ -13,7 +13,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -53,7 +52,6 @@ public class SearchAndDestroy extends TeamArena
 {
 	public static final Component GAME_NAME = Component.text("Search and Destroy", NamedTextColor.GOLD);
 	public static final Component HOW_TO_PLAY = Component.text("Arm and detonate other team's bombs or kill every enemy to win! Remember: there's no respawning, so play carefully!", NamedTextColor.GOLD);
-	public static final @NotNull TextComponent LAST_TO_STAND = Component.text("Last to stand", NamedTextColor.GRAY);
 	public static final int POISON_ANNOUNCEMENT = 60 * 20;
 
 	//record it here from the map config but won't use it for anything
@@ -906,13 +904,12 @@ public class SearchAndDestroy extends TeamArena
 				builder.append(Component.text("Safe", NamedTextColor.DARK_GREEN));
 			}
 
-			sidebarCache.put(team, new SidebarManager.SidebarEntry(builder.build(), Component.text(playersAlive + " alive")));
+			sidebarCache.put(team, new SidebarManager.SidebarEntry(builder.build(), Component.text(playersAlive + "\uD83D\uDC64")));
 		}
 		if (poisonTimeLeft >= POISON_ANNOUNCEMENT && !isPoison)
-			return List.of(LAST_TO_STAND);
+			return List.of();
 		Component herobrine = Component.text("???", NamedTextColor.DARK_RED);
-		return List.of(LAST_TO_STAND,
-			isPoison ?
+		return List.of(isPoison ?
 				Component.textOfChildren(herobrine, Component.text(" ongoing", NamedTextColor.GRAY)) :
 				Component.textOfChildren(herobrine,
 					Component.text(" in "),
@@ -936,14 +933,14 @@ public class SearchAndDestroy extends TeamArena
 			teamsShown++;
 			if (team == playerTeam) {
 				// blink red when flag picked up
-				boolean inDanger = false;
+				int armed = -1;
 				for (Bomb bomb : teamBombs.get(team)) {
 					if (bomb.isArmed()) {
-						inDanger = true;
+						armed = bomb.getArmedTime();
 						break;
 					}
 				}
-				var teamPrefix = inDanger && TeamArena.getGameTick() % 20 < 10 ? OWN_TEAM_PREFIX_DANGER : OWN_TEAM_PREFIX;
+				var teamPrefix = armed != -1 && (TeamArena.getGameTick() - armed) % 20 < 10 ? OWN_TEAM_PREFIX_DANGER : OWN_TEAM_PREFIX;
 				sidebar.addEntry(Component.textOfChildren(teamPrefix, line.text()), line.numberFormat());
 			} else {
 				sidebar.addEntry(line);
@@ -985,6 +982,11 @@ public class SearchAndDestroy extends TeamArena
 	@Override
 	public Component getGameName() {
 		return GAME_NAME;
+	}
+
+	@Override
+	public @NotNull Component getGameObjective(@org.jetbrains.annotations.Nullable TeamArenaTeam team) {
+		return Component.text("Survive");
 	}
 
 	@Override

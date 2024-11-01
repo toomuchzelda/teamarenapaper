@@ -461,29 +461,55 @@ public abstract class TeamArena
 	}
 
 	public final void tickSidebar() {
-		boolean showGameSidebar = gameState != GameState.PREGAME && gameState != GameState.TEAMS_CHOSEN;
+		boolean showGameSidebar = gameState == GameState.GAME_STARTING || gameState == GameState.LIVE;
 		boolean showTeamSize = gameState == GameState.TEAMS_CHOSEN;
 
 		Collection<Component> sharedSidebar = showGameSidebar ? updateSharedSidebar() : null;
 
 		for (var player : Bukkit.getOnlinePlayers()) {
 			var sidebar = SidebarManager.getInstance(player);
-			var style = Main.getPlayerInfo(player).getPreference(Preferences.SIDEBAR_STYLE);
+			PlayerInfo playerInfo = Main.getPlayerInfo(player);
+			var style = playerInfo.getPreference(Preferences.SIDEBAR_STYLE);
 			if (style == SidebarManager.Style.HIDDEN) {
 				sidebar.clear(player);
 				continue;
 			}
 
 			if (!showGameSidebar) {
-				sidebar.setTitle(player, Component.text("Teams", NamedTextColor.GOLD));
-				for (var team : getTeams()) {
-					var builder = Component.text();
-					if (team.getPlayerMembers().contains(player)) {
-						builder.append(OWN_TEAM_PREFIX);
+				sidebar.setTitle(player, getGameName());
+				if (gameState.isPreGame()) {
+					var indent = Component.text("  ");
+					Component gameObjective = getGameObjective(playerInfo.team);
+					if (gameObjective != Component.empty()) {
+						sidebar.addEntry(Component.text("Objective"));
+						sidebar.addEntry(indent.append(gameObjective));
+						if (!isRespawningGame())
+							sidebar.addEntry(Component.text("  (No Respawning)", NamedTextColor.RED));
 					}
-					builder.append(team.getComponentName());
-					sidebar.addEntry(builder.build(),
-						showTeamSize ? Component.text(team.getPlayerMembers().size() + "\uD83D\uDC64") : null);
+					sidebar.addEntry(Component.text("Teams"));
+
+					for (var team : getTeams()) {
+						var builder = Component.text();
+						if (team.getPlayerMembers().contains(player)) {
+							builder.append(OWN_TEAM_PREFIX);
+						} else {
+							builder.append(indent);
+						}
+						builder.append(showTeamSize ? team.getComponentSimpleName() : team.getComponentName());
+						sidebar.addEntry(builder.build(),
+							showTeamSize ? Component.text(team.getPlayerMembers().size() + "\uD83D\uDC64") : null);
+					}
+				} else {
+					if (winningTeam == null) {
+						sidebar.addEntry(Component.empty());
+						sidebar.addEntry(Component.text("Draw", NamedTextColor.AQUA));
+						sidebar.addEntry(Component.empty());
+					} else {
+						sidebar.addEntry(Component.empty());
+						sidebar.addEntry(winningTeam.getComponentName().decorate(TextDecoration.BOLD));
+						sidebar.addEntry(winningTeam.colourWord("  has won!"));
+						sidebar.addEntry(Component.empty());
+					}
 				}
 			} else {
 				sharedSidebar.forEach(sidebar::addEntry);
@@ -2334,6 +2360,16 @@ public abstract class TeamArena
 	}
 
 	public abstract Component getGameName();
+
+	/**
+	 * Gets the game objective.
+	 * @param team The team, or null for the global objective of the game
+	 * @return The game objective
+	 */
+	@NotNull
+	public Component getGameObjective(@Nullable TeamArenaTeam team) {
+		return Component.empty();
+	}
 
 	public abstract Component getHowToPlayBrief();
 

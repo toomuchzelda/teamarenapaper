@@ -36,6 +36,7 @@ import org.bukkit.map.MapCursor;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -314,18 +315,19 @@ public class CaptureTheFlag extends TeamArena
 
 		TextComponent objective = Component.textOfChildren(
 			Component.text("First to ", NamedTextColor.GRAY),
-			Component.text("⚑ " + capsToWin, NamedTextColor.GREEN)
+			Component.text("⚑ " + capsToWin, NamedTextColor.GOLD)
 		);
 		if (antiStallAction != null)
 			return List.of(
 				objective,
+				Component.text("Teams"),
 				Component.textOfChildren(
 					antiStallAction,
 					Component.text(" in "),
 					TextUtils.formatDurationMmSs(Ticks.duration(antiStallCountdown))
 				)
 			);
-		return List.of(objective);
+		return List.of(objective, Component.text("Teams"));
 	}
 
 	@Override
@@ -335,6 +337,7 @@ public class CaptureTheFlag extends TeamArena
 
 		int teamsShown = 0;
 
+		var indent = Component.text("  ");
 		for (var entry : sidebarCache.entrySet()) {
 			var flag = entry.getKey();
 			var team = flag.team;
@@ -348,7 +351,7 @@ public class CaptureTheFlag extends TeamArena
 				var teamPrefix = !flag.isAtBase && TeamArena.getGameTick() % 20 < 10 ? OWN_TEAM_PREFIX_DANGER : OWN_TEAM_PREFIX;
 				sidebar.addEntry(Component.textOfChildren(teamPrefix, line.text()), line.numberFormat());
 			} else {
-				sidebar.addEntry(line);
+				sidebar.addEntry(Component.textOfChildren(indent, line.text()), line.numberFormat());
 			}
 		}
 		// unimportant teams
@@ -880,6 +883,14 @@ public class CaptureTheFlag extends TeamArena
 	@Override
 	public Component getGameName() {
 		return GAME_NAME;
+	}
+
+	@Override
+	public @NotNull Component getGameObjective(@org.jetbrains.annotations.Nullable TeamArenaTeam team) {
+		return Component.textOfChildren(
+			Component.text("Capture ", NamedTextColor.GRAY),
+			Component.text("⚑ " + capsToWin, NamedTextColor.GREEN)
+		);
 	}
 
 	@Override
