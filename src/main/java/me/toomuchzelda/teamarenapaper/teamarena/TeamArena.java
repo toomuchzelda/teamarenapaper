@@ -461,7 +461,7 @@ public abstract class TeamArena
 	}
 
 	public final void tickSidebar() {
-		boolean showGameSidebar = gameState == GameState.GAME_STARTING || gameState == GameState.LIVE;
+		boolean showGameSidebar = gameState.compareTo(GameState.GAME_STARTING) >= 0;
 		boolean showTeamSize = gameState == GameState.TEAMS_CHOSEN;
 
 		Collection<Component> sharedSidebar = showGameSidebar ? updateSharedSidebar() : null;
@@ -477,39 +477,26 @@ public abstract class TeamArena
 
 			if (!showGameSidebar) {
 				sidebar.setTitle(player, getGameName());
-				if (gameState.isPreGame()) {
-					var indent = Component.text("  ");
-					Component gameObjective = getGameObjective(playerInfo.team);
-					if (gameObjective != Component.empty()) {
-						sidebar.addEntry(Component.text("Objective"));
-						sidebar.addEntry(indent.append(gameObjective));
-						if (!isRespawningGame())
-							sidebar.addEntry(Component.text("  (No Respawning)", NamedTextColor.RED));
-					}
-					sidebar.addEntry(Component.text("Teams"));
+				var indent = Component.text("  ");
+				Component gameObjective = getGameObjective(playerInfo.team);
+				if (gameObjective != Component.empty()) {
+					sidebar.addEntry(Component.text("Objective"));
+					sidebar.addEntry(indent.append(gameObjective));
+					if (!isRespawningGame())
+						sidebar.addEntry(Component.text("  (No Respawning)", NamedTextColor.RED));
+				}
+				sidebar.addEntry(Component.text("Teams"));
 
-					for (var team : getTeams()) {
-						var builder = Component.text();
-						if (team.getPlayerMembers().contains(player)) {
-							builder.append(OWN_TEAM_PREFIX);
-						} else {
-							builder.append(indent);
-						}
-						builder.append(showTeamSize ? team.getComponentSimpleName() : team.getComponentName());
-						sidebar.addEntry(builder.build(),
-							showTeamSize ? Component.text(team.getPlayerMembers().size() + "\uD83D\uDC64") : null);
-					}
-				} else {
-					if (winningTeam == null) {
-						sidebar.addEntry(Component.empty());
-						sidebar.addEntry(Component.text("Draw", NamedTextColor.AQUA));
-						sidebar.addEntry(Component.empty());
+				for (var team : getTeams()) {
+					var builder = Component.text();
+					if (team.getPlayerMembers().contains(player)) {
+						builder.append(OWN_TEAM_PREFIX);
 					} else {
-						sidebar.addEntry(Component.empty());
-						sidebar.addEntry(winningTeam.getComponentName().decorate(TextDecoration.BOLD));
-						sidebar.addEntry(winningTeam.colourWord("  has won!"));
-						sidebar.addEntry(Component.empty());
+						builder.append(indent);
 					}
+					builder.append(showTeamSize ? team.getComponentSimpleName() : team.getComponentName());
+					sidebar.addEntry(builder.build(),
+						showTeamSize ? Component.text(team.getPlayerMembers().size() + "\uD83D\uDC64") : null);
 				}
 			} else {
 				sharedSidebar.forEach(sidebar::addEntry);
