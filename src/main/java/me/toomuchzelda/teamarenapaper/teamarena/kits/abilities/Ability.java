@@ -19,6 +19,7 @@ import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.*;
 
 import javax.annotation.Nullable;
+import java.util.Set;
 
 //methods aren't abstract as abilities may not need to override them
 public abstract class Ability {
@@ -54,6 +55,11 @@ public abstract class Ability {
 			}
 		}
 		return null;
+	}
+
+	public static Set<Ability> getAbilities(Player player) {
+		PlayerInfo pinfo = Main.getPlayerInfo(player);
+		return pinfo.abilities;
 	}
 
 	//register all one-time-registered things for this ability

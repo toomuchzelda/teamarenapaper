@@ -10,16 +10,19 @@ import java.util.List;
 /**
  * Manage abilities which are not part of kits
  */
-public class AbilityManager {
+public class CommonAbilityManager {
 	public final RailgunAbility railgun;
+	public final ExplosiveProjectilesAbility explosives;
 
 	private final List<Ability> all;
 
-	public AbilityManager() {
+	public CommonAbilityManager() {
 		this.railgun = new RailgunAbility();
 		this.railgun.registerAbility();
+		this.explosives = new ExplosiveProjectilesAbility();
+		this.explosives.registerAbility();
 
-		this.all = List.of(railgun);
+		this.all = List.of(railgun, explosives);
 	}
 
 	public void tick() {

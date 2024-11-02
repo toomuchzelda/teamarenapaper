@@ -31,6 +31,7 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.FireworkEffectMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.Vector;
 
 import java.util.*;
@@ -40,9 +41,9 @@ public class ExplosiveProjectilesAbility extends Ability {
 	public static final int RPG_CD = 7 * 20;
 	public static final double RPG_BLAST_RADIUS = 8;
 	private static final int RPG_CHARGEUP_TIME = 35; //1.75 secs
-
 	private static final Component RPG_CHARGE_BOSSBAR_NAME = Component.text("CHARGING", NamedTextColor.YELLOW, TextDecoration.BOLD);
 	private static final Component RPG_CHARGE_ALMOST_READY = Component.text("CHARGING", NamedTextColor.GOLD, TextDecoration.BOLD);
+	private static final NamespacedKey RPG_ARROW_MARKER = new NamespacedKey(Main.getPlugin(), "rpgarrow");
 
 	public static final int GRENADE_MAX_ACTIVE = 3;
 	public static final int GRENADE_FUSE_TIME = 60;
@@ -60,6 +61,18 @@ public class ExplosiveProjectilesAbility extends Ability {
 		.lore(TextUtils.wrapString("Right click to charge one up. Once charged, it'll fire itself forward!", Style.style(TextUtils.RIGHT_CLICK_TO)))
 		.build();
 
+	//info for thrown rpgs
+	private static final class RPGInfo {
+		private final Arrow rpgArrow;
+		private int spawnTime;
+		private Player originalThrower; // Null until reflected
+
+		private RPGInfo(Arrow rpgArrow, int spawnTime) {
+			this.rpgArrow = rpgArrow;
+			this.spawnTime = spawnTime;
+		}
+	}
+
 	private static class ExplosiveInfo {
 		private RPGChargeInfo chargingRpg;
 		private final List<RPGInfo> activeRpgs;
@@ -73,12 +86,10 @@ public class ExplosiveProjectilesAbility extends Ability {
 
 	//info for charging up rpgs
 	private record RPGChargeInfo(BossBar bossbar, int throwTime) {}
-	//info for thrown rpgs
-	private record RPGInfo(Arrow rpgArrow, int spawnTime) {}
+
 	private record GrenadeInfo(Item grenade, Color color, int spawnTime) {}
 
 	private final Map<Player, ExplosiveInfo> explosiveInfos = new HashMap<>();
-	private final Map<Player, RPGInfo> reflectedRpgs = new HashMap<>();
 
 	@Override
 	public void unregisterAbility() {
@@ -90,11 +101,6 @@ public class ExplosiveProjectilesAbility extends Ability {
 			einfo.activeRpgs.clear();
 		}
 		explosiveInfos.clear();
-
-		for (var entry : reflectedRpgs.entrySet()) {
-			entry.getValue().rpgArrow.remove();
-		}
-		reflectedRpgs.clear();
 	}
 
 	private ExplosiveInfo getEinfo(Player player) {
@@ -104,6 +110,7 @@ public class ExplosiveProjectilesAbility extends Ability {
 	@Override
 	public void removeAbility(Player player) {
 		final ExplosiveInfo einfo = explosiveInfos.remove(player);
+		if (einfo == null) return;
 
 		if (einfo.chargingRpg != null)
 			player.hideBossBar(einfo.chargingRpg.bossbar);
@@ -126,21 +133,24 @@ public class ExplosiveProjectilesAbility extends Ability {
 			while (playerRpgIter.hasNext()) {
 				final RPGInfo rpgInfo = playerRpgIter.next();
 
-				if (rpgTick(entry.getKey(), rpgInfo, false)) {
+				if (rpgTick(entry.getKey(), rpgInfo)) {
 					playerRpgIter.remove();
 				}
-			}
-		}
-		// Tick reflected RPGs
-		for (var iterator = reflectedRpgs.entrySet().iterator(); iterator.hasNext(); ) {
-			var entry = iterator.next();
-			if (rpgTick(entry.getKey(), entry.getValue(), true)) {
-				iterator.remove();
 			}
 		}
 
 		//Tick RPG launches that are charging up
 		rpgChargeTick();
+
+		// cleanup
+		for (var iterator = explosiveInfos.entrySet().iterator(); iterator.hasNext(); ) {
+			var entry = iterator.next();
+
+			ExplosiveInfo einfo = entry.getValue();
+			if (einfo.chargingRpg == null && einfo.activeRpgs.isEmpty() && einfo.activeGrenades.isEmpty()) {
+				iterator.remove();
+			}
+		}
 	}
 
 	private void rpgChargeTick() {
@@ -179,18 +189,16 @@ public class ExplosiveProjectilesAbility extends Ability {
 	}
 
 	// return true if RPG is done and cleanup needed
-	private boolean rpgTick(final Player thrower, RPGInfo rpgInfo, boolean reflected) {
-		final World world = thrower.getWorld();
-		final Arrow rpgArrow = rpgInfo.rpgArrow();
+	private boolean rpgTick(final Player owner, RPGInfo rpgInfo) {
+		final Arrow rpgArrow = rpgInfo.rpgArrow;
 		final Location arrowLoc = rpgArrow.getLocation();
 
 		//Explode RPG if it hits block or player
 		if (rpgArrow.isInBlock() || rpgArrow.isOnGround() || rpgArrow.isDead() ||
 			rpgArrow.getTicksLived() >= 38) {
-			// rpgArrow.getShooter will be the original thrower if reflected, as handled in onReflect()
-			// TODO ^ not true
-			rpgBlast(arrowLoc, thrower, reflected,
-				rpgArrow.getShooter() instanceof Entity eShooter ? eShooter : null);
+
+			boolean reflected = rpgInfo.originalThrower != null;
+			rpgBlast(arrowLoc, owner, reflected, rpgInfo.originalThrower);
 
 			rpgArrow.remove();
 			return true;
@@ -198,12 +206,12 @@ public class ExplosiveProjectilesAbility extends Ability {
 		//RPG particle trail
 		else {
 			final int currentTick = TeamArena.getGameTick();
-			if ((currentTick - rpgInfo.spawnTime()) % 5 == 0) {
-				world.spawnParticle(Particle.EXPLOSION, arrowLoc, 1);
+			if ((currentTick - rpgInfo.spawnTime) % 5 == 0) {
+				owner.getWorld().spawnParticle(Particle.EXPLOSION, arrowLoc, 1);
 			}
 
-			if((currentTick - rpgInfo.spawnTime()) % 2 == 0) {
-				ParticleUtils.colouredRedstone(arrowLoc, Main.getPlayerInfo(thrower).team.getColour(), 1d, 3f);
+			if((currentTick - rpgInfo.spawnTime) % 2 == 0) {
+				ParticleUtils.colouredRedstone(arrowLoc, Main.getPlayerInfo(owner).team.getColour(), 1d, 3f);
 			}
 
 			return false;
@@ -223,7 +231,7 @@ public class ExplosiveProjectilesAbility extends Ability {
 				//Explode grenade if fuse time passes
 				if (currentTick - grenadeInfo.spawnTime >= GRENADE_FUSE_TIME) {
 					//real thrower info is passed on through grenade's thrower field
-					TeamArenaExplosion explosion = new TeamArenaExplosion(null, 3, 0.5, 10, 3.5, 0.35, DamageType.EXPLOSIVE_GRENADE, grenade);
+					TeamArenaExplosion explosion = new TeamArenaExplosion(null, 4, 0.5, 12, 3.5, 0.35, DamageType.EXPLOSIVE_GRENADE, grenade);
 					explosion.explode();
 
 					grenade.remove();
@@ -247,18 +255,23 @@ public class ExplosiveProjectilesAbility extends Ability {
 
 	@Override
 	public void onAttemptedAttack(DamageEvent event) { // Also called by porc onAttack
-		if (event.getDamageType().is(DamageType.PROJECTILE)) { // TODO Prevent RPG arrow from hitting players
+		if (event.getDamageType().is(DamageType.PROJECTILE) &&
+			event.getAttacker() instanceof AbstractArrow aa &&
+			Boolean.TRUE.equals(aa.getPersistentDataContainer().get(RPG_ARROW_MARKER, PersistentDataType.BOOLEAN))) { // Thanks Intellij IDEA Integrated Development Environment
+
 			event.setCancelled(true);
 			event.getAttacker().remove();
 		}
 	}
 
+	/*
 	@Override
 	public void onAttemptedDamage(DamageEvent event) {
 		if(event.getDamageType().is(DamageType.EXPLOSIVE_RPG_SELF)) {
 			event.setFinalDamage(5); //self RPG always does 5 damage
 		}
 	}
+	*/
 
 	@Override
 	public void onLaunchProjectile(PlayerLaunchProjectileEvent event) {
@@ -371,12 +384,13 @@ public class ExplosiveProjectilesAbility extends Ability {
 			arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
 			arrow.setShooter(shooter);
 		});
-
-		//sound effect
-		shooter.getWorld().playSound(shooter, Sound.ENTITY_FIREWORK_ROCKET_LAUNCH, SoundCategory.PLAYERS, 2f, 0.5f);
+		rpgArrow.getPersistentDataContainer().set(RPG_ARROW_MARKER, PersistentDataType.BOOLEAN, true);
 
 		List<RPGInfo> list = einfo.activeRpgs;
 		list.add(new RPGInfo(rpgArrow, TeamArena.getGameTick()));
+
+		//sound effect
+		shooter.getWorld().playSound(shooter, Sound.ENTITY_FIREWORK_ROCKET_LAUNCH, SoundCategory.PLAYERS, 2f, 0.5f);
 
 		// If they are kit explosive, notify the item regenerator
 		KitExplosive.ExplosiveAbility explosiveAbility = Ability.getAbility(shooter, KitExplosive.ExplosiveAbility.class);
@@ -385,7 +399,6 @@ public class ExplosiveProjectilesAbility extends Ability {
 	}
 
 	public void rpgBlast(Location explodeLoc, Player owner, boolean reflected, Entity originalThrower) {
-		//self damage multiplier does not matter here, is overridden in attempted damage
 		double selfDamageMult, selfKnockbackMult;
 		DamageType damageType = reflected ? DamageType.EXPLOSIVE_RPG_REFLECTED : DamageType.EXPLOSIVE_RPG;
 		if (!reflected) {
@@ -432,18 +445,6 @@ public class ExplosiveProjectilesAbility extends Ability {
 		}
 	}
 
-	// TODO check
-	// Called when porc dies
-	private void onReflectorCleanup(Player porc, Projectile projectile,
-									KitPorcupine.CleanupReason reason) {
-		if (reason == KitPorcupine.CleanupReason.PORC_DIED) {
-			RPGInfo rinfo = this.reflectedRpgs.remove(porc);
-			if (rinfo != null) { // May be null if onTick(), which is called before this, removed it
-				rinfo.rpgArrow.remove();
-			}
-		}
-	}
-
 	@Override
 	public void onReflect(ProjectileReflectEvent event) {
 		// Maybe an RPG
@@ -458,11 +459,16 @@ public class ExplosiveProjectilesAbility extends Ability {
 							Thread.dumpStack();
 						}
 
-						event.cleanupFunc = this::onReflectorCleanup;
-						event.attackFunc = this::onAttemptedAttack; // Handle damage mults
-						// Remove from explosive's ownership and add entry for the reflector
+						event.attackFunc = this::onAttemptedAttack;
+
+						rinfo.originalThrower = shooter;
+						rinfo.spawnTime = TeamArena.getGameTick();
+
+						// Remove ownership from original thrower and add to reflector
 						iterator.remove();
-						reflectedRpgs.put(event.reflector, new RPGInfo(arrow, TeamArena.getGameTick()));
+						ExplosiveInfo refEinfo = getEinfo(event.reflector);
+						refEinfo.activeRpgs.add(rinfo);
+
 						break;
 					}
 				}

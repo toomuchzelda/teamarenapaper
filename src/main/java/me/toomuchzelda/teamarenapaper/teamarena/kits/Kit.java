@@ -236,8 +236,7 @@ public abstract class Kit {
 	 * This method shouldn't really be in this class, but it is because tech debt.
      */
     public static Set<Ability> getAbilities(Player player) {
-        PlayerInfo pinfo = Main.getPlayerInfo(player);
-		return pinfo.abilities;
+       return Ability.getAbilities(player);
         /*if(pinfo.activeKit != null) {
             return pinfo.activeKit.getAbilities();
         }
