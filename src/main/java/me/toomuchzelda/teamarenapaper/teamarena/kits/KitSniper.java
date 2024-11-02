@@ -16,7 +16,6 @@ import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
@@ -88,7 +87,7 @@ public class KitSniper extends Kit {
 		setCategory(KitCategory.RANGED);
 	}
 
-	public class SniperAbility extends Ability {
+	public static class SniperAbility extends Ability {
 		public static final @NotNull TextColor SNIPER_COLOR = TextColor.color(0xd28a37);
 		private final Set<UUID> RECEIVED_GRENADE_CHAT_MESSAGE = new HashSet<>();
 		public static final TextColor GRENADE_MSG_COLOR = TextColor.color(66, 245, 158);
@@ -100,43 +99,27 @@ public class KitSniper extends Kit {
 		final List<BukkitTask> grenadeTasks = new ArrayList<>();
 		final Random gunInaccuracy = new Random();
 
-		public static final double MAX_SNIPER_RANGE = 128;
-
 		final Map<Player, EvictingQueue<Vector>> inaccuracyTracker = new HashMap<>();
 
 		public static final int SPAWN_PROTECTION_DURATION = 5 * 20;
+		final Map<Player, Integer> spawnTime = new HashMap<>();
 		final Set<Player> spawnProtectionExpired = new HashSet<>();
-
-		public enum ShieldType {
-			RESPAWN_SHIELD(Component.text("Sniper: Protective AURA", SNIPER_COLOR)),
-			KIT_REFLECTOR(null), // Component.text("⚠ Reflector: Firing KILLS You ⚠", TextColors.ERROR_RED)),
-			KIT_NONE(null); //Component.text("None: Invulnerable", NamedTextColor.GRAY));
-			public final Component message;
-			ShieldType(Component message) {
-				this.message = message;
-			}
-		}
-		@Nullable
-		public ShieldType getVictimShield(Player player) {
-			return switch (Kit.getActiveKit(player)) {
-				case KitSniper ignored when !spawnProtectionExpired.contains(player) -> ShieldType.RESPAWN_SHIELD;
-				case KitPorcupine ignored -> ShieldType.KIT_REFLECTOR;
-				case KitNone ignored -> ShieldType.KIT_NONE;
-				case null, default -> null;
-			};
-		}
 
 		@Override
 		public void unregisterAbility() {
 			grenadeTasks.forEach(BukkitTask::cancel);
 			grenadeTasks.clear();
 
+			inaccuracyTracker.clear();
+
+			spawnTime.clear();
 			spawnProtectionExpired.clear();
 		}
 
 		@Override
 		public void giveAbility(Player player) {
 			player.setExp(0.999f);
+			spawnTime.put(player, TeamArena.getGameTick());
 			inaccuracyTracker.put(player, EvictingQueue.create(3));
 			RewindablePlayerBoundingBoxManager.trackClientTick(player);
 		}
@@ -145,6 +128,7 @@ public class KitSniper extends Kit {
 		public void removeAbility(Player player) {
 			player.setExp(0);
 			player.getInventory().remove(Material.TURTLE_HELMET);
+			spawnTime.remove(player);
 			spawnProtectionExpired.remove(player);
 			inaccuracyTracker.remove(player);
 			var uuid = player.getUniqueId();
@@ -366,8 +350,8 @@ public class KitSniper extends Kit {
 
 					if (entityHit.victim instanceof Player playerVictim) {
 						PlayerInfo victimInfo = Main.getPlayerInfo(playerVictim);
-						switch (getVictimShield(playerVictim)) {
-							case KIT_REFLECTOR -> {
+						switch (Kit.getActiveKit(playerVictim)) {
+							case KitPorcupine ignored -> {
 								if (reflectorShooter == null) { // can't reflect twice
 									Location hitLoc = entityHit.hitPosition.toLocation(world);
 									KitPorcupine.PorcupineAbility.reflectEffect(playerVictim, hitLoc);
@@ -375,14 +359,15 @@ public class KitSniper extends Kit {
 									// reflect the bullet by firing another bullet as if the porcupine is a sniper
 									fireBullet(world, playerVictim, clientTick, victimInfo.team,
 										hitLoc, velocity.clone().multiply(-1), player);
-									return; // the sniper would definitely die
 								}
+								return; // the sniper would definitely die
 							}
-							case KIT_NONE, RESPAWN_SHIELD -> {
-								continue; // no damage
+							case KitSniper ignored when !spawnProtectionExpired.contains(playerVictim) -> {
+								// no damage
+								continue;
 							}
-							case null -> {}
-						}
+							case null, default -> {}
+						};
 					}
 					DamageEvent damageEvent;
 					if (reflectorShooter != null) {// is reflected bullet
@@ -473,7 +458,7 @@ public class KitSniper extends Kit {
 			inaccuracyTracker.add(current);
 
 			// check spawn protection timer
-			if (TeamArena.getGameTick() - pinfo.spawnedAt == SPAWN_PROTECTION_DURATION) {
+			if (TeamArena.getGameTick() - spawnTime.get(player) >= SPAWN_PROTECTION_DURATION) {
 				removeSpawnProtection(player, "over time", TextColor.color(0xfaf25e));
 			}
 
@@ -490,21 +475,6 @@ public class KitSniper extends Kit {
 			if (inventory.getItemInMainHand().getType() == Material.SPYGLASS) {
 				if (pinfo.getPreference(Preferences.KIT_ACTION_BAR)) {
 					player.sendActionBar(buildInaccuracyMessage(calcInaccuracy(player)));
-				}
-				// if scoping
-				if (player.getActiveItem().getType() == Material.SPYGLASS) {
-					// normal entity raytrace should be enough
-					Location eyeLocation = player.getEyeLocation();
-					RayTraceResult rayTraceResult = world.rayTrace(eyeLocation, eyeLocation.getDirection(),
-						MAX_SNIPER_RANGE, FluidCollisionMode.NEVER, true, 0,
-						entity -> entity instanceof Player victim && victim != player && getVictimShield(victim) != null);
-					if (rayTraceResult != null && rayTraceResult.getHitEntity() instanceof Player victim) {
-						ShieldType shieldType = Objects.requireNonNull(getVictimShield(victim));
-						if (shieldType.message != null) {
-							Title warningTitle = TextUtils.createTitle(Component.empty(), shieldType.message, 0, 10, 0);
-							player.showTitle(warningTitle);
-						}
-					}
 				}
 			}
 

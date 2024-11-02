@@ -2,8 +2,6 @@ package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
-import me.toomuchzelda.teamarenapaper.inventory.InventoryProvider;
-import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.inventory.TicTacToe;
 import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
@@ -11,10 +9,8 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 
@@ -44,8 +40,7 @@ public class CommandTicTacToe extends CustomCommand {
 			return;
 		}
 		if (args.length == 0) {
-			Inventories.openInventory(player, new TargetSelector());
-			return;
+			throw throwUsage();
 		}
 		String target = args[0];
 		if ("bot".equalsIgnoreCase(target)) {
@@ -135,42 +130,5 @@ public class CommandTicTacToe extends CustomCommand {
 			return BOTS;
 		}
 		return Collections.emptyList();
-	}
-
-	class TargetSelector implements InventoryProvider {
-		@Override
-		public @NotNull Component getTitle(Player player) {
-			return Component.text("Pick an opponent", NamedTextColor.GREEN);
-		}
-
-		@Override
-		public int getRows() {
-			return Math.min(6, 3 + Bukkit.getOnlinePlayers().size() / 9);
-		}
-
-		@Override
-		public void init(Player player, InventoryAccessor inventory) {
-			inventory.fillRow(0, ItemBuilder.of(Material.LIGHT_GRAY_STAINED_GLASS_PANE).hideTooltip().build());
-			TicTacToe.StandardBots[] bots = TicTacToe.StandardBots.values();
-			for (int i = 0; i < bots.length; i++) {
-				TicTacToe.StandardBots bot = bots[i];
-				inventory.set(i * 2 + 2, bot.getDisplayItem(),
-					e -> new TicTacToe(TicTacToe.getPlayer(player), bot).schedule());
-			}
-			inventory.fillRow(1, ItemBuilder.of(Material.BLACK_STAINED_GLASS_PANE).hideTooltip().build());
-			var players = Bukkit.getOnlinePlayers().toArray(new Player[0]);
-			for (int i = 0, count = Math.min(9 * 4, players.length); i < count; i++) {
-				Player other = players[i];
-				if (player == other) continue;
-				inventory.set(9 * 2 + i, ItemBuilder.of(Material.PLAYER_HEAD)
-					.displayName(other.playerListName())
-					.meta(SkullMeta.class, meta -> meta.setOwningPlayer(other))
-					.toClickableItem(e -> {
-						sendInvitation(player, other);
-						Inventories.closeInventory(player);
-					})
-				);
-			}
-		}
 	}
 }

@@ -17,6 +17,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingOutlineManager;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandCallvote;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandTeamChat;
+import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.GraffitiManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
@@ -24,9 +25,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
-import me.toomuchzelda.teamarenapaper.teamarena.inventory.GameMenu;
-import me.toomuchzelda.teamarenapaper.teamarena.inventory.KitInventory;
-import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
+import me.toomuchzelda.teamarenapaper.teamarena.inventory.*;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.IronGolemKillStreak;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.KillStreakManager;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.WolvesKillStreak;
@@ -143,13 +142,10 @@ public abstract class TeamArena
 		.displayName(Component.text("Select a Kit", NamedTextColor.BLUE))
 		.build();
 
-	protected static ItemStack kitControlMenuItem = ItemBuilder.of(Material.WRITABLE_BOOK)
-		.displayName(Component.text("Kit restrictions", NamedTextColor.AQUA))
-		.lore(Component.text("Click here to set kit restrictions", NamedTextColor.GRAY))
-		.build();
+	protected static ItemStack preferenceMenuItem = PreferencesInventory.PREFERENCE.clone();
 
-	protected static ItemStack gameMenuItem = ItemBuilder.of(Material.CHEST)
-		.displayName(Component.text("Game menu", NamedTextColor.LIGHT_PURPLE))
+	protected static ItemStack cosmeticsMenuItem = ItemBuilder.of(Material.ARMOR_STAND)
+		.displayName(Component.text("Manage cosmetics", NamedTextColor.LIGHT_PURPLE))
 		.build();
 
 	public static final Component OWN_TEAM_PREFIX = Component.text("▶ ");
@@ -955,12 +951,12 @@ public abstract class TeamArena
 		} else if (kitMenuItem.isSimilar(item)) {
 			event.setUseItemInHand(Event.Result.DENY);
 			Inventories.openInventory(player, new KitInventory());
-		} else if (kitControlMenuItem.isSimilar(item) && Main.getPlayerInfo(player).hasPermission(PermissionLevel.MOD)) {
+		} else if (preferenceMenuItem.isSimilar(item)) {
 			event.setUseItemInHand(Event.Result.DENY);
-//			Inventories.openInventory(player, new KitControlInventory());
-		} else if (gameMenuItem.isSimilar(item)) {
+			Inventories.openInventory(player, new PreferencesInventory());
+		} else if (cosmeticsMenuItem.isSimilar(item)) {
 			event.setUseItemInHand(Event.Result.DENY);
-			Inventories.openInventory(player, new GameMenu());
+			Inventories.openInventory(player, new CosmeticsInventory(CosmeticType.GRAFFITI));
 		}
 		else {
 			PlayerInfo pinfo = Main.getPlayerInfo(player);
@@ -1290,7 +1286,6 @@ public abstract class TeamArena
 			PlayerListScoreManager.setKills(player, 0);
 
 			PlayerInfo pinfo = Main.getPlayerInfo(player);
-			pinfo.spawnedAt = TeamArena.getGameTick();
 
 			giveKitAndGameItems(player, pinfo, true);
 
@@ -1478,10 +1473,8 @@ public abstract class TeamArena
 	public void giveLobbyItems(Player player) {
 		PlayerInventory inventory = player.getInventory();
 		inventory.setItem(0, kitMenuItem.clone());
-		if (Main.getPlayerInfo(player).hasPermission(PermissionLevel.MOD)) {
-//			inventory.setItem(2, kitControlMenuItem.clone());
-		}
-		inventory.setItem(4, gameMenuItem.clone());
+		inventory.setItem(4, preferenceMenuItem.clone());
+		inventory.setItem(5, cosmeticsMenuItem.clone());
 		inventory.setItem(8, miniMap.getMapItem());
 	}
 
@@ -1658,7 +1651,6 @@ public abstract class TeamArena
 		player.setAllowFlight(false);
 		PlayerUtils.resetState(player);
 
-		pinfo.spawnedAt = TeamArena.getGameTick();
 		giveKitAndGameItems(player, pinfo, true);
 		this.commonAbilityManager.give(player);
 		pinfo.kills = 0;

@@ -19,9 +19,9 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
-import org.bukkit.Sound;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -100,6 +100,7 @@ public class CommandCallvote extends CustomCommand {
 	public final Queue<Topic> queue = new ArrayDeque<>(); // obviously arrays > linked lists
 	public final Map<UUID, @NotNull VoteOption> ballot = new LinkedHashMap<>(Bukkit.getMaxPlayers());
 	public final Set<UUID> calledVotes = new HashSet<>();
+	@Nullable
 	Topic currentTopic = null;
 	BossBar bar;
 	int maxTime = 1, timeLeft;
@@ -158,7 +159,10 @@ public class CommandCallvote extends CustomCommand {
 			maxTime = 30;
 			timeLeft = 30;
 			assert CompileAsserts.OMIT || currentTopic.owner != null;
-			instruction = currentTopic.owner.append(Component.text(" has called for a new vote!", NamedTextColor.YELLOW));
+			instruction = Component.textOfChildren(
+				currentTopic.owner != null ? currentTopic.owner : Component.text("Herobrine"),
+				Component.text(" has called for a new vote!", NamedTextColor.YELLOW)
+			);
 		}
 
 		Bukkit.broadcast(Component.textOfChildren(
@@ -269,7 +273,7 @@ public class CommandCallvote extends CustomCommand {
 	Component getTopicDisplay(@Nullable Topic topic, @Nullable Locale locale, @Nullable VotingResults results) {
 		if (topic == null)
 			return Component.text("There is no ongoing vote.", NamedTextColor.DARK_RED);
-		Duration time = Duration.between(currentTopic.time(), ZonedDateTime.now());
+		Duration time = Duration.between(topic.time(), ZonedDateTime.now());
 
 		TextComponent.Builder message = Component.text();
 		message.append(
@@ -284,7 +288,7 @@ public class CommandCallvote extends CustomCommand {
 				Component.text("Submitted by ", NamedTextColor.YELLOW),
 				topic.owner(),
 				Component.space(),
-				TextUtils.formatDuration(time, currentTopic.time(), locale),
+				TextUtils.formatDuration(time, topic.time(), locale),
 				Component.text(" ago", NamedTextColor.YELLOW),
 				Component.newline());
 		}
@@ -318,6 +322,7 @@ public class CommandCallvote extends CustomCommand {
 	static final Component OPENING_BRACKET = Component.text("["),
 			CLOSING_BRACKET = Component.text("]");
 	Component getTopicVoteLinks() {
+		if (currentTopic == null) return Component.empty();
 		var builder = Component.text().append(
 				Component.text("Click to vote: ", NamedTextColor.YELLOW),
 				Component.newline()
@@ -452,17 +457,16 @@ public class CommandCallvote extends CustomCommand {
 					timeLeft += Math.max(0, time);
 				}
 				case "myvoteissuperimportant" -> {
-					if (currentTopic == null) {
-						sender.sendMessage(Component.text("There is no topic to vote on!", NamedTextColor.RED));
-						return;
-					}
-					if (sender instanceof Player player && !hasPermission(sender, PermissionLevel.OWNER)) {
-						player.chat("I am Kim Jong Un (101% support rating)");
-						player.getWorld().playSound(player, Sound.ENTITY_CAT_AMBIENT, 1, 0);
+					if (!hasPermission(sender, PermissionLevel.OWNER)) {
+						sendAngryLetter(sender, VOTER_FRAUD_ERROR_PARTS);
 						return;
 					}
 					if (args.length < 2) {
 						showUsage(sender, "/callvote myvoteissuperimportant <vote> [amount]");
+						return;
+					}
+					if (currentTopic == null) {
+						sender.sendMessage(Component.text("There is no topic to vote on!", NamedTextColor.RED));
 						return;
 					}
 					VoteOption option = currentTopic.options().options().get(args[1]);
@@ -511,6 +515,7 @@ public class CommandCallvote extends CustomCommand {
 				}
 				default -> {
 					String topic = String.join(" ", Arrays.copyOfRange(args, 0, args.length));
+					checkVoteTopic(sender, topic);
 					UUID caller;
 					Component name;
 					if (sender instanceof Player player) {
@@ -525,10 +530,16 @@ public class CommandCallvote extends CustomCommand {
 						caller = null;
 						name = sender.name();
 					}
-					createVote(caller, name, LegacyComponentSerializer.legacyAmpersand().deserialize(topic));
+					createVote(caller, name, Component.text(topic));
 					sender.sendMessage(Component.text("Queued a topic!").color(NamedTextColor.GREEN));
 				}
 			}
+		}
+	}
+
+	public static void checkVoteTopic(CommandSender sender, String topic) throws CommandException {
+		if (topic.length() > 50) {
+			sendAngryLetter(sender, LENGTH_ERROR_PARTS);
 		}
 	}
 
@@ -536,9 +547,44 @@ public class CommandCallvote extends CustomCommand {
 	public @NotNull Collection<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
 		if (args.length == 1) {
 			return hasPermission(sender, PermissionLevel.MOD) ?
-					Arrays.asList("extend", "myvoteissuperimportant", "createpriority", "info", "queue", "clearqueue", "abort") :
-					Arrays.asList("myvoteissuperimportant", "info");
+				Arrays.asList("extend", "myvoteissuperimportant", "createpriority", "info", "queue", "clearqueue", "abort") :
+				Arrays.asList("myvoteissuperimportant", "info");
 		}
 		return Collections.emptyList();
+	}
+
+	public static final String LENGTH_ERROR = """
+		Dear [Recipient's Name],
+		\0I hope this message finds you well. I wanted to take a moment to express my appreciation for the thoughtful topic you suggested for our upcoming vote. It is evident that you have put considerable effort into crafting your proposal, and your commitment to enhancing our discussions is commendable.
+		\0However, I would like to bring to your attention that the length of the topic you proposed exceeds the ideal range for effective communication. To ensure clarity and engagement among all participants, I kindly suggest that we limit the length of vote topics to within 50 characters. This constraint will help facilitate a more focused discussion and make it easier for everyone to grasp the essence of the proposal quickly.
+		\0By narrowing the topic's length, we can foster a more efficient voting process and enhance participation among our members. I genuinely believe that this adjustment will contribute positively to our discussions and decision-making.
+		\0Thank you for your understanding and collaboration in this matter. I look forward to seeing how your topic can be succinctly captured within the suggested limit.
+		\0Warm regards,
+		Blue Warfare Central Voting Committee""";
+	public static final String[] LENGTH_ERROR_PARTS = LENGTH_ERROR.split("\0");
+
+	public static final String VOTER_FRAUD_ERROR = """
+		Dear [Recipient's Name],
+		\0I am writing to you with the utmost gravity regarding a matter of profound concern that has come to the attention of the Blue Warfare Central Voting Committee. It is with a heavy heart, yet firm resolve, that I must address the serious allegations of voter fraud that have been linked to your recent activities within our voting framework.
+		\0Voter fraud is not merely a minor infraction; it is a heinous crime that undermines the very foundation of our democratic process. It erodes trust, damages the integrity of our electoral system, and disenfranchises honest participants who seek to engage in fair and equitable voting practices. The actions attributed to you are not just violations of our rules; they represent a direct attack on the values we uphold as a community.
+		\0Let me be unequivocal in stating that the Blue Warfare Central Voting Committee reserves the right to take decisive action against any individual found to be participating in such fraudulent behaviors. This includes, but is not limited to, the immediate suspension of your voting rights or even a permanent ban from our voting system without prior notice. We take these measures seriously and will not hesitate to act in the interest of safeguarding the integrity of our electoral process.
+		\0I urge you to cease any and all fraudulent activities immediately. It is imperative that you understand the gravity of this situation. Your cooperation is not just expected; it is essential for fostering a fair and just voting environment for everyone involved. We owe it to all participants to ensure that their voices are heard and that their votes carry the weight they deserve.
+		\0Failure to comply with this warning will leave us with no choice but to pursue the aforementioned actions. I trust you will take this matter seriously and act accordingly.
+		\0Sincerely,
+		Blue Warfare Central Voting Committee""";
+	public static final String[] VOTER_FRAUD_ERROR_PARTS = VOTER_FRAUD_ERROR.split("\0");
+
+	public static void sendAngryLetter(CommandSender sender, String[] letter) throws CommandException {
+		Bukkit.getScheduler().runTaskTimer(Main.getPlugin(), new Consumer<>() {
+			int index = 1;
+			@Override
+			public void accept(BukkitTask bukkitTask) {
+				sender.sendMessage(Component.text(letter[index++], TextColors.ERROR_RED));
+				if (index == letter.length)
+					bukkitTask.cancel();
+			}
+		}, 20, 100);
+
+		throw new CommandException("Dear " + sender.getName() + ",\n");
 	}
 }
