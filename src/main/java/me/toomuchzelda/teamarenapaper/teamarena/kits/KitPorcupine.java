@@ -57,7 +57,7 @@ public class KitPorcupine extends Kit {
 		void onAttack(DamageEvent event);
 	}
 
-	private static class PorcupineAbility extends Ability {
+	public static class PorcupineAbility extends Ability {
 		private static final class ReflectedInfo {
 			private final CleanupFunc cleanupFunc;
 			private final OnHitFunc hitFunc;
@@ -227,14 +227,19 @@ public class KitPorcupine extends Kit {
 				pShooter.playSound(pShooter, Sound.ENTITY_ARROW_HIT, SoundCategory.PLAYERS, 1f, 2f);
 			}
 
-			porc.getWorld().playSound(porc, Sound.BLOCK_NOTE_BLOCK_SNARE, 2f, 1f);
+			reflectEffect(porc, hitLoc);
+		}
 
-			porc.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, hitLoc, 10);
+		public static void reflectEffect(Entity reflector, Location hitLoc) {
+			final World world = hitLoc.getWorld();
+			world.playSound(reflector, Sound.BLOCK_NOTE_BLOCK_SNARE, 2f, 1f);
+
+			world.spawnParticle(Particle.ELECTRIC_SPARK, hitLoc, 10);
 			Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
-				porc.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, hitLoc, 10);
+				world.spawnParticle(Particle.ELECTRIC_SPARK, hitLoc, 10);
 			}, 1L);
 			Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
-				porc.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, hitLoc, 6);
+				world.spawnParticle(Particle.ELECTRIC_SPARK, hitLoc, 6);
 			}, 2L);
 		}
 	}

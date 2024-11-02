@@ -399,24 +399,12 @@ public abstract class TeamArena
 	}
 
 	/**
-	 * Update the player's current kit
-	 * @param player The player, who must be {@linkplain TeamArena#isDead(Entity) alive}
-	 * @param playerInfo The player's {@code PlayerInfo}
-	 * @param clearInventory Whether to clear the player's inventory
-	 */
-	public final void updateKitFor(Player player, PlayerInfo playerInfo, boolean clearInventory) {
-		playerInfo.spawnedAt = TeamArena.getGameTick();
-
-		giveKitAndGameItems(player, playerInfo, clearInventory);
-	}
-
-	/**
 	 * Grants the player kit- and game-related items
 	 * @param player The player, who must be {@link TeamArena#isDead(Entity) alive}
 	 * @param playerInfo The player's {@code PlayerInfo}
 	 * @param clearInventory Whether to clear the player's inventory
 	 */
-	protected void giveKitAndGameItems(Player player, PlayerInfo playerInfo, boolean clearInventory) {
+	public void giveKitAndGameItems(Player player, PlayerInfo playerInfo, boolean clearInventory) {
 		PlayerInventory inventory = player.getInventory();
 		if (clearInventory)
 			inventory.clear();
@@ -1297,7 +1285,10 @@ public abstract class TeamArena
 			player.setSaturatedRegenRate(0);
 			PlayerListScoreManager.setKills(player, 0);
 
-			updateKitFor(player, Main.getPlayerInfo(player), true);
+			PlayerInfo pinfo = Main.getPlayerInfo(player);
+			pinfo.spawnedAt = TeamArena.getGameTick();
+
+			giveKitAndGameItems(player, pinfo, true);
 
 			player.playSound(player.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, SoundCategory.AMBIENT, 2, 1);
 		}
@@ -1660,7 +1651,8 @@ public abstract class TeamArena
 		player.setAllowFlight(false);
 		PlayerUtils.resetState(player);
 
-		updateKitFor(player, pinfo, true);
+		pinfo.spawnedAt = TeamArena.getGameTick();
+		giveKitAndGameItems(player, pinfo, true);
 		pinfo.kills = 0;
 		PlayerListScoreManager.setKills(player, 0);
 

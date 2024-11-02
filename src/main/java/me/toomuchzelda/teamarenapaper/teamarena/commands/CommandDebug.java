@@ -200,7 +200,7 @@ public class CommandDebug extends CustomCommand {
 					}
 					info.kit = kit;
 					if (game.getGameState() == GameState.LIVE) {
-						game.updateKitFor(target, info, true);
+						game.giveKitAndGameItems(target, info, true);
 					}
 					target.sendMessage(Component.textOfChildren(
 							Component.text("Your kit has been updated to ", NamedTextColor.GREEN),

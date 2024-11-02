@@ -109,8 +109,8 @@ public class KitSniper extends Kit {
 
 		public enum ShieldType {
 			RESPAWN_SHIELD(Component.text("Sniper: Protective AURA", SNIPER_COLOR)),
-			KIT_REFLECTOR(Component.text("⚠ Reflector: Firing KILLS You ⚠", TextColors.ERROR_RED)),
-			KIT_NONE(Component.text("None: Invulnerable", NamedTextColor.GRAY));
+			KIT_REFLECTOR(null), // Component.text("⚠ Reflector: Firing KILLS You ⚠", TextColors.ERROR_RED)),
+			KIT_NONE(null); //Component.text("None: Invulnerable", NamedTextColor.GRAY));
 			public final Component message;
 			ShieldType(Component message) {
 				this.message = message;
@@ -130,6 +130,8 @@ public class KitSniper extends Kit {
 		public void unregisterAbility() {
 			grenadeTasks.forEach(BukkitTask::cancel);
 			grenadeTasks.clear();
+
+			spawnProtectionExpired.clear();
 		}
 
 		@Override
@@ -334,7 +336,8 @@ public class KitSniper extends Kit {
 		}
 
 		//Sniper Rifle Shooting
-		private void fireBullet(World world, Player player, int clientTick, TeamArenaTeam friendlyTeam, Location start, Vector velocity, boolean isReflected) {
+		// reflectShooter is the one who shot reflector, null if not a reflected bullet
+		private void fireBullet(World world, Player player, int clientTick, TeamArenaTeam friendlyTeam, Location start, Vector velocity, Player reflectorShooter) {
 			int now = TeamArena.getGameTick();
 			var playerHitboxes = RewindablePlayerBoundingBoxManager.doRewind(2 + now - clientTick,
 				victim -> victim.getGameMode() == GameMode.SURVIVAL && !friendlyTeam.hasMember(victim));
@@ -365,11 +368,13 @@ public class KitSniper extends Kit {
 						PlayerInfo victimInfo = Main.getPlayerInfo(playerVictim);
 						switch (getVictimShield(playerVictim)) {
 							case KIT_REFLECTOR -> {
-								if (!isReflected) { // can't reflect twice
+								if (reflectorShooter == null) { // can't reflect twice
+									Location hitLoc = entityHit.hitPosition.toLocation(world);
+									KitPorcupine.PorcupineAbility.reflectEffect(playerVictim, hitLoc);
 									// regulatory compliance
 									// reflect the bullet by firing another bullet as if the porcupine is a sniper
 									fireBullet(world, playerVictim, clientTick, victimInfo.team,
-										entityHit.hitPosition.toLocation(world), velocity.clone().multiply(-1), true);
+										hitLoc, velocity.clone().multiply(-1), player);
 									return; // the sniper would definitely die
 								}
 							}
@@ -380,7 +385,11 @@ public class KitSniper extends Kit {
 						}
 					}
 					DamageEvent damageEvent;
-					if (entityHit.isHeadshot)
+					if (reflectorShooter != null) {// is reflected bullet
+						damageEvent = DamageEvent.newDamageEvent(entityHit.victim, 1000000, REFLECTED_SNIPER, player, true);
+						damageEvent.setDamageTypeCause(reflectorShooter);
+					}
+					else if (entityHit.isHeadshot)
 						damageEvent = DamageEvent.newDamageEvent(entityHit.victim, 150, DamageType.SNIPER_HEADSHOT, player, true);
 					else
 						damageEvent = DamageEvent.newDamageEvent(entityHit.victim, 15, DamageType.SNIPER_SHOT, player, false);
@@ -409,7 +418,7 @@ public class KitSniper extends Kit {
 
 				TeamArenaTeam friendlyTeam = Main.getPlayerInfo(player).team;
 				int clientTick = RewindablePlayerBoundingBoxManager.getClientTickOrDefault(player, now);
-				fireBullet(world, player, clientTick, friendlyTeam, start, velocity, false);
+				fireBullet(world, player, clientTick, friendlyTeam, start, velocity, null);
 
 				//Sniper Cooldown + deleting the dropped sniper and returning a new one.
 				if (!KitOptions.sniperAccuracy) {
@@ -491,8 +500,10 @@ public class KitSniper extends Kit {
 						entity -> entity instanceof Player victim && victim != player && getVictimShield(victim) != null);
 					if (rayTraceResult != null && rayTraceResult.getHitEntity() instanceof Player victim) {
 						ShieldType shieldType = Objects.requireNonNull(getVictimShield(victim));
-						Title warningTitle = TextUtils.createTitle(Component.empty(), shieldType.message, 0, 10, 0);
-						player.showTitle(warningTitle);
+						if (shieldType.message != null) {
+							Title warningTitle = TextUtils.createTitle(Component.empty(), shieldType.message, 0, 10, 0);
+							player.showTitle(warningTitle);
+						}
 					}
 				}
 			}

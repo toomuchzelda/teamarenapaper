@@ -199,7 +199,7 @@ public class HideAndSeek extends TeamArena {
 		}
 
 		if (this.gameState == GameState.LIVE && !isDead(player)) {
-			this.updateKitFor(player, pinfo, true);
+			this.giveKitAndGameItems(player, pinfo, true);
 		}
 	}
 
@@ -401,13 +401,13 @@ public class HideAndSeek extends TeamArena {
 					playerInfo.activeKit.removeKit(player);
 				}
 				playerInfo.kit = kit;
-				updateKitFor(player, playerInfo, true);
+				this.giveKitAndGameItems(player, playerInfo, true);
 			}
 		}
 	}
 
 	@Override
-	protected void giveKitAndGameItems(Player player, PlayerInfo info, boolean clear) {
+	public void giveKitAndGameItems(Player player, PlayerInfo info, boolean clear) {
 		super.giveKitAndGameItems(player, info, clear);
 
 		if (this.seekerTeam.getPlayerMembers().contains(player) && this.gameState == GameState.LIVE && this.isHidingTime) {
