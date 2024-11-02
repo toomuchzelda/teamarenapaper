@@ -2,6 +2,8 @@ package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
+import me.toomuchzelda.teamarenapaper.teamarena.abilities.ExplosiveProjectilesAbility;
+import me.toomuchzelda.teamarenapaper.teamarena.abilities.RailgunAbility;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.KitDemolitions;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
@@ -22,7 +24,10 @@ public class CommandItem extends CustomCommand {
 
 	private static final Map<String, Supplier<ItemStack>> items = Map.of(
 		"TNTMine", () -> KitDemolitions.TNT_MINE_ITEM,
-		"PushMine", () -> KitDemolitions.PUSH_MINE_ITEM
+		"PushMine", () -> KitDemolitions.PUSH_MINE_ITEM,
+		"Railgun", () -> RailgunAbility.RAILGUN,
+		"RPG", () -> ExplosiveProjectilesAbility.RPG,
+		"Grenade", () -> ExplosiveProjectilesAbility.GRENADE
 		// TODO add more as needed
 	);
 

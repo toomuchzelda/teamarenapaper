@@ -134,14 +134,12 @@ public class KitPorcupine extends Kit {
 		public void onProjectileHit(DetailedProjectileHitEvent event) {
 			final Player porc = (Player) event.projectileHitEvent.getEntity().getShooter();
 			Map<Projectile, ReflectedInfo> reflections = this.reflectedProjectiles.get(porc);
-			ReflectedInfo rinfo = reflections.get(event.projectileHitEvent.getEntity());
-			if (rinfo != null) {
-				if (rinfo.hitFunc != null)
-					rinfo.hitFunc.onHit(porc, event);
-			}
-			else {
-				Main.logger().warning("Porc hit a projectile that it didn't reflect ??");
-				Thread.dumpStack();
+			if (reflections != null) {
+				ReflectedInfo rinfo = reflections.get(event.projectileHitEvent.getEntity());
+				if (rinfo != null) {
+					if (rinfo.hitFunc != null)
+						rinfo.hitFunc.onHit(porc, event);
+				}
 			}
 		}
 
@@ -151,15 +149,12 @@ public class KitPorcupine extends Kit {
 			if (event.getAttacker() instanceof Projectile projectile) {
 				final Player porc = (Player) event.getFinalAttacker();
 				final Map<Projectile, ReflectedInfo> reflections = this.reflectedProjectiles.get(porc);
-				ReflectedInfo rinfo = reflections.get(projectile);
-				if (rinfo != null) {
-					if (rinfo.attackFunc != null)
-						rinfo.attackFunc.onAttack(event);
-				}
-				else {
-					Main.logger().warning("Porc onAttemptedAttack");
-					Main.logger().warning(event.toString());
-					Thread.dumpStack();
+				if (reflections != null) {
+					ReflectedInfo rinfo = reflections.get(projectile);
+					if (rinfo != null) {
+						if (rinfo.attackFunc != null)
+							rinfo.attackFunc.onAttack(event);
+					}
 				}
 			}
 		}

@@ -3,10 +3,12 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.abilities;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
+import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DetailedProjectileHitEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityPoseChangeEvent;
@@ -17,19 +19,47 @@ import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.*;
 
 import javax.annotation.Nullable;
+import java.util.Set;
 
 //methods aren't abstract as abilities may not need to override them
 public abstract class Ability {
 	protected Ability() {}
 
 	public static void giveAbility(Player player, Ability ability, PlayerInfo pinfo) {
-		ability.giveAbility(player);
-		pinfo.abilities.add(ability);
+		if (pinfo.abilities.add(ability)) {
+			ability.giveAbility(player);
+		}
+		else {
+			Main.logger().warning("Tried to add ability " + ability.getClass() + " to player " + player.getName() + " when they already had it");
+			Thread.dumpStack();
+		}
 	}
 
 	public static void removeAbility(Player player, Ability ability, PlayerInfo pinfo) {
-		ability.removeAbility(player);
-		pinfo.abilities.remove(ability);
+		if (pinfo.abilities.remove(ability)) {
+			ability.removeAbility(player);
+		}
+		else {
+			Main.logger().warning("Tried to remove ability " + ability.getClass() + " from player " + player.getName() + " when they didn't have it");
+			Thread.dumpStack();
+		}
+	}
+
+	/**
+	 * @return the instance of Ability of type, or null
+	 */
+	public static <T extends Ability> T getAbility(Player player, Class<T> type) {
+		for (Ability a : Kit.getAbilities(player)) {
+			if (type.isInstance(a)) {
+				return (T) a;
+			}
+		}
+		return null;
+	}
+
+	public static Set<Ability> getAbilities(Player player) {
+		PlayerInfo pinfo = Main.getPlayerInfo(player);
+		return pinfo.abilities;
 	}
 
 	//register all one-time-registered things for this ability

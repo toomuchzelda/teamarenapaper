@@ -158,17 +158,22 @@ public class ItemUtils {
 	}
 
 	/**
-	 * Based on the lastUsedTick, itemDist gives the player the desiredItem
+	 * Based on the lastUsedTick, addRechargedItem gives the player the desiredItem
 	 * @ rechargeTime until maxCount is reached
+	 * Must be called every tick (or every rechargeTime period, but that is not useful)
 	 * @author onett425
 	 */
 	public static void addRechargedItem(Player player, int currentTick, int lastUsedTick,
 										int maxCount, int rechargeTime, ItemStack desiredItem) {
+		final int timeSince = currentTick - lastUsedTick;
+		if (timeSince == 0) return;
+
 		PlayerInventory inv = player.getInventory();
 		int itemCount = getItemCount(inv, desiredItem);
 
 		if (itemCount < maxCount &&
-			(currentTick - lastUsedTick) % rechargeTime == 0) {
+			timeSince % rechargeTime == 0) {
+
 			if (inv.getItemInOffHand().isSimilar(desiredItem)) {
 				inv.getItemInOffHand().add();
 			} else {
