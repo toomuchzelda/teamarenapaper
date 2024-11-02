@@ -40,29 +40,29 @@ public class RewindablePlayerBoundingBoxManager {
 
 	private static final Map<Player, EvictingReversibleQueue<PlayerBoundingBox>> playerHistory = new LinkedHashMap<>();
 	private static final Map<Player, Integer> playerClientTick = new HashMap<>();
-	private static final PacketListener packetListener;
-	static {
-		packetListener = new PacketAdapter(Main.getPlugin(), PacketType.Play.Client.PONG) {
-			@Override
-			public void onPacketReceiving(PacketEvent event) {
-				Player player = event.getPlayer();
-				if (!playerClientTick.containsKey(player))
-					return;
-				int clientTick = event.getPacket().getIntegers().read(0);
-				Integer lastClientTick = playerClientTick.put(player, clientTick);
-				if (lastClientTick != null && lastClientTick >= clientTick) {
-					player.kick(Component.text("sussy baka", TextColors.ERROR_RED));
-				}
-				event.setCancelled(true);
-			}
-		};
-		ProtocolLibrary.getProtocolManager().addPacketListener(packetListener);
+
+	public static void receivePing(PacketEvent event) {
+		Player player = event.getPlayer();
+		int clientTick;
+		Integer lastClientTick;
+		synchronized (playerClientTick) {
+			if (!playerClientTick.containsKey(player))
+				return;
+			clientTick = event.getPacket().getIntegers().read(0);
+			lastClientTick = playerClientTick.put(player, clientTick);
+		}
+		if (lastClientTick != null && lastClientTick >= clientTick) {
+			Main.logger().warning(player.getName() + " sent bad pong. previous=" + lastClientTick + ", most recent=" + clientTick);
+		}
+		event.setCancelled(true);
 	}
 
 	public static void tick() {
 		ClientboundPingPacket pingPacket = new ClientboundPingPacket(TeamArena.getGameTick());
-		for (Player player : playerClientTick.keySet()) {
-			PlayerUtils.sendPacket(player, pingPacket);
+		synchronized (playerClientTick) {
+			for (Player player : playerClientTick.keySet()) {
+				PlayerUtils.sendPacket(player, PacketType.Play.Server.PING, pingPacket);
+			}
 		}
 
 		TeamArena game = Main.getGame();
@@ -79,7 +79,9 @@ public class RewindablePlayerBoundingBoxManager {
 	 * @param player The player to track
 	 */
 	public static void trackClientTick(Player player) {
-		playerClientTick.put(player, null);
+		synchronized (playerClientTick) {
+			playerClientTick.put(player, null);
+		}
 	}
 
 	/**
@@ -87,7 +89,9 @@ public class RewindablePlayerBoundingBoxManager {
 	 * @param player The player to untrack
 	 */
 	public static void untrackClientTick(Player player) {
-		playerClientTick.remove(player);
+		synchronized (playerClientTick) {
+			playerClientTick.remove(player);
+		}
 	}
 
 	/**
@@ -106,7 +110,9 @@ public class RewindablePlayerBoundingBoxManager {
 	 * @return The self-reported client tick, or null if there is no record
 	 */
 	public static Integer getClientTick(Player player) {
-		return playerClientTick.get(player);
+		synchronized (playerClientTick) {
+			return playerClientTick.get(player);
+		}
 	}
 
 
@@ -126,7 +132,8 @@ public class RewindablePlayerBoundingBoxManager {
 	 * @return The self-reported client tick, or {@code defaultTick} if there is no record
 	 */
 	public static int getClientTickOrDefault(Player player, int defaultTick) {
-		Integer clientTick = playerClientTick.get(player);
+		Integer clientTick;
+		synchronized (playerClientTick) { clientTick = playerClientTick.get(player); }
 		return clientTick != null ? clientTick : defaultTick;
 	}
 

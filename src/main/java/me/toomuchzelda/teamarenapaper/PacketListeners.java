@@ -15,6 +15,7 @@ import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxViewer;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.DisguiseManager;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
+import me.toomuchzelda.teamarenapaper.teamarena.RewindablePlayerBoundingBoxManager;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitGhost;
@@ -81,7 +82,33 @@ public class PacketListeners
 	}
 
 	public PacketListeners(JavaPlugin plugin) {
+		entitySpawn(plugin);
 
+		entityMove(plugin);
+
+		entityRemove(plugin);
+
+		entityUse(plugin);
+
+		blockChange(plugin);
+
+		playerInfo(plugin);
+
+		playerInfoRemove(plugin);
+
+		namedSoundEffect(plugin);
+
+		entityEquipment(plugin);
+
+		entityMetadata(plugin);
+
+		updateAttributes(plugin);
+
+		pong(plugin);
+		//ProtocolLibrary.getProtocolManager().addPacketListener(new NoChatKeys());
+	}
+
+	private static void entitySpawn(JavaPlugin plugin) {
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.SPAWN_ENTITY)
 		{
@@ -110,9 +137,11 @@ public class PacketListeners
 				}
 			}
 		});
+	}
 
+	private static void entityMove(JavaPlugin plugin) {
 		//when moving player also move their hitboxes with them
-		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(Main.getPlugin(),
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.REL_ENTITY_MOVE, PacketType.Play.Server.REL_ENTITY_MOVE_LOOK,
 				PacketType.Play.Server.ENTITY_LOOK,
 				PacketType.Play.Server.ENTITY_TELEPORT)
@@ -162,8 +191,8 @@ public class PacketListeners
 			}
 		});
 
-		 //This packet listener is similar to the above but not the same because the packent also needs the
-		 // ENTITY_HEAD_ROTATION packet
+		//This packet listener is similar to the above but not the same because the packent also needs the
+		// ENTITY_HEAD_ROTATION packet
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(Main.getPlugin(),
 				PacketType.Play.Server.ENTITY_LOOK, PacketType.Play.Server.REL_ENTITY_MOVE,
 				PacketType.Play.Server.REL_ENTITY_MOVE_LOOK,
@@ -189,7 +218,9 @@ public class PacketListeners
 				PlayerUtils.sendPacket(viewer, toBundle);
 			}
 		});
+	}
 
+	private static void entityRemove(JavaPlugin plugin) {
 		//remove fake hitbox entities when player can't see the original player
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.ENTITY_DESTROY) {
@@ -214,7 +245,9 @@ public class PacketListeners
 				}
 			}
 		});
+	}
 
+	private static void entityUse(JavaPlugin plugin) {
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Client.USE_ENTITY) {
 			@Override
@@ -229,7 +262,9 @@ public class PacketListeners
 				}
 			}
 		});
+	}
 
+	private static void blockChange(JavaPlugin plugin) {
 		/**
 		 * Prevent the barrier block used in view limiting being removed client-side when right
 		 * clicking on it
@@ -256,7 +291,9 @@ public class PacketListeners
 				}
 			}
 		});*/
+	}
 
+	private static void playerInfo(JavaPlugin plugin) {
 		//intercept player info packets and replace with disguise if needed
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.PLAYER_INFO) {
@@ -325,10 +362,10 @@ public class PacketListeners
 						// with the above replacementData profile
 						GameProfile tabListProfile = disguise.tabListGameProfile;
 						PlayerInfoData tabListData = new PlayerInfoData(tabListProfile.getId(), entry.latency(),
-								entry.listed(), nativeGameMode, WrappedGameProfile.fromHandle(tabListProfile),
-								wrappedDisplayName,
-								//(WrappedProfilePublicKey.WrappedProfileKeyData) null);
-								(WrappedRemoteChatSessionData) null);
+							entry.listed(), nativeGameMode, WrappedGameProfile.fromHandle(tabListProfile),
+							wrappedDisplayName,
+							//(WrappedProfilePublicKey.WrappedProfileKeyData) null);
+							(WrappedRemoteChatSessionData) null);
 
 						newList.add(tabListData);
 					}
@@ -346,7 +383,7 @@ public class PacketListeners
 					List<ClientboundPlayerInfoUpdatePacket.Entry> nmsEntryList = new ArrayList<>(newList.size());
 					newList.forEach(playerInfoData -> {
 						ClientboundPlayerInfoUpdatePacket.Entry nmsEntry = (ClientboundPlayerInfoUpdatePacket.Entry)
-								PlayerInfoData.getConverter().getGeneric(playerInfoData);
+							PlayerInfoData.getConverter().getGeneric(playerInfoData);
 
 						nmsEntryList.add(nmsEntry);
 					});
@@ -356,7 +393,9 @@ public class PacketListeners
 				}
 			}
 		});
+	}
 
+	private static void playerInfoRemove(JavaPlugin plugin) {
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.PLAYER_INFO_REMOVE)
 		{
@@ -400,10 +439,12 @@ public class PacketListeners
 				}
 			}
 		});
+	}
 
+	private static void namedSoundEffect(JavaPlugin plugin) {
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.NAMED_SOUND_EFFECT, PacketType.Play.Server.ENTITY_SOUND)
-				//PacketType.Play.Server.CUSTOM_SOUND_EFFECT)
+			//PacketType.Play.Server.CUSTOM_SOUND_EFFECT)
 		{
 			@Override
 			public void onPacketSending(PacketEvent event) {
@@ -420,11 +461,11 @@ public class PacketListeners
 
 				if (cancelDamageSounds) {
 					if(sound == Sound.ENTITY_PLAYER_ATTACK_STRONG ||
-							sound == Sound.ENTITY_PLAYER_ATTACK_CRIT ||
-							sound == Sound.ENTITY_PLAYER_ATTACK_NODAMAGE ||
-							sound == Sound.ENTITY_PLAYER_ATTACK_WEAK ||
-							sound == Sound.ENTITY_PLAYER_ATTACK_SWEEP ||
-							sound == Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK) {
+						sound == Sound.ENTITY_PLAYER_ATTACK_CRIT ||
+						sound == Sound.ENTITY_PLAYER_ATTACK_NODAMAGE ||
+						sound == Sound.ENTITY_PLAYER_ATTACK_WEAK ||
+						sound == Sound.ENTITY_PLAYER_ATTACK_SWEEP ||
+						sound == Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK) {
 						event.setCancelled(true);
 						return;
 					}
@@ -440,10 +481,10 @@ public class PacketListeners
 				}
 				//handle ghost footsteps
 				else if (event.getPacketType() != PacketType.Play.Server.ENTITY_SOUND &&
-						Main.getGame().getGameState() == GameState.LIVE &&
-						FOOTSTEP_SOUNDS[sound.ordinal()] &&
-						event.getPacket().getSoundCategories().read(0) == EnumWrappers.SoundCategory.PLAYERS &&
-						ghostInstance != null)
+					Main.getGame().getGameState() == GameState.LIVE &&
+					FOOTSTEP_SOUNDS[sound.ordinal()] &&
+					event.getPacket().getSoundCategories().read(0) == EnumWrappers.SoundCategory.PLAYERS &&
+					ghostInstance != null)
 				{
 					StructureModifier<Integer> ints = event.getPacket().getIntegers();
 					final int x = ints.read(0);
@@ -468,7 +509,9 @@ public class PacketListeners
 				}
 			}
 		});
+	}
 
+	private static void entityEquipment(JavaPlugin plugin) {
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.ENTITY_EQUIPMENT)
 		{
@@ -513,9 +556,10 @@ public class PacketListeners
 				}
 			}
 		});
+	}
 
-
-		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(Main.getPlugin(),
+	private static void entityMetadata(JavaPlugin plugin) {
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.ENTITY_METADATA)
 		{
 			@Override
@@ -537,9 +581,11 @@ public class PacketListeners
 				event.setPacket(packet);
 			}
 		});
+	}
 
-		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(Main.getPlugin(),
-			PacketType.Play.Server.UPDATE_ATTRIBUTES)
+	private static void updateAttributes(JavaPlugin plugin) {
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
+				PacketType.Play.Server.UPDATE_ATTRIBUTES)
 		{
 			@Override
 			public void onPacketSending(PacketEvent event) {
@@ -556,8 +602,15 @@ public class PacketListeners
 				}
 			}
 		});
+	}
 
-		//ProtocolLibrary.getProtocolManager().addPacketListener(new NoChatKeys());
+	private static void pong(JavaPlugin plugin) {
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin, PacketType.Play.Client.PONG) {
+			@Override
+			public void onPacketReceiving(PacketEvent event) {
+				RewindablePlayerBoundingBoxManager.receivePing(event);
+			}
+		});
 	}
 
 	public static PlayerInfoData copyPlayerInfoEntry(ClientboundPlayerInfoUpdatePacket.Entry entry, boolean stripChat) {
