@@ -527,9 +527,9 @@ public sealed class BuildingOutline extends PacketEntity {
 			Byte baseBitfield = (Byte) clonedEntityData.getObject(MetaIndex.BASE_BITFIELD_OBJ);
 			clonedEntityData.setObject(MetaIndex.BASE_BITFIELD_OBJ,
 				(byte) ((baseBitfield != null ? baseBitfield : 0) | BITFIELD_MASK));
-			clonedEntityData.setObject(MetaIndex.CUSTOM_NAME_OBJ,
-				Optional.of(PaperAdventure.asVanilla(Component.text("Outline for " +
-					(entity != null ? entity : packetEntity)))));
+			//clonedEntityData.setObject(MetaIndex.CUSTOM_NAME_OBJ,
+			//	Optional.of(PaperAdventure.asVanilla(Component.text("Outline for " +
+			//		(entity != null ? entity : packetEntity)))));
 			clonedEntityData.setObject(MetaIndex.CUSTOM_NAME_VISIBLE_OBJ, false);
 			clonedEntityData.setObject(MetaIndex.NO_GRAVITY_OBJ, true);
 

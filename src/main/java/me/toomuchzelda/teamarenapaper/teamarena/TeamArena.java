@@ -2251,7 +2251,7 @@ public abstract class TeamArena
 	 * @return
 	 */
 	public boolean canBuildAt(Block block) {
-		return border.contains(block.getX(), block.getY(), block.getZ());
+		return border.contains(block.getX(), block.getY(), block.getZ()) && this.isVandalisableBlock(block);
 	}
 
 	public boolean canAttack(Player one, LivingEntity two) {

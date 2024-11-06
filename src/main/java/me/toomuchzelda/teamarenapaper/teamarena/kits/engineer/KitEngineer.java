@@ -248,8 +248,10 @@ public class KitEngineer extends Kit {
 						message = Component.text("Two teleporters are already active! Destroy one with your Destruction PDA", TextColors.ERROR_RED);
 					} else {
 						//Success: TP is created
-						selector.placePreview(Teleporter.class);
-						message = Component.text("Successfully placed your teleporter.", NamedTextColor.GREEN);
+						if (selector.placePreview(Teleporter.class) != null)
+							message = Component.text("Successfully placed your teleporter.", NamedTextColor.GREEN);
+						else
+							message = Component.text("Cannot build here", TextColors.ERROR_RED);
 					}
 				}
 				player.sendMessage(message);

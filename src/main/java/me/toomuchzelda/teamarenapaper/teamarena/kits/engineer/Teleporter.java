@@ -28,6 +28,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.BoundingBox;
+import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -90,7 +91,12 @@ public class Teleporter extends BlockBuilding implements PreviewableBuilding {
 		super.onPlace();
 
 		Block block = getLocation().getBlock();
-		hitBox = BoundingBox.of(block.getRelative(-1, 1, -1), block.getRelative(1, 2, 1));
+		//hitBox = BoundingBox.of(block.getRelative(-1, 1, -1), block.getRelative(1, 2, 1));
+		Vector blockLoc = block.getLocation().toVector();
+		hitBox = new BoundingBox(
+			blockLoc.getX(), blockLoc.getY() + 1d, blockLoc.getZ(),
+			blockLoc.getX() + 1d, blockLoc.getY() + 3d, blockLoc.getZ() + 1d
+		);
 		this.originalBlockState = block.getState();
 		block.setType(Material.HONEYCOMB_BLOCK, false);
 
@@ -173,8 +179,14 @@ public class Teleporter extends BlockBuilding implements PreviewableBuilding {
 				hologramText = Component.text("Teleport Ready", teamColor);
 				// teleport eligible entities
 				var nearbyEntities = location.getWorld().getNearbyEntities(hitBox, this::checkCanTeleport);
-				if (nearbyEntities.size() != 0)
-					teleport((Player) nearbyEntities.iterator().next(), other);
+				for (Entity e : nearbyEntities) { // allow all spectators but only 1 alive player
+					if (e instanceof Player p) {
+						boolean spec = Main.getGame().isSpectator(p);
+						teleport(p, other, spec);
+						if (!spec)
+							break;
+					}
+				}
 			} else {
 				double progress = Math.min(1, (double) other.getTimeElapsed() / TELEPORT_COOLDOWN);
 				int percentage = (int) Math.round(100d * progress);
@@ -187,10 +199,16 @@ public class Teleporter extends BlockBuilding implements PreviewableBuilding {
 		setText(hologramText);
 	}
 
-	public void teleport(Player player, Teleporter destination) {
+	public void teleport(Player player, Teleporter destination, boolean spec) {
 		// offset the destination relative to player's location on the teleporter
-		Location actualDestination = player.getLocation().subtract(location).add(destination.location);
+		// don't do this as the surrounding blocks at destination may suffocate player
+		//Location actualDestination = player.getLocation().subtract(location).add(destination.location);
+		Location actualDestination = destination.location.clone().add(0d, 1d, 0d);
+		actualDestination.setDirection(player.getLocation().getDirection());
 		player.teleport(actualDestination);
+
+		if (spec)
+			return;
 
 		int currentTick = TeamArena.getGameTick();
 		setLastUsedTick(currentTick);
