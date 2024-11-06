@@ -38,7 +38,7 @@ public class KitFilter {
 
 	public static final NamespacedKey ADMIN_KEY = new NamespacedKey(Main.getPlugin(), "admin");
 
-	public static final FilterRule DEFAULT_ADMIN_RULE = new FilterRule(ADMIN_KEY, "Admin rule", FilterAction.block("sniper", "longbow"));
+	public static final FilterRule DEFAULT_ADMIN_RULE = new FilterRule(ADMIN_KEY, "Admin rule", FilterAction.block("sniper", "longbow", "seeker"));
 	private static FilterPreset preset;
 
 	static {

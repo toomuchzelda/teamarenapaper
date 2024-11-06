@@ -6,6 +6,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.hideandseek.HideAndSeek;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
@@ -14,10 +15,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Sound;
-import org.bukkit.SoundCategory;
+import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -34,9 +32,12 @@ public class KitRadarSeeker extends Kit {
 	public KitRadarSeeker(TeamArena game) {
 		super("Radar", "Seek out the sneakier Hiders with your Radar", Material.RECOVERY_COMPASS);
 
-		this.setItems(new ItemStack(Material.WOODEN_SWORD), RADAR);
-		this.setArmor(new ItemStack(Material.LEATHER_HELMET), new ItemStack(Material.LEATHER_CHESTPLATE),
-			new ItemStack(Material.LEATHER_LEGGINGS), new ItemStack(Material.LEATHER_BOOTS));
+		this.setItems(new ItemStack(Material.STONE_SWORD), RADAR);
+		//this.setArmor(new ItemStack(Material.LEATHER_HELMET), new ItemStack(Material.LEATHER_CHESTPLATE),
+		//	new ItemStack(Material.LEATHER_LEGGINGS), new ItemStack(Material.LEATHER_BOOTS));
+		ItemStack hat = new ItemStack(Material.LEATHER_HELMET);
+		ItemUtils.colourLeatherArmor(Color.PURPLE, hat);
+		this.setArmor(hat, null, null, null);
 		this.setAbilities(new RadarSeekerAbility(game));
 	}
 

@@ -35,7 +35,12 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.beekeeper.KitBeekeeper;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.KitDemolitions;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.engineer.KitEngineer;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.explosive.KitExplosive;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.FilterAction;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.FilterRule;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitFilter;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitHider;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitRadarSeeker;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitSeeker;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.medic.KitMedic;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.rewind.KitRewind;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.trigger.KitTrigger;
@@ -176,6 +181,8 @@ public abstract class TeamArena
 	private final Component gameTitle;
 	private final Component gameSubTitle;
 
+	private static final FilterRule NO_HNS = new FilterRule("team_arena/no_hns", "No HNS kits by default", FilterAction.block("hider", "seeker", "radar"));
+
 	public TeamArena(TeamArenaMap map) {
 		File worldFile = map.getFile();
 		Main.logger().info("Loading world: " + map.getName() + ", file: " + worldFile.getAbsolutePath());
@@ -288,7 +295,9 @@ public abstract class TeamArena
 		this.fakeBlockManager = new FakeBlockManager(this);
 		this.commonAbilityManager = new CommonAbilityManager();
 
+		KitFilter.resetFilter();
 		registerKits();
+		applyKitFilters();
 
 		DamageTimes.clear();
 		DamageType.updateDamageSources(this);
@@ -381,11 +390,17 @@ public abstract class TeamArena
 			new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(), new KitNone(),
 			new KitVenom(), new KitRewind(), new KitValkyrie(), new KitExplosive(), new KitTrigger(), new KitMedic(this.killStreakManager),
 			new KitBerserker(), new KitEngineer(), new KitPorcupine(), new KitLongbow(), new KitSniper(), new KitBeekeeper(),
+
+			new KitHider(this), new KitSeeker(), new KitRadarSeeker(this)
 		};
 
 		for (Kit kit : defaultKits) {
 			registerKit(kit);
 		}
+	}
+
+	protected void applyKitFilters() {
+		KitFilter.addGlobalRule(NO_HNS);
 	}
 
 	protected void registerKit(Kit kit) {

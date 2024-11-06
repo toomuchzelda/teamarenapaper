@@ -47,6 +47,10 @@ public class HideAndSeek extends TeamArena {
 
 	private static final int DEFAULT_SEEK_TIME = 4 * 60 * 20; // 3 minutes?
 
+	private static final FilterRule GLOBAL_RULE = new FilterRule("hide_and_seek/global", "", FilterAction.allow("hider", "seeker", "radar"));
+	private static final FilterRule SEEKER_RULE = new FilterRule("hide_and_seek/seeker", "Seeker team restrictions", FilterAction.allow("seeker", "radar"));
+	private static final FilterRule HIDER_RULE = new FilterRule("hide_and_seek/hider", "Hider team restrictions", FilterAction.allow("hider"));
+
 	public TeamArenaTeam hiderTeam;
 	public TeamArenaTeam seekerTeam;
 
@@ -126,16 +130,15 @@ public class HideAndSeek extends TeamArena {
 		return this.president;
 	}
 
-	private static final FilterRule SEEKER_RULE = new FilterRule("hide_and_seek/seeker", "Seeker team restrictions", FilterAction.allow("seeker", "radar"));
-	private static final FilterRule HIDER_RULE = new FilterRule("hide_and_seek/hider", "Hider team restrictions", FilterAction.allow("hider"));
 	@Override
 	protected void registerKits() {
-		registerKit(new KitHider(this));
-		registerKit(new KitSeeker());
-		registerKit(new KitRadarSeeker(this));
+		super.registerKits();
+	}
 
-		// rules must be removed in prepDead
-		// or it will affect the next game
+	@Override
+	protected void applyKitFilters() {
+		KitFilter.addGlobalRule(GLOBAL_RULE);
+
 		KitFilter.addTeamRule("Hiders", HIDER_RULE);
 		KitFilter.addTeamRule("Seekers", SEEKER_RULE);
 	}
@@ -368,8 +371,6 @@ public class HideAndSeek extends TeamArena {
 	@Override
 	public void prepDead() {
 		super.prepDead();
-		KitFilter.removeTeamRule("Hiders", HIDER_RULE.key());
-		KitFilter.removeTeamRule("Seekers", SEEKER_RULE.key());
 
 		for (Player hider : this.hiderTeam.getPlayerMembers()) {
 			Main.getPlayerInfo(hider).getMetadataViewer().removeBitfieldValue(this.president,
