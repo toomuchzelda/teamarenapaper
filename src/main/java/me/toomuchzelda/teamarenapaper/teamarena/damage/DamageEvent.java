@@ -101,6 +101,9 @@ public class DamageEvent {
 		if(event.getEntity() instanceof ArmorStand stand && stand.isMarker())
 			return null;
 
+		if (event.getEntity() instanceof Painting)
+			return null;
+
 		//damage only occur in game world
 		if(event.getEntity().getWorld() != Main.getGame().getWorld())
 			return null;

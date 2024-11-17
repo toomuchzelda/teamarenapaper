@@ -65,6 +65,7 @@ import org.bukkit.entity.*;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.*;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
+import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
@@ -1112,6 +1113,12 @@ public abstract class TeamArena
 	public void onBlockDig(BlockDamageEvent event) {}
 
 	public void onBlockStopDig(BlockDamageAbortEvent event) {}
+
+	public void onShootBow(EntityShootBowEvent event) {
+		if (this.isDead(event.getEntity())) {
+			event.setCancelled(true);
+		}
+	}
 
 	public void onDropItem(PlayerDropItemEvent event) {
 		if (event.getPlayer().getGameMode() != GameMode.CREATIVE) {

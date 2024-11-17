@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.commands;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -10,6 +11,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
@@ -151,8 +153,35 @@ public abstract class CustomCommand extends Command {
 		}
 	}
 
+	public static @NotNull List<Entity> selectEntities(CommandSender sender, String arg) {
+		if (arg == null)
+			throw new CommandException("Bad entity selector");
+
+		List<Entity> selected = null;
+
+		if ("@alive".equals(arg)) {
+			selected = new ArrayList<>(Main.getGame().getPlayers());
+		}
+		else if (arg.startsWith("@") && arg.length() > 1) {
+			String teamArg = arg.substring(1);
+			for (TeamArenaTeam team : Main.getGame().getTeams()) {
+				if (team.getSimpleName().equalsIgnoreCase(teamArg)) {
+					selected = new ArrayList<>(team.getPlayerMembers());
+					break;
+				}
+			}
+		}
+
+		if (selected == null) {
+			selected = Bukkit.selectEntities(sender, arg);
+		}
+
+		return selected;
+	}
+
 	/**
 	 * Convenience method for getting the names of all online players for tab complete suggestion
+	 * @deprecated Use suggestPlayerSelectors() and selectEntities()
 	 */
 	public static List<String> suggestOnlinePlayers() {
 		Collection<? extends Player> players = Bukkit.getOnlinePlayers();
@@ -169,11 +198,16 @@ public abstract class CustomCommand extends Command {
 	 */
 	public static List<String> suggestPlayerSelectors() {
 		var playerNames = suggestOnlinePlayers();
-		var selectors = new ArrayList<String>(playerNames.size() + 3);
+		var selectors = new ArrayList<String>(playerNames.size() + 8);
 		selectors.addAll(playerNames);
 		selectors.add("@a");
 		selectors.add("@s");
 		selectors.add("@p");
+		if (Main.getGame() != null) {
+			for (TeamArenaTeam team : Main.getGame().getTeams()) {
+				selectors.add("@" + team.getSimpleName());
+			}
+		}
 		return selectors;
 	}
 

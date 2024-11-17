@@ -40,7 +40,7 @@ public class CommandItem extends CustomCommand {
 		if (args.length < 2)
 			throw throwUsage();
 
-		List<Entity> entities = Bukkit.selectEntities(sender, args[0]);
+		List<Entity> entities = CustomCommand.selectEntities(sender, args[0]);
 		ItemStack item = items.getOrDefault(args[1],
 			() -> ItemBuilder.of(Material.CAKE).displayName(Component.text(sender.getName() + " tried to give you " + args[1] + " but got the command horribly, horribly wrong.")).build()
 		).get();

@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.abilities;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import java.util.List;
@@ -45,6 +46,10 @@ public class CommonAbilityManager {
 	}
 
 	public void unregisterAll() {
+		for (Player p : Bukkit.getOnlinePlayers()) {
+			this.remove(p);
+		}
+
 		for (Ability a : all)
 			a.unregisterAbility();
 	}

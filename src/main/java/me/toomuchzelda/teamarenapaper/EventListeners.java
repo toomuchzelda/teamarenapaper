@@ -523,10 +523,14 @@ public class EventListeners implements Listener
 	public void entityShootBow(EntityShootBowEvent event) {
 		//event.getProjectile().setVelocity(EntityUtils.projectileLaunchVector(event.getEntity(),
 		//		event.getProjectile().getVelocity(), EntityUtils.VANILLA_PROJECTILE_SPRAY));
-		if(Main.getGame().getGameState() == LIVE) {
+		TeamArena game = Main.getGame();
+		if(game.getGameState() == LIVE) {
 			if (event.getProjectile() instanceof AbstractArrow aa) {
 				aa.setPickupStatus(AbstractArrow.PickupStatus.CREATIVE_ONLY);
 			}
+
+			game.onShootBow(event);
+			if (event.isCancelled()) return;
 
 			if (event.getEntity() instanceof Player p) {
 				for (Ability a : Kit.getAbilities(p)) {

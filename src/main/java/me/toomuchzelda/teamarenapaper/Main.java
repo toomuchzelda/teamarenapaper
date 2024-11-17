@@ -175,7 +175,6 @@ public final class Main extends JavaPlugin
 		return playerInfoUnmodifiable;
 	}
 
-	@UnmodifiableView
 	public static Iterator<Map.Entry<Player, PlayerInfo>> getPlayersIter() {
 		return playerInfoUnmodifiable.entrySet().iterator();
 	}

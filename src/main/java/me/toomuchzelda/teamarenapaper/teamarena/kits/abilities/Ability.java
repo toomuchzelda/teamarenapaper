@@ -39,10 +39,6 @@ public abstract class Ability {
 		if (pinfo.abilities.remove(ability)) {
 			ability.removeAbility(player);
 		}
-		else {
-			Main.logger().warning("Tried to remove ability " + ability.getClass() + " from player " + player.getName() + " when they didn't have it");
-			Thread.dumpStack();
-		}
 	}
 
 	/**
@@ -60,6 +56,18 @@ public abstract class Ability {
 	public static Set<Ability> getAbilities(Player player) {
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
 		return pinfo.abilities;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (obj == null) return false;
+		// Should only be one instance in use at any time
+		return this.getClass().equals(obj.getClass());
+	}
+
+	@Override
+	public int hashCode() {
+		return this.getClass().hashCode();
 	}
 
 	//register all one-time-registered things for this ability
