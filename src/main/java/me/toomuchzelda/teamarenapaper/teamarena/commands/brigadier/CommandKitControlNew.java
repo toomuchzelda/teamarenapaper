@@ -64,7 +64,7 @@ public class CommandKitControlNew extends BrigadierCommand {
 					})
 				)
 			)
-			.then(literal("preset")
+			/*.then(literal("preset")
 				.then(argument("preset", word())
 					.suggests(suggestList(KitFilter.PRESETS.keySet()))
 					.executes(ctx -> {
@@ -78,7 +78,7 @@ public class CommandKitControlNew extends BrigadierCommand {
 							Component.text(preset.name(), NamedTextColor.GOLD)
 						));
 						return SINGLE_SUCCESS;
-					})))
+					})))*/
 			.then(literal("allow").then(argument("kits", KitNamesArgument.INSTANCE).executes(ctx -> doAllowBlock(ctx, false))))
 			.then(literal("block").then(argument("kits", KitNamesArgument.INSTANCE).executes(ctx -> doAllowBlock(ctx, true))))
 			.then(literal("rules")

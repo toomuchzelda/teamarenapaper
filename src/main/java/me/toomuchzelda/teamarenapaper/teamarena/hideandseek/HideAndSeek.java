@@ -47,9 +47,9 @@ public class HideAndSeek extends TeamArena {
 
 	private static final int DEFAULT_SEEK_TIME = 4 * 60 * 20; // 3 minutes?
 
-	private static final FilterRule GLOBAL_RULE = new FilterRule("hide_and_seek/global", "", FilterAction.allow("hider", "seeker", "radar"));
-	private static final FilterRule SEEKER_RULE = new FilterRule("hide_and_seek/seeker", "Seeker team restrictions", FilterAction.allow("seeker", "radar"));
-	private static final FilterRule HIDER_RULE = new FilterRule("hide_and_seek/hider", "Hider team restrictions", FilterAction.allow("hider"));
+	private static final FilterRule GLOBAL_RULE = new FilterRule("hns/global", "", FilterAction.allow("hider", "seeker", "radar"));
+	private static final FilterRule SEEKER_RULE = new FilterRule("hns/seeker_team", "Seeker team restrictions", FilterAction.allow("seeker", "radar"));
+	private static final FilterRule HIDER_RULE = new FilterRule("hns/hider_team", "Hider team restrictions", FilterAction.allow("hider"));
 
 	public TeamArenaTeam hiderTeam;
 	public TeamArenaTeam seekerTeam;
@@ -141,6 +141,14 @@ public class HideAndSeek extends TeamArena {
 
 		KitFilter.addTeamRule("Hiders", HIDER_RULE);
 		KitFilter.addTeamRule("Seekers", SEEKER_RULE);
+	}
+
+	@Override
+	protected void removeKitFilters() {
+		KitFilter.removeGlobalRule(GLOBAL_RULE.key());
+
+		KitFilter.removeTeamRule("Hiders", HIDER_RULE.key());
+		KitFilter.removeTeamRule("Seekers", SEEKER_RULE.key());
 	}
 
 	@Override

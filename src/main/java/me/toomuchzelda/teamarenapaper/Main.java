@@ -153,12 +153,13 @@ public final class Main extends JavaPlugin
 		commandMap.register(fallbackPrefix, new CommandTime());
 		commandMap.register(fallbackPrefix, new CommandMapInfo());
 		commandMap.register(fallbackPrefix, new CommandItem());
+		commandMap.register(fallbackPrefix, new CommandKitControl());
 
 		// register brigadier commands
-		getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, e -> {
+		/*getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, e -> {
 			Commands commands = e.registrar();
 			CommandKitControlNew.register(commands);
-		});
+		});*/
 	}
 
 	public static PlayerInfo getPlayerInfo(Player player) {

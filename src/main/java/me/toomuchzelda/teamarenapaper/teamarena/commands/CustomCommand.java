@@ -16,6 +16,7 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public abstract class CustomCommand extends Command {
     public final PermissionLevel permissionLevel;
@@ -76,6 +77,7 @@ public abstract class CustomCommand extends Command {
             }
         }
         try {
+			//Bukkit.broadcastMessage(Arrays.stream(args).collect(Collectors.joining(",", "[", "]")));
 			Collection<String> completions = onTabComplete(sender, alias, args);
 			return filterCompletions(completions, args[args.length - 1]);
 		} catch (IllegalArgumentException ignored) {

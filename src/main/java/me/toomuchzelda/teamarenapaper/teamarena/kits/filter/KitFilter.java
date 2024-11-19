@@ -1,33 +1,33 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.filter;
 
+import com.google.common.collect.Sets;
+import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
-import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.Style;
+import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Filter kits based on their kit name.
  * By convention, kit filters are lowercase.
+ *
+ * FilterRules controlled by gamemodes must be added and removed at game start+end
+ * FilterRules added by admin commands will remain until removed
  */
 public class KitFilter {
 
@@ -38,28 +38,10 @@ public class KitFilter {
 
 	public static final NamespacedKey ADMIN_KEY = new NamespacedKey(Main.getPlugin(), "admin");
 
-	public static final FilterRule DEFAULT_ADMIN_RULE = new FilterRule(ADMIN_KEY, "Admin rule", FilterAction.block("sniper", "longbow", "seeker"));
-	private static FilterPreset preset;
+	public static final FilterRule DEFAULT_ADMIN_RULE = new FilterRule(ADMIN_KEY, "Admin rule", FilterAction.block());
 
 	static {
 		addGlobalRule(DEFAULT_ADMIN_RULE);
-	}
-
-	public record FilterPreset(String name, String desc, ItemStack displayItem, @Nullable FilterAction action) {
-		public FilterPreset {
-			displayItem = displayItem.clone();
-		}
-
-		public FilterPreset(String name, String desc, Material display, @Nullable FilterAction action) {
-			this(name, desc, ItemBuilder.of(display)
-				.displayName(Component.text(name, NamedTextColor.BLUE))
-				.lore(TextUtils.wrapString(desc, Style.style(NamedTextColor.GRAY)))
-				.build(), action);
-		}
-
-		public FilterPreset(String name, String desc, @Nullable FilterAction action) {
-			this(name, desc, Material.PAPER, action);
-		}
 	}
 
 	public static void addGlobalRule(FilterRule rule) {
@@ -96,6 +78,19 @@ public class KitFilter {
 		return removed[0];
 	}
 
+	public static boolean removeRule(NamespacedKey key) {
+		boolean b = false;
+		b = b || removeGlobalRule(key);
+		for (var teamEntry : Map.copyOf(teamRules).entrySet()) {
+			b = b || removeTeamRule(teamEntry.getKey(), key);
+		}
+		for (var playerEntry : Map.copyOf(playerRules).entrySet()) {
+			b = b || removePlayerRule(playerEntry.getKey(), key);
+		}
+
+		return b;
+	}
+
 	public static Collection<NamespacedKey> getGlobalRules() {
 		return Collections.unmodifiableSet(globalRules.keySet());
 	}
@@ -118,20 +113,45 @@ public class KitFilter {
 		}
 	}
 
-	public static final Map<String, FilterPreset> PRESETS = Stream.of(
-			new FilterPreset("Default", "The default Team Arena™ experience", null),
-			// TODO define RWF default here
-			new FilterPreset("Red Warfare Default", "Who used Kit Rewind on SnD??", FilterAction.allow("trooper")),
-			new FilterPreset("Sniper Duel", "The best FPS player shall prevail", Material.SPYGLASS, FilterAction.allow("sniper")),
-			new FilterPreset("Ghost Town", "Where'd everyone go?", Material.WHITE_STAINED_GLASS, FilterAction.allow("ghost")),
-			new FilterPreset("Imposter Game", "There is an imposter... ඞ", FilterAction.allow("spy")),
-			new FilterPreset("Close-Range Combat", "A battle between true warriors", Material.STONE_SWORD,
-				FilterAction.block("burst", "ghost", "engineer", "shortbow", "longbow", "pyro", "sniper")),
-			new FilterPreset("Archer Duel", "Bow-spammers rise!", Material.BOW, FilterAction.allow("shortbow", "longbow", "pyro"))
-		)
-		.collect(Collectors.toUnmodifiableMap(
-			p -> p.name.toLowerCase(Locale.ENGLISH).replaceAll("\\W", "_"), p -> p
-		));
+	public static Set<NamespacedKey> getAllRules() {
+		// Not a perfectly sized allocation
+		Set<NamespacedKey> all = Sets.newHashSetWithExpectedSize(globalRules.size() + teamRules.size() + playerRules.size());
+
+		all.addAll(globalRules.keySet());
+		for (var teamEntry : teamRules.entrySet()) all.addAll(teamEntry.getValue().keySet());
+		for (var playerEntry : playerRules.entrySet()) all.addAll(playerEntry.getValue().keySet());
+
+		return all;
+	}
+
+	public static Component listAllRules() {
+		TextComponent.Builder builder = Component.text();
+
+		for (var entry : globalRules.entrySet()) {
+			builder.append(Component.text(entry.getKey().toString() + ": ", NamedTextColor.GREEN));
+			builder.append(entry.getValue().toComponent());
+			builder.append(Component.newline());
+		}
+
+		appendToList(builder, teamRules, "team", NamedTextColor.AQUA);
+		appendToList(builder, playerRules, "player", NamedTextColor.DARK_AQUA);
+
+		return builder.build();
+	}
+	private static void appendToList(TextComponent.Builder builder,
+									 Map<String, Map<NamespacedKey, FilterRule>> map,
+									 String type,
+									 TextColor color) {
+		for (var entry : map.entrySet()) {
+			builder.append(Component.text("Rules for " + type + ": " + entry.getKey()));
+			builder.append(Component.newline());
+			for (var rule : entry.getValue().entrySet()) {
+				builder.append(Component.text("  " + rule.getKey().toString() + ": ", color));
+				builder.append(rule.getValue().toComponent());
+				builder.append(Component.newline());
+			}
+		}
+	}
 
 	// a more efficient way of filtering kits from a set
 	private static void mutateSet(Collection<FilterRule> rules, Set<String> set) {
@@ -205,7 +225,8 @@ public class KitFilter {
 					.collect(Collectors.toUnmodifiableSet()));
 			}
 		}
-		return Map.copyOf(allPlayerKits);
+		//return Map.copyOf(allPlayerKits);
+		return allPlayerKits;
 	}
 
 	public static Set<Kit> calculateKits(TeamArena game, Player player) {
@@ -214,14 +235,6 @@ public class KitFilter {
 
 	public static boolean canUseKit(TeamArena game, Player player, Kit kit) {
 		return calculateKits(game, player).contains(kit);
-	}
-
-	public static void setPreset(@NotNull TeamArena game, FilterPreset preset) {
-		if (preset.action == null)
-			addGlobalRule(DEFAULT_ADMIN_RULE);
-		else
-			addGlobalRule(new FilterRule(ADMIN_KEY, "Preset: " + preset.name, preset.action));
-		KitFilter.preset = preset;
 	}
 
 	public static void setAdminAllowed(TeamArena game, Collection<String> allowed) throws IllegalArgumentException {
@@ -239,7 +252,6 @@ public class KitFilter {
 	}
 
 	public static void setAdminBlocked(TeamArena game, Collection<String> blocked) throws IllegalArgumentException {
-		preset = null;
 		// For anyone not using an allowed kit, set it to a fallback one.
 		Optional<Kit> fallbackOpt = game.getKits().stream()
 			.filter(kit -> !blocked.contains(kit.getKey()))
@@ -276,6 +288,7 @@ public class KitFilter {
 				info.kit = fallbackKit;
 			}
 			if (!activeKitAvailable) {
+				assert CompileAsserts.OMIT || !game.isDead(player);
 				// also change active kit, very safe operation!
 				info.activeKit.removeKit(player, info);
 				// selected kit is guaranteed to be available

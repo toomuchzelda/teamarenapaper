@@ -39,7 +39,7 @@ public class TipBroadcaster
 			.build(),
 
 		Component.text("A Demolition's mine can be broken by punching it 3 times", COLOR),
-		Component.text("An Engineer's Sentry will only see you if it looks directly at you", COLOR),
+		//Component.text("An Engineer's Sentry will only see you if it looks directly at you", COLOR),
 		Component.text("Confused about the combat? Spam click like it's 1.8, and get sweep attacks and crits like it's 1.9", COLOR),
 		Component.text("Be careful! As kit Ghost, enemies can see you hold items, sprint on the ground, when you're on fire and when arrows are sticking out of you", COLOR),
 		//Component.text("Don't get overwhelmed! Kit Ninja can attack super fast, but you can fight back if you focus", COLOR),

@@ -182,7 +182,8 @@ public abstract class TeamArena
 	private final Component gameTitle;
 	private final Component gameSubTitle;
 
-	private static final FilterRule NO_HNS = new FilterRule("team_arena/no_hns", "No HNS kits by default", FilterAction.block("hider", "seeker", "radar"));
+	private static final FilterRule MISC_KITS = new FilterRule("tma/misc_kits", "Poorly balanced kits", FilterAction.block("sniper", "longbow"));
+	private static final FilterRule NO_HNS = new FilterRule("tma/no_hns", "No HNS kits by default", FilterAction.block("hider", "seeker", "radar"));
 
 	public TeamArena(TeamArenaMap map) {
 		File worldFile = map.getFile();
@@ -298,6 +299,7 @@ public abstract class TeamArena
 
 		KitFilter.resetFilter();
 		registerKits();
+		KitFilter.addGlobalRule(MISC_KITS);
 		applyKitFilters();
 
 		DamageTimes.clear();
@@ -402,6 +404,10 @@ public abstract class TeamArena
 
 	protected void applyKitFilters() {
 		KitFilter.addGlobalRule(NO_HNS);
+	}
+
+	protected void removeKitFilters() {
+		KitFilter.removeGlobalRule(NO_HNS.key());
 	}
 
 	protected void registerKit(Kit kit) {
@@ -1415,6 +1421,8 @@ public abstract class TeamArena
 
 	@OverridingMethodsMustInvokeSuper
 	public void prepDead() {
+		this.removeKitFilters();
+
 		for(var entry : Main.getPlayerInfoMap().entrySet()) {
 			final Player p = entry.getKey();
 			PlayerUtils.resetState(p);
