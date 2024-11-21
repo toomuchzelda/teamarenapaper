@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.hideandseek;
 
+import com.destroystokyo.paper.entity.Pathfinder;
 import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
@@ -10,6 +11,7 @@ import org.bukkit.craftbukkit.entity.CraftLivingEntity;
 import org.bukkit.craftbukkit.util.CraftVector;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 
@@ -55,6 +57,15 @@ public class PacketFlyingPoint extends PacketEntity {
 	}
 
 	private static Vector getCentrePoint(LivingEntity looker, double dist) {
+		if (looker instanceof Mob mob) {
+			Pathfinder.PathResult currentPath = mob.getPathfinder().getCurrentPath();
+			if (currentPath != null) {
+				Location finalPoint = currentPath.getFinalPoint();
+				if (finalPoint != null)
+					return finalPoint.add(0d, 1d, 0d).toVector();
+			}
+		}
+
 		Location eyeLocation = looker.getEyeLocation();
 		return eyeLocation.toVector().add(eyeLocation.getDirection().setY(0).multiply(dist));
 	}

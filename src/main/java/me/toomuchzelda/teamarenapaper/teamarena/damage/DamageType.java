@@ -486,7 +486,7 @@ public class DamageType {
 			return doPlaceholders(getRawDeathMessage(),
 					EntityUtils.getComponent(victim),
 					EntityUtils.getComponent(killer),
-					cause != null ? EntityUtils.getComponent(cause) : Component.empty()
+					cause != null ? EntityUtils.getComponent(cause) : Component.text("Unknown", MESSAGE_COLOR)
 			);
 		}
 

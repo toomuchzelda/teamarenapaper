@@ -47,8 +47,8 @@ public class HideAndSeek extends TeamArena {
 
 	private static final int DEFAULT_SEEK_TIME = 4 * 60 * 20; // 3 minutes?
 
-	private static final FilterRule GLOBAL_RULE = new FilterRule("hns/global", "", FilterAction.allow("hider", "seeker", "radar"));
-	private static final FilterRule SEEKER_RULE = new FilterRule("hns/seeker_team", "Seeker team restrictions", FilterAction.allow("seeker", "radar"));
+	private static final FilterRule GLOBAL_RULE = new FilterRule("hns/global", "", FilterAction.allow("hider", "radar"));
+	private static final FilterRule SEEKER_RULE = new FilterRule("hns/seeker_team", "Seeker team restrictions", FilterAction.allow("radar"));
 	private static final FilterRule HIDER_RULE = new FilterRule("hns/hider_team", "Hider team restrictions", FilterAction.allow("hider"));
 
 	public TeamArenaTeam hiderTeam;

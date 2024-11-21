@@ -28,15 +28,16 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.CrossbowMeta;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.Vector;
 
 import java.util.*;
 
-import static me.toomuchzelda.teamarenapaper.teamarena.kits.KitBurst.BurstAbility.ROCKET_CD;
-
 //Modified by onett425
 public class KitBurst extends Kit
 {
+	private static final NamespacedKey IS_CROSSBOW_KEY = new NamespacedKey(Main.getPlugin(), "burstcrossbow");
+
 	public KitBurst() {
 		super("Burst", "Do you love fireworks? Kit Burst does! So much so, they often shoot them a bit too close and blow themselves up!\n\n" +
 				"This kit launches fireworks around with a crossbow. It's very effective against groups of enemies! " +
@@ -58,6 +59,7 @@ public class KitBurst extends Kit
 		crossbowLore.addAll(TextUtils.wrapString("Left click while loaded to burst the firework right in front of you. Use it like a shotgun!", Style.style(TextUtils.LEFT_CLICK_TO).decoration(TextDecoration.ITALIC, false)));
 		bowMeta.lore(crossbowLore);
 		//bowMeta.addEnchant(Enchantment.QUICK_CHARGE, 1, true);
+		bowMeta.getPersistentDataContainer().set(IS_CROSSBOW_KEY, PersistentDataType.BOOLEAN, true);
 		crossbow.setItemMeta(bowMeta);
 
 		ItemStack firework = new ItemStack(Material.FIREWORK_ROCKET, 64);
@@ -66,7 +68,7 @@ public class KitBurst extends Kit
 				.displayName(Component.text("Rocket Launcher"))
 				.lore(Component.text("Right click to fire an explosive Rocket!", TextColors.LIGHT_YELLOW),
 				Component.text("Aim carefully, the blast radius is not very large...", TextColors.LIGHT_YELLOW),
-						Component.text("Cooldown: " + ROCKET_CD/20 + " seconds", TextColors.LIGHT_BROWN))
+						Component.text("Cooldown: " + BurstAbility.ROCKET_CD/20 + " seconds", TextColors.LIGHT_BROWN))
 				.build();
 
 		setItems(sword, crossbow, /*rocketLauncher,*/ firework);
@@ -94,7 +96,7 @@ public class KitBurst extends Kit
 
 		//used for identifying the entity across events
 		private static final Component SHOTUGUN_FIREWORK_NAME = Component.text("burstfw");
-		private static final double SHOTGUN_SELF_DAMAGE = 7d;
+		private static final double SHOTGUN_SELF_DAMAGE = 3d;
 		private static final double SHOTGUN_MAX_DAMAGE = 18d;
 		private static final int SHOTGUN_ARROW_LIVE_TICKS = 17;
 
@@ -130,7 +132,7 @@ public class KitBurst extends Kit
 
 				shooter.playSound(shooter, Sound.ENTITY_ARROW_HIT_PLAYER, 1.0f, 1.0f);
 			}
-			else if(event.getAttacker() instanceof Firework) {
+			else if(event.getAttacker() instanceof Firework fw && this.originalFwShooters.containsKey(fw)) {
 				this.fwAttemptAttack(event, false);
 			}
 			else if (event.getAttacker() instanceof Arrow arrow) { //may be shotgun
@@ -201,6 +203,10 @@ public class KitBurst extends Kit
 		@Override
 		public void onShootBow(EntityShootBowEvent event) {
 			if(event.getProjectile() instanceof Firework firework && event.getEntity() instanceof Player p) {
+				ItemStack bow = event.getBow();
+				if (bow == null || !bow.getPersistentDataContainer().has(IS_CROSSBOW_KEY))
+					return;
+
 				TeamArenaTeam team = Main.getPlayerInfo(p).team;
 
 				FireworkMeta meta = firework.getFireworkMeta();
@@ -424,19 +430,19 @@ public class KitBurst extends Kit
 			ProjectileHitEvent event = dEvent.projectileHitEvent;
 			if (event.isCancelled()) return;
 
-			//all arrows shot by burst are from the shotgun
-			// despawn immediately if hit a block
+			//see if this arrow is from a shotgun blast
 			if (event.getEntity() instanceof Arrow arrow) {
-				if (event.getHitBlock() != null) {
-					arrow.remove();
-					event.setCancelled(true);
-				}
-				else if (event.getHitEntity() != null) {
-					//see if this arrow is from a shotgun blast, and if the hit player was hit by this blast already
-					Set<Entity> set = BLAST_HIT_ENTITIES.get(arrow.customName());
-					//is a shotgun blast and hit an already hit victim
-					if(set != null && set.contains(event.getHitEntity())) {
+				Set<Entity> set = BLAST_HIT_ENTITIES.get(arrow.customName());
+				if (set != null) {
+					if (event.getHitBlock() != null) { // despawn immediately if hit a block
+						arrow.remove();
 						event.setCancelled(true);
+					}
+					else if (event.getHitEntity() != null) {
+						//is a shotgun blast and hit an already hit victim
+						if (set.contains(event.getHitEntity())) {
+							event.setCancelled(true);
+						}
 					}
 				}
 			}
@@ -444,15 +450,11 @@ public class KitBurst extends Kit
 
 		@Override
 		public void onReflect(ProjectileReflectEvent event) {
-			if (event.projectile instanceof Arrow) { // No reflect shotguns
+			if (event.projectile instanceof Arrow arrow && BLAST_HIT_ENTITIES.containsKey(arrow.customName())) { // No reflect shotguns
 				event.cancelled = true;
 				event.projectile.remove();
 			}
-			else {
-				if (!(event.projectile instanceof Firework)) {
-					Thread.dumpStack(); return;
-				}
-
+			else if (event.projectile instanceof Firework firework && originalFwShooters.containsKey(firework)) {
 				event.attackFunc = damageEvent -> fwAttemptAttack(damageEvent, true);
 
 				// TODO change firework colours

@@ -1,10 +1,12 @@
 package me.toomuchzelda.teamarenapaper.teamarena.abilities;
 
 import com.comphenix.protocol.events.PacketContainer;
+import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.ProjectileReflectEvent;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -28,10 +30,12 @@ public class RailgunAbility extends Ability {
 		.enchant(Enchantment.INFINITY, 1)
 		.build();
 	public static final int RAILGUN_COOLDOWN = 3 * 20;
+	private static final DamageType RAILGUN_REFLECTED = new DamageType(DamageType.RAILGUN,
+		"%Killed% <-- %Killer% <-- %Cause%'s railgun");
 
 	private static class RailInfo {
-		private boolean hitGround = false;
 		private Location previousPosition;
+		private LivingEntity playerWhoShotAReflector;
 	}
 
 	private final Map<AbstractArrow, RailInfo> rails = new HashMap<>();
@@ -51,11 +55,13 @@ public class RailgunAbility extends Ability {
 
 				shooter.getWorld().playSound(shooter, Sound.ENTITY_ARROW_SHOOT, SoundCategory.PLAYERS, 1f, 2f);
 
+				/*
 				final Location particleLoc = shooter.getEyeLocation();
 				final Vector direction = particleLoc.getDirection();
 				particleLoc.add(direction);
 				particleLoc.subtract(0d, 0.5d, 0d);
 				shooter.getWorld().spawnParticle(Particle.FIREWORK, particleLoc, 1, 0.05d, 0.05d, 0.05d, 0.04d);
+				*/
 			}
 			else {
 				fireRailgun(shooter, aa);
@@ -117,9 +123,28 @@ public class RailgunAbility extends Ability {
 	@Override
 	public void onAttemptedAttack(DamageEvent event) {
 		if (event.getDamageType().is(DamageType.PROJECTILE) && event.getAttacker() instanceof AbstractArrow aa) {
-			if (RAILGUN.isSimilar(aa.getWeapon())) {
-				event.setDamageType(DamageType.RAILGUN);
+			RailInfo rinfo = rails.get(aa);
+			if (rinfo != null) {
+				if (!RAILGUN.isSimilar(aa.getWeapon()))
+					Main.logger().warning("Railgun arrow not shot by railgun item: " + event.toString());
+
+				if (rinfo.playerWhoShotAReflector == null)
+					event.setDamageType(DamageType.RAILGUN);
+				else {
+					event.setDamageType(RAILGUN_REFLECTED);
+					event.setDamageTypeCause(rinfo.playerWhoShotAReflector);
+				}
 				event.recalculateFinalDamage(); // DamageType ignore armour needs recalc
+			}
+		}
+	}
+
+	@Override
+	public void onReflect(ProjectileReflectEvent event) {
+		if (event.projectile instanceof AbstractArrow aa) {
+			RailInfo rinfo = rails.get(aa);
+			if (rinfo != null && event.shooter instanceof LivingEntity living) {
+				rinfo.playerWhoShotAReflector = living;
 			}
 		}
 	}

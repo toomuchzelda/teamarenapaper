@@ -16,6 +16,7 @@ import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -30,15 +31,16 @@ public class KitRadarSeeker extends Kit {
 			"with Hiders Enforcement LLC and may result in a termination.", Style.style(TextColors.ERROR_RED)))
 		.build();
 	public KitRadarSeeker(TeamArena game) {
-		super("Radar", "Seek out the sneakier Hiders with your Radar", Material.RECOVERY_COMPASS);
+		super("Radar", "Seek out the Hiders with your Radar and chase them down", Material.RECOVERY_COMPASS);
 
 		this.setItems(new ItemStack(Material.STONE_SWORD), RADAR);
 		//this.setArmor(new ItemStack(Material.LEATHER_HELMET), new ItemStack(Material.LEATHER_CHESTPLATE),
 		//	new ItemStack(Material.LEATHER_LEGGINGS), new ItemStack(Material.LEATHER_BOOTS));
 		ItemStack hat = new ItemStack(Material.LEATHER_HELMET);
+		hat.addUnsafeEnchantment(Enchantment.FEATHER_FALLING, 2);
 		ItemUtils.colourLeatherArmor(Color.PURPLE, hat);
 		this.setArmor(hat, null, null, null);
-		this.setAbilities(new RadarSeekerAbility(game));
+		this.setAbilities(new RadarSeekerAbility(game), new KitSeeker.SeekerAbility());
 	}
 
 	private static class RadarSeekerAbility extends Ability {
