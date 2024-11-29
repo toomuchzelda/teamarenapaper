@@ -4,6 +4,7 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.mojang.datafixers.util.Pair;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
@@ -165,10 +166,9 @@ public class SpectatorAngelManager
 		 * @param mount true to mount, false to dismount the owner from the allay.
 		 */
 		public void mountOwner(boolean mount) {
-			PacketContainer setPassengersPacket = new PacketContainer(PacketType.Play.Server.MOUNT);
-			setPassengersPacket.getIntegers().write(0, this.getId());
-			int[] mountedEnts = mount ? new int[] {this.owner.getEntityId()} : EMPTY_ARR;
-			setPassengersPacket.getIntegerArrays().write(0, mountedEnts);
+			PacketContainer setPassengersPacket = EntityUtils.getMountPacket(this.getId(),
+				mount ? new int[] { this.owner.getEntityId() } : EMPTY_ARR);
+			
 			if (mount)
 				this.sendPacket(this.owner, setPassengersPacket);
 			else // Need to send this one now to avoid desyncs with the teleport that comes immediately after

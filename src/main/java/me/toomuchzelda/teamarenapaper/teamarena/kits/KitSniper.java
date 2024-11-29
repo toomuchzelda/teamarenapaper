@@ -354,7 +354,7 @@ public class KitSniper extends Kit {
 							case KitPorcupine ignored -> {
 								if (reflectorShooter == null) { // can't reflect twice
 									Location hitLoc = entityHit.hitPosition.toLocation(world);
-									KitPorcupine.PorcupineAbility.reflectEffect(playerVictim, hitLoc);
+									KitPorcupine.PorcupineAbility.reflectEffect(playerVictim, hitLoc, true);
 									// regulatory compliance
 									// reflect the bullet by firing another bullet as if the porcupine is a sniper
 									fireBullet(world, playerVictim, clientTick, victimInfo.team,

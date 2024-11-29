@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.abilities;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
+import me.toomuchzelda.teamarenapaper.teamarena.abilities.explosives.ExplosiveProjectilesAbility;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;

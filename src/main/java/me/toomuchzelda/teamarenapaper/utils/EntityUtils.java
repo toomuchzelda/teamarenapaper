@@ -316,6 +316,14 @@ public class EntityUtils {
 		return createMovePacket(entity.getId(), entity.getLocation(), xDelta, yDelta, zDelta, yawDelta, pitchDelta, onGround);
 	}
 
+	public static PacketContainer getMountPacket(int vehicle, int... riders) {
+		PacketContainer packet = new PacketContainer(PacketType.Play.Server.MOUNT);
+		packet.getIntegers().write(0, vehicle);
+		packet.getIntegerArrays().write(0, riders);
+
+		return packet;
+	}
+
 	// Following 3 methods exist because paper Entity.getTrackedPlayers() is really slow
 	@Deprecated
 	public static Set<ServerPlayerConnection> getTrackedPlayers0(Entity viewedEntity) {

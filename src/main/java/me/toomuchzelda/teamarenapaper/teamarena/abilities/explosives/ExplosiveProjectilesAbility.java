@@ -1,4 +1,4 @@
-package me.toomuchzelda.teamarenapaper.teamarena.abilities;
+package me.toomuchzelda.teamarenapaper.teamarena.abilities.explosives;
 
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import me.toomuchzelda.teamarenapaper.CompileAsserts;
@@ -8,7 +8,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaExplosion;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.KitPorcupine;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.ProjectileReflectEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.explosive.KitExplosive;
@@ -87,14 +86,17 @@ public class ExplosiveProjectilesAbility extends Ability {
 	//info for charging up rpgs
 	private record RPGChargeInfo(BossBar bossbar, int throwTime) {}
 
-	private record GrenadeInfo(Item grenade, Color color, int spawnTime) {}
+	private record GrenadeInfo(Item grenade, Color color, int spawnTime, GrenadeHitbox hitbox) {}
 
 	private final Map<Player, ExplosiveInfo> explosiveInfos = new HashMap<>();
 
 	@Override
 	public void unregisterAbility() {
 		for (ExplosiveInfo einfo : explosiveInfos.values()) {
-			einfo.activeGrenades.forEach(grenadeInfo -> grenadeInfo.grenade.remove());
+			einfo.activeGrenades.forEach(grenadeInfo -> {
+				grenadeInfo.grenade.remove();
+				grenadeInfo.hitbox.remove();
+			});
 			einfo.activeGrenades.clear();
 
 			einfo.activeRpgs.forEach(rpgInfo -> rpgInfo.rpgArrow.remove());
@@ -118,7 +120,10 @@ public class ExplosiveProjectilesAbility extends Ability {
 		einfo.activeRpgs.forEach(rpgInfo -> rpgInfo.rpgArrow.remove());
 		einfo.activeRpgs.clear();
 
-		einfo.activeGrenades.forEach(grenadeInfo -> grenadeInfo.grenade.remove());
+		einfo.activeGrenades.forEach(grenadeInfo -> {
+			grenadeInfo.grenade.remove();
+			grenadeInfo.hitbox.remove();
+		});
 		einfo.activeGrenades.clear();
 	}
 
@@ -165,7 +170,7 @@ public class ExplosiveProjectilesAbility extends Ability {
 
 			final int timeSince = currentTick - cinfo.throwTime();
 			if(timeSince % 6 == 0)
-				thrower.getWorld().playSound(thrower, Sound.BLOCK_ANVIL_PLACE, SoundCategory.PLAYERS, 0.65f, 0.8f);
+				thrower.getWorld().playSound(thrower, Sound.BLOCK_ANVIL_PLACE, SoundCategory.PLAYERS, 0.6f, 0.8f);
 			if(timeSince % 2 == 0)
 				EntityUtils.playCritEffect(thrower);
 
@@ -234,6 +239,7 @@ public class ExplosiveProjectilesAbility extends Ability {
 					TeamArenaExplosion explosion = new TeamArenaExplosion(null, 4, 0.5, 12, 3.5, 0.35, DamageType.EXPLOSIVE_GRENADE, grenade);
 					explosion.explode();
 
+					grenadeInfo.hitbox.remove();
 					grenade.remove();
 					playerGrenadesIter.remove();
 				}
@@ -339,7 +345,10 @@ public class ExplosiveProjectilesAbility extends Ability {
 		grenadeDrop.setVelocity(vel);
 		world.playSound(grenadeDrop, Sound.ENTITY_CREEPER_PRIMED, 0.85f, 1.1f);
 
-		currActiveGrenades.add(new GrenadeInfo(grenadeDrop, teamColor, TeamArena.getGameTick()));
+		GrenadeHitbox hitbox = new GrenadeHitbox(grenadeDrop);
+		hitbox.respawn();
+
+		currActiveGrenades.add(new GrenadeInfo(grenadeDrop, teamColor, TeamArena.getGameTick(), hitbox));
 
 		final PlayerInventory inv = thrower.getInventory();
 

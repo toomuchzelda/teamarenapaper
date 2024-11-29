@@ -1,7 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.explosive;
 
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.abilities.ExplosiveProjectilesAbility;
+import me.toomuchzelda.teamarenapaper.teamarena.abilities.explosives.ExplosiveProjectilesAbility;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;

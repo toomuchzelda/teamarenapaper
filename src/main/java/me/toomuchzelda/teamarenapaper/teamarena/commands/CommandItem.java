@@ -2,11 +2,10 @@ package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
-import me.toomuchzelda.teamarenapaper.teamarena.abilities.ExplosiveProjectilesAbility;
+import me.toomuchzelda.teamarenapaper.teamarena.abilities.explosives.ExplosiveProjectilesAbility;
 import me.toomuchzelda.teamarenapaper.teamarena.abilities.RailgunAbility;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.KitDemolitions;
 import net.kyori.adventure.text.Component;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
