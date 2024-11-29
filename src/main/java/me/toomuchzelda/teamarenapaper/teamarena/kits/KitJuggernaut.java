@@ -64,18 +64,18 @@ public class KitJuggernaut extends Kit {
         @Override
         public void giveAbility(Player player) {
             player.setFoodLevel(6);
-			player.getAttribute(Attribute.GENERIC_SCALE).addModifier(BIG_MODIFIER);
-			player.getAttribute(Attribute.PLAYER_SNEAKING_SPEED).addModifier(SNEAK_SPEED_MODIFIER);
-			player.getAttribute(Attribute.PLAYER_ENTITY_INTERACTION_RANGE).addModifier(REACH_MODIFIER);
+			player.getAttribute(Attribute.SCALE).addModifier(BIG_MODIFIER);
+			player.getAttribute(Attribute.SNEAKING_SPEED).addModifier(SNEAK_SPEED_MODIFIER);
+			player.getAttribute(Attribute.ENTITY_INTERACTION_RANGE).addModifier(REACH_MODIFIER);
 			FakeHitboxManager.setHidden(player, true);
         }
 
         @Override
         public void removeAbility(Player player) {
             player.setFoodLevel(20);
-			player.getAttribute(Attribute.GENERIC_SCALE).removeModifier(BIG_MODIFIER);
-			player.getAttribute(Attribute.PLAYER_SNEAKING_SPEED).removeModifier(SNEAK_SPEED_MODIFIER);
-			player.getAttribute(Attribute.PLAYER_ENTITY_INTERACTION_RANGE).removeModifier(REACH_MODIFIER);
+			player.getAttribute(Attribute.SCALE).removeModifier(BIG_MODIFIER);
+			player.getAttribute(Attribute.SNEAKING_SPEED).removeModifier(SNEAK_SPEED_MODIFIER);
+			player.getAttribute(Attribute.ENTITY_INTERACTION_RANGE).removeModifier(REACH_MODIFIER);
 			FakeHitboxManager.setHidden(player, false);
 			player.setCooldown(BATON.getType(), 0);
         }

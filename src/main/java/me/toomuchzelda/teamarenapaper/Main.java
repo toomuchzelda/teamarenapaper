@@ -27,6 +27,7 @@ import org.jetbrains.annotations.UnmodifiableView;
 import org.spigotmc.SpigotConfig;
 
 import java.util.*;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public final class Main extends JavaPlugin
@@ -194,6 +195,12 @@ public final class Main extends JavaPlugin
 
 	public static ComponentLogger componentLogger() {
 		return componentLogger;
+	}
+
+	public static void logDebug(String log) {
+		logger().log(Level.FINE, log);
+		if (logger().getLevel() == Level.FINE)
+			Thread.dumpStack();
 	}
 
 	public static Main getPlugin() {

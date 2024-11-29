@@ -62,7 +62,7 @@ public class RewindMarker {
 	}
 
 	void updatePos(Location location) {
-		indicator.translate(location.toVector());
+		//indicator.translate(location.toVector());
 		indicator.move(location);
 	}
 }

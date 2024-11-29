@@ -246,8 +246,8 @@ public class DamageEvent {
 						boolean isChargedSprintAttack = isChargedWeapon && p.isSprinting();
 
 						net.minecraft.world.entity.player.Player nmsPlayer = ((CraftPlayer) p).getHandle();
-						double walkedDist = nmsPlayer.walkDist - nmsPlayer.walkDistO;
-						boolean notExceedingWalkSpeed = walkedDist < p.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).getValue();
+						double walkedDist = nmsPlayer.getKnownMovement().horizontalDistance();
+						boolean notExceedingWalkSpeed = walkedDist < p.getAttribute(Attribute.MOVEMENT_SPEED).getValue() * 2.5d;
 						boolean sweep = false;
 
 						if(isChargedWeapon && !isChargedSprintAttack && !critical &&
@@ -257,7 +257,7 @@ public class DamageEvent {
 						}
 
 						if(sweep) {
-							float sweepingEdgeDmg = (float) (1f + p.getAttribute(Attribute.PLAYER_SWEEPING_DAMAGE_RATIO).getValue() * finalDamage);
+							float sweepingEdgeDmg = (float) (1f + p.getAttribute(Attribute.SWEEPING_DAMAGE_RATIO).getValue() * finalDamage);
 
 							List<LivingEntity> list = p.getWorld().getLivingEntities();
 							Iterator<LivingEntity> iter = list.iterator();
@@ -306,7 +306,7 @@ public class DamageEvent {
 		}
 
 		if(victim instanceof LivingEntity living) {
-			knockbackResistance = 1d - living.getAttribute(Attribute.GENERIC_KNOCKBACK_RESISTANCE).getValue();
+			knockbackResistance = 1d - living.getAttribute(Attribute.KNOCKBACK_RESISTANCE).getValue();
 			if (!alreadyCalcedArmor) {
 				finalDamage = DamageCalculator.calcArmorReducedDamage(damageType, rawDamage, living);
 			}
@@ -464,7 +464,7 @@ public class DamageEvent {
 
 				if (newHealth <= 0) {
 					//Bukkit.broadcast(Component.text(living.getName() + " has died"));
-					newHealth = living.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+					newHealth = living.getAttribute(Attribute.MAX_HEALTH).getValue();
 					isDeath = true;
 				}
 

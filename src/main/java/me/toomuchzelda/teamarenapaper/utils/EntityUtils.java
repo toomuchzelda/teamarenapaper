@@ -3,12 +3,8 @@ package me.toomuchzelda.teamarenapaper.utils;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.mojang.datafixers.util.Pair;
-import io.netty.buffer.Unpooled;
-import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.HoverEvent;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerLevel;
@@ -186,15 +182,6 @@ public class EntityUtils {
 		}
 	}
 
-	public static ClientboundRemoveEntitiesPacket getRemoveEntitiesPacket(Entity... entities) {
-		int[] ints = new int[entities.length];
-		for (int i = 0; i < entities.length; i++) {
-			ints[i] = entities[i].getEntityId();
-		}
-
-		return new ClientboundRemoveEntitiesPacket(ints);
-	}
-
 	public static Entity spawnCustomEntity(World world, Location loc, net.minecraft.world.entity.Entity nmsEntity) {
 		Entity bukkitEnitity = ((CraftWorld) world).addEntity(nmsEntity, CreatureSpawnEvent.SpawnReason.CUSTOM);
 		bukkitEnitity.teleport(loc);
@@ -227,7 +214,7 @@ public class EntityUtils {
 	public static void setMaxHealth(LivingEntity entity, double newHealth) {
 		double oldHealth = entity.getHealth();
 
-		entity.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(newHealth);
+		entity.getAttribute(Attribute.MAX_HEALTH).setBaseValue(newHealth);
 
 		if(oldHealth > newHealth)
 			entity.setHealth(newHealth);
@@ -252,68 +239,6 @@ public class EntityUtils {
 		for (AttributeModifier modifier : attributeInstance.getModifiers()) {
 			attributeInstance.removeModifier(modifier);
 		}
-	}
-
-	private static final double MAX_RELATIVE_DELTA = Short.MAX_VALUE / 4096d;
-	private static final double MIN_RELATIVE_DELTA = Short.MIN_VALUE / 4096d;
-
-	public static ClientboundTeleportEntityPacket createTeleportPacket(int id, double x, double y, double z,
-																	   double yaw, double pitch, boolean onGround) {
-
-		byte newYaw = (byte) (yaw * 256d / 360d);
-		byte newPitch = (byte) (pitch * 256d / 360d);
-		var friendlyByteBuf = new FriendlyByteBuf(Unpooled.buffer());
-		friendlyByteBuf.writeVarInt(id);
-		friendlyByteBuf.writeDouble(x);
-		friendlyByteBuf.writeDouble(y);
-		friendlyByteBuf.writeDouble(z);
-		friendlyByteBuf.writeByte(newYaw);
-		friendlyByteBuf.writeByte(newPitch);
-		friendlyByteBuf.writeBoolean(onGround);
-
-		return ClientboundTeleportEntityPacket.STREAM_CODEC.decode(friendlyByteBuf);
-	}
-
-	public static Packet<?> createMovePacket(int id, Location location, double xDelta, double yDelta, double zDelta,
-											 double yawDelta, double pitchDelta, boolean onGround) {
-		byte newYaw = (byte) ((location.getYaw() + yawDelta) * 256d / 360d);
-		byte newPitch = (byte) ((location.getPitch() + pitchDelta) * 256d / 360d);
-
-		if (xDelta >= MAX_RELATIVE_DELTA || yDelta >= MAX_RELATIVE_DELTA || zDelta >= MAX_RELATIVE_DELTA ||
-			xDelta <= MIN_RELATIVE_DELTA || yDelta <= MIN_RELATIVE_DELTA || zDelta <= MIN_RELATIVE_DELTA) {
-			var friendlyByteBuf = new FriendlyByteBuf(Unpooled.buffer());
-			friendlyByteBuf.writeVarInt(id);
-			friendlyByteBuf.writeDouble(location.getX() + xDelta);
-			friendlyByteBuf.writeDouble(location.getY() + yDelta);
-			friendlyByteBuf.writeDouble(location.getZ() + zDelta);
-			friendlyByteBuf.writeByte(newYaw);
-			friendlyByteBuf.writeByte(newPitch);
-			friendlyByteBuf.writeBoolean(onGround);
-
-			return ClientboundTeleportEntityPacket.STREAM_CODEC.decode(friendlyByteBuf);
-		} else {
-			short deltaX = (short) (xDelta * 4096d);
-			short deltaY = (short) (yDelta * 4096d);
-			short deltaZ = (short) (zDelta * 4096d);
-
-			if (yawDelta == 0 && pitchDelta == 0) {
-				return new ClientboundMoveEntityPacket.Pos(id, deltaX, deltaY, deltaZ, onGround);
-			} else if (deltaX == 0 && deltaY == 0 && deltaZ == 0) {
-				return new ClientboundMoveEntityPacket.Rot(id, newYaw, newPitch, onGround);
-			} else {
-				return new ClientboundMoveEntityPacket.PosRot(id, deltaX, deltaY, deltaZ, newYaw, newPitch, onGround);
-			}
-		}
-	}
-
-	public static Packet<?> createMovePacket(Entity entity, double xDelta, double yDelta, double zDelta,
-											 double yawDelta, double pitchDelta, boolean onGround) {
-		return createMovePacket(entity.getEntityId(), entity.getLocation(), xDelta, yDelta, zDelta, yawDelta, pitchDelta, onGround);
-	}
-
-	public static Packet<?> createMovePacket(PacketEntity entity, double xDelta, double yDelta, double zDelta,
-											 double yawDelta, double pitchDelta, boolean onGround) {
-		return createMovePacket(entity.getId(), entity.getLocation(), xDelta, yDelta, zDelta, yawDelta, pitchDelta, onGround);
 	}
 
 	// Following 3 methods exist because paper Entity.getTrackedPlayers() is really slow

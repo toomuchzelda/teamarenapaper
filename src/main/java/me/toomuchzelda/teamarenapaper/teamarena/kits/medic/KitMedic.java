@@ -293,7 +293,7 @@ public class KitMedic extends Kit
 					FishHook hook = medic.getFishHook();
 					if(hook != null) // Need to null check as medic.getFishHook may be null 1 tick later.
 						PlayerUtils.sendPacket(hookedPlayer,
-							new PacketContainer(PacketType.Play.Server.ENTITY_DESTROY, EntityUtils.getRemoveEntitiesPacket(hook))
+							new PacketContainer(PacketType.Play.Server.ENTITY_DESTROY, PacketUtils.getRemoveEntitiesPacket(hook))
 						);
 				});
 
@@ -399,7 +399,7 @@ public class KitMedic extends Kit
 					PlayerUtils.heal(healedPlayer, HEAL_PER_TICK, EntityRegainHealthEvent.RegainReason.MAGIC_REGEN);
 				}
 				else {
-					final double maxHealth = healed.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+					final double maxHealth = healed.getAttribute(Attribute.MAX_HEALTH).getValue();
 					healed.setHealth(Math.min(healed.getHealth() + HEAL_PER_TICK, maxHealth));
 				}
 
@@ -473,7 +473,7 @@ public class KitMedic extends Kit
 		private static final Component FULL = Component.text("Full", NamedTextColor.GREEN);
 		private static Component getHealingMessage(LivingEntity healed) {
 			double health = healed.getHealth() + healed.getAbsorptionAmount();
-			double maxHealth = healed.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+			double maxHealth = healed.getAttribute(Attribute.MAX_HEALTH).getValue();
 			double ticksToFull = (maxHealth - health) / HEAL_PER_TICK;
 			double healthPercentage = health / maxHealth * 100d;
 

@@ -9,7 +9,8 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.PacketUtils;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
@@ -57,8 +58,6 @@ public class PacketEntity
 	protected PacketContainer metadataPacket;
 //	private StructureModifier<List<WrappedDataValue>> dataValueCollectionModifier;
 	private PacketContainer teleportPacket;
-	private StructureModifier<Double> teleportPacketDoubles;
-	private StructureModifier<Byte> teleportPacketBytes;
 	protected PacketContainer rotateHeadPacket;
 	private StructureModifier<Byte> headPacketBytes;
 	@Nullable
@@ -279,11 +278,8 @@ public class PacketEntity
 	private void createTeleport() {
 		this.teleportPacket = new PacketContainer(PacketType.Play.Server.ENTITY_TELEPORT);
 		this.teleportPacket.getIntegers().write(0, id);
-
-		this.teleportPacketDoubles = teleportPacket.getDoubles();
-		this.teleportPacketBytes = teleportPacket.getBytes();
-
 		this.updateTeleportPacket(this.location);
+		this.teleportPacket.getModifier().write(2, Collections.emptySet());
 	}
 
 	protected PacketContainer getRelativePosPacket(Location oldLoc, Location newLoc) {
@@ -299,22 +295,28 @@ public class PacketEntity
 
 		final boolean changedRotation = oldYaw != newYaw || oldPitch != newPitch;
 
+		double xMovement = newLoc.getX() - oldLoc.getX();
+		double yMovement = newLoc.getY() - oldLoc.getY();
+		double zMovement = newLoc.getZ() - oldLoc.getZ();
+		long x = Math.round(xMovement * 32 * 128);
+		long y = Math.round(yMovement * 32 * 128);
+		long z = Math.round(zMovement * 32 * 128);
+
+		// Position change too distant for rel move
+		if (!PacketUtils.inRelMoveBounds(x, y, z)) return null;
+		final boolean changedPosition = x != 0 || y != 0 || z != 0;
+
 		final ClientboundMoveEntityPacket packet;
 		PacketType packetType;
 
-		if(distSqr > 0d) {
-			double xMovement = newLoc.getX() - oldLoc.getX();
-			double yMovement = newLoc.getY() - oldLoc.getY();
-			double zMovement = newLoc.getZ() - oldLoc.getZ();
-			short x = (short) (xMovement * 32 * 128);
-			short y = (short) (yMovement * 32 * 128);
-			short z = (short) (zMovement * 32 * 128);
+		if(changedPosition) {
+			short sX = (short) x; short sY = (short) y; short sZ = (short) z;
 			if(changedRotation) {
-				packet = new ClientboundMoveEntityPacket.PosRot(this.id, x, y, z, newYaw, newPitch, false);
+				packet = new ClientboundMoveEntityPacket.PosRot(this.id, sX, sY, sZ, newYaw, newPitch, false);
 				packetType = PacketType.Play.Server.REL_ENTITY_MOVE_LOOK;
 			}
 			else {
-				packet = new ClientboundMoveEntityPacket.Pos(this.id, x, y, z, false);
+				packet = new ClientboundMoveEntityPacket.Pos(this.id, sX, sY, sZ, false);
 				packetType = PacketType.Play.Server.REL_ENTITY_MOVE;
 			}
 		}
@@ -346,14 +348,10 @@ public class PacketEntity
 	}
 
 	protected void updateTeleportPacket(Location newLocation) {
-		StructureModifier<Double> doubles = this.teleportPacketDoubles;
-		doubles.write(0, newLocation.getX());
-		doubles.write(1, newLocation.getY());
-		doubles.write(2, newLocation.getZ());
-
-		StructureModifier<Byte> bytes = this.teleportPacketBytes;
-		bytes.write(0, angleToByte(newLocation.getYaw()));
-		bytes.write(1, angleToByte(newLocation.getPitch()));
+		PacketUtils.setTeleportCoords(this.teleportPacket,
+			newLocation.getX(), newLocation.getY(), newLocation.getZ(),
+			0d, 0d, 0d,
+			newLocation.getYaw(), newLocation.getPitch());
 	}
 
 	protected void updateSpawnPacket(Location newLocation) {
