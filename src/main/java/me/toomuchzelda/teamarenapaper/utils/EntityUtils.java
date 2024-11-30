@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.utils;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
+import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Pair;
 import io.netty.buffer.Unpooled;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;

@@ -323,13 +323,11 @@ public class PacketListeners
 					final int originalIndex = newList.size(); // Keep track of this entry's position in the newList
 					newList.add(wrappedEntryCopy);
 
-					if(FakeHitboxManager.ACTIVE && addPlayer) {
+					if(FakeHitboxManager.ACTIVE && addPlayer && !entry.profileId().equals(event.getPlayer().getUniqueId())) {
 						// Ensure player doesn't see their own fake player entries
-						if(!entry.profileId().equals(event.getPlayer().getUniqueId())) {
-							FakeHitbox hitbox = FakeHitboxManager.getByPlayerUuid(entry.profileId());
-							if(hitbox != null) {
-								newList.addAll(hitbox.getPlayerInfoEntries());
-							}
+						FakeHitbox hitbox = FakeHitboxManager.getByPlayerUuid(entry.profileId());
+						if(hitbox != null) {
+							newList.addAll(hitbox.getPlayerInfoEntries());
 						}
 					}
 
@@ -339,35 +337,7 @@ public class PacketListeners
 
 					DisguiseManager.Disguise disguise = DisguiseManager.getDisguiseSeeing(updatedPlayer, event.getPlayer());
 					if (disguise != null) {
-						EnumWrappers.NativeGameMode nativeGameMode = getNativeGameMode(entry.gameMode());
-						WrappedChatComponent wrappedDisplayName = WrappedChatComponent.fromHandle(entry.displayName());
-						if(addPlayer) {
-							// The playerinfodata with the disguised player's UUID but
-							// the disguise target's skin
-							// not listed
-							PlayerInfoData replacementData = new PlayerInfoData(
-								disguise.disguisedGameProfile.getId(), entry.latency(), false,
-								nativeGameMode, WrappedGameProfile.fromHandle(disguise.disguisedGameProfile),
-								WrappedChatComponent.fromHandle(entry.displayName()),
-								//(WrappedProfilePublicKey.WrappedProfileKeyData) null);
-								(WrappedRemoteChatSessionData) null);
-
-							newList.set(originalIndex, replacementData);
-
-							disguise.viewers.put(event.getPlayer(), TeamArena.getGameTick());
-						}
-
-						// The player profile of the tab list entry that looks like the
-						// original player, but has a different UUID to avoid conflict
-						// with the above replacementData profile
-						GameProfile tabListProfile = disguise.tabListGameProfile;
-						PlayerInfoData tabListData = new PlayerInfoData(tabListProfile.getId(), entry.latency(),
-							entry.listed(), nativeGameMode, WrappedGameProfile.fromHandle(tabListProfile),
-							wrappedDisplayName,
-							//(WrappedProfilePublicKey.WrappedProfileKeyData) null);
-							(WrappedRemoteChatSessionData) null);
-
-						newList.add(tabListData);
+						disguise.handlePlayerInfoAdd(event.getPlayer(), entry, addPlayer, newList, originalIndex);
 					}
 				}
 

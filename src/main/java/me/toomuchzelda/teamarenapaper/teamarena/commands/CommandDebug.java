@@ -23,10 +23,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.hideandseek.PacketFlyingPoint;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.PayloadTestKillstreak;
 import me.toomuchzelda.teamarenapaper.utils.*;
-import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketDisplay;
-import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
-import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
-import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -608,6 +605,10 @@ public class CommandDebug extends CustomCommand {
 					throw new CommandException("Failed to load song: " + e.getMessage(), e);
 				}
 			}
+			case "packethuman" -> {
+				FakeHuman fh = FakeHuman.spawn(player.getLocation().add(player.getLocation().getDirection().multiply(3d)), "fakehuman");
+				fh.humanTarget(player);
+			}
 			default -> showUsage(sender);
 		}
 	}
@@ -617,7 +618,7 @@ public class CommandDebug extends CustomCommand {
 		if (args.length == 1) {
 			return Arrays.asList("hide", "gui", "guitest", "signtest", "game", "setrank", "setteam", "setkit",
 				"votetest", "draw", "graffititest", "respawn", "fakehitbox", "testmotd", "arrowMarker", "packetcache", "showSpawns",
-				"flyingpoint", "fakeBlock", "elevator", "showores", "darken", "amogus", "loadsong", "movemaxxing");
+				"flyingpoint", "fakeBlock", "elevator", "showores", "darken", "amogus", "loadsong", "movemaxxing", "packethuman");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");
