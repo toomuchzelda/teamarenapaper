@@ -781,6 +781,11 @@ public class EventListeners implements Listener
 	}
 
 	@EventHandler
+	public void entityDismount(EntityDismountEvent event) {
+		Herobrine.onDismount(event);
+	}
+
+	@EventHandler
 	public void playerItemDamage(PlayerItemDamageEvent event) {
 		event.setCancelled(true);
 	}
