@@ -686,6 +686,10 @@ public class PacketEntity
 		return location.clone();
 	}
 
+	public Location getLocationMut() {
+		return location;
+	}
+
 	public World getWorld() {
 		return location.getWorld();
 	}

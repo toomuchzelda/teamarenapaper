@@ -12,6 +12,7 @@ import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketPlayer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
@@ -212,5 +213,7 @@ public class LoginHandler
 		SidebarManager.getInstance(player).registerObjectives(player);
 
 		Main.getGame().joiningPlayer(player, pinfo);
+
+		PacketPlayer.onJoin(event);
 	}
 }

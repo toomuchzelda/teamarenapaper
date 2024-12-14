@@ -1,37 +1,40 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
 import com.destroystokyo.paper.entity.Pathfinder;
+import com.mojang.authlib.GameProfile;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageNumbers;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
-import me.toomuchzelda.teamarenapaper.utils.packetentities.FakeHuman;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketPlayer;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.SpeechBubbleHologram;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDismountEvent;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.Vector;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-public class Herobrine extends FakeHuman {
+public class Herobrine extends PacketPlayer {
 
 	private static final int SLEEP_TIME = 3 * 20;
 	private static final double MAX_HEALTH = 100d;
+
+	private static final ItemStack PICKAXE = new ItemStack(Material.DIAMOND_PICKAXE);
+	private static final ItemStack SWORD = new ItemStack(Material.DIAMOND_SWORD);
+	private static final ItemStack WOODEN_AXE = new ItemStack(Material.WOODEN_AXE);
 
 	private enum TargetType {
 		CHASE,
@@ -61,14 +64,27 @@ public class Herobrine extends FakeHuman {
 	private static final NamespacedKey BEAT_MARKER_KEY = new NamespacedKey(Main.getPlugin(), "herobrinebeatmarker");
 
 	public Herobrine(TeamArena game, Block shrineTop, Location location, String name) {
-		super(location, name);
+		super(location, null, viewer -> true, name);
 
 		this.game = game;
 		this.shrine = shrineTop;
 		this.sleepTime = SLEEP_TIME;
+	}
 
-		this.getAttribute(Attributes.MAX_HEALTH).setBaseValue(MAX_HEALTH);
-		this.setHealth((float) MAX_HEALTH);
+	@Override
+	public void respawn() {
+		super.respawn();
+		this.mob.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(MAX_HEALTH);
+		this.mob.setHealth(MAX_HEALTH);
+	}
+
+	@Override
+	public void despawn() {
+		super.despawn();
+		if (this.beatMount != null)
+			this.beatMount.remove();
+		this.beatMount = null;
+		this.target = null;
 	}
 
 	private void selectTarget() {
@@ -80,7 +96,7 @@ public class Herobrine extends FakeHuman {
 		// try the player furthest away
 		for (Player p : Bukkit.getOnlinePlayers()) {
 			if (this.game.isDead(p)) continue;
-			double distToCandidate = EntityUtils.distanceSqr(this.bukkitEntity, p);
+			double distToCandidate = EntityUtils.distanceSqr(p, this.getLocationMut());
 			if (distToCandidate > distSqr) {
 				candidate = p;
 				distSqr = distToCandidate;
@@ -117,7 +133,7 @@ public class Herobrine extends FakeHuman {
 				this.sleepTime = SLEEP_TIME;
 				this.target = null;
 				this.behaviourTick = 0;
-				this.setMainHand(Material.AIR);
+				this.setEquipment(EquipmentSlot.HAND, new ItemStack(Material.AIR));
 				this.setGravity(true);
 				if (this.beatMount != null) {
 					this.beatMount.remove();
@@ -136,8 +152,8 @@ public class Herobrine extends FakeHuman {
 
 		Location loc = this.mob.getLocation();
 		if (this.target != null)
-			loc.setDirection(target.getEyeLocation().toVector().subtract(this.bukkitEntity.getEyeLocation().toVector()));
-		this.bukkitEntity.teleport(loc);
+			loc.setDirection(target.getEyeLocation().toVector().subtract(this.getEyeLoc().toVector()));
+		this.move(loc, true);
 	}
 
 	private void chaseTick() {
@@ -150,11 +166,11 @@ public class Herobrine extends FakeHuman {
 					final Material mat = entry.getValue();
 
 					if (mat.isAir())
-						this.setMainHand(Material.DIAMOND_PICKAXE);
+						this.setMainHand(PICKAXE);
 					else
-						this.setMainHand(mat);
+						this.setMainHand(new ItemStack(mat));
 
-					this.bukkitEntity.swingMainHand();
+					this.swingMainHand();
 
 					final Block blockPos = entry.getKey();
 					if (mat.isAir()) {
@@ -162,7 +178,7 @@ public class Herobrine extends FakeHuman {
 							Bukkit.getOnlinePlayers().forEach(player -> ParticleUtils.blockBreakEffect(player, blockPos));
 					}
 					else {
-						loc.getWorld().playSound(this.bukkitEntity, blockPos.getBlockSoundGroup().getPlaceSound(), SoundCategory.BLOCKS, 1f, 1f);
+						loc.getWorld().playSound(this.getLocationMut(), blockPos.getBlockSoundGroup().getPlaceSound(), SoundCategory.BLOCKS, 1f, 1f);
 					}
 					blockPos.setType(mat);
 				}
@@ -216,17 +232,18 @@ public class Herobrine extends FakeHuman {
 			}
 
 			if (pf != null) {
-				printPath(pf);
+				//printPath(pf);
 			}
 		}
 
-		double reachSqr = this.bukkitEntity.getAttribute(Attribute.PLAYER_ENTITY_INTERACTION_RANGE).getValue();
+		double reachSqr = 3d; // this.mob.getAttribute(Attribute.PLAYER_ENTITY_INTERACTION_RANGE).getValue();
 		reachSqr *= reachSqr;
-		if (EntityUtils.distanceSqr(this.bukkitEntity, this.target) <= reachSqr) {
-			this.setMainHand(Material.DIAMOND_SWORD);
-			this.bukkitEntity.swingMainHand();
+		if (EntityUtils.distanceSqr(this.target, this.getLocationMut()) <= reachSqr) {
+			this.setMainHand(SWORD);
+			this.swingMainHand();
 
-			DamageEvent damageEvent = DamageEvent.newDamageEvent(this.target, 1d, DamageType.MELEE, this.bukkitEntity, false);
+			DamageEvent damageEvent = DamageEvent.newDamageEvent(this.target, 1d, DamageType.MELEE, this.mob, false);
+			damageEvent.setRawDamage(DamageNumbers.getMaterialBaseDamage(SWORD.getType()));
 			Main.getGame().queueDamage(damageEvent);
 		}
 	}
@@ -235,32 +252,32 @@ public class Herobrine extends FakeHuman {
 		if (this.behaviourTick == 0) {
 			final Location top = this.shrine.getLocation().add(0.5d, 1d, 0.5d);
 			this.mob.teleport(top);
-			particleTeleport(this.bukkitEntity, top);
+			particleMove(top);
 			particleTeleport(this.target, top);
 		}
 		else if (this.behaviourTick < 3 * 20) {
 			// noop
 		}
 		else if (this.behaviourTick == 3 * 20) {
-			this.setMainHand(Material.WOODEN_AXE);
+			this.setMainHand(WOODEN_AXE);
 		}
 		else if (this.behaviourTick % 30 == 0) {
-			this.swing(InteractionHand.MAIN_HAND);
-			this.bukkitEntity.getWorld().strikeLightningEffect(this.target.getLocation());
-			DamageEvent damage = DamageEvent.newDamageEvent(this.target, 10d, DamageType.END_GAME_LIGHTNING, this.bukkitEntity, false);
+			this.swingMainHand();
+			this.mob.getWorld().strikeLightningEffect(this.target.getLocation());
+			DamageEvent damage = DamageEvent.newDamageEvent(this.target, 10d, DamageType.END_GAME_LIGHTNING, this.mob, false);
 			this.game.queueDamage(damage);
 		}
 	}
 
 	private void beatTick() {
 		if (this.behaviourTick == 0) {
-			final Location top = this.shrine.getLocation().add(0.5d, 1d, 0.5d);
-			final Location hero = top.clone().add(3d, 0d, 0d);
+			final Location top = this.shrine.getLocation().add(0.5d, 1.5d, 0.5d);
+			final Location hero = top.clone().add(3d, -0.5d, 0d);
 
 			this.setGravity(false);
 			this.mob.teleport(hero);
-			particleTeleport(this.bukkitEntity, hero);
-			this.setMainHand(Material.AIR);
+			particleMove(hero);
+			this.setMainHand(new ItemStack(Material.AIR));
 
 			this.beatMount = top.getWorld().spawn(top, Interaction.class);
 			this.beatMount.getPersistentDataContainer().set(
@@ -276,7 +293,7 @@ public class Herobrine extends FakeHuman {
 
 		}
 		else { // ora ora ora
-			this.swing(InteractionHand.MAIN_HAND);
+			this.swingMainHand();
 
 			final Location bloodLoc = target.getLocation().add(0d, (this.behaviourTick % 2 == 0 ? 0d : 1d), 0d);
 			EntityUtils.forEachTrackedPlayer(this.target,
@@ -293,7 +310,7 @@ public class Herobrine extends FakeHuman {
 				}
 			}
 
-			DamageEvent damage = DamageEvent.newDamageEvent(this.target, 1d, DamageType.MELEE, this.bukkitEntity, false);
+			DamageEvent damage = DamageEvent.newDamageEvent(this.target, 1d, DamageType.MELEE, this.mob, false);
 			damage.setIgnoreInvulnerability(true);
 			this.game.queueDamage(damage);
 		}
@@ -305,9 +322,12 @@ public class Herobrine extends FakeHuman {
 		}
 	}
 
-	private void hTeleport(Location loc) {
-		this.mob.teleport(loc);
-		this.bukkitEntity.teleport(loc);
+	private void particleMove(Location loc) {
+		this.getWorld().playEffect(this.getLocationMut(), Effect.ENDER_SIGNAL, 0);
+		this.getWorld().playSound(this.getLocationMut(), Sound.ENTITY_ENDERMAN_TELEPORT, SoundCategory.HOSTILE, 1f, 1f);
+		this.move(loc);
+		this.getWorld().playEffect(loc, Effect.ENDER_SIGNAL, 0);
+		this.getWorld().playSound(this.getLocationMut(), Sound.ENTITY_ENDERMAN_TELEPORT, SoundCategory.HOSTILE, 1f, 1f);
 	}
 
 	private static void particleTeleport(Entity e, Location loc) {
@@ -363,7 +383,7 @@ public class Herobrine extends FakeHuman {
 			double y = MathUtils.randomMax(1d);
 			double z = MathUtils.randomMax(1d);
 
-			return new Vector(x, y, z).normalize();
+			return new Vector(x, y, z).normalize().multiply(1.2d);
 		}
 	}
 }

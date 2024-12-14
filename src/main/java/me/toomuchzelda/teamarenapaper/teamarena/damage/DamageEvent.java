@@ -8,6 +8,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketPlayer;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundDamageEventPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
@@ -110,6 +111,9 @@ public class DamageEvent {
 
 		//prevent spectators from getting hurt
 		if(event.getEntity() instanceof Player p && Main.getGame().isSpectator(p))
+			return null;
+
+		if (PacketPlayer.isPacketPlayerPathfinder(event.getEntity()))
 			return null;
 
 
