@@ -1,6 +1,9 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
 import com.destroystokyo.paper.entity.Pathfinder;
+import com.destroystokyo.paper.profile.CraftPlayerProfile;
+import com.destroystokyo.paper.profile.PlayerProfile;
+import com.destroystokyo.paper.profile.ProfileProperty;
 import com.mojang.authlib.GameProfile;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
@@ -30,7 +33,7 @@ import java.util.*;
 public class Herobrine extends PacketPlayer {
 
 	private static final int SLEEP_TIME = 3 * 20;
-	private static final double MAX_HEALTH = 100d;
+	private static final double MAX_HEALTH = 1000d;
 
 	private static final ItemStack PICKAXE = new ItemStack(Material.DIAMOND_PICKAXE);
 	private static final ItemStack SWORD = new ItemStack(Material.DIAMOND_SWORD);
@@ -41,6 +44,10 @@ public class Herobrine extends PacketPlayer {
 		SMITE,
 		BEAT
 	}
+	// Bias for CHASE
+	private static final TargetType[] CHANCES = new TargetType[] {
+		TargetType.CHASE, TargetType.CHASE, TargetType.SMITE, TargetType.BEAT
+	};
 
 	private static final Component[] SCREAM_MESSAGES = new Component[] {
 		Component.text("AAAHH!!!", NamedTextColor.DARK_RED, TextDecoration.BOLD),
@@ -63,12 +70,31 @@ public class Herobrine extends PacketPlayer {
 	private Entity beatMount;
 	private static final NamespacedKey BEAT_MARKER_KEY = new NamespacedKey(Main.getPlugin(), "herobrinebeatmarker");
 
-	public Herobrine(TeamArena game, Block shrineTop, Location location, String name) {
-		super(location, null, viewer -> true, name);
+	private static GameProfile buildGameProfile() {
+		PlayerProfile pp = Bukkit.createProfile(UUID.randomUUID(), "Herobrine");
+		pp.setProperty(
+			new ProfileProperty("textures",
+			"ewogICJ0aW1lc3RhbXAiIDogMTczNDE3Mzc1NjI4NCwKICAicHJvZmlsZUlkIiA6ICI5NTg2ZTVhYjE1N2E0NjU4YWQ4MGIwNzU1MmE5Y2E2MyIsCiAgInByb2ZpbGVOYW1lIiA6ICJNSEZfSGVyb2JyaW5lIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzJjNjVlZDI4MjljODNlMTE5YTgwZGZiMjIyMTY0NDNlODc4ZWYxMDY0OWM0YTM1NGY3NGJmNDVhZDA2YmMxYTciCiAgICB9CiAgfQp9",
+			"a6/5LRu4JVXslE1vAuPdAAeFC797LodGesjfq8q1icfQOvgJfkSicGYiFvZf86Fo2C/hcIz8sZmgUsa5vDRpOlHfuK34nEc7tIh09bQtufH6xQY4q/nSDHy7ODVhjkX27GwZhMYE31NFjfpjVhVrQXWVWaJEtyDok0KlrllO+cU7Hbu0WbxhEMsStiU4u9r2yTaE9Njjp0YOL2i/Bm/02x4yYzyR+frmnZvVcBBHf7i6aElyj+GojNah1u88oooERY70eAbriCTX/MlzfgHxy+DP/SJgFmst4GZcSwfKs2YkV3fWyOhTfoFtlhVBbv39kJh5mZykPjOWZ2KonL/uuTUdgro9kVMhQrKE22cM93Nm3aaqhWJ9Ny7vJ/TPz1syTYRF5akKtU8WLROhY0mqzHoTXFUWyYU0er2oZtpi4WkUZIOf3gEhkOUVE5m09etg+lzPzNVxCid8/ae1/J4QyFsHAd/xDIXKVhRbcyoGOZI5d0iyGKxH0gt7WcjLVGBeu45C0+2HDcRsqyhph+NnqaFg5FwhxisYiTe3yi8rXKqVwqZFYmqTkmZJpPiaWbK5O7rDM3vnGl6lTKhOkKcOp5WSRRX2FfTIs79VfBcToLMQva8kamX8r0p4SVwwOZ3f02ueUV9TEXdIHt4UB6CqL40/De5/ftzXZ59z5oyOksw="
+			)
+		);
+
+		return ((CraftPlayerProfile) pp).buildGameProfile();
+	}
+
+	public Herobrine(TeamArena game, Block shrineTop, Location location) {
+		super(location, null, viewer -> true, buildGameProfile());
 
 		this.game = game;
 		this.shrine = shrineTop;
 		this.sleepTime = SLEEP_TIME;
+	}
+
+	@Override
+	protected void spawnMob(Location location) {
+		super.spawnMob(location);
+
+		this.mob.customName(Component.text("Herobrine"));
 	}
 
 	@Override
@@ -88,7 +114,7 @@ public class Herobrine extends PacketPlayer {
 	}
 
 	private void selectTarget() {
-		TargetType goal = MathUtils.randomElement(TargetType.values());
+		TargetType goal = MathUtils.randomElement(CHANCES);
 
 		LivingEntity candidate = null;
 		double distSqr = -1d;
@@ -114,45 +140,45 @@ public class Herobrine extends PacketPlayer {
 	public void tick() {
 		super.tick();
 
-		if (this.sleepTime-- > 0) {
-			return;
-		}
+		if (this.sleepTime-- <= 0) {
+			if (this.target != null) {
+				if (!this.game.isDead(this.target)) {
+					if (this.targetType == TargetType.CHASE)
+						this.chaseTick();
+					else if (this.targetType == TargetType.SMITE)
+						this.smiteTick();
+					else if (this.targetType == TargetType.BEAT)
+						this.beatTick();
 
-		if (this.target != null) {
-			if (!this.game.isDead(this.target)) {
-				if (this.targetType == TargetType.CHASE)
-					this.chaseTick();
-				else if (this.targetType == TargetType.SMITE)
-					this.smiteTick();
-				else if (this.targetType == TargetType.BEAT)
-					this.beatTick();
-
-				this.behaviourTick++;
+					this.behaviourTick++;
+				}
+				else {
+					this.sleepTime = SLEEP_TIME;
+					this.target = null;
+					this.behaviourTick = 0;
+					this.setEquipment(EquipmentSlot.HAND, new ItemStack(Material.AIR));
+					this.setGravity(true);
+					if (this.beatMount != null) {
+						this.beatMount.remove();
+						this.beatMount = null;
+					}
+				}
 			}
 			else {
-				this.sleepTime = SLEEP_TIME;
-				this.target = null;
-				this.behaviourTick = 0;
-				this.setEquipment(EquipmentSlot.HAND, new ItemStack(Material.AIR));
-				this.setGravity(true);
+				this.scaffoldPositions.clear();
 				if (this.beatMount != null) {
 					this.beatMount.remove();
 					this.beatMount = null;
 				}
+				this.selectTarget();
 			}
-		}
-		else {
-			this.scaffoldPositions.clear();
-			if (this.beatMount != null) {
-				this.beatMount.remove();
-				this.beatMount = null;
-			}
-			this.selectTarget();
 		}
 
 		Location loc = this.mob.getLocation();
 		if (this.target != null)
 			loc.setDirection(target.getEyeLocation().toVector().subtract(this.getEyeLoc().toVector()));
+		else
+			loc.setDirection(this.getLocationMut().getDirection());
 		this.move(loc, true);
 	}
 
@@ -165,19 +191,17 @@ public class Herobrine extends PacketPlayer {
 				for (var entry : bp.blocks.entrySet()) {
 					final Material mat = entry.getValue();
 
-					if (mat.isAir())
-						this.setMainHand(PICKAXE);
-					else
-						this.setMainHand(new ItemStack(mat));
-
 					this.swingMainHand();
 
 					final Block blockPos = entry.getKey();
 					if (mat.isAir()) {
-						if (!blockPos.getType().isAir())
+						if (!blockPos.getType().isAir()) {
+							this.setMainHand(PICKAXE);
 							Bukkit.getOnlinePlayers().forEach(player -> ParticleUtils.blockBreakEffect(player, blockPos));
+						}
 					}
 					else {
+						this.setMainHand(new ItemStack(mat));
 						loc.getWorld().playSound(this.getLocationMut(), blockPos.getBlockSoundGroup().getPlaceSound(), SoundCategory.BLOCKS, 1f, 1f);
 					}
 					blockPos.setType(mat);
@@ -255,7 +279,7 @@ public class Herobrine extends PacketPlayer {
 			particleMove(top);
 			particleTeleport(this.target, top);
 		}
-		else if (this.behaviourTick < 3 * 20) {
+		else if (this.behaviourTick < 2 * 20) {
 			// noop
 		}
 		else if (this.behaviourTick == 3 * 20) {
@@ -302,11 +326,14 @@ public class Herobrine extends PacketPlayer {
 			if (this.target instanceof Player pTarget) {
 				ParticleUtils.blockBreakEffect(pTarget, Material.REDSTONE_BLOCK, bloodLoc);
 				if (this.behaviourTick % 4 == 0) {
-					SpeechBubbleHologram s = new SpeechBubbleHologram(
-						pTarget, MathUtils.randomElement(SCREAM_MESSAGES), new ScreamMovementFunc()
-					);
-					s.setLiveTime(30);
-					s.respawn();
+					// Spawning a new packetent during tick() throws CME
+					Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
+						SpeechBubbleHologram s = new SpeechBubbleHologram(
+							pTarget, MathUtils.randomElement(SCREAM_MESSAGES), new ScreamMovementFunc()
+						);
+						s.setLiveTime(30);
+						s.respawn();
+					});
 				}
 			}
 

@@ -606,7 +606,7 @@ public class CommandDebug extends CustomCommand {
 				}
 			}
 			case "packethuman" -> {
-				Herobrine h = new Herobrine(Main.getGame(), player.getTargetBlockExact(10), player.getLocation(), "fakehuman");
+				Herobrine h = new Herobrine(Main.getGame(), player.getTargetBlockExact(10), player.getLocation());
 				h.respawn();
 			}
 			default -> showUsage(sender);

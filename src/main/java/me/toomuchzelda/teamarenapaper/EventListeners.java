@@ -658,9 +658,6 @@ public class EventListeners implements Listener
 				&& ctf.flagStands.containsKey(stand)) {
 				event.setCancelled(true);
 			}
-			else if (PacketPlayer.isPacketPlayerPathfinder(collidedWith)) {
-				event.setCancelled(true);
-			}
 			else if (!(projectile instanceof FishHook) && // Medic needs to fishhook teammates
 				projectile.getShooter() instanceof Player pShooter &&
 				collidedWith instanceof LivingEntity livingVictim) {

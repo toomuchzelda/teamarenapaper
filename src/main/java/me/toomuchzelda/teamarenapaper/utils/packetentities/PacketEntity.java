@@ -387,12 +387,7 @@ public class PacketEntity
 	 * @param effect A ClientboundAnimatePacket effect.
 	 */
 	public void playEffect(int effect) {
-		PacketContainer packet = new PacketContainer(PacketType.Play.Server.ANIMATION);
-
-		StructureModifier<Integer> ints = packet.getIntegers();
-		ints.write(0, this.getId());
-		ints.write(1, effect);
-
+		PacketContainer packet = EntityUtils.animatePacket(this.getId(), effect);
 		this.realViewers.forEach(player -> this.sendPacket(player, packet));
 	}
 

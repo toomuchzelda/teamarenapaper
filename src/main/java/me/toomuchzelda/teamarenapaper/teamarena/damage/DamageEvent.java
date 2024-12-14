@@ -113,9 +113,6 @@ public class DamageEvent {
 		if(event.getEntity() instanceof Player p && Main.getGame().isSpectator(p))
 			return null;
 
-		if (PacketPlayer.isPacketPlayerPathfinder(event.getEntity()))
-			return null;
-
 
 		if(event instanceof EntityDamageByEntityEvent dEvent) {
 			if(dEvent.getDamager() instanceof Player p && Main.getGame().isSpectator(p))
