@@ -27,12 +27,14 @@ public abstract class Ability {
 
 	public static void giveAbility(Player player, Ability ability, PlayerInfo pinfo) {
 		if (pinfo.abilities.add(ability)) {
-			ability.giveAbility(player);
+
 		}
 		else {
 			Main.logger().warning("Tried to add ability " + ability.getClass() + " to player " + player.getName() + " when they already had it");
 			Thread.dumpStack();
 		}
+
+		ability.giveAbility(player);
 	}
 
 	public static void removeAbility(Player player, Ability ability, PlayerInfo pinfo) {

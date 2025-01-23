@@ -47,9 +47,12 @@ public class PacketPlayer extends PacketEntity {
 		assert CompileAsserts.OMIT || packetPlayer != null;
 		assert CompileAsserts.OMIT || packetPlayer.mob == event.getVictim(); // sanity check
 
-		packetPlayer.playHurtEffect(event);
-		if (event.getFinalDamage() >= packetPlayer.mob.getHealth()) {
-			packetPlayer.remove();
+		packetPlayer.onConfirmedHurt(event);
+		if (!event.isCancelled()) {
+			packetPlayer.playHurtEffect(event);
+			if (event.getFinalDamage() >= packetPlayer.mob.getHealth()) {
+				packetPlayer.remove();
+			}
 		}
 	}
 
@@ -148,6 +151,10 @@ public class PacketPlayer extends PacketEntity {
 
 	public void swingMainHand() {
 		this.broadcastPacket(this.swingMainHand);
+	}
+
+	public void onConfirmedHurt(DamageEvent event) {
+
 	}
 
 	public void playHurtEffect(DamageEvent event) {

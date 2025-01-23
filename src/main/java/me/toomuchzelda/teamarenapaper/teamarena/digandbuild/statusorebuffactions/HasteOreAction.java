@@ -17,13 +17,11 @@ import org.bukkit.potion.PotionEffectType;
 
 public class HasteOreAction implements StatusOreType.BuffAction
 {
-	public static final String HASTE_EFFECT_KEY = "dnbhst";
-	private static int compositeKeyCounter = 0; // Ensure all keys are unique to allow stacking of haste effect.
-	private static final PotionEffect HASTE_EFFECT = new PotionEffect(PotionEffectType.HASTE, 30 * 20, 0, false, true);
+	private static final PotionEffect HASTE_EFFECT = new PotionEffect(PotionEffectType.HASTE, 45 * 20, 2, false, true, true);
 	@Override
 	public int buff(Player redeemer, int required, int itemsUsed, LifeOre ore, DigAndBuild gameInstance) {
 		if (itemsUsed >= required) {
-			Component message = redeemer.playerListName().append(Component.text(" got your team Haste!", StatusOreType.HASTE.getTextColor()));
+			Component message = redeemer.playerListName().append(Component.text(" got your team Haste III!", StatusOreType.HASTE.getTextColor()));
 			for (Player teammate : Main.getPlayerInfo(redeemer).team.getPlayerMembers()) {
 				giveEffect(teammate);
 
@@ -43,7 +41,6 @@ public class HasteOreAction implements StatusOreType.BuffAction
 	}
 
 	public static void giveEffect(LivingEntity living) {
-		final String compositeKey = HASTE_EFFECT_KEY + compositeKeyCounter++;
-		//PotionEffectManager.addEffect(living, compositeKey, HASTE_EFFECT);
+		living.addPotionEffect(HASTE_EFFECT);
 	}
 }

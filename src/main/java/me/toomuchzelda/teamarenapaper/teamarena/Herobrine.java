@@ -70,6 +70,8 @@ public class Herobrine extends PacketPlayer {
 	private Entity beatMount;
 	private static final NamespacedKey BEAT_MARKER_KEY = new NamespacedKey(Main.getPlugin(), "herobrinebeatmarker");
 
+	private final Map<UUID, Double> damagers = new HashMap<>(); // Player uuids only
+
 	private static GameProfile buildGameProfile() {
 		PlayerProfile pp = Bukkit.createProfile(UUID.randomUUID(), "Herobrine");
 		pp.setProperty(
@@ -113,19 +115,63 @@ public class Herobrine extends PacketPlayer {
 		this.target = null;
 	}
 
+	@Override
+	public void onConfirmedHurt(DamageEvent event) {
+		super.onConfirmedHurt(event);
+
+		if (event.getFinalAttacker() instanceof Player pAttacker) {
+			this.damagers.merge(pAttacker.getUniqueId(), event.getFinalDamage(), Double::sum);
+		}
+	}
+
+	public Player getHighestDamager() {
+		Player p = null;
+		double max = 0d;
+		for (var entry : this.damagers.entrySet()) {
+			if (entry.getValue() > max) {
+				max = entry.getValue();
+				p = Bukkit.getPlayer(entry.getKey());
+			}
+		}
+
+		return p;
+	}
+
 	private void selectTarget() {
-		TargetType goal = MathUtils.randomElement(CHANCES);
+		TargetType goal = TargetType.CHASE; // MathUtils.randomElement(CHANCES);
 
 		LivingEntity candidate = null;
-		double distSqr = -1d;
 
-		// try the player furthest away
-		for (Player p : Bukkit.getOnlinePlayers()) {
-			if (this.game.isDead(p)) continue;
-			double distToCandidate = EntityUtils.distanceSqr(p, this.getLocationMut());
-			if (distToCandidate > distSqr) {
-				candidate = p;
-				distSqr = distToCandidate;
+		ArrayList<Player> candidates = new ArrayList<>(Bukkit.getOnlinePlayers());
+		candidates.removeIf(this.game::isDead);
+
+		if (!candidates.isEmpty()) {
+			Collections.shuffle(candidates);
+
+			// Add a bias for players further away
+			candidates.sort((o1, o2) -> {
+				boolean o1Sneaking = o1.isSneaking();
+				boolean o2Sneaking = o2.isSneaking();
+				if (o1Sneaking != o2Sneaking) {
+					if (o1Sneaking) return -1;
+					else return 1;
+				} else {
+					double dist1 = EntityUtils.distanceSqr(o1, this.getLocationMut());
+					double dist2 = EntityUtils.distanceSqr(o2, this.getLocationMut());
+					dist1 /= 10d;
+					dist2 /= 10d;
+					dist1 = Math.floor(dist1);
+					dist2 = Math.floor(dist2);
+
+					return (int) (dist2 - dist1);
+				}
+			});
+
+			if (candidates.size() == 1)
+				candidate = candidates.getFirst();
+			else {
+				final int index = MathUtils.random.nextInt(candidates.size() / 2);
+				candidate = candidates.get(index);
 			}
 		}
 
@@ -204,7 +250,9 @@ public class Herobrine extends PacketPlayer {
 						this.setMainHand(new ItemStack(mat));
 						loc.getWorld().playSound(this.getLocationMut(), blockPos.getBlockSoundGroup().getPlaceSound(), SoundCategory.BLOCKS, 1f, 1f);
 					}
-					blockPos.setType(mat);
+
+					if (this.game.isVandalisableBlock(blockPos))
+						blockPos.setType(mat);
 				}
 
 				this.mob.teleport(loc); // TODO interpolate?
