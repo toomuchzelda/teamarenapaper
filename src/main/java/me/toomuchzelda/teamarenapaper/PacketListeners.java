@@ -12,6 +12,7 @@ import com.mojang.datafixers.util.Pair;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitbox;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxViewer;
+import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.DisguiseManager;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
@@ -105,6 +106,8 @@ public class PacketListeners
 		updateAttributes(plugin);
 
 		pong(plugin);
+
+		updateSign(plugin);
 		//ProtocolLibrary.getProtocolManager().addPacketListener(new NoChatKeys());
 	}
 
@@ -579,6 +582,15 @@ public class PacketListeners
 			@Override
 			public void onPacketReceiving(PacketEvent event) {
 				RewindablePlayerBoundingBoxManager.receivePing(event);
+			}
+		});
+	}
+
+	private static void updateSign(JavaPlugin plugin) {
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin, PacketType.Play.Client.UPDATE_SIGN) {
+			@Override
+			public void onPacketReceiving(PacketEvent event) {
+				Inventories.onUpdateSign(event);
 			}
 		});
 	}
