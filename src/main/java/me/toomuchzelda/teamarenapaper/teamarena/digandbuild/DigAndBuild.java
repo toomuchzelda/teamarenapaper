@@ -78,8 +78,9 @@ public class DigAndBuild extends TeamArena
 	private static final int EFF_TIME = 3 * 60 * 20; // Time until enchantments are given. Anti stall measure.
 	private static final int EFF_ACTIVE = 0;
 	private static final Map<Enchantment, Integer> DEFAULT_EFF_ENCHANTS = Map.of(
-		Enchantment.EFFICIENCY, 2
+		Enchantment.EFFICIENCY, 3
 	);
+	private static final int HEROBRINE_TIME = 2 * 60 * 20;
 
 	private static final int TICKS_PER_GAIN_BLOCK = 30;
 	private static final int TICKS_PER_LOSE_BLOCK = 40;
@@ -117,6 +118,8 @@ public class DigAndBuild extends TeamArena
 	private boolean canJoinMidGame = true;
 
 	private int effTime; // Game timestamp of when eff2 will be given
+	private int herobrineTime = -1; // countdown that begins after efficiency given
+	private Herobrine herobrine;
 
 	public DigAndBuild(TeamArenaMap map) {
 		super(map);
@@ -412,16 +415,7 @@ public class DigAndBuild extends TeamArena
 			}
 			else { // KILLED
 				event.setCancelled(false);
-				// Stop the team from respawning
-				for (Player loser : ore.owningTeam.getPlayerMembers()) {
-					if (this.respawnTimers.remove(loser) != null) {
-						loser.sendActionBar(YOU_WONT_RESPAWN);
-					}
-					SpectatorAngelManager.removeAngel(loser);
-				}
-				this.announceOreKilled(ore);
-
-				this.canJoinMidGame = false; // Prevent players from joining the game from now on.
+				this.killLifeLore(ore);
 			}
 			// Bit messy to do here, need to clear current miners manually after successfully damaged
 			ore.clearMiners();
@@ -610,7 +604,18 @@ public class DigAndBuild extends TeamArena
 		}
 	}
 
-	private void announceOreKilled(LifeOre ore) {
+	private void killLifeLore(LifeOre ore) {
+		// Stop the team from respawning
+		for (Player loser : ore.owningTeam.getPlayerMembers()) {
+			if (this.respawnTimers.remove(loser) != null) {
+				loser.sendActionBar(YOU_WONT_RESPAWN);
+			}
+			SpectatorAngelManager.removeAngel(loser);
+		}
+
+		this.canJoinMidGame = false; // Prevent players from joining the game from now on.
+		ore.clearMiners();
+
 		final Component oreDestroyer = ore.getMinerComponent(false);
 
 		TextReplacementConfig minerReplacementLong =
@@ -846,6 +851,36 @@ public class DigAndBuild extends TeamArena
 			for (Player p : Bukkit.getOnlinePlayers()) {
 				p.playSound(p, Sound.ENTITY_CAT_PURREOW, SoundCategory.AMBIENT, 1f, 2f);
 			}
+
+			this.herobrineTime = HEROBRINE_TIME;
+		}
+
+		if (this.herobrineTime > 0) {
+			this.herobrineTime--;
+		}
+		else if (this.herobrineTime != -1) { // activate
+			this.herobrineTime = -1;
+			Location loc = this.middle.toLocation(this.getWorld());
+			this.herobrine = new Herobrine(this, this.getWorld().getBlockAt(loc), loc);
+			this.herobrine.respawn();
+
+			for (LifeOre ore : this.teamOres.values()) {
+				if (ore.setHealth(0)) {
+					this.killLifeLore(ore);
+					ore.coords.toBlock(this.gameWorld).setType(Material.AIR);
+				}
+			}
+		}
+		else if (this.herobrine != null) {
+			if (this.herobrine.isRemoved()) { // herobrine killed, end the game
+				Player highest = this.herobrine.getHighestDamager();
+				if (highest != null) {
+					this.winningTeam = Main.getPlayerInfo(highest).team;
+				}
+
+				this.prepEnd();
+				return;
+			}
 		}
 
 		this.doBlockCooldowns();
@@ -943,6 +978,7 @@ public class DigAndBuild extends TeamArena
 	public void checkWinner() {
 		TeamArenaTeam winnerTeam = null;
 		int aliveTeamCount = 0;
+		int maxTeamMembersAlive = 0;
 		for (TeamArenaTeam team : this.teams) {
 			if (!team.isAlive()) continue;
 			if (team.score == TEAM_DEAD_SCORE)
@@ -952,6 +988,7 @@ public class DigAndBuild extends TeamArena
 			if (!ore.isDead()) {
 				winnerTeam = team;
 				aliveTeamCount++;
+				maxTeamMembersAlive = Integer.MAX_VALUE; // No teams without ore may override
 			}
 			else {
 				int aliveTeamMemberCount = 0;
@@ -965,6 +1002,11 @@ public class DigAndBuild extends TeamArena
 
 				if (aliveTeamMemberCount >= 1) {
 					aliveTeamCount++;
+				}
+
+				if (aliveTeamMemberCount > maxTeamMembersAlive) {
+					maxTeamMembersAlive = aliveTeamMemberCount;
+					winnerTeam = team;
 				}
 
 				if (aliveTeamMemberCount == 1 && team.score != TEAM_LASTMAN_SCORE) {

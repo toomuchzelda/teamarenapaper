@@ -1,9 +1,12 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
+import com.comphenix.protocol.wrappers.*;
 import com.mojang.authlib.GameProfile;
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.PacketListeners;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.world.entity.player.PlayerModelPart;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
@@ -201,6 +204,42 @@ public class DisguiseManager
 		private void removeSkinParts(Player viewer) {
 			MetadataViewer metadataViewer = Main.getPlayerInfo(viewer).getMetadataViewer();
 			metadataViewer.removeViewedValue(this.disguisedPlayer, MetaIndex.PLAYER_SKIN_PARTS_IDX);
+		}
+
+		public void handlePlayerInfoAdd(Player receiver,
+										ClientboundPlayerInfoUpdatePacket.Entry entry,
+										boolean addPlayer,
+										List<PlayerInfoData> list, final int originalIndex) {
+
+			EnumWrappers.NativeGameMode nativeGameMode = PacketListeners.getNativeGameMode(entry.gameMode());
+			WrappedChatComponent wrappedDisplayName = WrappedChatComponent.fromHandle(entry.displayName());
+			if(addPlayer) {
+				// The playerinfodata with the disguised player's UUID but
+				// the disguise target's skin
+				// not listed
+				PlayerInfoData replacementData = new PlayerInfoData(
+					this.disguisedGameProfile.getId(), entry.latency(), false,
+					nativeGameMode, WrappedGameProfile.fromHandle(this.disguisedGameProfile),
+					WrappedChatComponent.fromHandle(entry.displayName()),
+					//(WrappedProfilePublicKey.WrappedProfileKeyData) null);
+					(WrappedRemoteChatSessionData) null);
+
+				list.set(originalIndex, replacementData);
+
+				this.viewers.put(receiver, TeamArena.getGameTick());
+			}
+
+			// The player profile of the tab list entry that looks like the
+			// original player, but has a different UUID to avoid conflict
+			// with the above replacementData profile
+			GameProfile tabListProfile = this.tabListGameProfile;
+			PlayerInfoData tabListData = new PlayerInfoData(tabListProfile.getId(), entry.latency(),
+				entry.listed(), nativeGameMode, WrappedGameProfile.fromHandle(tabListProfile),
+				wrappedDisplayName,
+				//(WrappedProfilePublicKey.WrappedProfileKeyData) null);
+				(WrappedRemoteChatSessionData) null);
+
+			list.add(tabListData);
 		}
 	}
 }

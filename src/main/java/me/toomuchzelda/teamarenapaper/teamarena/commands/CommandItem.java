@@ -31,7 +31,7 @@ public class CommandItem extends CustomCommand {
 	);
 
 	public CommandItem() {
-		super("item", "Get team arena items", "/item player item [count]", PermissionLevel.OWNER);
+		super("item", "Get team arena items", "/item player item [count]", PermissionLevel.MOD);
 	}
 
 	@Override

@@ -505,7 +505,7 @@ public class SearchAndDestroy extends TeamArena
 			spawnPos.getNearbyPlayers(2, 3)
 					.forEach(player -> EntityUtils.setVelocity(player, player.getLocation().toVector().subtract(spawnPos.toVector()).normalize().multiply(0.3d)));
 
-			buildShrine(spawnPos.clone().subtract(0, 2, 0));
+			Herobrine.buildShrine(spawnPos.clone().subtract(0, 2, 0));
 
 			spawnPos.getWorld().strikeLightningEffect(spawnPos.clone().add(0, 2, 0));
 		}
@@ -709,38 +709,6 @@ public class SearchAndDestroy extends TeamArena
 			player.removePotionEffect(PotionEffectType.REGENERATION);
 			EntityUtils.setMaxHealth(player, 10d);
 		}
-	}
-
-	public static void buildShrine(Location baseLocation) {
-		World world = baseLocation.getWorld();
-
-		final int baseX = baseLocation.getBlockX();
-		final int baseY = baseLocation.getBlockY();
-		final int baseZ = baseLocation.getBlockZ();
-
-		//clear out the surrounding space first
-		for(int x = -2; x < 3; x++) {
-			for(int y = 0; y < 4; y++) {
-				for(int z = -2; z < 3; z++) {
-					world.getBlockAt(baseX + x, baseY + y, baseZ + z).setType(Material.AIR);
-				}
-			}
-		}
-
-		for(int x = -1; x < 2; x++) {
-			for(int z = -1; z < 2; z++) {
-				world.getBlockAt(baseX + x, baseY, baseZ + z).setType(Material.GOLD_BLOCK);
-			}
-		}
-
-		world.getBlockAt(baseX, baseY + 1, baseZ).setType(Material.NETHERRACK);
-		world.getBlockAt(baseX, baseY + 2, baseZ).setType(Material.FIRE);
-
-		for(int x = -1; x < 2; x += 2)
-			world.getBlockAt(baseX + x, baseY + 1, baseZ).setType(Material.REDSTONE_TORCH);
-
-		for(int z = -1; z < 2; z += 2)
-			world.getBlockAt(baseX, baseY + 1, baseZ + z).setType(Material.REDSTONE_TORCH);
 	}
 
 	public static void announceBombEvent(Bomb bomb, BombEvent bombEvent) {

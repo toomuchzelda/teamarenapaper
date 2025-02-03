@@ -18,6 +18,10 @@ public class PacketEntityManager
 		}
 	}
 
+	static PacketEntity getById(int id) {
+		return ALL_PACKET_ENTITIES.get(id);
+	}
+
 	static void addAttachedEntity(AttachedPacketEntity entity) {
 		Set<AttachedPacketEntity> set = ATTACHED_PACKET_ENTITIES_LOOKUP.computeIfAbsent(entity.entity.getEntityId(), id -> new LinkedHashSet<>());
 		set.add(entity);

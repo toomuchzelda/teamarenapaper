@@ -38,6 +38,7 @@ import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketPlayer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.ParsingException;
@@ -778,6 +779,11 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void entityDamageItem(EntityDamageItemEvent event) {
 		event.setCancelled(true);
+	}
+
+	@EventHandler
+	public void entityDismount(EntityDismountEvent event) {
+		Herobrine.onDismount(event);
 	}
 
 	@EventHandler

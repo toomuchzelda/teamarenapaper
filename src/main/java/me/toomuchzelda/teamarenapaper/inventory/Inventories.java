@@ -22,6 +22,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.BlockState;
+import org.bukkit.craftbukkit.CraftWorld;
 import org.bukkit.craftbukkit.block.data.CraftBlockData;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
@@ -60,37 +61,34 @@ public final class Inventories implements Listener {
 
     public static boolean debug = false;
 
+	public static void onUpdateSign(PacketEvent event) { // Called by PacketListeners
+		Player player = event.getPlayer();
+		ManagedSign managedSign = managedSigns.remove(player);
+		if (managedSign == null) // ignore if not our sign
+			return;
+		ServerboundSignUpdatePacket packet = (ServerboundSignUpdatePacket) event.getPacket().getHandle();
+		// put it back if not the correct sign somehow
+		if (packet.getPos().getX() != managedSign.location.x() ||
+			packet.getPos().getY() != managedSign.location.y() ||
+			packet.getPos().getZ() != managedSign.location.z()) {
+			managedSigns.put(player, managedSign);
+			return;
+		}
+
+		event.setCancelled(true);
+		String[] lines = packet.getLines();
+		String fullMessage = lines[0];
+		if (!lines[1].isBlank()) {
+			fullMessage += " " + lines[1];
+		}
+		managedSign.future.complete(fullMessage); // not null
+		player.sendBlockChanges(List.of(managedSign.originalState), true);
+	}
+
     private Inventories() {
 		logger = Main.logger();
 
         Bukkit.getScheduler().runTaskTimer(Main.getPlugin(), Inventories::tick, 1, 1);
-
-		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(Main.getPlugin(), PacketType.Play.Client.UPDATE_SIGN) {
-			@Override
-			public void onPacketReceiving(PacketEvent event) {
-				Player player = event.getPlayer();
-				ManagedSign managedSign = managedSigns.remove(player);
-				if (managedSign == null) // ignore if not our sign
-					return;
-				ServerboundSignUpdatePacket packet = (ServerboundSignUpdatePacket) event.getPacket().getHandle();
-				// put it back if not the correct sign somehow
-				if (packet.getPos().getX() != managedSign.location.x() ||
-					packet.getPos().getY() != managedSign.location.y() ||
-					packet.getPos().getZ() != managedSign.location.z()) {
-					managedSigns.put(player, managedSign);
-					return;
-				}
-
-				event.setCancelled(true);
-				String[] lines = packet.getLines();
-				String fullMessage = lines[0];
-				if (!lines[1].isBlank()) {
-					fullMessage += " " + lines[1];
-				}
-				managedSign.future.complete(fullMessage); // not null
-				player.sendBlockChanges(List.of(managedSign.originalState), true);
-			}
-		});
     }
 
     public static void tick() {
@@ -170,7 +168,14 @@ public final class Inventories implements Listener {
 		var fakeData = Material.OAK_SIGN.createBlockData();
 		// send the associated data
 		var blockPos = new BlockPos(signLocation.getBlockX(), signLocation.getBlockY(), signLocation.getBlockZ());
-		var fakeSign = new SignBlockEntity(blockPos, ((CraftBlockData) fakeData).getState());
+
+		// NMS needs to get the level the sign is in, but it's not actually in any level, so override this as a hack
+		var fakeSign = new SignBlockEntity(blockPos, ((CraftBlockData) fakeData).getState()) {
+			@Override
+			public @Nullable net.minecraft.world.level.Level getLevel() {
+				return ((CraftWorld) player.getWorld()).getHandle();
+			}
+		};
 
 		List<Component> wrapped = TextUtils.wrapString(defaultValue, Style.empty(), 80);
 		net.minecraft.network.chat.Component[] lines = new net.minecraft.network.chat.Component[4];
@@ -215,7 +220,7 @@ public final class Inventories implements Listener {
 		ManagedSign managedSign = managedSigns.remove(e.getPlayer());
 		if (managedSign != null) {
 			logger.warning("Player " + e.getPlayer().getName() + " quit before sending sign edit packet");
-			managedSign.future.complete("");
+			// managedSign.future.complete(""); Don't complete if player offline
 		}
     }
 

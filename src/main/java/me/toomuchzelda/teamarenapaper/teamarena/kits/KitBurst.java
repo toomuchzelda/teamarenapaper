@@ -96,7 +96,7 @@ public class KitBurst extends Kit
 
 		//used for identifying the entity across events
 		private static final Component SHOTUGUN_FIREWORK_NAME = Component.text("burstfw");
-		private static final double SHOTGUN_SELF_DAMAGE = 3d;
+ 		private static final double SHOTGUN_SELF_DAMAGE = 5d;
 		private static final double SHOTGUN_MAX_DAMAGE = 18d;
 		private static final int SHOTGUN_ARROW_LIVE_TICKS = 17;
 

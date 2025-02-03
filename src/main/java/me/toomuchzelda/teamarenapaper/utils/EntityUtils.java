@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.utils;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
+import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Pair;
 import io.netty.buffer.Unpooled;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
@@ -168,9 +169,7 @@ public class EntityUtils {
 	 * @param effect A ClientboundAnimatePacket effect.
 	 */
 	public static void playEffect(Entity entity, int effect) {
-		net.minecraft.world.entity.Entity nmsEntity = ((CraftEntity) entity).getHandle();
-		PacketContainer packet = new PacketContainer(PacketType.Play.Server.ANIMATION,
-			new ClientboundAnimatePacket(nmsEntity, effect));
+		PacketContainer packet = animatePacket(entity.getEntityId(), effect);
 
 		//if a player, send packet to self
 		if (entity instanceof Player p) {
@@ -184,6 +183,14 @@ public class EntityUtils {
 		for (ServerPlayerConnection connection : getTrackedPlayers0(entity)) {
 			PlayerUtils.sendPacket(connection.getPlayer().getBukkitEntity(), packet);
 		}
+	}
+
+	public static PacketContainer animatePacket(int entityId, int animation) {
+		PacketContainer p = new PacketContainer(PacketType.Play.Server.ANIMATION);
+		p.getIntegers().write(0, entityId);
+		p.getIntegers().write(1, animation);
+
+		return p;
 	}
 
 	public static ClientboundRemoveEntitiesPacket getRemoveEntitiesPacket(Entity... entities) {

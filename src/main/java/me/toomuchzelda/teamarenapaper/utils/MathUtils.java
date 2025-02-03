@@ -19,6 +19,10 @@ public class MathUtils
 		return rand;
 	}
 
+	public static double randomMax(double max) {
+		return random.nextDouble(max);
+	}
+
 	public static int randomMax(int max) {
 		// + 1 to not exclude the max value itself
 		return random.nextInt(max + 1);

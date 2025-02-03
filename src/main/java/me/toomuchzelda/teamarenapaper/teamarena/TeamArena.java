@@ -46,6 +46,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.rewind.KitRewind;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.trigger.KitTrigger;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketPlayer;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.SpeechBubbleHologram;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -836,6 +837,9 @@ public abstract class TeamArena
 			}
 			else if (victim instanceof Bee) {
 				KitBeekeeper.BeekeeperAbility.handleBeeConfirmedDamage(event);
+			}
+			else if (PacketPlayer.isPacketPlayerPathfinder(victim)) {
+				PacketPlayer.onConfirmedDamage(event);
 			}
 
 			if (!event.isCancelled() && event.getFinalDamage() > 0) {
