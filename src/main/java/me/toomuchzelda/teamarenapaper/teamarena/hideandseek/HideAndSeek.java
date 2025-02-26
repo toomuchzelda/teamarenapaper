@@ -119,7 +119,7 @@ public class HideAndSeek extends TeamArena {
 	}
 
 	public boolean isAllowedEntityType(EntityType type) {
-		return this.allowedEntities.contains(type);
+		return type != EntityType.PLAYER && this.allowedEntities.contains(type);
 	}
 
 	public ArrayList<BlockCoords> getAllowedBlockCoords() {

@@ -395,7 +395,7 @@ public abstract class TeamArena
 			new KitVenom(), new KitRewind(), new KitValkyrie(), new KitExplosive(), new KitTrigger(), new KitMedic(this.killStreakManager),
 			new KitBerserker(), new KitEngineer(), new KitPorcupine(), new KitLongbow(), new KitSniper(), new KitBeekeeper(),
 
-			new KitHider(this), new KitSeeker(), new KitRadarSeeker(this)
+			new KitHider(this), /*new KitSeeker(),*/ new KitRadarSeeker(this)
 		};
 
 		for (Kit kit : defaultKits) {
