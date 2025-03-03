@@ -317,15 +317,6 @@ public class ItemUtils {
 				.build();
 	}
 
-	private static final int MODEL_DATA_MAX = 1 << 24; // precision loss beyond 16 million
-	public static final boolean SEND_CUSTOM_MODEL_DATA = false;
-	@Deprecated
-	public static Integer getCustomModelData(@NotNull String string) {
-		if (!SEND_CUSTOM_MODEL_DATA)
-			return null;
-		return Math.floorMod(string.hashCode(), MODEL_DATA_MAX); // model data cannot be negative
-	}
-
 	public static boolean isOldBuySign(BlockState blockState) {
 		if (blockState instanceof Sign signState) {
 			final String asString = PlainTextComponentSerializer.plainText().serialize(signState.lines().get(0));

@@ -46,10 +46,9 @@ public class KitPyro extends Kit
 		meta.displayName(ItemUtils.noItalics(Component.text("Incendiary launcher", MOLOTOV_TEXT_COLOR)));
 
 		Style style = Style.style(TextUtils.RIGHT_CLICK_TO).decoration(TextDecoration.ITALIC, false);
-		List<Component> lore = TextUtils.wrapString(
+		meta.lore(TextUtils.wrapString(
 				"Shoot a flaming arrow that lights the floor on fire and burns enemies that stand in it!\n" +
-						"The arrow will bounce off walls and ceilings so you can land some epic trick shots.", style, 200);
-		meta.lore(lore);
+						"The arrow will bounce off walls and ceilings so you can land some epic trick shots.", style, 200));
 		MOLOTOV_BOW.setItemMeta(meta);
 	}
 

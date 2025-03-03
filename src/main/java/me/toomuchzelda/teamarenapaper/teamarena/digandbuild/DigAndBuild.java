@@ -314,7 +314,7 @@ public class DigAndBuild extends TeamArena
 
 	private static ItemStack createItemStack(StatusOreType type, TeamArenaMap.DNBStatusOreInfo info) {
 		Component name = createOreItemName(info.required(), type.displayName);
-		List<Component> lore = TextUtils.wrapString(type.description, Style.style(TextUtils.RIGHT_CLICK_TO));
+		List<TextComponent> lore = TextUtils.wrapString(type.description, Style.style(TextUtils.RIGHT_CLICK_TO));
 
 		return ItemBuilder.of(info.itemType()).displayName(name).lore(lore).build();
 	}

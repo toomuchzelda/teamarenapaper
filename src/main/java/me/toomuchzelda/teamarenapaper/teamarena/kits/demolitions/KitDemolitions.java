@@ -17,6 +17,7 @@ import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
@@ -74,11 +75,11 @@ public class KitDemolitions extends Kit
 		setValidMineBlock(Material.DIRT_PATH);
 		setValidMineBlock(Material.FARMLAND);
 
-		List<Component> usage = TextUtils.wrapString("Right click to place the mine. " +
+		List<TextComponent> usage = TextUtils.wrapString("Right click to place the mine. " +
 				"It will be triggered by your remote detonator or when enemies step on it.",
 			Style.style(TextUtils.RIGHT_CLICK_TO));
 
-		List<Component> tntMineLore = TextUtils.wrapString("A TNT landmine trap that blows enemies to smithereens",
+		List<TextComponent> tntMineLore = TextUtils.wrapString("A TNT landmine trap that blows enemies to smithereens",
 			Style.style(TNT_COLOR));
 		TNT_MINE_ITEM = ItemBuilder.of(Material.TNT)
 			.amount(TNT_MINE_COUNT)
@@ -92,7 +93,7 @@ public class KitDemolitions extends Kit
 			.lore(tntMineLore)
 			.build();
 
-		List<Component> pushMineLore = TextUtils.wrapString("A trap that creates an explosive gust of air, pushing away all enemies near it",
+		List<TextComponent> pushMineLore = TextUtils.wrapString("A trap that creates an explosive gust of air, pushing away all enemies near it",
 			Style.style(NamedTextColor.WHITE));
 		PUSH_MINE_ITEM = ItemBuilder.of(Material.WHITE_WOOL)
 			.amount(PUSH_MINE_COUNT)

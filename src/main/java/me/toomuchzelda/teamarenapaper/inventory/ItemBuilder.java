@@ -125,16 +125,6 @@ public final class ItemBuilder {
 		return this;
 	}
 
-
-	@Deprecated
-	public ItemBuilder customModelData(@Nullable String data) {
-		if (data != null)
-			meta.setCustomModelData(ItemUtils.getCustomModelData(data));
-		else
-			meta.setCustomModelData(null);
-		return this;
-	}
-
     public ItemBuilder hide(ItemFlag... flags) {
         meta.addItemFlags(flags);
         return this;

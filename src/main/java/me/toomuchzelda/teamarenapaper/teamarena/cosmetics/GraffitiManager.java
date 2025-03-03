@@ -79,6 +79,11 @@ public class GraffitiManager {
 			if (sameBlock.equals(old)) {
 				// player owns the graffiti, replace it with new art
 				old.setItem(stack, false);
+				old.setFacingDirection(blockFace, true);
+				if (blockFace == BlockFace.UP || blockFace == BlockFace.DOWN) {
+					// NESW
+					old.setRotation(Rotation.values()[xzDirection.ordinal()]);
+				}
 				world.playSound(old, Sound.ENTITY_SILVERFISH_HURT, 0.2f, 1);
 				if (graffiti.isAnimated()) {
 					graffiti.sendMapView();

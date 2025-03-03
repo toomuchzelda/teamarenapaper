@@ -347,16 +347,22 @@ public class TextUtils {
 
 	private static final Pattern SAFE_TO_WRAP = Pattern.compile("\\s|\\n");
 
-	public static List<Component> wrapString(String string, Style style) {
+	public static List<TextComponent> wrapString(String string, Style style) {
 		return wrapString(string, style, DEFAULT_WIDTH);
 	}
 
-	public static List<Component> wrapString(String string, Style style, int maxWidth) {
+	public static List<TextComponent> wrapString(String string, Style style, int maxWidth) {
 		return wrapString(string, style, maxWidth, false);
 	}
 
-	public static List<Component> wrapString(String string, Style style, int maxWidth, boolean preserveNewlines) {
-		List<Component> lines = new ArrayList<>();
+	public static List<TextComponent> wrapString(String string, Style style, int maxWidth, boolean preserveNewlines) {
+		return wrapStringRaw(string, maxWidth, preserveNewlines).stream()
+			.map(line -> Component.text(line, style))
+			.toList();
+	}
+
+	public static List<String> wrapStringRaw(String string, int maxWidth, boolean preserveNewlines) {
+		List<String> lines = new ArrayList<>();
 		StringBuilder line = new StringBuilder();
 		String[] split = preserveNewlines ? string.split(" ") : SAFE_TO_WRAP.split(string);
 		for (String word : split) {
@@ -364,14 +370,14 @@ public class TextUtils {
 			String[] innerLines;
 			if (preserveNewlines && (innerLines = word.split("\\n", -1)).length != 1) {
 				if (!line.isEmpty()) {
-					lines.add(Component.text(line.append(' ').append(innerLines[0]).toString(), style));
+					lines.add(line.append(' ').append(innerLines[0]).toString());
 					line.setLength(0);
 				} else {
-					lines.add(Component.text(innerLines[0], style));
+					lines.add(innerLines[0]);
 				}
 				// line should be empty by now
 				for (int i = 1; i < innerLines.length - 1; i++) {
-					lines.add(Component.text(innerLines[i], style));
+					lines.add(innerLines[i]);
 				}
 				line.append(innerLines[innerLines.length - 1]);
 				continue;
@@ -382,13 +388,13 @@ public class TextUtils {
 					line.append(' ');
 				line.append(word);
 			} else {
-				lines.add(Component.text(line.toString(), style));
+				lines.add(line.toString());
 				line.setLength(0);
 				line.append(word);
 			}
 		}
 		// final line
-		lines.add(Component.text(line.toString(), style));
+		lines.add(line.toString());
 		return List.copyOf(lines);
 	}
 

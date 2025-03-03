@@ -64,7 +64,7 @@ public abstract class Preference<T> {
 	 * @return The description, split into lines
 	 */
 	@Nullable
-	public List<Component> getValueDescription(@NotNull T value) {
+	public List<? extends Component> getValueDescription(@NotNull T value) {
 		return null;
 	}
 

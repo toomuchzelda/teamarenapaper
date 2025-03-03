@@ -6,6 +6,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -22,22 +23,30 @@ public abstract class CosmeticItem {
 	@NotNull
 	public final NamespacedKey key;
 	@NotNull
-	public final String name;
+	public final Component name;
 	@Nullable
-	public final String author;
+	public final Component author;
 	@Nullable
-	public final String desc;
+	public final List<Component> desc;
 
 	private final ItemStack display;
 	protected CosmeticItem(@NotNull NamespacedKey key, @NotNull File file, @NotNull YamlConfiguration info) {
 		this.key = key;
-		var name = info.getString("name");
+		String name = info.getString("name");
 		if (name == null) {
 			name = file.getName().substring(0, file.getName().indexOf('.'));
 		}
-		this.name = name;
-		this.author = info.getString("author");
-		this.desc = info.getString("description");
+		MiniMessage miniMessage = MiniMessage.miniMessage();
+		this.name = miniMessage.deserialize(name).colorIfAbsent(NamedTextColor.YELLOW);
+		String author = info.getString("author");
+		this.author = author != null ? miniMessage.deserialize(author).colorIfAbsent(NamedTextColor.AQUA) : null;
+		String description = info.getString("description");
+		if (description != null) {
+			String wrapped = String.join("\n", TextUtils.wrapStringRaw(description, TextUtils.DEFAULT_WIDTH, true));
+			this.desc = TextUtils.splitLines(miniMessage.deserialize(wrapped).colorIfAbsent(NamedTextColor.GRAY));
+		} else {
+			this.desc = null;
+		}
 		var displayString = info.getString("display");
 		if (displayString == null) {
 			display = new ItemStack(Material.ARMOR_STAND);
@@ -60,15 +69,14 @@ public abstract class CosmeticItem {
 	protected List<Component> getExtraInfo() {
 		var author = Component.textOfChildren(Component.text("Author: ", NamedTextColor.GOLD),
 			this.author != null ?
-				Component.text(this.author, NamedTextColor.AQUA) :
+				this.author :
 				Component.text("Unknown", NamedTextColor.DARK_GRAY)
 		);
 		if (this.desc != null) {
-			var wrappedDesc = TextUtils.wrapString(this.desc, Style.style(NamedTextColor.GRAY), TextUtils.DEFAULT_WIDTH, true);
-			var list = new ArrayList<Component>(wrappedDesc.size() + 2);
+			var list = new ArrayList<Component>(desc.size() + 2);
 			list.add(author);
 			list.add(Component.text("Description:", NamedTextColor.GOLD));
-			list.addAll(wrappedDesc);
+			list.addAll(desc);
 
 			return List.copyOf(list);
 		} else {
@@ -79,7 +87,7 @@ public abstract class CosmeticItem {
 	@NotNull
 	public Component getInfo() {
 		return Component.textOfChildren(
-			Component.text("Name: ", NamedTextColor.GOLD), Component.text(this.name, NamedTextColor.YELLOW),
+			Component.text("Name: ", NamedTextColor.GOLD), this.name,
 			Component.newline(),
 			getExtras()
 		);
@@ -88,8 +96,7 @@ public abstract class CosmeticItem {
 	@NotNull
 	public ItemStack getDisplay(boolean complex) {
 		return ItemBuilder.from(display.clone())
-			.displayName(Component.text(this.name, NamedTextColor.YELLOW))
-			.customModelData("cosmetics/" + key)
+			.displayName(name)
 			.lore(getExtraInfo())
 			.hideAll()
 			.build();

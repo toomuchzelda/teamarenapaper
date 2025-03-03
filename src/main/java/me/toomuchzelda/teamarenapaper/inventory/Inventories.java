@@ -10,6 +10,7 @@ import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.Style;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ClientboundOpenSignEditorPacket;
@@ -177,7 +178,7 @@ public final class Inventories implements Listener {
 			}
 		};
 
-		List<Component> wrapped = TextUtils.wrapString(defaultValue, Style.empty(), 80);
+		List<TextComponent> wrapped = TextUtils.wrapString(defaultValue, Style.empty(), 80);
 		net.minecraft.network.chat.Component[] lines = new net.minecraft.network.chat.Component[4];
 		Arrays.fill(lines, net.minecraft.network.chat.Component.empty());
 		for (int i = 0; i < Math.min(wrapped.size(), 2); i++) {

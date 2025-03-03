@@ -51,7 +51,6 @@ public class PreferencesInventory implements InventoryProvider {
 	// https://minecraft-heads.com/custom-heads/miscellaneous/27523-settings
 	public static final ItemStack PREFERENCE = ItemBuilder.of(Material.COMPARATOR)
 		.displayName(text("Preferences", NamedTextColor.WHITE))
-		.customModelData("preferences")
 		.build();
 
 	TabBar<PreferenceCategory> categoryTab = new TabBar<>(null);
@@ -144,14 +143,12 @@ public class PreferencesInventory implements InventoryProvider {
 	);
 	private static <T> ClickableItem prefToItem(@Nullable InventoryProvider parent, @Nullable InventoryAccessor inventory,
 												Preference<T> preference, T current) {
-		Integer customModelData = ItemUtils.getCustomModelData("preferences/" + preference.getName());
 
 		var builder = ItemBuilder.from(preference.getIcon().clone())
 			.displayName(preference.getDisplayName())
 			.lore(text("ID: " + preference.getName(), DARK_GRAY))
 			.addLore(TextUtils.wrapString(preference.getDescription(), Style.style(YELLOW),
 				TextUtils.DEFAULT_WIDTH, true))
-			.customModelData(customModelData)
 			.hideAll();
 		// inventory can be null to only show the icon
 		if (inventory == null) {
@@ -359,7 +356,7 @@ public class PreferencesInventory implements InventoryProvider {
 
 		private ClickableItem prefOptionToItem(InventoryAccessor inventory, T option, boolean selected) {
 			String name = preference.serialize(option);
-			List<Component> description = preference.getValueDescription(option);
+			List<? extends Component> description = preference.getValueDescription(option);
 			var builder = ItemBuilder.of(selected ? Material.MAP : Material.PAPER)
 				.displayName(text(name, YELLOW));
 			if (description != null) {

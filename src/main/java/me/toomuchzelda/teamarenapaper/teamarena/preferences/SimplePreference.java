@@ -30,7 +30,7 @@ public class SimplePreference<T> extends Preference<T> {
 
 	private Component displayName;
 	private ItemStack icon = new ItemStack(Material.PAPER);
-	private Map<T, List<Component>> valueDescriptions = Map.of();
+	private Map<T, List<? extends Component>> valueDescriptions = Map.of();
 	private Function<String, T> migrator;
 	private PreferenceCategory category;
 
@@ -207,11 +207,11 @@ public class SimplePreference<T> extends Preference<T> {
 	}
 
 	@Override
-	public @Nullable List<Component> getValueDescription(@NotNull T value) {
+	public @Nullable List<? extends Component> getValueDescription(@NotNull T value) {
 		return valueDescriptions.get(value);
 	}
 
-	public SimplePreference<T> setValueDescriptions(@NotNull Map<T, List<Component>> descriptions) {
+	public SimplePreference<T> setValueDescriptions(@NotNull Map<T, List<? extends Component>> descriptions) {
 		valueDescriptions = Map.copyOf(descriptions);
 		return this;
 	}

@@ -145,7 +145,7 @@ public class Graffiti extends CosmeticItem {
 		if (!complex)
 			return super.getDisplay(false);
 		return ItemBuilder.of(Material.FILLED_MAP)
-			.displayName(Component.text(name, NamedTextColor.GOLD))
+			.displayName(name)
 			.lore(getExtraInfo())
 			.hideAll()
 			.meta(MapMeta.class, mapMeta -> mapMeta.setMapView(getMapView()))
