@@ -186,13 +186,7 @@ public class KitBerserker extends Kit {
 			// Blood visual effect
 			// For full kills only
 			if (amount == 1.0f) {
-				final Location location = victim.getLocation();
-				final Location up1 = location.clone().add(0d, 1d, 0d);
-				Bukkit.getOnlinePlayers().forEach(player -> {
-					ParticleUtils.blockBreakEffect(player, Material.REDSTONE_BLOCK, location);
-					ParticleUtils.blockBreakEffect(player, Material.REDSTONE_BLOCK, up1);
-				});
-
+				ParticleUtils.bloodEffect(victim);
 				berserker.getInventory().addItem(FOOD_ITEM);
 			}
 		}

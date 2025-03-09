@@ -65,6 +65,17 @@ public class EntityUtils {
 		}
     }
 
+	public static double getScale(Entity e) {
+		double scale = 1d;
+		if (e instanceof LivingEntity living) {
+			AttributeInstance instance = living.getAttribute(Attribute.GENERIC_SCALE);
+			if (instance != null)
+				scale = instance.getValue();
+		}
+
+		return scale;
+	}
+
     public static Vector projectileLaunchVector(Entity shooter, Vector original, double spray) {
         //slight randomness in direction
         double randX = MathUtils.random.nextGaussian() * spray;

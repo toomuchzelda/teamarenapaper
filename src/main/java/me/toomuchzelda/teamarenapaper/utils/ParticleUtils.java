@@ -8,6 +8,7 @@ import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.craftbukkit.CraftParticle;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
 public class ParticleUtils {
@@ -83,5 +84,29 @@ public class ParticleUtils {
 	/** Play the block destruction effect that happens when a player breaks a block */
 	public static void blockBreakEffect(Player player, Material mat, Location loc) {
 		player.playEffect(loc, Effect.STEP_SOUND, mat);
+	}
+
+	/** Play the block destruction effect that happens when a player breaks a block,
+	 * for all players who can see the entity victim  */
+	public static void bloodEffect(Entity victim) {
+		final Location loc = victim.getLocation();
+		final double oY = loc.getY();
+
+		// Play for self if player
+		if (victim instanceof Player player) {
+			blockBreakEffect(player, Material.REDSTONE_BLOCK, loc);
+			for (double i = 1; i < victim.getHeight(); i++)
+				blockBreakEffect(player, Material.REDSTONE_BLOCK, loc.add(0d, 1d, 0d));
+
+			loc.setY(oY);
+		}
+
+		EntityUtils.forEachTrackedPlayer(victim, player -> {
+			blockBreakEffect(player, Material.REDSTONE_BLOCK, loc);
+			for (double i = 1; i < victim.getHeight(); i++)
+				blockBreakEffect(player, Material.REDSTONE_BLOCK, loc.add(0d, 1d, 0d));
+
+			loc.setY(oY);
+		});
 	}
 }

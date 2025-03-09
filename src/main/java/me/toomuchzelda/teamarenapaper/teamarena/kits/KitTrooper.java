@@ -1,23 +1,24 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.abilities.explosives.CritAbility;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 
 public class KitTrooper extends Kit {
 
-    public KitTrooper() {
+    public KitTrooper(TeamArena game) {
         super("Trooper", "Your standard issue melee fighter, it can handle most 1-on-1 sword fights " +
                 "and can heal itself with Golden Apples. It has a small appetite though, so it can't eat them too often."
 				, Material.IRON_SWORD);
@@ -29,10 +30,10 @@ public class KitTrooper extends Kit {
         armour[0] = new ItemStack(Material.IRON_BOOTS);
         this.setArmour(armour);
 
-        ItemStack sword = new ItemStack(Material.IRON_SWORD);
-        ItemMeta swordMeta = sword.getItemMeta();
-        swordMeta.addEnchant(Enchantment.SHARPNESS, 1, false);
-        sword.setItemMeta(swordMeta);
+        ItemStack sword = new ItemStack(Material.STONE_SWORD);
+        //ItemMeta swordMeta = sword.getItemMeta();
+        //swordMeta.addEnchant(Enchantment.SHARPNESS, 1, false);
+        //sword.setItemMeta(swordMeta);
 
         ItemStack gapples = new ItemStack(Material.GOLDEN_APPLE);
         gapples.setAmount(5);
@@ -41,7 +42,10 @@ public class KitTrooper extends Kit {
 
 		setCategory(KitCategory.FIGHTER);
 
-		this.setAbilities(new TrooperAbility());
+		if (KitOptions.trooperRatio)
+			this.setAbilities(new TrooperAbility(), new CritAbility(game));
+		else
+			this.setAbilities(new TrooperAbility());
     }
 
 	public static class TrooperAbility extends Ability

@@ -239,6 +239,8 @@ public class DamageType {
 
 	public static final DamageType BEEKEEPER_BEE = new DamageType("Beekeeper's bee", "%Killed% was stung by %Killer%'s bee");
 
+	public static final DamageType RATIO_CRIT = new DamageType("Tipper critical hit").setMelee();
+
 	/*******************************************************************************************
 	 * 									GAMEMODE DAMAGETYPES
 	 ******************************************************************************************/

@@ -41,13 +41,16 @@ public class KitNinja extends Kit
 		.displayName(Component.text("Really heavy ender pearl")).build();
 
 	public KitNinja() {
-		super("Ninja", "A kit that's a fast runner and a faster swinger. Every sword strike it does is weak, but " +
-				"it can hit enemies twice as fast, allowing for some brain melting combos.\n\nIt also has ender pearls."
+		super("Ninja", "A kit that's a fast runner " +
+				(KitOptions.ninjaFastAttack ? "and a faster swinger. Every sword strike it does is weak, but it can hit enemies twice as fast, allowing for some brain melting combos."
+				: " and falls as gracefully as a cat."
+				) +
+				"\n\nIt also has really heavy ender pearls."
 				, Material.ENDER_PEARL);
 
 		ItemStack boots = new ItemStack(Material.CHAINMAIL_BOOTS);
 		ItemMeta bootsMeta = boots.getItemMeta();
-		bootsMeta.addEnchant(Enchantment.FEATHER_FALLING, 2, true);
+		bootsMeta.addEnchant(Enchantment.FEATHER_FALLING, 4, true);
 		boots.setItemMeta(bootsMeta);
 
 		this.setArmor(new ItemStack(Material.IRON_HELMET), new ItemStack(Material.IRON_CHESTPLATE),

@@ -390,7 +390,7 @@ public abstract class TeamArena
 
 	protected void registerKits() {
 		var defaultKits = new Kit[] {
-			new KitTrooper(), new KitArcher(), new KitGhost(), new KitDwarf(), new KitBurst(),
+			new KitTrooper(this), new KitArcher(), new KitGhost(), new KitDwarf(), new KitBurst(),
 			new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(), new KitNone(),
 			new KitVenom(), new KitRewind(), new KitValkyrie(), new KitExplosive(), new KitTrigger(), new KitMedic(this.killStreakManager),
 			new KitBerserker(), new KitEngineer(), new KitPorcupine(), new KitLongbow(), new KitSniper(), new KitBeekeeper(),

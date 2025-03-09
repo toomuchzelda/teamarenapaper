@@ -8,6 +8,7 @@ import com.mojang.authlib.GameProfile;
 import io.papermc.paper.adventure.PaperAdventure;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PacketSender;
 import net.kyori.adventure.text.Component;
@@ -34,6 +35,7 @@ import java.util.*;
 
 public class FakeHitbox
 {
+	public static final double OFFSET_DEFAULT = 0.15d;
 	//index is the fake player number 0-3
 	private static final Vector[] OFFSETS;
 	//metadata to make them invisible
@@ -48,7 +50,7 @@ public class FakeHitbox
 		int i = 0;
 		for (int x = -1; x <= 1; x += 2) {
 			for (int z = -1; z <= 1; z += 2) {
-				Vector vec = new Vector(x * 0.15, 0d, z * 0.15);
+				Vector vec = new Vector(x * OFFSET_DEFAULT, 0d, z * OFFSET_DEFAULT);
 				OFFSETS[i++] = vec;
 			}
 		}
@@ -508,12 +510,7 @@ public class FakeHitbox
 	}
 
 	private double getScale() {
-		double scale = 1d;
-		AttributeInstance instance = this.owner.getAttribute(Attribute.GENERIC_SCALE);
-		if (instance != null)
-			scale = instance.getValue();
-
-		return scale;
+		return EntityUtils.getScale(this.owner);
 	}
 
 	private void updateAttributePackets() {

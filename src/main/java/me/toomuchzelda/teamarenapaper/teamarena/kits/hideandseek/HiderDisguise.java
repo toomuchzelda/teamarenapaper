@@ -328,13 +328,13 @@ public class HiderDisguise {
 			this.solid = false;
 		}
 
-		@Override
+		/*@Override
 		public void onInteract(Player player, EquipmentSlot hand, boolean attack) {
 			if (player.getEntityId() == this.hiderId) return; // Don't interact with self!
 			// Just redirect the interaction to the hider
 			PacketContainer packet = PlayerUtils.createUseEntityPacket(player, hiderId, hand, attack);
 			ProtocolLibrary.getProtocolManager().receiveClientPacket(player, packet, false);
-		}
+		}*/
 
 		@Override
 		public double getYOffset() {
