@@ -80,13 +80,13 @@ public class KitNinja extends Kit
 
 		@Override
 		public void giveAbility(Player player) {
-			player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).addModifier(NINJA_SPEED_MODIFIER);
+			player.getAttribute(Attribute.MOVEMENT_SPEED).addModifier(NINJA_SPEED_MODIFIER);
 			player.addPotionEffect(NIGHT_VISION_EFFECT);
 		}
 
 		@Override
 		public void removeAbility(Player player) {
-			player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).removeModifier(NINJA_SPEED_MODIFIER);
+			player.getAttribute(Attribute.MOVEMENT_SPEED).removeModifier(NINJA_SPEED_MODIFIER);
 			player.removePotionEffect(NIGHT_VISION_EFFECT.getType());
 			THROWN_PEARLS.remove(player);
 		}
@@ -131,7 +131,7 @@ public class KitNinja extends Kit
 		public void onPlayerTick(Player player) {
 			TeamArena game = Main.getGame();
 			if(game instanceof CaptureTheFlag ctf) {
-				AttributeInstance speedAttr = player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
+				AttributeInstance speedAttr = player.getAttribute(Attribute.MOVEMENT_SPEED);
 				if(ctf.isFlagCarrier(player)) {
 					if (speedAttr.getModifiers().contains(NINJA_SPEED_MODIFIER)) {
 						speedAttr.removeModifier(NINJA_SPEED_MODIFIER);

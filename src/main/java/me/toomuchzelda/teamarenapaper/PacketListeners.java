@@ -9,6 +9,7 @@ import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.*;
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Pair;
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitbox;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxViewer;
@@ -34,9 +35,7 @@ import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.level.GameType;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Sound;
+import org.bukkit.*;
 import org.bukkit.craftbukkit.CraftSound;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
@@ -56,7 +55,7 @@ public class PacketListeners
 	/**
 	 * Lookup table for footstep sounds. Primarily wanted to cancel ghost walking sounds
 	 */
-	private static final boolean[] FOOTSTEP_SOUNDS;
+	private static final Set<Sound> FOOTSTEP_SOUNDS;
 
 	/**
 	 * The KitGhost instance being used by the current game. Reference kept here for the ghost-cancelling footstep
@@ -65,21 +64,20 @@ public class PacketListeners
 	public static KitGhost ghostInstance;
 
 	static {
-		FOOTSTEP_SOUNDS = new boolean[Sound.values().length];
-		Arrays.fill(FOOTSTEP_SOUNDS, false);
-
-		for(Sound s : Sound.values()) {
-			if(s.getKey().getKey().toLowerCase().endsWith("step")) {
-				setFootstep(s, true);
+		List<Sound> stepSounds = new ArrayList<>();
+		for (Sound sound : Registry.SOUND_EVENT) {
+			NamespacedKey key = Registry.SOUND_EVENT.getKey(sound);
+			if (key != null && key.getKey().endsWith("step")) {
+				stepSounds.add(sound);
 			}
-
-			setFootstep(Sound.ENTITY_PLAYER_SPLASH, true);
-			setFootstep(Sound.ENTITY_PLAYER_SWIM, true);
 		}
+		stepSounds.add(Sound.ENTITY_PLAYER_SPLASH);
+		stepSounds.add(Sound.ENTITY_PLAYER_SWIM);
+		FOOTSTEP_SOUNDS = new ObjectOpenHashSet<>(stepSounds);
 	}
 
-	private static void setFootstep(Sound sound, boolean isFootstep) {
-		FOOTSTEP_SOUNDS[sound.ordinal()] = isFootstep;
+	private static boolean isFootstep(Sound sound) {
+		return FOOTSTEP_SOUNDS.contains(sound);
 	}
 
 	public PacketListeners(JavaPlugin plugin) {
@@ -455,7 +453,7 @@ public class PacketListeners
 				//handle ghost footsteps
 				else if (event.getPacketType() != PacketType.Play.Server.ENTITY_SOUND &&
 					Main.getGame().getGameState() == GameState.LIVE &&
-					FOOTSTEP_SOUNDS[sound.ordinal()] &&
+					isFootstep(sound) &&
 					event.getPacket().getSoundCategories().read(0) == EnumWrappers.SoundCategory.PLAYERS &&
 					ghostInstance != null)
 				{

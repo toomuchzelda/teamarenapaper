@@ -39,12 +39,12 @@ public class KitSeeker extends Kit {
 
 		@Override
 		protected void giveAbility(Player player) {
-			EntityUtils.addAttribute(player.getAttribute(Attribute.GENERIC_JUMP_STRENGTH), JUMP_BOOST);
+			EntityUtils.addAttribute(player.getAttribute(Attribute.JUMP_STRENGTH), JUMP_BOOST);
 		}
 
 		@Override
 		protected void removeAbility(Player player) {
-			player.getAttribute(Attribute.GENERIC_JUMP_STRENGTH).removeModifier(JUMP_BOOST);
+			player.getAttribute(Attribute.JUMP_STRENGTH).removeModifier(JUMP_BOOST);
 		}
 	}
 }

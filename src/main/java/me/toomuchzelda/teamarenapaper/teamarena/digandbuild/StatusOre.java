@@ -44,7 +44,7 @@ public class StatusOre
 		if (!this.ready) return false;
 
 		final Block block = this.position.toBlock(this.world);
-		if (block.isValidTool(breaker.getEquipment().getItemInMainHand())) {
+		if (block.isPreferredTool(breaker.getEquipment().getItemInMainHand())) {
 			this.lastBreakTime = TeamArena.getGameTick();
 			this.ready = false;
 

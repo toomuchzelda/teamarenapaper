@@ -21,6 +21,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Registry;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
@@ -245,7 +246,7 @@ public class EntityUtils {
 	public static void setMaxHealth(LivingEntity entity, double newHealth) {
 		double oldHealth = entity.getHealth();
 
-		entity.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(newHealth);
+		entity.getAttribute(Attribute.MAX_HEALTH).setBaseValue(newHealth);
 
 		if(oldHealth > newHealth)
 			entity.setHealth(newHealth);
@@ -258,7 +259,7 @@ public class EntityUtils {
 	}
 
 	public static void removeAllModifiers(LivingEntity living) {
-		for(Attribute attribute : Attribute.values()) {
+		for(Attribute attribute : Registry.ATTRIBUTE) {
 			AttributeInstance instance = living.getAttribute(attribute);
 			if(instance != null) {
 				removeAllModifiers(instance);

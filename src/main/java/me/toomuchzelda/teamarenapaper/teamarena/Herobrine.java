@@ -102,7 +102,7 @@ public class Herobrine extends PacketPlayer {
 	@Override
 	public void respawn() {
 		super.respawn();
-		this.mob.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(MAX_HEALTH);
+		this.mob.getAttribute(Attribute.MAX_HEALTH).setBaseValue(MAX_HEALTH);
 		this.mob.setHealth(MAX_HEALTH);
 	}
 

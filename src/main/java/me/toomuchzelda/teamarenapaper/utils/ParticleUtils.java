@@ -40,7 +40,7 @@ public class ParticleUtils {
 		ParticleOptions nmsParticleOptions = CraftParticle.createParticleParam(particle, data);
 		ClientboundLevelParticlesPacket packet = new ClientboundLevelParticlesPacket(
 			nmsParticleOptions,
-			force,
+			force, false,
 			loc.getX(), loc.getY(), loc.getZ(),
 			offX, offY, offZ,
 			speed,
@@ -68,7 +68,7 @@ public class ParticleUtils {
 	public static void playExplosionParticle(Location location, float offX, float offY, float offZ, boolean large) {
 		ParticleOptions particle = large ? ParticleTypes.EXPLOSION_EMITTER : ParticleTypes.EXPLOSION;
 		PacketContainer packet = new PacketContainer(PacketType.Play.Server.WORLD_PARTICLES,
-			new ClientboundLevelParticlesPacket(particle, false, location.getX(), location.getY(), location.getZ(), offX, offY, offZ, 1f, 1));
+			new ClientboundLevelParticlesPacket(particle, false, false, location.getX(), location.getY(), location.getZ(), offX, offY, offZ, 1f, 1));
 
 		for(Player p : location.getWorld().getPlayers()) {
 			PlayerUtils.sendPacket(p, packet);

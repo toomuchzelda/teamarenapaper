@@ -98,11 +98,11 @@ public class KitDwarf extends Kit
 		@Override
 		public void removeAbility(Player player) {
 			sneakTimes.remove(player);
-			player.getAttribute(Attribute.GENERIC_SCALE).removeModifier(SMALL_ATTRIBUTE);
+			player.getAttribute(Attribute.SCALE).removeModifier(SMALL_ATTRIBUTE);
 			//they should only have 1 of these attributemodifiers on at a time, but admin abuse does things
-			for(AttributeModifier modifier : player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).getModifiers()) {
+			for(AttributeModifier modifier : player.getAttribute(Attribute.MOVEMENT_SPEED).getModifiers()) {
 				if(modifier.getName().startsWith(MODIFIER_NAME)) {
-					player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).removeModifier(modifier);
+					player.getAttribute(Attribute.MOVEMENT_SPEED).removeModifier(modifier);
 				}
 			}
 			player.setExp(0);
@@ -133,9 +133,9 @@ public class KitDwarf extends Kit
 
 		private static void updateScale(Pose newPose, Player player) {
 			if (newPose == Pose.SNEAKING) {
-				EntityUtils.addAttribute(player.getAttribute(Attribute.GENERIC_SCALE), SMALL_ATTRIBUTE);
+				EntityUtils.addAttribute(player.getAttribute(Attribute.SCALE), SMALL_ATTRIBUTE);
 			} else {
-				player.getAttribute(Attribute.GENERIC_SCALE).removeModifier(SMALL_ATTRIBUTE);
+				player.getAttribute(Attribute.SCALE).removeModifier(SMALL_ATTRIBUTE);
 			}
 		}
 
@@ -196,8 +196,8 @@ public class KitDwarf extends Kit
 			int enchantLevels = player.getLevel() / LEVELS_PER_ENCHANT;
 
 			AttributeModifier oldMod = LEVELS_TO_MODIFIER[prevLevel];
-			player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).removeModifier(oldMod);
-			player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).addModifier(LEVELS_TO_MODIFIER[player.getLevel()]);
+			player.getAttribute(Attribute.MOVEMENT_SPEED).removeModifier(oldMod);
+			player.getAttribute(Attribute.MOVEMENT_SPEED).addModifier(LEVELS_TO_MODIFIER[player.getLevel()]);
 
 			PlayerInventory inventory = player.getInventory();
 			TeamArena game = Main.getGame();

@@ -14,6 +14,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntitySpawnEvent;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
@@ -240,6 +241,7 @@ public class MetadataViewer
 	 * Clean up custom metadata for non-existent entities.
 	 * @deprecated Entity cleanup should be done by EntityRemove event
 	 */
+	@Deprecated
 	public void cleanUp() {
 		var iter = entityValues.entrySet().iterator();
 		while(iter.hasNext()) {
