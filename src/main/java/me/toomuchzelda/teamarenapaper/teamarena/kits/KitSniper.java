@@ -78,7 +78,7 @@ public class KitSniper extends Kit {
 
 		ItemStack sword = new ItemStack(Material.IRON_SWORD);
 		ItemMeta meta = sword.getItemMeta();
-		meta.addAttributeModifier(Attribute.GENERIC_MOVEMENT_SPEED, KNIFE_SPEED);
+		meta.addAttributeModifier(Attribute.MOVEMENT_SPEED, KNIFE_SPEED);
 		sword.setItemMeta(meta);
 
 		setItems(sword, SNIPER, GRENADE);

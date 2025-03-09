@@ -509,7 +509,7 @@ public class FakeHitbox
 
 	private double getScale() {
 		double scale = 1d;
-		AttributeInstance instance = this.owner.getAttribute(Attribute.GENERIC_SCALE);
+		AttributeInstance instance = this.owner.getAttribute(Attribute.SCALE);
 		if (instance != null)
 			scale = instance.getValue();
 

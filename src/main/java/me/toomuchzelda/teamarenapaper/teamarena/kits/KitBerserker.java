@@ -107,7 +107,7 @@ public class KitBerserker extends Kit {
 						PlayerUtils.sendKitMessage(eater, msg, msg);
 						return;
 					}
-					if (eater.getHealth() + 0.5d < eater.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue()) {
+					if (eater.getHealth() + 0.5d < eater.getAttribute(Attribute.MAX_HEALTH).getValue()) {
 						item.subtract();
 						PlayerUtils.heal(eater, HEAL_AMOUNT, EntityRegainHealthEvent.RegainReason.CUSTOM);
 						eater.getWorld().playSound(eater, Sound.ENTITY_GENERIC_EAT, SoundCategory.PLAYERS, 1.4f, 0.0f);

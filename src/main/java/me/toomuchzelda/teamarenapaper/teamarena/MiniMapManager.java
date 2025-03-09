@@ -533,9 +533,11 @@ public class MiniMapManager {
             for (int i = minX; i <= maxX; i++) {
                 for (int j = minZ; j <= maxZ; j++) {
                     byte actualColor = i == minX || i == maxX || j == minZ || j == maxZ ? borderColor : color;
-                    if (actualColor == TRANSPARENT)
-						//noinspection removal
-						actualColor = canvas.getBasePixel(i, j);
+                    if (actualColor == TRANSPARENT) {
+						@SuppressWarnings("removal")
+						byte basePixel = canvas.getBasePixel(i, j);
+						actualColor = basePixel;
+					}
 					//noinspection deprecation
 					canvas.setPixel(i, j, actualColor);
                 }

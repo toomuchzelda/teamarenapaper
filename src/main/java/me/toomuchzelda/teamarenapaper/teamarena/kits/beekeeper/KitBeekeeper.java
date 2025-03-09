@@ -184,7 +184,7 @@ public class KitBeekeeper extends Kit
 				}
 
 				beeEntity = (Bee) EntityUtils.spawnCustomEntity(loc.getWorld(), loc, new CustomBee(EntityType.BEE, loc.getWorld()));
-				beeEntity.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(BEE_HEALTH);
+				beeEntity.getAttribute(Attribute.MAX_HEALTH).setBaseValue(BEE_HEALTH);
 				lastRegenTick = TeamArena.getGameTick();
 				lastDamageTick = lastRegenTick + OUT_OF_COMBAT_TIME;
 				CustomBee.setCustomBeeSpeed(beeEntity, BEE_SPEED);
