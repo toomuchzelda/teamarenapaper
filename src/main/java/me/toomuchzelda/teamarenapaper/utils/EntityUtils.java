@@ -367,6 +367,13 @@ public class EntityUtils {
 		}
 	}
 
+	public static void forEachTrackedPlayerAndSelf(Entity viewedEntity, Consumer<Player> func) {
+		forEachTrackedPlayer(viewedEntity, func);
+		if (viewedEntity instanceof Player p) {
+			func.accept(p);
+		}
+	}
+
 	public static ArrayList<Player> getTrackedPlayers(Entity viewedEntity) {
 		Set<ServerPlayerConnection> connections = getTrackedPlayers0(viewedEntity);
 		ArrayList<Player> list = new ArrayList<>(connections.size());

@@ -14,13 +14,12 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
+import me.toomuchzelda.teamarenapaper.utils.PacketSender;
+import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.AttachedPacketHologram;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
-import org.bukkit.Bukkit;
-import org.bukkit.Sound;
-import org.bukkit.SoundCategory;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.EquipmentSlot;
 
@@ -58,7 +57,7 @@ public class CritAbility extends Ability {
 				viewerRule, CUSTOM_NAME, false) {
 				@Override
 				public double getYOffset() {
-					return (entity.getHeight() / 2d) - (BOX_HEIGHT / 4d);
+					return getBoxYOffset(entity);
 				}
 			};
 			this.vehicle.setCustomNameVisible(false);
@@ -127,6 +126,10 @@ public class CritAbility extends Ability {
 			}
 
 			return (float) (base + 0.07f);
+		}
+
+		public static double getBoxYOffset(Entity e) {
+			return (e.getHeight() / 2d) - (BOX_HEIGHT / 4d);
 		}
 	}
 
@@ -204,6 +207,23 @@ public class CritAbility extends Ability {
 				playCritSound(world, attacker, i * 2, volume, 1.1f + (((float) i) / 3f));
 				playCritSound(world, attacker, (i * 2) + 1, volume, 1.3f + (((float) i) / 3f));
 			}
+
+			final PacketSender sender = PacketSender.getDefault(1);
+			final Location pLoc = event.getVictim().getLocation().add(0d, CritHitbox.getBoxYOffset(event.getVictim()), 0d);
+			EntityUtils.forEachTrackedPlayerAndSelf(event.getVictim(), player -> {
+				ParticleUtils.batchParticles(player, sender, Particle.CRIT, null,
+					pLoc, 512d, 10,
+					0.03f, 0.0f, 0.03f,
+					0.4f,
+					false);
+
+				ParticleUtils.batchParticles(player, sender, Particle.ENCHANTED_HIT, null,
+					pLoc, 512d, 10,
+					0.3f, 0.0f, 0.3f,
+					0.4f,
+					false);
+			});
+			sender.flush();
 
 			//ParticleUtils.bloodEffect(event.getVictim());
 		}
