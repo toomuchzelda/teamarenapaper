@@ -222,7 +222,7 @@ public class KitBurst extends Kit
 				//meta.setPower(1);
 				firework.setFireworkMeta(meta);
 				firework.setVelocity(firework.getVelocity().multiply(0.6));
-				firework.setTicksToDetonate(18);
+				firework.setTicksToDetonate(21);
 
 				this.originalFwShooters.put(firework, p.getUniqueId());
 			}

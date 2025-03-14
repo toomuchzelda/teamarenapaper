@@ -1,15 +1,18 @@
 package me.toomuchzelda.teamarenapaper.utils.packetentities;
 
 import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Pose;
+import org.bukkit.inventory.EquipmentSlot;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
@@ -160,5 +163,16 @@ public class AttachedPacketEntity extends PacketEntity
 
 			packetsOut.add(entityPacket);
 		}
+	}
+
+	@Override
+	public void onInteract(Player player, EquipmentSlot hand, boolean attack) {
+		// Default implementation: redirect interaction to player
+		final int thisEid = this.entity.getEntityId();
+		if (player.getEntityId() == thisEid)
+			return; // Don't interact with self!
+
+		PacketContainer packet = PlayerUtils.createUseEntityPacket(player, thisEid, hand, attack);
+		ProtocolLibrary.getProtocolManager().receiveClientPacket(player, packet, false);
 	}
 }

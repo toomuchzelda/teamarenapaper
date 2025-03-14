@@ -635,7 +635,9 @@ public class DamageEvent {
 				Vector kb = this.getKnockback().clone();
 				kb.setY(0).normalize();
 
-				((CraftPlayer) playerVictim).getHandle().indicateDamage(-kb.getX(), -kb.getZ());
+				if (Math.abs(kb.getX()) > Vector.getEpsilon() && Math.abs(kb.getZ()) > Vector.getEpsilon()) {
+					((CraftPlayer) playerVictim).getHandle().indicateDamage(-kb.getX(), -kb.getZ());
+				}
 			}
 			else if (tiltType == DamageTiltType.ALL) {
 				PlayerUtils.syncHurtDirection(playerVictim);

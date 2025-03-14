@@ -36,10 +36,10 @@ public class AttachedMedicGuardian extends AttachedPacketEntity
 		return 0.5d;
 	}
 
-	@Override
+	/*@Override
 	public void onInteract(Player player, EquipmentSlot hand, boolean attack) {
 		// Just redirect the interaction to the entity it's attached to
 		PacketContainer packet = PlayerUtils.createUseEntityPacket(player, this.entity.getEntityId(), hand, attack);
 		ProtocolLibrary.getProtocolManager().receiveClientPacket(player, packet, false);
-	}
+	}*/
 }

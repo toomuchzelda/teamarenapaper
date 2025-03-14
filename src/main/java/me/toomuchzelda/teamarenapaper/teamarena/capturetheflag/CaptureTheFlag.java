@@ -745,6 +745,10 @@ public class CaptureTheFlag extends TeamArena
 		return meta != null && flagItems.contains(meta.getDisplayName());
 	}
 
+	public boolean isFlagEntity(Entity e) {
+		return this.flagStands.containsKey(e);
+	}
+
 	@Override
 	public boolean isWearableArmorPiece(ItemStack item) {
 		return !isFlagItem(item) && super.isWearableArmorPiece(item);

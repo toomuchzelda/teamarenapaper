@@ -58,7 +58,8 @@ public class StatusBarManager
 		}
 
 		public StatusBarHologram(Player player) {
-			super(player, null, viewer -> Main.getGame().canSeeStatusBar(player, viewer), PREGAME_TEXT, false);
+			super(Main.getPlayerInfo(player).statusIndicatorId, player, null,
+				viewer -> Main.getGame().canSeeStatusBar(player, viewer), PREGAME_TEXT, false);
 
 			this.setText(PREGAME_TEXT, false);
 			PlayerInfo pinfo = Main.getPlayerInfo(player);

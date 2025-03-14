@@ -56,7 +56,7 @@ public class KitPyro extends Kit
 		super("Pyro", "I fear no man...\n\nThis kit is equipped to burn everything that's not on its team.\n\n" +
 				"With a flaming sword, it can burn up close. " +
 				"With a flaming bow, it can burn from afar.\n\n" +
-				(!KitOptions.pyroMolotov ?
+				(KitOptions.pyroMolotov ?
 					"And with an incendiary launcher, it can sear victims nicely, while they're still fresh (alive)."
 					:
 					"And with explosion-proof armour, it's safer than Obama in his limousine.")
