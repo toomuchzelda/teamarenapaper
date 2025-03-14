@@ -74,6 +74,10 @@ public class MathUtils
 		return value >= min && value <= max;
 	}
 
+	public static double square(double a) {
+		return a * a;
+	}
+
 	public static Color randomColor() {
 		int r = randomMax(255);
 		int g = randomMax(255);

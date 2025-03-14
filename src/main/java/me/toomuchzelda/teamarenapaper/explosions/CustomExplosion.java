@@ -231,7 +231,7 @@ public class CustomExplosion
 
 		if(victim instanceof LivingEntity living) {
 			double kbRes;
-			AttributeInstance explosionKbResAttr = living.getAttribute(Attribute.GENERIC_EXPLOSION_KNOCKBACK_RESISTANCE);
+			AttributeInstance explosionKbResAttr = living.getAttribute(Attribute.EXPLOSION_KNOCKBACK_RESISTANCE);
 			if (explosionKbResAttr != null) {
 				kbRes = explosionKbResAttr.getValue();
 				kbRes = MathUtils.clamp(0d, 1d, kbRes); // just to be safe

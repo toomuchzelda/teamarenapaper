@@ -27,7 +27,7 @@ public class KillAssistTracker {
     //reduce all damage amounts done by other players by uniform amount when healing
     public void heal(double amount) {
         //find percentage of new health out of max health
-        double maxHealth = player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+        double maxHealth = player.getAttribute(Attribute.MAX_HEALTH).getValue();
         double oldHealth = player.getHealth();
         double oldRemainderHealth = maxHealth - oldHealth;
         double newHealth = Math.min(oldHealth + amount, maxHealth);
@@ -53,19 +53,19 @@ public class KillAssistTracker {
     public double getAssistAmount(Player player) {
         return playerDamageAmounts.getOrDefault(player, 0d);
     }
-    
+
     public Player getPlayer() {
         return this.player;
     }
-    
+
     public void removeAssist(Player player) {
         playerDamageAmounts.remove(player);
     }
-    
+
     public Iterator<Map.Entry<Player, Double>> getIterator() {
         return playerDamageAmounts.entrySet().iterator();
     }
-    
+
     public void clear() {
         playerDamageAmounts.clear();
     }

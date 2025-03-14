@@ -1,10 +1,15 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
+import io.papermc.paper.datacomponent.DataComponentType;
 import net.minecraft.world.damagesource.DamageSource;
 import org.bukkit.Material;
 import org.bukkit.craftbukkit.entity.CraftEntity;
 import org.bukkit.craftbukkit.entity.CraftLivingEntity;
+import org.bukkit.craftbukkit.entity.CraftPlayer;
+import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.entity.*;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.inventory.ItemStack;
 
 import javax.annotation.Nullable;
 
@@ -13,13 +18,18 @@ public class DamageSourceCreator {
     public static DamageSource getMelee(LivingEntity damager) {
         net.minecraft.world.entity.LivingEntity nmsLiving = ((CraftLivingEntity) damager).getHandle();
         if (damager instanceof Player) {
-            return DamageType.nmsDamageSources.playerAttack((net.minecraft.world.entity.player.Player) nmsLiving);
+			return DamageType.nmsDamageSources.playerAttack((net.minecraft.world.entity.player.Player) nmsLiving);
         } else if (damager instanceof Bee) {
             return DamageType.nmsDamageSources.sting(nmsLiving);
         } else {
             return DamageType.nmsDamageSources.mobAttack(nmsLiving);
         }
     }
+
+	public static DamageSource getSweeping(Player sweeper) {
+		net.minecraft.world.entity.player.Player nmsPlayer = ((CraftPlayer) sweeper).getHandle();
+		return DamageType.nmsDamageSources.playerAttack(nmsPlayer).knownCause(EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK);
+	}
 
     public static DamageSource getProjectile(Entity projectile, @Nullable LivingEntity shooter) {
         net.minecraft.world.entity.Entity nmsProjectile = ((CraftEntity) projectile).getHandle();

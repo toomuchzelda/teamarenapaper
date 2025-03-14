@@ -32,7 +32,7 @@ public class DamageCalculator
 		double itemDamage;
 		if(weapon.getType().isAir()) // If not item held, get the mob's own attack damage
 		{
-			AttributeInstance attribute = attacker.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE);
+			AttributeInstance attribute = attacker.getAttribute(Attribute.ATTACK_DAMAGE);
 			if (attribute != null)
 				itemDamage = attribute.getValue();
 			else {
