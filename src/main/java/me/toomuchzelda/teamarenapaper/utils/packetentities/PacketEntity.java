@@ -9,7 +9,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.PacketUtils;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
@@ -57,7 +57,6 @@ public class PacketEntity
 	protected PacketContainer metadataPacket;
 //	private StructureModifier<List<WrappedDataValue>> dataValueCollectionModifier;
 	private PacketContainer teleportPacket;
-	private StructureModifier<Double> teleportPacketDoubles;
 	private StructureModifier<Byte> teleportPacketBytes;
 	protected PacketContainer rotateHeadPacket;
 	private StructureModifier<Byte> headPacketBytes;
@@ -277,12 +276,6 @@ public class PacketEntity
 	}
 
 	private void createTeleport() {
-		this.teleportPacket = new PacketContainer(PacketType.Play.Server.ENTITY_TELEPORT);
-		this.teleportPacket.getIntegers().write(0, id);
-
-		this.teleportPacketDoubles = teleportPacket.getDoubles();
-		this.teleportPacketBytes = teleportPacket.getBytes();
-
 		this.updateTeleportPacket(this.location);
 	}
 
@@ -346,14 +339,9 @@ public class PacketEntity
 	}
 
 	protected void updateTeleportPacket(Location newLocation) {
-		StructureModifier<Double> doubles = this.teleportPacketDoubles;
-		doubles.write(0, newLocation.getX());
-		doubles.write(1, newLocation.getY());
-		doubles.write(2, newLocation.getZ());
-
-		StructureModifier<Byte> bytes = this.teleportPacketBytes;
-		bytes.write(0, angleToByte(newLocation.getYaw()));
-		bytes.write(1, angleToByte(newLocation.getPitch()));
+		this.teleportPacket = new PacketContainer(PacketUtils.ENTITY_POSITION_SYNC, PacketUtils.newEntityPositionSync(
+			id, newLocation, null, false
+		));
 	}
 
 	protected void updateSpawnPacket(Location newLocation) {

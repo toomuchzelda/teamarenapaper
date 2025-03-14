@@ -11,6 +11,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PacketSender;
+import me.toomuchzelda.teamarenapaper.utils.PacketUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket;
@@ -60,7 +61,6 @@ public class FakeHitbox
 	// index 0 = invis bitfield, 1 = pose
 	private final ArrayList<WrappedDataValue> metadataList;
 	private final PacketContainer[] spawnPlayerPackets;
-	private final PacketContainer[] teleportPackets;
 	private final PacketContainer[] metadataPackets;
 	private final PacketContainer[] attributePackets;
 	private final PacketContainer[] spawnAndMetaPackets;
@@ -88,7 +88,6 @@ public class FakeHitbox
 		metadataList.add(MetaIndex.newValue(MetaIndex.POSE_OBJ, MetaIndex.getNmsPose(owner.getPose())));
 
 		spawnPlayerPackets = new PacketContainer[4];
-		teleportPackets = new PacketContainer[4];
 		metadataPackets = new PacketContainer[4];
 		attributePackets = new PacketContainer[4];
 		spawnAndMetaPackets = new PacketContainer[12];
@@ -128,11 +127,6 @@ public class FakeHitbox
 			//positions modified in updatePosition()
 			spawnPlayerPackets[i] = spawnPlayerPacket;
 			spawnAndMetaPackets[i] = spawnPlayerPacket;
-
-			PacketContainer teleportPacket = new PacketContainer(PacketType.Play.Server.ENTITY_TELEPORT);
-			teleportPacket.getIntegers().write(0, fPlayer.entityId);
-			teleportPackets[i] = teleportPacket;
-
 
 			PacketContainer metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
 			metadataPacket.getIntegers().write(0, fPlayer.entityId);
@@ -185,7 +179,7 @@ public class FakeHitbox
 					//PlayerUtils.sendPacket(entry.getKey(), cache, this.getAttributePackets());
 					//PlayerUtils.sendPacket(entry.getKey(), cache, this.getTeleportPackets());
 					cache.enqueue(entry.getKey(), this.getAttributePackets());
-					cache.enqueue(entry.getKey(), this.getTeleportPackets());
+					cache.enqueue(entry.getKey(), this.createTeleportPackets());
 				}
 			}
 		}
@@ -237,6 +231,15 @@ public class FakeHitbox
 		}
 	}
 
+	public PacketContainer[] createTeleportPackets() {
+		PacketContainer[] packets = new PacketContainer[coordinates.length];
+		for (int i = 0; i < coordinates.length; i++) {
+			packets[i] = new PacketContainer(PacketUtils.ENTITY_POSITION_SYNC,
+				PacketUtils.newEntityPositionSync(fakePlayerIds[i], coordinates[i], null, 0, 0, owner.isOnGround()));
+		}
+		return packets;
+	}
+
 	public void updatePosition(Location newLocation, org.bukkit.entity.Pose bukkitPose, final boolean updateClients) {
 		updatePosition(newLocation, bukkitPose, updateClients, PacketSender.getImmediateInstance());
 	}
@@ -286,8 +289,10 @@ public class FakeHitbox
 			}
 
 			//update the packets
-			writeDoubles(spawnPlayerPackets[i], coordinates[i]);
-			writeDoubles(teleportPackets[i], coordinates[i]);
+			spawnPlayerPackets[i].getDoubles()
+				.write(0, coordinates[i].getX())
+				.write(1, coordinates[i].getY())
+				.write(2, coordinates[i].getZ());
 		}
 
 		//update positions on client if needed
@@ -295,9 +300,10 @@ public class FakeHitbox
 			for (var entry : this.viewers.entrySet()) {
 				if (entry.getValue().isSeeingHitboxes) {
 					for (int i = 0; i < 4; i++) {
-						if (updateThisBox[i])
+						if (updateThisBox[i]) {
 							//PlayerUtils.sendPacket(entry.getKey(), cache, teleportPackets);
-							cache.enqueue(entry.getKey(), teleportPackets);
+							cache.enqueue(entry.getKey(), createTeleportPackets());
+						}
 					}
 				}
 			}
@@ -407,8 +413,9 @@ public class FakeHitbox
 		return this.spawnAndMetaPackets;
 	}
 
+	@Deprecated
 	public PacketContainer[] getTeleportPackets() {
-		return this.teleportPackets;
+		return createTeleportPackets();
 	}
 
 	public @Nullable PacketContainer[] createRelMovePackets(PacketContainer movePacket) {
@@ -421,7 +428,7 @@ public class FakeHitbox
 		if (pose != HitboxPose.OTHER ||
 				(this.lastPoseChangeTime >= currentTick - 3 && this.lastPoseChangeTime <= currentTick)) {
 
-			packets = this.teleportPackets;
+			packets = createTeleportPackets();
 		}
 		//ignore look-only packets as the direction hitboxes face is not important
 		else if(movePacket.getType() == PacketType.Play.Server.REL_ENTITY_MOVE_LOOK ||
@@ -441,13 +448,6 @@ public class FakeHitbox
 		}
 
 		return packets;
-	}
-
-	private static void writeDoubles(PacketContainer packet, Vector coords) {
-		StructureModifier<Double> doubles = packet.getDoubles();
-		doubles.write(0, coords.getX());
-		doubles.write(1, coords.getY());
-		doubles.write(2, coords.getZ());
 	}
 
 	// Make new packets that only have the pose change, instead of using this.metadataPackets, to reduce
