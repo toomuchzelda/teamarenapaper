@@ -208,24 +208,7 @@ public class CritAbility extends Ability {
 				playCritSound(world, attacker, (i * 2) + 1, volume, 1.3f + (((float) i) / 3f));
 			}
 
-			final PacketSender sender = PacketSender.getDefault(1);
-			final Location pLoc = event.getVictim().getLocation().add(0d, CritHitbox.getBoxYOffset(event.getVictim()), 0d);
-			EntityUtils.forEachTrackedPlayerAndSelf(event.getVictim(), player -> {
-				ParticleUtils.batchParticles(player, sender, Particle.CRIT, null,
-					pLoc, 512d, 10,
-					0.03f, 0.0f, 0.03f,
-					0.4f,
-					false);
-
-				ParticleUtils.batchParticles(player, sender, Particle.ENCHANTED_HIT, null,
-					pLoc, 512d, 10,
-					0.3f, 0.0f, 0.3f,
-					0.4f,
-					false);
-			});
-			sender.flush();
-
-			//ParticleUtils.bloodEffect(event.getVictim());
+			ParticleUtils.bloodEffect(event.getVictim());
 		}
 	}
 
