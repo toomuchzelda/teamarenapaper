@@ -69,7 +69,7 @@ public class EntityUtils {
 	public static double getScale(Entity e) {
 		double scale = 1d;
 		if (e instanceof LivingEntity living) {
-			AttributeInstance instance = living.getAttribute(Attribute.GENERIC_SCALE);
+			AttributeInstance instance = living.getAttribute(Attribute.SCALE);
 			if (instance != null)
 				scale = instance.getValue();
 		}
