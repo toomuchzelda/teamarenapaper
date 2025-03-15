@@ -114,9 +114,6 @@ public class EventListeners implements Listener
 
 			PacketEntityManager.cleanUp();
 
-			//might as well reset
-			ItemUtils._uniqueName = 0;
-
 			//create the next game
 			Main.setGame(GameScheduler.getNextGame());
 		}

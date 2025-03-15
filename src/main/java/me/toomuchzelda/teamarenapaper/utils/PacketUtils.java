@@ -21,28 +21,6 @@ public class PacketUtils {
 		);
 	}
 
-	public static PacketContainer newEntityPositionSync(int id, Vector pos, @Nullable Vector velocity, float yaw, float pitch, boolean onGround) {
-		return new PacketContainer(ENTITY_POSITION_SYNC,
-			new ClientboundEntityPositionSyncPacket(
-				id,
-				new PositionMoveRotation(CraftVector.toNMS(pos), velocity != null ? CraftVector.toNMS(velocity) : Vec3.ZERO, yaw, pitch),
-				onGround
-			)
-		);
-	}
-
-	public static PacketContainer newEntityPositionSync(int id, Location location, @Nullable Vector velocity, boolean onGround) {
-		return new PacketContainer(ENTITY_POSITION_SYNC,
-			new ClientboundEntityPositionSyncPacket(
-				id,
-				new PositionMoveRotation(
-					CraftLocation.toVec3D(location), velocity != null ? CraftVector.toNMS(velocity) : Vec3.ZERO, location.getYaw(), location.getPitch()
-				),
-				onGround
-			)
-		);
-	}
-
 	public static void setEntityPositionSyncPos(PacketContainer packet, Vector pos, Vector velocity) {
 		assert CompileAsserts.OMIT || packet.getType() == ENTITY_POSITION_SYNC;
 
