@@ -160,21 +160,9 @@ public class AttachedPacketEntity extends PacketEntity
 
 			// type check is retained for future migration
 			if (packet.getType() == PacketUtils.ENTITY_POSITION_SYNC &&
-				packet.getHandle() instanceof ClientboundEntityPositionSyncPacket(
-					int id,
-					PositionMoveRotation(Vec3 position, Vec3 deltaMovement, float yRot, float xRot),
-					boolean onGround
-				)) {
+				packet.getHandle() instanceof ClientboundEntityPositionSyncPacket) {
 				//adjust the entity's Y position
-				var newNmsPacket = new ClientboundEntityPositionSyncPacket(
-					id,
-					new PositionMoveRotation(
-						new Vec3(position.x, position.y + getYOffset(), position.z),
-						deltaMovement, yRot, xRot
-					),
-					onGround
-				);
-				PacketUtils.setPacketAdapterHandle(packet, newNmsPacket);
+				PacketUtils.addEntityPositionSyncY(entityPacket, this.getYOffset());
 			}
 
 			packetsOut.add(entityPacket);

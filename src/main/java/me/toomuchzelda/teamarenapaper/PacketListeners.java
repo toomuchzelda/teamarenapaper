@@ -166,7 +166,7 @@ public class PacketListeners
 							if (event.getPacketType() == PacketUtils.ENTITY_POSITION_SYNC || hitboxViewer.getHitboxSpawnTime() < TeamArena.getGameTick()) {
 								hitboxViewer.setHitboxSpawnTime(Integer.MAX_VALUE);
 								//PlayerUtils.sendPacket(viewer, hitbox.getTeleportPackets());
-								toBundle = hitbox.createTeleportPackets();
+								toBundle = hitbox.getTeleportPackets();
 							}
 							else {
 								PacketContainer[] movePackets = hitbox.createRelMovePackets(packet);

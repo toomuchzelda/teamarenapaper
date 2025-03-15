@@ -61,6 +61,7 @@ public class FakeHitbox
 	// index 0 = invis bitfield, 1 = pose
 	private final ArrayList<WrappedDataValue> metadataList;
 	private final PacketContainer[] spawnPlayerPackets;
+	private final PacketContainer[] teleportPackets;
 	private final PacketContainer[] metadataPackets;
 	private final PacketContainer[] attributePackets;
 	private final PacketContainer[] spawnAndMetaPackets;
@@ -88,6 +89,7 @@ public class FakeHitbox
 		metadataList.add(MetaIndex.newValue(MetaIndex.POSE_OBJ, MetaIndex.getNmsPose(owner.getPose())));
 
 		spawnPlayerPackets = new PacketContainer[4];
+		teleportPackets = new PacketContainer[4];
 		metadataPackets = new PacketContainer[4];
 		attributePackets = new PacketContainer[4];
 		spawnAndMetaPackets = new PacketContainer[12];
@@ -127,6 +129,9 @@ public class FakeHitbox
 			//positions modified in updatePosition()
 			spawnPlayerPackets[i] = spawnPlayerPacket;
 			spawnAndMetaPackets[i] = spawnPlayerPacket;
+
+			PacketContainer teleportPacket = PacketUtils.newEntityPositionSync(fPlayer.entityId);
+			this.teleportPackets[i] = teleportPacket;
 
 			PacketContainer metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
 			metadataPacket.getIntegers().write(0, fPlayer.entityId);
@@ -179,7 +184,7 @@ public class FakeHitbox
 					//PlayerUtils.sendPacket(entry.getKey(), cache, this.getAttributePackets());
 					//PlayerUtils.sendPacket(entry.getKey(), cache, this.getTeleportPackets());
 					cache.enqueue(entry.getKey(), this.getAttributePackets());
-					cache.enqueue(entry.getKey(), this.createTeleportPackets());
+					cache.enqueue(entry.getKey(), this.getTeleportPackets());
 				}
 			}
 		}
@@ -229,15 +234,6 @@ public class FakeHitbox
 				}
 			}
 		}
-	}
-
-	public PacketContainer[] createTeleportPackets() {
-		PacketContainer[] packets = new PacketContainer[coordinates.length];
-		for (int i = 0; i < coordinates.length; i++) {
-			packets[i] = new PacketContainer(PacketUtils.ENTITY_POSITION_SYNC,
-				PacketUtils.newEntityPositionSync(fakePlayerIds[i], coordinates[i], null, 0, 0, owner.isOnGround()));
-		}
-		return packets;
 	}
 
 	public void updatePosition(Location newLocation, org.bukkit.entity.Pose bukkitPose, final boolean updateClients) {
@@ -293,6 +289,8 @@ public class FakeHitbox
 				.write(0, coordinates[i].getX())
 				.write(1, coordinates[i].getY())
 				.write(2, coordinates[i].getZ());
+
+			PacketUtils.setEntityPositionSyncPos(this.teleportPackets[i], coordinates[i], null);
 		}
 
 		//update positions on client if needed
@@ -302,7 +300,7 @@ public class FakeHitbox
 					for (int i = 0; i < 4; i++) {
 						if (updateThisBox[i]) {
 							//PlayerUtils.sendPacket(entry.getKey(), cache, teleportPackets);
-							cache.enqueue(entry.getKey(), createTeleportPackets());
+							cache.enqueue(entry.getKey(), teleportPackets[i]);
 						}
 					}
 				}
@@ -413,9 +411,8 @@ public class FakeHitbox
 		return this.spawnAndMetaPackets;
 	}
 
-	@Deprecated
 	public PacketContainer[] getTeleportPackets() {
-		return createTeleportPackets();
+		return this.teleportPackets;
 	}
 
 	public @Nullable PacketContainer[] createRelMovePackets(PacketContainer movePacket) {
@@ -428,7 +425,7 @@ public class FakeHitbox
 		if (pose != HitboxPose.OTHER ||
 				(this.lastPoseChangeTime >= currentTick - 3 && this.lastPoseChangeTime <= currentTick)) {
 
-			packets = createTeleportPackets();
+			packets = this.teleportPackets;
 		}
 		//ignore look-only packets as the direction hitboxes face is not important
 		else if(movePacket.getType() == PacketType.Play.Server.REL_ENTITY_MOVE_LOOK ||

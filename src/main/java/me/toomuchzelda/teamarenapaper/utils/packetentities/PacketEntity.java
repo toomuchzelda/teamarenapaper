@@ -57,7 +57,6 @@ public class PacketEntity
 	protected PacketContainer metadataPacket;
 //	private StructureModifier<List<WrappedDataValue>> dataValueCollectionModifier;
 	private PacketContainer teleportPacket;
-	private StructureModifier<Byte> teleportPacketBytes;
 	protected PacketContainer rotateHeadPacket;
 	private StructureModifier<Byte> headPacketBytes;
 	@Nullable
@@ -276,6 +275,7 @@ public class PacketEntity
 	}
 
 	private void createTeleport() {
+		this.teleportPacket = PacketUtils.newEntityPositionSync(this.id);
 		this.updateTeleportPacket(this.location);
 	}
 
@@ -339,9 +339,7 @@ public class PacketEntity
 	}
 
 	protected void updateTeleportPacket(Location newLocation) {
-		this.teleportPacket = new PacketContainer(PacketUtils.ENTITY_POSITION_SYNC, PacketUtils.newEntityPositionSync(
-			id, newLocation, null, false
-		));
+		PacketUtils.setEntityPositionSyncPos(this.teleportPacket, newLocation, null);
 	}
 
 	protected void updateSpawnPacket(Location newLocation) {
