@@ -25,13 +25,16 @@ import org.bukkit.util.Vector;
 import java.util.*;
 
 public class KitRadarSeeker extends Kit {
+	public static final String NAME = "Radar";
+
 	private static final ItemStack RADAR = ItemBuilder.of(Material.WARPED_FUNGUS_ON_A_STICK)
 		.displayName(Component.text("\"Radar\"", NamedTextColor.GREEN))
 		.lore(TextUtils.wrapString("Note: Questioning your equipment is in violation of your contract " +
 			"with Hiders Enforcement LLC and may result in a termination.", Style.style(TextColors.ERROR_RED)))
 		.build();
+
 	public KitRadarSeeker(TeamArena game) {
-		super("Radar", "Seek out the Hiders with your Radar and chase them down", Material.RECOVERY_COMPASS);
+		super(NAME, "Seek out the Hiders with your Radar and chase them down", Material.RECOVERY_COMPASS);
 
 		this.setItems(new ItemStack(Material.STONE_SWORD), RADAR);
 		//this.setArmor(new ItemStack(Material.LEATHER_HELMET), new ItemStack(Material.LEATHER_CHESTPLATE),

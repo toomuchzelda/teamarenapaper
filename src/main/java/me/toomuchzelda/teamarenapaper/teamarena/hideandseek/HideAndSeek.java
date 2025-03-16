@@ -90,7 +90,7 @@ public class HideAndSeek extends TeamArena {
 		this.isHidingTime = true;
 
 		this.hiderKit = this.kits.get(KitHider.NAME.toLowerCase(Locale.ENGLISH));
-		this.seekerKit = this.kits.get(KitSeeker.NAME.toLowerCase(Locale.ENGLISH));
+		this.seekerKit = this.kits.get(KitRadarSeeker.NAME.toLowerCase(Locale.ENGLISH));
 
 		KillStreakManager ksManager = this.getKillStreakManager();
 		ksManager.disableKillStreak(KillStreakManager.KillStreakID.COMPASS);
