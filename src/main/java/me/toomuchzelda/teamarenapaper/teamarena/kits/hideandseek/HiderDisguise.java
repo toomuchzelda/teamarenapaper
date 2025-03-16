@@ -1,6 +1,5 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek;
 
-import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
@@ -18,17 +17,17 @@ import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
-import net.minecraft.world.level.block.state.BlockState;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.craftbukkit.block.CraftBlockState;
+import org.bukkit.craftbukkit.block.data.CraftBlockData;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.EquipmentSlot;
 import org.joml.Vector3f;
 
 import java.util.List;
@@ -55,8 +54,8 @@ public class HiderDisguise {
 
 
 	// Used if disguised as a block
-	private BlockState nmsBlockState;
-	private static final BlockState nmsAirBlockState = ((CraftBlockState) Material.AIR.createBlockData().createBlockState()).getHandle();
+	private BlockData blockData;
+	private static final BlockData airBlockData = Material.AIR.createBlockData();
 	private BlockCoords occupiedBlock;
 	private int blockChangeTick;
 	private BlockBuilding building; // Register to prevent overlaps
@@ -85,12 +84,12 @@ public class HiderDisguise {
 	// Is this the NMS type?
 	private static final Vector3f defaultTranslateVec = new Vector3f(-0.5f, -0.5f, -0.5f);
 	void disguise(Block clicked) {
-		if (this.nmsBlockState != null) {
+		if (this.blockData != null) {
 			assert CompileAsserts.OMIT || this.occupiedBlock != null;
 			this.breakExistingSolid();
 		}
 
-		this.nmsBlockState = ((CraftBlockState) clicked.getState()).getHandle();
+		this.blockData = clicked.getBlockData();
 
 		boolean respawn = false; // need to refresh meta manually if already existed
 		if (this.disguise == null || this.disguise.getEntityType() != EntityType.BLOCK_DISPLAY) {
@@ -108,7 +107,7 @@ public class HiderDisguise {
 			this.disguise.setMetadata(MetaIndex.DISPLAY_TRANSLATION_OBJ, defaultTranslateVec);
 		}
 
-		this.disguise.setMetadata(MetaIndex.BLOCK_DISPLAY_BLOCK_OBJ, nmsBlockState);
+		this.disguise.setMetadata(MetaIndex.BLOCK_DISPLAY_BLOCK_OBJ, ((CraftBlockData) blockData).getState());
 		this.disguise.updateMetadataPacket();
 
 		if (respawn)
@@ -125,10 +124,10 @@ public class HiderDisguise {
 	}
 
 	void disguise(LivingEntity clicked) {
-		if (this.nmsBlockState != null)
+		if (this.blockData != null)
 			this.resetBlockTimer(null);
 
-		this.nmsBlockState = null;
+		this.blockData = null;
 
 		if (this.disguise != null) {
 			this.disguise.remove();
@@ -149,9 +148,9 @@ public class HiderDisguise {
 		this.disguise.remove();
 		this.disguise = null;
 
-		if (this.nmsBlockState != null)
+		if (this.blockData != null)
 			this.resetBlockTimer(null);
-		this.nmsBlockState = null;
+		this.blockData = null;
 
 		PlayerUtils.setInvisible(this.hider, false);
 	}
@@ -240,7 +239,7 @@ public class HiderDisguise {
 		bukkitState.setBlockData(this.nmsBlockState.createCraftBlockData());
 		bukkitState.update(true, false);*/
 		this.fbManagerKey = this.game.getFakeBlockManager()
-			.setFakeBlock(this.occupiedBlock, this.nmsBlockState, viewer -> viewer != this.hider);
+			.setFakeBlock(this.occupiedBlock, this.blockData, viewer -> viewer != this.hider);
 
 		this.setBlockDisplayData(true, this.occupiedBlock, true);
 
@@ -249,7 +248,7 @@ public class HiderDisguise {
 	}
 
 	void tick() {
-		if (this.nmsBlockState != null) {
+		if (this.blockData != null) {
 			BlockCoords currentCoords = this.getCoords();
 			// Use BuildingManager to prevent 2 solidifications in 1 block
 			if (!currentCoords.equals(this.occupiedBlock)) {
@@ -299,11 +298,11 @@ public class HiderDisguise {
 	}
 
 	private void visualBlockEffect() {
-		ParticleUtils.blockBreakEffect(this.hider, this.nmsBlockState.getBukkitMaterial(), this.hider.getLocation());
+		ParticleUtils.blockBreakEffect(this.hider, this.blockData, this.hider.getLocation());
 	}
 
 	void remove() {
-		if (this.nmsBlockState != null) {
+		if (this.blockData != null) {
 			this.resetBlockTimer(null);
 		}
 
