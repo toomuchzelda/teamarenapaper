@@ -338,6 +338,10 @@ public class PacketEntity
 		}
 	}
 
+	protected void updateTeleportPacket() {
+		this.updateTeleportPacket(this.getLocationMut());
+	}
+
 	protected void updateTeleportPacket(Location newLocation) {
 		PacketUtils.setEntityPositionSyncPos(this.teleportPacket, newLocation, null);
 	}
