@@ -13,6 +13,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -185,6 +186,7 @@ public abstract class CustomCommand extends Command {
 	 * Convenience method for getting the names of all online players for tab complete suggestion
 	 * @deprecated Use suggestPlayerSelectors() and selectEntities()
 	 */
+	@Deprecated
 	public static List<String> suggestOnlinePlayers() {
 		Collection<? extends Player> players = Bukkit.getOnlinePlayers();
 		List<String> playerNames = new ArrayList<>(players.size());

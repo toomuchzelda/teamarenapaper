@@ -25,6 +25,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -52,12 +53,14 @@ public class KitSpy extends Kit
 			+ "sec disguise time").color(NamedTextColor.LIGHT_PURPLE));
 	public static final Component ATTACKED_MESSAGE = Component.text("Lost your disguise because you attacked someone!").color(NamedTextColor.LIGHT_PURPLE);
 
+	private static final NamespacedKey HEAD_PDC_KEY = new NamespacedKey(Main.getPlugin(), "spyplayerhead");
 
 	//preferably wouldnt be static, but this is becoming really messy
 	public static HashMap<Player, SpyDisguiseInfo> currentlyDisguised;
 
+	private int playerHeadId = 0; // Unique for each player head on kill
 	//need to store Kit and Player, player should be inside the skull's PlayerProfile already
-	public final HashMap<ItemStack, Kit> skullItemDisguises = new HashMap<>();
+	public final HashMap<Integer, Kit> skullItemDisguises = new HashMap<>();
 
 	static {
 		DISGUISE_MENU_LORE_LIST = List.of(DISGUISE_MENU_DESC, DISGUISE_MENU_DESC2);
@@ -165,11 +168,14 @@ public class KitSpy extends Kit
 				List<Component> lore = new ArrayList<>(2);
 				lore.add(ItemUtils.noItalics(Component.text("Kit: " + victimsKit.getName()).color(NamedTextColor.LIGHT_PURPLE)));
 				lore.add(HEAD_TIME_MESSAGE);
-				lore.add(Component.text(ItemUtils.getUniqueId()));
 				meta.lore(lore);
+
+				final int headId = playerHeadId++;
+				meta.getPersistentDataContainer().set(HEAD_PDC_KEY, PersistentDataType.INTEGER, headId);
+
 				victimsHead.setItemMeta(meta);
 
-				skullItemDisguises.put(victimsHead, victimsKit);
+				skullItemDisguises.put(headId, victimsKit);
 				player.getInventory().addItem(victimsHead);
 			}
 		}
@@ -194,16 +200,24 @@ public class KitSpy extends Kit
 				}
 				else if (event.getMaterial() == Material.PLAYER_HEAD){
 					ItemStack head = event.getItem();
-					Kit kit = skullItemDisguises.remove(head);
-					if(kit != null) {
-						SkullMeta meta = (SkullMeta) head.getItemMeta();
-						Player spy = event.getPlayer();
-						Player toDisguiseAs = Bukkit.getPlayer(meta.getPlayerProfile().getId());
+					Integer id = head.getPersistentDataContainer().get(HEAD_PDC_KEY, PersistentDataType.INTEGER);
+					if (id != null) {
+						Kit kit = skullItemDisguises.remove(id);
+						if (kit != null) {
+							SkullMeta meta = (SkullMeta) head.getItemMeta();
+							Player spy = event.getPlayer();
+							Player toDisguiseAs = Bukkit.getPlayer(meta.getPlayerProfile().getId());
 
-						disguisePlayer(spy, Main.getPlayerInfo(spy).team, toDisguiseAs, kit, TIME_TO_DISGUISE_HEAD, false);
+							disguisePlayer(spy, Main.getPlayerInfo(spy).team, toDisguiseAs, kit, TIME_TO_DISGUISE_HEAD, false);
 
-						spy.getInventory().remove(head);
-						event.setUseItemInHand(Event.Result.DENY);
+							spy.getInventory().remove(head);
+							event.setUseItemInHand(Event.Result.DENY);
+						}
+						else {
+							Main.logger().warning(event.getPlayer().getName() + " used a player head which" +
+								" had an ID of " + id + " but was not an entry in skullItemDisguises");
+							event.getItem().setAmount(0);
+						}
 					}
 				}
 			}

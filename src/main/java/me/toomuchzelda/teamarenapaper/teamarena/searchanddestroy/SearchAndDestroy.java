@@ -179,7 +179,8 @@ public class SearchAndDestroy extends TeamArena
 	@Override
 	public void setupMiniMap() {
 		teamBombs.forEach((team, bombs) -> {
-			MapCursor.Type icon = MapCursor.Type.valueOf("BANNER_" + team.getDyeColour().name());
+			String key = "banner_" + team.getDyeColour().name().toLowerCase(Locale.ENGLISH);
+			MapCursor.Type icon = Registry.MAP_DECORATION_TYPE.get(NamespacedKey.minecraft(key));
 			var bombText = Component.text(team.getSimpleName() + "'s bomb", team.getRGBTextColor());
 			miniMap.registerCursors(
 				(ignored1, ignored2) -> CommandDebug.ignoreWinConditions || gameState == GameState.PREGAME || team.hasLivingOrRespawningMembers(),

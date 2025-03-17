@@ -1379,7 +1379,7 @@ public abstract class TeamArena
 		//reveal everyone to everyone just to be safe
 		for(Player p : Bukkit.getOnlinePlayers()) {
 			try {
-				p.getAttribute(Attribute.GENERIC_SCALE).removeModifier(SPECTATOR_SCALE);
+				p.getAttribute(Attribute.SCALE).removeModifier(SPECTATOR_SCALE);
 			} catch (Exception e) { e.printStackTrace(); }
 			for(Player pp : Bukkit.getOnlinePlayers()) {
 				p.showPlayer(Main.getPlugin(), pp);
@@ -1655,7 +1655,7 @@ public abstract class TeamArena
 		player.getInventory().clear();
 		giveSpectatorItems(player);
 		player.setAllowFlight(true);
-		EntityUtils.addAttribute(player.getAttribute(Attribute.GENERIC_SCALE), SPECTATOR_SCALE);
+		EntityUtils.addAttribute(player.getAttribute(Attribute.SCALE), SPECTATOR_SCALE);
 
 		//hide all the spectators from everyone else
 		for(Player p : Bukkit.getOnlinePlayers()) {
@@ -1815,7 +1815,7 @@ public abstract class TeamArena
 			//convert the raw damage into decimal range 0 to 1
 			// eg 10 damage (on player with 20 max health) = 0.5 kills
 			double damageAmount = entry.getValue();
-			damageAmount /= victim.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+			damageAmount /= victim.getAttribute(Attribute.MAX_HEALTH).getValue();
 			addKillAmount(damager, damageAmount, victim);
 		}
 	}
@@ -1971,7 +1971,7 @@ public abstract class TeamArena
 		player.teleport(toTeleport);
 
 		player.setGameMode(GameMode.SURVIVAL);
-		player.getAttribute(Attribute.GENERIC_ATTACK_SPEED).setBaseValue(999999);
+		player.getAttribute(Attribute.ATTACK_SPEED).setBaseValue(999999);
 		this.sendGameAndMapInfo(player);
 		if (gameState.isPreGame()) {
 			//decided from loggingInPlayer(Player)

@@ -11,6 +11,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PacketSender;
+import me.toomuchzelda.teamarenapaper.utils.PacketUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket;
@@ -21,8 +22,6 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.phys.AABB;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.attribute.Attribute;
-import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.craftbukkit.CraftWorld;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.EntityType;
@@ -131,10 +130,8 @@ public class FakeHitbox
 			spawnPlayerPackets[i] = spawnPlayerPacket;
 			spawnAndMetaPackets[i] = spawnPlayerPacket;
 
-			PacketContainer teleportPacket = new PacketContainer(PacketType.Play.Server.ENTITY_TELEPORT);
-			teleportPacket.getIntegers().write(0, fPlayer.entityId);
-			teleportPackets[i] = teleportPacket;
-
+			PacketContainer teleportPacket = PacketUtils.newEntityPositionSync(fPlayer.entityId);
+			this.teleportPackets[i] = teleportPacket;
 
 			PacketContainer metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
 			metadataPacket.getIntegers().write(0, fPlayer.entityId);
@@ -288,8 +285,12 @@ public class FakeHitbox
 			}
 
 			//update the packets
-			writeDoubles(spawnPlayerPackets[i], coordinates[i]);
-			writeDoubles(teleportPackets[i], coordinates[i]);
+			spawnPlayerPackets[i].getDoubles()
+				.write(0, coordinates[i].getX())
+				.write(1, coordinates[i].getY())
+				.write(2, coordinates[i].getZ());
+
+			PacketUtils.setEntityPositionSyncPos(this.teleportPackets[i], coordinates[i], null);
 		}
 
 		//update positions on client if needed
@@ -297,9 +298,10 @@ public class FakeHitbox
 			for (var entry : this.viewers.entrySet()) {
 				if (entry.getValue().isSeeingHitboxes) {
 					for (int i = 0; i < 4; i++) {
-						if (updateThisBox[i])
+						if (updateThisBox[i]) {
 							//PlayerUtils.sendPacket(entry.getKey(), cache, teleportPackets);
-							cache.enqueue(entry.getKey(), teleportPackets);
+							cache.enqueue(entry.getKey(), teleportPackets[i]);
+						}
 					}
 				}
 			}
@@ -443,13 +445,6 @@ public class FakeHitbox
 		}
 
 		return packets;
-	}
-
-	private static void writeDoubles(PacketContainer packet, Vector coords) {
-		StructureModifier<Double> doubles = packet.getDoubles();
-		doubles.write(0, coords.getX());
-		doubles.write(1, coords.getY());
-		doubles.write(2, coords.getZ());
 	}
 
 	// Make new packets that only have the pose change, instead of using this.metadataPackets, to reduce

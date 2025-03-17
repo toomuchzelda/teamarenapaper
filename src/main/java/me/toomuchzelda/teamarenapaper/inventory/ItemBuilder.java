@@ -140,8 +140,9 @@ public final class ItemBuilder {
 	}
 
 	private static final NamespacedKey UNIQUE_KEY = new NamespacedKey(Main.getPlugin(), "item_id");
+	private static int id = 0;
 	public ItemBuilder unique() {
-		meta.getPersistentDataContainer().set(UNIQUE_KEY, PersistentDataType.INTEGER, ItemUtils._uniqueName++);
+		meta.getPersistentDataContainer().set(UNIQUE_KEY, PersistentDataType.INTEGER, id++);
 		return this;
 	}
 

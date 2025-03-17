@@ -3,7 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.abilities.explosives.CritAbility;
+import me.toomuchzelda.teamarenapaper.teamarena.abilities.CritAbility;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;

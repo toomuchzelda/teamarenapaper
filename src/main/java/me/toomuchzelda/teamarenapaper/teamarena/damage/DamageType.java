@@ -373,8 +373,9 @@ public class DamageType {
 		LIGHTNING.setDamageSource(nmsDamageSources.lightningBolt());
 		MAGMA.setDamageSource(nmsDamageSources.hotFloor());
 		// MELEE Handled in getAttack
-		MELTING.setDamageSource(nmsDamageSources.melting());
-		POISON.setDamageSource(nmsDamageSources.poison());
+		// These two taken from what CraftBukkit does
+		MELTING.setDamageSource(nmsDamageSources.onFire().knownCause(EntityDamageEvent.DamageCause.MELTING));
+		POISON.setDamageSource(nmsDamageSources.magic().knownCause(EntityDamageEvent.DamageCause.POISON));
 		// PROJECTILE handled in getAttack
 		// SONIC_BOOM
 		STARVATION.setDamageSource(nmsDamageSources.starve());
@@ -392,7 +393,7 @@ public class DamageType {
 		SNIPER_GRENADE_FAIL.setDamageSource(nmsDamageSources.explosion(null, null)); // TODO handle source and attacker
 		// SNIPER_HEADSHOT TODO handle
 		DEMO_TNTMINE.setDamageSource(nmsDamageSources.explosion(null, null));
-		TOXIC_LEAP.setDamageSource(nmsDamageSources.poison());
+		TOXIC_LEAP.setDamageSource(nmsDamageSources.magic().knownCause(EntityDamageEvent.DamageCause.POISON));
 		// BURST_FIREWORK TODO nmsD.firework( ,)
 		// BURST_FIREWORK_SELF.setDamageSource()
 		// BURST_SHOTGUN_SELF
@@ -524,17 +525,17 @@ public class DamageType {
     }
 
     public static DamageType getSweeping(EntityDamageEvent event) {
-        if(event instanceof EntityDamageByEntityEvent dEvent && dEvent.getDamager() instanceof LivingEntity living) {
-            return getSweeping(living);
+        if(event instanceof EntityDamageByEntityEvent dEvent && dEvent.getDamager() instanceof Player p) {
+			return getSweeping(p);
         }
         else {
             return SWEEP_ATTACK;
         }
     }
 
-    public static DamageType getSweeping(LivingEntity living) {
-        return new DamageType(SWEEP_ATTACK).setDamageSource(DamageSourceCreator.getMelee(living).sweep());
-    }
+	public static DamageType getSweeping(Player p) {
+		return new DamageType(SWEEP_ATTACK).setDamageSource(DamageSourceCreator.getSweeping(p));
+	}
 
 	public static DamageType getSonicBoom(EntityDamageEvent event) {
 		if (event instanceof EntityDamageByEntityEvent entityDamageByEntityEvent) {

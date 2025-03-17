@@ -214,7 +214,7 @@ public class CaptureTheFlag extends TeamArena
             announcementTitle = SPEED_NOW_TITLE;
 
             for (Player carrier : flagHolders.keySet()) {
-				EntityUtils.addAttribute(carrier.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED), SPEED_ATTR);
+				EntityUtils.addAttribute(carrier.getAttribute(Attribute.MOVEMENT_SPEED), SPEED_ATTR);
                 currentSpeeders.add(carrier);
             }
         }
@@ -461,7 +461,7 @@ public class CaptureTheFlag extends TeamArena
 
 		//give speed boost if appropriate
 		if(this.timeToSpeed <= 0) {
-			AttributeInstance attributeInstance = player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
+			AttributeInstance attributeInstance = player.getAttribute(Attribute.MOVEMENT_SPEED);
 			EntityUtils.addAttribute(attributeInstance, SPEED_ATTR);
 			currentSpeeders.add(player);
 		}
@@ -531,7 +531,7 @@ public class CaptureTheFlag extends TeamArena
 			flag.teleportToBase();
 		}
 
-		AttributeInstance aInst = player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
+		AttributeInstance aInst = player.getAttribute(Attribute.MOVEMENT_SPEED);
 		if(aInst.getModifiers().contains(SPEED_ATTR)) {
 			aInst.removeModifier(SPEED_ATTR);
 		}
@@ -637,7 +637,7 @@ public class CaptureTheFlag extends TeamArena
 
 		Iterator<Player> speedersIter = currentSpeeders.iterator();
 		while(speedersIter.hasNext()) {
-			speedersIter.next().getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).removeModifier(SPEED_ATTR);
+			speedersIter.next().getAttribute(Attribute.MOVEMENT_SPEED).removeModifier(SPEED_ATTR);
 			speedersIter.remove();
 		}
 
@@ -814,7 +814,8 @@ public class CaptureTheFlag extends TeamArena
 			Flag flag = entry.getValue();
 
 			ArmorStand stand = flag.getArmorStand();
-			MapCursor.Type icon = MapCursor.Type.valueOf("BANNER_" + team.getDyeColour().name());
+			String key = "banner_" + team.getDyeColour().name().toLowerCase(Locale.ENGLISH);
+			MapCursor.Type icon = Registry.MAP_DECORATION_TYPE.get(NamespacedKey.minecraft(key));
 			Component flagText = Component.text(team.getSimpleName() + " flag", team.getRGBTextColor());
 			Component yourFlagText = Component.text("Your flag", team.getRGBTextColor());
 			miniMap.registerCursor(
@@ -843,7 +844,7 @@ public class CaptureTheFlag extends TeamArena
 		flagItems.clear();
 
 		for (Player carrier : currentSpeeders) {
-			carrier.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).removeModifier(SPEED_ATTR);
+			carrier.getAttribute(Attribute.MOVEMENT_SPEED).removeModifier(SPEED_ATTR);
 		}
 	}
 

@@ -7,6 +7,10 @@ import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.PacketUtils;
+import net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket;
+import net.minecraft.world.entity.PositionMoveRotation;
+import net.minecraft.world.phys.Vec3;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -154,11 +158,11 @@ public class AttachedPacketEntity extends PacketEntity
 			PacketContainer entityPacket = packet.shallowClone();
 			entityPacket.getIntegers().write(0, this.getId());
 
-			if(packet.getType() == PacketType.Play.Server.ENTITY_TELEPORT) {
+			// type check is retained for future migration
+			if (packet.getType() == PacketUtils.ENTITY_POSITION_SYNC &&
+				packet.getHandle() instanceof ClientboundEntityPositionSyncPacket) {
 				//adjust the entity's Y position
-				double y = packet.getDoubles().read(1);
-				y += this.getYOffset();
-				entityPacket.getDoubles().write(1, y);
+				PacketUtils.addEntityPositionSyncY(entityPacket, this.getYOffset());
 			}
 
 			packetsOut.add(entityPacket);

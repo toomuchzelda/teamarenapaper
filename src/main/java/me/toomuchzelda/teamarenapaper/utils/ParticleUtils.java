@@ -7,6 +7,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.craftbukkit.CraftParticle;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -40,7 +41,7 @@ public class ParticleUtils {
 		ParticleOptions nmsParticleOptions = CraftParticle.createParticleParam(particle, data);
 		ClientboundLevelParticlesPacket packet = new ClientboundLevelParticlesPacket(
 			nmsParticleOptions,
-			force,
+			force, false,
 			loc.getX(), loc.getY(), loc.getZ(),
 			offX, offY, offZ,
 			speed,
@@ -68,7 +69,7 @@ public class ParticleUtils {
 	public static void playExplosionParticle(Location location, float offX, float offY, float offZ, boolean large) {
 		ParticleOptions particle = large ? ParticleTypes.EXPLOSION_EMITTER : ParticleTypes.EXPLOSION;
 		PacketContainer packet = new PacketContainer(PacketType.Play.Server.WORLD_PARTICLES,
-			new ClientboundLevelParticlesPacket(particle, false, location.getX(), location.getY(), location.getZ(), offX, offY, offZ, 1f, 1));
+			new ClientboundLevelParticlesPacket(particle, false, false, location.getX(), location.getY(), location.getZ(), offX, offY, offZ, 1f, 1));
 
 		for(Player p : location.getWorld().getPlayers()) {
 			PlayerUtils.sendPacket(p, packet);
@@ -78,12 +79,21 @@ public class ParticleUtils {
 	/** Play the block destruction effect that happens when a player breaks a block */
 	public static void blockBreakEffect(Player player, Block block) {
 		Location loc = block.getLocation();
-		player.playEffect(loc, Effect.STEP_SOUND, block.getType());
+		player.playEffect(loc, Effect.STEP_SOUND, block.getBlockData());
+	}
+
+	/**
+	 * Play the block destruction effect that happens when a player breaks a block
+	 * @deprecated Incorrect clientside effect
+	 */
+	@Deprecated
+	public static void blockBreakEffect(Player player, Material mat, Location loc) {
+		player.playEffect(loc, Effect.STEP_SOUND, mat);
 	}
 
 	/** Play the block destruction effect that happens when a player breaks a block */
-	public static void blockBreakEffect(Player player, Material mat, Location loc) {
-		player.playEffect(loc, Effect.STEP_SOUND, mat);
+	public static void blockBreakEffect(Player player, BlockData blockData, Location loc) {
+		player.playEffect(loc, Effect.STEP_SOUND, blockData);
 	}
 
 	/** Play the block destruction effect that happens when a player breaks a block,

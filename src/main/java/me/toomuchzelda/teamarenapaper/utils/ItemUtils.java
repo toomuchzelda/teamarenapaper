@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.utils;
 
 import com.destroystokyo.paper.MaterialSetTag;
+import io.papermc.paper.datacomponent.DataComponentType;
 import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
@@ -21,15 +22,10 @@ import org.jetbrains.annotations.NotNull;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Predicate;
 
 public class ItemUtils {
-	public static int _uniqueName = 0;
-
     /**
      * used to explicity set italics state of components to false
      * useful coz setting displayname/lore on ItemMetas defaults to making them italic
@@ -54,6 +50,31 @@ public class ItemUtils {
     public static boolean isSword(ItemStack item) {
         return SWORD_ITEMS.isTagged(item.getType());
     }
+
+	public static Map<DataComponentType, Object> getComponents(ItemStack item) {
+		Map<DataComponentType, Object> map = new HashMap<>();
+		for (DataComponentType dct : item.getDataTypes()) {
+			if (dct instanceof DataComponentType.Valued v)
+				map.put(dct, item.getData(v));
+			else
+				map.put(dct, null);
+		}
+
+		return map;
+	}
+
+	// For debugging
+	public static String componentsToStr(ItemStack item) {
+		Map<DataComponentType, Object> map = getComponents(item);
+		StringBuilder s = new StringBuilder(512);
+
+		int i = 0;
+		for (var entry : map.entrySet()) {
+			s.append(i++).append("=").append(entry.getValue()).append("\n");
+		}
+
+		return s.toString();
+	}
 
 	public static boolean isArmorSlotIndex(int index) {
 		return index > 35 && index < 40;
@@ -255,21 +276,6 @@ public class ItemUtils {
 			}
 		}
 	}
-
-    /**
-     * return a bunch of color chars to append to the end of item name/lore to make it unique (including uniquely hash-able)
-     * used to stop stacking of otherwise identical items.
-     * credit libraryaddict - https://github.com/libraryaddict/RedWarfare/blob/master/redwarfare-core/src/me/libraryaddict/core/utils/UtilInv.java
-     */
-    public static String getUniqueId() {
-		final String strints = Integer.toString(_uniqueName++);
-		final StringBuilder string = new StringBuilder(strints.length() * 2);
-        for (int i = 0; i < strints.length(); i++) {
-            string.append(ChatColor.COLOR_CHAR).append(strints.charAt(i));
-        }
-
-        return string.toString();
-    }
 
 	public static boolean isHoldingItem(LivingEntity e) {
 		EntityEquipment equipment = e.getEquipment();

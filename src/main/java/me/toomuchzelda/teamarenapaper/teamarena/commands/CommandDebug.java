@@ -33,6 +33,7 @@ import net.minecraft.network.protocol.game.ClientboundHurtAnimationPacket;
 import net.minecraft.world.level.block.state.BlockState;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.command.CommandSender;
 import org.bukkit.craftbukkit.block.data.CraftBlockData;
 import org.bukkit.entity.EntityType;
@@ -506,16 +507,15 @@ public class CommandDebug extends CustomCommand {
 			}
 			case "fakeBlock" -> {
 				if (args.length < 3)
-					throw throwUsage("fakeBlock add/remove MATERIAL/KEY");
+					throw throwUsage("fakeBlock add/remove blockData/KEY");
 
 				if (args[1].equalsIgnoreCase("add")) {
 
 					Block targetBlock = player.getTargetBlock(null, 5);
-					Material desiredMat = Material.valueOf(args[2]);
+					BlockData blockData = Bukkit.createBlockData(args[2]);
 					FakeBlockManager fbManager = Main.getGame().getFakeBlockManager();
 
-					long key = fbManager.setFakeBlock(new BlockCoords(targetBlock),
-						((CraftBlockData) desiredMat.createBlockData()).getState(), viewer -> viewer == player);
+					long key = fbManager.setFakeBlock(new BlockCoords(targetBlock), blockData, viewer -> viewer == player);
 
 					Bukkit.broadcastMessage("Key is " + key);
 				}

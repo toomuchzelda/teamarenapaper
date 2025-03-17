@@ -1,4 +1,4 @@
-package me.toomuchzelda.teamarenapaper.teamarena.abilities.explosives;
+package me.toomuchzelda.teamarenapaper.teamarena.abilities;
 
 import com.comphenix.protocol.events.PacketContainer;
 import me.toomuchzelda.teamarenapaper.CompileAsserts;
@@ -14,7 +14,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
-import me.toomuchzelda.teamarenapaper.utils.PacketSender;
 import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.AttachedPacketHologram;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
@@ -42,13 +41,12 @@ public class CritAbility extends Ability {
 		// of the player on the clientside.
 		private final PacketEntity interaction;
 		private final AttachedPacketHologram vehicle;
-		private final CritAbility critAbility;
 
 		private float width;
+		private float vehicleWidth; // not the vehicle's width
 
 		public CritHitbox(LivingEntity followed, CritAbility critAbility) {
 			this.followed = followed;
-			this.critAbility = critAbility;
 
 			final Predicate<Player> viewerRule =
 				viewer -> viewer != followed && Ability.getAbility(viewer, CritAbility.class) != null;
@@ -58,6 +56,17 @@ public class CritAbility extends Ability {
 				@Override
 				public double getYOffset() {
 					return getBoxYOffset(entity);
+				}
+
+				@Override
+				public void tick() {
+					super.tick();
+					float currentWidth = getWidth(followed);
+					if (currentWidth != CritHitbox.this.vehicleWidth) {
+						CritHitbox.this.vehicleWidth = currentWidth;
+						this.updateTeleportPacket();
+						this.broadcastPacket(this.getTeleportPacket());
+					}
 				}
 			};
 			this.vehicle.setCustomNameVisible(false);
@@ -97,6 +106,7 @@ public class CritAbility extends Ability {
 			};
 
 			this.width = getWidth(followed);
+			this.vehicleWidth = width;
 			if (!KitOptions.trooperRatioVisible)
 				this.interaction.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK);
 			this.interaction.setMetadata(MetaIndex.INTERACTION_WIDTH_OBJ, this.width);

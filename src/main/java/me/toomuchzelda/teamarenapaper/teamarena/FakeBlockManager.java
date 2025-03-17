@@ -4,7 +4,6 @@ import io.papermc.paper.event.packet.PlayerChunkLoadEvent;
 import io.papermc.paper.math.BlockPosition;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
-import net.minecraft.world.level.block.state.BlockState;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
@@ -22,18 +21,18 @@ public class FakeBlockManager {
 	public static final long INVALID_KEY = 0;
 	private static long keyCtr = 0; // unique key for each fakeblock register-er
 	private static final class FakeBlock {
-		private final BlockState nmsState;
+		private final BlockData blockData;
 		private final Predicate<Player> viewerRule;
 		private final long key;
 
-		private FakeBlock(BlockState nmsState, Predicate<Player> viewerRule) {
-			this.nmsState = nmsState;
+		private FakeBlock(BlockData blockData, Predicate<Player> viewerRule) {
+			this.blockData = blockData;
 			this.viewerRule = viewerRule;
 			this.key = ++keyCtr;
 		}
 
 		@Override
-		public String toString() { return "FakeBlock[" + "nmsState=" + nmsState + "]"; }
+		public String toString() { return "FakeBlock[nmsState=" + blockData + "]"; }
 	}
 
 	private final Map<BlockCoords, List<FakeBlock>> fakeBlocks;
@@ -43,23 +42,22 @@ public class FakeBlockManager {
 		this.fakeBlocks = new HashMap<>();
 	}
 
-	private record PosAndBlockData(BlockCoords coords, BlockState state) {}
+	private record PosAndBlockData(BlockCoords coords, BlockData data) {}
 
 	/** Add a fake block */
-	public long setFakeBlock(BlockCoords coords, BlockState nmsBlockState, Predicate<Player> viewerRule) {
+	public long setFakeBlock(BlockCoords coords, BlockData nmsBlockState, Predicate<Player> viewerRule) {
 		FakeBlock fakeBlock = new FakeBlock(nmsBlockState, viewerRule);
 
 		List<FakeBlock> list = fakeBlocks.computeIfAbsent(coords, c -> new ArrayList<>(2));
 		list.add(fakeBlock);
 
-		final Chunk chunk = coords.toBlock(this.game.getWorld()).getChunk();
 		for (Player viewer : Bukkit.getOnlinePlayers()) {
-			if (!viewer.isChunkSent(chunk)) continue;
+			if (!coords.hasLoaded(viewer)) continue;
 
 			ArrayList<PosAndBlockData> toSend = new ArrayList<>(2);
 			for (FakeBlock fb : list) {
 				if (fb.viewerRule.test(viewer)) {
-					toSend.add(new PosAndBlockData(coords, fb.nmsState));
+					toSend.add(new PosAndBlockData(coords, fb.blockData));
 				}
 			}
 
@@ -89,7 +87,7 @@ public class FakeBlockManager {
 					if (list == null)
 						list = new ArrayList<>(2);
 
-					list.add(new PosAndBlockData(bc, fb.nmsState));
+					list.add(new PosAndBlockData(bc, fb.blockData));
 				}
 			}
 		}
@@ -105,13 +103,12 @@ public class FakeBlockManager {
 		if (!posAndBlockData.isEmpty()) {
 			if (posAndBlockData.size() == 1) {
 				PosAndBlockData pair = posAndBlockData.getFirst();
-				viewer.sendBlockChange(pair.coords.toLocation(game.getWorld()),
-					pair.state.createCraftBlockData());
+				viewer.sendBlockChange(pair.coords.toLocation(game.getWorld()), pair.data);
 			}
 			else {
-				Map<BlockPosition, BlockData> map = new HashMap<>(posAndBlockData.size() * 2);
+				Map<BlockPosition, BlockData> map = HashMap.newHashMap(posAndBlockData.size());
 				for (var pair : posAndBlockData) {
-					BlockData previous = map.put(pair.coords.toPaperBlockPos(), pair.state.createCraftBlockData());
+					BlockData previous = map.put(pair.coords.toPaperBlockPos(), pair.data);
 					if (previous != null) {
 						Main.logger().warning("Multiple Fakeblocks in same coordinates registered for " + viewer +
 							", pair: " + pair + ". Was previously " + previous);
