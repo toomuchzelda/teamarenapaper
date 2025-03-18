@@ -25,7 +25,10 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
-import me.toomuchzelda.teamarenapaper.teamarena.inventory.*;
+import me.toomuchzelda.teamarenapaper.teamarena.inventory.CosmeticsInventory;
+import me.toomuchzelda.teamarenapaper.teamarena.inventory.KitInventory;
+import me.toomuchzelda.teamarenapaper.teamarena.inventory.PreferencesInventory;
+import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.IronGolemKillStreak;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.KillStreakManager;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.WolvesKillStreak;
@@ -40,7 +43,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.FilterRule;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitFilter;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitHider;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitRadarSeeker;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitSeeker;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.medic.KitMedic;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.rewind.KitRewind;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.trigger.KitTrigger;
@@ -296,7 +298,7 @@ public abstract class TeamArena
 		graffiti = new GraffitiManager(this);
 		killStreakManager = new KillStreakManager();
 		this.fakeBlockManager = new FakeBlockManager(this);
-		this.commonAbilityManager = new CommonAbilityManager();
+		this.commonAbilityManager = new CommonAbilityManager(this);
 
 		KitFilter.resetFilter();
 		registerKits();
@@ -394,6 +396,7 @@ public abstract class TeamArena
 			new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(), new KitNone(),
 			new KitVenom(), new KitRewind(), new KitValkyrie(), new KitExplosive(), new KitTrigger(), new KitMedic(this.killStreakManager),
 			new KitBerserker(), new KitEngineer(), new KitPorcupine(), new KitLongbow(), new KitSniper(), new KitBeekeeper(),
+			new KitMarine(this.commonAbilityManager),
 
 			new KitHider(this), /*new KitSeeker(),*/ new KitRadarSeeker(this)
 		};

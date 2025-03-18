@@ -165,4 +165,12 @@ public class MathUtils
 	public static float easeOutCubic(float t) {
 		return 1 - (float) Math.pow(1 - t, 3);
 	}
+
+	public static float lerp(float a, float b, float t) {
+		return Math.fma(b - a, t, a);
+	}
+
+	public static double lerp(double a, double b, double t) {
+		return Math.fma(b - a, t, a);
+	}
 }

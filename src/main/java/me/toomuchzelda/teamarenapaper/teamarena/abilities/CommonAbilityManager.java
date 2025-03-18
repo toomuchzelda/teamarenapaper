@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.abilities;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.abilities.explosives.ExplosiveProjectilesAbility;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import org.bukkit.Bukkit;
@@ -15,14 +16,17 @@ import java.util.List;
 public class CommonAbilityManager {
 	public final RailgunAbility railgun;
 	public final ExplosiveProjectilesAbility explosives;
+	public final RiptideAbility riptide;
 
 	private final List<Ability> all;
 
-	public CommonAbilityManager() {
+	public CommonAbilityManager(TeamArena game) {
 		this.railgun = new RailgunAbility();
 		this.railgun.registerAbility();
 		this.explosives = new ExplosiveProjectilesAbility();
 		this.explosives.registerAbility();
+		this.riptide = new RiptideAbility(game);
+		this.riptide.registerAbility();
 
 		this.all = List.of(railgun, explosives);
 	}

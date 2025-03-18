@@ -1,7 +1,6 @@
 package me.toomuchzelda.teamarenapaper.inventory;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.ComponentLike;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -66,12 +65,22 @@ public final class ItemBuilder {
 		return meta.displayName();
 	}
 
-    public ItemBuilder displayName(@Nullable ComponentLike component) {
-        meta.displayName(component != null ?
+	public ItemBuilder displayName(@Nullable ComponentLike component) {
+		meta.displayName(component != null ?
 			component.asComponent().decorationIfAbsent(TextDecoration.ITALIC, TextDecoration.State.FALSE) :
 			null);
-        return this;
-    }
+		return this;
+	}
+
+	@Nullable
+	public Component name() {
+		return meta.hasItemName() ? meta.itemName() : null;
+	}
+
+	public ItemBuilder name(@Nullable ComponentLike component) {
+		meta.itemName(component != null ? component.asComponent() : null);
+		return this;
+	}
 
 	@Nullable
 	public List<Component> lore() {
@@ -114,6 +123,11 @@ public final class ItemBuilder {
         meta.addEnchant(enchantment, level, true);
         return this;
     }
+
+	public ItemBuilder enchantmentGlint(boolean glint) {
+		meta.setEnchantmentGlintOverride(glint);
+		return this;
+	}
 
     public ItemBuilder color(@Nullable Color color) {
         meta(LeatherArmorMeta.class, armorMeta -> armorMeta.setColor(color));

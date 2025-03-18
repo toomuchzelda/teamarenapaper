@@ -22,8 +22,8 @@ import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.ChatAnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingListeners;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
-import me.toomuchzelda.teamarenapaper.teamarena.commands.brigadier.BrigadierCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CustomCommand;
+import me.toomuchzelda.teamarenapaper.teamarena.commands.brigadier.BrigadierCommand;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.*;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.DigAndBuild;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
@@ -33,12 +33,10 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.KitReach;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitVenom;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
-import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
-import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketPlayer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.ParsingException;
@@ -690,7 +688,9 @@ public class EventListeners implements Listener
 			}
 
 			if (collidedWith != null &&
-				betterEvent.projectileHitEvent.getEntity() instanceof AbstractArrow) {
+				betterEvent.projectileHitEvent.getEntity() instanceof AbstractArrow abstractArrow &&
+				!(abstractArrow instanceof Trident) // trident loyalty fix
+			) {
 				ArrowManager.handleBlockCollision(event);
 				ArrowManager.handleArrowEntityCollision(event);
 
@@ -1056,6 +1056,32 @@ public class EventListeners implements Listener
 	public void playerFish(PlayerFishEvent event) {
 		for(Ability a : Kit.getAbilities(event.getPlayer())) {
 			a.onFish(event);
+		}
+	}
+
+	@EventHandler
+	public void playerRiptide(PlayerRiptideEvent event) {
+		for (Ability a : Kit.getAbilities(event.getPlayer())) {
+			a.onRiptide(event);
+		}
+	}
+
+	@EventHandler
+	public void playerStopUsingItem(PlayerStopUsingItemEvent event) {
+		for (Ability a : Kit.getAbilities(event.getPlayer())) {
+			a.onStopUsingItem(event);
+		}
+	}
+
+	@EventHandler
+	public void entityRemove(EntityRemoveEvent event) {
+		if (event.getEntity() instanceof Trident trident &&
+			trident.getShooter() instanceof Player player &&
+			event.getCause() != EntityRemoveEvent.Cause.PICKUP) {
+			// try returning the trident to the player
+			if (!player.getInventory().contains(trident.getItemStack())) {
+				player.getInventory().addItem(trident.getItemStack());
+			}
 		}
 	}
 
