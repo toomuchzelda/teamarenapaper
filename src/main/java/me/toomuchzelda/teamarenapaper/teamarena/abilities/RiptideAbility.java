@@ -12,10 +12,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DetailedProjectileHitEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.ProjectileReflectEvent;
-import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
-import me.toomuchzelda.teamarenapaper.utils.GlowUtils;
-import me.toomuchzelda.teamarenapaper.utils.MathUtils;
-import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -206,12 +203,12 @@ public class RiptideAbility extends Ability {
 		THUNDERING(Component.text("⛈", TextColor.color(0xFFFECE)), Component.text("The thunderstorm makes your cells shiver in excitement."),
 			5, 2f, 0.075f), // let's get crazy
 		// environment factors
-		WATER(Component.text(" \uD83D\uDCA7 ", TextColor.color(0x6FCAFF)), Component.text("Water is your domain."),
+		WATER(Component.text("\uD83D\uDCA6", TextColor.color(0x6FCAFF)), Component.text("Water is your domain."),
 			1, 0.8f, 0.2f),
 		DEEP_WATER(Component.text("\uD83C\uDF0A", TextColor.color(0x6FCAFF)), Component.text("You are thriving below the water surface."),
 			1.8f, 1.5f, 1),
 		// troll factors
-		BLUE_TEAM(Component.text("⚑", NamedTextColor.BLUE), Component.text("You thought you sense water, turns out it was just Blue Team members."), 0),
+		BLUE_TEAM(Component.text("⚑", NamedTextColor.BLUE), Component.text("Blue Team members do look like water, but no."), 0),
 		// impact-based factors
 		IMPACT_BOOST(Component.text("🔱", TextColor.color(0x274036/*0x579B8C*/)), Component.text("You feel an adrenaline rush from masterfully impaling your enemy."),
 			0.2f),
@@ -301,7 +298,7 @@ public class RiptideAbility extends Ability {
 			Component.text("Your average "),
 			Component.text("Riptide", NamedTextColor.AQUA),
 			Component.text(" level was "),
-			Component.text(TextUtils.formatNumber(info.totalProgress / (TeamArena.getGameTick() - info.startTick)), NamedTextColor.YELLOW),
+			Component.text("%.2f".formatted(info.totalProgress / (TeamArena.getGameTick() - info.startTick)), NamedTextColor.YELLOW),
 			Component.text(".")
 		));
 		info.cleanUp(player);
@@ -319,8 +316,9 @@ public class RiptideAbility extends Ability {
 	public void onLaunchProjectile(PlayerLaunchProjectileEvent event) {
 		if (event.getProjectile() instanceof Trident trident && trident.getShooter() instanceof Player player) {
 			RiptideInfo riptideInfo = riptideInfoMap.get(player);
-			trident.setDamage(4 + (int) riptideInfo.progress);
-			riptideInfo.setProgress(riptideInfo.getProgress() - 1, 20);
+			int riptide = (int) riptideInfo.progress;
+			trident.setDamage(4 + riptide);
+			riptideInfo.setProgress(riptideInfo.getProgress() - riptide / 3f, 20);
 			TeamArenaTeam team = Main.getPlayerInfo(player).team;
 			GlowUtils.setGlowing(List.of((player)), List.of(trident), true, team != null ? NamedTextColor.nearestTo(team.getRGBTextColor()) : NamedTextColor.AQUA);
 		}
@@ -393,31 +391,93 @@ public class RiptideAbility extends Ability {
 			player.playSound(player, Sound.BLOCK_ENCHANTMENT_TABLE_USE, SoundCategory.PLAYERS, 0.5f, 1f);
 		}
 		info.update(factors, increment);
+		Component actionBar;
 
 		var attribute = Objects.requireNonNull(player.getAttribute(Attribute.WATER_MOVEMENT_EFFICIENCY));
-		if (info.progress >= 1 && canRiptide(player) && !player.isInWaterOrRain()) {
-			if (attribute.getModifier(SNEAK_SPEED.getKey()) == null)
-				attribute.addModifier(SNEAK_SPEED);
-			BlockCoords targetCoords = new BlockCoords(player.getEyeLocation());
-			if (!targetCoords.equals(info.fakeWaterBlockCoords)) {
+		if (info.progress >= 1 && !burdened) {
+			// is sneaking
+			if (canRiptide(player) && !player.isInWaterOrRain()) {
+				if (attribute.getModifier(SNEAK_SPEED.getKey()) == null)
+					attribute.addModifier(SNEAK_SPEED);
+				BlockCoords targetCoords = new BlockCoords(player.getEyeLocation());
+				if (!targetCoords.equals(info.fakeWaterBlockCoords)) {
+					if (info.fakeWaterBlockKey != 0) {
+						Main.getGame().getFakeBlockManager().removeFakeBlock(info.fakeWaterBlockCoords, info.fakeWaterBlockKey);
+					}
+					info.fakeWaterBlockCoords = targetCoords;
+					info.fakeWaterBlockKey = Main.getGame().getFakeBlockManager().setFakeBlock(info.fakeWaterBlockCoords, SHALLOW_WATER_DATA, p -> p == player);
+				}
+				player.sendPotionEffectChange(player, new PotionEffect(PotionEffectType.CONDUIT_POWER, 1000000, 0, true));
+			} else {
+				player.sendPotionEffectChangeRemove(player, PotionEffectType.CONDUIT_POWER);
+				attribute.removeModifier(SNEAK_SPEED);
 				if (info.fakeWaterBlockKey != 0) {
 					Main.getGame().getFakeBlockManager().removeFakeBlock(info.fakeWaterBlockCoords, info.fakeWaterBlockKey);
+					info.fakeWaterBlockKey = 0;
+					info.fakeWaterBlockCoords = null;
 				}
-				info.fakeWaterBlockCoords = targetCoords;
-				info.fakeWaterBlockKey = Main.getGame().getFakeBlockManager().setFakeBlock(info.fakeWaterBlockCoords, SHALLOW_WATER_DATA, p -> p == player);
 			}
-			player.sendPotionEffectChange(player, new PotionEffect(PotionEffectType.CONDUIT_POWER, 1000000, 0, true));
+
+			if (canRiptide(player)) {
+				actionBar = Component.text("Ready to Riptide", NamedTextColor.AQUA);
+				if (player.getActiveItem().getType() == Material.TRIDENT) {
+					List<Vector> vectors = estimateRiptideLocation(player, player.getActiveItem());
+					if (!vectors.isEmpty()) {
+						var cache = new PacketSender.Cached(1, vectors.size());
+						Particle.DustOptions dustOptions = new Particle.DustOptions(Color.AQUA, 1);
+						Location eye = player.getEyeLocation();
+						Location temp = player.getLocation();
+						for (Vector vector : vectors) {
+							temp.set(vector.getX(), vector.getY(), vector.getZ());
+							if (eye.distanceSquared(temp) <= 2 * 2) continue;
+							ParticleUtils.batchParticles(
+								player, cache, Particle.DUST, dustOptions, temp,
+								64, 0, 0, 0, 0, 0, true
+							);
+						}
+						cache.flush();
+					}
+				}
+			} else if (!player.isOnGround()) {
+				actionBar = Component.text("Stay on ground to Riptide", NamedTextColor.GRAY);
+			} else {
+				actionBar = Component.textOfChildren(
+					Component.text("["),
+					Component.keybind("key.sneak", NamedTextColor.GREEN),
+					Component.text("] to Riptide")
+				).color(NamedTextColor.GRAY);
+			}
 		} else {
-			player.sendPotionEffectChangeRemove(player, PotionEffectType.CONDUIT_POWER);
-			attribute.removeModifier(SNEAK_SPEED);
-			if (info.fakeWaterBlockKey != 0) {
-				Main.getGame().getFakeBlockManager().removeFakeBlock(info.fakeWaterBlockCoords, info.fakeWaterBlockKey);
-				info.fakeWaterBlockKey = 0;
-				info.fakeWaterBlockCoords = null;
-			}
+			actionBar = Component.text("Can't riptide", NamedTextColor.DARK_GRAY);
 		}
+		player.sendActionBar(actionBar);
 
 		updateItems(player, Math.min(3, (int) info.progress), changed);
+	}
+
+	private static final double ACCELERATION = 0.08;
+	private static final double VERTICAL_DRAG = 1 - 0.02;
+	private static final double HORIZONTAL_DRAG = 1 - 0.09;
+	private static List<Vector> estimateRiptideLocation(Player player, ItemStack stack) {
+		Location location = player.getLocation();
+		if (player.isOnGround())
+			location.add(0, 1.2, 0); // lol okay
+		World world = player.getWorld();
+		Vector velocity = ItemUtils.getRiptidePush(stack, player);
+		if (velocity == null)
+			return List.of();
+		var list = new ArrayList<Vector>();
+		for (int i = 0; i < 50; i++) {
+			list.add(location.toVector());
+			var hitResult = world.rayTraceBlocks(location, velocity, velocity.length(), FluidCollisionMode.ALWAYS, true);
+			if (hitResult != null)
+				break;
+			location.add(velocity);
+			velocity.setY((velocity.getY() - ACCELERATION) * VERTICAL_DRAG);
+			velocity.setX(velocity.getX() * HORIZONTAL_DRAG);
+			velocity.setZ(velocity.getZ() * HORIZONTAL_DRAG);
+		}
+		return list;
 	}
 
 	@Override

@@ -1,11 +1,10 @@
 package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
-import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitMarine;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
@@ -20,7 +19,7 @@ public class CommandCredits extends CustomCommand
 		Component toomuchzelda = Component.text("toomuchzelda", TextColor.color(34, 177, 76));
 		Component jacky8399 = Component.text("jacky8399", TextColor.color(3, 94, 252));
 		Component onnet = Component.text("Onett_", TextColor.color(154, 230, 212));
-		Component T_0_E_D = TextUtils.getRGBManiacComponent(Component.text("T_0_E_D"), Style.empty(), 0.5d);
+		Component T_0_E_D = KitMarine.T_0_E_D; //TextUtils.getRGBManiacComponent(Component.text("T_0_E_D"), Style.empty(), 0.5d);
 		Component theRest = Component.text("Xtikman, Elitemaster5, jojosue, Kullanari, SevereMyopia, 22balletgirls, Woaxa", NamedTextColor.AQUA);
 
 		CREDITS = Component.text()

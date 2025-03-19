@@ -20,7 +20,6 @@ import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
@@ -68,15 +67,11 @@ public class KitInventory implements InventoryProvider {
 		return 6;
 	}
 
-	protected static final Style LORE_STYLE = Style.style(NamedTextColor.YELLOW);
 	protected static final TextComponent SELECTED_COMPONENT = Component.text("Currently selected!", NamedTextColor.GREEN, TextDecoration.BOLD);
 
 	private ClickableItem kitToItem(Kit kit, boolean selected) {
 		boolean disabled = !allowedKits.contains(kit);
-		Style nameStyle = Style.style(kit.getCategory().textColor());
-		String desc = kit.getDescription();
-		// word wrapping
-		List<Component> loreLines = new ArrayList<>(TextUtils.wrapString(desc, LORE_STYLE, TextUtils.DEFAULT_WIDTH, true));
+		List<Component> loreLines = new ArrayList<>(kit.getDescription());
 
 		if (selected) {
 			loreLines.add(Component.empty());
@@ -89,15 +84,10 @@ public class KitInventory implements InventoryProvider {
 
 		return ClickableItem.of(
 			ItemBuilder.from(disabled ? new ItemStack(Material.BARRIER) : kit.getIcon())
-				.displayName(Component.text(kit.getName(),
-					disabled ? nameStyle.decorate(TextDecoration.STRIKETHROUGH) : nameStyle))
+				.displayName(disabled ? kit.getDisplayName().decorate(TextDecoration.STRIKETHROUGH) : kit.getDisplayName())
 				.lore(loreLines)
 				.hide(ItemFlag.values())
-				.meta(meta -> {
-					if (selected) {
-						meta.addEnchant(Enchantment.PROTECTION, 1, true);
-					}
-				})
+				.enchantmentGlint(selected)
 				.build(),
 			e -> {
 				// recalculate allowed kit
