@@ -61,14 +61,30 @@ public class MetaIndex
 	public static final int GUARDIAN_TARGET_IDX = 17;
 
 	public static final int DISPLAY_INTERPOLATION_DELAY_IDX = 8;
+	public static final int DISPLAY_TRANSFORMATION_INTERPOLATION_DURATION_IDX = 9;
 	public static final int DISPLAY_POSROT_INTERPOLATION_DURATION_IDX = 10;
 	public static final int DISPLAY_TRANSLATION_IDX = 11;
 	public static final int DISPLAY_SCALE_IDX = 12;
+	public static final int DISPLAY_ROTATION_LEFT_IDX = 13;
+	public static final int DISPLAY_ROTATION_RIGHT_IDX = 14;
 	public static final int DISPLAY_BILLBOARD_IDX = 15;
+	public static final int DISPLAY_BRIGHTNESS_OVERRIDE_IDX = 16;
+	public static final int DISPLAY_VIEW_RANGE_IDX = 17;
+	public static final int DISPLAY_SHADOW_RADIUS_IDX = 18;
+	public static final int DISPLAY_SHADOW_STRENGTH_IDX = 19;
+	public static final int DISPLAY_WIDTH_IDX = 20;
+	public static final int DISPLAY_HEIGHT_IDX = 21;
+	public static final int DISPLAY_GLOW_COLOR_OVERRIDE = 22;
 
 	public static final int BLOCK_DISPLAY_BLOCK_IDX = 23;
 
 	public static final int ITEM_DISPLAY_ITEM_IDX = 23;
+
+	public static final int TEXT_DISPLAY_TEXT_IDX = 23;
+	public static final int TEXT_DISPLAY_LINE_WIDTH_IDX = 24;
+	public static final int TEXT_DISPLAY_BACKGROUND_COLOR_IDX = 25;
+	public static final int TEXT_DISPLAY_TEXT_OPACITY_IDX = 26;
+	public static final int TEXT_DISPLAY_BITMASK_IDX = 27;
 
 	public static final WrappedDataWatcher.Serializer BITFIELD_SERIALIZER = WrappedDataWatcher.Registry.get(Byte.class);
 
@@ -114,6 +130,7 @@ public class MetaIndex
 	public static final WrappedDataWatcherObject GUARDIAN_TARGET_OBJ;
 
 	public static final WrappedDataWatcherObject DISPLAY_INTERPOLATION_DELAY_OBJ;
+	public static final WrappedDataWatcherObject DISPLAY_TRANSFORMATION_INTERPOLATION_DURATION_OBJ = dataWatcherObject(DISPLAY_TRANSFORMATION_INTERPOLATION_DURATION_IDX, Integer.class);
 	public static final WrappedDataWatcherObject DISPLAY_POSROT_INTERPOLATION_DURATION_OBJ;
 	public static final WrappedDataWatcherObject DISPLAY_TRANSLATION_OBJ;
 	public static final WrappedDataWatcherObject DISPLAY_SCALE_OBJ;
@@ -133,6 +150,28 @@ public class MetaIndex
 	public static final WrappedDataWatcherObject BLOCK_DISPLAY_BLOCK_OBJ;
 
 	public static final WrappedDataWatcherObject ITEM_DISPLAY_ITEM_OBJ;
+
+	public static final WrappedDataWatcherObject TEXT_DISPLAY_TEXT_OBJ = dataWatcherObject(TEXT_DISPLAY_TEXT_IDX, WrappedDataWatcher.Registry.getChatComponentSerializer());
+	public static final WrappedDataWatcherObject TEXT_DISPLAY_LINE_WIDTH_OBJ = dataWatcherObject(TEXT_DISPLAY_LINE_WIDTH_IDX, Integer.class);
+	public static final WrappedDataWatcherObject TEXT_DISPLAY_BACKGROUND_COLOR_OBJ = dataWatcherObject(TEXT_DISPLAY_BACKGROUND_COLOR_IDX, Integer.class);
+	public static final WrappedDataWatcherObject TEXT_DISPLAY_TEXT_OPACITY_OBJ = dataWatcherObject(TEXT_DISPLAY_TEXT_OPACITY_IDX, Byte.class);
+	public static final WrappedDataWatcherObject TEXT_DISPLAY_BITMASK_OBJ = dataWatcherObject(TEXT_DISPLAY_BITMASK_IDX, Byte.class);
+	public enum TextDisplayBitmask {
+		HAS_SHADOW,
+		IS_SEE_THROUGH,
+		USE_DEFAULT_BACKGROUND_COLOR,
+		ALIGNMENT
+	}
+
+	private static WrappedDataWatcherObject dataWatcherObject(int index, Class<?> clazz) {
+		return dataWatcherObject(index, WrappedDataWatcher.Registry.get(clazz));
+	}
+
+	private static WrappedDataWatcherObject dataWatcherObject(int index, WrappedDataWatcher.Serializer serializer) {
+		var dataWatcherObject = new WrappedDataWatcherObject(index, serializer);
+		addMapping(dataWatcherObject);
+		return dataWatcherObject;
+	}
 
 	private static void addMapping(WrappedDataWatcherObject object) {
 		INDEX_SERIALIZER_MAP.put(object.getIndex(), object.getSerializer());

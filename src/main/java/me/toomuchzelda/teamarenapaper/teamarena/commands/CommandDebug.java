@@ -12,6 +12,7 @@ import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.inventory.TabBar;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
+import me.toomuchzelda.teamarenapaper.teamarena.abilities.centurion.ShieldInstance;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowManager;
@@ -42,6 +43,7 @@ import org.bukkit.entity.Villager;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -64,6 +66,8 @@ public class CommandDebug extends CustomCommand {
 	public static boolean disableMiniMapInCaseSomethingTerribleHappens;
 
 	public static boolean sniperShowRewind;
+
+	private static ShieldInstance shieldInstance;
 
 	public CommandDebug() {
 		super("debug", "", "/debug ...", PermissionLevel.OWNER, "abuse");
@@ -360,6 +364,30 @@ public class CommandDebug extends CustomCommand {
 		}
 
 		switch (args[0]) {
+			case "shield" -> {
+				if (shieldInstance != null && shieldInstance.isValid()) {
+					shieldInstance.cleanUp();
+					shieldInstance = null;
+				} else {
+					shieldInstance = new ShieldInstance(player, ShieldInstance.ShieldConfig.DEFAULT);
+				}
+			}
+			case "fixedshield" -> {
+				if (shieldInstance != null && shieldInstance.isValid()) {
+					shieldInstance.cleanUp();
+					shieldInstance = null;
+				} else {
+					RayTraceResult result = player.rayTraceBlocks(10);
+					if (result != null) {
+						Location location = player.getLocation();
+						Vector hitPosition = result.getHitPosition();
+						location.set(hitPosition.getX(), hitPosition.getY() + player.getEyeHeight(), hitPosition.getZ());
+						shieldInstance = new ShieldInstance(player,
+							new ShieldInstance.ShieldConfig(
+								ShieldInstance.ShieldConfig.DEFAULT_HEALTH, ShieldInstance.ShieldConfig.DEFAULT_MAX_HEALTH, 200, location));
+					}
+				}
+			}
 			case "movemaxxing" -> {
 				new BukkitRunnable() {
 					int ticks = 0;

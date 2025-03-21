@@ -598,21 +598,7 @@ public class PacketEntity
 	 * Does not consider the viewing rule.
 	 */
 	public void setViewers(Collection<Player> viewers) {
-		LinkedHashSet<Player> newViewers = new LinkedHashSet<>(viewers.size());
-
-		for(Player newViewer : viewers) {
-			newViewers.add(newViewer);
-			spawn(newViewer);
-		}
-
-		//remove viewers that were not specified in the players arg
-		for (Player prevViewer : this.viewers) {
-			if (!newViewers.contains(prevViewer) && realViewers.remove(prevViewer)) {
-				despawn(prevViewer);
-			}
-		}
-
-		this.viewers = newViewers;
+		this.viewers = new LinkedHashSet<>(viewers);
 		this.reEvaluateViewers(true);
 	}
 
