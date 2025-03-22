@@ -215,16 +215,20 @@ public class CritAbility extends Ability {
 		if (event.getDamageType().is(DamageType.RATIO_CRIT)) {
 			Entity attacker = event.getAttacker();
 			assert CompileAsserts.OMIT || attacker != null;
-			World world = attacker.getWorld();
-			world.playSound(attacker, Sound.ENTITY_PLAYER_ATTACK_CRIT, SoundCategory.PLAYERS, 1.f, 0.9f);
-			for (long i = 0; i < 3; i++) {
-				final float volume = 1.f - (((float) i) / 3f);
-				playCritSound(world, attacker, i * 2, volume, 1.1f + (((float) i) / 3f));
-				playCritSound(world, attacker, (i * 2) + 1, volume, 1.3f + (((float) i) / 3f));
-			}
-
-			ParticleUtils.bloodEffect(event.getVictim());
+			// splitterEffect(attacker, event.getVictim()); Done by TeamArena
 		}
+	}
+
+	public static void splitterEffect(Entity attacker, Entity victim) {
+		World world = attacker.getWorld();
+		world.playSound(attacker, Sound.ENTITY_PLAYER_ATTACK_CRIT, SoundCategory.PLAYERS, 1.f, 0.9f);
+		for (long i = 0; i < 3; i++) {
+			final float volume = 1.f - (((float) i) / 3f);
+			playCritSound(world, attacker, i * 2, volume, 1.1f + (((float) i) / 3f));
+			playCritSound(world, attacker, (i * 2) + 1, volume, 1.3f + (((float) i) / 3f));
+		}
+
+		ParticleUtils.bloodEffect(victim);
 	}
 
 	private static void playCritSound(World world, Entity attacker, long delay, float volume, float pitch) {

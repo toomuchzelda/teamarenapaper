@@ -3,8 +3,10 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits;
 import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.ArrowManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DetailedProjectileHitEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.ProjectileReflectEvent;
@@ -26,7 +28,7 @@ public class KitPorcupine extends Kit {
 		.lore(List.of(Component.text("TODO TODO TODO")))
 		.build();
 
-	public KitPorcupine() {
+	public KitPorcupine(TeamArena game) {
 		super("Reflector", "\"Life is a mirror and will reflect back to the thinker what he thinks into it.\" - Ernest Holmes",
 			Material.DEAD_BUSH);
 
@@ -41,7 +43,7 @@ public class KitPorcupine extends Kit {
 
 		setCategory(KitCategory.UTILITY);
 
-		setAbilities(new PorcupineAbility());
+		setAbilities(new PorcupineAbility(game));
 	}
 
 	public enum CleanupReason {
@@ -74,6 +76,10 @@ public class KitPorcupine extends Kit {
 
 		// To globally enforce 1 reflection per projectile
 		private final WeakHashMap<Projectile, Void> reflectedProjLookup = new WeakHashMap<>();
+
+		private final TeamArena game;
+
+		public PorcupineAbility(TeamArena game) { this.game = game; }
 
 		private Map<Projectile, ReflectedInfo> getProjectiles(Player porc) {
 			return reflectedProjectiles.computeIfAbsent(porc, player -> new HashMap<>());
@@ -156,6 +162,28 @@ public class KitPorcupine extends Kit {
 							rinfo.attackFunc.onAttack(event);
 					}
 				}
+			}
+		}
+
+		@Override
+		public void onReceiveDamage(DamageEvent event) {
+			if (event.getDamageType().is(DamageType.RATIO_CRIT)) {
+				event.setCancelled(true);
+				// Reflect splitters
+				final Entity attacker = event.getAttacker();
+				if (attacker != null) {
+					final Entity victim = event.getVictim();
+					DamageEvent reflect = DamageEvent.newDamageEvent(attacker, 1d,
+						DamageType.REFLECTED_RATIO_CRIT, victim, false);
+					reflect.setRawDamage(event.getRawDamage()); // Have to set after, to override weapon calc
+					this.game.queueDamage(reflect);
+
+					Location hitLoc = victim.getLocation().add(0d, victim.getHeight() / 2d, 0d);
+					hitLoc.add(attacker.getLocation().subtract(hitLoc).multiply(-0.3d));
+					reflectEffect(victim, hitLoc, true);
+				}
+				else
+					Main.logger().severe("Attacker of splitter was null. " + event.toString());
 			}
 		}
 
