@@ -18,6 +18,7 @@ import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.sql.DBSetPreferences;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
+import me.toomuchzelda.teamarenapaper.teamarena.abilities.centurion.ShieldListener;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.ChatAnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingListeners;
@@ -649,9 +650,12 @@ public class EventListeners implements Listener
 			if (collidedWith instanceof Player p && Main.getGame().isSpectator(p)) {
 				event.setCancelled(true);
 			}
-			else if(collidedWith instanceof ArmorStand stand && Main.getGame() instanceof CaptureTheFlag ctf
-				&& ctf.flagStands.containsKey(stand)) {
-				event.setCancelled(true);
+			else if(collidedWith instanceof ArmorStand stand) {
+				if (Main.getGame() instanceof CaptureTheFlag ctf && ctf.isFlagEntity(stand)) {
+					event.setCancelled(true);
+				} else if (ShieldListener.onProjectileHit(event)) {
+					event.setCancelled(true);
+				}
 			}
 			else if (!(projectile instanceof FishHook) && // Medic needs to fishhook teammates
 				projectile.getShooter() instanceof Player pShooter &&

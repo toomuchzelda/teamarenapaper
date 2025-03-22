@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.abilities.centurion;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketDisplay;
@@ -16,8 +17,8 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
@@ -28,19 +29,6 @@ import java.util.stream.IntStream;
  * @author jacky
  */
 public class ShieldInstance {
-	public record ShieldConfig(double health, double maxHealth, int duration, @Nullable Location anchor) {
-		public static final double DEFAULT_MAX_HEALTH = 100;
-		public static final double DEFAULT_HEALTH = DEFAULT_MAX_HEALTH;
-
-		private static final int SHIELD_PERMANENT = -1;
-		public static ShieldConfig DEFAULT = new ShieldConfig(DEFAULT_HEALTH, DEFAULT_MAX_HEALTH, SHIELD_PERMANENT, null);
-
-		public ShieldConfig {
-			if (maxHealth < health) throw new IllegalArgumentException("maxHealth");
-		}
-	}
-
-
 	public static final NamespacedKey SHIELD_ENTITY = new NamespacedKey(Main.getPlugin(), "shield");
 
 	public final World world;
@@ -65,11 +53,14 @@ public class ShieldInstance {
 	private final List<PacketDisplay> playerDisplays;
 	private final List<PacketDisplay> otherDisplays;
 
-	private final LinkedHashSet<ArmorStand> boxes;
+	final LinkedHashSet<ArmorStand> boxes;
 
-	private final BukkitTask task;
+//	private final BukkitTask task;
 
 	private final long spawnedAt;
+
+	private Runnable breakListener;
+	private Runnable expireListener;
 
 	private static final int SHIELD_SIZE = 3;
 	private static final float SHIELD_WIDTH = 5;
@@ -80,7 +71,7 @@ public class ShieldInstance {
 
 	private static final int SHIELD_ALPHA_MAX = 127;
 	private static final int SHIELD_ALPHA_MIN = 40;
-	private static final int SHIELD_COLOR_HEX = 0x3AB3DA;
+	public static final int SHIELD_COLOR_HEX = 0x3AB3DA;
 	private static final int SHIELD_COLOR_INTERP_INTERVAL = 100;
 
 	public ShieldInstance(Player player, ShieldConfig shieldConfig) {
@@ -88,15 +79,15 @@ public class ShieldInstance {
 		this.player = player;
 		this.spawnedAt = world.getGameTime();
 
-		if (shieldConfig.anchor != null) {
-			anchor = shieldConfig.anchor.clone();
+		if (shieldConfig.anchor() != null) {
+			anchor = shieldConfig.anchor().clone();
 			anchor.setPitch(0);
 		} else {
 			anchor = null;
 		}
-		this.health = shieldConfig.health;
-		this.maxHealth = shieldConfig.maxHealth;
-		this.duration = shieldConfig.duration;
+		this.health = shieldConfig.health();
+		this.maxHealth = shieldConfig.maxHealth();
+		this.duration = shieldConfig.duration();
 
 		World world = player.getWorld();
 		List<Location> boxLocations = getCurvedBoxLocations();
@@ -129,9 +120,19 @@ public class ShieldInstance {
 			team.addMembers(boxes.toArray(new Entity[0]));
 		}
 
-		task = Bukkit.getScheduler().runTaskTimer(Main.getPlugin(), this::tick, 0, 1);
+//		task = Bukkit.getScheduler().runTaskTimer(Main.getPlugin(), this::tick, 0, 1);
 
 		updateViewers();
+
+		ShieldListener.registerShield(this);
+	}
+
+	public void setBreakListener(Runnable breakListener) {
+		this.breakListener = breakListener;
+	}
+
+	public void setExpireListener(Runnable expireListener) {
+		this.expireListener = expireListener;
 	}
 
 	public boolean isValid() {
@@ -213,7 +214,7 @@ public class ShieldInstance {
 		return Color.fromARGB(SHIELD_COLOR_HEX | (getShieldAlpha() << 24));
 	}
 
-	private Color getShieldOtherColor() {
+	Color getShieldOtherColor() {
 		PlayerInfo playerInfo = Main.getPlayerInfo(player);
 		if (playerInfo.team != null) {
 			int value = playerInfo.team.getRGBTextColor().value();
@@ -224,7 +225,7 @@ public class ShieldInstance {
 
 	private static final float FACTOR = 0.7f;
 	/** See {@link java.awt.Color#brighter()} */
-	private static Color brighter(Color base) {
+	static Color brighter(Color base) {
 		int a = base.getAlpha(), r = base.getRed(), g = base.getGreen(), b = base.getBlue();
 		int i = (int)(1.0/(1.0-FACTOR));
 		if ( r == 0 && g == 0 && b == 0) {
@@ -325,7 +326,7 @@ public class ShieldInstance {
 		}
 	}
 
-	private void playBreakEffect() {
+	public void playBreakEffect() {
 		Location loc = getShieldLocation();
 		world.playSound(loc, Sound.BLOCK_RESPAWN_ANCHOR_DEPLETE, SoundCategory.PLAYERS, 0.5f, 1f);
 		// play block crack effect on the plane the shield occupies
@@ -371,11 +372,15 @@ public class ShieldInstance {
 			return;
 		}
 		if (health == 0) {
+			if (breakListener != null)
+				breakListener.run();
 			playBreakEffect();
 			cleanUp();
 			return;
 		}
 		if (duration != -1 && world.getGameTime() - spawnedAt > duration) {
+			if (expireListener != null)
+				expireListener.run();
 			cleanUp();
 			return;
 		}
@@ -404,7 +409,7 @@ public class ShieldInstance {
 		lastHealth = health;
 
 		// regen
-		if (world.getGameTime() - lastDamageTick >= SHIELD_REGEN_COOLDOWN) {
+		if (TeamArena.getGameTick() - lastDamageTick >= SHIELD_REGEN_COOLDOWN) {
 			health = Math.min(maxHealth, health + SHIELD_REGEN_PER_TICK);
 		}
 
@@ -414,13 +419,20 @@ public class ShieldInstance {
 	public void cleanUp() {
 		if (!valid)
 			return;
-		task.cancel();
+		ShieldListener.unregisterShield(this);
+
+//		task.cancel();
 
 		for (PacketDisplay playerDisplay : playerDisplays) {
 			playerDisplay.remove();
 		}
 		for (PacketDisplay otherDisplay : otherDisplays) {
 			otherDisplay.remove();
+		}
+		Entity[] arr = boxes.toArray(new Entity[0]);
+		TeamArenaTeam team = Main.getPlayerInfo(player).team;
+		if (team != null) {
+			team.removeMembers(arr);
 		}
 		boxes.forEach(Entity::remove);
 		boxes.clear();
@@ -434,6 +446,31 @@ public class ShieldInstance {
 		if (playerInfo.team == null)
 			return false;
 		return playerInfo.team.hasMember(attacker);
+	}
+
+	public void updateTeam(@Nullable TeamArenaTeam oldTeam, @Nullable TeamArenaTeam newTeam) {
+		Entity[] arr = boxes.toArray(new Entity[0]);
+		if (oldTeam != null) {
+			oldTeam.removeMembers(arr);
+		}
+		if (newTeam != null) {
+			newTeam.addMembers(arr);
+		}
+	}
+
+	public void damage(double damage) {
+		lastDamageTick = TeamArena.getGameTick();
+		health = Math.max(0, health - damage);
+	}
+
+	public void damage(double damage, @NotNull Vector hitPosition) {
+		damage(damage);
+		Location location = hitPosition.toLocation(world);
+		world.playSound(location, Sound.ITEM_TRIDENT_HIT, SoundCategory.PLAYERS, 1, 0.8f);
+		for (int i = 0; i < 10; i++)
+			world.spawnParticle(Particle.DUST, hitPosition.getX(), hitPosition.getY(), hitPosition.getZ(), 0,
+				Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5, 0,
+				new Particle.DustOptions(brighter(getShieldOtherColor()), 1f));
 	}
 
 }

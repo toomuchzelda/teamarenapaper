@@ -8,6 +8,7 @@ import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.abilities.CommonAbilityManager;
+import me.toomuchzelda.teamarenapaper.teamarena.abilities.centurion.ShieldListener;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerSound;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.ChatAnnouncerManager;
@@ -901,6 +902,9 @@ public abstract class TeamArena
 		}
 
 		if (BuildingListeners.onEntityAttack(event)) // Handled by building
+			return;
+
+		if (ShieldListener.onEntityAttack(event)) // Handled by shields
 			return;
 
 		// Handle entities that are part of some Ability

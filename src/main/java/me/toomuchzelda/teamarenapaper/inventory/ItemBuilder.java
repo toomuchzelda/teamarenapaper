@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.inventory;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.utils.MutableDataComponentPatch;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.ComponentLike;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -25,6 +26,7 @@ import java.util.function.Consumer;
 public final class ItemBuilder {
     private final ItemStack stack;
     private final ItemMeta meta;
+	private MutableDataComponentPatch dataComponentPatch;
     private ItemBuilder(Material material) {
         this(new ItemStack(material));
     }
@@ -160,8 +162,45 @@ public final class ItemBuilder {
 		return this;
 	}
 
+	// Data Components API
+	private MutableDataComponentPatch components() {
+		if (dataComponentPatch == null)
+			dataComponentPatch = MutableDataComponentPatch.fromItem(stack);
+		return dataComponentPatch;
+	}
+
+	public ItemBuilder removeData(io.papermc.paper.datacomponent.DataComponentType type) {
+		components().remove(type);
+		return this;
+	}
+
+	public ItemBuilder setData(io.papermc.paper.datacomponent.DataComponentType.NonValued component) {
+		components().set(component);
+		return this;
+	}
+
+	public <T> ItemBuilder setData(io.papermc.paper.datacomponent.DataComponentType.Valued<T> component, T value) {
+		components().set(component, value);
+		return this;
+	}
+
+	public <T> T getData(io.papermc.paper.datacomponent.DataComponentType.Valued<T> component) {
+		return components().get(component);
+	}
+
+	public <T> T getDataOrDefault(io.papermc.paper.datacomponent.DataComponentType.Valued<T> component, T fallback) {
+		return components().getOrDefault(component, fallback);
+	}
+
+	public boolean hasData(io.papermc.paper.datacomponent.DataComponentType component) {
+		return components().has(component);
+	}
+
     public ItemStack build() {
         stack.setItemMeta(meta);
+		if (dataComponentPatch != null) {
+			dataComponentPatch.apply(stack);
+		}
         return stack;
     }
 

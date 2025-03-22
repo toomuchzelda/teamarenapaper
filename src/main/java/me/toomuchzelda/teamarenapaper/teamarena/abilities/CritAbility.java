@@ -73,7 +73,7 @@ public class CritAbility extends Ability {
 			this.vehicle.updateMetadataPacket();
 
 			interaction = new PacketEntity(PacketEntity.NEW_ID, EntityType.INTERACTION, followed.getLocation(), null,
-				this.vehicle.getViewerRule()) {
+				viewer -> this.vehicle.getRealViewers().contains(viewer)) {
 				@Override
 				public void onInteract(Player player, EquipmentSlot hand, boolean attack) {
 					if (player == followed) return;

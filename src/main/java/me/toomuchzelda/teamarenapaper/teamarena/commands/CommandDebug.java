@@ -12,6 +12,7 @@ import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.inventory.TabBar;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
+import me.toomuchzelda.teamarenapaper.teamarena.abilities.centurion.ShieldConfig;
 import me.toomuchzelda.teamarenapaper.teamarena.abilities.centurion.ShieldInstance;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticType;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
@@ -369,7 +370,7 @@ public class CommandDebug extends CustomCommand {
 					shieldInstance.cleanUp();
 					shieldInstance = null;
 				} else {
-					shieldInstance = new ShieldInstance(player, ShieldInstance.ShieldConfig.DEFAULT);
+					shieldInstance = new ShieldInstance(player, ShieldConfig.DEFAULT);
 				}
 			}
 			case "fixedshield" -> {
@@ -383,8 +384,8 @@ public class CommandDebug extends CustomCommand {
 						Vector hitPosition = result.getHitPosition();
 						location.set(hitPosition.getX(), hitPosition.getY() + player.getEyeHeight(), hitPosition.getZ());
 						shieldInstance = new ShieldInstance(player,
-							new ShieldInstance.ShieldConfig(
-								ShieldInstance.ShieldConfig.DEFAULT_HEALTH, ShieldInstance.ShieldConfig.DEFAULT_MAX_HEALTH, 200, location));
+							new ShieldConfig(
+								ShieldConfig.DEFAULT_HEALTH, ShieldConfig.DEFAULT_MAX_HEALTH, 200, location));
 					}
 				}
 			}

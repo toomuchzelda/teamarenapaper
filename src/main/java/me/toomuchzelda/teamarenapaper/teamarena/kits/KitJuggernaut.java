@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
+import me.toomuchzelda.teamarenapaper.teamarena.abilities.centurion.CenturionAbility;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
@@ -45,7 +46,7 @@ public class KitJuggernaut extends Kit {
         sword.setItemMeta(swordMeta);
 
         setItems(sword, BATON);
-        setAbilities(new JuggernautAbility());
+        setAbilities(new JuggernautAbility(), new CenturionAbility());
 
 		setCategory(KitCategory.FIGHTER);
     }
@@ -101,6 +102,14 @@ public class KitJuggernaut extends Kit {
 				jugg.playEffect(EntityEffect.BREAK_EQUIPMENT_MAIN_HAND);
 				Bukkit.getScheduler().runTaskLater(Main.getPlugin(),
 					() -> jugg.playEffect(EntityEffect.BREAK_EQUIPMENT_MAIN_HAND), 1);
+			}
+		}
+
+		@Override
+		public void onReceiveDamage(DamageEvent event) {
+			if (event.getDamageType().is(DamageType.SNIPER_HEADSHOT)) {
+				// forced damage mitigation
+				event.setFinalDamage(Math.min(19, event.getFinalDamage()));
 			}
 		}
 
