@@ -7,10 +7,7 @@ import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ProjectileDeflection;
 import org.bukkit.Location;
 import org.bukkit.craftbukkit.entity.CraftAbstractArrow;
-import org.bukkit.entity.AbstractArrow;
-import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.*;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
@@ -32,6 +29,10 @@ public class ShieldListener {
 		for (ArmorStand box : shieldInstance.boxes) {
 			boxToShieldMap.remove(box);
 		}
+	}
+
+	public static ShieldInstance lookupShieldInstance(ArmorStand box) {
+		return boxToShieldMap.get(box);
 	}
 
 	public static boolean onEntityAttack(DamageEvent damageEvent) {
@@ -79,6 +80,8 @@ public class ShieldListener {
 			net.minecraft.world.entity.projectile.AbstractArrow nmsArrow = ((CraftAbstractArrow) arrow).getHandle();
 			nmsArrow.deflect(ProjectileDeflection.REVERSE, nmsArrow, nmsArrow.getOwner(), false);
 			nmsArrow.setDeltaMovement(nmsArrow.getDeltaMovement().scale(0.2));
+		} else if (event.getEntity() instanceof Firework firework) {
+			firework.detonate();
 		}
 		return true;
 	}

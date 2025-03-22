@@ -25,7 +25,10 @@ import me.toomuchzelda.teamarenapaper.teamarena.hideandseek.PacketFlyingPoint;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.PayloadTestKillstreak;
 import me.toomuchzelda.teamarenapaper.utils.*;
-import me.toomuchzelda.teamarenapaper.utils.packetentities.*;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketDisplay;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -44,6 +47,7 @@ import org.bukkit.entity.Villager;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
@@ -68,7 +72,8 @@ public class CommandDebug extends CustomCommand {
 
 	public static boolean sniperShowRewind;
 
-	private static ShieldInstance shieldInstance;
+	private static List<ShieldInstance> shieldInstance = new ArrayList<>();
+	private static List<BukkitTask> shieldTask = new ArrayList<>();
 
 	public CommandDebug() {
 		super("debug", "", "/debug ...", PermissionLevel.OWNER, "abuse");
@@ -365,29 +370,24 @@ public class CommandDebug extends CustomCommand {
 		}
 
 		switch (args[0]) {
-			case "shield" -> {
-				if (shieldInstance != null && shieldInstance.isValid()) {
-					shieldInstance.cleanUp();
-					shieldInstance = null;
+			case "addshield" -> {
+				RayTraceResult result = player.rayTraceBlocks(10);
+				Location location = player.getLocation();
+				if (result != null) {
+					Vector hitPosition = result.getHitPosition();
+					location.set(hitPosition.getX(), hitPosition.getY() + player.getEyeHeight(), hitPosition.getZ());
 				} else {
-					shieldInstance = new ShieldInstance(player, ShieldConfig.DEFAULT);
+					location.add(location.getDirection().multiply(10));
 				}
+				ShieldInstance shield = new ShieldInstance(player, new ShieldConfig(ShieldConfig.DEFAULT_HEALTH, ShieldConfig.DEFAULT_MAX_HEALTH, -1, location));
+				BukkitTask task = Bukkit.getScheduler().runTaskTimer(Main.getPlugin(), shield::tick, 0, 1);
+				shield.setBreakListener(task::cancel);
+				shieldInstance.add(shield);
+				shieldTask.add(task);
 			}
-			case "fixedshield" -> {
-				if (shieldInstance != null && shieldInstance.isValid()) {
-					shieldInstance.cleanUp();
-					shieldInstance = null;
-				} else {
-					RayTraceResult result = player.rayTraceBlocks(10);
-					if (result != null) {
-						Location location = player.getLocation();
-						Vector hitPosition = result.getHitPosition();
-						location.set(hitPosition.getX(), hitPosition.getY() + player.getEyeHeight(), hitPosition.getZ());
-						shieldInstance = new ShieldInstance(player,
-							new ShieldConfig(
-								ShieldConfig.DEFAULT_HEALTH, ShieldConfig.DEFAULT_MAX_HEALTH, 200, location));
-					}
-				}
+			case "clearshields" -> {
+				shieldTask.forEach(BukkitTask::cancel);
+				shieldInstance.forEach(ShieldInstance::cleanUp);
 			}
 			case "movemaxxing" -> {
 				new BukkitRunnable() {
@@ -647,7 +647,8 @@ public class CommandDebug extends CustomCommand {
 		if (args.length == 1) {
 			return Arrays.asList("hide", "gui", "guitest", "signtest", "game", "setrank", "setteam", "setkit",
 				"votetest", "draw", "graffititest", "respawn", "fakehitbox", "testmotd", "arrowMarker", "packetcache", "showSpawns",
-				"flyingpoint", "fakeBlock", "elevator", "showores", "darken", "amogus", "loadsong", "movemaxxing", "packethuman");
+				"flyingpoint", "fakeBlock", "elevator", "showores", "darken", "amogus", "loadsong", "movemaxxing", "packethuman",
+				"addshield", "clearshields");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");

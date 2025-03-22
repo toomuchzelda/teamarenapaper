@@ -2,11 +2,17 @@ package me.toomuchzelda.teamarenapaper.explosions;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.abilities.centurion.ShieldInstance;
+import me.toomuchzelda.teamarenapaper.teamarena.abilities.centurion.ShieldListener;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
@@ -15,10 +21,8 @@ import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
 import javax.annotation.Nullable;
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Re-implementation of explosions to be more customizable and better accommodating of Team Arena
@@ -88,7 +92,22 @@ public class CustomExplosion
 		record HitInfo(Entity entity, Vector hitVector, double distance, double damage) {}
 
 		List<HitInfo> hitEntities = new LinkedList<>();
-		Collection<? extends Entity> allEntities = this.getEntitiesToConsider();
+		Entity[] allEntities = this.getEntitiesToConsider().toArray(new Entity[0]);
+
+		Location temp = centre.clone();
+		Arrays.sort(allEntities, Comparator.comparingDouble(entity -> entity.getLocation(temp).distanceSquared(centre)));
+
+		TreeMap<Double, List<Map.Entry<ShieldInstance, List<AABB>>>> distanceToShieldAABBMap = Arrays.stream(allEntities)
+			.filter(entity -> entity instanceof ArmorStand && entity.getLocation().distanceSquared(centre) <= explRadSqr)
+			.map(entity -> ShieldListener.lookupShieldInstance((ArmorStand) entity))
+			.distinct()
+			.map(shield -> Map.entry(shield, shield.buildVoxelShape()))
+			.collect(Collectors.groupingBy(entry -> entry.getKey().getShieldLocation().distance(centre),
+				TreeMap::new, Collectors.toList()));
+
+		Set<ShieldInstance> damagedShields = new HashSet<>();
+		Main.componentLogger().info("Explosion has {} shields", distanceToShieldAABBMap.size());
+
 		for(Entity e : allEntities) {
 			if(!globalShouldHurtEntity(e))
 				continue;
@@ -137,17 +156,32 @@ public class CustomExplosion
 
 					RayTraceResult rayTrace =
 							world.rayTraceBlocks(centre, aim, aimLength, FluidCollisionMode.NEVER, true);
-					//did not hit any blocks, since entity is in explosion range then it must have hit the entity
 					if (rayTrace == null) {
-						hit = true;
-						distance = aimLength;
-						hitVector = aim;
+						Vec3 start = new Vec3(centre.getX(), centre.getY(), centre.getZ());
+						Vec3 end = start.add(aim.getX(), aim.getY(), aim.getZ());
 
-						//debug - play a particle at the hit point
-						/*Vector hitPoint = locVector.clone().add(hitVector);
-						ParticleUtils.colouredRedstone(hitPoint.toLocation(world), Color.LIME, 3d, 3f);*/
+						ShieldInstance hitShield = null;
+						// check for shields
+						shield:
+						for (List<Map.Entry<ShieldInstance, List<AABB>>> list : distanceToShieldAABBMap.tailMap(aimLength, true).values()) {
+							for (Map.Entry<ShieldInstance, List<AABB>> entry : list) {
+								var aabbs = entry.getValue();
+								BlockHitResult clip = AABB.clip(aabbs, start, end, BlockPos.ZERO);
+								if (clip != null) {
+									hitShield = entry.getKey();
+									break shield;
+								}
+							}
+						}
 
-						break;
+						// did not hit any blocks or shields, since entity is in explosion range then it must have hit the entity
+						if (hitShield == null) {
+							hit = true;
+							distance = aimLength;
+							hitVector = aim;
+							break;
+						}
+
 					}
 
 					debugIdx++;
@@ -157,6 +191,17 @@ public class CustomExplosion
 			if(hit) {
 				//linear damage fall off
 				double damage = calculateDamage(hitVector, distance);
+
+				if (e instanceof ArmorStand stand) {
+					ShieldInstance shield = ShieldListener.lookupShieldInstance(stand);
+					if (shield != null) {
+						if (!damagedShields.add(shield))
+							continue;
+						// deal extra damage to shields
+						damage *= 4;
+						Main.componentLogger().info("Shield explosion damage: {}", damage);
+					}
+				}
 
 				HitInfo info = new HitInfo(e, hitVector, distance, damage);
 				hitEntities.add(info);

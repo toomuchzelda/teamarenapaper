@@ -12,6 +12,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import net.kyori.adventure.util.Ticks;
+import net.minecraft.world.phys.AABB;
 import org.bukkit.*;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.*;
@@ -243,7 +244,7 @@ public class ShieldInstance {
 		);
 	}
 
-	private Location getShieldLocation() {
+	public Location getShieldLocation() {
 		if (anchor != null)
 			return anchor.clone();
 		Location eyeLocation = player.getEyeLocation();
@@ -252,6 +253,19 @@ public class ShieldInstance {
 		direction.setY(0);
 		eyeLocation.add(direction.multiply(1.5));
 		return eyeLocation;
+	}
+
+	private static final double AABB_SIZE = SHIELD_BOX_WIDTH / 2;
+	public List<AABB> buildVoxelShape() {
+		List<Location> locations = getCurvedBoxLocations();
+		List<AABB> list = new ArrayList<>(locations.size());
+		for (Location location : locations) {
+			list.add(new AABB(
+				location.getX() - AABB_SIZE, location.getY(), location.getZ() - AABB_SIZE,
+				location.getX() + AABB_SIZE, location.getY() + SHIELD_HEIGHT, location.getZ() + AABB_SIZE
+			));
+		}
+		return list;
 	}
 
 	private List<Location> getCurvedBoxLocations() {
