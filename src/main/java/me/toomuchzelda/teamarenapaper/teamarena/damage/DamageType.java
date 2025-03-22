@@ -239,7 +239,8 @@ public class DamageType {
 
 	public static final DamageType BEEKEEPER_BEE = new DamageType("Beekeeper's bee", "%Killed% was stung by %Killer%'s bee");
 
-	public static final DamageType RATIO_CRIT = new DamageType("Splitter critical hit", "%Killed% was split in half by %Killer%'s surgical accuracy").setMelee();
+	public static final DamageType RATIO_CRIT = new DamageType("Splitter critical hit", "%Killed% was split in half by %Killer%").setMelee();
+	public static final DamageType REFLECTED_RATIO_CRIT = new DamageType("Reflected splitter critical hit", "%Killed% had their splitter bounce off %Killer%").setMelee();
 
 	/*******************************************************************************************
 	 * 									GAMEMODE DAMAGETYPES
