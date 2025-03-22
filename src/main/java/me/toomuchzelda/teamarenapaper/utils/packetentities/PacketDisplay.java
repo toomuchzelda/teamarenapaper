@@ -82,4 +82,12 @@ public class PacketDisplay extends PacketEntity {
 		}
 		this.setMetadata(MetaIndex.TEXT_DISPLAY_BITMASK_OBJ, bits);
 	}
+
+	public void setWidth(float width) {
+		this.setMetadata(MetaIndex.DISPLAY_WIDTH_OBJ, width);
+	}
+
+	public void setHeight(float height) {
+		this.setMetadata(MetaIndex.DISPLAY_HEIGHT_OBJ, height);
+	}
 }

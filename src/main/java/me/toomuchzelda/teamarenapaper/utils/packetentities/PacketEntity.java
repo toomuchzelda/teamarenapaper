@@ -435,6 +435,9 @@ public class PacketEntity
 	}
 
 	protected void spawn(Player player) {
+		if (!isAlive)
+			return;
+
 		this.sendPacket(player, spawnPacket);
 		this.sendPacket(player, metadataPacket);
 		if (equipmentPacket != null)
@@ -454,10 +457,10 @@ public class PacketEntity
 		}
 
 		if(!isAlive) {
+			this.isAlive = true;
 			for (Player p : viewers) {
 				spawn(p);
 			}
-			this.isAlive = true;
 			//this.move(this.getLocation(), true);
 			this.syncLocation();
 		}
@@ -598,7 +601,13 @@ public class PacketEntity
 	 * Does not consider the viewing rule.
 	 */
 	public void setViewers(Collection<Player> viewers) {
-		this.viewers = new LinkedHashSet<>(viewers);
+		LinkedHashSet<Player> newViewers = new LinkedHashSet<>(viewers);
+		for (Player oldViewer : this.viewers) {
+			if (!newViewers.contains(oldViewer) && realViewers.remove(oldViewer)) {
+				despawn(oldViewer);
+			}
+		}
+		this.viewers = newViewers;
 		this.reEvaluateViewers(true);
 	}
 
@@ -639,6 +648,11 @@ public class PacketEntity
 	public Set<Player> getRealViewers() {
 		//return Collections.unmodifiableSet(realViewers);
 		return this.unmodifiableRealViewers;
+	}
+
+	@Nullable
+	public Predicate<Player> getViewerRule() {
+		return viewerRule;
 	}
 
 	public PacketContainer getSpawnPacket() {

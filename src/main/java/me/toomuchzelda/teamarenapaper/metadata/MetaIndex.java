@@ -134,6 +134,8 @@ public class MetaIndex
 	public static final WrappedDataWatcherObject DISPLAY_POSROT_INTERPOLATION_DURATION_OBJ;
 	public static final WrappedDataWatcherObject DISPLAY_TRANSLATION_OBJ;
 	public static final WrappedDataWatcherObject DISPLAY_SCALE_OBJ;
+	public static final WrappedDataWatcherObject DISPLAY_WIDTH_OBJ = dataWatcherObject(DISPLAY_WIDTH_IDX, Float.class);
+	public static final WrappedDataWatcherObject DISPLAY_HEIGHT_OBJ = dataWatcherObject(DISPLAY_HEIGHT_IDX, Float.class);
 
 	public static final WrappedDataWatcherObject DISPLAY_BILLBOARD_OBJ;
 	public enum DisplayBillboardOption {

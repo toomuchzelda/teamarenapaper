@@ -118,6 +118,10 @@ public class ShieldInstance {
 
 		for (var playerDisplay : playerDisplays) {
 			playerDisplay.setViewers(player);
+			playerDisplay.respawn();
+		}
+		for (PacketDisplay otherDisplay : otherDisplays) {
+			otherDisplay.respawn();
 		}
 
 		TeamArenaTeam team = Main.getPlayerInfo(player).team;
@@ -281,10 +285,10 @@ public class ShieldInstance {
 	}
 
 	private static boolean playerCantSee(Player player, PacketDisplay display) {
-		Location location = display.getLocation();
+		Location location = display.getLocation().add(0, SHIELD_HEIGHT / 2, 0);
 		Location eyeLocation = player.getEyeLocation();
 		double distance = location.distance(eyeLocation);
-		Vector direction = location.subtract(eyeLocation).toVector();
+		Vector direction = location.subtract(eyeLocation).toVector().normalize();
 		return player.getWorld().rayTraceBlocks(eyeLocation, direction, distance, FluidCollisionMode.NEVER, true) != null;
 	}
 
@@ -298,7 +302,7 @@ public class ShieldInstance {
 
 		var plugin = Main.getPlugin();
 		for (Player player : Bukkit.getOnlinePlayers()) {
-			if ((trackedBy.contains(player) && !isFriendly(player)) || this.player == player) {
+			if ((trackedBy.contains(player) && !isFriendly(player))) {
 				for (var box : boxes) {
 					player.showEntity(plugin, box);
 				}
@@ -387,11 +391,13 @@ public class ShieldInstance {
 				playerDisplay.setBackgroundColor(color);
 				playerDisplay.setInterpolationDelay(0);
 				playerDisplay.updateMetadataPacket();
+				playerDisplay.refreshViewerMetadata();
 			}
 			for (PacketDisplay otherDisplay : otherDisplays) {
 				otherDisplay.setBackgroundColor(otherColor);
 				otherDisplay.setInterpolationDelay(0);
 				otherDisplay.updateMetadataPacket();
+				otherDisplay.refreshViewerMetadata();
 			}
 
 		}
