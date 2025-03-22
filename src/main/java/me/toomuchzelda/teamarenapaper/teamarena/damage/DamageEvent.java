@@ -888,7 +888,6 @@ public class DamageEvent {
 	}
 
 	/** For debug only */
-	@Deprecated
 	@Override
 	public String toString() {
 		StringBuilder s = new StringBuilder(2048);
