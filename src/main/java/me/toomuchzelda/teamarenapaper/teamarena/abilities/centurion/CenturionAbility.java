@@ -11,7 +11,7 @@ import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
-import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -26,12 +26,28 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import static net.kyori.adventure.text.Component.*;
 
 public class CenturionAbility extends Ability {
 	public static final NamespacedKey SHIELD_KEY = new NamespacedKey(Main.getPlugin(), "centurion_shield");
 	public static final ItemStack SHIELD = ItemBuilder.of(Material.PORKCHOP)
-		.name(Component.text("Particle Shield", TextColor.color(ShieldInstance.SHIELD_COLOR_HEX)))
+		.name(text("Particle Shield", TextColor.color(ShieldInstance.SHIELD_COLOR_HEX)))
+		.lore(List.of(
+			text("An advanced particle shield that", NamedTextColor.WHITE),
+			text("mitigates most attacks to your allies.", NamedTextColor.WHITE),
+			textOfChildren(
+				text("Hold ["), keybind("key.use", NamedTextColor.AQUA), text("] to make the shield "),
+				text("follow you", NamedTextColor.BLUE)
+			).color(NamedTextColor.GRAY),
+			textOfChildren(
+				text("Press ["), keybind("key.drop", NamedTextColor.GREEN), text("] to deploy the shield "),
+				text("remotely", NamedTextColor.DARK_GREEN)
+			).color(NamedTextColor.GRAY),
+			text("Note that there is a cooldown after every action.", NamedTextColor.DARK_GRAY)
+		))
 		.meta(meta -> meta.getPersistentDataContainer().set(SHIELD_KEY, PersistentDataType.BOOLEAN, true))
 		.setData(DataComponentTypes.USE_COOLDOWN, UseCooldown.useCooldown(10).cooldownGroup(SHIELD_KEY).build())
 		// sus!
@@ -135,7 +151,7 @@ public class CenturionAbility extends Ability {
 			location.add(location.getDirection().multiply(10));
 		}
 
-		player.setCooldown(SHIELD, 15 * 20);
+		player.setCooldown(SHIELD, 16 * 20);
 		ShieldHistory history = playerShieldHistories.remove(player);
 		double health = history != null ? history.estimateHealthNow() : ShieldConfig.DEFAULT_MAX_HEALTH;
 		ShieldInstance shield = new ShieldInstance(player,

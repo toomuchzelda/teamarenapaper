@@ -70,14 +70,8 @@ public class RiptideAbility extends Ability {
 	private static final AttributeModifier SNEAK_SPEED = new AttributeModifier(
 		new NamespacedKey(Main.getPlugin(), "riptide_sneak_speed"), 1, AttributeModifier.Operation.ADD_NUMBER);
 
-	public RiptideAbility(TeamArena game) {
-		double random = MathUtils.random.nextDouble();
-		if (random < 0.25) {
-			game.gameWorld.setStorm(true);
-			if (random < 0.02) {
-				game.gameWorld.setThundering(true);
-			}
-		}
+	public RiptideAbility() {
+
 	}
 
 	private static final int RIPTIDE_IMPACT_BOOST_DURATION = 20;

@@ -16,7 +16,6 @@ import java.util.List;
 public class CommonAbilityManager {
 	public final RailgunAbility railgun;
 	public final ExplosiveProjectilesAbility explosives;
-	public final RiptideAbility riptide;
 
 	private final List<Ability> all;
 
@@ -25,8 +24,6 @@ public class CommonAbilityManager {
 		this.railgun.registerAbility();
 		this.explosives = new ExplosiveProjectilesAbility();
 		this.explosives.registerAbility();
-		this.riptide = new RiptideAbility(game);
-		this.riptide.registerAbility();
 
 		this.all = List.of(railgun, explosives);
 	}

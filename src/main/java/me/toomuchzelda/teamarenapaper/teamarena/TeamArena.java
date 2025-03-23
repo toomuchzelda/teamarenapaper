@@ -254,6 +254,15 @@ public abstract class TeamArena
 		gameWorld.setGameRule(GameRule.SHOW_DEATH_MESSAGES, false);
 		gameWorld.setDifficulty(Difficulty.NORMAL);
 
+		// random weather
+		double random = MathUtils.random.nextDouble();
+		if (random < 0.25) {
+			gameWorld.setStorm(true);
+			if (random < 0.02) {
+				gameWorld.setThundering(true);
+			}
+		}
+
 		//force disable relative projectile velocity (projectiles inheriting the velocity of their shooter)
 		((CraftWorld) gameWorld).getHandle().paperConfig().misc.disableRelativeProjectileVelocity = true;
 

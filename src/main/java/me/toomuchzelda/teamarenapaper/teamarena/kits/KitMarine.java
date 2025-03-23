@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.abilities.CommonAbilityManager;
+import me.toomuchzelda.teamarenapaper.teamarena.abilities.RiptideAbility;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.*;
 import org.bukkit.Color;
@@ -21,7 +22,7 @@ public class KitMarine extends Kit {
 	private static final Style STYLE = DESC_STYLE;
 	private static final Style STYLE_ST = DESC_STYLE.decorate(TextDecoration.STRIKETHROUGH);
 	private static final List<Component> DESC = List.of(
-		Component.text("Sure, here's a description of the Marine Kit:", STYLE_ST),
+		Component.text("Sure, here's a description of Kit Marine:", STYLE_ST),
 		Component.text("🐟🐠🐡🦈", STYLE_ST),
 		Component.text("You are a fish. You are a fish. You are a fish.", STYLE),
 		Component.text("You are going on an amphibious assault mission.", STYLE),
@@ -29,7 +30,8 @@ public class KitMarine extends Kit {
 		Component.text("Ride the waves with your riptide ability.", STYLE),
 		Component.empty(),
 		Component.text("In Loving Memory of", NamedTextColor.WHITE),
-		T_0_E_D
+		T_0_E_D,
+		Component.empty()
 	);
 
 	public KitMarine(CommonAbilityManager commonAbilityManager) {
@@ -54,7 +56,7 @@ public class KitMarine extends Kit {
 				.build()
 		);
 		// trident item is given by the ability
-		setAbilities(commonAbilityManager.riptide);
+		setAbilities(new RiptideAbility());
 		setCategory(KitCategory.FIGHTER);
 	}
 }
