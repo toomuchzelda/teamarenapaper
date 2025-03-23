@@ -6,6 +6,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import org.bukkit.Material;
@@ -22,6 +23,11 @@ public abstract class Kit {
     public static final Comparator<Kit> COMPARATOR = Comparator.comparing(Kit::getName);
 
     private static final Ability[] EMPTY_ABILITIES = new Ability[0];
+
+	protected static final Style DESC_STYLE = Style.style(NamedTextColor.YELLOW);
+	private static List<TextComponent> convertDescription(String description) {
+		return TextUtils.wrapString(description, DESC_STYLE, TextUtils.DEFAULT_WIDTH, true);
+	}
 
 	private final String name;
 	private Component displayName;
@@ -43,9 +49,8 @@ public abstract class Kit {
         this(name, description, new ItemStack(icon));
     }
 
-	protected static final Style DESC_STYLE = Style.style(NamedTextColor.YELLOW);
     public Kit(String name, String description, ItemStack display) {
-		this(name.toLowerCase(Locale.ENGLISH), name, TextUtils.wrapString(description, DESC_STYLE, TextUtils.DEFAULT_WIDTH, true), display);
+		this(name.toLowerCase(Locale.ENGLISH), name, convertDescription(description), display);
     }
 
 	public Kit(String key, String name, List<? extends Component> description, ItemStack display) {
@@ -70,7 +75,7 @@ public abstract class Kit {
 	public Kit (Kit other, String name, String description, ItemStack icon) {
 		this.name = name;
 		this.key = this.name.toLowerCase(Locale.ENGLISH);
-		this.description = description;
+		this.description = List.copyOf(convertDescription(description));
 		this.display = icon.clone();
 
 		this.armour = other.armour;

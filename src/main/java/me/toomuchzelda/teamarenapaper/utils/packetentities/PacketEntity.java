@@ -655,11 +655,6 @@ public class PacketEntity
 		return this.unmodifiableRealViewers;
 	}
 
-	@Nullable
-	public Predicate<Player> getViewerRule() {
-		return viewerRule;
-	}
-
 	public PacketContainer getSpawnPacket() {
 		return this.spawnPacket;
 	}
