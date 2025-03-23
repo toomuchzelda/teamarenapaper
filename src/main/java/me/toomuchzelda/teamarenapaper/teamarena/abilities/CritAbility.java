@@ -16,9 +16,11 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.AttachedPacketHologram;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketDisplay;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
+import org.bukkit.craftbukkit.block.data.CraftBlockData;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.EquipmentSlot;
 
@@ -40,10 +42,10 @@ public class CritAbility extends Ability {
 		// to have it ride. Then the interaction should perfectly match the position
 		// of the player on the clientside.
 		private final PacketEntity interaction;
+		private final PacketDisplay flash; // For flash vfx
 		private final AttachedPacketHologram vehicle;
 
 		private float width;
-		private float vehicleWidth; // not the vehicle's width
 
 		public CritHitbox(LivingEntity followed, CritAbility critAbility) {
 			this.followed = followed;
@@ -56,17 +58,6 @@ public class CritAbility extends Ability {
 				@Override
 				public double getYOffset() {
 					return getBoxYOffset(entity);
-				}
-
-				@Override
-				public void tick() {
-					super.tick();
-					float currentWidth = getWidth(followed);
-					if (currentWidth != CritHitbox.this.vehicleWidth) {
-						CritHitbox.this.vehicleWidth = currentWidth;
-						this.updateTeleportPacket();
-						this.broadcastPacket(this.getTeleportPacket());
-					}
 				}
 			};
 			this.vehicle.setCustomNameVisible(false);
@@ -97,26 +88,18 @@ public class CritAbility extends Ability {
 					PacketContainer mountPacket = EntityUtils.getMountPacket(CritHitbox.this.getVehicle().getId(), this.getId());
 					this.broadcastPacket(mountPacket);
 				}
-
-				@Override
-				public void tick() {
-					super.tick();
-					float currentWidth = getWidth(followed);
-					if (currentWidth != CritHitbox.this.width) {
-						CritHitbox.this.width = currentWidth;
-						this.setMetadata(MetaIndex.INTERACTION_WIDTH_OBJ, currentWidth);
-						this.refreshViewerMetadata();
-					}
-				}
 			};
 
 			this.width = getWidth(followed);
-			this.vehicleWidth = width;
-			if (!KitOptions.trooperRatioVisible)
+			if (!KitOptions.splitterVisible)
 				this.interaction.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK);
 			this.interaction.setMetadata(MetaIndex.INTERACTION_WIDTH_OBJ, this.width);
 			this.interaction.setMetadata(MetaIndex.INTERACTION_HEIGHT_OBJ, BOX_HEIGHT);
 			this.interaction.updateMetadataPacket();
+
+			this.flash = new PacketDisplay(PacketEntity.NEW_ID, EntityType.BLOCK_DISPLAY, this.vehicle.getLocationMut(),
+				null, viewer -> this.getInteraction().getRealViewers().contains(viewer));
+			this.flash.setMetadata(MetaIndex.BLOCK_DISPLAY_BLOCK_OBJ, ((CraftBlockData) Material.REDSTONE_BLOCK.createBlockData()).getState());
 		}
 
 		public void spawn() {
@@ -131,6 +114,41 @@ public class CritAbility extends Ability {
 
 		private PacketEntity getVehicle() {
 			return this.vehicle;
+		}
+
+		private PacketEntity getInteraction() { return this.interaction; }
+
+		private void tick() {
+			float currentWidth = getWidth(followed);
+			if (currentWidth != this.width) {
+				this.width = currentWidth;
+
+				// update vehicle position
+				this.vehicle.move();
+				// resize interaction and block display
+				this.interaction.setMetadata(MetaIndex.INTERACTION_WIDTH_OBJ, currentWidth);
+				this.interaction.refreshViewerMetadata();
+
+				// this.flash.setMetadata();
+			}
+		}
+
+		public void flash() {
+			byte glowOn = (byte) (MetaIndex.BASE_BITFIELD_GLOWING_MASK);
+			if (!KitOptions.splitterVisible)
+				glowOn |= (byte) (MetaIndex.BASE_BITFIELD_INVIS_MASK);
+
+			this.interaction.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, glowOn);
+			this.interaction.refreshViewerMetadata();
+
+			Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
+				byte glowOff = (byte) 0;
+				if (!KitOptions.splitterVisible)
+					glowOff |= (byte) (MetaIndex.BASE_BITFIELD_INVIS_MASK);
+
+				this.interaction.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, glowOff);
+				this.interaction.refreshViewerMetadata();
+			}, 3L);
 		}
 
 		private static float getWidth(Entity e) {
@@ -219,7 +237,8 @@ public class CritAbility extends Ability {
 		}
 	}
 
-	public static void splitterEffect(Entity attacker, Entity victim) {
+	/** Play effects for anyone who got critted */
+	public void onSuccessfulCrit(LivingEntity attacker, LivingEntity victim) {
 		World world = attacker.getWorld();
 		world.playSound(attacker, Sound.ENTITY_PLAYER_ATTACK_CRIT, SoundCategory.PLAYERS, 1.f, 0.9f);
 		for (long i = 0; i < 3; i++) {
@@ -228,7 +247,11 @@ public class CritAbility extends Ability {
 			playCritSound(world, attacker, (i * 2) + 1, volume, 1.3f + (((float) i) / 3f));
 		}
 
-		ParticleUtils.bloodEffect(victim);
+		// ParticleUtils.bloodEffect(victim);
+
+		// Make the vulnerable part flash
+		CritHitbox critHitbox = this.critHitboxes.get(victim);
+		critHitbox.flash();
 	}
 
 	private static void playCritSound(World world, Entity attacker, long delay, float volume, float pitch) {

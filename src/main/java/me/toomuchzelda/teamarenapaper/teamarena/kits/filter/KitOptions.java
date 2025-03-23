@@ -14,8 +14,7 @@ public class KitOptions
 	public static boolean pyroMolotov;
 	public static boolean rewindClockPhases;
 	public static boolean rewindStasis;
-	public static boolean trooperRatio;
-	public static boolean trooperRatioVisible;
+	public static boolean splitterVisible;
 
 	private static void resetToDefault() {
 		sniperAccuracy = false;
@@ -26,8 +25,7 @@ public class KitOptions
 		pyroMolotov = false;
 		rewindClockPhases = false;
 		rewindStasis = false;
-		trooperRatio = true;
-		trooperRatioVisible = false;
+		splitterVisible = false;
 	}
 
 	// Keys must not have spaces and be type-able with a keyboard.
@@ -54,8 +52,7 @@ public class KitOptions
 		OPTION_TOGGLE_FUNCS.put("pyroMolotov", () -> pyroMolotov = !pyroMolotov);
 		OPTION_TOGGLE_FUNCS.put("rewindClockPhases", () -> rewindClockPhases = !rewindClockPhases);
 		OPTION_TOGGLE_FUNCS.put("rewindStasis", () -> rewindStasis = !rewindStasis);
-		OPTION_TOGGLE_FUNCS.put("trooperRatio", () -> trooperRatio = !trooperRatio);
-		OPTION_TOGGLE_FUNCS.put("trooperRatioVisible", () -> trooperRatioVisible = !trooperRatioVisible);
+		OPTION_TOGGLE_FUNCS.put("splitterVisible", () -> splitterVisible = !splitterVisible);
 	}
 
 	/** @return true if toggling was successful. */

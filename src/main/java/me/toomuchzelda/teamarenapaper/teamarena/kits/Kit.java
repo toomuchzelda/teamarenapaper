@@ -66,6 +66,21 @@ public abstract class Kit {
 		activeUsers = new LinkedHashSet<>();
 	}
 
+	/** Copy ctor */
+	public Kit (Kit other, String name, String description, ItemStack icon) {
+		this.name = name;
+		this.key = this.name.toLowerCase(Locale.ENGLISH);
+		this.description = description;
+		this.display = icon.clone();
+
+		this.armour = other.armour;
+		this.items = other.items;
+		this.abilities = other.abilities;
+		this.fuseEnchantLevel = other.fuseEnchantLevel;
+
+		this.activeUsers = new LinkedHashSet<>();
+	}
+
 	public Kit setCategory(@NotNull KitCategory category) {
 		this.category = category;
 		return this;
@@ -163,6 +178,11 @@ public abstract class Kit {
     public void setItems(ItemStack... items) {
         this.items = items;
     }
+
+	/** Note returned array is mutable */
+	public ItemStack[] getItems() {
+		return this.items;
+	}
 
     public void setAbilities(Ability... abilities) {
         this.abilities = abilities;

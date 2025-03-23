@@ -300,7 +300,7 @@ public class KitFilter {
 				message = getActiveKitMessage(fallbackKit);
 				player.showTitle(getActiveKitTitle(fallbackKit));
 			} else if (!kitAvailable) {
-				message = getSelectedKitMessage(fallbackKit);
+				message = getSelectedKitMessage(info.kit.getName(), fallbackKit);
 			}
 			if (message != null)
 				player.sendMessage(message);
@@ -363,9 +363,9 @@ public class KitFilter {
 		);
 	}
 
-	public static Component getSelectedKitMessage(Kit newKit) {
+	public static Component getSelectedKitMessage(String preferredKit, Kit newKit) {
 		return Component.textOfChildren(
-			Component.text("The kit you have selected has been disabled by an admin.\nYou now have "),
+			Component.text("Kit " + preferredKit + " has been disabled by an admin.\nYou now have "),
 			newKit.getDisplayName(),
 			Component.text(" selected.")
 		).color(NamedTextColor.YELLOW);

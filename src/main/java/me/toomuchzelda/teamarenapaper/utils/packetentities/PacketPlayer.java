@@ -105,7 +105,7 @@ public class PacketPlayer extends PacketEntity {
 	}
 
 	@Override
-	public void spawn(Player viewer) {
+	protected void spawn(Player viewer) {
 		this.sendPacket(viewer, this.addPlayerInfo);
 		super.spawn(viewer);
 	}

@@ -173,6 +173,8 @@ public abstract class TeamArena
 	protected final FakeBlockManager fakeBlockManager;
 	private final CommonAbilityManager commonAbilityManager;
 
+	private CritAbility critAbility; // Assigned in registerKits()
+
 	private static final String[] BUY_SIGN_MESSAGES = new String[] {
 		"The ancient relic of 2013 crumbles as you move your hand near it.",
 		"You have a flashback of screaming players fleeing from a Dwarf with ender pearls...",
@@ -187,7 +189,7 @@ public abstract class TeamArena
 	private final Component gameTitle;
 	private final Component gameSubTitle;
 
-	private static final FilterRule MISC_KITS = new FilterRule("tma/misc_kits", "Poorly balanced kits", FilterAction.block("sniper", "longbow"));
+	private static final FilterRule MISC_KITS = new FilterRule("tma/misc_kits", "Poorly balanced kits", FilterAction.block("sniper", "longbow", "trooper"));
 	private static final FilterRule NO_HNS = new FilterRule("tma/no_hns", "No HNS kits by default", FilterAction.block("hider", "seeker", "radar"));
 
 	public TeamArena(TeamArenaMap map) {
@@ -373,7 +375,7 @@ public abstract class TeamArena
 			}
 			// notify kit change
 			if (!pinfo.kit.getName().equalsIgnoreCase(pinfo.defaultKit))
-				p.sendMessage(KitFilter.getSelectedKitMessage(pinfo.kit));
+				p.sendMessage(KitFilter.getSelectedKitMessage(pinfo.defaultKit, pinfo.kit));
 
 			pinfo.team = noTeamTeam;
 			pinfo.clearDamageReceivedLog();
@@ -402,8 +404,10 @@ public abstract class TeamArena
 	}
 
 	protected void registerKits() {
+		final KitTrooper trooper = new KitTrooper(this);
+		final KitSplitter splitter = new KitSplitter(this, trooper);
 		var defaultKits = new Kit[] {
-			new KitTrooper(this), new KitArcher(), new KitGhost(), new KitDwarf(), new KitBurst(),
+			trooper, splitter, new KitArcher(), new KitGhost(), new KitDwarf(), new KitBurst(),
 			new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(), new KitNone(),
 			new KitVenom(), new KitRewind(), new KitValkyrie(), new KitExplosive(), new KitTrigger(), new KitMedic(this.killStreakManager),
 			new KitBerserker(), new KitEngineer(), new KitPorcupine(this), new KitLongbow(), new KitSniper(), new KitBeekeeper(),
@@ -415,6 +419,8 @@ public abstract class TeamArena
 		for (Kit kit : defaultKits) {
 			registerKit(kit);
 		}
+
+		this.critAbility = splitter.getCritAbility();
 	}
 
 	protected void applyKitFilters() {
@@ -857,7 +863,10 @@ public abstract class TeamArena
 			if (!event.isCancelled() && event.getFinalDamage() > 0) {
 				if (event.getDamageType().is(DamageType.RATIO_CRIT) || event.getDamageType().is(DamageType.REFLECTED_RATIO_CRIT)) {
 					assert CompileAsserts.OMIT || event.getAttacker() != null;
-					CritAbility.splitterEffect(event.getAttacker(), event.getVictim());
+					assert CompileAsserts.OMIT || (event.getAttacker() instanceof LivingEntity && event.getVictim() instanceof LivingEntity);
+					this.critAbility.onSuccessfulCrit(
+						(LivingEntity) event.getAttacker(), (LivingEntity) event.getVictim()
+					);
 				}
 				//spawn damage indicator hologram
 				// divide by two to display as hearts
@@ -1975,8 +1984,9 @@ public abstract class TeamArena
 
 		Kit kit = KitFilter.filterKit(this, playerInfo.team, player, preferredKit);
 		if (kit != preferredKit) {
+			final String preferredKitName = preferredKit.getName();
 			Bukkit.getScheduler().runTask(Main.getPlugin(), () ->
-				player.sendMessage(KitFilter.getSelectedKitMessage(kit)));
+				player.sendMessage(KitFilter.getSelectedKitMessage(preferredKitName, kit)));
 		}
 		playerInfo.kit = kit;
 
