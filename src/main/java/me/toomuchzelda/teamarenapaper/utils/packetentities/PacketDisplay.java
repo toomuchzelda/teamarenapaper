@@ -21,17 +21,17 @@ public class PacketDisplay extends PacketEntity {
 		super(id, entityType, location, viewers, viewerRule);
 	}
 
-	private static Vector3F bukkitToPLibVec(Vector vec) {
-        return new Vector3F((float) vec.getX(), (float) vec.getY(), (float) vec.getZ());
+	private static Vector3f bukkitToJoml(Vector vec) {
+        return new Vector3f((float) vec.getX(), (float) vec.getY(), (float) vec.getZ());
 	}
 
 	// Not sure how this works with joml Vector3f serializer
 	public void translate(Vector translation) {
-		this.setMetadata(MetaIndex.DISPLAY_TRANSLATION_OBJ, bukkitToPLibVec(translation));
+		this.setMetadata(MetaIndex.DISPLAY_TRANSLATION_OBJ, bukkitToJoml(translation));
 	}
 
 	public void setScale(Vector scale) {
-		this.setMetadata(MetaIndex.DISPLAY_SCALE_OBJ, bukkitToPLibVec(scale));
+		this.setMetadata(MetaIndex.DISPLAY_SCALE_OBJ, bukkitToJoml(scale));
 	}
 
 	public void setBillboard(MetaIndex.DisplayBillboardOption option) {

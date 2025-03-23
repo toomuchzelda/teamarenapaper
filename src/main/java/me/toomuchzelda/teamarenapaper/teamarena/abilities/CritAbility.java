@@ -23,6 +23,8 @@ import org.bukkit.*;
 import org.bukkit.craftbukkit.block.data.CraftBlockData;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.util.Vector;
+import org.joml.Vector3f;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -46,6 +48,7 @@ public class CritAbility extends Ability {
 		private final AttachedPacketHologram vehicle;
 
 		private float width;
+		private final PacketContainer mountPacket;
 
 		public CritHitbox(LivingEntity followed, CritAbility critAbility) {
 			this.followed = followed;
@@ -64,7 +67,7 @@ public class CritAbility extends Ability {
 			this.vehicle.updateMetadataPacket();
 
 			interaction = new PacketEntity(PacketEntity.NEW_ID, EntityType.INTERACTION, followed.getLocation(), null,
-				viewer -> this.vehicle.getRealViewers().contains(viewer)) {
+				viewer -> this.getVehicle().getRealViewers().contains(viewer)) {
 				@Override
 				public void onInteract(Player player, EquipmentSlot hand, boolean attack) {
 					if (player == followed) return;
@@ -76,38 +79,44 @@ public class CritAbility extends Ability {
 				}
 
 				// Always mount the vehicle. The vehicle should always be alive when this is called
-				// since it was registed before this, and the viewerrules are identical.
+				// since it was registed before this
 				@Override
 				public void respawn() {
 					super.respawn();
-					if (!getVehicle().getRealViewers().equals(getRealViewers())) {
-						Main.componentLogger().warn("Inconsistent crit viewers:\nVehicle: {}\nInteraction: {}",
-							getVehicle().getRealViewers(), getRealViewers());
-						return;
-					}
-					PacketContainer mountPacket = EntityUtils.getMountPacket(CritHitbox.this.getVehicle().getId(), this.getId());
-					this.broadcastPacket(mountPacket);
+					this.broadcastPacket(CritHitbox.this.mountPacket);
 				}
 			};
 
 			this.width = getWidth(followed);
 			if (!KitOptions.splitterVisible)
 				this.interaction.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK);
-			this.interaction.setMetadata(MetaIndex.INTERACTION_WIDTH_OBJ, this.width);
-			this.interaction.setMetadata(MetaIndex.INTERACTION_HEIGHT_OBJ, BOX_HEIGHT);
-			this.interaction.updateMetadataPacket();
 
-			this.flash = new PacketDisplay(PacketEntity.NEW_ID, EntityType.BLOCK_DISPLAY, this.vehicle.getLocationMut(),
-				null, viewer -> this.getInteraction().getRealViewers().contains(viewer));
-			this.flash.setMetadata(MetaIndex.BLOCK_DISPLAY_BLOCK_OBJ, ((CraftBlockData) Material.REDSTONE_BLOCK.createBlockData()).getState());
+			final Location flashLoc = this.vehicle.getLocation();
+			flashLoc.setPitch(0f); flashLoc.setYaw(0f);
+			this.flash = new PacketDisplay(PacketEntity.NEW_ID, EntityType.BLOCK_DISPLAY, flashLoc,
+				null, viewer -> this.getInteraction().getRealViewers().contains(viewer)) {
+				@Override
+				public void respawn() {
+					super.respawn();
+					this.broadcastPacket(CritHitbox.this.mountPacket);
+				}
+			};
+			this.flash.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, (byte) MetaIndex.BASE_BITFIELD_INVIS_MASK);
+			this.flash.setMetadata(MetaIndex.BLOCK_DISPLAY_BLOCK_OBJ, ((CraftBlockData) Material.AIR.createBlockData()).getState());
+
+			this.updateScale(this.width);
+
+			this.mountPacket = EntityUtils.getMountPacket(this.vehicle.getId(), this.interaction.getId(), this.flash.getId());
 		}
 
 		public void spawn() {
 			this.vehicle.respawn();
 			this.interaction.respawn();
+			this.flash.respawn();
 		}
 
 		public void remove() {
+			this.flash.remove();
 			this.interaction.remove();
 			this.vehicle.remove();
 		}
@@ -126,29 +135,33 @@ public class CritAbility extends Ability {
 				// update vehicle position
 				this.vehicle.move();
 				// resize interaction and block display
-				this.interaction.setMetadata(MetaIndex.INTERACTION_WIDTH_OBJ, currentWidth);
-				this.interaction.refreshViewerMetadata();
-
-				// this.flash.setMetadata();
+				this.updateScale(currentWidth);
 			}
 		}
 
-		public void flash() {
-			byte glowOn = (byte) (MetaIndex.BASE_BITFIELD_GLOWING_MASK);
-			if (!KitOptions.splitterVisible)
-				glowOn |= (byte) (MetaIndex.BASE_BITFIELD_INVIS_MASK);
-
-			this.interaction.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, glowOn);
+		private void updateScale(float width) {
+			this.interaction.setMetadata(MetaIndex.INTERACTION_HEIGHT_OBJ, BOX_HEIGHT);
+			this.interaction.setMetadata(MetaIndex.INTERACTION_WIDTH_OBJ, width);
 			this.interaction.refreshViewerMetadata();
 
-			Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
-				byte glowOff = (byte) 0;
-				if (!KitOptions.splitterVisible)
-					glowOff |= (byte) (MetaIndex.BASE_BITFIELD_INVIS_MASK);
+			this.flash.translate(new Vector(-0.5d, 0d, -0.5d));
+			this.flash.setScale(new Vector3f(width, BOX_HEIGHT, width));
+			this.flash.refreshViewerMetadata();
+		}
 
-				this.interaction.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, glowOff);
-				this.interaction.refreshViewerMetadata();
-			}, 3L);
+		public void flash() {
+			final byte glowOn = (byte) (MetaIndex.BASE_BITFIELD_GLOWING_MASK | MetaIndex.BASE_BITFIELD_INVIS_MASK);
+			this.flash.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, glowOn);
+			this.flash.setMetadata(MetaIndex.BLOCK_DISPLAY_BLOCK_OBJ,
+				((CraftBlockData) Material.RED_STAINED_GLASS.createBlockData()).getState());
+			this.flash.refreshViewerMetadata();
+
+			Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
+				this.flash.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK);
+				this.flash.setMetadata(MetaIndex.BLOCK_DISPLAY_BLOCK_OBJ,
+					((CraftBlockData) Material.AIR.createBlockData()).getState());
+				this.flash.refreshViewerMetadata();
+			}, 1L);
 		}
 
 		private static float getWidth(Entity e) {
@@ -219,6 +232,7 @@ public class CritAbility extends Ability {
 			}
 		}
 		addHitboxes();
+		this.critHitboxes.values().forEach(CritHitbox::tick);
 	}
 
 	@Override
@@ -247,7 +261,7 @@ public class CritAbility extends Ability {
 			playCritSound(world, attacker, (i * 2) + 1, volume, 1.3f + (((float) i) / 3f));
 		}
 
-		// ParticleUtils.bloodEffect(victim);
+		ParticleUtils.bloodEffect(victim);
 
 		// Make the vulnerable part flash
 		CritHitbox critHitbox = this.critHitboxes.get(victim);

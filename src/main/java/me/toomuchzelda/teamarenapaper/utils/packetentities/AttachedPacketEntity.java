@@ -74,7 +74,7 @@ public class AttachedPacketEntity extends PacketEntity
 	 */
 	@Override
 	protected void move(Location newLocation, boolean force) {
-		if(this.location.equals(newLocation))
+		if(this.location.equals(newLocation) && !force)
 			return;
 
 		newLocation = newLocation.clone();
