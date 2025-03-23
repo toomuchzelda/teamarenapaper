@@ -9,6 +9,7 @@ import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.abilities.CommonAbilityManager;
 import me.toomuchzelda.teamarenapaper.teamarena.abilities.centurion.ShieldListener;
+import me.toomuchzelda.teamarenapaper.teamarena.abilities.CritAbility;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerSound;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.ChatAnnouncerManager;
@@ -405,7 +406,7 @@ public abstract class TeamArena
 			new KitTrooper(this), new KitArcher(), new KitGhost(), new KitDwarf(), new KitBurst(),
 			new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(), new KitNone(),
 			new KitVenom(), new KitRewind(), new KitValkyrie(), new KitExplosive(), new KitTrigger(), new KitMedic(this.killStreakManager),
-			new KitBerserker(), new KitEngineer(), new KitPorcupine(), new KitLongbow(), new KitSniper(), new KitBeekeeper(),
+			new KitBerserker(), new KitEngineer(), new KitPorcupine(this), new KitLongbow(), new KitSniper(), new KitBeekeeper(),
 			new KitMarine(this.commonAbilityManager),
 
 			new KitHider(this), /*new KitSeeker(),*/ new KitRadarSeeker(this)
@@ -775,10 +776,8 @@ public abstract class TeamArena
 	}
 
 	public void damageTick() {
-		Iterator<DamageEvent> iter = damageQueue.iterator();
-		while(iter.hasNext()) {
-			DamageEvent event = iter.next();
-			iter.remove();
+		while(!this.damageQueue.isEmpty()) {
+			DamageEvent event = this.damageQueue.remove();
 
 			try {
 				processDamageEvent(event);
@@ -856,6 +855,10 @@ public abstract class TeamArena
 			}
 
 			if (!event.isCancelled() && event.getFinalDamage() > 0) {
+				if (event.getDamageType().is(DamageType.RATIO_CRIT) || event.getDamageType().is(DamageType.REFLECTED_RATIO_CRIT)) {
+					assert CompileAsserts.OMIT || event.getAttacker() != null;
+					CritAbility.splitterEffect(event.getAttacker(), event.getVictim());
+				}
 				//spawn damage indicator hologram
 				// divide by two to display as hearts
 				Component damageText = Component.text(MathUtils.round(event.getFinalDamage() / 2, 2), NamedTextColor.YELLOW, TextDecoration.BOLD);
