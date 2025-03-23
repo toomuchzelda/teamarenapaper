@@ -11,6 +11,8 @@ import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.utils.TextColors;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Location;
@@ -19,6 +21,8 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerItemHeldEvent;
+import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.RayTraceResult;
@@ -77,6 +81,7 @@ public class CenturionAbility extends Ability {
 		}
 	}
 	private final Map<Player, ShieldHistory> playerShieldHistories = new HashMap<>();
+	private final Map<Player, Double> playerMitigation = new HashMap<>();
 
 	@Override
 	public void onTick() {
@@ -109,6 +114,16 @@ public class CenturionAbility extends Ability {
 			shield.cleanUp();
 		}
 		playerShieldHistories.remove(player);
+		Double mitigatedDamage = playerMitigation.remove(player);
+		if (mitigatedDamage == null)
+			mitigatedDamage = 0d;
+		player.sendMessage(textOfChildren(
+				text("You mitigated "),
+				text(TextUtils.formatHealth(mitigatedDamage), TextColors.HEALTH),
+				text(" with your "),
+				text("Particle Shield", TextColor.color(ShieldInstance.SHIELD_COLOR_HEX)),
+				text(".")
+		).color(NamedTextColor.GRAY));
 	}
 
 
@@ -124,6 +139,7 @@ public class CenturionAbility extends Ability {
 		ShieldHistory history = playerShieldHistories.remove(player);
 		ShieldConfig config = history != null ? history.buildConfig() : ShieldConfig.DEFAULT;
 		ShieldInstance shield = new ShieldInstance(player, config);
+		shield.setMitigationListener(mitigation -> playerMitigation.merge(player, mitigation, Double::sum));
 		shield.setBreakListener(() -> {
 			playerShields.remove(player);
 			// punish the player for letting their shields break
@@ -156,16 +172,30 @@ public class CenturionAbility extends Ability {
 		double health = history != null ? history.estimateHealthNow() : ShieldConfig.DEFAULT_MAX_HEALTH;
 		ShieldInstance shield = new ShieldInstance(player,
 			new ShieldConfig(health, ShieldConfig.DEFAULT_MAX_HEALTH, 10 * 20, location));
+		shield.setMitigationListener(mitigation -> playerMitigation.merge(player, mitigation, Double::sum));
 		shield.setExpireListener(() -> playerShields.remove(player));
 		shield.setBreakListener(() -> playerShields.remove(player));
 		playerShields.put(player, shield);
 	}
 
 	@Override
+	public void onSwapHandItems(PlayerSwapHandItemsEvent event) {
+		stopUsingShield(event.getPlayer());
+	}
+
+	@Override
+	public void onSwitchItemSlot(PlayerItemHeldEvent event) {
+		stopUsingShield(event.getPlayer());
+	}
+
+	@Override
 	public void onStopUsingItem(PlayerStopUsingItemEvent event) {
-		if (!isShieldItem(event.getItem()))
+		stopUsingShield(event.getPlayer());
+	}
+
+	private void stopUsingShield(Player player) {
+		if (!isShieldItem(player.getActiveItem()))
 			return;
-		Player player = event.getPlayer();
 		ShieldInstance shield = playerShields.remove(player);
 		if (shield != null) {
 			ShieldHistory history = new ShieldHistory(shield.health, shield.lastDamageTick, TeamArena.getGameTick());

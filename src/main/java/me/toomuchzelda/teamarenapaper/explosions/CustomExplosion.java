@@ -177,6 +177,7 @@ public class CustomExplosion
 									// team check
 									if (entry.getKey().isFriendly(checkShield)) {
 										hitShield = entry.getKey();
+										hitShield.addMitigation(calculateDamage(aim, aimLength));
 //										Main.componentLogger().info("Damage to {} mitigated by shield {}", e, hitShield.uuid);
 										break;
 									}

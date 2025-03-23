@@ -23,6 +23,7 @@ import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
 import java.util.*;
+import java.util.function.DoubleConsumer;
 import java.util.stream.IntStream;
 
 /**
@@ -31,10 +32,14 @@ import java.util.stream.IntStream;
 public class ShieldInstance {
 	public static final NamespacedKey SHIELD_ENTITY = new NamespacedKey(Main.getPlugin(), "shield");
 
+	public static final boolean USE_TEXT_DISPLAY = false;
+
 	public final UUID uuid = UUID.randomUUID();
 
 	public final World world;
 	public final Player player;
+	@Nullable
+	private TeamArenaTeam team;
 
 	private boolean valid = true;
 
@@ -59,11 +64,11 @@ public class ShieldInstance {
 
 	private final long spawnedAt;
 
-	@Nullable
-	private TeamArenaTeam team;
+	private double mitigation;
 
 	private Runnable breakListener;
 	private Runnable expireListener;
+	private DoubleConsumer mitigationListener;
 
 	private static final int SHIELD_SIZE = 3;
 	private static final float SHIELD_WIDTH = 5;
@@ -81,6 +86,7 @@ public class ShieldInstance {
 		this.world = player.getWorld();
 		this.player = player;
 		this.spawnedAt = world.getGameTime();
+		team = Main.getPlayerInfo(player).team;
 
 		if (shieldConfig.anchor() != null) {
 			anchor = shieldConfig.anchor().clone();
@@ -99,13 +105,17 @@ public class ShieldInstance {
 		playerDisplays = new ArrayList<>(numElements);
 		otherDisplays = new ArrayList<>(numElements);
 		boxes = LinkedHashSet.newLinkedHashSet(numElements);
+
+		DyeColor baseColor = DyeColor.LIGHT_BLUE;
+		DyeColor otherColor = team != null ? team.getDyeColour() : DyeColor.BLUE;
+
 		for (Location location : boxLocations) {
-			ShieldPart shieldPart = new ShieldPart(location);
+			ShieldPart shieldPart;
+			if (USE_TEXT_DISPLAY)
+				shieldPart = new TextShieldPart(location, getShieldBaseColor(), getShieldOtherColor(), playerDisplays, otherDisplays);
+			else
+				shieldPart = new BlockShieldPart(location, baseColor, otherColor, playerDisplays, otherDisplays);
 			parts.add(shieldPart);
-			playerDisplays.add(shieldPart.playerFrontDisplay);
-			playerDisplays.add(shieldPart.playerBackDisplay);
-			otherDisplays.add(shieldPart.otherFrontDisplay);
-			otherDisplays.add(shieldPart.otherBackDisplay);
 			boxes.add(world.spawn(location, ArmorStand.class, ShieldInstance::spawnBox));
 			boxes.add(world.spawn(location.clone().add(0, 1.1f, 0), ArmorStand.class, ShieldInstance::spawnBox));
 		}
@@ -118,7 +128,6 @@ public class ShieldInstance {
 			otherDisplay.respawn();
 		}
 
-		team = Main.getPlayerInfo(player).team;
 		if (team != null) {
 			team.addMembers(boxes.toArray(new Entity[0]));
 		}
@@ -138,27 +147,81 @@ public class ShieldInstance {
 		this.expireListener = expireListener;
 	}
 
+	public void setMitigationListener(DoubleConsumer mitigationListener) {
+		this.mitigationListener = mitigationListener;
+	}
+
 	public boolean isValid() {
 		return valid;
 	}
 
-	public class ShieldPart {
+	interface ShieldPart {
+		void updateLocations(Location base);
+	}
+
+	public static class BlockShieldPart implements ShieldPart {
+		private final PacketDisplay playerDisplay;
+		private final PacketDisplay otherDisplay;
+		BlockShieldPart(Location base, DyeColor baseColor, DyeColor otherColor,
+						List<PacketDisplay> playerDisplays, List<PacketDisplay> otherDisplays) {
+			playerDisplay = spawnDisplay(base, baseColor);
+			otherDisplay = spawnOtherDisplay(base, otherColor);
+
+			playerDisplays.add(playerDisplay);
+			otherDisplays.add(otherDisplay);
+		}
+
+		@Override
+		public void updateLocations(Location base) {
+			playerDisplay.move(base);
+			otherDisplay.move(base);
+
+		}
+		private static final float BLOCK_WIDTH = SHIELD_WIDTH / SHIELD_BOXES_COUNT;
+		private PacketDisplay spawnDisplay(Location location, DyeColor color) {
+			PacketDisplay blockDisplay = new PacketDisplay(PacketEntity.NEW_ID, EntityType.BLOCK_DISPLAY, location, null, null);
+			blockDisplay.setBlockData(Objects.requireNonNull(Material.getMaterial(color.name() + "_STAINED_GLASS")).createBlockData());
+			blockDisplay.setTeleportDuration(1);
+			blockDisplay.setTranslation(new Vector3f(-BLOCK_WIDTH / 2, 0, 0));
+			blockDisplay.setScale(new Vector3f(BLOCK_WIDTH, SHIELD_HEIGHT, 0.1f));
+			blockDisplay.setInterpolationDuration(SHIELD_COLOR_INTERP_INTERVAL);
+			blockDisplay.setBrightnessOverride(new Display.Brightness(15, 15));
+			blockDisplay.updateMetadataPacket();
+			return blockDisplay;
+		}
+
+		private PacketDisplay spawnOtherDisplay(Location location, DyeColor color) {
+			PacketDisplay blockDisplay = spawnDisplay(location, color);
+			blockDisplay.setTeleportDuration(3);
+			blockDisplay.updateMetadataPacket();
+			return blockDisplay;
+		}
+	}
+
+	public static class TextShieldPart implements ShieldPart {
 		final PacketDisplay playerFrontDisplay;
 		final PacketDisplay playerBackDisplay;
 		final PacketDisplay otherFrontDisplay;
 		final PacketDisplay otherBackDisplay;
 
-		ShieldPart(Location base) {
-			playerFrontDisplay = spawnDisplay(base);
-			otherFrontDisplay = spawnOtherDisplay(base);
+		TextShieldPart(Location base, Color baseColor, Color otherColor,
+				   List<PacketDisplay> playerDisplays, List<PacketDisplay> otherDisplays) {
+			playerFrontDisplay = spawnDisplay(base, baseColor);
+			otherFrontDisplay = spawnOtherDisplay(base, otherColor);
 
 			var back = base.clone();
 			back.setYaw(back.getYaw() + 180);
-			playerBackDisplay = spawnDisplay(back);
-			otherBackDisplay = spawnOtherDisplay(back);
+			playerBackDisplay = spawnDisplay(back, baseColor);
+			otherBackDisplay = spawnOtherDisplay(back, otherColor);
+
+			playerDisplays.add(playerFrontDisplay);
+			playerDisplays.add(playerBackDisplay);
+			otherDisplays.add(otherFrontDisplay);
+			otherDisplays.add(otherBackDisplay);
 		}
 
-		void updateLocations(Location base) {
+		@Override
+		public void updateLocations(Location base) {
 			playerFrontDisplay.move(base);
 			otherFrontDisplay.move(base);
 			Location back = base.clone();
@@ -172,10 +235,10 @@ public class ShieldInstance {
 		private static final float TEXT_Y_SCALE = 4 * SHIELD_HEIGHT;
 		private static final float TEXT_X_OFFSET = -3f / 256 * TEXT_X_SCALE;
 		private static final float TEXT_Y_OFFSET = -1f / 16 * (16 + 3) / 16 * TEXT_Y_SCALE + SHIELD_HEIGHT / 4;
-		private PacketDisplay spawnDisplay(Location location) {
+		private PacketDisplay spawnDisplay(Location location, Color color) {
 			PacketDisplay textDisplay = new PacketDisplay(PacketEntity.NEW_ID, EntityType.TEXT_DISPLAY, location, null, null);
 			textDisplay.text(Component.text(" "));
-			textDisplay.setBackgroundColor(getShieldBaseColor());
+			textDisplay.setBackgroundColor(color);
 			textDisplay.setTextOpacity((byte) 0);
 			textDisplay.setTeleportDuration(1);
 			textDisplay.setTranslation(new Vector3f(TEXT_X_OFFSET, TEXT_Y_OFFSET, 0.01f));
@@ -186,9 +249,8 @@ public class ShieldInstance {
 			return textDisplay;
 		}
 
-		private PacketDisplay spawnOtherDisplay(Location location) {
-			PacketDisplay textDisplay = spawnDisplay(location);
-			textDisplay.setBackgroundColor(getShieldOtherColor());
+		private PacketDisplay spawnOtherDisplay(Location location, Color color) {
+			PacketDisplay textDisplay = spawnDisplay(location, color);
 			textDisplay.setTeleportDuration(3);
 			textDisplay.updateMetadataPacket();
 			return textDisplay;
@@ -203,9 +265,7 @@ public class ShieldInstance {
 		interaction.setPersistent(false);
 		interaction.setCanTick(false);
 		interaction.setVisible(false);
-		for (EquipmentSlot slot : EquipmentSlot.values()) {
-			interaction.addEquipmentLock(slot, ArmorStand.LockType.ADDING_OR_CHANGING);
-		}
+		interaction.setDisabledSlots(EquipmentSlot.values());
 		interaction.getPersistentDataContainer().set(SHIELD_ENTITY, PersistentDataType.BOOLEAN, true);
 	}
 
@@ -302,6 +362,7 @@ public class ShieldInstance {
 	}
 
 	private static boolean playerCantSee(Player player, PacketDisplay display) {
+		if (!USE_TEXT_DISPLAY) return false; // no need to hide for BlockShieldPart
 		Location location = display.getLocation().add(0, SHIELD_HEIGHT / 2, 0);
 		Location eyeLocation = player.getEyeLocation();
 		double distance = location.distance(eyeLocation);
@@ -352,11 +413,11 @@ public class ShieldInstance {
 		double x = loc.getX(), y = loc.getY(), z = loc.getZ();
 		Vector front = loc.getDirection();
 		front.setY(0);
-		Vector right = new Vector(0, 1, 0).crossProduct(front).normalize().multiply(SHIELD_WIDTH / 5);
+		Vector right = new Vector(0, 1, 0).crossProduct(front).normalize().multiply(SHIELD_WIDTH / 10);
 		double xStep = right.getX(), zStep = right.getZ();
 		for (int j = -5; j <= 5; j++) {
 			loc.setY(y + j * (SHIELD_HEIGHT / 5));
-			for (int i = -5; i <= 5; i++) {
+			for (int i = -10; i <= 10; i++) {
 				loc.setX(x + i * xStep);
 				loc.setZ(z + i * zStep);
 				world.spawnParticle(Particle.BLOCK, loc, 0, data);
@@ -405,22 +466,23 @@ public class ShieldInstance {
 		updateViewers();
 
 		long tickSinceSpawn = (player.getWorld().getGameTime() - spawnedAt) % (SHIELD_COLOR_INTERP_INTERVAL * 2);
-		if (health != lastHealth || tickSinceSpawn == 0 || tickSinceSpawn == SHIELD_COLOR_INTERP_INTERVAL) {
-			Color color = (tickSinceSpawn < SHIELD_COLOR_INTERP_INTERVAL) ? getShieldBaseColor() : brighter(getShieldBaseColor());
-			Color otherColor = (tickSinceSpawn < SHIELD_COLOR_INTERP_INTERVAL) ? getShieldOtherColor() : brighter(getShieldOtherColor());
-			for (PacketDisplay playerDisplay : playerDisplays) {
-				playerDisplay.setBackgroundColor(color);
-				playerDisplay.setInterpolationDelay(0);
-				playerDisplay.updateMetadataPacket();
-				playerDisplay.refreshViewerMetadata();
+		if (USE_TEXT_DISPLAY) {
+			if (health != lastHealth || tickSinceSpawn == 0 || tickSinceSpawn == SHIELD_COLOR_INTERP_INTERVAL) {
+				Color color = (tickSinceSpawn < SHIELD_COLOR_INTERP_INTERVAL) ? getShieldBaseColor() : brighter(getShieldBaseColor());
+				Color otherColor = (tickSinceSpawn < SHIELD_COLOR_INTERP_INTERVAL) ? getShieldOtherColor() : brighter(getShieldOtherColor());
+				for (PacketDisplay playerDisplay : playerDisplays) {
+					playerDisplay.setBackgroundColor(color);
+					playerDisplay.setInterpolationDelay(0);
+					playerDisplay.updateMetadataPacket();
+					playerDisplay.refreshViewerMetadata();
+				}
+				for (PacketDisplay otherDisplay : otherDisplays) {
+					otherDisplay.setBackgroundColor(otherColor);
+					otherDisplay.setInterpolationDelay(0);
+					otherDisplay.updateMetadataPacket();
+					otherDisplay.refreshViewerMetadata();
+				}
 			}
-			for (PacketDisplay otherDisplay : otherDisplays) {
-				otherDisplay.setBackgroundColor(otherColor);
-				otherDisplay.setInterpolationDelay(0);
-				otherDisplay.updateMetadataPacket();
-				otherDisplay.refreshViewerMetadata();
-			}
-
 		}
 		lastHealth = health;
 
@@ -491,6 +553,16 @@ public class ShieldInstance {
 			world.spawnParticle(Particle.DUST, hitPosition.getX(), hitPosition.getY(), hitPosition.getZ(), 0,
 				Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5, 0,
 				new Particle.DustOptions(brighter(getShieldOtherColor()), 1f));
+	}
+
+	public void addMitigation(double mitigation) {
+		this.mitigation += mitigation;
+		if (mitigationListener != null)
+			mitigationListener.accept(mitigation);
+	}
+
+	public double getMitigation() {
+		return mitigation;
 	}
 
 }

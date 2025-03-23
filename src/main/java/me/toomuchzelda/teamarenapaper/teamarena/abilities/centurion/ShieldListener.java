@@ -50,7 +50,7 @@ public class ShieldListener {
 				return true;
 			}
 			double finalDamage = damageEvent.getFinalDamage();
-
+			shield.addMitigation(finalDamage); // add raw damage
 			if (damageEvent.getDamageType().isExplosion() && attacker instanceof org.bukkit.entity.Projectile) {
 				var damagedUUIDs = getUUIDs(attacker.getPersistentDataContainer(), SHIELD_DAMAGED);
 				// don't damage the shield multiple times
@@ -88,6 +88,7 @@ public class ShieldListener {
 			Location arrowLocation = arrow.getLocation();
 			RayTraceResult result = armorStand.getBoundingBox().expand(0.3).rayTrace(
 				arrowLocation.toVector(), arrow.getVelocity(), armorStand.getLocation().distance(arrowLocation) + 1);
+			shield.addMitigation(arrow.getDamage());
 			double damage = arrow.getDamage() * 10;
 
 //			Main.componentLogger().info("Projectile damage: {}\n(To shield {})", damage, shield.uuid);

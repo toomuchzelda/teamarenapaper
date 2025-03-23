@@ -1,11 +1,14 @@
 package me.toomuchzelda.teamarenapaper.utils.packetentities;
 
-import com.comphenix.protocol.wrappers.Vector3F;
 import io.papermc.paper.adventure.PaperAdventure;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import net.kyori.adventure.text.Component;
+import net.minecraft.util.Brightness;
 import org.bukkit.Color;
 import org.bukkit.Location;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.craftbukkit.block.data.CraftBlockData;
+import org.bukkit.entity.Display;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
@@ -58,6 +61,12 @@ public class PacketDisplay extends PacketEntity {
 		this.setMetadata(MetaIndex.DISPLAY_SCALE_OBJ, scale);
 	}
 
+	public void setBrightnessOverride(@Nullable Display.Brightness brightnessOverride) {
+		int packed = brightnessOverride == null ? -1 :
+			new Brightness(brightnessOverride.getBlockLight(), brightnessOverride.getSkyLight()).pack();
+		this.setMetadata(MetaIndex.DISPLAY_BRIGHTNESS_OVERRIDE_OBJ, packed);
+	}
+
 	public void text(Component text) {
 		this.setMetadata(MetaIndex.TEXT_DISPLAY_TEXT_OBJ, PaperAdventure.asVanilla(text));
 	}
@@ -89,5 +98,9 @@ public class PacketDisplay extends PacketEntity {
 
 	public void setHeight(float height) {
 		this.setMetadata(MetaIndex.DISPLAY_HEIGHT_OBJ, height);
+	}
+
+	public void setBlockData(BlockData blockData) {
+		this.setMetadata(MetaIndex.BLOCK_DISPLAY_BLOCK_OBJ, ((CraftBlockData) blockData).getState());
 	}
 }
