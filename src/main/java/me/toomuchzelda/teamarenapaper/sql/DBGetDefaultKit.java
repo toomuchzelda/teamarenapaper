@@ -10,7 +10,7 @@ import java.util.UUID;
 
 public class DBGetDefaultKit extends DBOperation<String>
 {
-	public static final String DEFAULT_KIT = "Trooper";
+	public static final String DEFAULT_KIT = "Splitter";
 
 	private final String uuid;
 

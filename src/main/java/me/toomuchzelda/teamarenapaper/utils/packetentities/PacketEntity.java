@@ -388,6 +388,11 @@ public class PacketEntity
 		this.dirtyRelativePacketTime = 0;
 	}
 
+	/** Forcefully update position */
+	public void move() {
+		this.move(this.getLocationMut(), true);
+	}
+
 	/**
 	 * does not support moving between worlds
 	 */

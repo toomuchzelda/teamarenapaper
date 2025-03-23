@@ -1,12 +1,8 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.abilities.CritAbility;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
-import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -19,8 +15,6 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-
-import java.util.List;
 
 public class KitTrooper extends Kit {
 
@@ -36,32 +30,19 @@ public class KitTrooper extends Kit {
         armour[0] = new ItemStack(Material.IRON_BOOTS);
         this.setArmour(armour);
 
-		ItemStack sword;
-		if (KitOptions.trooperRatio)
-			sword = ItemBuilder.of(Material.STONE_SWORD)
-				.displayName(Component.text("Splitter sword"))
-				.lore(
-					List.of(Component.text("Hit enemies right in the middle to inflict critical damage", TextUtils.LEFT_CLICK_TO))
-				).build();
-		else {
-			sword = new ItemStack(Material.IRON_SWORD);
-			ItemMeta swordMeta = sword.getItemMeta();
-			swordMeta.addEnchant(Enchantment.SHARPNESS, 1, false);
-			sword.setItemMeta(swordMeta);
-		}
+		ItemStack sword = new ItemStack(Material.IRON_SWORD);
+		ItemMeta swordMeta = sword.getItemMeta();
+		swordMeta.addEnchant(Enchantment.SHARPNESS, 1, false);
+		sword.setItemMeta(swordMeta);
 
-
-        ItemStack gapples = new ItemStack(Material.GOLDEN_APPLE);
+		ItemStack gapples = new ItemStack(Material.GOLDEN_APPLE);
         gapples.setAmount(5);
 
         setItems(sword, gapples);
 
 		setCategory(KitCategory.FIGHTER);
 
-		if (KitOptions.trooperRatio)
-			this.setAbilities(new TrooperAbility(), new CritAbility(game));
-		else
-			this.setAbilities(new TrooperAbility());
+		this.setAbilities(new TrooperAbility());
     }
 
 	public static class TrooperAbility extends Ability

@@ -638,6 +638,19 @@ public class CommandDebug extends CustomCommand {
 				Herobrine h = new Herobrine(Main.getGame(), player.getTargetBlockExact(10), player.getLocation());
 				h.respawn();
 			}
+			case "invisibleBlock" -> {
+				Location loc = player.getLocation();
+				PacketDisplay display = new PacketDisplay(PacketEntity.NEW_ID, EntityType.BLOCK_DISPLAY, loc, null, PacketEntity.VISIBLE_TO_ALL);
+				display.setMetadata(MetaIndex.BLOCK_DISPLAY_BLOCK_OBJ, ((CraftBlockData) Material.STONE.createBlockData()).getState());
+				if (Boolean.parseBoolean(args[1]))
+					display.setMetadata(MetaIndex.BASE_BITFIELD_OBJ,
+						(byte) (MetaIndex.BASE_BITFIELD_INVIS_MASK | MetaIndex.BASE_BITFIELD_GLOWING_MASK));
+				else
+					display.setMetadata(MetaIndex.BASE_BITFIELD_OBJ,
+						(byte) (MetaIndex.BASE_BITFIELD_GLOWING_MASK));
+				display.updateMetadataPacket();
+				display.respawn();
+			}
 			default -> showUsage(sender);
 		}
 	}
@@ -648,7 +661,7 @@ public class CommandDebug extends CustomCommand {
 			return Arrays.asList("hide", "gui", "guitest", "signtest", "game", "setrank", "setteam", "setkit",
 				"votetest", "draw", "graffititest", "respawn", "fakehitbox", "testmotd", "arrowMarker", "packetcache", "showSpawns",
 				"flyingpoint", "fakeBlock", "elevator", "showores", "darken", "amogus", "loadsong", "movemaxxing", "packethuman",
-				"addshield", "clearshields");
+				"addshield", "clearshields", "invisibleBlock");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");
