@@ -2,7 +2,6 @@ package me.toomuchzelda.teamarenapaper.utils;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
-import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Pair;
 import io.netty.buffer.Unpooled;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
@@ -125,6 +124,9 @@ public class EntityUtils {
 		final Location loc = proj.getLocation();
 		final Vector dir = proj.getVelocity();
 
+		RayTraceResult result = hitEntity.getBoundingBox().expand(0.3).rayTrace(loc.toVector(), dir, dir.length() + 1);
+		if (true)
+			return result;
 		// Raysize comes from ProjectileUtil
 		return rayTraceEntities(loc.getWorld(), loc, dir, dir.length(), 1.0f, 0.3f,
 			entity -> entity == hitEntity);

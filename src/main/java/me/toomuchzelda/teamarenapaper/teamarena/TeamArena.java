@@ -8,6 +8,7 @@ import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.abilities.CommonAbilityManager;
+import me.toomuchzelda.teamarenapaper.teamarena.abilities.centurion.ShieldListener;
 import me.toomuchzelda.teamarenapaper.teamarena.abilities.CritAbility;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerSound;
@@ -26,7 +27,10 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
-import me.toomuchzelda.teamarenapaper.teamarena.inventory.*;
+import me.toomuchzelda.teamarenapaper.teamarena.inventory.CosmeticsInventory;
+import me.toomuchzelda.teamarenapaper.teamarena.inventory.KitInventory;
+import me.toomuchzelda.teamarenapaper.teamarena.inventory.PreferencesInventory;
+import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.IronGolemKillStreak;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.KillStreakManager;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.WolvesKillStreak;
@@ -41,7 +45,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.FilterRule;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitFilter;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitHider;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitRadarSeeker;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitSeeker;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.medic.KitMedic;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.rewind.KitRewind;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.trigger.KitTrigger;
@@ -252,6 +255,15 @@ public abstract class TeamArena
 		gameWorld.setGameRule(GameRule.SHOW_DEATH_MESSAGES, false);
 		gameWorld.setDifficulty(Difficulty.NORMAL);
 
+		// random weather
+		double random = MathUtils.random.nextDouble();
+		if (random < 0.25) {
+			gameWorld.setStorm(true);
+			if (random < 0.02) {
+				gameWorld.setThundering(true);
+			}
+		}
+
 		//force disable relative projectile velocity (projectiles inheriting the velocity of their shooter)
 		((CraftWorld) gameWorld).getHandle().paperConfig().misc.disableRelativeProjectileVelocity = true;
 
@@ -297,7 +309,7 @@ public abstract class TeamArena
 		graffiti = new GraffitiManager(this);
 		killStreakManager = new KillStreakManager();
 		this.fakeBlockManager = new FakeBlockManager(this);
-		this.commonAbilityManager = new CommonAbilityManager();
+		this.commonAbilityManager = new CommonAbilityManager(this);
 
 		KitFilter.resetFilter();
 		registerKits();
@@ -395,6 +407,7 @@ public abstract class TeamArena
 			new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(), new KitNone(),
 			new KitVenom(), new KitRewind(), new KitValkyrie(), new KitExplosive(), new KitTrigger(), new KitMedic(this.killStreakManager),
 			new KitBerserker(), new KitEngineer(), new KitPorcupine(this), new KitLongbow(), new KitSniper(), new KitBeekeeper(),
+			new KitMarine(this.commonAbilityManager),
 
 			new KitHider(this), /*new KitSeeker(),*/ new KitRadarSeeker(this)
 		};
@@ -901,6 +914,9 @@ public abstract class TeamArena
 		}
 
 		if (BuildingListeners.onEntityAttack(event)) // Handled by building
+			return;
+
+		if (ShieldListener.onEntityAttack(event)) // Handled by shields
 			return;
 
 		// Handle entities that are part of some Ability

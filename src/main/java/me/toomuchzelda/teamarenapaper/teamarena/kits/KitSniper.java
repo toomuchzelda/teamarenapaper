@@ -4,6 +4,7 @@ import com.google.common.collect.EvictingQueue;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
+import me.toomuchzelda.teamarenapaper.teamarena.abilities.centurion.ShieldInstance;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
@@ -337,10 +338,8 @@ public class KitSniper extends Kit {
 			var rayTraceResult = doRayTrace(player, playerHitboxes, otherEntities, start, velocity, 128);
 
 			world.playSound(player, Sound.ENTITY_GENERIC_EXPLODE, 0.8f, 2.5f);
-			double distance = rayTraceResult.terminatingBlock != null ?
-				rayTraceResult.terminatingBlock.getHitPosition().distance(startVector) : 128;
-			showTracers(start, distance, velocity, player);
 
+			Double shieldDistance = null;
 			if (rayTraceResult.entityHits != null) {
 				for (EntityHit entityHit : rayTraceResult.entityHits) {
 					if (entityHit.isHeadshot)
@@ -367,7 +366,7 @@ public class KitSniper extends Kit {
 								continue;
 							}
 							case null, default -> {}
-						};
+						}
 					}
 					DamageEvent damageEvent;
 					if (reflectorShooter != null) {// is reflected bullet
@@ -379,8 +378,20 @@ public class KitSniper extends Kit {
 					else
 						damageEvent = DamageEvent.newDamageEvent(entityHit.victim, 15, DamageType.SNIPER_SHOT, player, false);
 					Main.getGame().queueDamage(damageEvent);
+
+					// shields block all further damage
+					if (entityHit.victim.getPersistentDataContainer().has(ShieldInstance.SHIELD_ENTITY)) {
+						shieldDistance = entityHit.hitPosition.distance(startVector);
+						break;
+					}
 				}
 			}
+			double distance = shieldDistance != null ?
+				shieldDistance :
+				rayTraceResult.terminatingBlock != null ?
+					rayTraceResult.terminatingBlock.getHitPosition().distance(startVector) :
+					128;
+			showTracers(start, distance, velocity, player);
 		}
 
 		@Override

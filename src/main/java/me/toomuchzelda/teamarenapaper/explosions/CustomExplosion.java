@@ -2,23 +2,29 @@ package me.toomuchzelda.teamarenapaper.explosions;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.abilities.centurion.ShieldInstance;
+import me.toomuchzelda.teamarenapaper.teamarena.abilities.centurion.ShieldListener;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.craftbukkit.CraftWorld;
 import org.bukkit.entity.*;
-import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
 import javax.annotation.Nullable;
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 /**
  * Re-implementation of explosions to be more customizable and better accommodating of Team Arena
@@ -81,6 +87,7 @@ public class CustomExplosion
 		final Location centre = this.getCentre();
 		final World world = centre.getWorld();
 		final Vector locVector = centre.toVector();
+		Vec3 nmsStart = new Vec3(centre.getX(), centre.getY(), centre.getZ());
 
 		final double explRadSqr = this.explosionRadius * this.explosionRadius;
 		final double guarRadSqr = this.guaranteeHitRadius * this.guaranteeHitRadius;
@@ -88,7 +95,23 @@ public class CustomExplosion
 		record HitInfo(Entity entity, Vector hitVector, double distance, double damage) {}
 
 		List<HitInfo> hitEntities = new LinkedList<>();
-		Collection<? extends Entity> allEntities = this.getEntitiesToConsider();
+		Entity[] allEntities = this.getEntitiesToConsider().toArray(new Entity[0]);
+
+		Location temp = centre.clone();
+		Arrays.sort(allEntities, Comparator.comparingDouble(entity -> entity.getLocation(temp).distanceSquared(centre)));
+
+		// a list of shields and their bounding boxes
+		List<Map.Entry<ShieldInstance, List<AABB>>> shieldList = Arrays.stream(allEntities)
+			.filter(entity -> entity instanceof ArmorStand && entity.getLocation(temp).distanceSquared(centre) <= explRadSqr)
+			.map(entity -> ShieldListener.lookupShieldInstance((ArmorStand) entity))
+			.filter(Objects::nonNull)
+			.distinct()
+			.map(shield -> Map.entry(shield, shield.buildVoxelShape()))
+			.toList();
+
+		Set<ShieldInstance> damagedShields = new HashSet<>();
+//		Main.componentLogger().info("Explosion has {} shields", shieldList.size());
+
 		for(Entity e : allEntities) {
 			if(!globalShouldHurtEntity(e))
 				continue;
@@ -104,20 +127,24 @@ public class CustomExplosion
 			if(distSqr <= guarRadSqr) {
 				hit = true;
 				distance = Math.sqrt(distSqr);
+//				Main.componentLogger().info("Guaranteed damage to {} ignored by shields", e);
 			}
 			else if(distSqr <= explRadSqr) {
 				//all the directions to aim at the victim at
 				// 0 will always be the towards the centre of the target
 				Vector[] directions;
+				LivingEntity checkShield;
 				//if a livingentity, if it doesn't hit their centre, then aim for eyes, then feet.
 				if(e instanceof LivingEntity living) {
 					directions = new Vector[]{
 							directionToCentre,
 							eBaseVector.clone().setY(eBaseVector.getY() + living.getEyeHeight()).subtract(locVector),
 							eBaseVector.subtract(locVector)}; //final use of this Vector instance, don't need to clone
+					checkShield = living;
 				}
 				else {
 					directions = new Vector[]{directionToCentre};
+					checkShield = null;
 				}
 
 				/*for(Vector aim : directions) {
@@ -135,19 +162,36 @@ public class CustomExplosion
 						continue;
 					}
 
-					RayTraceResult rayTrace =
-							world.rayTraceBlocks(centre, aim, aimLength, FluidCollisionMode.NEVER, true);
-					//did not hit any blocks, since entity is in explosion range then it must have hit the entity
-					if (rayTrace == null) {
-						hit = true;
-						distance = aimLength;
-						hitVector = aim;
+					// use nms level clip since we already use nms for checking AABBs later on
+					Vec3 end = nmsStart.add(aim.getX(), aim.getY(), aim.getZ());
+					var nmsRayTrace = ((CraftWorld) world).getHandle().clip(
+						new ClipContext(nmsStart, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, CollisionContext.empty()));
+					if (nmsRayTrace.getType() == HitResult.Type.MISS) {
+						ShieldInstance hitShield = null;
+						// check for shields
+						if (checkShield != null) {
+							for (Map.Entry<ShieldInstance, List<AABB>> entry : shieldList) {
+								var aabbs = entry.getValue();
+								BlockHitResult clip = AABB.clip(aabbs, nmsStart, end, BlockPos.ZERO);
+								if (clip != null && clip.getType() != HitResult.Type.MISS) {
+									// team check
+									if (entry.getKey().isFriendly(checkShield)) {
+										hitShield = entry.getKey();
+//										Main.componentLogger().info("Damage to {} mitigated by shield {}", e, hitShield.uuid);
+										break;
+									}
+								}
+							}
+						}
 
-						//debug - play a particle at the hit point
-						/*Vector hitPoint = locVector.clone().add(hitVector);
-						ParticleUtils.colouredRedstone(hitPoint.toLocation(world), Color.LIME, 3d, 3f);*/
+						// did not hit any blocks or shields, since entity is in explosion range then it must have hit the entity
+						if (hitShield == null) {
+							hit = true;
+							distance = aimLength;
+							hitVector = aim;
+							break;
+						}
 
-						break;
 					}
 
 					debugIdx++;
@@ -157,6 +201,14 @@ public class CustomExplosion
 			if(hit) {
 				//linear damage fall off
 				double damage = calculateDamage(hitVector, distance);
+
+				// only damage shields once
+				if (e instanceof ArmorStand stand) {
+					ShieldInstance shield = ShieldListener.lookupShieldInstance(stand);
+					if (shield != null && !damagedShields.add(shield)) {
+						continue;
+					}
+				}
 
 				HitInfo info = new HitInfo(e, hitVector, distance, damage);
 				hitEntities.add(info);

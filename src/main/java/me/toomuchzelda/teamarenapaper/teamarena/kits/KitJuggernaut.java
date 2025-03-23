@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
+import me.toomuchzelda.teamarenapaper.teamarena.abilities.centurion.CenturionAbility;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
@@ -17,6 +18,11 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import java.util.List;
+
+import static net.kyori.adventure.text.Component.empty;
+import static net.kyori.adventure.text.Component.text;
+
 public class KitJuggernaut extends Kit {
 
 	private static final ItemStack BATON = ItemBuilder.of(Material.STICK)
@@ -28,11 +34,19 @@ public class KitJuggernaut extends Kit {
 
 	private static final int BATON_COOLDOWN = 5 * 20;
 
+	private static final Style STYLE = DESC_STYLE;
     public KitJuggernaut() {
-        super("Juggernaut", "Have you ever just wanted full netherite armour? Well, now you get it. But it's really heavy. " +
-				"So heavy in fact you can't sprint with it. Still worth it...!\n\n" +
-				"At least the sword has Sweeping Edge III.\n" +
-				"And you get a Knockback III stick.", Material.NETHERITE_CHESTPLATE);
+        super("juggernaut", "Juggernaut",
+			List.of(
+				text("Have you ever just wanted full netherite armor?", STYLE),
+				text("Well, now you get it. But it's REALLY heavy.", STYLE),
+				text("So heavy in fact you can't sprint with it.", STYLE),
+				text("Hopefully it's still worth it...!", STYLE),
+				empty(),
+				text("At least the sword has Sweeping Edge III.", STYLE),
+				text("And you get a Knockback III baton.", STYLE),
+				text("And also a cool shield to protect your allies.", STYLE)
+			), new ItemStack(Material.NETHERITE_CHESTPLATE));
         setArmor(new ItemStack(Material.NETHERITE_HELMET),
                 new ItemStack(Material.NETHERITE_CHESTPLATE),
                 new ItemStack(Material.NETHERITE_LEGGINGS),
@@ -45,7 +59,7 @@ public class KitJuggernaut extends Kit {
         sword.setItemMeta(swordMeta);
 
         setItems(sword, BATON);
-        setAbilities(new JuggernautAbility());
+        setAbilities(new JuggernautAbility(), new CenturionAbility());
 
 		setCategory(KitCategory.FIGHTER);
     }
@@ -101,6 +115,14 @@ public class KitJuggernaut extends Kit {
 				jugg.playEffect(EntityEffect.BREAK_EQUIPMENT_MAIN_HAND);
 				Bukkit.getScheduler().runTaskLater(Main.getPlugin(),
 					() -> jugg.playEffect(EntityEffect.BREAK_EQUIPMENT_MAIN_HAND), 1);
+			}
+		}
+
+		@Override
+		public void onReceiveDamage(DamageEvent event) {
+			if (event.getDamageType().is(DamageType.SNIPER_HEADSHOT)) {
+				// forced damage mitigation
+				event.setFinalDamage(Math.min(19, event.getFinalDamage()));
 			}
 		}
 

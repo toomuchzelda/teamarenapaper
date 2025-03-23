@@ -270,6 +270,12 @@ public class DamageType {
 	public static final DamageType RAILGUN = new DamageType("Railgun", "%Killed% was perforated by %Killer%'s Railgun")
 		.setIgnoreRate().setNoKnockback().setProjectile().setIgnoreArmor(true);
 
+	public static final DamageType TRIDENT_PROJECTILE = new DamageType("Trident", "%Killed% was impaled by %Killer%")
+		.setProjectile();
+
+	public static final DamageType TRIDENT_MELEE = new DamageType("Trident Melee", "%Killed% was impaled by %Killer%")
+		.setMelee();
+
 	private static int idCounter = 0;
 	static DamageSources nmsDamageSources;
 

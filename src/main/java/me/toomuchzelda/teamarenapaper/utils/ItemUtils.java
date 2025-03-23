@@ -8,9 +8,15 @@ import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-import org.bukkit.*;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import org.bukkit.Bukkit;
+import org.bukkit.Color;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Sign;
+import org.bukkit.craftbukkit.entity.CraftLivingEntity;
+import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -18,6 +24,7 @@ import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.MalformedURLException;
@@ -331,5 +338,17 @@ public class ItemUtils {
 		}
 
 		return false;
+	}
+
+	// see TridentItem
+	public static Vector getRiptidePush(ItemStack stack, LivingEntity livingEntity) {
+		float spinAttackStrength = EnchantmentHelper.getTridentSpinAttackStrength(CraftItemStack.asNMSCopy(stack), ((CraftLivingEntity) livingEntity).getHandle());
+		if (spinAttackStrength == 0)
+			return null;
+		double yaw = Math.toRadians(livingEntity.getYaw());
+		double pitch = Math.toRadians(livingEntity.getPitch());
+		double ySin = Math.sin(pitch), yCos = Math.cos(pitch);
+		Vector vector = new Vector(-Math.sin(yaw) * yCos, -ySin, Math.cos(yaw) * yCos);
+		return vector.multiply(spinAttackStrength / vector.length());
 	}
 }

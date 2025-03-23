@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.abilities;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.player.PlayerItemCooldownEvent;
+import io.papermc.paper.event.player.PlayerStopUsingItemEvent;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
@@ -196,6 +197,10 @@ public abstract class Ability {
 	public void onInventoryDrag(InventoryDragEvent event) {}
 
 	public void onFish(PlayerFishEvent event) {}
+
+	public void onRiptide(PlayerRiptideEvent event) {}
+
+	public void onStopUsingItem(PlayerStopUsingItemEvent event) {}
 
 	public void onTeamSwitch(Player player, @Nullable TeamArenaTeam oldTeam, @Nullable TeamArenaTeam newTeam) {}
 }

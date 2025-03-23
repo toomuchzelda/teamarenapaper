@@ -49,7 +49,7 @@ public class CritAbility extends Ability {
 			this.followed = followed;
 
 			final Predicate<Player> viewerRule =
-				viewer -> viewer != followed && Ability.getAbility(viewer, CritAbility.class) != null;
+				viewer -> viewer != followed && viewer.canSee(followed) && Ability.getAbility(viewer, CritAbility.class) != null;
 
 			this.vehicle = new AttachedPacketHologram(PacketEntity.NEW_ID, this.followed, null,
 				viewerRule, CUSTOM_NAME, false) {
@@ -73,7 +73,7 @@ public class CritAbility extends Ability {
 			this.vehicle.updateMetadataPacket();
 
 			interaction = new PacketEntity(PacketEntity.NEW_ID, EntityType.INTERACTION, followed.getLocation(), null,
-				viewerRule) {
+				viewer -> this.vehicle.getRealViewers().contains(viewer)) {
 				@Override
 				public void onInteract(Player player, EquipmentSlot hand, boolean attack) {
 					if (player == followed) return;
@@ -89,6 +89,11 @@ public class CritAbility extends Ability {
 				@Override
 				public void respawn() {
 					super.respawn();
+					if (!getVehicle().getRealViewers().equals(getRealViewers())) {
+						Main.componentLogger().warn("Inconsistent crit viewers:\nVehicle: {}\nInteraction: {}",
+							getVehicle().getRealViewers(), getRealViewers());
+						return;
+					}
 					PacketContainer mountPacket = EntityUtils.getMountPacket(CritHitbox.this.getVehicle().getId(), this.getId());
 					this.broadcastPacket(mountPacket);
 				}

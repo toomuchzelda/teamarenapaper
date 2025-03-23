@@ -4,13 +4,17 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.Style;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.*;
 
@@ -20,8 +24,9 @@ public abstract class Kit {
     private static final Ability[] EMPTY_ABILITIES = new Ability[0];
 
 	private final String name;
+	private Component displayName;
 	private final String key; // used in commands
-    private final String description;
+    private final List<Component> description;
     private final ItemStack display;
 	@NotNull
 	private KitCategory category = KitCategory.FIGHTER;
@@ -38,23 +43,28 @@ public abstract class Kit {
         this(name, description, new ItemStack(icon));
     }
 
+	protected static final Style DESC_STYLE = Style.style(NamedTextColor.YELLOW);
     public Kit(String name, String description, ItemStack display) {
-        this.name = name;
-		this.key = name.toLowerCase(Locale.ENGLISH);
-        this.description = description;
-        this.display = display.clone();
+		this(name.toLowerCase(Locale.ENGLISH), name, TextUtils.wrapString(description, DESC_STYLE, TextUtils.DEFAULT_WIDTH, true), display);
+    }
 
-        //these are set via the setter methods
-        ItemStack[] armour = new ItemStack[4];
-        Arrays.fill(armour, new ItemStack(Material.AIR));
-        this.armour = armour;
+	public Kit(String key, String name, List<? extends Component> description, ItemStack display) {
+		this.key = key;
+		this.name = name;
+		this.description = List.copyOf(description);
+		this.display = display.clone();
 
-        this.items = new ItemStack[0];
-        this.abilities = EMPTY_ABILITIES;
+		//these are set via the setter methods
+		ItemStack[] armour = new ItemStack[4];
+		Arrays.fill(armour, new ItemStack(Material.AIR));
+		this.armour = armour;
+
+		this.items = new ItemStack[0];
+		this.abilities = EMPTY_ABILITIES;
 		this.fuseEnchantLevel = 0;
 
-        activeUsers = new LinkedHashSet<>();
-    }
+		activeUsers = new LinkedHashSet<>();
+	}
 
 	public Kit setCategory(@NotNull KitCategory category) {
 		this.category = category;
@@ -66,7 +76,10 @@ public abstract class Kit {
 		return category;
 	}
 
-	private Component displayName;
+	protected void setDisplayName(Component displayName) {
+		this.displayName = displayName;
+	}
+
 	public Component getDisplayName() {
 		if (displayName == null)
 			displayName = Component.text(getName(), category.textColor());
@@ -200,7 +213,8 @@ public abstract class Kit {
 		return key;
 	}
 
-    public String getDescription() {
+	@Unmodifiable
+    public List<? extends Component> getDescription() {
         return description;
     }
 
