@@ -8,6 +8,7 @@ import io.papermc.paper.event.player.PlayerStopUsingItemEvent;
 import io.papermc.paper.registry.keys.SoundEventKeys;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import net.kyori.adventure.text.Component;
@@ -45,6 +46,21 @@ public class CenturionAbility extends Ability {
 		.build();
 
 	private final Map<Player, ShieldInstance> playerShields = new HashMap<>();
+	record ShieldHistory(double health, long lastDamageTick, int stoppedAt) {
+		double estimateHealthNow() {
+			int now = TeamArena.getGameTick();
+			long regenTicks = now - (lastDamageTick + ShieldInstance.SHIELD_REGEN_COOLDOWN);
+			if (regenTicks > 0) {
+				return Math.min(ShieldConfig.DEFAULT_MAX_HEALTH, health + regenTicks * ShieldInstance.SHIELD_REGEN_PER_TICK);
+			}
+			return health;
+		}
+
+		ShieldConfig buildConfig() {
+			return new ShieldConfig(estimateHealthNow(), ShieldConfig.DEFAULT_MAX_HEALTH, -1, null);
+		}
+	}
+	private final Map<Player, ShieldHistory> playerShieldHistories = new HashMap<>();
 
 	@Override
 	public void onTick() {
@@ -76,6 +92,7 @@ public class CenturionAbility extends Ability {
 			shield.playBreakEffect();
 			shield.cleanUp();
 		}
+		playerShieldHistories.remove(player);
 	}
 
 
@@ -88,7 +105,9 @@ public class CenturionAbility extends Ability {
 			return;
 		if (player.hasCooldown(SHIELD) || (playerShields.get(player) instanceof ShieldInstance shieldInstance && shieldInstance.isValid()))
 			return;
-		ShieldInstance shield = new ShieldInstance(player, ShieldConfig.DEFAULT);
+		ShieldHistory history = playerShieldHistories.remove(player);
+		ShieldConfig config = history != null ? history.buildConfig() : ShieldConfig.DEFAULT;
+		ShieldInstance shield = new ShieldInstance(player, config);
 		shield.setBreakListener(() -> {
 			playerShields.remove(player);
 			// punish the player for letting their shields break
@@ -111,14 +130,16 @@ public class CenturionAbility extends Ability {
 		Location location = player.getLocation();
 		if (result != null) {
 			Vector hitPosition = result.getHitPosition();
-			location.set(hitPosition.getX(), hitPosition.getY() + player.getEyeHeight(), hitPosition.getZ());
+			location.set(hitPosition.getX(), hitPosition.getY() + 1.5, hitPosition.getZ());
 		} else {
 			location.add(location.getDirection().multiply(10));
 		}
 
 		player.setCooldown(SHIELD, 15 * 20);
+		ShieldHistory history = playerShieldHistories.remove(player);
+		double health = history != null ? history.estimateHealthNow() : ShieldConfig.DEFAULT_MAX_HEALTH;
 		ShieldInstance shield = new ShieldInstance(player,
-			new ShieldConfig(ShieldConfig.DEFAULT_HEALTH, ShieldConfig.DEFAULT_MAX_HEALTH, 10 * 20, location));
+			new ShieldConfig(health, ShieldConfig.DEFAULT_MAX_HEALTH, 10 * 20, location));
 		shield.setExpireListener(() -> playerShields.remove(player));
 		shield.setBreakListener(() -> playerShields.remove(player));
 		playerShields.put(player, shield);
@@ -130,8 +151,12 @@ public class CenturionAbility extends Ability {
 			return;
 		Player player = event.getPlayer();
 		ShieldInstance shield = playerShields.remove(player);
-		shield.cleanUp();
-		player.setCooldown(SHIELD, 20);
+		if (shield != null) {
+			ShieldHistory history = new ShieldHistory(shield.health, shield.lastDamageTick, TeamArena.getGameTick());
+			playerShieldHistories.put(player, history);
+			shield.cleanUp();
+			player.setCooldown(SHIELD, 20);
+		}
 	}
 
 	@Override

@@ -497,6 +497,12 @@ public class EventListeners implements Listener
 	//create and cache damage events
 	@EventHandler
 	public void entityDamage(EntityDamageEvent event) {
+		// intercept damage events earlier to get details about the projectile
+		if (event instanceof EntityDamageByEntityEvent damageByEntityEvent &&
+			ShieldListener.onEntityDamageByEntity(damageByEntityEvent)) {
+			return;
+		}
+
 		DamageEvent.handleBukkitEvent(event);
 	}
 

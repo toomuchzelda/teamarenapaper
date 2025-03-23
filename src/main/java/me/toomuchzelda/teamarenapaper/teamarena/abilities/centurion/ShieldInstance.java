@@ -1,7 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.abilities.centurion;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
@@ -32,18 +31,20 @@ import java.util.stream.IntStream;
 public class ShieldInstance {
 	public static final NamespacedKey SHIELD_ENTITY = new NamespacedKey(Main.getPlugin(), "shield");
 
+	public final UUID uuid = UUID.randomUUID();
+
 	public final World world;
 	public final Player player;
 
 	private boolean valid = true;
 
-	private static final long SHIELD_REGEN_COOLDOWN = 5 * 20;
-	private static final double SHIELD_REGEN_PER_TICK = 0.5f;
+	static final long SHIELD_REGEN_COOLDOWN = 5 * 20;
+	static final double SHIELD_REGEN_PER_TICK = 0.5f;
 
-	private double health;
+	double health;
 	private double lastHealth;
 	private final double maxHealth;
-	private long lastDamageTick = -SHIELD_REGEN_COOLDOWN;
+	long lastDamageTick = -SHIELD_REGEN_COOLDOWN;
 	private final int duration;
 
 	// if null, the shield follows the player
@@ -56,9 +57,10 @@ public class ShieldInstance {
 
 	final LinkedHashSet<ArmorStand> boxes;
 
-//	private final BukkitTask task;
-
 	private final long spawnedAt;
+
+	@Nullable
+	private TeamArenaTeam team;
 
 	private Runnable breakListener;
 	private Runnable expireListener;
@@ -116,7 +118,7 @@ public class ShieldInstance {
 			otherDisplay.respawn();
 		}
 
-		TeamArenaTeam team = Main.getPlayerInfo(player).team;
+		team = Main.getPlayerInfo(player).team;
 		if (team != null) {
 			team.addMembers(boxes.toArray(new Entity[0]));
 		}
@@ -216,9 +218,8 @@ public class ShieldInstance {
 	}
 
 	Color getShieldOtherColor() {
-		PlayerInfo playerInfo = Main.getPlayerInfo(player);
-		if (playerInfo.team != null) {
-			int value = playerInfo.team.getRGBTextColor().value();
+		if (team != null) {
+			int value = team.getRGBTextColor().value();
 			return Color.fromARGB(value | (getShieldAlpha() << 24));
 		}
 		return getShieldBaseColor();
@@ -247,7 +248,8 @@ public class ShieldInstance {
 	public Location getShieldLocation() {
 		if (anchor != null)
 			return anchor.clone();
-		Location eyeLocation = player.getEyeLocation();
+		Location eyeLocation = player.getLocation();
+		eyeLocation.setY(eyeLocation.getY() + 1.5);
 		eyeLocation.setPitch(0);
 		Vector direction = eyeLocation.getDirection();
 		direction.setY(0);
@@ -255,14 +257,14 @@ public class ShieldInstance {
 		return eyeLocation;
 	}
 
-	private static final double AABB_SIZE = SHIELD_BOX_WIDTH / 2;
+	private static final double AABB_SIZE = SHIELD_BOX_WIDTH / 2 + 0.05;
 	public List<AABB> buildVoxelShape() {
 		List<Location> locations = getCurvedBoxLocations();
 		List<AABB> list = new ArrayList<>(locations.size());
 		for (Location location : locations) {
 			list.add(new AABB(
-				location.getX() - AABB_SIZE, location.getY(), location.getZ() - AABB_SIZE,
-				location.getX() + AABB_SIZE, location.getY() + SHIELD_HEIGHT, location.getZ() + AABB_SIZE
+				location.getX() - AABB_SIZE, location.getY() - 0.05, location.getZ() - AABB_SIZE,
+				location.getX() + AABB_SIZE, location.getY() + SHIELD_HEIGHT + 0.05, location.getZ() + AABB_SIZE
 			));
 		}
 		return list;
@@ -344,7 +346,7 @@ public class ShieldInstance {
 		Location loc = getShieldLocation();
 		world.playSound(loc, Sound.BLOCK_RESPAWN_ANCHOR_DEPLETE, SoundCategory.PLAYERS, 0.5f, 1f);
 		// play block crack effect on the plane the shield occupies
-		BlockData data = Main.getPlayerInfo(player).team instanceof TeamArenaTeam team ?
+		BlockData data = team != null ?
 			Objects.requireNonNull(Material.getMaterial(team.getDyeColour().toString() + "_STAINED_GLASS")).createBlockData() :
 			Material.LIGHT_BLUE_STAINED_GLASS.createBlockData();
 		double x = loc.getX(), y = loc.getY(), z = loc.getZ();
@@ -444,7 +446,6 @@ public class ShieldInstance {
 			otherDisplay.remove();
 		}
 		Entity[] arr = boxes.toArray(new Entity[0]);
-		TeamArenaTeam team = Main.getPlayerInfo(player).team;
 		if (team != null) {
 			team.removeMembers(arr);
 		}
@@ -456,10 +457,14 @@ public class ShieldInstance {
 	public boolean isFriendly(LivingEntity attacker) {
 		if (attacker == player)
 			return true;
-		PlayerInfo playerInfo = Main.getPlayerInfo(player);
-		if (playerInfo.team == null)
+		if (team == null)
 			return false;
-		return playerInfo.team.hasMember(attacker);
+		return team.hasMember(attacker) && !(attacker instanceof ArmorStand armorStand && boxes.contains(armorStand));
+	}
+
+	@Nullable
+	public TeamArenaTeam getTeam() {
+		return team;
 	}
 
 	public void updateTeam(@Nullable TeamArenaTeam oldTeam, @Nullable TeamArenaTeam newTeam) {
@@ -470,6 +475,7 @@ public class ShieldInstance {
 		if (newTeam != null) {
 			newTeam.addMembers(arr);
 		}
+		team = newTeam;
 	}
 
 	public void damage(double damage) {
