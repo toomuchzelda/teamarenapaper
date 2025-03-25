@@ -84,6 +84,12 @@ public class DamageEvent {
 	public static @Nullable DamageEvent handleBukkitEvent(EntityDamageEvent event) {
 		event.setCancelled(true);
 
+		// Always play fall damage sound
+		if (event.getCause() == EntityDamageEvent.DamageCause.FALL) {
+			if (event.getEntity() instanceof LivingEntity living)
+				EntityUtils.playFallDamageSound(living, event.getDamage());
+		}
+
 		if(Main.getGame().getGameState() != LIVE)
 			return null;
 

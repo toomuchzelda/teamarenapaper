@@ -4,6 +4,7 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.mojang.datafixers.util.Pair;
 import io.netty.buffer.Unpooled;
+import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -18,16 +19,14 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Registry;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.craftbukkit.CraftEquipmentSlot;
 import org.bukkit.craftbukkit.CraftWorld;
 import org.bukkit.craftbukkit.entity.CraftEntity;
+import org.bukkit.craftbukkit.entity.CraftLivingEntity;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.craftbukkit.util.CraftVector;
@@ -42,12 +41,42 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.reflect.InaccessibleObjectException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 public class EntityUtils {
+	private static Method playBlockFallSoundMethod;
+
 	public static void cacheReflection() {
+		try {
+			playBlockFallSoundMethod = net.minecraft.world.entity.LivingEntity.class.getDeclaredMethod(
+				"playBlockFallSound"
+			);
+			playBlockFallSoundMethod.setAccessible(true);
+		}
+		catch (NoSuchMethodException | InaccessibleObjectException | SecurityException e) {
+			Main.logger().severe("Could not reflectively access method ");
+			e.printStackTrace();
+
+			playBlockFallSoundMethod = null;
+		}
+	}
+
+	// From nmsLiving.causeFallDamage()
+	public static void playFallDamageSound(LivingEntity living, double damage) {
+		if (playBlockFallSoundMethod == null)
+			living.getWorld().playSound(living, Sound.ENTITY_HORSE_ANGRY, SoundCategory.MASTER, 1.0f, 1.0f);
+		else {
+			try {
+				net.minecraft.world.entity.LivingEntity nmsLiving = ((CraftLivingEntity) living).getHandle();
+				nmsLiving.playSound(nmsLiving.getFallDamageSound0((int) damage), 1.0f, 1.0f);
+				playBlockFallSoundMethod.invoke(nmsLiving);
+			} catch (IllegalAccessException | InvocationTargetException ignored) {}
+		}
 	}
 
 	@NotNull
@@ -75,27 +104,6 @@ public class EntityUtils {
 
 		return scale;
 	}
-
-    public static Vector projectileLaunchVector(Entity shooter, Vector original, double spray) {
-        //slight randomness in direction
-        double randX = MathUtils.random.nextGaussian() * spray;
-        double randY = MathUtils.random.nextGaussian() * spray;
-        double randZ = MathUtils.random.nextGaussian() * spray;
-
-        Vector direction = shooter.getLocation().getDirection();
-        double power = original.subtract(shooter.getVelocity()).length();
-
-        //probably add to each component?
-        direction.setX(direction.getX() + randX);
-        direction.setY(direction.getY() + randY);
-        direction.setZ(direction.getZ() + randZ);
-
-        direction.multiply(power);
-
-        //Bukkit.broadcastMessage("velocity: " + direction.toString());
-
-        return direction;
-    }
 
 	// For getting the hit block ProjectileHitEvents where only the hit entity is given
 	public static BlockHitResult getHitBlock(ProjectileHitEvent event) {
