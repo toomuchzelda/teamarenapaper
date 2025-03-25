@@ -15,6 +15,7 @@ import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerPlayerConnection;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -67,13 +68,18 @@ public class EntityUtils {
 	}
 
 	// From nmsLiving.causeFallDamage()
+	// See MC-278552 (Fixed in 1.21.5/25w02a)
 	public static void playFallDamageSound(LivingEntity living, double damage) {
 		if (playBlockFallSoundMethod == null)
 			living.getWorld().playSound(living, Sound.ENTITY_HORSE_ANGRY, SoundCategory.MASTER, 1.0f, 1.0f);
 		else {
 			try {
 				net.minecraft.world.entity.LivingEntity nmsLiving = ((CraftLivingEntity) living).getHandle();
-				nmsLiving.playSound(nmsLiving.getFallDamageSound0((int) damage), 1.0f, 1.0f);
+				SoundEvent sound = nmsLiving.getFallDamageSound0((int) damage);
+				// LivingEntity#playSound doesn't broadcast the sound to the player
+				// nmsLiving.playSound(sound, 1.0f, 1.0f);
+				//noinspection resource
+				nmsLiving.level().playSound(null, nmsLiving.getX(), nmsLiving.getY(), nmsLiving.getZ(), sound, nmsLiving.getSoundSource(), 1f, 1f);
 				playBlockFallSoundMethod.invoke(nmsLiving);
 			} catch (IllegalAccessException | InvocationTargetException ignored) {}
 		}
