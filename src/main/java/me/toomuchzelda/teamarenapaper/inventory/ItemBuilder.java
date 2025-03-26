@@ -12,8 +12,10 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ArmorMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
+import org.bukkit.inventory.meta.trim.ArmorTrim;
 import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.Nullable;
 
@@ -135,6 +137,11 @@ public final class ItemBuilder {
         meta(LeatherArmorMeta.class, armorMeta -> armorMeta.setColor(color));
         return this;
     }
+
+	public ItemBuilder armourTrim(ArmorTrim trim) {
+		meta(ArmorMeta.class, armorMeta -> armorMeta.setTrim(trim));
+		return this;
+	}
 
 	public ItemBuilder customModelData(@Nullable Integer data) {
 		meta.setCustomModelData(data);

@@ -189,7 +189,7 @@ public abstract class TeamArena
 	private final Component gameTitle;
 	private final Component gameSubTitle;
 
-	private static final FilterRule MISC_KITS = new FilterRule("tma/misc_kits", "Poorly balanced kits", FilterAction.block("sniper", "longbow", "trooper"));
+	private static final FilterRule MISC_KITS = new FilterRule("tma/misc_kits", "Poorly balanced kits", FilterAction.block("sniper", "longbow"));
 	private static final FilterRule NO_HNS = new FilterRule("tma/no_hns", "No HNS kits by default", FilterAction.block("hider", "seeker", "radar"));
 
 	public TeamArena(TeamArenaMap map) {
@@ -259,7 +259,7 @@ public abstract class TeamArena
 
 		// random weather
 		double random = MathUtils.random.nextDouble();
-		if (random < 0.25) {
+		if (random < 0.1) {
 			gameWorld.setStorm(true);
 			if (random < 0.02) {
 				gameWorld.setThundering(true);

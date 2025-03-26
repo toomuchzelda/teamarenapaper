@@ -6,8 +6,13 @@ import me.toomuchzelda.teamarenapaper.teamarena.abilities.CritAbility;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
+import org.bukkit.Color;
 import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.trim.ArmorTrim;
+import org.bukkit.inventory.meta.trim.TrimMaterial;
+import org.bukkit.inventory.meta.trim.TrimPattern;
 
 import java.util.Arrays;
 import java.util.List;
@@ -23,6 +28,31 @@ public class KitSplitter extends Kit {
 				"ranked higher than me, and if their cursed energy is weak, I can cut them in two, even " +
 				"with a blunt blade.",
 			new ItemStack(SWORD_TYPE));
+
+		// blonde hair with 'glasses'
+		ItemStack head = ItemBuilder.of(Material.GOLDEN_HELMET)
+			.armourTrim(new ArmorTrim(
+				TrimMaterial.NETHERITE, TrimPattern.WILD
+			))
+			.build();
+
+		// White blazer with blue shirt
+		ItemStack shirt = ItemBuilder.of(Material.LEATHER_CHESTPLATE)
+			.color(Color.fromRGB(0x466a90))
+			.armourTrim(new ArmorTrim(
+				TrimMaterial.IRON, TrimPattern.VEX
+			))
+			.enchant(Enchantment.PROTECTION, 6)
+			.build();
+
+		// white pants, brown shoes with black bottoms
+		ItemStack pants = ItemBuilder.of(Material.IRON_LEGGINGS).build();
+		ItemStack shoes = ItemBuilder.of(Material.LEATHER_BOOTS)
+			.armourTrim(new ArmorTrim(
+				TrimMaterial.NETHERITE, TrimPattern.SNOUT
+			))
+			.build();
+		this.setArmor(head, shirt, pants, shoes);
 
 		ItemStack sword = ItemBuilder.of(SWORD_TYPE)
 			.displayName(Component.text("Splitter sword"))
