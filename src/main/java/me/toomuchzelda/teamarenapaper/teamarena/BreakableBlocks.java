@@ -26,6 +26,7 @@ public class BreakableBlocks
 			//don't break big dripleaf as may be part of map path
 			setBlockBreakable(Material.BIG_DRIPLEAF_STEM, false);
 			setBlockBreakable(Material.BIG_DRIPLEAF, false);
+			setBlockBreakable(Material.SCAFFOLDING, false);
 		}
 	}
 

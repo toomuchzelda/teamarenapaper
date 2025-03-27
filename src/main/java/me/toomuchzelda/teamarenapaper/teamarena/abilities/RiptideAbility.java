@@ -533,7 +533,9 @@ public class RiptideAbility extends Ability {
 	public void onAttemptedAttack(DamageEvent event) {
 		if (event.getAttacker() instanceof Trident) {
 			event.setDamageType(DamageType.TRIDENT_PROJECTILE);
-		} else {
+		} else if (event.getDamageType().is(DamageType.MELEE) &&
+			event.getMeleeWeapon().getType() == TRIDENT.getType()) {
+
 			event.setDamageType(DamageType.TRIDENT_MELEE);
 		}
 	}
