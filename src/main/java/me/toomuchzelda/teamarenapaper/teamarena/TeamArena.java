@@ -2033,6 +2033,8 @@ public abstract class TeamArena
 				player.hidePlayer(Main.getPlugin(), spec);
 			}
 		}
+
+		graffiti.onPlayerJoin(player);
 	}
 
 	public void leavingPlayer(Player player) {

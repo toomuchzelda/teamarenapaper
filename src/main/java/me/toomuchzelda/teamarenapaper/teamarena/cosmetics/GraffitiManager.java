@@ -196,4 +196,10 @@ public class GraffitiManager {
 				NamedTextColor.RED));
 		}
 	}
+
+	public void onPlayerJoin(Player player) {
+		for (Graffiti graffiti : animatedGraffiti.values()) {
+			graffiti.sendMapView(player);
+		}
+	}
 }

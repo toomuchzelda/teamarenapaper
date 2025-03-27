@@ -3,8 +3,6 @@ package me.toomuchzelda.teamarenapaper.teamarena.cosmetics;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -116,6 +114,14 @@ public class Graffiti extends CosmeticItem {
 				for (int i = 0; i < frames.length; i++) {
 					player.sendMap(cachedMapViews[i]);
 				}
+			}
+		});
+	}
+
+	public void sendMapView(Player player) {
+		Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
+			for (int i = 0; i < frames.length; i++) {
+				player.sendMap(cachedMapViews[i]);
 			}
 		});
 	}

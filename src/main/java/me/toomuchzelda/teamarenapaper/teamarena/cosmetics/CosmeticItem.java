@@ -1,22 +1,25 @@
 package me.toomuchzelda.teamarenapaper.teamarena.cosmetics;
 
+import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 public abstract class CosmeticItem {
@@ -51,10 +54,34 @@ public abstract class CosmeticItem {
 		if (displayString == null) {
 			display = new ItemStack(Material.ARMOR_STAND);
 		} else {
-			display = Bukkit.getItemFactory().createItemStack(displayString);
+			ItemStack display;
+			try {
+				byte[] decoded = Base64.getDecoder().decode(displayString);
+				display = ItemStack.deserializeBytes(decoded);
+			} catch (Exception ex) {
+				try {
+					display = Bukkit.getItemFactory().createItemStack(displayString);
+				} catch (IllegalArgumentException ex2) {
+					var iae = new IllegalArgumentException("Neither Base64 stack nor item command format: " + displayString, ex2);
+					iae.addSuppressed(ex);
+					throw iae;
+				}
+				// one-time migration
+				Main.componentLogger().warn("Migrating {} cosmetic {} display item to bytes: {}", getCosmeticType(), key, displayString);
+				byte[] stack = display.serializeAsBytes();
+				String encoded = Base64.getEncoder().encodeToString(stack);
+				info.set("display", encoded);
+				try {
+					info.save(file);
+				} catch (IOException ex2) {
+					Main.componentLogger().error("Failed to save migrated file {}", file.getPath(), ex2);
+				}
+			}
+			this.display = display;
 		}
 	}
 
+	@Contract(pure = true)
 	public abstract CosmeticType getCosmeticType();
 
 	public void unload() {

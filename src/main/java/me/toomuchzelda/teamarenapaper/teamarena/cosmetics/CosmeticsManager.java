@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.cosmetics;
 
+import me.toomuchzelda.teamarenapaper.Main;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.Nullable;
@@ -47,7 +48,7 @@ public class CosmeticsManager {
 				CosmeticItem loaded = type.loader.load(key, file, yaml);
 				loadedCosmetics.computeIfAbsent(type, ignored -> new LinkedHashMap<>()).put(key, loaded);
 			} catch (Exception ex) {
-				new RuntimeException("Loading cosmetic " + key + " at " + file.getPath(), ex).printStackTrace();
+				Main.componentLogger().warn("Loading {} cosmetic {} at {}", type, key, file.getPath(), ex);
 			}
 		}
 	}
