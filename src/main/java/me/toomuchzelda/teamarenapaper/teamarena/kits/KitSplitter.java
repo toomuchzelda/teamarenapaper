@@ -30,26 +30,27 @@ public class KitSplitter extends Kit {
 			new ItemStack(SWORD_TYPE));
 
 		// blonde hair with 'glasses'
-		ItemStack head = ItemBuilder.of(Material.GOLDEN_HELMET)
+		/*ItemStack head = ItemBuilder.of(Material.GOLDEN_HELMET)
 			.armourTrim(new ArmorTrim(
 				TrimMaterial.NETHERITE, TrimPattern.WILD
 			))
-			.build();
+			.build(); */
+		ItemStack head = new ItemStack(Material.AIR);
 
 		// White blazer with blue shirt
 		ItemStack shirt = ItemBuilder.of(Material.LEATHER_CHESTPLATE)
-			.color(Color.fromRGB(0x466a90))
+			.color(Color.fromRGB(0xFFFFFF))
 			.armourTrim(new ArmorTrim(
-				TrimMaterial.IRON, TrimPattern.VEX
+				TrimMaterial.LAPIS, TrimPattern.VEX // The undershirt
 			))
 			.enchant(Enchantment.PROTECTION, 6)
 			.build();
 
 		// white pants, brown shoes with black bottoms
 		ItemStack pants = ItemBuilder.of(Material.IRON_LEGGINGS).build();
-		ItemStack shoes = ItemBuilder.of(Material.LEATHER_BOOTS)
+		ItemStack shoes = ItemBuilder.of(Material.IRON_BOOTS)
 			.armourTrim(new ArmorTrim(
-				TrimMaterial.NETHERITE, TrimPattern.SNOUT
+				TrimMaterial.COPPER, TrimPattern.SNOUT
 			))
 			.build();
 		this.setArmor(head, shirt, pants, shoes);

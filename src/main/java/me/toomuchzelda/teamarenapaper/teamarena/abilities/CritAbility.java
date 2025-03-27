@@ -54,7 +54,7 @@ public class CritAbility extends Ability {
 			this.followed = followed;
 
 			final Predicate<Player> viewerRule =
-				viewer -> viewer != followed && viewer.canSee(followed) && Ability.getAbility(viewer, CritAbility.class) != null;
+				viewer -> viewer != followed && viewer.canSee(followed);
 
 			this.vehicle = new AttachedPacketHologram(PacketEntity.NEW_ID, this.followed, null,
 				viewerRule, CUSTOM_NAME, false) {
@@ -67,7 +67,8 @@ public class CritAbility extends Ability {
 			this.vehicle.updateMetadataPacket();
 
 			interaction = new PacketEntity(PacketEntity.NEW_ID, EntityType.INTERACTION, followed.getLocation(), null,
-				viewer -> this.getVehicle().getRealViewers().contains(viewer)) {
+				viewer -> this.getVehicle().getRealViewers().contains(viewer) &&
+					Ability.getAbility(viewer, CritAbility.class) != null) {
 				@Override
 				public void onInteract(Player player, EquipmentSlot hand, boolean attack) {
 					if (player == followed) return;
@@ -94,7 +95,7 @@ public class CritAbility extends Ability {
 			final Location flashLoc = this.vehicle.getLocation();
 			flashLoc.setPitch(0f); flashLoc.setYaw(0f);
 			this.flash = new PacketDisplay(PacketEntity.NEW_ID, EntityType.BLOCK_DISPLAY, flashLoc,
-				null, viewer -> this.getInteraction().getRealViewers().contains(viewer)) {
+				null, viewer -> this.getVehicle().getRealViewers().contains(viewer)) {
 				@Override
 				public void respawn() {
 					super.respawn();
