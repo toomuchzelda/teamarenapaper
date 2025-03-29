@@ -14,7 +14,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.FilterRule;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitFilter;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitHider;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitRadarSeeker;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitSeeker;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -354,7 +353,10 @@ public class HideAndSeek extends TeamArena {
 
 	@Override
 	public void updateSidebar(Player player, SidebarManager sidebar) {
-
+		if (hiderTeam.hasMember(player)) {
+			sidebar.addEntry(Component.text("Hider King", NamedTextColor.GOLD));
+			sidebar.addEntry(president.playerListName());
+		}
 	}
 
 	@Override

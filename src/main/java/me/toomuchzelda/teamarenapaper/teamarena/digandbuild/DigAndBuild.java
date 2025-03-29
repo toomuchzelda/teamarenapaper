@@ -158,9 +158,6 @@ public class DigAndBuild extends TeamArena
 		// unimportant teams
 		if (sidebarCache.size() != teamsShown)
 			sidebar.addEntry(Component.text("+ " + (sidebarCache.size() - teamsShown) + " teams", NamedTextColor.GRAY));
-		sidebar.addEntry(Component.empty());
-		sidebar.addEntry(Component.text("$ Team Resources", NamedTextColor.YELLOW));
-		sidebar.addEntry(Component.text("  ur team broke bro ☠", NamedTextColor.GRAY));
 	}
 
 	@Override
