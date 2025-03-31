@@ -41,6 +41,12 @@ public class HideAndSeek extends TeamArena {
 	private static final Component PRESIDENT_DIED = Component.text("Hider King has been killed!", NamedTextColor.GOLD);
 	private static final Component HIDERS_WIN = Component.text("Time's up!", NamedTextColor.GOLD, TextDecoration.BOLD);
 	private static final Component NO_RESPAWNING = Component.text("Hiders don't respawn", TextColors.ERROR_RED);
+	/*       Sidebar       */
+	private static final Component HELD_ITEMS_VISIBLE = Component.text("Held Items are visible!", NamedTextColor.RED);
+	private static final Component KILL_HIDER_KING = Component.textOfChildren(
+		Component.text("Find and kill the ", NamedTextColor.GOLD),
+		Component.text("Hider King", NamedTextColor.GREEN)
+	);
 
 	private static final double HIDER_SEEKER_RATIO = 2d; // 2 Hiders for every seeker
 
@@ -354,8 +360,25 @@ public class HideAndSeek extends TeamArena {
 	@Override
 	public void updateSidebar(Player player, SidebarManager sidebar) {
 		if (hiderTeam.hasMember(player)) {
-			sidebar.addEntry(Component.text("Hider King", NamedTextColor.GOLD));
-			sidebar.addEntry(president.playerListName());
+			sidebar.addEntry(Component.text("Protect the Hider King", NamedTextColor.GOLD));
+			sidebar.addEntry(Component.text(" >").append(president.playerListName()));
+			sidebar.addEntry(HELD_ITEMS_VISIBLE);
+		}
+		else {
+			sidebar.addEntry(KILL_HIDER_KING);
+		}
+
+		if (this.gameState == GameState.LIVE) {
+			if (!this.isHidingTime) {
+				int mins = (remainingSeekTime / 20) / 60;
+				int secs = (remainingSeekTime / 20) % 60;
+				sidebar.addEntry(Component.text(mins + ":" + secs + " left", NamedTextColor.GOLD));
+			}
+			else {
+				int remainingTime = (this.gameLiveTime + this.hideTimeTicks) - TeamArena.getGameTick();
+				remainingTime /= 20;
+				sidebar.addEntry(Component.text(remainingTime + "s to hide", NamedTextColor.GOLD));
+			}
 		}
 	}
 
