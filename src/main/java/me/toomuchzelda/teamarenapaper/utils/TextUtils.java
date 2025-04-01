@@ -11,6 +11,7 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import net.kyori.adventure.util.HSVLike;
+import org.bukkit.block.BlockFace;
 import org.bukkit.map.MinecraftFont;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -59,9 +60,9 @@ public class TextUtils {
 		String minutes = "" + duration.toMinutesPart();
 		String seconds  = "" + duration.toSecondsPart();
 		return Component.text(
-			(minutes.length() != 2 ? "0" : "") + minutes +
+			(minutes.length() < 2 ? "0" : "") + minutes +
 			":" +
-			(seconds.length() != 2 ? "0" : "") + seconds, NamedTextColor.YELLOW);
+			(seconds.length() < 2 ? "0" : "") + seconds, NamedTextColor.YELLOW);
 	}
 
 	public static String formatNumber(double value, int scale) {
@@ -88,6 +89,18 @@ public class TextUtils {
 
 	public static String formatHealth(double health) {
 		return Math.round(health * 5d) / 10d + "❤";
+	}
+
+	// N E S W U D NE NW SE SW
+	// 🡩🡪🡫🡨⮙⮛🡭🡬🡮🡯
+	private static final String[] DIRECTION_ARROWS = {"\uD83E\uDC69", "\uD83E\uDC6A" ,"\uD83E\uDC6B", "\uD83E\uDC68",
+		"⮙", "⮛", "\uD83E\uDC6D", "\uD83E\uDC6C", "\uD83E\uDC6E", "\uD83E\uDC6F"};
+
+	public static String formatDirection(BlockFace blockFace) {
+		int index = blockFace.ordinal();
+		if (index >= DIRECTION_ARROWS.length)
+			throw new IllegalArgumentException("blockFace");
+		return DIRECTION_ARROWS[index];
 	}
 
 	public static boolean containsIgnoreCase(String needle, String haystack) {

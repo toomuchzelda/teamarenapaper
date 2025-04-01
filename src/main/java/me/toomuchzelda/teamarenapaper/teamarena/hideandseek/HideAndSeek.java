@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.hideandseek;
 
+import io.papermc.paper.util.Tick;
 import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
@@ -23,9 +24,11 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.inventory.PlayerInventory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.time.Duration;
 import java.util.*;
 
 public class HideAndSeek extends TeamArena {
@@ -64,7 +67,7 @@ public class HideAndSeek extends TeamArena {
 	private Set<Material> allowedBlocks;
 	private Set<EntityType> allowedEntities;
 
-	private final ArrayList<BlockCoords> allowedBlockCoords;
+	private final List<BlockCoords> allowedBlockCoords;
 
 	private boolean isHidingTime;
 	private int remainingSeekTime; // Assigned in prepLive
@@ -127,7 +130,7 @@ public class HideAndSeek extends TeamArena {
 		return type != EntityType.PLAYER && this.allowedEntities.contains(type);
 	}
 
-	public ArrayList<BlockCoords> getAllowedBlockCoords() {
+	public List<BlockCoords> getAllowedBlockCoords() {
 		return this.allowedBlockCoords;
 	}
 
@@ -299,8 +302,7 @@ public class HideAndSeek extends TeamArena {
 				prepEnd();
 
 				return;
-			}
-			else {
+			} else if (remainingSeekTime > 0) {
 				final int secs = this.remainingSeekTime / 20;
 				if (remainingSeekTime % 20 == 0 &&
 					(secs % DEFAULT_SEEK_TIME == 0 || secs % (DEFAULT_SEEK_TIME / 2) == 0 ||
@@ -358,27 +360,40 @@ public class HideAndSeek extends TeamArena {
 	}
 
 	@Override
+	public Collection<Component> updateSharedSidebar() {
+		if (this.gameState == GameState.LIVE) {
+			Component message;
+			if (!this.isHidingTime) {
+				Duration duration = Tick.of(remainingSeekTime);
+				message = Component.textOfChildren(
+					TextUtils.formatDurationMmSs(duration),
+					Component.text(" left", NamedTextColor.GOLD)
+				);
+			} else {
+				int remainingTime = ((this.gameLiveTime + this.hideTimeTicks) - TeamArena.getGameTick()) / 20;
+				message = Component.text(remainingTime + "s to hide", NamedTextColor.GOLD);
+			}
+			return List.of(message);
+		}
+		return List.of();
+	}
+
+	@Override
 	public void updateSidebar(Player player, SidebarManager sidebar) {
 		if (hiderTeam.hasMember(player)) {
-			sidebar.addEntry(Component.text("Protect the Hider King", NamedTextColor.GOLD));
-			sidebar.addEntry(Component.text(" >").append(president.playerListName()));
-			sidebar.addEntry(HELD_ITEMS_VISIBLE);
-		}
-		else {
+			if (president != player) {
+				sidebar.addEntry(Component.text("Protect the Hider King", NamedTextColor.RED));
+				String dir = TextUtils.formatDirection(MathUtils.calcRelativeDirection(player.getEyeLocation(), president.getEyeLocation(), true));
+				sidebar.addEntry(Component.text(dir + " ", NamedTextColor.GREEN).append(president.playerListName()));
+			} else {
+				sidebar.addEntry(Component.text("Survive as the Hider King", NamedTextColor.RED));
+			}
+			PlayerInventory inventory = player.getInventory();
+			if (!inventory.getItemInMainHand().isEmpty() || !inventory.getItemInOffHand().isEmpty()) {
+				sidebar.addEntry(HELD_ITEMS_VISIBLE);
+			}
+		} else {
 			sidebar.addEntry(KILL_HIDER_KING);
-		}
-
-		if (this.gameState == GameState.LIVE) {
-			if (!this.isHidingTime) {
-				int mins = (remainingSeekTime / 20) / 60;
-				int secs = (remainingSeekTime / 20) % 60;
-				sidebar.addEntry(Component.text(mins + ":" + secs + " left", NamedTextColor.GOLD));
-			}
-			else {
-				int remainingTime = (this.gameLiveTime + this.hideTimeTicks) - TeamArena.getGameTick();
-				remainingTime /= 20;
-				sidebar.addEntry(Component.text(remainingTime + "s to hide", NamedTextColor.GOLD));
-			}
 		}
 	}
 

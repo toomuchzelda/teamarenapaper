@@ -15,6 +15,7 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Sign;
+import org.bukkit.block.sign.Side;
 import org.bukkit.craftbukkit.entity.CraftLivingEntity;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.enchantments.Enchantment;
@@ -332,7 +333,7 @@ public class ItemUtils {
 
 	public static boolean isOldBuySign(BlockState blockState) {
 		if (blockState instanceof Sign signState) {
-			final String asString = PlainTextComponentSerializer.plainText().serialize(signState.lines().get(0));
+			final String asString = PlainTextComponentSerializer.plainText().serialize(signState.getSide(Side.FRONT).lines().getFirst());
 
 			return asString.contains("[Buy]");
 		}

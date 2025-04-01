@@ -1,17 +1,29 @@
 package me.toomuchzelda.teamarenapaper.utils;
 
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import net.minecraft.core.SectionPos;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.ChunkAccess;
+import net.minecraft.world.level.chunk.LevelChunkSection;
+import net.minecraft.world.level.chunk.PalettedContainer;
+import net.minecraft.world.level.chunk.status.ChunkStatus;
+import org.bukkit.Chunk;
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.craftbukkit.CraftChunk;
 import org.bukkit.craftbukkit.block.CraftBlock;
+import org.bukkit.craftbukkit.block.CraftBlockType;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 
 public class BlockUtils
 {
@@ -80,7 +92,7 @@ public class BlockUtils
 	}
 
 	/* For hide and seek */
-	public static ArrayList<BlockCoords> getAllBlocks(Set<Material> mats, TeamArena game) {
+	public static ArrayList<BlockCoords> getAllBlocksSlow(Set<Material> mats, TeamArena game) {
 		final ArrayList<BlockCoords> list = new ArrayList<>(512);
 
 		final int minHeight = game.getWorld().getMinHeight();
@@ -102,6 +114,52 @@ public class BlockUtils
 
 		list.trimToSize();
 		return list;
+	}
+
+	public static List<BlockCoords> getAllBlocks(Set<Material> mats, TeamArena game) {
+		Set<BlockState> nmsBlockStateSet = mats.stream()
+			.map(CraftBlockType::bukkitToMinecraft)
+			.flatMap(block -> block.getStateDefinition().getPossibleStates().stream())
+			.collect(ObjectOpenHashSet.toSet());
+		Predicate<BlockState> predicate = nmsBlockStateSet::contains;
+		ArrayList<BlockCoords> list = new ArrayList<>(512);
+
+		// access the internal paletted container of each chunk section for much more efficient BlockState comparisons
+		BoundingBox border = game.getBorder();
+		for (Chunk chunk : game.gameWorld.getIntersectingChunks(border)) {
+			ChunkAccess nmsChunk = ((CraftChunk) chunk).getHandle(ChunkStatus.FULL);
+			int xOffset = nmsChunk.locX << 4, zOffset = nmsChunk.locZ << 4;
+
+			LevelChunkSection[] sections = nmsChunk.getSections();
+			for (int sectionIdx = Math.max(0, SectionPos.blockToSectionCoord(border.getMinY())),
+				 sectionEnd = Math.min(sections.length, SectionPos.blockToSectionCoord(border.getMaxY()));
+				 sectionIdx < sectionEnd; sectionIdx++) {
+				LevelChunkSection section = sections[sectionIdx];
+				if (section.hasOnlyAir())
+					continue;
+				PalettedContainer<BlockState> palettedContainer = section.getStates();
+				if (!palettedContainer.maybeHas(predicate))
+					continue;
+				int yOffset = sectionIdx << 4;
+				// block states are internally stored in yzx order
+				for (int j = 0; j < 16; j++) {
+					int y = yOffset + j;
+					for (int k = 0; k < 16; k++) {
+						int z = zOffset + k;
+						for (int i = 0; i < 16; i++) {
+							int x = xOffset + i;
+							if (!border.contains(x, y, z))
+								continue;
+							BlockState blockState = palettedContainer.get(i, j, k);
+							if (nmsBlockStateSet.contains(blockState)) {
+								list.add(new BlockCoords(x, y, z));
+							}
+						}
+					}
+				}
+			}
+		}
+		return List.copyOf(list);
 	}
 
 	public static boolean isAirToTheNakedEye(Material mat) {

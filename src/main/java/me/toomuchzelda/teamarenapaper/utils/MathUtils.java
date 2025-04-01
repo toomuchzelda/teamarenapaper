@@ -3,6 +3,8 @@ package me.toomuchzelda.teamarenapaper.utils;
 import com.google.common.primitives.Doubles;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Color;
+import org.bukkit.Location;
+import org.bukkit.block.BlockFace;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
@@ -172,5 +174,61 @@ public class MathUtils
 
 	public static double lerp(double a, double b, double t) {
 		return Math.fma(b - a, t, a);
+	}
+
+	private static final BlockFace[] CARDINALS = {BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST};
+	private static final BlockFace[] ORDINALS = {BlockFace.NORTH_EAST, BlockFace.NORTH_WEST, BlockFace.SOUTH_EAST, BlockFace.SOUTH_WEST};
+
+	/**
+	 * Calculates the nearest direction as if {@code end} was considered north.
+	 * @param start The starting location
+	 * @param end The north
+	 * @param includeOrdinals Whether to include ordinals (NE, NW, SE, SW)
+	 * @return A direction
+	 */
+	public static BlockFace calcRelativeDirection(Location start, Location end, boolean includeOrdinals) {
+		double yDist = Math.abs(end.getY() - start.getY());
+		double xzDist = Math.sqrt(Math.pow(start.getX() - end.getX(), 2) + Math.pow(start.getZ() - end.getZ(), 2));
+		if (yDist > xzDist) {
+			return start.getY() < end.getY() ? BlockFace.UP : BlockFace.DOWN;
+		}
+		double targetYaw = Math.atan2(-(end.getX() - start.getX()), end.getZ() - start.getZ());
+		// If we calculate the difference the two yaws we get 0 when start is looking at the target,
+ 		// so we subtract by pi to make 0 represent north.
+		double relativeYaw = targetYaw - Math.toRadians(start.getYaw()) - Math.PI;
+		return calcNearestDirection(relativeYaw, includeOrdinals);
+	}
+
+	/**
+	 * Calculates the nearest direction
+	 * @param yaw The yaw
+	 * @param includeOrdinals Whether to include ordinals (NE, NW, SE, SW)
+	 * @return The nearest direction
+	 */
+	public static BlockFace calcNearestDirection(double yaw, boolean includeOrdinals) {
+		double x = -Math.sin(yaw);
+		double z = Math.cos(yaw);
+
+		BlockFace face = BlockFace.NORTH;
+		double distance = Double.MIN_VALUE;
+
+		for (BlockFace cardinal : CARDINALS) {
+			double d = (x * cardinal.getModX() + z * cardinal.getModZ());
+			if (d >= distance) {
+				face = cardinal;
+				distance = d;
+			}
+		}
+		if (includeOrdinals) {
+			double sqrt2 = Math.sqrt(2);
+			for (BlockFace ordinal : ORDINALS) {
+				double d = (x * ordinal.getModX() + z * ordinal.getModZ()) / sqrt2;
+				if (d >= distance) {
+					face = ordinal;
+					distance = d;
+				}
+			}
+		}
+		return face;
 	}
 }

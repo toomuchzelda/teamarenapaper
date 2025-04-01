@@ -8,8 +8,8 @@ import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.teamarena.abilities.CommonAbilityManager;
-import me.toomuchzelda.teamarenapaper.teamarena.abilities.centurion.ShieldListener;
 import me.toomuchzelda.teamarenapaper.teamarena.abilities.CritAbility;
+import me.toomuchzelda.teamarenapaper.teamarena.abilities.centurion.ShieldListener;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerSound;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.ChatAnnouncerManager;
@@ -274,9 +274,8 @@ public abstract class TeamArena
 			chunk.setForceLoaded(true);
 
 			// Remove almost all of the old Buy signs if any - leave a few at random for easter egg
-			Collection<BlockState> signs = chunk.getTileEntities(block -> ItemUtils.isOldBuySign(block.getState()), false);
-			for (BlockState state : signs) {
-				if (MathUtils.random.nextDouble() < 0.95d) {
+			for (BlockState state : chunk.getTileEntities(false)) {
+				if (ItemUtils.isOldBuySign(state) && MathUtils.random.nextDouble() < 0.95d) {
 					state.getBlock().setType(Material.AIR);
 				}
 			}
@@ -1052,7 +1051,7 @@ public abstract class TeamArena
 		// Destroy old buy signs when they are clicked
 		if (event.getAction() == Action.RIGHT_CLICK_BLOCK && event.useInteractedBlock() != Event.Result.DENY) {
 			final Block clickedBlock = event.getClickedBlock();
-			if (ItemUtils.isOldBuySign(clickedBlock.getState())) {
+			if (ItemUtils.isOldBuySign(clickedBlock.getState(false))) {
 				event.setUseInteractedBlock(Event.Result.DENY);
 				clickedBlock.breakNaturally(true);
 

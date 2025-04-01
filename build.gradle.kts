@@ -70,5 +70,8 @@ tasks.withType(xyz.jpenilla.runtask.task.AbstractRun::class) {
         vendor = JvmVendorSpec.JETBRAINS
         languageVersion = JavaLanguageVersion.of(21)
     }
-    jvmArgs("-XX:+AllowEnhancedClassRedefinition", "-Dnet.kyori.ansi.colorLevel=truecolor")
+    jvmArgs("-XX:+AllowEnhancedClassRedefinition",
+        "-Dnet.kyori.ansi.colorLevel=truecolor", // IntelliJ console workaround
+        "-Dnet.kyori.adventure.text.warnWhenLegacyFormattingDetected=false", // disable nag when loading legacy maps
+    )
 }
