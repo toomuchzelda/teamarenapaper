@@ -778,6 +778,15 @@ public abstract class TeamArena
 
 		respawnTimers.put(player, new RespawnInfo(gameTick));
 		giveLobbyItems(player);
+
+		// Update any viewers who have glowing teammates turned on
+		final PlayerInfo playerInfo = Main.getPlayerInfo(player);
+		for (Player viewer : playerInfo.team.getPlayerMembers()) {
+			PlayerInfo viewerInfo = Main.getPlayerInfo(viewer);
+			if (viewerInfo.viewingGlowingTeammates) {
+				setViewingGlowingTeammate(player, true, viewerInfo.getMetadataViewer());
+			}
+		}
 	}
 
 	public void damageTick() {
@@ -1076,16 +1085,7 @@ public abstract class TeamArena
 			if (exceptions != null && exceptions.contains(viewed))
 				continue;
 
-			if(glow) {
-				meta.updateBitfieldValue(viewed, MetaIndex.BASE_BITFIELD_IDX,
-						MetaIndex.BASE_BITFIELD_GLOWING_IDX, glow);
-			}
-			else {
-				meta.removeBitfieldValue(viewed, MetaIndex.BASE_BITFIELD_IDX,
-						MetaIndex.BASE_BITFIELD_GLOWING_IDX);
-			}
-
-			meta.refreshViewer(viewed);
+			setViewingGlowingTeammate(viewed, glow, meta);
 		}
 
 		if(message) {
@@ -1097,6 +1097,19 @@ public abstract class TeamArena
 
 			meta.getViewer().sendMessage(text);
 		}
+	}
+
+	private static void setViewingGlowingTeammate(Player viewed, boolean glow, MetadataViewer viewerMetaViewer) {
+		if(glow) {
+			viewerMetaViewer.updateBitfieldValue(viewed, MetaIndex.BASE_BITFIELD_IDX,
+					MetaIndex.BASE_BITFIELD_GLOWING_IDX, glow);
+		}
+		else {
+			viewerMetaViewer.removeBitfieldValue(viewed, MetaIndex.BASE_BITFIELD_IDX,
+					MetaIndex.BASE_BITFIELD_GLOWING_IDX);
+		}
+
+		viewerMetaViewer.refreshViewer(viewed);
 	}
 
 	public void onInteractEntity(PlayerInteractEntityEvent event) {
@@ -2145,6 +2158,9 @@ public abstract class TeamArena
 		else {
 			lowestTeam = sorted.getFirst();
 		}
+
+		if (true)
+			lowestTeam = teams[0];
 
 		if(add)
 			lowestTeam.addMembers(player);

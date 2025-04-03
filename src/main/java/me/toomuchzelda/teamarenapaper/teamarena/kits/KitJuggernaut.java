@@ -59,7 +59,7 @@ public class KitJuggernaut extends Kit {
         sword.setItemMeta(swordMeta);
 
         setItems(sword, BATON);
-        setAbilities(new JuggernautAbility(), new CenturionAbility());
+        setAbilities(new JuggernautAbility() /*, new CenturionAbility()*/);
 
 		setCategory(KitCategory.FIGHTER);
     }
