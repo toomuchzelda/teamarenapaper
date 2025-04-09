@@ -22,6 +22,9 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Collections;
+import java.util.Set;
+import java.util.WeakHashMap;
 
 public class Graffiti extends CosmeticItem {
 	BufferedImage[] frames;
@@ -107,23 +110,28 @@ public class Graffiti extends CosmeticItem {
 		sendMapView();
 	}
 
+	final Set<Player> mapsSent = Collections.newSetFromMap(new WeakHashMap<>());
 	public void sendMapView() {
 		// send players the map
 		Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
 			for (Player player : Bukkit.getOnlinePlayers()) {
-				for (int i = 0; i < frames.length; i++) {
-					player.sendMap(cachedMapViews[i]);
+				if (mapsSent.add(player)) {
+					for (int i = 0; i < frames.length; i++) {
+						player.sendMap(cachedMapViews[i]);
+					}
 				}
 			}
 		});
 	}
 
 	public void sendMapView(Player player) {
-		Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
-			for (int i = 0; i < frames.length; i++) {
-				player.sendMap(cachedMapViews[i]);
-			}
-		});
+		if (mapsSent.add(player)) {
+			Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
+				for (int i = 0; i < frames.length; i++) {
+					player.sendMap(cachedMapViews[i]);
+				}
+			});
+		}
 	}
 
 	public MapView getMapView() {

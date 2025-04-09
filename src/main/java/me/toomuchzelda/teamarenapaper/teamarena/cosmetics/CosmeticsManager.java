@@ -3,7 +3,6 @@ package me.toomuchzelda.teamarenapaper.teamarena.cosmetics;
 import me.toomuchzelda.teamarenapaper.Main;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.util.*;
@@ -65,7 +64,6 @@ public class CosmeticsManager {
 		return Collections.unmodifiableSet(loadedCosmetics.getOrDefault(cosmeticType, Map.of()).keySet());
 	}
 
-	@Nullable
 	public static <T extends CosmeticItem> T getCosmetic(CosmeticType cosmeticType, NamespacedKey key) {
 		CosmeticItem item = loadedCosmetics.getOrDefault(cosmeticType, Map.of()).get(key);
 

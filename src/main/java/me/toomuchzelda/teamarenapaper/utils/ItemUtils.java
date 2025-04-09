@@ -325,10 +325,7 @@ public class ItemUtils {
 				.meta(SkullMeta.class, skullMeta -> skullMeta.setPlayerProfile(CHECKMARK_HEAD.getPlayerProfile()))
 				.build();
 		}
-		return ItemBuilder.from(stack.clone())
-				.enchant(Enchantment.PROTECTION, 1)
-				.hide(ItemFlag.HIDE_ENCHANTS)
-				.build();
+		return ItemBuilder.from(stack.clone()).enchantmentGlint(true).build();
 	}
 
 	public static boolean isOldBuySign(BlockState blockState) {

@@ -2082,6 +2082,8 @@ public abstract class TeamArena
 		if(this.gameState == GameState.LIVE) {
 			Bukkit.broadcast(player.playerListName().append(Component.text(" left the game", NamedTextColor.YELLOW)));
 		}
+
+		graffiti.onPlayerLeave(player);
 	}
 
 	public void informOfTeam(Player p) {

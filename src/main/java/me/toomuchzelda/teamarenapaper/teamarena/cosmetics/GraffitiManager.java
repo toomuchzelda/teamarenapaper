@@ -147,7 +147,7 @@ public class GraffitiManager {
 	private static final Map<UUID, Integer> itemSwapTimes = new HashMap<>();
 	private static final int ITEM_SWAP_DURATION = 20;
 	private static final Map<UUID, Integer> graffitiCooldown = new HashMap<>();
-	private static final int GRAFFITI_COOLDOWN = 50; // to prevent spamming noise
+	private static final int GRAFFITI_COOLDOWN = 100; // to prevent spamming noise
 	private static final HashSet<UUID> setCosmeticReminder = new HashSet<>();
 	public void onSwapHandItems(PlayerSwapHandItemsEvent e) {
 		Player player = e.getPlayer();
@@ -200,6 +200,20 @@ public class GraffitiManager {
 	public void onPlayerJoin(Player player) {
 		for (Graffiti graffiti : animatedGraffiti.values()) {
 			graffiti.sendMapView(player);
+		}
+	}
+
+	public void onPlayerLeave(Player player) {
+		ItemFrame placedGraffiti = playerPlacedMaps.remove(player.getUniqueId());
+		if (placedGraffiti != null) {
+			spawnedMaps.remove(new BlockCoords(placedGraffiti.getLocation()));
+			placedGraffiti.remove();
+			animatedGraffiti.remove(placedGraffiti);
+		}
+
+		for (NamespacedKey key : CosmeticsManager.getLoadedCosmetics(CosmeticType.GRAFFITI)) {
+			Graffiti graffiti = CosmeticsManager.getCosmetic(CosmeticType.GRAFFITI, key);
+			graffiti.mapsSent.remove(player);
 		}
 	}
 }
