@@ -258,13 +258,13 @@ public abstract class TeamArena
 		gameWorld.setDifficulty(Difficulty.NORMAL);
 
 		// random weather
-		double random = MathUtils.random.nextDouble();
+		/*double random = MathUtils.random.nextDouble();
 		if (random < 0.1) {
 			gameWorld.setStorm(true);
 			if (random < 0.02) {
 				gameWorld.setThundering(true);
 			}
-		}
+		}*/
 
 		//force disable relative projectile velocity (projectiles inheriting the velocity of their shooter)
 		((CraftWorld) gameWorld).getHandle().paperConfig().misc.disableRelativeProjectileVelocity = true;
@@ -2158,9 +2158,6 @@ public abstract class TeamArena
 		else {
 			lowestTeam = sorted.getFirst();
 		}
-
-		if (true)
-			lowestTeam = teams[0];
 
 		if(add)
 			lowestTeam.addMembers(player);

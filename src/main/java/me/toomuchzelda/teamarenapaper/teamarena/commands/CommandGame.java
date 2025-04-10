@@ -65,8 +65,11 @@ public class CommandGame extends CustomCommand {
 					.filter(map -> map.getName().equalsIgnoreCase(mapName))
 					.findAny().orElseThrow(() -> new IllegalArgumentException(mapName + " is not a valid map!"));
 
-				if (type == null)
+				if (type == null) {
 					type = newMap.getRandomGameType();
+					if (type == null)
+						throw new CommandException("Map " + newMap.getName() + " doesn't have any GameTypes registered!");
+				}
 			}
 			else {
 				if (type == null)

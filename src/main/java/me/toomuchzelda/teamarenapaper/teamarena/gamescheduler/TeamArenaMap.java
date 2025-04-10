@@ -652,6 +652,8 @@ public class TeamArenaMap
 	}
 
 	public GameType getRandomGameType() {
+		if (this.gameTypes.isEmpty())
+			return null;
 		return this.gameTypes.get(MathUtils.random.nextInt(gameTypes.size()));
 	}
 

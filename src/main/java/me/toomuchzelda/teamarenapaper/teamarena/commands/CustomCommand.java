@@ -17,13 +17,15 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 public abstract class CustomCommand extends Command {
     public final PermissionLevel permissionLevel;
 
 	private static final HashMap<String, CustomCommand> PLUGIN_COMMANDS = new HashMap<>();
-	protected static final List<String> BOOLEAN_SUGGESTIONS = List.of("true", "false");
+	protected static final List<String> BOOLEAN_SUGGESTIONS = List.of("true", "fa" +
+		"lse");
 
 	protected CustomCommand(@NotNull String name, @NotNull String description, @NotNull String usage,
 							PermissionLevel permissionLevel, String... aliases) {
@@ -56,13 +58,17 @@ public abstract class CustomCommand extends Command {
 			run(sender, commandLabel, args);
 		} catch (CommandException e) {
 			sender.sendMessage(e.message);
-		} catch (IllegalArgumentException ex) {
-			sender.sendMessage(Component.text(ex.toString(), TextColors.ERROR_RED));
         } catch (Throwable e) {
 			sender.sendMessage(Component.text("Internal error", TextColors.ERROR_RED));
-            Main.logger().severe("Command " + getClass().getSimpleName() + " finished execution exceptionally " +
-                    "for input /" + commandLabel + " " + String.join(" ", args));
-            e.printStackTrace();
+			// To ease searching of the error in logs
+			final String rand = UUID.randomUUID().toString().substring(0, 6);
+			if (hasPermission(sender, PermissionLevel.MOD)) {
+				sender.sendMessage(Component.text("This error has been logged with tag " + rand +
+					". Please notify a developer."));
+			}
+			final String msg = "Command " + getClass().getSimpleName() + " finished execution exceptionally " +
+				"for input /" + commandLabel + " " + String.join(" ", args) + ". Tag:" + rand;
+			Main.logger().log(Level.SEVERE, msg, e);
         }
         return true;
     }
@@ -73,6 +79,10 @@ public abstract class CustomCommand extends Command {
     public final @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
         if (sender instanceof Player player) {
             PlayerInfo playerInfo = Main.getPlayerInfo(player);
+			if (playerInfo == null) {
+				Main.logger().info(player.getName() + " tabComplete but pinfo was null.");
+				return List.of();
+			}
             if (!playerInfo.hasPermission(permissionLevel)) {
                 return List.of();
             }

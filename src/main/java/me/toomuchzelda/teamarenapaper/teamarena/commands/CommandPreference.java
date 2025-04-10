@@ -47,7 +47,7 @@ public class CommandPreference extends CustomCommand {
 				.filter(Objects::nonNull)
 				.toList();
 			if (players.size() == 0)
-				throw new IllegalArgumentException("No players selected");
+				throw new CommandException("No players selected");
 			Preference preference = getPreference(sender, args[1], true);
 			if (preference == null)
 				return;
@@ -85,7 +85,7 @@ public class CommandPreference extends CustomCommand {
 						return;
 					var values = preference.getValues();
 					if (values == null)
-						throw new IllegalArgumentException(prefName + " cannot be changed using a GUI");
+						throw new CommandException(prefName + " cannot be changed using a GUI");
 					Inventories.openInventory(player, new PreferencesInventory.PreferenceEditInventory(preference, List.copyOf(values), null));
 				} else {
 					Inventories.openInventory(player, new PreferencesInventory());

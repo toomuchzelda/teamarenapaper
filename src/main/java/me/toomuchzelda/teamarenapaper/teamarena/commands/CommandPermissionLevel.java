@@ -50,7 +50,7 @@ public class CommandPermissionLevel extends CustomCommand
 
 				Player target = Bukkit.getPlayer(args[1]);
 				if (target == null)
-					throw new IllegalArgumentException("Unknown player");
+					throw new CommandException("Unknown player");
 
 
 				PermissionLevel level;
@@ -65,7 +65,7 @@ public class CommandPermissionLevel extends CustomCommand
 						level = null;
 					}
 					else {
-						throw new IllegalArgumentException("Permission level must be valid or \"null\"");
+						throw new CommandException("Permission level must be valid or \"null\"");
 					}
 				}
 
@@ -87,14 +87,14 @@ public class CommandPermissionLevel extends CustomCommand
 				if (args.length > 1) {
 					target = Bukkit.getPlayer(args[1]);
 					if (target == null) {
-						throw new IllegalArgumentException("Unknown player");
+						throw new CommandException("Unknown player");
 					}
 				}
 				else if (sender instanceof Player playerSender) {
 					target = playerSender;
 				}
 				else {
-					throw new IllegalArgumentException("Specify a player");
+					throw new CommandException("Specify a player");
 				}
 
 				PlayerInfo pinfo = Main.getPlayerInfo(target);
