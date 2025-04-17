@@ -4,6 +4,7 @@ import com.destroystokyo.paper.profile.CraftPlayerProfile;
 import com.destroystokyo.paper.profile.PlayerProfile;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.sql.*;
+import me.toomuchzelda.teamarenapaper.teamarena.DisguiseManager;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
 import me.toomuchzelda.teamarenapaper.teamarena.SidebarManager;
@@ -215,5 +216,6 @@ public class LoginHandler
 		Main.getGame().joiningPlayer(player, pinfo);
 
 		PacketPlayer.onJoin(event);
+		DisguiseManager.applyViewedDisguises(player);
 	}
 }

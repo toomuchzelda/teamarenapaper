@@ -8,14 +8,12 @@ import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.world.entity.player.PlayerModelPart;
-import net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket;
-import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 
 import java.util.*;
+import java.util.function.Predicate;
 
 /**
  * create and keep track of fake players infos and whos seeing them
@@ -25,10 +23,11 @@ public class DisguiseManager
 {
 	//get the real player from disguise's entity id
 	//private static final Map<Integer, Disguise> FAKE_ID_TO_DISGUISE_LOOKUP = Collections.synchronizedMap(new HashMap<>());
-	private static final Map<Integer, Set<Disguise>> PLAYER_ID_TO_DISGUISE_LOOKUP = Collections.synchronizedMap(new HashMap<>());
+	private static final Map<Integer, LinkedHashSet<Disguise>> PLAYER_ID_TO_DISGUISE_LOOKUP = new HashMap<>();
 
-	public static Disguise createDisguise(Player toDisguise, Player toDisguiseAs, Collection<Player> viewers, boolean start) {
-		Disguise disguise = new Disguise(toDisguise, viewers, toDisguiseAs);
+	public static Disguise createDisguise(Player toDisguise, Player toDisguiseAs, Collection<Player> viewers,
+										  Predicate<Player> viewerRule, boolean start) {
+		Disguise disguise = new Disguise(toDisguise, viewers, viewerRule, toDisguiseAs);
 
 		if(start)
 			startDisgusie(disguise);
@@ -38,6 +37,7 @@ public class DisguiseManager
 
 	public static void startDisgusie(Disguise disguise) {
 		Player toDisguise = disguise.disguisedPlayer;
+		disguise.initViewers();
 		//keep track of viewers that had the player registered so as to not reveal to anyone that had them hidden
 		List<Player> couldSee = new LinkedList<>();
 
@@ -58,7 +58,7 @@ public class DisguiseManager
 
 	private static void addDisguise(Player player, Disguise disguise) {
 		Set<Disguise> set = PLAYER_ID_TO_DISGUISE_LOOKUP.computeIfAbsent(player.getEntityId(), value ->
-				new HashSet<>());
+				LinkedHashSet.newLinkedHashSet(3));
 		set.add(disguise);
 	}
 
@@ -85,9 +85,11 @@ public class DisguiseManager
 					viewer.showPlayer(Main.getPlugin(), disg.disguisedPlayer);
 				}
 			}
+
+			if (set.isEmpty()) // Do this after as it needs to be in the map for handlePlayerInfoAdd
+				PLAYER_ID_TO_DISGUISE_LOOKUP.remove(disguisedPlayer.getEntityId());
 		}
 	}
-
 
 	//TODO: untested
 	public static void removeDisguise(int disguisedPlayer, Disguise disguise) {
@@ -107,6 +109,9 @@ public class DisguiseManager
 			for (Player viewer : couldSee) {
 				viewer.showPlayer(Main.getPlugin(), disguise.disguisedPlayer);
 			}
+
+			if (set.isEmpty())
+				PLAYER_ID_TO_DISGUISE_LOOKUP.remove(disguisedPlayer);
 		}
 	}
 
@@ -138,6 +143,33 @@ public class DisguiseManager
 		return toReturn;
 	}
 
+	/** Update the disguises a player should see when they join */
+	public static void applyViewedDisguises(Player viewer) {
+		for (var entry : PLAYER_ID_TO_DISGUISE_LOOKUP.entrySet()) {
+			if (entry.getKey() == viewer.getEntityId()) continue;
+			boolean updatedThisPlayer = false; // Viewers only see 1 of the many disguises
+			for (Disguise d : entry.getValue()) {
+				if (d.updateViewerListing(viewer)) {
+					final boolean couldSee = !updatedThisPlayer && viewer.canSee(d.disguisedPlayer);
+					if (couldSee) viewer.hidePlayer(Main.getPlugin(), d.disguisedPlayer);
+					d.viewers.put(viewer, 0);
+					if (couldSee) viewer.showPlayer(Main.getPlugin(), d.disguisedPlayer);
+
+					updatedThisPlayer = true;
+				}
+			}
+		}
+	}
+
+	public static void onLeave(Player leaver) {
+		removeDisguises(leaver);
+		for (var entry : PLAYER_ID_TO_DISGUISE_LOOKUP.entrySet()) {
+			for (Disguise d : entry.getValue()) {
+				d.removeViewer(leaver);
+			}
+		}
+	}
+
 	/*public static int getDisguiseToSeeId(int disguisedPlayer, Player viewer) {
 		Disguise disguise = getDisguiseSeeing(disguisedPlayer, viewer);
 		if(disguise != null) {
@@ -149,21 +181,32 @@ public class DisguiseManager
 
 	public static class Disguise
 	{
+		private static final Predicate<Player> TRUE = viewer -> true;
 		public Player disguisedPlayer;
 		public UUID tabListPlayerUuid;
 		public GameProfile disguisedGameProfile;
 		public GameProfile tabListGameProfile;
-		public Map<Player, Integer> viewers;
+		public final Map<Player, Integer> viewers;
+		private final Predicate<Player> viewerRule;
 		private final boolean[] skinParts;
 
-		private Disguise(Player player, Collection<Player> viewers, Player toDisguiseAs) {
+		/** Players in the collection not matching the viewerRule are ignored */
+		private Disguise(Player player, Collection<? extends Player> viewers, Predicate<Player> viewerRule,
+						 Player toDisguiseAs) {
 			this.disguisedPlayer = player;
 			this.tabListPlayerUuid = UUID.randomUUID();
-			this.viewers = new HashMap<>(viewers.size());
 
+			if (viewers == null) viewers = Bukkit.getOnlinePlayers();
+			this.viewers = HashMap.newHashMap(viewers.size());
+
+			if (viewerRule == null) viewerRule = TRUE;
+			this.viewerRule = viewerRule;
+
+			/* Removed - now initialised on startDisguise()
 			for(Player viewer : viewers) {
-				this.viewers.put(viewer, 0);
-			}
+				if (this.viewerRule.test(viewer))
+					this.viewers.put(viewer, 0);
+			}*/
 
 			GameProfile disguiseAs = ((CraftPlayer) toDisguiseAs).getHandle().getGameProfile();
 			this.disguisedGameProfile = new GameProfile(disguisedPlayer.getUniqueId(), disguiseAs.getName());
@@ -204,6 +247,27 @@ public class DisguiseManager
 		private void removeSkinParts(Player viewer) {
 			MetadataViewer metadataViewer = Main.getPlayerInfo(viewer).getMetadataViewer();
 			metadataViewer.removeViewedValue(this.disguisedPlayer, MetaIndex.PLAYER_SKIN_PARTS_IDX);
+		}
+
+		/** Fill the lookup map on disguise start */
+		private void initViewers() {
+			this.viewers.clear();
+			Bukkit.getOnlinePlayers().forEach(player -> {
+				if (this.viewerRule.test(player)) this.viewers.put(player, 0);
+			});
+		}
+
+		/** Return true if was not previously a viewer */
+		private boolean updateViewerListing(Player viewer) {
+			if (this.viewerRule.test(viewer)) {
+				return this.viewers.putIfAbsent(viewer, 0) == null;
+			}
+
+			return false;
+		}
+
+		private void removeViewer(Player viewer) {
+			this.viewers.remove(viewer);
 		}
 
 		public void handlePlayerInfoAdd(Player receiver,

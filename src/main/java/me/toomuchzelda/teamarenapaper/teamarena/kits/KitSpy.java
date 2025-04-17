@@ -31,6 +31,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.logging.Level;
 
 public class KitSpy extends Kit
 {
@@ -60,7 +61,7 @@ public class KitSpy extends Kit
 
 	private int playerHeadId = 0; // Unique for each player head on kill
 	//need to store Kit and Player, player should be inside the skull's PlayerProfile already
-	public final HashMap<Integer, Kit> skullItemDisguises = new HashMap<>();
+	public final HashMap<Integer, SpyDisguiseInfo> skullItemDisguises = new HashMap<>();
 
 	static {
 		DISGUISE_MENU_LORE_LIST = List.of(DISGUISE_MENU_DESC, DISGUISE_MENU_DESC2);
@@ -130,12 +131,11 @@ public class KitSpy extends Kit
 			//remove any skulls they might've had from the hashmap
 			var iter = player.getInventory().iterator();
 			while(iter.hasNext()) {
-				ItemStack item = iter.next();
-				if(item == null)
+				Integer id = getSkullId(iter.next());
+				if(id == null)
 					continue;
 
-				if(item.getType() == Material.PLAYER_HEAD) //not every head may be a spy disguise item but meh
-					skullItemDisguises.remove(item);
+				skullItemDisguises.remove(id);
 			}
 
 			// close GUI
@@ -143,6 +143,11 @@ public class KitSpy extends Kit
 
 			player.setLevel(0);
 			player.setExp(0);
+		}
+
+		private static Integer getSkullId(ItemStack skull) {
+			if (skull == null) return null;
+			return skull.getPersistentDataContainer().get(HEAD_PDC_KEY, PersistentDataType.INTEGER);
 		}
 
 		@Override
@@ -175,7 +180,9 @@ public class KitSpy extends Kit
 
 				victimsHead.setItemMeta(meta);
 
-				skullItemDisguises.put(headId, victimsKit);
+				SpyDisguiseInfo sinfo = new SpyDisguiseInfo(Main.getGame(), player, victimsKit, victim, TIME_TO_DISGUISE_HEAD);
+
+				skullItemDisguises.put(headId, sinfo);
 				player.getInventory().addItem(victimsHead);
 			}
 		}
@@ -200,15 +207,13 @@ public class KitSpy extends Kit
 				}
 				else if (event.getMaterial() == Material.PLAYER_HEAD){
 					ItemStack head = event.getItem();
-					Integer id = head.getPersistentDataContainer().get(HEAD_PDC_KEY, PersistentDataType.INTEGER);
+					Integer id = getSkullId(head);
 					if (id != null) {
-						Kit kit = skullItemDisguises.remove(id);
-						if (kit != null) {
-							SkullMeta meta = (SkullMeta) head.getItemMeta();
+						SpyDisguiseInfo sinfo = skullItemDisguises.remove(id);
+						if (sinfo != null) {
 							Player spy = event.getPlayer();
-							Player toDisguiseAs = Bukkit.getPlayer(meta.getPlayerProfile().getId());
 
-							disguisePlayer(spy, Main.getPlayerInfo(spy).team, toDisguiseAs, kit, TIME_TO_DISGUISE_HEAD, false);
+							disguisePlayer(spy, sinfo);
 
 							spy.getInventory().remove(head);
 							event.setUseItemInHand(Event.Result.DENY);
@@ -292,6 +297,25 @@ public class KitSpy extends Kit
 			}
 		}
 
+		/** on interaction with skull item */
+		private static void disguisePlayer(Player spy, SpyDisguiseInfo sinfo) {
+			DisguiseManager.removeDisguises(spy);
+			spy.setInvisible(false);
+
+			// Not that this should ever happen, since you'd never get a skull of yourself, but anyway
+			if (spy.getUniqueId().equals(sinfo.disguisingAsPlayer())) {
+				currentlyDisguised.remove(spy);
+				Component yourselfText = Component.text("Removed disguise, you now look like yourself").color(NamedTextColor.LIGHT_PURPLE);
+				PlayerUtils.sendKitMessage(spy, yourselfText, yourselfText);
+				return;
+			}
+
+			Component disguisingText = Component.text("Disguising as ").color(NamedTextColor.DARK_PURPLE).append(sinfo.disguiseAsPlayerListName);
+			PlayerUtils.sendKitMessage(spy, disguisingText, disguisingText);
+
+			sinfo.setUsedTime(TeamArena.getGameTick());
+			currentlyDisguised.put(spy, sinfo);
+		}
 		/**
 		 * handle disguise change
 		 */
@@ -310,23 +334,8 @@ public class KitSpy extends Kit
 			Component disguisingText = Component.text("Disguising as ").color(NamedTextColor.DARK_PURPLE).append(toDisguiseAs.playerListName());
 			PlayerUtils.sendKitMessage(player, disguisingText, disguisingText);
 
-			List<DisguiseManager.Disguise> disguises = new LinkedList<>();
-			for(TeamArenaTeam team : Main.getGame().getTeams()) {
-				if(team == ownTeam)
-					continue;
-
-				DisguiseManager.Disguise disguise = DisguiseManager.createDisguise(player, toDisguiseAs,
-						team.getPlayerMembers(), false);
-				disguises.add(disguise);
-			}
-
-			if(theirKit == null) {
-				//theirKit = Kit.getActiveKit(toDisguiseAs, false);
-				theirKit = Kit.getActiveKitHideInvis(toDisguiseAs);
-			}
-
-			SpyDisguiseInfo info = new SpyDisguiseInfo(disguises, theirKit, toDisguiseAs,
-					TeamArena.getGameTick() + timeToDisguise);
+			SpyDisguiseInfo info = new SpyDisguiseInfo(Main.getGame(), player, theirKit, toDisguiseAs, timeToDisguise);
+			info.setUsedTime(TeamArena.getGameTick());
 			currentlyDisguised.put(player, info);
 
 			//reset cooldown
@@ -394,23 +403,72 @@ public class KitSpy extends Kit
 	/**
 	 * specifically for kit Spy
 	 */
-	public record SpyDisguiseInfo(List<DisguiseManager.Disguise> disguises,
-								  Kit disguisingAsKit,
-								  Player disguisingAsPlayer,
-								  int timeToApply,
-								  Component informMessage) {
+	public static final class SpyDisguiseInfo {
+		private final List<DisguiseManager.Disguise> disguises;
+		private final Kit disguisingAsKit;
+		private final UUID disguisingAsPlayer;
+		private final Component disguiseAsPlayerListName;
+		private int timeToApply;
+		private final Component informMessage;
 
-		public SpyDisguiseInfo {
-			disguises = List.copyOf(disguises); // defensive copy
+		public SpyDisguiseInfo(TeamArena game, Player spy,
+							   Kit disguisingAsKit, Player toDisguiseAs,
+							   int timeToApply) {
+
+			this.disguises = new ArrayList<>();
+			TeamArenaTeam spyTeam = Main.getPlayerInfo(spy).team;
+			for(TeamArenaTeam team : game.getTeams()) {
+				if(team == spyTeam)
+					continue;
+
+				DisguiseManager.Disguise disguise = DisguiseManager.createDisguise(spy, toDisguiseAs,
+					team.getPlayerMembers(), team::hasMember,false);
+				disguises.add(disguise);
+			}
+
+			if(disguisingAsKit == null) {
+				//disguisingAsKit = Kit.getActiveKit(toDisguiseAs, false);
+				disguisingAsKit = Kit.getActiveKitHideInvis(toDisguiseAs);
+
+				if (disguisingAsKit == null) {
+					Main.logger().log(Level.WARNING, "Kit spy could not find a kit for " + toDisguiseAs, new RuntimeException());
+					disguisingAsKit = game.getKits().iterator().next();
+				}
+			}
+
+			this.disguisingAsKit = disguisingAsKit;
+			this.disguisingAsPlayer = toDisguiseAs.getUniqueId();
+			this.disguiseAsPlayerListName = toDisguiseAs.playerListName();
+			this.timeToApply = timeToApply;
+			this.informMessage = Component.textOfChildren(
+				Component.text("Disguised as ", NamedTextColor.LIGHT_PURPLE),
+				toDisguiseAs.playerListName(),
+				Component.text("    Kit: ", NamedTextColor.LIGHT_PURPLE),
+				Component.text(disguisingAsKit().getName(), disguisingAsKit.getCategory().textColor())
+			);
 		}
 
-		public SpyDisguiseInfo(List<DisguiseManager.Disguise> disguises, Kit kit, Player player, int timeToApply) {
-			this(disguises, kit, player, timeToApply, Component.textOfChildren(
-				Component.text("Disguised as ", NamedTextColor.LIGHT_PURPLE),
-				player.playerListName(),
-				Component.text("    Kit: ", NamedTextColor.LIGHT_PURPLE),
-				Component.text(kit.getName(), kit.getCategory().textColor())
-			));
+		public Kit disguisingAsKit() {
+			return disguisingAsKit;
+		}
+
+		public UUID disguisingAsPlayer() {
+			return disguisingAsPlayer;
+		}
+
+		/** Call before using for SpyAbility.onTick() */
+		public void setUsedTime(int tick) {
+			this.timeToApply += tick;
+		}
+
+		@Override
+		public String toString() {
+			return "SpyDisguiseInfo[" +
+				"disguises=" + disguises + ", " +
+				"disguisingAsKit=" + disguisingAsKit + ", " +
+				"disguisingAsPlayer=" + disguisingAsPlayer + ", " +
+				"timeToApply=" + timeToApply + ", " +
+				"informMessage=" + informMessage + ']';
 		}
 	}
 }

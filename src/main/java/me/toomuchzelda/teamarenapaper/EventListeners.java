@@ -270,6 +270,7 @@ public class EventListeners implements Listener
 		FakeHitboxManager.removeFakeHitbox(leaver);
 		LoadedChunkTracker.removeTrackedChunks(leaver);
 		SidebarManager.removeInstance(leaver);
+		DisguiseManager.onLeave(leaver);
 
 		PlayerInfo pinfo = Main.removePlayerInfo(leaver);
 
