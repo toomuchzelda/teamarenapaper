@@ -1099,6 +1099,7 @@ public class EventListeners implements Listener
 	public static boolean avoidCME = false; // Avoid CME when aa.remove() in ArrowManager.tick();
 	/**
 	 * Clean up despawning arrows from ArrowPierceManager
+	 * Also indirectly called by TeamArena#prepDead
 	 */
 	@EventHandler
 	public void entityRemoveFromWorld(EntityRemoveFromWorldEvent event) {

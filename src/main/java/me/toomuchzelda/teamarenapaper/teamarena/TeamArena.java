@@ -1496,6 +1496,13 @@ public abstract class TeamArena
 		BuildingOutlineManager.cleanUp();
 
 		setGameState(GameState.DEAD);
+
+		// The server won't call EntityRemove events properly (for arrows on world unload,
+		// as of writing), so we call remove() on each entity manually
+		for (Entity e : this.getWorld().getEntities()) {
+			if (!(e instanceof Player))
+				e.remove();
+		}
 	}
 
 	public void setupTeams() {
