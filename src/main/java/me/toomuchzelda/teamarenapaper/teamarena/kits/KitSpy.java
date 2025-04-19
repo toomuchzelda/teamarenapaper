@@ -297,6 +297,15 @@ public class KitSpy extends Kit
 			}
 		}
 
+		/** Return true when the disguise is actively and visible */
+		public boolean isDisguised(Player spy) {
+			final SpyDisguiseInfo sinfo = currentlyDisguised.get(spy);
+			if (sinfo != null) {
+				return sinfo.timeToApply <= TeamArena.getGameTick();
+			}
+			else return false;
+		}
+
 		/** on interaction with skull item */
 		private static void disguisePlayer(Player spy, SpyDisguiseInfo sinfo) {
 			DisguiseManager.removeDisguises(spy);
