@@ -26,6 +26,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.UnmodifiableView;
 import org.spigotmc.SpigotConfig;
 
+import java.io.File;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -58,6 +59,18 @@ public final class Main extends JavaPlugin
 
 		SpigotConfig.logNamedDeaths = false;
 		SpigotConfig.logVillagerDeaths = false;
+
+		// Needs to exist for DB and HTTPD
+		final File pluginDataFolder = this.getDataFolder();
+		if (!pluginDataFolder.exists()) {
+			if (!pluginDataFolder.mkdir()) {
+				throw new RuntimeException("Could not create directory " + pluginDataFolder);
+			}
+		}
+		else if (!pluginDataFolder.isDirectory()) {
+			throw new RuntimeException("A file at path " + pluginDataFolder + " exists but it is not a " +
+				"directory");
+		}
 
 		// load important classes
 		Preferences.registerPreferences();
