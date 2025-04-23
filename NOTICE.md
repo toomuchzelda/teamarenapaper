@@ -1,4 +1,4 @@
-NanoHTTPD is provided under the following license:
+NanoHTTPD (All classes in package org.nanohttpd) is provided under the following license:
 
 Copyright (c) 2012-2013 by Paul S. Hawke, 2001,2005-2013 by Jarno Elonen, 2010 by Konstantinos Togias
 All rights reserved.

@@ -4,7 +4,6 @@ plugins {
     id("java")
     id("io.papermc.paperweight.userdev") version "2.0.0-beta.14"
     id("xyz.jpenilla.run-paper") version "2.3.1"
-    id("com.gradleup.shadow") version "8.3.6"
 }
 
 repositories {
@@ -24,7 +23,6 @@ dependencies {
     implementation("org.xerial:sqlite-jdbc:3.41.2.2")
     paperweight.paperDevBundle("1.21.4-R0.1-SNAPSHOT")
     compileOnly("com.comphenix.protocol:ProtocolLib:5.3.0")
-    implementation("org.nanohttpd:nanohttpd:2.3.1")
 
     testImplementation(platform("org.junit:junit-bom:5.11.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
@@ -50,12 +48,6 @@ tasks {
         options.release.set(21)
     }
 
-    shadowJar {
-        dependencies {
-            include (dependency("org.nanohttpd:nanohttpd:2.3.1"))
-        }
-    }
-
     test {
         useJUnitPlatform()
         testLogging {
@@ -68,10 +60,6 @@ tasks {
         downloadPlugins {
             url("https://ci.dmulloy2.net/job/ProtocolLib/lastSuccessfulBuild/artifact/build/libs/ProtocolLib.jar")
         }
-    }
-
-    build {
-        dependsOn(shadowJar)
     }
 }
 

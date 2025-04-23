@@ -89,7 +89,7 @@ public class CommandCredits extends CustomCommand
 				)
 				.clickEvent(ClickEvent.clickEvent(ClickEvent.Action.OPEN_URL, "https://www.spigotmc.org/resources/protocollib.1997/")),
 			Component.newline(),
-			Component.text("Team Arena includes a copy of NanoHTTPD in binary form, which is licensed under the following: ",
+			Component.text("Team Arena includes a copy of NanoHTTPD, which is licensed under the following: ",
 				NamedTextColor.YELLOW, TextDecoration.UNDERLINED
 			).clickEvent(ClickEvent.clickEvent(ClickEvent.Action.OPEN_URL, "https://github.com/NanoHttpd/nanohttpd")),
 			Component.newline(),

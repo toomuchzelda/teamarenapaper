@@ -1,8 +1,10 @@
 package me.toomuchzelda.teamarenapaper.httpd;
 
-import fi.iki.elonen.NanoHTTPD;
+import org.nanohttpd.protocols.http.*;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.httpd.handlers.ResourcePackHandler;
+import org.nanohttpd.protocols.http.response.Response;
+import org.nanohttpd.protocols.http.response.Status;
 
 import java.io.IOException;
 import java.util.Map;
@@ -28,37 +30,36 @@ public class HttpDaemon extends NanoHTTPD {
 		super.stop();
 	}
 
-	private static Response respondStatus(Response.Status status) {
-		return newFixedLengthResponse(status, MIME_PLAINTEXT, status.getDescription());
+	private static Response respondStatus(Status status) {
+		return Response.newFixedLengthResponse(status, MIME_PLAINTEXT, status.getDescription());
 	}
 
 	@Override
 	public Response serve(IHTTPSession session) {
-		// Only serve requests from online players
-
+		// TODO Only serve requests from online players
 
 		final long contentLength = getContentLength(session.getHeaders());
 		if (contentLength == -1) {
-			return respondStatus(Response.Status.LENGTH_REQUIRED);
+			return respondStatus(Status.LENGTH_REQUIRED);
 		}
 		else if (contentLength >= MAX_CONTENT_LENGTH) {
-			return respondStatus(Response.Status.PAYLOAD_TOO_LARGE);
+			return respondStatus(Status.PAYLOAD_TOO_LARGE);
 		}
 
 		//uri begins with /, so 0 is nothing and uri[1] is the first directory
 		final String[] uri = session.getUri().split("/");
 		if (uri.length <= 1) {
-			return respondStatus(Response.Status.NOT_FOUND);
+			return respondStatus(Status.NOT_FOUND);
 		}
 
 		if ("resourcepack.zip".equals(uri[1])) {
-			final Response response = newFixedLengthResponse(Response.Status.OK, MIME_ZIP,
+			final Response response = Response.newFixedLengthResponse(Status.OK, MIME_ZIP,
 				this.rpHandler.getResourcePack(), this.rpHandler.getSize());
 			response.closeConnection(true); // Minecraft client shouldn't have any further business
 			return response;
 		}
 		else {
-			return respondStatus(Response.Status.NOT_FOUND);
+			return respondStatus(Status.NOT_FOUND);
 		}
 	}
 
