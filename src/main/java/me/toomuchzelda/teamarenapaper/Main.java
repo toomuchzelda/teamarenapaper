@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper;
 import com.comphenix.protocol.ProtocolLibrary;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
+import me.toomuchzelda.teamarenapaper.httpd.HttpDaemon;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.sql.DBSetPreferences;
 import me.toomuchzelda.teamarenapaper.sql.DatabaseManager;
@@ -27,7 +28,9 @@ import org.jetbrains.annotations.UnmodifiableView;
 import org.spigotmc.SpigotConfig;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public final class Main extends JavaPlugin
@@ -35,6 +38,7 @@ public final class Main extends JavaPlugin
 	private static TeamArena teamArena;
 	private static EventListeners eventListeners;
 	private static PacketListeners packetListeners;
+	private static HttpDaemon httpDaemon;
 	private static Logger logger;
 	private static ComponentLogger componentLogger;
 
@@ -107,6 +111,16 @@ public final class Main extends JavaPlugin
 
 		registerCommands();
 
+		try {
+			logger().info("Starting NanoHTTPD");
+			httpDaemon = new HttpDaemon(this);
+			httpDaemon.startListening();
+		}
+		catch (IOException e) {
+			logger().log(Level.WARNING, "Failed to start HttpDaemon", e);
+			httpDaemon = null;
+		}
+
 		// fetch latest update
 		//Bukkit.getScheduler().runTask(this, ChangelogMenu::fetch);
 	}
@@ -114,6 +128,10 @@ public final class Main extends JavaPlugin
 	@Override
 	public void onDisable() {
 		// Plugin shutdown logic
+		if (httpDaemon != null) {
+			logger().info("Stopping NanoHTTPD");
+			httpDaemon.stop();
+		}
 
 		//synchronously save all player's preferences
 		try {
