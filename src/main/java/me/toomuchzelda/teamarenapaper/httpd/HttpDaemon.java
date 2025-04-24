@@ -1,5 +1,7 @@
 package me.toomuchzelda.teamarenapaper.httpd;
 
+import me.toomuchzelda.teamarenapaper.CompileAsserts;
+import org.bukkit.entity.Player;
 import org.nanohttpd.protocols.http.*;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.httpd.handlers.ResourcePackHandler;
@@ -7,12 +9,18 @@ import org.nanohttpd.protocols.http.response.Response;
 import org.nanohttpd.protocols.http.response.Status;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.util.HashMap;
 import java.util.Map;
 
 public class HttpDaemon extends NanoHTTPD {
 	private static final int DEFAULT_PORT = 25500;
 	private static final int MAX_CONTENT_LENGTH = 1024;
 	private static final String MIME_ZIP = "application/zip";
+
+	public static final String LOG_PREFIX = "[HTTP] ";
+
+	private FilteringServerThread serverListenerThread;
 
 	private final ResourcePackHandler rpHandler;
 
@@ -25,18 +33,42 @@ public class HttpDaemon extends NanoHTTPD {
 		this.start(NanoHTTPD.SOCKET_READ_TIMEOUT, true);
 	}
 
+	@Override // Supply extended ServerRunnable to filter connections
+	protected ServerRunnable createServerRunnable(int timeout) {
+		this.serverListenerThread = new FilteringServerThread(this, timeout);
+		return this.serverListenerThread;
+	}
+
 	@Override
 	public void stop() {
 		super.stop();
 	}
 
-	private static Response respondStatus(Status status) {
-		return Response.newFixedLengthResponse(status, MIME_PLAINTEXT, status.getDescription());
+	// Pass through InetAddress from PlayerLoginEvent as player.getAddress() is null during event
+	public void onConnect(Player joiner, InetAddress address) {
+		this.serverListenerThread.onConnect(joiner, address);
+	}
+
+	public void onLeave(Player leaver) {
+		this.serverListenerThread.onLeave(leaver);
 	}
 
 	@Override
 	public Response serve(IHTTPSession session) {
-		// TODO Only serve requests from online players
+		assert CompileAsserts.OMIT || this.serverListenerThread != null;
+
+		Main.logger().info(LOG_PREFIX + "Request received from " + session.getRemoteIpAddress());
+		Main.logger().info(LOG_PREFIX + session.getUri());
+		Main.logger().info(LOG_PREFIX + session.getHeaders());
+		try {
+			session.parseBody(new HashMap<>());
+		} catch (Exception ignored) {}
+		Main.logger().info(LOG_PREFIX + session.getParameters());
+		// Example output:
+		//[22:11:04 INFO]: [TeamArenaPaper] [HTTP] Request received from 127.0.0.1
+		//[22:11:04 INFO]: [TeamArenaPaper] [HTTP] /resourcepack.zip
+		//[22:11:04 INFO]: [TeamArenaPaper] [HTTP] {x-minecraft-pack-format=46, x-minecraft-version-id=1.21.4, x-minecraft-version=1.21.4, remote-addr=127.0.0.1, http-client-ip=127.0.0.1, x-minecraft-username=toomuchzelda, host=localhost:25500, connection=keep-alive, x-minecraft-uuid=87605074e96f40f4a449f791d959ce6a, user-agent=Minecraft Java/1.21.4, accept=*/*}
+		//[22:11:04 INFO]: [TeamArenaPaper] [HTTP] {}
 
 		final long contentLength = getContentLength(session.getHeaders());
 		if (contentLength == -1) {
@@ -61,6 +93,10 @@ public class HttpDaemon extends NanoHTTPD {
 		else {
 			return respondStatus(Status.NOT_FOUND);
 		}
+	}
+
+	private static Response respondStatus(Status status) {
+		return Response.newFixedLengthResponse(status, MIME_PLAINTEXT, status.getDescription());
 	}
 
 	/** Returns the length of the content.

@@ -15,6 +15,7 @@ import me.toomuchzelda.teamarenapaper.explosions.EntityExplosionInfo;
 import me.toomuchzelda.teamarenapaper.explosions.ExplosionManager;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitbox;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
+import me.toomuchzelda.teamarenapaper.httpd.HttpDaemon;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.sql.DBSetPreferences;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
@@ -279,6 +280,10 @@ public class EventListeners implements Listener
 		if(Main.getPlugin().isEnabled()) {
 			DBSetPreferences.asyncSavePlayerPreferences(leaver, pinfo);
 		}
+
+		HttpDaemon hd = Main.getHttpDaemon();
+		if (hd != null)
+			hd.onLeave(leaver);
 
 		Main.playerIdLookup.remove(leaver.getEntityId());
 	}

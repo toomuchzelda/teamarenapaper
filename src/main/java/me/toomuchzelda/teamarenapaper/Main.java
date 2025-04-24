@@ -27,6 +27,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.UnmodifiableView;
 import org.spigotmc.SpigotConfig;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -239,5 +240,10 @@ public final class Main extends JavaPlugin
 		TeamArena oldGame = teamArena;
 		teamArena = newGame;
 		oldGame.cleanUp();
+	}
+
+	@Nullable
+	public static HttpDaemon getHttpDaemon() {
+		return httpDaemon;
 	}
 }
