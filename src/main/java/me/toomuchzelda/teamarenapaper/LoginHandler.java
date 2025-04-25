@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper;
 import com.destroystokyo.paper.profile.CraftPlayerProfile;
 import com.destroystokyo.paper.profile.PlayerProfile;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
+import me.toomuchzelda.teamarenapaper.httpd.HttpDaemon;
 import me.toomuchzelda.teamarenapaper.sql.*;
 import me.toomuchzelda.teamarenapaper.teamarena.DisguiseManager;
 import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
@@ -193,6 +194,11 @@ public class LoginHandler
 
 		loginToJoinCache.put(player, playerInfo);
 		Main.playerIdLookup.put(player.getEntityId(), player);
+
+		HttpDaemon hd = Main.getHttpDaemon();
+		if (hd != null)
+			hd.onConnect(player, event.getRealAddress());
+
 		Main.getGame().loggingInPlayer(player, playerInfo);
 	}
 
