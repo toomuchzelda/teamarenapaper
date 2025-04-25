@@ -1975,6 +1975,7 @@ public abstract class TeamArena
 	}
 
 	public void joiningPlayer(Player player, PlayerInfo playerInfo) {
+		PlayerUtils.resetState(player);
 		Location toTeleport = spawnPos;
 		if(gameState.isPreGame()) {
 			if(gameState == GameState.TEAMS_CHOSEN || gameState == GameState.GAME_STARTING) {
