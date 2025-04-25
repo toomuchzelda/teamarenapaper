@@ -1,11 +1,27 @@
 package me.toomuchzelda.teamarenapaper.httpd.handlers;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import org.bukkit.entity.Player;
 
 import java.io.*;
+import java.util.UUID;
 
 public class ResourcePackHandler {
 	private static final String RESOURCE_PACK_NAME = "resourcepack.zip";
+
+	// TODO use the headers in request to rate limit downloads?
+	private static class PlayerRecord {
+		UUID uuid;
+		long connectionPeriodStart;
+		long connectionCount;
+
+		public PlayerRecord(Player player, long connectionTime) {
+			this.uuid = player.getUniqueId();
+			this.connectionPeriodStart = connectionTime;
+			this.connectionCount = 1;
+		}
+	}
+
 	private final byte[] resourcePack;
 
 	public ResourcePackHandler(Main plugin) throws IOException {

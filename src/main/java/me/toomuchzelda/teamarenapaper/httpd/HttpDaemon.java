@@ -57,13 +57,15 @@ public class HttpDaemon extends NanoHTTPD {
 	public Response serve(IHTTPSession session) {
 		assert CompileAsserts.OMIT || this.serverListenerThread != null;
 
-		Main.logger().info(LOG_PREFIX + "Request received from " + session.getRemoteIpAddress());
-		Main.logger().info(LOG_PREFIX + session.getUri());
+		Main.logger().info(
+			LOG_PREFIX + "Serving request from " + session.getRemoteIpAddress() + ",URI=" + session.getUri()
+		);
+		/*Main.logger().info(LOG_PREFIX + session.getUri());
 		Main.logger().info(LOG_PREFIX + session.getHeaders());
-		try {
+		/*try {
 			session.parseBody(new HashMap<>());
 		} catch (Exception ignored) {}
-		Main.logger().info(LOG_PREFIX + session.getParameters());
+		Main.logger().info(LOG_PREFIX + session.getParameters());*/
 		// Example output:
 		//[22:11:04 INFO]: [TeamArenaPaper] [HTTP] Request received from 127.0.0.1
 		//[22:11:04 INFO]: [TeamArenaPaper] [HTTP] /resourcepack.zip
