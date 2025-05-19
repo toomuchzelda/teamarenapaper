@@ -1187,18 +1187,17 @@ public abstract class TeamArena
 
 		final Player chatter = event.getPlayer();
 		final PlayerInfo pinfo = Main.getPlayerInfo(chatter);
+		Component message = event.message();
 		//if player is defaulting to team chat
 		if(this.canTeamChatNow(chatter) && pinfo.getPreference(Preferences.DEFAULT_TEAM_CHAT)) {
 			//put their message in team chat if teams have been decided
-			CommandTeamChat.sendTeamMessage(pinfo.team, chatter, event.message());
+			CommandTeamChat.sendTeamMessage(pinfo.team, chatter, message);
 		}
 		else { //else global chat
-			Bukkit.broadcast(constructChatMessage(chatter, event.message()));
+			Bukkit.broadcast(constructChatMessage(chatter, message));
 
 			// Queue for voice announcer
-			if (event.message() instanceof TextComponent textComponent) {
-				ChatAnnouncerManager.queueMessage(textComponent);
-			}
+			ChatAnnouncerManager.queueMessage(message);
 		}
 	}
 
