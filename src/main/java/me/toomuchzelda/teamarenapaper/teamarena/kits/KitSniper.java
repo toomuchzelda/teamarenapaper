@@ -1,10 +1,13 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import com.google.common.collect.EvictingQueue;
+import io.papermc.paper.datacomponent.DataComponentTypes;
+import io.papermc.paper.datacomponent.item.ItemAttributeModifiers;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.abilities.centurion.ShieldInstance;
+import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
@@ -12,6 +15,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.DisplayUtils;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
@@ -32,7 +36,7 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.EquipmentSlotGroup;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
-import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.BoundingBox;
@@ -65,10 +69,12 @@ public class KitSniper extends Kit {
 			.displayName(Component.text("CheyTac Intervention"))
 			.build();
 
+	@SuppressWarnings("UnstableApiUsage")
 	public static final AttributeModifier KNIFE_SPEED = new AttributeModifier(
 			new NamespacedKey(Main.getPlugin(), "sniper_knife_speed"),
 			0.2, //20% = speed 1
-			AttributeModifier.Operation.ADD_SCALAR, EquipmentSlotGroup.HAND);
+			AttributeModifier.Operation.ADD_SCALAR, EquipmentSlotGroup.MAINHAND);
+
 
 	public KitSniper() {
 		super("Sniper", "Be careful when sniping... Too much movement and your aim will worsen. " +
@@ -76,20 +82,48 @@ public class KitSniper extends Kit {
 
 		setArmor(new ItemStack(Material.LEATHER_HELMET), new ItemStack(Material.LEATHER_CHESTPLATE),
 				new ItemStack(Material.LEATHER_LEGGINGS), new ItemStack(Material.LEATHER_BOOTS));
-
-		ItemStack sword = new ItemStack(Material.IRON_SWORD);
-		ItemMeta meta = sword.getItemMeta();
-		meta.addAttributeModifier(Attribute.MOVEMENT_SPEED, KNIFE_SPEED);
-		sword.setItemMeta(meta);
-
-		setItems(sword, SNIPER, GRENADE);
+		setItems(); // items are now given by the ability
 		setAbilities(new SniperAbility());
 
 		setCategory(KitCategory.RANGED);
 	}
 
+	private static final NamespacedKey SWORD_KEY = new NamespacedKey(Main.getPlugin(), "sniper_knife");
+	private static final List<String> SWORD_NAMES = List.of("Bayonet", "M9 Bayonet", "Bowie Knife",
+		"Butterfly Knife", "Classic Knife", "Falchion Knife", "Flip Knife", "Gut Knife", "Huntsman Knife", "Karambit",
+		"Kukri Knife", "Navaja Knife", "Nomad Knife", "Paracord Knife", "Shadow Daggers", "Skeleton Knife",
+		"Stiletto Knife", "Survival Knife", "Talon Knife", "Ursus Knife");
+	private static final List<Material> SWORD_MATERIALS = List.of(
+		Material.IRON_SWORD, Material.GOLDEN_SWORD, Material.DIAMOND_SWORD, Material.NETHERITE_SWORD,
+		Material.AMETHYST_SHARD, Material.BLAZE_ROD, Material.BREEZE_ROD, Material.ECHO_SHARD,
+		Material.TRIAL_KEY, Material.OMINOUS_TRIAL_KEY);
+	private static final List<Map.Entry<String, TextColor>> SWORD_WEAR = List.of(
+		Map.entry("Factory New", NamedTextColor.GOLD),
+		Map.entry("Minimal Wear", NamedTextColor.LIGHT_PURPLE),
+		Map.entry("Field-Tested", NamedTextColor.BLUE),
+		Map.entry("Well-Worn", NamedTextColor.WHITE),
+		Map.entry("Battle-Scarred", NamedTextColor.GRAY)
+	);
+	private static final ItemAttributeModifiers SWORD_ATTRIBUTE_MODIFIERS = ItemAttributeModifiers.itemAttributes()
+		.addModifier(Attribute.ATTACK_DAMAGE, new AttributeModifier(SWORD_KEY, 6, AttributeModifier.Operation.ADD_NUMBER))
+		.addModifier(Attribute.MOVEMENT_SPEED, KNIFE_SPEED)
+		.build();
+	private static final ItemAttributeModifiers SWORD_ATTRIBUTE_MODIFIERS_NO_SPEED = ItemAttributeModifiers.itemAttributes()
+		.addModifier(Attribute.ATTACK_DAMAGE, new AttributeModifier(SWORD_KEY, 6, AttributeModifier.Operation.ADD_NUMBER))
+		.build();
+	private static ItemStack buildSword() {
+		String name = MathUtils.randomElement(SWORD_NAMES);
+		var wear = MathUtils.randomElement(SWORD_WEAR);
+		return ItemBuilder.of(Material.IRON_SWORD)
+			.name(Component.text(name + " | " + wear.getKey(), wear.getValue()))
+			.meta(meta -> meta.getPersistentDataContainer().set(SWORD_KEY, PersistentDataType.BOOLEAN, true))
+			.setData(DataComponentTypes.ITEM_MODEL, MathUtils.randomElement(SWORD_MATERIALS).key())
+			.setData(DataComponentTypes.ATTRIBUTE_MODIFIERS, SWORD_ATTRIBUTE_MODIFIERS)
+			.build();
+	}
+
 	public static class SniperAbility extends Ability {
-		public static final @NotNull TextColor SNIPER_COLOR = TextColor.color(0xd28a37);
+		public static final TextColor SNIPER_COLOR = TextColor.color(0xd28a37);
 		private final Set<UUID> RECEIVED_GRENADE_CHAT_MESSAGE = new HashSet<>();
 		public static final TextColor GRENADE_MSG_COLOR = TextColor.color(66, 245, 158);
 
@@ -123,6 +157,7 @@ public class KitSniper extends Kit {
 			spawnTime.put(player, TeamArena.getGameTick());
 			inaccuracyTracker.put(player, EvictingQueue.create(3));
 			RewindablePlayerBoundingBoxManager.trackClientTick(player);
+			player.getInventory().addItem(buildSword(), SNIPER, GRENADE);
 		}
 
 		@Override
@@ -483,15 +518,13 @@ public class KitSniper extends Kit {
 			}
 
 			//Sniper Information message
-			if (inventory.getItemInMainHand().getType() == Material.SPYGLASS) {
+			ItemStack hand = inventory.getItemInMainHand();
+			if (hand.getType() == Material.SPYGLASS) {
 				if (pinfo.getPreference(Preferences.KIT_ACTION_BAR)) {
 					player.sendActionBar(buildInaccuracyMessage(calcInaccuracy(player)));
 				}
-			}
-
-			//Grenade Information message
-			if (inventory.getItemInMainHand().getType() == Material.TURTLE_HELMET && player.getExp() == 0.999f) {
-
+			} else if (hand.getType() == Material.TURTLE_HELMET && player.getExp() == 0.999f) {
+				//Grenade Information message
 				Component actionBar = Component.text("Left/Right Click to Arm", GRENADE_MSG_COLOR);
 				Component text = Component.text("Click to arm the grenade", GRENADE_MSG_COLOR);
 				if (pinfo.getPreference(Preferences.KIT_ACTION_BAR)) {
@@ -500,6 +533,20 @@ public class KitSniper extends Kit {
 				//Chat Message is only sent once per life
 				if (pinfo.getPreference(Preferences.KIT_CHAT_MESSAGES) && RECEIVED_GRENADE_CHAT_MESSAGE.add(uuid)) {
 					player.sendMessage(text);
+				}
+			} else if (hand.getPersistentDataContainer().has(SWORD_KEY) && Main.getGame() instanceof CaptureTheFlag ctf) {
+				boolean hasSpeed = hand.getData(DataComponentTypes.ATTRIBUTE_MODIFIERS).modifiers().size() == 2;
+				boolean canHaveSpeed = !ctf.isFlagCarrier(player);
+				if (hasSpeed != canHaveSpeed) {
+					hand.setData(DataComponentTypes.ATTRIBUTE_MODIFIERS, canHaveSpeed ? SWORD_ATTRIBUTE_MODIFIERS : SWORD_ATTRIBUTE_MODIFIERS_NO_SPEED);
+					player.getInventory().setItemInMainHand(hand);
+
+					if (!canHaveSpeed)
+						player.sendMessage(Component.text().color(NamedTextColor.LIGHT_PURPLE)
+							.append(Component.text("The weight of the flag bears down on your "),
+								hand.getDataOrDefault(DataComponentTypes.ITEM_NAME, Component.empty()),
+								Component.text(". You're no longer fast!"))
+							.build());
 				}
 			}
 

@@ -8,6 +8,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 
@@ -55,6 +56,10 @@ public class MathUtils
 
 	public static <T> T randomElement(T[] array) {
 		return array[random.nextInt(array.length)];
+	}
+
+	public static <T> T randomElement(List<? extends T> list) {
+		return list.get(random.nextInt(list.size()));
 	}
 
 	public static int clamp(int min, int max, int value) {
