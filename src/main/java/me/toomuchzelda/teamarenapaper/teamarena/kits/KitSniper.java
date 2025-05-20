@@ -457,7 +457,7 @@ public class KitSniper extends Kit {
 				fireBullet(world, player, clientTick, friendlyTeam, start, velocity, null);
 
 				//Sniper Cooldown + deleting the dropped sniper and returning a new one.
-				if (!KitOptions.sniperAccuracy) {
+				if (KitOptions.sniperCooldown) {
 					player.setCooldown(Material.SPYGLASS, 25);
 				}
 				event.setCancelled(true);
