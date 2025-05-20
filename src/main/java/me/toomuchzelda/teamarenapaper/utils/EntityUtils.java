@@ -92,9 +92,7 @@ public class EntityUtils {
 
         if (entity instanceof Player player) {
 			var uselessRGBName = player.playerListName();
-			var entityInfo = entity.asHoverEvent().value();
-			entityInfo.name(uselessRGBName);
-			return uselessRGBName.hoverEvent(HoverEvent.showEntity(entityInfo));
+			return uselessRGBName.hoverEvent(HoverEvent.showEntity(EntityType.PLAYER, player.getUniqueId(), uselessRGBName));
 		} else {
 			return entity.name();
 		}

@@ -867,10 +867,11 @@ public class DamageEvent {
 	}
 	public void broadcastDeathMessage() {
 		if (this.broadcastsDeathMessage()) {
-			final Component deathMessage = this.getDamageType().getDeathMessage(this.getVictim(), this.getFinalAttacker(), this.getDamageTypeCause());
+			DamageType.DeathMessage deathMessage = this.getDamageType().getDeathMessage();
 			if (deathMessage != null) {
-				Main.componentLogger().info(deathMessage);
-				final Component darkened = TextUtils.darken(deathMessage);
+				Component message = deathMessage.render(this.getVictim(), this.getFinalAttacker(), this.getDamageTypeCause());
+				Component darkened = deathMessage.renderDarkened(this.getVictim(), this.getFinalAttacker(), this.getDamageTypeCause());
+				Main.componentLogger().info(message);
 				var iter = Main.getPlayersIter();
 				while (iter.hasNext()) {
 					var entry = iter.next();
@@ -882,7 +883,7 @@ public class DamageEvent {
 						viewer.sendMessage(darkened);
 					}
 					else {
-						viewer.sendMessage(deathMessage);
+						viewer.sendMessage(message);
 					}
 				}
 			}

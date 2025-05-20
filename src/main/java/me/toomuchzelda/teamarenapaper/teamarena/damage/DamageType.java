@@ -4,8 +4,8 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.minecraft.world.damagesource.DamageSource;
@@ -19,6 +19,8 @@ import org.bukkit.entity.*;
 import org.bukkit.event.entity.EntityDamageByBlockEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.inventory.EntityEquipment;
+import org.bukkit.inventory.ItemStack;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -167,6 +169,10 @@ public class DamageType {
      *                                  KIT BASE DAMAGETYPES
      ******************************************************************************************/
 
+	public static final DamageType NONE_MELEE = new DamageType(MELEE, "%Killed% was punched to death by %Killer% using %Weapon%",
+		"%Killed% was beaten to death by %Killer% using %Weapon%", "%Killed% was no match against %Killer%'s %Weapon%",
+		"%Killed% was bludgeoned to death by %Killer% using %Weapon%");
+
     public static final DamageType PYRO_MOLOTOV = new DamageType("Pyro Incendiary", "%Killed% was burned to death by %Killer%'s incendiary")
             .setFire().setIgnoreArmor(false).setNoKnockback();
 
@@ -178,6 +184,8 @@ public class DamageType {
 
 	public static final DamageType SNIPER_HEADSHOT = new DamageType("Sniper Headshot", "%Killed% was headshot by %Killer%")
 			.setProjectile();
+
+	public static final DamageType SNIPER_MELEE = new DamageType(MELEE, "%Killed% was stabbed by %Killer% using %Weapon%");
 
     public static final DamageType DEMO_TNTMINE = new DamageType("Demolitions TNT Mine",
             "%Killed% stepped on %Killer%'s TNT Mine and blew up")
@@ -282,7 +290,7 @@ public class DamageType {
     //a constant identifier for same types, to compare for same types across separate instances of this class
     // without evaluating a String
 	private final int id;
-	private final String[] _deathMessages;
+	private final DeathMessage[] _deathMessages;
 	private final List<Enchantment> applicableEnchantments;
     private boolean _burn;
     private boolean _explosion;
@@ -302,7 +310,7 @@ public class DamageType {
     private DamageType(String name, String... deathMessages) {
 		this.id = nextId();
         _name = name;
-        _deathMessages = deathMessages;
+        _deathMessages = DeathMessage.parseArray(deathMessages);
 		applicableEnchantments = new ArrayList<>(2);
 		applicableEnchantments.add(Enchantment.PROTECTION);
 		trackedType = DamageTimes.TrackedDamageTypes.OTHER;
@@ -330,7 +338,7 @@ public class DamageType {
     public DamageType(DamageType copyOf, String... deathMessages) {
         id = copyOf.id;
         _burn = copyOf._burn;
-        _deathMessages = deathMessages;
+        _deathMessages = DeathMessage.parseArray(deathMessages);
         _explosion = copyOf._explosion;
         _fall = copyOf._fall;
         _fire = copyOf._fire;
@@ -486,41 +494,14 @@ public class DamageType {
         }
     }
 
-    public String getRawDeathMessage() {
-        return _deathMessages[MathUtils.random.nextInt(_deathMessages.length)];
-    }
-
 	@Nullable
-    public Component getDeathMessage(@Nullable Entity victim, @Nullable Entity killer, @Nullable Entity cause) {
+    public DeathMessage getDeathMessage() {
 		if(hasDeathMessages()) {
-			return doPlaceholders(getRawDeathMessage(),
-					EntityUtils.getComponent(victim),
-					EntityUtils.getComponent(killer),
-					cause != null ? EntityUtils.getComponent(cause) : Component.text("Unknown", MESSAGE_COLOR)
-			);
+			return MathUtils.randomElement(_deathMessages);
 		}
 
 		return null;
     }
-
-	private static final Pattern LEGACY_REGEX = Pattern.compile("%(Kille[dr]|Cause)%");
-	private static final TextColor MESSAGE_COLOR = NamedTextColor.YELLOW;
-	private static Component doPlaceholders(String message, Component victim, Component killer, Component cause) {
-		// old message format
-		return Component.text(message, MESSAGE_COLOR)
-				.replaceText(TextReplacementConfig.builder()
-						.match(LEGACY_REGEX)
-						.replacement((result, builder) -> {
-							String arg = result.group(1);
-							return switch (arg) {
-								case "Killed" -> victim;
-								case "Killer" -> killer;
-								case "Cause" -> cause;
-								default -> throw new Error();
-							};
-						})
-						.build());
-	}
 
     public static DamageType getMelee(EntityDamageEvent event) {
         if(event instanceof EntityDamageByEntityEvent dEvent && dEvent.getDamager() instanceof org.bukkit.entity.LivingEntity living) {
@@ -825,5 +806,84 @@ public class DamageType {
 	public boolean equals(Object obj) {
 		return obj instanceof DamageType other &&
 				id == other.id;
+	}
+
+	/**
+	 * A death message with certain placeholders
+	 * @param fragments The component fragments
+	 * @param placeholders The placeholders
+	 */
+	public record DeathMessage(Component[] fragments, Placeholder[] placeholders) {
+		private static final TextColor MESSAGE_COLOR = NamedTextColor.YELLOW;
+		private static final TextColor MESSAGE_COLOR_DARKENED = TextUtils.darken(NamedTextColor.YELLOW);
+
+		public enum Placeholder {
+			VICTIM, ATTACKER, CAUSE, WEAPON
+		}
+
+		private static final Pattern LEGACY_REGEX = Pattern.compile("%(?:Kille[dr]|Cause|Weapon)%");
+		public static DeathMessage parse(String string) {
+			List<Component> fragments = new ArrayList<>();
+			List<Placeholder> placeholders = new ArrayList<>();
+			int index = 0;
+			var matcher = LEGACY_REGEX.matcher(string);
+			while (matcher.find()) {
+				fragments.add(Component.text(string.substring(index, matcher.start())));
+				placeholders.add(switch (string.substring(matcher.start() + 1, matcher.end() - 1)) {
+					case "Killed" -> Placeholder.VICTIM;
+					case "Killer" -> Placeholder.ATTACKER;
+					case "Cause" -> Placeholder.CAUSE;
+					case "Weapon" -> Placeholder.WEAPON;
+					default -> throw new Error();
+				});
+				index = matcher.end();
+			}
+			// append tail
+			fragments.add(Component.text(string.substring(index)));
+
+			return new DeathMessage(fragments.toArray(new Component[0]), placeholders.toArray(new Placeholder[0]));
+		}
+
+		public static DeathMessage[] parseArray(String... strings) {
+			DeathMessage[] deathMessages = new DeathMessage[strings.length];
+			for (int i = 0; i < strings.length; i++) {
+				deathMessages[i] = parse(strings[i]);
+			}
+			return deathMessages;
+		}
+
+		public Component render(@Nullable Entity victim, @Nullable Entity attacker, @Nullable Entity cause) {
+			return render(false, victim, attacker, cause);
+		}
+
+		public Component renderDarkened(@Nullable Entity victim, @Nullable Entity attacker, @Nullable Entity cause) {
+			return render(true, victim, attacker, cause);
+		}
+
+		private Component render(boolean darken, @Nullable Entity victim, @Nullable Entity attacker, @Nullable Entity cause) {
+			var builder = Component.text().color(darken ? MESSAGE_COLOR_DARKENED : MESSAGE_COLOR);
+			for (int i = 0; i < placeholders.length; i++) {
+				builder.append(fragments[i]);
+				Component value = switch (placeholders[i]) {
+					case VICTIM -> EntityUtils.getComponent(victim);
+					case ATTACKER -> EntityUtils.getComponent(attacker);
+					case CAUSE -> EntityUtils.getComponent(cause);
+					case WEAPON -> {
+						ItemStack stack;
+						if (attacker instanceof LivingEntity livingEntity &&
+							livingEntity.getEquipment() instanceof EntityEquipment ee && // I LOVE NULLS
+							!(stack = ee.getItemInMainHand()).isEmpty()) {
+							yield stack.displayName();
+						} else {
+							yield Component.empty();
+						}
+					}
+				};
+				builder.append(darken ? TextUtils.darken(value) : value);
+			}
+			// append tail
+			builder.append(fragments[fragments.length - 1]);
+			return builder.build();
+		}
 	}
 }
