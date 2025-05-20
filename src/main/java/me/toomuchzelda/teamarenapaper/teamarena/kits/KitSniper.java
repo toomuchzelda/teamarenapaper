@@ -1,10 +1,18 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
+import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.events.PacketContainer;
+import com.comphenix.protocol.wrappers.WrappedDataValue;
+import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.google.common.collect.EvictingQueue;
+import io.papermc.paper.adventure.PaperAdventure;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.datacomponent.item.ItemAttributeModifiers;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
+import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.abilities.centurion.ShieldInstance;
 import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
@@ -18,24 +26,20 @@ import me.toomuchzelda.teamarenapaper.utils.DisplayUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketDisplay;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.block.data.BlockData;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Item;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.EquipmentSlotGroup;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.*;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
@@ -44,6 +48,7 @@ import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3f;
 
 import java.util.*;
 
@@ -144,6 +149,7 @@ public class KitSniper extends Kit {
 		public static final int SPAWN_PROTECTION_DURATION = 5 * 20;
 		final Map<Player, Integer> spawnTime = new HashMap<>();
 		final Set<Player> spawnProtectionExpired = new HashSet<>();
+		final Map<Player, ScopeGlint> scopeGlints = new HashMap<>();
 
 		@Override
 		public void unregisterAbility() {
@@ -158,11 +164,12 @@ public class KitSniper extends Kit {
 
 		@Override
 		public void giveAbility(Player player) {
+			player.getInventory().addItem(buildSword(), SNIPER, GRENADE);
 			player.setExp(0.999f);
+			RewindablePlayerBoundingBoxManager.trackClientTick(player);
 			spawnTime.put(player, TeamArena.getGameTick());
 			inaccuracyTracker.put(player, EvictingQueue.create(3));
-			RewindablePlayerBoundingBoxManager.trackClientTick(player);
-			player.getInventory().addItem(buildSword(), SNIPER, GRENADE);
+			scopeGlints.put(player, new ScopeGlint(player));
 		}
 
 		@Override
@@ -172,9 +179,18 @@ public class KitSniper extends Kit {
 			spawnTime.remove(player);
 			spawnProtectionExpired.remove(player);
 			inaccuracyTracker.remove(player);
+			ScopeGlint scopeGlint = scopeGlints.remove(player);
+			scopeGlint.remove();
 			var uuid = player.getUniqueId();
 			RECEIVED_GRENADE_CHAT_MESSAGE.remove(uuid);
 			RewindablePlayerBoundingBoxManager.untrackClientTick(player);
+		}
+
+		@Override
+		public void onTick() {
+			for (ScopeGlint scopeGlint : scopeGlints.values()) {
+				scopeGlint.update();
+			}
 		}
 
 		public void throwGrenade(Player player, double amp) {
@@ -588,6 +604,176 @@ public class KitSniper extends Kit {
 			if (spawnProtectionExpired.add(player)) {
 				player.sendMessage(text("Your protective aura has faded " + reason + ".", textColor));
 			}
+		}
+	}
+
+	public static class ScopeGlint extends PacketDisplay {
+
+		public enum Display {
+			OFF, WHITE, TEAM_COLOR
+		}
+
+		private final Player sniper;
+		private final PlayerInfo sniperInfo;
+		private boolean isScoping = false;
+
+		private static final float TEXT_X_SCALE = 8f; //SHIELD_WIDTH;
+		private static final float TEXT_Y_SCALE = 4;
+		private static final float TEXT_X_OFFSET = -3f / 256 * TEXT_X_SCALE;
+		private static final float TEXT_Y_OFFSET = -1f / 16 * (16 + 3) / 16 * TEXT_Y_SCALE + 1f / 4;
+		public ScopeGlint(Player sniper) {
+			super(NEW_ID, EntityType.TEXT_DISPLAY, getRealEyeLocation(sniper, false), null, null);
+			this.sniper = sniper;
+			this.sniperInfo = Main.getPlayerInfo(sniper);
+			setViewerRule(viewer -> !sniperInfo.team.hasMember(viewer) &&
+				Main.getPlayerInfo(viewer).getPreference(Preferences.SNIPER_SCOPE_GLINT) != Display.OFF);
+
+			text(Component.text("█"));
+			setBrightnessOverride(new org.bukkit.entity.Display.Brightness(15, 0));
+			setBackgroundColor(Color.fromARGB(0x00FFFFFF));
+			setTeleportDuration(3);
+			setInterpolationDuration(2);
+			// force client to render
+			setMetadata(MetaIndex.DISPLAY_VIEW_RANGE_OBJ, 4f);
+			updateMetadataPacket();
+		}
+
+		private static final Vector GLOBAL_UP = new Vector(0, 1, 0);
+		private static Location getRealEyeLocation(Player player, boolean isScoping) {
+			Location location = player.getLocation();
+			// semi-realistic neck physics
+			double height = player.getHeight();
+			double eyeHeight = player.getEyeHeight();
+			double headLength = (height - eyeHeight) * 2;
+			double neckHeight = height - headLength;
+			location.add(0, neckHeight, 0);
+			// | Lefty	| Using offhand	| Is left hand	|
+			// | False	| False			| False			|
+			// | True	| False			| True			|
+			// | False	| True			| True			| // it's called a table intellij
+			// | True	| True			| False			|
+			boolean isLeftHand = player.getActiveItemHand() == EquipmentSlot.OFF_HAND ^ player.getMainHand() == MainHand.LEFT;
+			Vector front = location.getDirection();
+			Vector right = front.getCrossProduct(GLOBAL_UP).normalize();
+			Vector up = front.getCrossProduct(right).normalize().multiply(-1);
+			return location.add(front.multiply(isScoping ? 0.95 : 0.35).add(up.multiply(headLength * 0.3)).add(right.multiply((isLeftHand ? -1 : 1) * 0.15)));
+		}
+
+		public void update() {
+			PlayerInventory inventory = sniper.getInventory();
+			if (inventory.getItemInOffHand().getType() == Material.SPYGLASS || inventory.getItemInMainHand().getType() == Material.SPYGLASS) {
+				isScoping = sniper.getActiveItem().getType() == Material.SPYGLASS;
+				move(getRealEyeLocation(sniper, isScoping));
+				if (!isAlive())
+					respawn();
+				else
+					refreshViewerMetadata();
+			} else {
+				despawn();
+			}
+		}
+
+		private final Map<Player, Int2ObjectMap<Object>> personalizedMetadataCache = new HashMap<>();
+		@Override
+		protected void spawn(Player player) {
+			if (!isAlive())
+				return;
+
+			personalizedMetadataCache.put(player, new Int2ObjectOpenHashMap<>());
+
+			this.sendPacket(player, spawnPacket);
+			List<WrappedDataValue> personalizedValues = packPersonalizedValues(player);
+			if (!personalizedValues.isEmpty()) {
+				var playerMetadataPacket = metadataPacket.shallowClone();
+				playerMetadataPacket.getDataValueCollectionModifier().modify(0, old -> {
+					var list = new ArrayList<>(old);
+					list.addAll(personalizedValues);
+					return list;
+				});
+				sendPacket(player, playerMetadataPacket);
+			} else {
+				sendPacket(player, metadataPacket);
+			}
+		}
+
+		@Override
+		protected void despawn(Player player) {
+			super.despawn(player);
+
+			personalizedMetadataCache.remove(player).clear();
+		}
+
+		@Override
+		public void refreshViewerMetadata() {
+			for (Player player : realViewers) {
+				List<WrappedDataValue> personalizedValues = packPersonalizedValues(player);
+				if (!personalizedValues.isEmpty()) {
+					var metadataPacket = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
+					metadataPacket.getIntegers().write(0, getId());
+					metadataPacket.getDataValueCollectionModifier().write(0, personalizedValues);
+					sendPacket(player, metadataPacket);
+				}
+			}
+		}
+
+		private static WrappedDataValue newWrappedDataValue(WrappedDataWatcher.WrappedDataWatcherObject object, Object value) {
+			return new WrappedDataValue(object.getIndex(), object.getSerializer(), value);
+		}
+
+		private static void checkCache(Int2ObjectMap<Object> cache, List<WrappedDataValue> dirtyList,
+									   WrappedDataWatcher.WrappedDataWatcherObject object, Object value) {
+			Object old = cache.put(object.getIndex(), value);
+			if (!value.equals(old)) {
+				dirtyList.add(newWrappedDataValue(object, value));
+			}
+		}
+
+		private List<WrappedDataValue> packPersonalizedValues(Player player) {
+			Int2ObjectMap<Object> cache = personalizedMetadataCache.get(player);
+			List<WrappedDataValue> dirtyList = new ArrayList<>();
+
+			TextComponent text = Main.getPlayerInfo(player).getPreference(Preferences.SNIPER_SCOPE_GLINT) == Display.TEAM_COLOR ?
+				Component.text("█", sniperInfo.team.getRGBTextColor()) :
+				Component.text("█");
+			checkCache(cache, dirtyList, MetaIndex.TEXT_DISPLAY_TEXT_OBJ, PaperAdventure.asVanilla(text));
+
+			Location glintLocation = getLocationMut();
+			Location playerLocation = player.getEyeLocation();
+			Vector glintToPlayer = playerLocation.clone().subtract(glintLocation).toVector();
+			Vector glintDirection = glintLocation.getDirection();
+			Vector playerDirection = playerLocation.getDirection().multiply(-1);
+
+			double angle = glintDirection.angle(glintToPlayer);
+			// minimum size
+			double distanceSquared = playerLocation.distanceSquared(glintLocation);
+			float scale = isScoping ? 1 : 0.6f;
+			if (distanceSquared >= 24 * 24) {
+				scale *= (float) (Math.sqrt(distanceSquared) / 24);
+			}
+			// also scale by angle
+			if (angle <= Math.PI / 9) { // 20 degrees
+				scale *= (float) MathUtils.lerp(3, 1, angle / (Math.PI / 9));
+			}
+			checkCache(cache, dirtyList, MetaIndex.DISPLAY_TRANSLATION_OBJ, new Vector3f(0, -scale / 10f /* magic number */, 0));
+			checkCache(cache, dirtyList, MetaIndex.DISPLAY_SCALE_OBJ, new Vector3f(scale));
+			// opacity based on angle to the player
+			// 255 - fully opaque
+			double opacity = 255 * MathUtils.clamp(0.5, 1, 1 - (MathUtils.clamp(Math.PI / 18, Math.PI / 4, angle) - Math.PI / 18) / 35d);
+			// but reduce the glint if the player is looking at it or scoping
+			if (playerDirection.angle(glintDirection) <= Math.PI / 18) {
+				opacity = Math.max(opacity * 0.8, 128);
+			}
+			if (player.getActiveItem().getType() == Material.SPYGLASS) {
+				opacity = Math.max(opacity * 0.5, 128);
+			}
+
+			checkCache(cache, dirtyList, MetaIndex.TEXT_DISPLAY_TEXT_OPACITY_OBJ, opacity > 127 ? (byte) (opacity - 256) : (byte) opacity);
+
+			// always send 0 interp delay
+			if (!dirtyList.isEmpty())
+				dirtyList.add(newWrappedDataValue(MetaIndex.DISPLAY_INTERPOLATION_DELAY_OBJ, 0));
+
+			return dirtyList;
 		}
 	}
 

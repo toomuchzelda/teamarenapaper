@@ -4,6 +4,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.SidebarManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSniper;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.SpeechBubbleHologram;
 import org.bukkit.Material;
@@ -70,6 +71,12 @@ public class Preferences {
 			"See damage holograms for damage caused by other players", true)
 		.setDisplayName("See damage holograms")
 		.setIcon(Material.IRON_SWORD)
+		.setCategory(PreferenceCategory.VISUAL_EFFECTS);
+
+	public static final Preference<KitSniper.ScopeGlint.Display> SNIPER_SCOPE_GLINT = SimplePreference.ofEnum("sniper_scope_glint",
+		"See a glint when a sniper aims near you", KitSniper.ScopeGlint.Display.class, KitSniper.ScopeGlint.Display.WHITE)
+		.setDisplayName("Sniper scope glint")
+		.setIcon(Material.SPYGLASS)
 		.setCategory(PreferenceCategory.VISUAL_EFFECTS);
 
 	public static final Preference<Boolean> TEAM_CHAT_SOUND = SimplePreference.ofBoolean("team_chat_sound",

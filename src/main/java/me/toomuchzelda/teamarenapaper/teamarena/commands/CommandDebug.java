@@ -24,6 +24,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.hideandseek.PacketFlyingPoint;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.PayloadTestKillstreak;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSniper;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketDisplay;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
@@ -74,6 +75,9 @@ public class CommandDebug extends CustomCommand {
 
 	private static List<ShieldInstance> shieldInstance = new ArrayList<>();
 	private static List<BukkitTask> shieldTask = new ArrayList<>();
+
+	private static KitSniper.ScopeGlint scopeGlint;
+	private static BukkitTask scopeGlintTask;
 
 	public CommandDebug() {
 		super("debug", "", "/debug ...", PermissionLevel.OWNER, "abuse");
@@ -650,6 +654,17 @@ public class CommandDebug extends CustomCommand {
 						(byte) (MetaIndex.BASE_BITFIELD_GLOWING_MASK));
 				display.updateMetadataPacket();
 				display.respawn();
+			}
+			case "scopeglint" -> {
+				if (scopeGlint != null) {
+					scopeGlint.remove();
+					scopeGlint = null;
+					scopeGlintTask.cancel();
+					scopeGlintTask = null;
+				} else {
+					scopeGlint = new KitSniper.ScopeGlint(player);
+					scopeGlintTask = Bukkit.getScheduler().runTaskTimer(Main.getPlugin(), scopeGlint::update, 0, 0);
+				}
 			}
 			default -> showUsage(sender);
 		}

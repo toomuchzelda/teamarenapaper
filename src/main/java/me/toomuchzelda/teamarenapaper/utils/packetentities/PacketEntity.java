@@ -8,13 +8,13 @@ import io.papermc.paper.adventure.PaperAdventure;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.PacketUtils;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
 import org.bukkit.Bukkit;
-import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.data.BlockData;
@@ -522,17 +522,16 @@ public class PacketEntity
 	public void onInteract(Player player, EquipmentSlot hand, boolean attack) {}
 
 	protected void reEvaluateViewers(boolean spawn) {
-		Chunk holChunk = this.location.getChunk();
-		final int holX = holChunk.getX();
-		final int holZ = holChunk.getZ();
+		BlockCoords coords = new BlockCoords(location);
+		double x = location.getX();
+		double z = location.getZ();
+		Location temp = location.clone();
 		if(viewerRule != null) {
 			for(Player p : Bukkit.getOnlinePlayers()) {
 				if(viewerRule.test(p)) {
 					viewers.add(p);
-					Chunk pChunk = p.getChunk();
-					int playX = pChunk.getX();
-					int playZ = pChunk.getZ();
-					if(isInViewingRange(holX, holZ, playX, playZ, p.getSimulationDistance())) {
+					p.getLocation(temp);
+					if(isInViewingRangeNew(x, z, temp.getX(), temp.getZ(), p.getSendViewDistance() << 4) && coords.hasLoaded(p)) {
 						if(realViewers.add(p) && spawn)
 							spawn(p);
 					}
@@ -550,11 +549,8 @@ public class PacketEntity
 		}
 		else {
 			for(Player p : viewers) {
-				Chunk pChunk = p.getChunk();
-				int playX = pChunk.getX();
-				int playZ = pChunk.getZ();
-
-				if(isInViewingRange(holX, holZ, playX, playZ, p.getSimulationDistance())) {
+				p.getLocation(temp);
+				if(isInViewingRangeNew(x, z, temp.getX(), temp.getZ(), p.getSendViewDistance() << 4) && coords.hasLoaded(p)) {
 					if(realViewers.add(p) && spawn)
 						spawn(p);
 				}
@@ -579,6 +575,11 @@ public class PacketEntity
 		final int z2 = playZ + offset;
 
 		return (playX <= holX && holX <= x2 && playZ <= holZ && holZ <= z2);
+	}
+	private static boolean isInViewingRangeNew(double x, double z, double viewerX, double viewerZ, int viewDistance) {
+		double dx = x - viewerX;
+		double dz = z - viewerZ;
+		return dx * dx + dz * dz <= viewDistance * viewDistance;
 	}
 
 	public void refreshViewerMetadata() {
