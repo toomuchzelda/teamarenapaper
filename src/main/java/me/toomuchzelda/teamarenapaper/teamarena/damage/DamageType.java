@@ -179,11 +179,15 @@ public class DamageType {
 	public static final DamageType SNIPER_GRENADE_FAIL = new DamageType("Grenade Fail", "%Killed% forgot they pulled the pin.")
 			.setInstantDeath().setNoKnockback();
 
+	/**
+	 * for sniper kills, additional death messages are supplied by the kit itself
+	 * @see me.toomuchzelda.teamarenapaper.teamarena.kits.KitSniper.SniperDeathMessages
+ 	 */
 	public static final DamageType SNIPER_SHOT = new DamageType("Sniper Shot", "%Killed% was sniped by %Killer%")
 		.setProjectile();
 
 	public static final DamageType SNIPER_HEADSHOT = new DamageType("Sniper Headshot", "%Killed% was headshot by %Killer%")
-			.setProjectile();
+		.setProjectile();
 
 	public static final DamageType SNIPER_MELEE = new DamageType(MELEE, "%Killed% was stabbed by %Killer% using %Weapon%");
 

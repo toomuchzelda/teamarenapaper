@@ -409,7 +409,7 @@ public class HideAndSeek extends TeamArena {
 	public void onDamage(DamageEvent event) {
 		if (event.getFinalAttacker() instanceof Player p && this.seekerTeam.hasMember(p)) {
 			if (this.isAllowedEntityType(event.getVictim().getType())) {
-				event.setBroadcastDeathMessage(false);
+				event.setBroadcastsDeathMessage(false);
 			}
 		}
 

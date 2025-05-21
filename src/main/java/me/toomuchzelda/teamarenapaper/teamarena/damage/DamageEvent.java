@@ -54,6 +54,8 @@ public class DamageEvent {
 	private double finalDamage;
 	private DamageType damageType;
 	private Entity damageTypeCause; // for %Cause% in DamageType deathmessages
+	@Nullable
+	private DamageType.DeathMessage deathMessageOverride;
 	private boolean broadcastsDeathMessage;
 
 	//null implies no knockback
@@ -852,11 +854,20 @@ public class DamageEvent {
 		return this.damageTypeCause;
 	}
 
-	public boolean broadcastsDeathMessage() {
+	public void setDeathMessageOverride(@Nullable DamageType.DeathMessage deathMessageOverride) {
+		this.deathMessageOverride = deathMessageOverride;
+	}
+
+	@Nullable
+	public DamageType.DeathMessage getDeathMessageOverride() {
+		return deathMessageOverride;
+	}
+
+	public boolean isBroadcastsDeathMessage() {
 		return this.broadcastsDeathMessage;
 	}
 
-	public void setBroadcastDeathMessage(boolean broadcastsDeathMessage) {
+	public void setBroadcastsDeathMessage(boolean broadcastsDeathMessage) {
 		this.broadcastsDeathMessage = broadcastsDeathMessage;
 	}
 
@@ -866,8 +877,8 @@ public class DamageEvent {
 		NONE
 	}
 	public void broadcastDeathMessage() {
-		if (this.broadcastsDeathMessage()) {
-			DamageType.DeathMessage deathMessage = this.getDamageType().getDeathMessage();
+		if (this.isBroadcastsDeathMessage()) {
+			DamageType.DeathMessage deathMessage = deathMessageOverride != null ? deathMessageOverride : damageType.getDeathMessage();
 			if (deathMessage != null) {
 				Component message = deathMessage.render(this.getVictim(), this.getFinalAttacker(), this.getDamageTypeCause());
 				Component darkened = deathMessage.renderDarkened(this.getVictim(), this.getFinalAttacker(), this.getDamageTypeCause());

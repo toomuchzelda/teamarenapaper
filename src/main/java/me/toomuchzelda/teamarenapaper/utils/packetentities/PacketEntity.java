@@ -527,30 +527,35 @@ public class PacketEntity
 		double z = location.getZ();
 		Location temp = location.clone();
 		if(viewerRule != null) {
-			for(Player p : Bukkit.getOnlinePlayers()) {
-				if(viewerRule.test(p)) {
-					viewers.add(p);
-					p.getLocation(temp);
-					if(isInViewingRangeNew(x, z, temp.getX(), temp.getZ(), p.getSendViewDistance() << 4) && coords.hasLoaded(p)) {
-						if(realViewers.add(p) && spawn)
-							spawn(p);
-					}
-					else if(realViewers.remove(p) && spawn) {
-						despawn(p);
-					}
+			// remove offline players
+			for (var iter = viewers.iterator(); iter.hasNext();) {
+				Player viewer = iter.next();
+				if (!viewer.isOnline()) {
+					iter.remove();
+					if (realViewers.remove(viewer) && spawn)
+						despawn(viewer);
 				}
-				else {
-					viewers.remove(p);
-					if(realViewers.remove(p) && spawn) {
-						despawn(p);
+			}
+			for (Player player : Bukkit.getOnlinePlayers()) {
+				if (viewerRule.test(player)) {
+					if (viewers.add(player)) {
+						player.getLocation(temp);
+						if (isInViewingRangeNew(x, z, temp.getX(), temp.getZ(), player.getSendViewDistance() << 4) && coords.hasLoaded(player)) {
+							if (realViewers.add(player) && spawn)
+								spawn(player);
+						}
 					}
+				} else {
+					viewers.remove(player);
+					if (realViewers.remove(player) && spawn)
+						despawn(player);
 				}
 			}
 		}
 		else {
 			for(Player p : viewers) {
 				p.getLocation(temp);
-				if(isInViewingRangeNew(x, z, temp.getX(), temp.getZ(), p.getSendViewDistance() << 4) && coords.hasLoaded(p)) {
+				if (p.isOnline() && isInViewingRangeNew(x, z, temp.getX(), temp.getZ(), p.getSendViewDistance() << 4) && coords.hasLoaded(p)) {
 					if(realViewers.add(p) && spawn)
 						spawn(p);
 				}
