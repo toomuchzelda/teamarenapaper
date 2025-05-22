@@ -40,9 +40,6 @@ import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.kyori.adventure.text.minimessage.tag.Inserting;
-import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -239,19 +236,11 @@ public class EventListeners implements Listener
 		});
 	}
 
-	private static final MiniMessage MM = MiniMessage.builder().tags(TagResolver.empty()).build();
-	private static final MiniMessage MM_MOD = MiniMessage.miniMessage();
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true) // Get called after other plugins.
 	public void asyncChat(AsyncChatEvent event) {
 		Player player = event.getPlayer();
 		String rawMessage = PlainTextComponentSerializer.plainText().serialize(event.message());
-		MiniMessage miniMessage = Main.getPlayerInfo(player).hasPermission(PermissionLevel.MOD) ? MM_MOD : MM;
-		// process <item> placeholder
-		Component newMessage = miniMessage.deserialize(rawMessage, TagResolver.resolver("item",
-			(Inserting) () -> {
-				var stack = player.getInventory().getItemInMainHand();
-				return stack.isEmpty() ? Component.empty() : stack.displayName();
-			}));
+		Component newMessage = TeamArena.parseChatPlaceholders(player, rawMessage);
 		if (PlainTextComponentSerializer.plainText().serialize(newMessage).isBlank()) {
 			event.setCancelled(true);
 			return;

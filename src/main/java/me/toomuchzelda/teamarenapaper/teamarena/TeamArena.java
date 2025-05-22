@@ -58,6 +58,9 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.tag.Inserting;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
@@ -89,6 +92,8 @@ import org.jetbrains.annotations.Nullable;
 import javax.annotation.OverridingMethodsMustInvokeSuper;
 import java.io.File;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
 /**
@@ -1199,6 +1204,31 @@ public abstract class TeamArena
 			// Queue for voice announcer
 			ChatAnnouncerManager.queueMessage(message);
 		}
+	}
+
+	private static final MiniMessage MM = MiniMessage.builder().tags(TagResolver.empty()).build();
+	private static final MiniMessage MM_MOD = MiniMessage.miniMessage();
+	public static Component parseChatPlaceholders(Player player, String rawMessage) {
+		MiniMessage miniMessage = Main.getPlayerInfo(player).hasPermission(PermissionLevel.MOD) ? MM_MOD : MM;
+		// process <item> placeholder
+		return miniMessage.deserialize(rawMessage, TagResolver.resolver("item",
+			(Inserting) () -> {
+				// access Bukkit API synchronously
+				CompletableFuture<ItemStack> future;
+				if (!Bukkit.isPrimaryThread()) {
+					future = new CompletableFuture<>();
+					Bukkit.getScheduler().runTask(Main.getPlugin(), () -> future.complete(player.getInventory().getItemInMainHand()));
+				} else {
+					future = CompletableFuture.completedFuture(player.getInventory().getItemInMainHand());
+				}
+				try {
+					ItemStack stack = future.get(1, TimeUnit.SECONDS);
+					return stack.isEmpty() ? Component.empty() : stack.displayName();
+				} catch (Exception ex) {
+					Main.componentLogger().error("Failed to get {}'s held item", player.getName(), ex);
+					return Component.empty();
+				}
+			}));
 	}
 
 	private static final Component COLON_SPACE = Component.text(": ");
