@@ -553,9 +553,17 @@ public class PacketEntity
 			}
 		}
 		else {
-			for(Player p : viewers) {
+			for (var iter = viewers.iterator(); iter.hasNext();) {
+				Player p = iter.next();
+				if (!p.isOnline()) {
+					iter.remove();
+					if (realViewers.remove(p) && spawn)
+						despawn(p);
+					continue;
+				}
+
 				p.getLocation(temp);
-				if (p.isOnline() && isInViewingRangeNew(x, z, temp.getX(), temp.getZ(), p.getSendViewDistance() << 4) && coords.hasLoaded(p)) {
+				if (isInViewingRangeNew(x, z, temp.getX(), temp.getZ(), p.getSendViewDistance() << 4) && coords.hasLoaded(p)) {
 					if(realViewers.add(p) && spawn)
 						spawn(p);
 				}

@@ -8,6 +8,7 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.decoration.ArmorStand;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import java.util.*;
@@ -74,7 +75,7 @@ public class MetaIndex
 	public static final int DISPLAY_SHADOW_STRENGTH_IDX = 19;
 	public static final int DISPLAY_WIDTH_IDX = 20;
 	public static final int DISPLAY_HEIGHT_IDX = 21;
-	public static final int DISPLAY_GLOW_COLOR_OVERRIDE = 22;
+	public static final int DISPLAY_GLOW_COLOR_OVERRIDE_IDX = 22;
 
 	public static final int BLOCK_DISPLAY_BLOCK_IDX = 23;
 
@@ -134,10 +135,12 @@ public class MetaIndex
 	public static final WrappedDataWatcherObject DISPLAY_POSROT_INTERPOLATION_DURATION_OBJ;
 	public static final WrappedDataWatcherObject DISPLAY_TRANSLATION_OBJ;
 	public static final WrappedDataWatcherObject DISPLAY_SCALE_OBJ;
+	public static final WrappedDataWatcherObject DISPLAY_ROTATION_LEFT_OBJ = dataWatcherObject(DISPLAY_ROTATION_LEFT_IDX, Quaternionf.class);
 	public static final WrappedDataWatcherObject DISPLAY_BRIGHTNESS_OVERRIDE_OBJ = dataWatcherObject(DISPLAY_BRIGHTNESS_OVERRIDE_IDX, Integer.class);
 	public static final WrappedDataWatcherObject DISPLAY_VIEW_RANGE_OBJ = dataWatcherObject(DISPLAY_VIEW_RANGE_IDX, Float.class);
 	public static final WrappedDataWatcherObject DISPLAY_WIDTH_OBJ = dataWatcherObject(DISPLAY_WIDTH_IDX, Float.class);
 	public static final WrappedDataWatcherObject DISPLAY_HEIGHT_OBJ = dataWatcherObject(DISPLAY_HEIGHT_IDX, Float.class);
+	public static final WrappedDataWatcherObject DISPLAY_GLOW_COLOR_OVERRIDE_OBJ = dataWatcherObject(DISPLAY_GLOW_COLOR_OVERRIDE_IDX, Integer.class);
 
 	public static final WrappedDataWatcherObject DISPLAY_BILLBOARD_OBJ;
 	public enum DisplayBillboardOption {

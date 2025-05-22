@@ -1,8 +1,7 @@
 package me.toomuchzelda.teamarenapaper.utils;
 
-import org.bukkit.NamespacedKey;
-import org.bukkit.Registry;
-import org.bukkit.Sound;
+import org.bukkit.*;
+import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 
@@ -34,5 +33,19 @@ public class SoundUtils {
     // very funny - toomuchzelda
     public static Sound getRandomObnoxiousSound() {
         return OBNOXIOUS_SOUNDS.get(MathUtils.random.nextInt(OBNOXIOUS_SOUNDS.size()));
+	}
+
+	/**
+	 * Plays a sound with a minimum volume similar to /playsound.
+	 */
+	public static void playSoundWithMinVolume(Player player, Location location, Sound sound, SoundCategory category, float volume, float pitch, long seed, float minVolume) {
+		// attenuation distance for all sounds not from vanilla gameplay is 16
+		Location playerLocation = player.getLocation();
+		if (minVolume > 0 && playerLocation.distanceSquared(location) > 16 * 16) {
+			location = location.clone().subtract(playerLocation);
+			location.multiply(2 / location.length()).add(playerLocation);
+			volume = minVolume;
+		}
+		player.playSound(location, sound, category, volume, pitch, seed);
 	}
 }

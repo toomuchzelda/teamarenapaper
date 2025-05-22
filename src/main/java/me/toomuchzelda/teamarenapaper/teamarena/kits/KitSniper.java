@@ -25,6 +25,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketDisplay;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -150,12 +151,10 @@ public class KitSniper extends Kit {
 
 		final Map<Player, SniperInfo> sniperInfoMap = new HashMap<>();
 
-//		final Map<Player, EvictingQueue<Vector>> inaccuracyTracker = new HashMap<>();
-
 		public static final int SPAWN_PROTECTION_DURATION = 5 * 20;
-//		final Map<Player, Integer> spawnTime = new HashMap<>();
-//		final Set<Player> spawnProtectionExpired = new HashSet<>();
 		final Map<Player, ScopeGlint> scopeGlints = new HashMap<>();
+
+		final List<SniperTracers> sniperTracers = new ArrayList<>();
 
 		static class SniperInfo {
 			EvictingQueue<Vector> inaccuracyTracker = EvictingQueue.create(3);
@@ -195,6 +194,10 @@ public class KitSniper extends Kit {
 			grenadeTasks.clear();
 
 			sniperInfoMap.clear();
+			scopeGlints.values().forEach(ScopeGlint::remove);
+			scopeGlints.clear();
+			sniperTracers.forEach(tracers -> tracers.displays.forEach(PacketEntity::remove));
+			sniperTracers.clear();
 		}
 
 		@Override
@@ -223,6 +226,13 @@ public class KitSniper extends Kit {
 		@Override
 		public void onTick() {
 			scopeGlints.values().forEach(ScopeGlint::update);
+			sniperTracers.removeIf(tracer -> {
+				if (TeamArena.getGameTick() > tracer.removeAt) {
+					tracer.displays.forEach(PacketEntity::remove);
+					return true;
+				}
+				return false;
+			});
 		}
 
 		public void throwGrenade(Player player, double amp) {
@@ -468,16 +478,12 @@ public class KitSniper extends Kit {
 			Vector startVector = start.toVector();
 			var rayTraceResult = doRayTrace(player, playerHitboxes, otherEntities.toList(), start, velocity, 128);
 
-			world.playSound(player, Sound.ENTITY_GENERIC_EXPLODE, 0.8f, 2.5f);
-
 			Player firstPlayerVictim = null; // will show as the cause for collateral death messages
+			boolean hasHeadshot = false;
 			Double shieldDistance = null;
 			if (!rayTraceResult.entityHits.isEmpty()) {
 				for (EntityHit entityHit : rayTraceResult.entityHits) {
-					if (entityHit.isHeadshot)
-						player.playSound(player.getEyeLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.PLAYERS, 1, 2);
-					else
-						player.playSound(player.getEyeLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.PLAYERS, 0.5f, 1);
+					hasHeadshot |= entityHit.isHeadshot;
 
 					if (entityHit.victim instanceof Player playerVictim) {
 						PlayerInfo victimInfo = Main.getPlayerInfo(playerVictim);
@@ -541,11 +547,43 @@ public class KitSniper extends Kit {
 				rayTraceResult.terminatingBlock != null ?
 					rayTraceResult.terminatingBlock.getHitPosition().distance(startVector) :
 					128;
-			showTracers(start, distance, velocity, player);
+			// show tracers and play sounds
+			SniperTracers[] tracers = showTracers(start, distance, velocity, player);
+			sniperTracers.add(tracers[0]);
+			sniperTracers.add(tracers[1]);
+
+			Vector end = startVector.clone().add(velocity.clone().normalize().multiply(distance));
+			TeamArenaTeam team = Main.getPlayerInfo(player).team;
+			player.playSound(player, Sound.ENTITY_GENERIC_EXPLODE, 0.5f, 2f);
+			if (!rayTraceResult.entityHits.isEmpty()) {
+				if (hasHeadshot)
+					player.playSound(player, Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.PLAYERS, 1, 2);
+				else
+					player.playSound(player, Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.PLAYERS, 0.5f, 1);
+			}
+			for (Player other : Bukkit.getOnlinePlayers()) {
+				if (player == other) continue;
+				if (team.hasMember(other)) {
+					other.playSound(start, Sound.ENTITY_GENERIC_EXPLODE, 0.3f, 2f);
+				} else {
+					Vector locVec = other.getEyeLocation().toVector();
+					Vector nearestPoint = MathUtils.getNearestPointOnLine(startVector, end, locVec);
+					double distSq = nearestPoint.distanceSquared(locVec);
+					if (distSq < 16) {
+						// bullet whizz
+						other.playSound(nearestPoint.toLocation(world), Sound.ENTITY_BREEZE_SHOOT, SoundCategory.PLAYERS,
+							(float) (Math.min(4, 1 / Math.sqrt(distSq)) / 4), 1.7f, 8399);
+					}
+					SoundUtils.playSoundWithMinVolume(other, start, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.PLAYERS,
+						0.5f, 2, 8399, 0.01f);
+				}
+			}
 		}
 
+		private record SniperTracers(int removeAt, List<PacketDisplay> displays) {}
+		private static final BlockData SELF_TRACER_BLOCK_DATA = Material.RED_CONCRETE.createBlockData();
 		private static final Vector UP = new Vector(0, 1, 0);
-		private static void showTracers(Location start, double distance, Vector bulletDirection, Player player) {
+		private static SniperTracers[] showTracers(Location start, double distance, Vector bulletDirection, Player player) {
 			// for the shooter, move the line below their crosshair
 			Location tracerLocation = start.clone();
 			Vector direction = tracerLocation.getDirection();
@@ -556,20 +594,28 @@ public class KitSniper extends Kit {
 			Vector down = right.getCrossProduct(direction).normalize();
 			tracerLocation.add(down.multiply(0.15));
 
-			var displays = DisplayUtils.createLine(tracerLocation, bulletDirection,
-				(float) (distance > 2 ? distance - 2 : distance),
-				blockDisplay -> {
-					blockDisplay.setVisibleByDefault(false);
-					player.showEntity(Main.getPlugin(), blockDisplay);
-				}, null, Material.RED_CONCRETE.createBlockData());
-			DisplayUtils.ensureCleanup(displays, 50);
+			var displays = DisplayUtils.createVirtualLine(tracerLocation, bulletDirection,
+				(float) (distance > 2 ? distance - 2 : distance), null, SELF_TRACER_BLOCK_DATA);
+			for (PacketDisplay display : displays) {
+				display.setViewers(player);
+				display.respawn();
+			}
 
 			TeamArenaTeam team = Main.getPlayerInfo(player).team;
-			BlockData glass = Objects.requireNonNull(Registry.MATERIAL.get(NamespacedKey.minecraft(team.getDyeColour().name().toLowerCase(Locale.ENGLISH) + "_stained_glass"))).createBlockData();
-			var otherDisplays = DisplayUtils.createLine(start, bulletDirection, (float) distance, blockDisplay -> {
-				player.hideEntity(Main.getPlugin(), blockDisplay);
-			}, null, glass);
-			DisplayUtils.ensureCleanup(otherDisplays);
+			BlockData glass = team.getGlassMaterial().createBlockData();
+			var otherDisplays = DisplayUtils.createVirtualLine(start, bulletDirection, (float) distance, null, glass);
+			for (PacketDisplay otherDisplay : otherDisplays) {
+				otherDisplay.setViewerRule(viewer -> viewer != player);
+				// need to refresh viewers immediately, so we do a little tomfoolery
+				otherDisplay.addViewers();
+				otherDisplay.respawn();
+			}
+
+			int now = TeamArena.getGameTick();
+			return new SniperTracers[] {
+				new SniperTracers(now + 50, displays),
+				new SniperTracers(now + 50, otherDisplays)
+			};
 		}
 
 		@Override
@@ -723,7 +769,7 @@ public class KitSniper extends Kit {
 			Vector front = location.getDirection();
 			Vector right = front.getCrossProduct(GLOBAL_UP).normalize();
 			Vector up = front.getCrossProduct(right).normalize().multiply(-1);
-			return location.add(front.multiply((isScoping ? 0.95 : 0.35) + 1).add(up.multiply(headLength * 0.3)).add(right.multiply((isLeftHand ? -1 : 1) * 0.15)));
+			return location.add(front.multiply(isScoping ? 0.95 : 0.35).add(up.multiply(headLength * 0.3)).add(right.multiply((isLeftHand ? -1 : 1) * 0.15)));
 		}
 
 		@Override
@@ -827,7 +873,7 @@ public class KitSniper extends Kit {
 			if (angle <= Math.PI / 9) { // 20 degrees
 				scale *= (float) MathUtils.lerp(3, 1, angle / (Math.PI / 9));
 			}
-			checkCache(cache, dirtyList, MetaIndex.DISPLAY_TRANSLATION_OBJ, new Vector3f(0, -scale / 10f /* magic number */, -1));
+			checkCache(cache, dirtyList, MetaIndex.DISPLAY_TRANSLATION_OBJ, new Vector3f(0, -scale / 10f /* magic number */, 0));
 			checkCache(cache, dirtyList, MetaIndex.DISPLAY_SCALE_OBJ, new Vector3f(scale));
 			// opacity based on angle to the player
 			// 255 - fully opaque

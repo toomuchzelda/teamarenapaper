@@ -13,6 +13,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import java.util.Collection;
@@ -24,17 +25,13 @@ public class PacketDisplay extends PacketEntity {
 		super(id, entityType, location, viewers, viewerRule);
 	}
 
-	private static Vector3f bukkitToJoml(Vector vec) {
-        return new Vector3f((float) vec.getX(), (float) vec.getY(), (float) vec.getZ());
-	}
-
 	// Not sure how this works with joml Vector3f serializer
 	public void translate(Vector translation) {
-		this.setMetadata(MetaIndex.DISPLAY_TRANSLATION_OBJ, bukkitToJoml(translation));
+		setTranslation(translation.toVector3f());
 	}
 
 	public void setScale(Vector scale) {
-		this.setMetadata(MetaIndex.DISPLAY_SCALE_OBJ, bukkitToJoml(scale));
+		setScale(scale.toVector3f());
 	}
 
 	public void setBillboard(MetaIndex.DisplayBillboardOption option) {
@@ -57,8 +54,16 @@ public class PacketDisplay extends PacketEntity {
 		this.setMetadata(MetaIndex.DISPLAY_TRANSLATION_OBJ, translation);
 	}
 
+	public void setLeftRotation(Quaternionf leftRotation) {
+		this.setMetadata(MetaIndex.DISPLAY_ROTATION_LEFT_OBJ, leftRotation);
+	}
+
 	public void setScale(Vector3f scale) {
 		this.setMetadata(MetaIndex.DISPLAY_SCALE_OBJ, scale);
+	}
+
+	public void setGlowColorOverride(@Nullable Color color) {
+		this.setMetadata(MetaIndex.DISPLAY_GLOW_COLOR_OVERRIDE_OBJ, color == null ? -1 : color.asARGB());
 	}
 
 	public void setBrightnessOverride(@Nullable Display.Brightness brightnessOverride) {
