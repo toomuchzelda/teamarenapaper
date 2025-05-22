@@ -27,7 +27,6 @@ import java.util.function.Consumer;
  */
 public class DisplayUtils {
 	private static final Main PLUGIN = Main.getPlugin();
-	private static final Vector3f NO_TRANSLATION = new Vector3f();
 	private static final Quaternionf NO_ROTATION = new Quaternionf();
 
 	public static void ensureCleanup(List<? extends Display> displays) {

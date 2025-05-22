@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSniper;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
@@ -21,6 +22,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.ApiStatus;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -180,12 +182,14 @@ public class DamageType {
 			.setInstantDeath().setNoKnockback();
 
 	/**
-	 * for sniper kills, additional death messages are supplied by the kit itself
-	 * @see me.toomuchzelda.teamarenapaper.teamarena.kits.KitSniper.SniperDeathMessages
+	 * for sniper kills, damage types with additional death messages are supplied by the kit itself
+	 * @see KitSniper.SniperDamageTypes
  	 */
+	@ApiStatus.Internal
 	public static final DamageType SNIPER_SHOT = new DamageType("Sniper Shot", "%Killed% was sniped by %Killer%")
 		.setProjectile();
 
+	@ApiStatus.Internal
 	public static final DamageType SNIPER_HEADSHOT = new DamageType("Sniper Headshot", "%Killed% was headshot by %Killer%")
 		.setProjectile();
 

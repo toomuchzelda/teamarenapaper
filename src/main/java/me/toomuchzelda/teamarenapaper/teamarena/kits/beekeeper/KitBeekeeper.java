@@ -12,6 +12,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageNumbers;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
@@ -482,7 +483,7 @@ public class KitBeekeeper extends Kit
 			if (pair != null) {
 				pair.beekeeperBee.lastDamageTick = TeamArena.getGameTick();
 				if (event.getFinalDamage() >= bee.getHealth()) { // Is a beekeeper bee and this DamageEvent kills them
-					event.setBroadcastsDeathMessage(false);
+					event.setBroadcastDeathMessage(false);
 					pair.beekeeperBee().setDead(false);
 				}
 			}

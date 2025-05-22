@@ -501,9 +501,9 @@ public class TextUtils {
 
 	public static TextColor darken(@NotNull TextColor c) {
 		return TextColor.color(
-			Math.max(0, (int) (c.red() * 0.7f)),
-			Math.max(0, (int) (c.green() * 0.7f)),
-			Math.max(0, (int) (c.blue() * 0.7f))
+			(c.red() + NamedTextColor.GRAY.red()) / 2,
+			(c.green() + NamedTextColor.GRAY.green()) / 2,
+			(c.blue() + NamedTextColor.GRAY.blue()) / 2
 		);
 	}
 }

@@ -553,6 +553,7 @@ public class PacketEntity
 			}
 		}
 		else {
+			// remove offline players
 			for (var iter = viewers.iterator(); iter.hasNext();) {
 				Player p = iter.next();
 				if (!p.isOnline()) {
@@ -575,20 +576,9 @@ public class PacketEntity
 	}
 
 	/**
-	 * Coordinates are chunk coordinates
+	 * Kindly borrowed from Paper
+	 * @see net.minecraft.server.level.ChunkMap.TrackedEntity#updatePlayer(net.minecraft.server.level.ServerPlayer)
 	 */
-	private static boolean isInViewingRange(int holX, int holZ, int playX, int playZ, int simulDist) {
-		//get the corner
-		playX -= simulDist;
-		playZ -= simulDist;
-
-		//other corner
-		final int offset = (simulDist * 2) + 1;
-		final int x2 = playX + offset;
-		final int z2 = playZ + offset;
-
-		return (playX <= holX && holX <= x2 && playZ <= holZ && holZ <= z2);
-	}
 	private static boolean isInViewingRangeNew(double x, double z, double viewerX, double viewerZ, int viewDistance) {
 		double dx = x - viewerX;
 		double dz = z - viewerZ;

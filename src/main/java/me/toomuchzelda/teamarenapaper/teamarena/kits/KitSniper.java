@@ -19,7 +19,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.capturetheflag.CaptureTheFlag;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType.DeathMessage;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
@@ -141,10 +140,6 @@ public class KitSniper extends Kit {
 		public static final TextColor SNIPER_COLOR = TextColor.color(0xd28a37);
 		private final Set<UUID> RECEIVED_GRENADE_CHAT_MESSAGE = new HashSet<>();
 		public static final TextColor GRENADE_MSG_COLOR = TextColor.color(66, 245, 158);
-
-		private static final DamageType REFLECTED_SNIPER = new DamageType(DamageType.SNIPER_HEADSHOT,
-			"%Cause% did not have enough map knowledge",
-			"%Killed% suffered from %Cause%'s skill issue");
 
 		final List<BukkitTask> grenadeTasks = new ArrayList<>();
 		final Random gunInaccuracy = new Random();
@@ -503,17 +498,10 @@ public class KitSniper extends Kit {
 					}
 					DamageEvent damageEvent;
 					if (reflectorShooter != null) {// is reflected bullet
-						damageEvent = DamageEvent.newDamageEvent(entityHit.victim, 1000000, REFLECTED_SNIPER, player, true);
+						damageEvent = DamageEvent.newDamageEvent(entityHit.victim, 1000000, SniperDamageTypes.REFLECTED_SNIPER, player, true);
 						damageEvent.setDamageTypeCause(reflectorShooter);
 					} else {
-						if (entityHit.isHeadshot)
-							damageEvent = DamageEvent.newDamageEvent(entityHit.victim, 150, DamageType.SNIPER_HEADSHOT, player, true);
-						else
-							damageEvent = DamageEvent.newDamageEvent(entityHit.victim, 15, DamageType.SNIPER_SHOT, player, false);
-						damageEvent.setDamageTypeCause(firstPlayerVictim);
-						damageEvent.setDeathMessageOverride(
-							SniperDeathMessages.getDeathMessage(this, player, entityHit.isHeadshot, entityHit.victim, firstPlayerVictim)
-						);
+						damageEvent = SniperDamageTypes.buildDamageEvent(this, player, entityHit, firstPlayerVictim);
 					}
 					Main.getGame().queueDamage(damageEvent);
 
@@ -896,49 +884,57 @@ public class KitSniper extends Kit {
 		}
 	}
 
-	public static class SniperDeathMessages {
-		public static final DeathMessage[] SHOT = messages("%Killed% was sniped by %Killer%",
+	// public for javadoc reference
+	public static class SniperDamageTypes {
+		private static final DamageType SHOT = new DamageType(DamageType.SNIPER_SHOT, "%Killed% was sniped by %Killer%",
 			"%Killed% was perforated by %Killer%");
 
-		public static final DeathMessage[] HEADSHOT = messages("%Killed% was headshot by %Killer%",
+		private static final DamageType HEADSHOT = new DamageType(DamageType.SNIPER_HEADSHOT, "%Killed% was headshot by %Killer%",
 			"%Killed%'s head was blown off by %Killer%");
+
+		private static final DamageType REFLECTED_SNIPER = new DamageType(HEADSHOT,
+			"%Cause% did not have enough map knowledge",
+			"%Killed% suffered from %Cause%'s skill issue");
 
 		/* Sniper duels, only appears when both players recently used the scope */
 
-		public static final DeathMessage[] DUEL_SHOT = messages("%Killed% lost the sniper duel to %Killer%",
+		private static final DamageType DUEL_SHOT = new DamageType(SHOT, "%Killed% lost the sniper duel to %Killer%",
 			"%Killed% had less map knowledge than %Killer%", "%Killed% was hard scoping and didn't notice %Killer%");
 
-		public static final DeathMessage[] DUEL_HEADSHOT = messages("%Killed%'s head appeared in %Killer%'s scope",
+		private static final DamageType DUEL_HEADSHOT = new DamageType(HEADSHOT, "%Killed%'s head appeared in %Killer%'s scope",
 			"%Killed%'s scope glint was noticed by %Killer%");
 
 		/* Collateral shots */
 
-		public static final DeathMessage[] COLLATERAL_SHOT = messages(
+		private static final DamageType COLLATERAL_SHOT = new DamageType(SHOT,
 			"%Killed% was pierced by %Killer%'s bullet passing through %Cause%",
 			"%Killed% was perforated by %Killer%'s bullet passing through %Cause%"
 		);
 
-		public static final DeathMessage[] COLLATERAL_HEADSHOT = messages(
+		private static final DamageType COLLATERAL_HEADSHOT = new DamageType(HEADSHOT,
 			"%Killed%'s head was blown off by %Killer%'s bullet passing through %Cause%",
 			"%Killed%'s head was pierced by %Killer%'s bullet passing through %Cause%"
 		);
 
-		private static DeathMessage[] messages(String... strings) {
-			return DeathMessage.parseArray(strings);
-		}
-
-		static DeathMessage getDeathMessage(SniperAbility ability, Player attacker, boolean isHeadShot, Entity victim, @Nullable Player firstPlayerVictim) {
-			DeathMessage[] array;
-			if (firstPlayerVictim != null) {
-				array = isHeadShot ? COLLATERAL_HEADSHOT : COLLATERAL_SHOT;
+		private static DamageType getDamageType(SniperAbility ability, Player attacker, Entity victim, boolean isHeadshot, boolean isCollateral) {
+			if (isCollateral) {
+				return isHeadshot ? COLLATERAL_HEADSHOT : COLLATERAL_SHOT;
 			} else if (victim instanceof Player victimPlayer &&
 				ability.sniperInfoMap.get(victimPlayer) instanceof SniperAbility.SniperInfo victimSniperInfo &&
 				victimSniperInfo.wasRecentlyScoping() && ability.sniperInfoMap.get(attacker).wasRecentlyScoping()) {
-				array = isHeadShot ? DUEL_HEADSHOT : DUEL_SHOT;
+				return isHeadshot ? DUEL_HEADSHOT : DUEL_SHOT;
 			} else {
-				array = isHeadShot ? SHOT : HEADSHOT;
+				return isHeadshot ? SHOT : HEADSHOT;
 			}
-			return MathUtils.randomElement(array);
+		}
+
+		private static DamageEvent buildDamageEvent(SniperAbility ability, Player attacker, SniperAbility.EntityHit entityHit, @Nullable Player firstPlayerVictim) {
+			Entity victim = entityHit.victim;
+			boolean isHeadshot = entityHit.isHeadshot;
+			DamageType damageType = getDamageType(ability, attacker, victim, isHeadshot, firstPlayerVictim != null);
+			DamageEvent damageEvent = DamageEvent.newDamageEvent(victim, isHeadshot ? 150 : 15, damageType, attacker, isHeadshot);
+			damageEvent.setDamageTypeCause(firstPlayerVictim);
+			return damageEvent;
 		}
 	}
 
