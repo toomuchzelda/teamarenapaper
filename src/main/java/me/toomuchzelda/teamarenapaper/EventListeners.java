@@ -40,8 +40,6 @@ import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.kyori.adventure.text.minimessage.ParsingException;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -238,24 +236,16 @@ public class EventListeners implements Listener
 		});
 	}
 
-	@EventHandler (priority = EventPriority.HIGHEST) // Get called after other plugins.
+	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true) // Get called after other plugins.
 	public void asyncChat(AsyncChatEvent event) {
-		if (event.isCancelled()) return;
-
 		Player player = event.getPlayer();
-		if (Main.getPlayerInfo(player).hasPermission(PermissionLevel.MOD)) {
-			try {
-				Component component = MiniMessage.builder().strict(true).build()
-					.deserialize(PlainTextComponentSerializer.plainText().serialize(event.message()));
-				event.message(component);
-			} catch (ParsingException ex) {
-				Bukkit.getScheduler().runTask(Main.getPlugin(), () ->
-					player.kick(Component.text("Unsafe MiniMessage input:\n" +
-						ex.getMessage().replace("\t", "    "), TextColors.ERROR_RED)));
-				event.setCancelled(true);
-				return;
-			}
+		String rawMessage = PlainTextComponentSerializer.plainText().serialize(event.message());
+		Component newMessage = TeamArena.parseChatPlaceholders(player, rawMessage);
+		if (PlainTextComponentSerializer.plainText().serialize(newMessage).isBlank()) {
+			event.setCancelled(true);
+			return;
 		}
+		event.message(newMessage);
 
 		Main.getGame().onChat(event);
 	}

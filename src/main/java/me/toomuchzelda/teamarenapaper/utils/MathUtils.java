@@ -8,6 +8,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 
@@ -55,6 +56,10 @@ public class MathUtils
 
 	public static <T> T randomElement(T[] array) {
 		return array[random.nextInt(array.length)];
+	}
+
+	public static <T> T randomElement(List<? extends T> list) {
+		return list.get(random.nextInt(list.size()));
 	}
 
 	public static int clamp(int min, int max, int value) {
@@ -230,5 +235,34 @@ public class MathUtils
 			}
 		}
 		return face;
+	}
+
+	/**
+	 * Gets the nearest point, relative to a reference point, that lies on a line segment
+	 * @param lineStart The start of the line segment
+	 * @param lineEnd The end of the line segment
+	 * @param vector The reference point
+	 * @return The nearest point that lies on the segment
+	 */
+	public static Vector getNearestPointOnLine(Vector lineStart, Vector lineEnd, Vector vector) {
+		/*
+		Given the points A, B and P and the vector AB, it can be observed that:
+		AQ = AB * (dot(AB, AP) / length(AB)^2)
+		PQ = AQ - AP
+		such that angle(AB, PQ) = 90 degrees
+		 */
+		double lineLengthSq = lineStart.distanceSquared(lineEnd);
+		Vector lineDir = lineEnd.clone().subtract(lineStart);
+		Vector dir = vector.clone().subtract(lineStart);
+		Vector proj = lineDir.clone().multiply(lineDir.dot(dir) / lineDir.lengthSquared());
+		// to ensure the returned point lies on the line segment,
+		// the projection is compared against the two points that define the segment
+		proj.add(lineStart);
+		if (proj.distanceSquared(lineStart) >= lineLengthSq) {
+			return lineEnd;
+		} else if (proj.distanceSquared(lineEnd) >= lineLengthSq) {
+			return lineStart;
+		}
+		return proj;
 	}
 }

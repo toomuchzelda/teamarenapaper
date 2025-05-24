@@ -160,6 +160,14 @@ public class TeamArenaTeam
 		return dyeColour;
 	}
 
+	private Material glassMaterial;
+	public Material getGlassMaterial() {
+		if (glassMaterial == null) {
+			glassMaterial = Objects.requireNonNull(Registry.MATERIAL.get(NamespacedKey.minecraft(getDyeColour().name().toLowerCase(Locale.ENGLISH) + "_stained_glass")));
+		}
+		return glassMaterial;
+	}
+
 	public int getTotalScore() {
 		return score + score2;
 	}

@@ -1,12 +1,12 @@
 package me.toomuchzelda.teamarenapaper.teamarena.announcer;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Class to handle the announcing of words appearing in chat
@@ -22,7 +22,7 @@ public class ChatAnnouncerManager
 {
 	private static final int ANNOUNCE_COOLDOWN = 4 * 1000; // once every 4 seconds
 	// Also serves as a lock for the lastAnnounceTime
-	private static final List<TextComponent> queuedMessages = new LinkedList<>();
+	private static final List<Component> queuedMessages = new LinkedList<>();
 
 	// Unix time in milliseconds
 	// Use system time as the time gets queried asynchronously so TeamArena.getGameTick() may be faulty.
@@ -44,7 +44,7 @@ public class ChatAnnouncerManager
 	}
 
 	// May be called asynchronously
-	public static void queueMessage(TextComponent message) {
+	public static void queueMessage(Component message) {
 		// Decide if the time is valid atomically
 		// Unfortunately this means only 1 thread can process a message at once but that's still better than
 		// doing it on the main thread.
@@ -55,7 +55,7 @@ public class ChatAnnouncerManager
 					queuedMessages.add(message);
 				}
 				else { // Process it on the async thread.
-					processMessage(message.content(), time);
+					processMessage(PlainTextComponentSerializer.plainText().serialize(message), time);
 				}
 			}
 		}
@@ -74,7 +74,7 @@ public class ChatAnnouncerManager
 			long timer = currentTime;
 			var iter = queuedMessages.iterator();
 			while (iter.hasNext()) {
-				String message = iter.next().content();
+				String message = PlainTextComponentSerializer.plainText().serialize(iter.next());
 				iter.remove();
 
 				if (processMessage(message, currentTime)) {

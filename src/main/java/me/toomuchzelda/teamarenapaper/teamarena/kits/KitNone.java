@@ -83,5 +83,12 @@ public class KitNone extends Kit {
 				}
 			}
 		}
+
+		@Override
+		public void onAttemptedAttack(DamageEvent event) {
+			if (event.getDamageType().is(DamageType.MELEE) && !event.getMeleeWeapon().isEmpty()) {
+				event.setDamageType(DamageType.NONE_MELEE);
+			}
+		}
 	}
 }

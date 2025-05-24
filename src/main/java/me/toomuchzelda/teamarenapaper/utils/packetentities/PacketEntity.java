@@ -8,13 +8,13 @@ import io.papermc.paper.adventure.PaperAdventure;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
+import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.PacketUtils;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
 import org.bukkit.Bukkit;
-import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.data.BlockData;
@@ -522,39 +522,49 @@ public class PacketEntity
 	public void onInteract(Player player, EquipmentSlot hand, boolean attack) {}
 
 	protected void reEvaluateViewers(boolean spawn) {
-		Chunk holChunk = this.location.getChunk();
-		final int holX = holChunk.getX();
-		final int holZ = holChunk.getZ();
+		BlockCoords coords = new BlockCoords(location);
+		double x = location.getX();
+		double z = location.getZ();
+		Location temp = location.clone();
 		if(viewerRule != null) {
-			for(Player p : Bukkit.getOnlinePlayers()) {
-				if(viewerRule.test(p)) {
-					viewers.add(p);
-					Chunk pChunk = p.getChunk();
-					int playX = pChunk.getX();
-					int playZ = pChunk.getZ();
-					if(isInViewingRange(holX, holZ, playX, playZ, p.getSimulationDistance())) {
-						if(realViewers.add(p) && spawn)
-							spawn(p);
-					}
-					else if(realViewers.remove(p) && spawn) {
-						despawn(p);
-					}
+			// remove offline players
+			for (var iter = viewers.iterator(); iter.hasNext();) {
+				Player viewer = iter.next();
+				if (!viewer.isOnline()) {
+					iter.remove();
+					if (realViewers.remove(viewer) && spawn)
+						despawn(viewer);
 				}
-				else {
-					viewers.remove(p);
-					if(realViewers.remove(p) && spawn) {
-						despawn(p);
+			}
+			for (Player player : Bukkit.getOnlinePlayers()) {
+				if (viewerRule.test(player)) {
+					if (viewers.add(player)) {
+						player.getLocation(temp);
+						if (isInViewingRangeNew(x, z, temp.getX(), temp.getZ(), player.getSendViewDistance() << 4) && coords.hasLoaded(player)) {
+							if (realViewers.add(player) && spawn)
+								spawn(player);
+						}
 					}
+				} else {
+					viewers.remove(player);
+					if (realViewers.remove(player) && spawn)
+						despawn(player);
 				}
 			}
 		}
 		else {
-			for(Player p : viewers) {
-				Chunk pChunk = p.getChunk();
-				int playX = pChunk.getX();
-				int playZ = pChunk.getZ();
+			// remove offline players
+			for (var iter = viewers.iterator(); iter.hasNext();) {
+				Player p = iter.next();
+				if (!p.isOnline()) {
+					iter.remove();
+					if (realViewers.remove(p) && spawn)
+						despawn(p);
+					continue;
+				}
 
-				if(isInViewingRange(holX, holZ, playX, playZ, p.getSimulationDistance())) {
+				p.getLocation(temp);
+				if (isInViewingRangeNew(x, z, temp.getX(), temp.getZ(), p.getSendViewDistance() << 4) && coords.hasLoaded(p)) {
 					if(realViewers.add(p) && spawn)
 						spawn(p);
 				}
@@ -566,19 +576,13 @@ public class PacketEntity
 	}
 
 	/**
-	 * Coordinates are chunk coordinates
+	 * Kindly borrowed from Paper
+	 * @see net.minecraft.server.level.ChunkMap.TrackedEntity#updatePlayer(net.minecraft.server.level.ServerPlayer)
 	 */
-	private static boolean isInViewingRange(int holX, int holZ, int playX, int playZ, int simulDist) {
-		//get the corner
-		playX -= simulDist;
-		playZ -= simulDist;
-
-		//other corner
-		final int offset = (simulDist * 2) + 1;
-		final int x2 = playX + offset;
-		final int z2 = playZ + offset;
-
-		return (playX <= holX && holX <= x2 && playZ <= holZ && holZ <= z2);
+	private static boolean isInViewingRangeNew(double x, double z, double viewerX, double viewerZ, int viewDistance) {
+		double dx = x - viewerX;
+		double dz = z - viewerZ;
+		return dx * dx + dz * dz <= viewDistance * viewDistance;
 	}
 
 	public void refreshViewerMetadata() {

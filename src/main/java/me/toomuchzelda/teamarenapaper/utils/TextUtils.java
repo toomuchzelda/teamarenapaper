@@ -495,14 +495,15 @@ public class TextUtils {
 		return forEachComponent(comp, component -> {
 			TextColor c = component.color();
 			if (c == null) return component;
-			final NamedTextColor gray = NamedTextColor.GRAY;
-			c = TextColor.color(
-				(c.red() + gray.red()) / 2,
-				(c.green() + gray.green()) / 2,
-				(c.blue() + gray.blue()) / 2
-			);
-
-			return component.color(c);
+			return component.color(darken(c));
 		});
+	}
+
+	public static TextColor darken(@NotNull TextColor c) {
+		return TextColor.color(
+			(c.red() + NamedTextColor.GRAY.red()) / 2,
+			(c.green() + NamedTextColor.GRAY.green()) / 2,
+			(c.blue() + NamedTextColor.GRAY.blue()) / 2
+		);
 	}
 }

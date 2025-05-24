@@ -1,10 +1,14 @@
 package me.toomuchzelda.teamarenapaper.utils;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketDisplay;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import org.bukkit.*;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Display;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Transformation;
@@ -145,6 +149,48 @@ public class DisplayUtils {
 				}
 				blockDisplay.setPersistent(false);
 			});
+			segments.add(display);
+		}
+		return List.copyOf(segments);
+	}
+
+	public static List<PacketDisplay> createVirtualLine(Location location, Vector direction, float length, @Nullable Color color, BlockData blockData) {
+		Vector normalized = direction.clone().normalize();
+		Vector cross = LINE_SEGMENT_AXIS.getCrossProduct(normalized);
+		Quaternionf leftRotation;
+		if (cross.isZero()) {
+			leftRotation = new Quaternionf();
+		} else {
+			cross.normalize();
+			leftRotation = new Quaternionf(new AxisAngle4d(
+				LINE_SEGMENT_AXIS.angle(normalized),
+				cross.getX(), cross.getY(), cross.getZ()
+			));
+		}
+
+		Location temp = location.clone();
+		temp.setYaw(0);
+		temp.setPitch(0);
+
+		List<PacketDisplay> segments = new ArrayList<>((int) Math.ceil(length / LINE_SEGMENT_MAX_LENGTH));
+		for (int i = 0; i < length; i += LINE_SEGMENT_MAX_LENGTH) {
+			float segmentLength = Math.min(length - i, LINE_SEGMENT_MAX_LENGTH);
+			temp.set(
+				location.getX() + normalized.getX() * i,
+				location.getY() + normalized.getY() * i,
+				location.getZ() + normalized.getZ() * i
+			);
+			Vector3f scale = new Vector3f(segmentLength, 0.05f, 0.05f);
+
+			PacketDisplay display = new PacketDisplay(PacketEntity.NEW_ID, EntityType.BLOCK_DISPLAY, temp, null, null);
+			display.setBlockData(blockData);
+			display.setScale(scale);
+			display.setLeftRotation(leftRotation);
+			if (color != null) {
+				display.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_GLOWING_MASK);
+				display.setGlowColorOverride(color);
+			}
+			display.updateMetadataPacket();
 			segments.add(display);
 		}
 		return List.copyOf(segments);

@@ -40,7 +40,7 @@ public class CommandTeamChat extends CustomCommand
 			if(game.canTeamChatNow(player)) {
 				PlayerInfo pinfo = Main.getPlayerInfo(player);
 				TeamArenaTeam playersTeam = pinfo.team;
-				Component msgComponent = Component.text(String.join(" ", args));
+				Component msgComponent = TeamArena.parseChatPlaceholders(player, String.join(" ", args));
 
 				//they are defaulting to team chat, so the /t command should post to global chat instead
 				if(pinfo.getPreference(Preferences.DEFAULT_TEAM_CHAT)) {

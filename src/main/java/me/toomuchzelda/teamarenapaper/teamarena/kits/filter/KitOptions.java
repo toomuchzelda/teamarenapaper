@@ -6,6 +6,7 @@ import java.util.Map;
 
 public class KitOptions
 {
+	public static boolean sniperCooldown;
 	public static boolean sniperAccuracy;
 
 	public static boolean ghostAetherial;
@@ -17,7 +18,8 @@ public class KitOptions
 	public static boolean splitterVisible;
 
 	private static void resetToDefault() {
-		sniperAccuracy = false;
+		sniperCooldown = true;
+		sniperAccuracy = true;
 
 		ghostAetherial = false;
 		burstShowArrows = false;
@@ -36,6 +38,7 @@ public class KitOptions
 
 		OPTION_TOGGLE_FUNCS = new HashMap<>();
 
+		OPTION_TOGGLE_FUNCS.put("sniperCooldown", () -> sniperCooldown = !sniperCooldown);
 		OPTION_TOGGLE_FUNCS.put("sniperAccuracy", () -> sniperAccuracy = !sniperAccuracy);
 
 		OPTION_TOGGLE_FUNCS.put("resetToDefault", KitOptions::resetToDefault);

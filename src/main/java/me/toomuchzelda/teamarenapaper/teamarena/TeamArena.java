@@ -58,6 +58,9 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.tag.Inserting;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
@@ -89,6 +92,8 @@ import org.jetbrains.annotations.Nullable;
 import javax.annotation.OverridingMethodsMustInvokeSuper;
 import java.io.File;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
 /**
@@ -1187,19 +1192,43 @@ public abstract class TeamArena
 
 		final Player chatter = event.getPlayer();
 		final PlayerInfo pinfo = Main.getPlayerInfo(chatter);
+		Component message = event.message();
 		//if player is defaulting to team chat
 		if(this.canTeamChatNow(chatter) && pinfo.getPreference(Preferences.DEFAULT_TEAM_CHAT)) {
 			//put their message in team chat if teams have been decided
-			CommandTeamChat.sendTeamMessage(pinfo.team, chatter, event.message());
+			CommandTeamChat.sendTeamMessage(pinfo.team, chatter, message);
 		}
 		else { //else global chat
-			Bukkit.broadcast(constructChatMessage(chatter, event.message()));
+			Bukkit.broadcast(constructChatMessage(chatter, message));
 
 			// Queue for voice announcer
-			if (event.message() instanceof TextComponent textComponent) {
-				ChatAnnouncerManager.queueMessage(textComponent);
-			}
+			ChatAnnouncerManager.queueMessage(message);
 		}
+	}
+
+	private static final MiniMessage MM = MiniMessage.builder().tags(TagResolver.empty()).build();
+	private static final MiniMessage MM_MOD = MiniMessage.miniMessage();
+	public static Component parseChatPlaceholders(Player player, String rawMessage) {
+		MiniMessage miniMessage = Main.getPlayerInfo(player).hasPermission(PermissionLevel.MOD) ? MM_MOD : MM;
+		// process <item> placeholder
+		return miniMessage.deserialize(rawMessage, TagResolver.resolver("item",
+			(Inserting) () -> {
+				// access Bukkit API synchronously
+				CompletableFuture<ItemStack> future;
+				if (!Bukkit.isPrimaryThread()) {
+					future = new CompletableFuture<>();
+					Bukkit.getScheduler().runTask(Main.getPlugin(), () -> future.complete(player.getInventory().getItemInMainHand()));
+				} else {
+					future = CompletableFuture.completedFuture(player.getInventory().getItemInMainHand());
+				}
+				try {
+					ItemStack stack = future.get(1, TimeUnit.SECONDS);
+					return stack.isEmpty() ? Component.empty() : stack.displayName();
+				} catch (Exception ex) {
+					Main.componentLogger().error("Failed to get {}'s held item", player.getName(), ex);
+					return Component.empty();
+				}
+			}));
 	}
 
 	private static final Component COLON_SPACE = Component.text(": ");
