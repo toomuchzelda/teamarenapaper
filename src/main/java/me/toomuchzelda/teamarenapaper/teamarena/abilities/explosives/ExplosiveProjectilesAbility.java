@@ -309,6 +309,10 @@ public class ExplosiveProjectilesAbility extends Ability {
 		}
 
 		final Player thrower = event.getPlayer();
+
+		assert item != null; // so IDEA stops complaining
+		if (thrower.hasCooldown(item)) return;
+
 		final Color teamColor = Main.getPlayerInfo(thrower).team.getColour();
 
 		//Finding all the currently active grenades that are owned by the current thrower
@@ -319,7 +323,7 @@ public class ExplosiveProjectilesAbility extends Ability {
 		if (thrower.getGameMode() != GameMode.CREATIVE && currActiveGrenades.size() >= GRENADE_MAX_ACTIVE) {
 			thrower.sendMessage(Component.text("Only " + GRENADE_MAX_ACTIVE + " Grenades may be active at once!",
 				ITEM_YELLOW));
-			thrower.playSound(thrower, Sound.ENTITY_CREEPER_PRIMED, 0.9f, 0.5f);
+			thrower.playSound(thrower, Sound.ENTITY_CREEPER_HURT, 0.9f, 0.5f);
 			return;
 		}
 		//Creating the grenade item to be thrown
@@ -363,6 +367,8 @@ public class ExplosiveProjectilesAbility extends Ability {
 		KitExplosive.ExplosiveAbility explosiveAbility = Ability.getAbility(thrower, KitExplosive.ExplosiveAbility.class);
 		if (explosiveAbility != null)
 			explosiveAbility.onUse(thrower, true);
+
+		thrower.setCooldown(item, 10);
 	}
 
 	private void rpgLaunch(final Player shooter, final ExplosiveInfo einfo) {
