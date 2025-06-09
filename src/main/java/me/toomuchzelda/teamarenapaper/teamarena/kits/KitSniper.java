@@ -26,7 +26,6 @@ import me.toomuchzelda.teamarenapaper.utils.*;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketDisplay;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.*;
@@ -710,6 +709,11 @@ public class KitSniper extends Kit {
 				player.sendMessage(text("Your protective aura has faded " + reason + ".", textColor));
 			}
 		}
+
+		@Override
+		public void onTeamSwitch(Player player, @Nullable TeamArenaTeam oldTeam, @Nullable TeamArenaTeam newTeam) {
+			scopeGlints.get(player).onTeamSwitch(newTeam);
+		}
 	}
 
 	public static class ScopeGlint extends PacketDisplay {
@@ -729,6 +733,7 @@ public class KitSniper extends Kit {
 			setViewerRule(viewer -> !sniperInfo.team.hasMember(viewer) &&
 				Main.getPlayerInfo(viewer).getPreference(Preferences.SNIPER_SCOPE_GLINT) != Display.OFF);
 
+			onTeamSwitch(sniperInfo.team);
 			text(Component.text("█"));
 			setBrightnessOverride(new org.bukkit.entity.Display.Brightness(15, 0));
 			setBackgroundColor(Color.fromARGB(0x00FFFFFF));
@@ -765,6 +770,14 @@ public class KitSniper extends Kit {
 			// do not reevaluate viewers in globalTick
 		}
 
+		private static final net.minecraft.network.chat.Component DEFAULT_DISPLAY_TEXT = PaperAdventure.asVanilla(Component.text("█"));
+		private net.minecraft.network.chat.Component teamDisplayText;
+		public void onTeamSwitch(TeamArenaTeam newTeam) {
+			teamDisplayText = newTeam != null ?
+				PaperAdventure.asVanilla(Component.text("█", newTeam.getRGBTextColor())) :
+				DEFAULT_DISPLAY_TEXT;
+		}
+
 		public void update() {
 			PlayerInventory inventory = sniper.getInventory();
 			if (inventory.getItemInOffHand().getType() == Material.SPYGLASS || inventory.getItemInMainHand().getType() == Material.SPYGLASS) {
@@ -786,17 +799,13 @@ public class KitSniper extends Kit {
 			if (!isAlive())
 				return;
 
-			personalizedMetadataCache.put(player, new Int2ObjectOpenHashMap<>());
-
 			this.sendPacket(player, spawnPacket);
 			List<WrappedDataValue> personalizedValues = packPersonalizedValues(player);
 			if (!personalizedValues.isEmpty()) {
 				var playerMetadataPacket = metadataPacket.shallowClone();
-				playerMetadataPacket.getDataValueCollectionModifier().modify(0, old -> {
-					var list = new ArrayList<>(old);
-					list.addAll(personalizedValues);
-					return list;
-				});
+				var modifier = playerMetadataPacket.getDataValueCollectionModifier();
+				personalizedValues.addAll(modifier.read(0));
+				modifier.write(0, personalizedValues);
 				sendPacket(player, playerMetadataPacket);
 			} else {
 				sendPacket(player, metadataPacket);
@@ -807,11 +816,13 @@ public class KitSniper extends Kit {
 		protected void despawn(Player player) {
 			super.despawn(player);
 
-			personalizedMetadataCache.remove(player).clear();
+			personalizedMetadataCache.remove(player);
 		}
 
 		@Override
 		public void refreshViewerMetadata() {
+			if (!isAlive())
+				return;
 			for (Player player : realViewers) {
 				List<WrappedDataValue> personalizedValues = packPersonalizedValues(player);
 				if (!personalizedValues.isEmpty()) {
@@ -827,22 +838,24 @@ public class KitSniper extends Kit {
 			return new WrappedDataValue(object.getIndex(), object.getSerializer(), value);
 		}
 
-		private static void checkCache(Int2ObjectMap<Object> cache, List<WrappedDataValue> dirtyList,
+		private static boolean checkCache(Int2ObjectMap<Object> cache, List<WrappedDataValue> dirtyList,
 									   WrappedDataWatcher.WrappedDataWatcherObject object, Object value) {
 			Object old = cache.put(object.getIndex(), value);
 			if (!value.equals(old)) {
-				dirtyList.add(newWrappedDataValue(object, value));
+				return dirtyList.add(newWrappedDataValue(object, value));
 			}
+			return false;
 		}
 
 		private List<WrappedDataValue> packPersonalizedValues(Player player) {
-			Int2ObjectMap<Object> cache = personalizedMetadataCache.get(player);
+			Int2ObjectMap<Object> cache = personalizedMetadataCache.computeIfAbsent(player, ignored -> new Int2ObjectOpenHashMap<>(4));
 			List<WrappedDataValue> dirtyList = new ArrayList<>();
 
-			TextComponent text = Main.getPlayerInfo(player).getPreference(Preferences.SNIPER_SCOPE_GLINT) == Display.TEAM_COLOR ?
-				Component.text("█", sniperInfo.team.getRGBTextColor()) :
-				Component.text("█");
-			checkCache(cache, dirtyList, MetaIndex.TEXT_DISPLAY_TEXT_OBJ, PaperAdventure.asVanilla(text));
+			var text = Main.getPlayerInfo(player).getPreference(Preferences.SNIPER_SCOPE_GLINT) == Display.TEAM_COLOR ?
+				teamDisplayText : DEFAULT_DISPLAY_TEXT;
+			checkCache(cache, dirtyList, MetaIndex.TEXT_DISPLAY_TEXT_OBJ, text);
+
+			boolean shouldInterp = false;
 
 			Location glintLocation = getLocationMut();
 			Location playerLocation = player.getEyeLocation();
@@ -861,8 +874,8 @@ public class KitSniper extends Kit {
 			if (angle <= Math.PI / 9) { // 20 degrees
 				scale *= (float) MathUtils.lerp(3, 1, angle / (Math.PI / 9));
 			}
-			checkCache(cache, dirtyList, MetaIndex.DISPLAY_TRANSLATION_OBJ, new Vector3f(0, -scale / 10f /* magic number */, 0));
-			checkCache(cache, dirtyList, MetaIndex.DISPLAY_SCALE_OBJ, new Vector3f(scale));
+			shouldInterp |= checkCache(cache, dirtyList, MetaIndex.DISPLAY_TRANSLATION_OBJ, new Vector3f(0, -scale / 10f /* magic number */, 0));
+			shouldInterp |= checkCache(cache, dirtyList, MetaIndex.DISPLAY_SCALE_OBJ, new Vector3f(scale));
 			// opacity based on angle to the player
 			// 255 - fully opaque
 			double opacity = 255 * MathUtils.clamp(0.5, 1, 1 - (MathUtils.clamp(Math.PI / 18, Math.PI / 4, angle) - Math.PI / 18) / 35d);
@@ -874,10 +887,10 @@ public class KitSniper extends Kit {
 				opacity = Math.max(opacity * 0.5, 128);
 			}
 
-			checkCache(cache, dirtyList, MetaIndex.TEXT_DISPLAY_TEXT_OPACITY_OBJ, opacity > 127 ? (byte) (opacity - 256) : (byte) opacity);
+			shouldInterp |= checkCache(cache, dirtyList, MetaIndex.TEXT_DISPLAY_TEXT_OPACITY_OBJ, opacity > 127 ? (byte) (opacity - 256) : (byte) opacity);
 
 			// always send 0 interp delay
-			if (!dirtyList.isEmpty())
+			if (shouldInterp)
 				dirtyList.add(newWrappedDataValue(MetaIndex.DISPLAY_INTERPOLATION_DELAY_OBJ, 0));
 
 			return dirtyList;

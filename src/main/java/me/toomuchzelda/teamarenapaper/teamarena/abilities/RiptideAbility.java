@@ -26,6 +26,7 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Levelled;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.entity.Trident;
@@ -301,6 +302,13 @@ public class RiptideAbility extends Ability {
 			ItemStack stack = iter.next();
 			if (stack != null && stack.getType() == Material.TRIDENT && stack.getPersistentDataContainer().has(TRIDENT_KEY)) {
 				iter.set(null);
+			}
+		}
+		// remove all player tridents
+		UUID uuid = player.getUniqueId();
+		for (Entity entity : player.getWorld().getEntities()) {
+			if (entity instanceof Trident trident && uuid.equals(trident.getOwnerUniqueId())) {
+				entity.remove();
 			}
 		}
 		Objects.requireNonNull(player.getAttribute(Attribute.WATER_MOVEMENT_EFFICIENCY)).removeModifier(SNEAK_SPEED);
