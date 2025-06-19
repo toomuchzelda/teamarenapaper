@@ -260,6 +260,7 @@ public abstract class TeamArena
 		gameWorld.setGameRule(GameRule.NATURAL_REGENERATION, false);
 		gameWorld.setGameRule(GameRule.RANDOM_TICK_SPEED, 0);
 		gameWorld.setGameRule(GameRule.SHOW_DEATH_MESSAGES, false);
+		gameWorld.setGameRule(GameRule.LOCATOR_BAR, false);
 		gameWorld.setDifficulty(Difficulty.NORMAL);
 
 		// random weather
