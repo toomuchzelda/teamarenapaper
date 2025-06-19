@@ -14,11 +14,13 @@ import me.toomuchzelda.teamarenapaper.utils.PacketSender;
 import me.toomuchzelda.teamarenapaper.utils.PacketUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.AABB;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -57,7 +59,7 @@ public class FakeHitbox
 		INVIS_META = MetaIndex.newValue(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK);
 	}
 
-	private final List<PlayerInfoData> playerInfoEntries;
+	private final List<ClientboundPlayerInfoUpdatePacket.Entry> playerInfoEntries;
 	// index 0 = invis bitfield, 1 = pose
 	private final ArrayList<WrappedDataValue> metadataList;
 	private final PacketContainer[] spawnPlayerPackets;
@@ -97,7 +99,7 @@ public class FakeHitbox
 		removeEntitiesPacket = new PacketContainer(PacketType.Play.Server.ENTITY_DESTROY);
 		fakePlayerIds = new int[4];
 
-		List<PlayerInfoData> playerUpdates = new ArrayList<>(4);
+		List<ClientboundPlayerInfoUpdatePacket.Entry> playerUpdates = new ArrayList<>(4);
 
 		net.minecraft.world.entity.ai.attributes.AttributeInstance nmsAi =
 			((CraftPlayer) this.owner).getHandle().getAttribute(Attributes.SCALE);
@@ -116,11 +118,10 @@ public class FakeHitbox
 			net.minecraft.network.chat.Component nmsComponent = PaperAdventure.asVanilla(displayNameComp);
 
 			// Unlisted playerinfo entry.
-			PlayerInfoData wrappedEntry = new PlayerInfoData(fPlayer.uuid, 1, false, EnumWrappers.NativeGameMode.SURVIVAL,
-				WrappedGameProfile.fromHandle(authLibProfile), WrappedChatComponent.fromHandle(nmsComponent),
-				(WrappedRemoteChatSessionData) null);
+			var nmsEntry = new ClientboundPlayerInfoUpdatePacket.Entry(fPlayer.uuid, authLibProfile, false,
+				1, GameType.SURVIVAL, nmsComponent, true, 0, null);
 
-			playerUpdates.add(wrappedEntry);
+			playerUpdates.add(nmsEntry);
 
 			PacketContainer spawnPlayerPacket = new PacketContainer(PacketType.Play.Server.SPAWN_ENTITY);
 			spawnPlayerPacket.getIntegers().write(0, fPlayer.entityId);
@@ -403,7 +404,7 @@ public class FakeHitbox
 		return this.viewers.computeIfAbsent(viewer, player1 -> new FakeHitboxViewer());
 	}
 
-	public List<PlayerInfoData> getPlayerInfoEntries() {
+	public List<ClientboundPlayerInfoUpdatePacket.Entry> getPlayerInfoEntries() {
 		return this.playerInfoEntries;
 	}
 

@@ -2,8 +2,10 @@ package me.toomuchzelda.teamarenapaper.utils;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
+import com.mojang.authlib.GameProfile;
 import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.world.entity.PositionMoveRotation;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.Location;
@@ -58,5 +60,20 @@ public class PacketUtils {
 		pmr = new PositionMoveRotation(nmsPos, pmr.deltaMovement(), pmr.yRot(), pmr.xRot());
 
 		packet.getModifier().write(1, pmr);
+	}
+
+	public static ClientboundPlayerInfoUpdatePacket.Entry replacePlayerInfoProfile(ClientboundPlayerInfoUpdatePacket.Entry entry, GameProfile profile) {
+		return new ClientboundPlayerInfoUpdatePacket.Entry(
+			profile.getId(), profile,
+			entry.listed(), entry.latency(), entry.gameMode(), entry.displayName(),
+			entry.showHat(), entry.listOrder(), null
+		);
+	}
+
+	public static ClientboundPlayerInfoUpdatePacket.Entry stripPlayerInfoChat(ClientboundPlayerInfoUpdatePacket.Entry entry) {
+		return new ClientboundPlayerInfoUpdatePacket.Entry(
+			entry.profileId(), entry.profile(), entry.listed(), entry.latency(), entry.gameMode(), entry.displayName(),
+			entry.showHat(), entry.listOrder(), null
+		);
 	}
 }

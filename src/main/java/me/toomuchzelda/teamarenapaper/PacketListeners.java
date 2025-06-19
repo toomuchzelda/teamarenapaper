@@ -6,7 +6,7 @@ import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.reflect.StructureModifier;
-import com.comphenix.protocol.wrappers.*;
+import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Pair;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
@@ -28,14 +28,12 @@ import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.AttachedPacketEntity;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
 import net.minecraft.core.Holder;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.level.GameType;
 import org.bukkit.*;
 import org.bukkit.craftbukkit.CraftSound;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
@@ -302,33 +300,32 @@ public class PacketListeners
 
 			@Override
 			public void onPacketSending(PacketEvent event) {
+				Player target = event.getPlayer();
+				UUID targetUuid = target.getUniqueId();
+
 				ClientboundPlayerInfoUpdatePacket nmsPacket = (ClientboundPlayerInfoUpdatePacket) event.getPacket().getHandle();
 
-				Set<ClientboundPlayerInfoUpdatePacket.Action> actions = nmsPacket.actions();
-
-				//final boolean stripChat = actions.contains(ClientboundPlayerInfoUpdatePacket.Action.INITIALIZE_CHAT);
-				final boolean addPlayer = actions.contains(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER);
+				var actions = nmsPacket.actions();
+				boolean addPlayer = actions.contains(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER);
 
 				List<ClientboundPlayerInfoUpdatePacket.Entry> list = nmsPacket.entries();
 				final int size = FakeHitboxManager.ACTIVE ? list.size() * 5 : list.size();
-				List<PlayerInfoData> newList = new ArrayList<>(size);
+				List<ClientboundPlayerInfoUpdatePacket.Entry> newList = new ArrayList<>(size);
 
-				UUID receiverUuid = event.getPlayer().getUniqueId();
-				for(ClientboundPlayerInfoUpdatePacket.Entry entry : list) {
-					if(receiverUuid.equals(entry.profileId())) {
+				for (ClientboundPlayerInfoUpdatePacket.Entry entry : list) {
+					if (targetUuid.equals(entry.profileId())) {
 						// If it's the players own just include their unmodified original
-						newList.add(PlayerInfoData.getConverter().getSpecific(entry));
+						newList.add(entry);
 						continue;
 					}
 
-					PlayerInfoData wrappedEntryCopy = copyPlayerInfoEntry(entry, true);
-					final int originalIndex = newList.size(); // Keep track of this entry's position in the newList
-					newList.add(wrappedEntryCopy);
+					int originalIndex = newList.size(); // Keep track of this entry's position in the newList
+					newList.add(PacketUtils.stripPlayerInfoChat(entry));
 
-					if(FakeHitboxManager.ACTIVE && addPlayer && !entry.profileId().equals(event.getPlayer().getUniqueId())) {
+					if (FakeHitboxManager.ACTIVE && addPlayer) {
 						// Ensure player doesn't see their own fake player entries
 						FakeHitbox hitbox = FakeHitboxManager.getByPlayerUuid(entry.profileId());
-						if(hitbox != null) {
+						if (hitbox != null) {
 							newList.addAll(hitbox.getPlayerInfoEntries());
 						}
 					}
@@ -337,31 +334,18 @@ public class PacketListeners
 					if (updatedPlayer == null)
 						continue;
 
-					DisguiseManager.Disguise disguise = DisguiseManager.getDisguiseSeeing(updatedPlayer, event.getPlayer());
+					DisguiseManager.Disguise disguise = DisguiseManager.getDisguiseSeeing(updatedPlayer, target);
 					if (disguise != null) {
-						disguise.handlePlayerInfoAdd(event.getPlayer(), entry, addPlayer, newList, originalIndex);
+						disguise.handlePlayerInfoAdd(target, entry, addPlayer, newList, originalIndex);
 					}
 				}
 
 				// Modifications took place, so replace the packet
 				// The same packet instance is sent to many players, so we need to
 				// avoid mutating the original
-				if(newList.size() > 0) {
-					PacketContainer packet = new PacketContainer(PacketType.Play.Server.PLAYER_INFO);
-					packet.getModifier().write(0, nmsPacket.actions());
-
-					// For some reason, packet.getPlayerInfoDataLists().write() is not working, so I will try to
-					// convert it to a list of the NMS object and pass that through with packet.getModifier()
-					List<ClientboundPlayerInfoUpdatePacket.Entry> nmsEntryList = new ArrayList<>(newList.size());
-					newList.forEach(playerInfoData -> {
-						ClientboundPlayerInfoUpdatePacket.Entry nmsEntry = (ClientboundPlayerInfoUpdatePacket.Entry)
-							PlayerInfoData.getConverter().getGeneric(playerInfoData);
-
-						nmsEntryList.add(nmsEntry);
-					});
-					//packet.getPlayerInfoDataLists().write(0, newList);
-					packet.getModifier().write(1, nmsEntryList);
-					event.setPacket(packet);
+				if (!newList.isEmpty()) {
+					event.setPacket(new PacketContainer(PacketType.Play.Server.PLAYER_INFO,
+						new ClientboundPlayerInfoUpdatePacket(actions, newList)));
 				}
 			}
 		});
@@ -383,8 +367,8 @@ public class PacketListeners
 						// Ensure player doesn't see their own fake player entries
 						FakeHitbox hitbox = FakeHitboxManager.getByPlayerUuid(uuid);
 						if(hitbox != null) {
-							for(PlayerInfoData data : hitbox.getPlayerInfoEntries()) {
-								copyList.add(data.getProfileId());
+							for (var entry : hitbox.getPlayerInfoEntries()) {
+								copyList.add(entry.profileId());
 							}
 						}
 					}
@@ -405,9 +389,8 @@ public class PacketListeners
 				}
 
 				if (copyList.size() > nmsPacket.profileIds().size()) {
-					PacketContainer packet = event.getPacket().shallowClone();
-					packet.getModifier().write(0, copyList);
-					event.setPacket(packet);
+					event.setPacket(new PacketContainer(PacketType.Play.Server.PLAYER_INFO_REMOVE,
+						new ClientboundPlayerInfoRemovePacket(copyList)));
 				}
 			}
 		});
@@ -594,29 +577,5 @@ public class PacketListeners
 		});
 	}
 
-	public static PlayerInfoData copyPlayerInfoEntry(ClientboundPlayerInfoUpdatePacket.Entry entry, boolean stripChat) {
-		EnumWrappers.NativeGameMode nativeGameMode = getNativeGameMode(entry.gameMode());
-		WrappedGameProfile wrappedGameProfile = WrappedGameProfile.fromHandle(entry.profile());
-		Component nmsComponent = entry.displayName();
-		WrappedChatComponent wrappedComponent = null;
-		if(nmsComponent != null)
-			wrappedComponent = WrappedChatComponent.fromHandle(nmsComponent);
 
-		return new PlayerInfoData(entry.profileId(), entry.latency(), entry.listed(),
-				nativeGameMode, wrappedGameProfile, wrappedComponent,
-				//stripChat ? null : new WrappedProfilePublicKey.WrappedProfileKeyData(entry.chatSession()));
-				stripChat ? null : new WrappedRemoteChatSessionData(entry.chatSession()));
-	}
-
-	public static EnumWrappers.NativeGameMode getNativeGameMode(GameType nmsType) {
-		EnumWrappers.NativeGameMode nativeGameMode = null;
-		switch (nmsType) {
-			case SURVIVAL -> nativeGameMode = EnumWrappers.NativeGameMode.SURVIVAL;
-			case CREATIVE -> nativeGameMode = EnumWrappers.NativeGameMode.CREATIVE;
-			case ADVENTURE -> nativeGameMode = EnumWrappers.NativeGameMode.ADVENTURE;
-			case SPECTATOR -> nativeGameMode = EnumWrappers.NativeGameMode.SPECTATOR;
-		}
-
-		return nativeGameMode;
-	}
 }
