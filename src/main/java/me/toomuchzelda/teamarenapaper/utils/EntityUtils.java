@@ -4,7 +4,6 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.mojang.datafixers.util.Pair;
 import io.netty.buffer.Unpooled;
-import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -15,12 +14,14 @@ import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerPlayerConnection;
-import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Registry;
+import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
@@ -42,47 +43,37 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.lang.reflect.InaccessibleObjectException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 public class EntityUtils {
-	private static Method playBlockFallSoundMethod;
+	private static final MethodHandle PLAY_BLOCK_FALL_SOUND;
 
 	public static void cacheReflection() {
-		try {
-			playBlockFallSoundMethod = net.minecraft.world.entity.LivingEntity.class.getDeclaredMethod(
-				"playBlockFallSound"
-			);
-			playBlockFallSoundMethod.setAccessible(true);
-		}
-		catch (NoSuchMethodException | InaccessibleObjectException | SecurityException e) {
-			Main.logger().severe("Could not reflectively access method ");
-			e.printStackTrace();
+		// static initializer
+	}
 
-			playBlockFallSoundMethod = null;
+	static {
+		try {
+			var lookup = MethodHandles.privateLookupIn(net.minecraft.world.entity.LivingEntity.class, MethodHandles.lookup());
+			PLAY_BLOCK_FALL_SOUND = lookup.findVirtual(net.minecraft.world.entity.LivingEntity.class,
+				"playBlockFallSound", MethodType.methodType(void.class));
+		} catch (NoSuchMethodException | IllegalAccessException ex) {
+			throw new Error("Could not reflectively access method playBlockFallSound", ex);
 		}
 	}
 
 	// From nmsLiving.causeFallDamage()
-	// See MC-278552 (Fixed in 1.21.5/25w02a)
 	public static void playFallDamageSound(LivingEntity living, double damage) {
-		if (playBlockFallSoundMethod == null)
-			living.getWorld().playSound(living, Sound.ENTITY_HORSE_ANGRY, SoundCategory.MASTER, 1.0f, 1.0f);
-		else {
-			try {
-				net.minecraft.world.entity.LivingEntity nmsLiving = ((CraftLivingEntity) living).getHandle();
-				SoundEvent sound = nmsLiving.getFallDamageSound0((int) damage);
-				// LivingEntity#playSound doesn't broadcast the sound to the player
-				// nmsLiving.playSound(sound, 1.0f, 1.0f);
-				//noinspection resource
-				nmsLiving.level().playSound(null, nmsLiving.getX(), nmsLiving.getY(), nmsLiving.getZ(), sound, nmsLiving.getSoundSource(), 1f, 1f);
-				playBlockFallSoundMethod.invoke(nmsLiving);
-			} catch (IllegalAccessException | InvocationTargetException ignored) {}
-		}
+		try {
+			net.minecraft.world.entity.LivingEntity nmsLiving = ((CraftLivingEntity) living).getHandle();
+			nmsLiving.playSound(nmsLiving.getFallDamageSound((int) damage), 1, 1);
+			PLAY_BLOCK_FALL_SOUND.invokeExact((net.minecraft.world.entity.LivingEntity) nmsLiving);
+		} catch (Throwable ignored) {}
 	}
 
 	@NotNull
@@ -249,7 +240,7 @@ public class EntityUtils {
 
             //send a packet NOW
             // can avoid protocollib since the nms constructor is public and modular
-            Vec3 vec = CraftVector.toNMS(velocity);
+            Vec3 vec = CraftVector.toVec3(velocity);
             ClientboundSetEntityMotionPacket packet = new ClientboundSetEntityMotionPacket(player.getEntityId(), vec);
             nmsPlayer.connection.send(packet);
         }

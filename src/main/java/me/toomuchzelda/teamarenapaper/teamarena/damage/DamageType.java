@@ -789,12 +789,14 @@ public class DamageType {
         return "DamageType[" + getName() + "]";
     }
 
-    public static void checkDamageTypes() {
+    @SuppressWarnings("UnstableApiUsage")
+	public static void checkDamageTypes() {
         //Entity for the sake of constructing damage events
         Pig entity = Main.getGame().getWorld().spawn(Main.getGame().getWorld().getSpawnLocation(), Pig.class);
 
+		org.bukkit.damage.DamageSource source = org.bukkit.damage.DamageSource.builder(org.bukkit.damage.DamageType.GENERIC).build();
         for (EntityDamageEvent.DamageCause cause : EntityDamageEvent.DamageCause.values()) {
-			EntityDamageEvent event = new EntityDamageEvent(entity, cause, 1d);
+			EntityDamageEvent event = new EntityDamageEvent(entity, cause, source, 1d);
             DamageType attack = DamageType.getAttack(event);
 
             if (attack == null || attack == DamageType.UNKNOWN) {

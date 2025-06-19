@@ -113,7 +113,7 @@ public class PacketFlyingPoint extends PacketEntity {
 
 		if (!(this.toFollow instanceof Player)) {
 			net.minecraft.world.entity.LivingEntity nmsLiving = ((CraftLivingEntity) this.toFollow).getHandle();
-			nmsLiving.lookAt(EntityAnchorArgument.Anchor.EYES, CraftVector.toNMS(newPos));
+			nmsLiving.lookAt(EntityAnchorArgument.Anchor.EYES, CraftVector.toVec3(newPos));
 
 			//Location loc = this.toFollow.getLocation();
 			//loc.setDirection(diffFromCentre);

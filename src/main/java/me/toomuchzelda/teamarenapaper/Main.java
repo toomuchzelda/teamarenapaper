@@ -1,8 +1,6 @@
 package me.toomuchzelda.teamarenapaper;
 
 import com.comphenix.protocol.ProtocolLibrary;
-import io.papermc.paper.command.brigadier.Commands;
-import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import me.toomuchzelda.teamarenapaper.httpd.HttpDaemon;
 import me.toomuchzelda.teamarenapaper.inventory.Inventories;
 import me.toomuchzelda.teamarenapaper.sql.DBSetPreferences;
@@ -11,7 +9,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.announcer.AnnouncerManager;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.*;
-import me.toomuchzelda.teamarenapaper.teamarena.commands.brigadier.CommandKitControlNew;
 import me.toomuchzelda.teamarenapaper.teamarena.cosmetics.CosmeticsManager;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;

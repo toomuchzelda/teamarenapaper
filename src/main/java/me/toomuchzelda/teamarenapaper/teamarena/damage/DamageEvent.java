@@ -419,7 +419,7 @@ public class DamageEvent {
 			if(knockback != null && damageType.isKnockback()) {
 				if (victim instanceof Player player) {
 					//send knockback packet without modifying player's velocity
-					Vec3 vec = CraftVector.toNMS(knockback);
+					Vec3 vec = CraftVector.toVec3(knockback);
 					ClientboundSetEntityMotionPacket packet = new ClientboundSetEntityMotionPacket(player.getEntityId(), vec);
 					PlayerUtils.sendPacket(player, new PacketContainer(PacketType.Play.Server.ENTITY_VELOCITY, packet));
 				} else {
@@ -625,7 +625,7 @@ public class DamageEvent {
 			if (isDeath)
 				sound = livingVictim.getDeathSound();
 			else {
-				SoundEvent nmsSound = nmsVictim.getHurtSound0(source);
+				SoundEvent nmsSound = nmsVictim.getHurtSound(source);
 				sound = CraftSound.minecraftToBukkit(nmsSound);
 			}
 		}

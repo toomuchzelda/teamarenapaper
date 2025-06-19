@@ -326,8 +326,7 @@ public class KitPyro extends Kit
 							Arrow newArrow = (Arrow) newProjectile;
 							newArrow.setColor(arrow.getColor());
 							newArrow.setDamage(arrow.getDamage());
-							newArrow.setKnockbackStrength(arrow.getKnockbackStrength());
-							newArrow.setShotFromCrossbow(arrow.isShotFromCrossbow());
+							newArrow.setWeapon(arrow.getWeapon());
 							newArrow.setPickupStatus(arrow.getPickupStatus());
 						} else {
 							Snowball snowball = (Snowball) projectile;

@@ -51,7 +51,12 @@ public class MutableDataComponentPatch {
 
 	public <T> MutableDataComponentPatch set(io.papermc.paper.datacomponent.DataComponentType.Valued<T> component, T value) {
 		var craftComponent = (PaperDataComponentType.ValuedImpl<T, ?>) component;
-		map.set(bukkitToMinecraft(component), craftComponent.getAdapter().toVanilla(value));
+		return setInternal(craftComponent, value);
+	}
+
+	// internal generic helper
+	private <T, NMS> MutableDataComponentPatch setInternal(PaperDataComponentType.ValuedImpl<T, NMS> component, T value) {
+		map.set(component.getHandle(), component.getAdapter().toVanilla(value, component.getHolder()));
 		return this;
 	}
 

@@ -606,7 +606,7 @@ public class EventListeners implements Listener
 						event.getPlayer().sendMessage(Component.text("One of your ender pearls landed outside the border. " +
 								"Aim better!").color(TextColors.ERROR_RED));
 					}
-					else if(cause == PlayerTeleportEvent.TeleportCause.CHORUS_FRUIT) {
+					else if(cause == PlayerTeleportEvent.TeleportCause.CONSUMABLE_EFFECT) {
 						event.getPlayer().sendMessage(Component.text("This fruit tried to take you outside the border, " +
 										"so now you just go nowhere because I have deemed finding a safe alternative position" +
 										" to be too much trouble (i am lazy). Here's a free diamond! - toomuchzelda")
