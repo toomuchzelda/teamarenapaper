@@ -305,8 +305,7 @@ public class PacketListeners
 
 				ClientboundPlayerInfoUpdatePacket nmsPacket = (ClientboundPlayerInfoUpdatePacket) event.getPacket().getHandle();
 
-				var actions = nmsPacket.actions();
-				boolean addPlayer = actions.contains(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER);
+				boolean addPlayer = nmsPacket.actions().contains(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER);
 
 				List<ClientboundPlayerInfoUpdatePacket.Entry> list = nmsPacket.entries();
 				final int size = FakeHitboxManager.ACTIVE ? list.size() * 5 : list.size();
@@ -345,7 +344,7 @@ public class PacketListeners
 				// avoid mutating the original
 				if (!newList.isEmpty()) {
 					event.setPacket(new PacketContainer(PacketType.Play.Server.PLAYER_INFO,
-						new ClientboundPlayerInfoUpdatePacket(actions, newList)));
+						new ClientboundPlayerInfoUpdatePacket(nmsPacket.actions(), newList)));
 				}
 			}
 		});
@@ -367,7 +366,7 @@ public class PacketListeners
 						// Ensure player doesn't see their own fake player entries
 						FakeHitbox hitbox = FakeHitboxManager.getByPlayerUuid(uuid);
 						if(hitbox != null) {
-							for (var entry : hitbox.getPlayerInfoEntries()) {
+							for (ClientboundPlayerInfoUpdatePacket.Entry entry : hitbox.getPlayerInfoEntries()) {
 								copyList.add(entry.profileId());
 							}
 						}
@@ -576,6 +575,5 @@ public class PacketListeners
 			}
 		});
 	}
-
 
 }

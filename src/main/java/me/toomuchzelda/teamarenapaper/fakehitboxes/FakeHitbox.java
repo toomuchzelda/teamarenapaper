@@ -118,10 +118,8 @@ public class FakeHitbox
 			net.minecraft.network.chat.Component nmsComponent = PaperAdventure.asVanilla(displayNameComp);
 
 			// Unlisted playerinfo entry.
-			var nmsEntry = new ClientboundPlayerInfoUpdatePacket.Entry(fPlayer.uuid, authLibProfile, false,
-				1, GameType.SURVIVAL, nmsComponent, true, 0, null);
-
-			playerUpdates.add(nmsEntry);
+			playerUpdates.add(new ClientboundPlayerInfoUpdatePacket.Entry(fPlayer.uuid, authLibProfile, false,
+				1, GameType.SURVIVAL, nmsComponent, true, 0, null));
 
 			PacketContainer spawnPlayerPacket = new PacketContainer(PacketType.Play.Server.SPAWN_ENTITY);
 			spawnPlayerPacket.getIntegers().write(0, fPlayer.entityId);

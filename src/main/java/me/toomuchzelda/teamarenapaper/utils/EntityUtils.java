@@ -59,9 +59,8 @@ public class EntityUtils {
 
 	static {
 		try {
-			var lookup = MethodHandles.privateLookupIn(net.minecraft.world.entity.LivingEntity.class, MethodHandles.lookup());
-			PLAY_BLOCK_FALL_SOUND = lookup.findVirtual(net.minecraft.world.entity.LivingEntity.class,
-				"playBlockFallSound", MethodType.methodType(void.class));
+			PLAY_BLOCK_FALL_SOUND = MethodHandles.privateLookupIn(net.minecraft.world.entity.LivingEntity.class, MethodHandles.lookup())
+				.findVirtual(net.minecraft.world.entity.LivingEntity.class, "playBlockFallSound", MethodType.methodType(void.class));
 		} catch (NoSuchMethodException | IllegalAccessException ex) {
 			throw new Error("Could not reflectively access method playBlockFallSound", ex);
 		}

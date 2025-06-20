@@ -277,19 +277,15 @@ public class DisguiseManager
 				// The playerinfodata with the disguised player's UUID but
 				// the disguise target's skin
 				// not listed
-				var replacementData = PacketUtils.replacePlayerInfoProfile(entry, disguisedGameProfile);
-
-				list.set(originalIndex, replacementData);
+				list.set(originalIndex, PacketUtils.replacePlayerInfoProfile(entry, disguisedGameProfile));
 
 				this.viewers.put(receiver, TeamArena.getGameTick());
 			}
 
 			// The player profile of the tab list entry that looks like the
-			// original player, but has a different UUID to avoid conflict
+			// original player, but has a different U1UID to avoid conflict
 			// with the above replacementData profile
-			var tabListData = PacketUtils.replacePlayerInfoProfile(entry, tabListGameProfile);
-
-			list.add(tabListData);
+			list.add(PacketUtils.replacePlayerInfoProfile(entry, tabListGameProfile));
 		}
 	}
 }
