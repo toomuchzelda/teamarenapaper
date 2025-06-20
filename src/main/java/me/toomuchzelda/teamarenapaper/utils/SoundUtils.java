@@ -1,22 +1,14 @@
 package me.toomuchzelda.teamarenapaper.utils;
 
-import net.minecraft.core.Holder;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.sounds.SoundEvent;
-import net.minecraft.util.RandomSource;
+import io.papermc.paper.registry.RegistryKey;
 import org.bukkit.*;
-import org.bukkit.craftbukkit.CraftServer;
-import org.bukkit.craftbukkit.CraftSound;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 
 public class SoundUtils {
     public static Sound getRandomSound() {
-		net.minecraft.core.Registry<SoundEvent> registry = ((CraftServer) Bukkit.getServer()).getHandle().getServer()
-			.registryAccess().lookupOrThrow(Registries.SOUND_EVENT);
-		Holder.Reference<SoundEvent> randomSound = registry.getRandom(RandomSource.create()).orElseThrow();
-		return CraftSound.minecraftHolderToBukkit(randomSound);
+		return MathUtils.getRandomRegistryElement(RegistryKey.SOUND_EVENT);
     }
 
     private static final ArrayList<Sound> OBNOXIOUS_SOUNDS = new ArrayList<>();

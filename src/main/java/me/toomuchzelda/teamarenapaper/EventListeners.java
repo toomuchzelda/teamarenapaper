@@ -666,6 +666,13 @@ public class EventListeners implements Listener
 				if (!Main.getGame().canAttack(pShooter, livingVictim)) {
 					event.setCancelled(true);
 				}
+			} else if (
+				projectile instanceof Firework firework &&
+					Main.getGame().getKillStreakManager().isCrateFirework(firework) &&
+					collidedWith instanceof Parrot parrot &&
+					parrot.getVehicle() == firework) { // band-aid fix for crate signals
+				event.setCancelled(true);
+				return;
 			}
 
 			// Cancelled event at this point means absolutely NO collision

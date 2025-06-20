@@ -1,10 +1,18 @@
 package me.toomuchzelda.teamarenapaper.utils;
 
 import com.google.common.primitives.Doubles;
+import io.papermc.paper.registry.PaperRegistries;
+import io.papermc.paper.registry.RegistryKey;
+import io.papermc.paper.registry.entry.RegistryEntryMeta;
+import io.papermc.paper.registry.tag.TagKey;
 import net.kyori.adventure.text.format.TextColor;
+import net.minecraft.core.Holder;
+import net.minecraft.util.RandomSource;
 import org.bukkit.Color;
+import org.bukkit.Keyed;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
+import org.bukkit.craftbukkit.CraftRegistry;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
@@ -15,6 +23,7 @@ import java.util.Random;
 public class MathUtils
 {
 	public static final Random random = new Random();
+	private static final RandomSource nmsRandom = RandomSource.create();
 
 	public static double randomRange(double min, double max) {
 		double rand = random.nextDouble() * (max - min);
@@ -60,6 +69,22 @@ public class MathUtils
 
 	public static <T> T randomElement(List<? extends T> list) {
 		return list.get(random.nextInt(list.size()));
+	}
+
+	public static <T extends Keyed> T getRandomRegistryElement(RegistryKey<T> registryKey) {
+		return mapNmsToBukkit(registryKey, CraftRegistry.getMinecraftRegistry(PaperRegistries.registryToNms(registryKey))
+			.getRandom(nmsRandom).orElseThrow());
+	}
+	public static <T extends Keyed> T getRandomRegistryElement(RegistryKey<T> registryKey, TagKey<T> tagKey) {
+		return mapNmsToBukkit(registryKey, CraftRegistry.getMinecraftRegistry(PaperRegistries.registryToNms(registryKey))
+			.getRandomElementOf(PaperRegistries.toNms(tagKey), nmsRandom).orElseThrow());
+	}
+
+	private static <M, T extends Keyed> T mapNmsToBukkit(RegistryKey<T> registryKey, Holder<M> nmsObject) {
+		RegistryEntryMeta<M, T> registryMeta = Objects.requireNonNull(PaperRegistries.<M, T>getEntry(registryKey)).meta();
+		if (!(registryMeta instanceof RegistryEntryMeta.ServerSide<M, T> serverSideMeta))
+			throw new IllegalStateException("Not data-driven registry: " + registryKey);
+		return serverSideMeta.registryTypeMapper().createBukkit(nmsObject);
 	}
 
 	public static int clamp(int min, int max, int value) {

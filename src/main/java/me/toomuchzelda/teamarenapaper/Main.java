@@ -26,6 +26,7 @@ import org.spigotmc.SpigotConfig;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.*;
 import java.util.logging.Level;
@@ -113,8 +114,10 @@ public final class Main extends JavaPlugin
 			logger().info("Starting NanoHTTPD");
 			httpDaemon = new HttpDaemon(this);
 			httpDaemon.startListening();
-		}
-		catch (IOException e) {
+		} catch (FileNotFoundException ex) {
+			logger().log(Level.WARNING, ex.getMessage());
+			httpDaemon = null;
+		} catch (IOException e) {
 			logger().log(Level.WARNING, "Failed to start HttpDaemon", e);
 			httpDaemon = null;
 		}
