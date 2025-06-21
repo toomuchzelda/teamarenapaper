@@ -11,7 +11,6 @@ import org.bukkit.Material;
 import org.bukkit.Registry;
 import org.bukkit.Sound;
 
-import java.util.Arrays;
 import java.util.Map;
 
 public class Preferences {
@@ -23,7 +22,8 @@ public class Preferences {
 	// Clientside
 	public static final Preference<Sound> BOW_HIT_SOUND = SimplePreference.ofKeyed("bow_hit_sound",
 			"Sound that plays when you hit a bow shot on an entity", Sound.class, Sound.ENTITY_ARROW_HIT_PLAYER,
-			Arrays.asList(Sound.values()), Registry.SOUNDS::get)
+			Registry.SOUNDS.keyStream().sorted().map(Registry.SOUNDS::get).toList(),
+			Registry.SOUNDS::get)
 		.setIcon(Material.BOW)
 		.setCategory(PreferenceCategory.VISUAL_EFFECTS);
 

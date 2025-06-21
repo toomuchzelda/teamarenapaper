@@ -2,15 +2,15 @@ package me.toomuchzelda.teamarenapaper.utils;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
+import com.mojang.authlib.GameProfile;
 import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.world.entity.PositionMoveRotation;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.Location;
-import org.bukkit.craftbukkit.util.CraftLocation;
 import org.bukkit.craftbukkit.util.CraftVector;
 import org.bukkit.util.Vector;
-import org.jetbrains.annotations.Nullable;
 
 public class PacketUtils {
 	public static final PacketType ENTITY_POSITION_SYNC = PacketType.fromCurrent(PacketType.Protocol.PLAY, PacketType.Sender.SERVER, 0x20, ClientboundEntityPositionSyncPacket.class);
@@ -27,8 +27,8 @@ public class PacketUtils {
 		final ClientboundEntityPositionSyncPacket eps = (ClientboundEntityPositionSyncPacket) packet.getHandle();
 		PositionMoveRotation pmr = eps.values();
 
-		Vec3 nmsPos = CraftVector.toNMS(pos);
-		Vec3 nmsVel = velocity == null ? pmr.deltaMovement() : CraftVector.toNMS(velocity);
+		Vec3 nmsPos = CraftVector.toVec3(pos);
+		Vec3 nmsVel = velocity == null ? pmr.deltaMovement() : CraftVector.toVec3(velocity);
 
 		pmr = new PositionMoveRotation(nmsPos, nmsVel, pmr.yRot(), pmr.xRot());
 
@@ -42,7 +42,7 @@ public class PacketUtils {
 		PositionMoveRotation pmr = eps.values();
 
 		Vec3 nmsPos = new Vec3(pos.getX(), pos.getY(), pos.getZ());
-		Vec3 nmsVel = velocity == null ? pmr.deltaMovement() : CraftVector.toNMS(velocity);
+		Vec3 nmsVel = velocity == null ? pmr.deltaMovement() : CraftVector.toVec3(velocity);
 
 		pmr = new PositionMoveRotation(nmsPos, nmsVel, pos.getYaw(), pos.getPitch());
 
@@ -60,5 +60,20 @@ public class PacketUtils {
 		pmr = new PositionMoveRotation(nmsPos, pmr.deltaMovement(), pmr.yRot(), pmr.xRot());
 
 		packet.getModifier().write(1, pmr);
+	}
+
+	public static ClientboundPlayerInfoUpdatePacket.Entry replacePlayerInfoProfile(ClientboundPlayerInfoUpdatePacket.Entry entry, GameProfile profile) {
+		return new ClientboundPlayerInfoUpdatePacket.Entry(
+			profile.getId(), profile,
+			entry.listed(), entry.latency(), entry.gameMode(), entry.displayName(),
+			entry.showHat(), entry.listOrder(), null
+		);
+	}
+
+	public static ClientboundPlayerInfoUpdatePacket.Entry stripPlayerInfoChat(ClientboundPlayerInfoUpdatePacket.Entry entry) {
+		return new ClientboundPlayerInfoUpdatePacket.Entry(
+			entry.profileId(), entry.profile(), entry.listed(), entry.latency(), entry.gameMode(), entry.displayName(),
+			entry.showHat(), entry.listOrder(), null
+		);
 	}
 }

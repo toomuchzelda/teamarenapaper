@@ -13,10 +13,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class FallingCrate {
 	private static final double LEASH_KNOT_Y_OFFSET = -0.7 * 0.92; // chicken eye location

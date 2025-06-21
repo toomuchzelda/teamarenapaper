@@ -23,6 +23,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class TNTMine extends DemoMine
 {
@@ -56,7 +57,7 @@ public class TNTMine extends DemoMine
 		World world = baseLoc.getWorld();
 		ItemStack leatherBoots = new ItemStack(Material.LEATHER_BOOTS);
 		ItemUtils.colourLeatherArmor(color, leatherBoots);
-		org.bukkit.util.Consumer<ArmorStand> propApplier = stand -> {
+		Consumer<ArmorStand> propApplier = stand -> {
 			stand.setGlowing(false);
 			stand.setSilent(true);
 			stand.setMarker(true);

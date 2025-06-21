@@ -4,6 +4,7 @@ import com.destroystokyo.paper.entity.ai.Goal;
 import com.destroystokyo.paper.entity.ai.GoalKey;
 import com.destroystokyo.paper.entity.ai.GoalType;
 import com.destroystokyo.paper.entity.ai.MobGoals;
+import io.papermc.paper.registry.RegistryKey;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.GameState;
@@ -85,8 +86,10 @@ public class WolvesKillStreak extends CratedKillStreak
 					wolf1.setSitting(false);
 					wolf1.setCollarColor(dyeColor);
 					wolf1.setBreed(false);
+					wolf1.setVariant(MathUtils.getRandomRegistryElement(RegistryKey.WOLF_VARIANT));
+					wolf1.setSoundVariant(MathUtils.getRandomRegistryElement(RegistryKey.WOLF_SOUND_VARIANT));
 
-					String name = "(Wolf) " + WOLF_NAMES.get(MathUtils.randomMax(WOLF_NAMES.size() - 1));
+					String name = "(Wolf) " + MathUtils.randomElement(WOLF_NAMES);
 					wolf1.customName(Component.text(name, team.getRGBTextColor()));
 					wolf1.setCustomNameVisible(true);
 				});

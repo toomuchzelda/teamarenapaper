@@ -28,7 +28,7 @@ public class ResourcePackHandler {
 		final File dataDir = plugin.getDataFolder();
 		final File resourcePack = new File(dataDir, RESOURCE_PACK_NAME);
 		if (!resourcePack.exists() || resourcePack.isDirectory()) {
-			throw new IOException("Invalid or non-existent resource pack. " +
+			throw new FileNotFoundException("Invalid or non-existent resource pack. " +
 				"Please use a zip file. named " + RESOURCE_PACK_NAME + ". " +
 				"Continuing without...");
 		}
