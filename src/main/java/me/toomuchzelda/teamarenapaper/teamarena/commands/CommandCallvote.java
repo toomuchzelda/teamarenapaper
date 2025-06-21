@@ -150,8 +150,8 @@ public class CommandCallvote extends CustomCommand {
 		Component instruction;
 
 		if (option == StartVoteOption.MAP) {
-			maxTime = 10;
-			timeLeft = 10;
+			maxTime = 15;
+			timeLeft = 15;
 			//instruction = Component.text("Vote for the next map:", NamedTextColor.YELLOW);
 			instruction = Component.empty();
 		}

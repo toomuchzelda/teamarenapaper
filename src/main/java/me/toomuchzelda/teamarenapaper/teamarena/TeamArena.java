@@ -114,7 +114,7 @@ public abstract class TeamArena
 	//ticks of game starting time
 	protected static final int GAME_STARTING_TIME = 10 * 20;
 	protected static final int TOTAL_WAITING_TIME = PRE_TEAMS_TIME + PRE_GAME_STARTING_TIME + GAME_STARTING_TIME;
-	protected static final int END_GAME_TIME = 11 * 20; // 11 seconds, 10 seconds are for map voting.
+	protected static final int END_GAME_TIME = 16 * 20; // 16 seconds, 15 seconds are for map voting.
 	protected static final int MIN_PLAYERS_REQUIRED = 2;
 
 	//init to this, don't want negative numbers when waitingSince is set to the past in the prepGamestate() methods
@@ -204,7 +204,8 @@ public abstract class TeamArena
 
 		//copy the map to another directory and load from there to avoid any accidental modifying of the original
 		// map
-		File dest = new File("temp_" + worldFile.getName().toLowerCase(Locale.ENGLISH).substring(0, 5) + "_" + System.currentTimeMillis());
+		final String lowerCase = worldFile.getName().toLowerCase(Locale.ENGLISH);
+		File dest = new File("temp_" + lowerCase.substring(0, Math.min(lowerCase.length(), 5)) + "_" + System.currentTimeMillis());
 		if (dest.mkdir()) {
 			FileUtils.copyFolder(worldFile, dest);
 			//delete the uid.dat
