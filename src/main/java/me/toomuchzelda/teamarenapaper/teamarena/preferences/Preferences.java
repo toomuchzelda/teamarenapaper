@@ -6,7 +6,10 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSniper;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.SpeechBubbleHologram;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
 import org.bukkit.Registry;
 import org.bukkit.Sound;
@@ -18,6 +21,13 @@ public class Preferences {
 	public static void registerPreferences() {
 		// static initializer
 	}
+
+	private static final Component REMOVED_TEXT = Component.text("Removed. ", TextColors.ERROR_RED);
+	public static final Map<String, Component> REMOVED_PREFERENCES = Map.of(
+		"koth_hill_particles", REMOVED_TEXT.append(Component.text("Please use the client settings (Video -> Particles)", NamedTextColor.GREEN)),
+		"hearts_flash_damage", REMOVED_TEXT.append(Component.text("No longer supported by Minecraft", NamedTextColor.YELLOW)),
+		"damage_tilt", REMOVED_TEXT.append(Component.text("Please use client settings (Accessibility -> Damage Tilt)", NamedTextColor.GREEN))
+	);
 
 	// Clientside
 	public static final Preference<Sound> BOW_HIT_SOUND = SimplePreference.ofKeyed("bow_hit_sound",
@@ -100,18 +110,6 @@ public class Preferences {
 			"Receive kit-related messages in chat", true)
 		// https://minecraft-heads.com/custom-heads/miscellaneous/28599-speech-bubble-chat
 		.setIcon(ItemUtils.createPlayerHead("b02af3ca2d5a160ca1114048b7947594269afe2b1b5ec255ee72b683b60b99b9"))
-		.setCategory(PreferenceCategory.GAMEPLAY);
-
-	public static final Preference<Integer> KOTH_HILL_PARTICLES = SimplePreference.ofNumber("koth_hill_particles",
-			"""
-				The frequency of particles along the Hill border in King of the Hill.
-				0 = disable particles
-				1 = fewer particles
-				10 = more particles""", Integer.class, 4,
-			value -> value >= 0 && value <= 10)
-		.setDisplayName("KOTH particle frequency")
-		// https://minecraft-heads.com/custom-heads/miscellaneous/34656-glint-particle
-		.setIcon(ItemUtils.createPlayerHead("9f84735fc9c760e95eaf10cec4f10edb5f3822a5ff9551eeb5095135d1ffa302"))
 		.setCategory(PreferenceCategory.GAMEPLAY);
 
 	public static final Preference<Boolean> RECEIVE_GAME_TITLES = SimplePreference.ofBoolean("receive_game_titles",
