@@ -52,7 +52,8 @@ public class KitNone extends Kit {
 			if (ench.containsKey(Enchantment.FEATHER_FALLING) ||
 				ench.containsKey(Enchantment.DEPTH_STRIDER) ||
 				ench.containsKey(Enchantment.SWIFT_SNEAK) ||
-				ench.containsKey(Enchantment.FROST_WALKER)) {
+				ench.containsKey(Enchantment.FROST_WALKER) ||
+				ench.containsKey(Enchantment.SOUL_SPEED)) {
 
 				player.getEquipment().setBoots(item);
 			}

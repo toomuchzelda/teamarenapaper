@@ -23,7 +23,7 @@ import java.util.EnumSet;
 public class DefendPointTask extends BeeTask
 {
 	private static final int SWITCH_TARGET_CD = 6;
-	private static final double MAX_DISTANCE_SQR = 6d * 6d;
+	private static final double MAX_DISTANCE_SQR = 7d * 7d;
 	private static final double MIN_DISTANCE_SQR = 0.5d * 0.5d;
 
 	private static final Component ACTIONBAR_DEFEND = Component.text("Defend", NamedTextColor.BLUE)
