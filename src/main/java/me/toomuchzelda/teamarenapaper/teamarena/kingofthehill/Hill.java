@@ -1,13 +1,14 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kingofthehill;
 
-import me.toomuchzelda.teamarenapaper.Main;
+import com.comphenix.protocol.events.PacketContainer;
+import com.destroystokyo.paper.ClientOption;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PacketSender;
 import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
 import me.toomuchzelda.teamarenapaper.utils.RealHologram;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
-import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.kyori.adventure.text.Component;
+import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.util.BoundingBox;
@@ -34,6 +35,9 @@ public class Hill {
     }
 
     public void playParticles(Color... colors) {
+		if (TeamArena.getGameTick() % 5 != 0) // minimum particle interval
+			return;
+
         //ParticleBuilder doesn't support coloured SPELL_MOB Particles
 
         MathUtils.shuffleArray(colors);
@@ -41,68 +45,67 @@ public class Hill {
         //draw x lines
         Location location = border.getMin().toLocation(world);
 		Location otherSide = location.clone();
-        double xLength = border.getWidthX();
-        double zLength = border.getWidthZ();
+		int minX = (int) border.getMinX();
+		int minY = (int) border.getMinY();
+		int minZ = (int) border.getMinZ();
+        int xLength = (int) border.getWidthX();
+        int zLength = (int) border.getWidthZ();
 
         int red;
         int green;
         int blue;
 
-		PacketSender sender = PacketSender.getDefault((int) (xLength + zLength + 1) * 2);
+		int listSize = (xLength + 1 + zLength + 1);
+		PacketSender sender = PacketSender.getDefault(listSize * 2);
 
+		// array of packets
+		PacketContainer[] particles = new PacketContainer[listSize * 2];
+		int i = 0;
+
+		// draw x lines
         for(int x = 0; x <= xLength; x++)
         {
-            //get RGB as 0-255 and convert to 0-1
             int index = x % colors.length;
-            red = colors[index].getRed();
-            green = colors[index].getGreen();
-            blue = colors[index].getBlue();
 
-			Color bukkitColor = Color.fromRGB(red, green, blue);
-            location.setX(border.getMinX() + x);
-			otherSide.set(location.getX(), location.getY(), location.getZ() + zLength);
+			particles[i * 2] = ParticleUtils.batchParticles(Particle.ENTITY_EFFECT, colors[index],
+				minX + x, minY, minZ,
+				0, 0, 0, 0, 1, true);
+			particles[i * 2 + 1] = ParticleUtils.batchParticles(Particle.ENTITY_EFFECT, colors[index],
+				minX + x, minY, minZ + zLength,
+				0, 0, 0, 0, 1, true);
 
-			for(Player p : Bukkit.getOnlinePlayers()) {
-				int num = Main.getPlayerInfo(p).getPreference(Preferences.KOTH_HILL_PARTICLES);
-				if (num == 0)
-					continue;
-
-				if(TeamArena.getGameTick() % (11 - num) == 0) {
-					// Also does distance check
-					ParticleUtils.batchParticles(p, sender, Particle.ENTITY_EFFECT, bukkitColor, location,
-						VIEW_DISTANCE, 0, 0, 0, 0, 1f, true);
-
-					ParticleUtils.batchParticles(p, sender, Particle.ENTITY_EFFECT, bukkitColor, otherSide,
-						VIEW_DISTANCE, 0, 0, 0, 0, 1f, true);
-				}
-			}
+			i++;
         }
 
         //draw z lines
-        // reset location vector to start point X
-        location.setX(border.getMinX());
         for(int z = 0; z <= zLength; z += 1)
         {
             int index = z % colors.length;
-            red = colors[index].getRed();
-            green = colors[index].getGreen();
-            blue = colors[index].getBlue();
 
-			Color bukkitColor = Color.fromRGB(red, green, blue);
-            location.setZ(border.getMinZ() + z);
-			otherSide.set(location.getX() + xLength, location.getY(), location.getZ());
+			particles[i * 2] = ParticleUtils.batchParticles(Particle.ENTITY_EFFECT, colors[index],
+				minX, minY, minZ + z,
+				0, 0, 0, 0, 1, true);
+			particles[i * 2 + 1] = ParticleUtils.batchParticles(Particle.ENTITY_EFFECT, colors[index],
+				minX + xLength, minY, minZ + z,
+				0, 0, 0, 0, 1, true);
+			i++;
+		}
 
-            for(Player p : Bukkit.getOnlinePlayers()) {
-				int freq = Main.getPlayerInfo(p).getPreference(Preferences.KOTH_HILL_PARTICLES);
-				if (freq == 0)
-					continue;
+		boolean isSecondTick = TeamArena.getGameTick() % 10 == 0;
+		for (Player player : Bukkit.getOnlinePlayers()) {
+			ClientOption.ParticleVisibility particleVisibility = player.getClientOption(ClientOption.PARTICLE_VISIBILITY);
+			if (particleVisibility == ClientOption.ParticleVisibility.MINIMAL)
+				continue;
+			if (particleVisibility == ClientOption.ParticleVisibility.DECREASED && !isSecondTick)
+				continue;
 
-				if(TeamArena.getGameTick() % (11 - freq) == 0) {
-					ParticleUtils.batchParticles(p, sender, Particle.ENTITY_EFFECT, bukkitColor, location,
-						VIEW_DISTANCE, 0, 0, 0, 0, 1f, true);
+			Location eyeLocation = player.getEyeLocation();
+			Location particleLocation = eyeLocation.clone();
 
-					ParticleUtils.batchParticles(p, sender, Particle.ENTITY_EFFECT, bukkitColor, otherSide,
-						VIEW_DISTANCE, 0, 0, 0, 0, 1f, true);
+			for (PacketContainer packet : particles) {
+				ClientboundLevelParticlesPacket nmsPacket = (ClientboundLevelParticlesPacket) packet.getHandle();
+				if (particleLocation.set(nmsPacket.getX(), minY, nmsPacket.getZ()).distanceSquared(eyeLocation) <= VIEW_DISTANCE * VIEW_DISTANCE) {
+					sender.enqueue(player, packet);
 				}
 			}
 		}
