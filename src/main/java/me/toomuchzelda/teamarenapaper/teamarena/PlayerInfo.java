@@ -56,6 +56,10 @@ public final class PlayerInfo
 	// Currently used for KillStreak announcements
 	public int lastKillTime;
 	//for right clicking the leather chestplate
+	/**
+	 * Whether teammates are highlighted (glowing).
+	 * @see TeamArena#setViewingGlowingTeammates(PlayerInfo, boolean, boolean)
+	 */
 	public boolean viewingGlowingTeammates;
 
 	/**
@@ -87,7 +91,6 @@ public final class PlayerInfo
 		totalKills = 0;
 		deaths = 0;
 		lastKillTime = 0;
-		viewingGlowingTeammates = false;
 		lastInteractUnknownEntityTimes = new int[2];
 		this.lastMessageSender = null;
 

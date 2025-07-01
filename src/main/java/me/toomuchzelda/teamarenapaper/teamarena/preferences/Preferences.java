@@ -37,13 +37,6 @@ public class Preferences {
 		.setIcon(Material.BOW)
 		.setCategory(PreferenceCategory.VISUAL_EFFECTS);
 
-	/*public static final Preference<Boolean> HEARTS_FLASH_DAMAGE = SimplePreference.ofBoolean("hearts_flash_damage",
-			"If your hearts should flash when taking damage", true)
-		// https://minecraft-heads.com/custom-heads/miscellaneous/34659-damage-particle
-		.setIcon(ItemUtils.createPlayerHead("5ee118eddaee0dfb2cbc2c3d59c13a41a7d68cce945e42167aa1dcb8d0670517"))
-		.setCategory(PreferenceCategory.VISUAL_EFFECTS);
-	 */
-
 	public static final Preference<Boolean> HEARTS_FLASH_REGEN = SimplePreference.ofBoolean("hearts_flash_regen",
 			"If your hearts should flash while regenerating", true)
 		// https://minecraft-heads.com/custom-heads/miscellaneous/34655-heart-particle
@@ -144,7 +137,13 @@ public class Preferences {
 	public static final Preference<Boolean> DEFAULT_TEAM_CHAT = SimplePreference.ofBoolean("default_team_chat",
 			"Whether your chat messages should go to team chat instead of all chat by default.\n" +
 				"(Use /t to talk in the opposite chat)", false)
-		.setIcon(Material.GOAT_HORN)
+		.setIcon(Material.CALIBRATED_SCULK_SENSOR)
+		.setCategory(PreferenceCategory.GAMEPLAY);
+
+	public static final Preference<Boolean> DEFAULT_TEAMMATE_OUTLINE = SimplePreference.ofBoolean("default_teammate_outline",
+			"Whether your teammates should be highlighted by default. You can always change this in-game with your team item.",
+			false)
+		.setIcon(Material.MUSIC_DISC_5)
 		.setCategory(PreferenceCategory.GAMEPLAY);
 
 	public static final Preference<BuildingManager.AllyVisibility> ALLY_BUILDING_OUTLINE = SimplePreference.ofEnum("ally_building_outline",
