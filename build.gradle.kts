@@ -19,7 +19,7 @@ dependencies {
     // https://mvnrepository.com/artifact/org.xerial/sqlite-jdbc
     //paper has a sqlite driver at runtime
     implementation("org.xerial:sqlite-jdbc:3.41.2.2")
-    paperweight.paperDevBundle("1.21.6-R0.1-SNAPSHOT")
+    paperweight.paperDevBundle("1.21.7-R0.1-SNAPSHOT")
     compileOnly("com.comphenix.protocol:ProtocolLib:5.3.0")
 
     testImplementation(platform("org.junit:junit-bom:5.11.0"))
@@ -52,7 +52,7 @@ tasks {
     }
 
     runServer {
-        minecraftVersion("1.21.6")
+        minecraftVersion("1.21.7")
         downloadPlugins {
             url("https://ci.dmulloy2.net/job/ProtocolLib/lastSuccessfulBuild/artifact/build/libs/ProtocolLib.jar")
         }

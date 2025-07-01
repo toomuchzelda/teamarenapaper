@@ -180,10 +180,10 @@ public class EventListeners implements Listener
 	}
 
 	//these three events are called in this order
-	@EventHandler(priority = EventPriority.MONITOR)
-	public void playerLogin(PlayerLoginEvent event) {
-		LoginHandler.handlePlayerLogin(event);
-	}
+//	@EventHandler(priority = EventPriority.MONITOR)
+//	public void playerLogin(PlayerLoginEvent event) {
+//		LoginHandler.handlePlayerLogin(event);
+//	}
 
 	@EventHandler
 	public void playerSpawn(PlayerSpawnLocationEvent event) {

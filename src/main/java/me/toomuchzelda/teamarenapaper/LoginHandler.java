@@ -18,11 +18,9 @@ import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketPlayer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerLoginEvent;
 
 import java.sql.SQLException;
 import java.util.*;
@@ -135,18 +133,17 @@ public class LoginHandler
 		}
 	}
 
-	static void handlePlayerLogin(PlayerLoginEvent event) {
+	static void handlePlayerJoin(PlayerJoinEvent event) {
 		final Player player = event.getPlayer();
 		final UUID uuid = player.getUniqueId();
 		final PlayerInfo playerInfo;
 
-		Main.logger().info(player.getName() + " PlayerLoginEvent");
+		List<Component> messages = new ArrayList<>();
+
+		Main.logger().info(player.getName() + " PlayerJoinEvent (pre)");
 
 		// Remove before check if they are allowed to join to prevent memory leak
 		final DBLoadedData loadedData = loadedDbDataCache.remove(uuid);
-		if (event.getResult() != PlayerLoginEvent.Result.ALLOWED) {
-			return;
-		}
 
 		if (PlayerUtils.getOpLevel(player) == 4) { // Being max level op on vanilla server overrides DB
 			playerInfo = new PlayerInfo(PermissionLevel.OWNER, player);
@@ -155,9 +152,7 @@ public class LoginHandler
 		}
 
 		if (playerInfo.permissionLevel != PermissionLevel.ALL) {
-			Bukkit.getScheduler().runTask(Main.getPlugin(),
-				() -> player.sendMessage(Component.text("Your rank has been updated to " + playerInfo.permissionLevel.name(),
-					NamedTextColor.GREEN)));
+			messages.add(Component.text("Your rank has been updated to " + playerInfo.permissionLevel.name(), NamedTextColor.GREEN));
 		}
 
 		Map<Preference<?>, ?> prefMap = loadedData.preferenceMap();
@@ -172,14 +167,12 @@ public class LoginHandler
 			Preference<?> pref = entry.getKey();
 			if(entry.getValue() == null) {
 				((Map.Entry<Preference<?>, Object> ) entry).setValue(pref.getDefaultValue());
-				Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
-					player.sendMessage(Component.text(
+				messages.add(Component.text(
 						"Your previous set value for preference " + pref.getName() +
-							" is now invalid and has been reset to default: " + pref.getDefaultValue().toString() +
+							" is now invalid and has been reset to default: " + pref.getDefaultValue() +
 							". This may have happened because the preference itself was changed or perhaps due to " +
 							"some extraneous shenanigans and perchance, a sizeable portion of tomfoolery.",
-						TextColors.ERROR_RED));}
-				);
+						TextColors.ERROR_RED));
 			}
 		}
 		playerInfo.setPreferenceValues(prefMap);
@@ -189,20 +182,14 @@ public class LoginHandler
 			defaultKit = DBGetDefaultKit.DEFAULT_KIT;
 		playerInfo.defaultKit = defaultKit;
 
-		loginToJoinCache.put(player, playerInfo);
 		Main.playerIdLookup.put(player.getEntityId(), player);
 
 		HttpDaemon hd = Main.getHttpDaemon();
 		if (hd != null)
-			hd.onConnect(player, event.getRealAddress());
+			hd.onConnect(player, player.getAddress().getAddress());
 
 		Main.getGame().loggingInPlayer(player, playerInfo);
-	}
 
-	private static final Map<Player, PlayerInfo> loginToJoinCache = new WeakHashMap<>();
-
-	static void handlePlayerJoin(PlayerJoinEvent event) {
-		final Player player = event.getPlayer();
 		Main.logger().info(player.getName() + " PlayerJoinEvent");
 
 		FakeHitboxManager.addFakeHitbox(player);
@@ -210,17 +197,17 @@ public class LoginHandler
 		//disable yellow "Player has joined the game" messages
 		event.joinMessage(null);
 
-		final PlayerInfo pinfo = loginToJoinCache.remove(player);
-		Main.addPlayerInfo(player, pinfo);
-		pinfo.getScoreboard().set();
+		Main.addPlayerInfo(player, playerInfo);
+		playerInfo.getScoreboard().set();
 		// send sidebar objectives
 		SidebarManager.getInstance(player).registerObjectives(player);
 
-		Main.getGame().joiningPlayer(player, pinfo);
+		Main.getGame().joiningPlayer(player, playerInfo);
 
 		PacketPlayer.onJoin(event);
 		DisguiseManager.applyViewedDisguises(player);
 
+		messages.forEach(player::sendMessage);
 		player.addCustomChatCompletions(List.of("<item>"));
 	}
 }
