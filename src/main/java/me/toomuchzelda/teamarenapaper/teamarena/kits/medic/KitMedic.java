@@ -304,8 +304,10 @@ public class KitMedic extends Kit
 		private void stopGlowing(Player medic, HealInfo hinfo) {
 			PlayerUtils.sendKitMessage(medic, null, STOPPED_HEALING);
 			// Remove the medic-only glowing effect.
-			MetadataViewer viewer = Main.getPlayerInfo(medic).getMetadataViewer();
-			viewer.removeBitfieldValue(hinfo.healed(), MetaIndex.BASE_BITFIELD_IDX, MetaIndex.BASE_BITFIELD_GLOWING_IDX);
+			PlayerInfo playerInfo = Main.getPlayerInfo(medic);
+			MetadataViewer viewer = playerInfo.getMetadataViewer();
+			if (!playerInfo.viewingGlowingTeammates)
+				viewer.removeBitfieldValue(hinfo.healed(), MetaIndex.BASE_BITFIELD_IDX, MetaIndex.BASE_BITFIELD_GLOWING_IDX);
 			viewer.refreshViewer(hinfo.healed());
 
 			hinfo.guardian().remove();

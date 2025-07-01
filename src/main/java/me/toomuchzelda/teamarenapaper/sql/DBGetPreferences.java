@@ -4,6 +4,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preference;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 
 import javax.annotation.Nullable;
 import java.sql.Connection;
@@ -40,12 +41,9 @@ public class DBGetPreferences extends DBOperation<DBGetPreferences.Result>
 				//throw immediately; do not allow this to ever happen
 				if(pref == null) {
 					Component removalMsg = Preferences.REMOVED_PREFERENCES.get(prefName);
-					if (removalMsg != null) {
-						prefMessages.put(prefName, removalMsg);
-						continue;
-					} else {
-						throw new IllegalArgumentException("DB stored preference name " + prefName + " not found");
-					}
+					prefMessages.put(prefName, Objects.requireNonNullElseGet(removalMsg,
+						() -> Component.text("Preference not found. Please report this to an admin.", NamedTextColor.DARK_RED, TextDecoration.BOLD)));
+					continue;
 				}
 
 				//attempt to read the stored value
