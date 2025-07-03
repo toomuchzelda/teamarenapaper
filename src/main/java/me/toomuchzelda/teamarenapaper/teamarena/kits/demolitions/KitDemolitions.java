@@ -276,25 +276,7 @@ public class KitDemolitions extends Kit
 				event.setUseItemInHand(Event.Result.DENY);
 				event.setUseInteractedBlock(Event.Result.DENY); //prevent arming tnt
 				DemoMine mine = (DemoMine) BuildingOutlineManager.getSelector(demo).getSelected();
-				if (mine != null && !mine.isTriggered()) {
-					if (event.getAction().isRightClick()) {
-						mine.trigger(demo);
-					} else {
-						boolean newValue = !mine.quickTrigger;
-						mine.quickTrigger = newValue;
-
-						long quickTriggerCount = BuildingManager.getAllPlayerBuildings(demo).stream()
-							.filter(building -> building instanceof DemoMine demoMine && demoMine.quickTrigger)
-							.count();
-						demo.sendMessage(text().append(
-							text((newValue ? "Added" : "Removed") + " this "), mine.type.displayName(),
-							text(newValue ? " to " : " from "), QUICK_TRIGGER,
-							text(". You now have "),
-							text(quickTriggerCount, NamedTextColor.YELLOW),
-							text(" bombs in "), QUICK_TRIGGER_UNCOOL, text(".")
-						).color(newValue ? NamedTextColor.GREEN : NamedTextColor.RED));
-					}
-				}
+				doMineAction(demo, mine, event.getAction().isLeftClick());
 			} else if (event.getAction().isRightClick()) {
 				Block clicked = event.getClickedBlock();
 				if (clicked == null || usedItem == null)
@@ -321,6 +303,28 @@ public class KitDemolitions extends Kit
 					Component message = text("You can't place a mine here!", TextColors.ERROR_RED);
 					PlayerUtils.sendKitMessage(event.getPlayer(), message, message);
 				}
+			}
+		}
+
+		public static void doMineAction(Player demoPlayer, DemoMine mine, boolean attack) {
+			if (mine == null || mine.isTriggered())
+				return;
+			if (attack) {
+				boolean newValue = !mine.quickTrigger;
+				mine.quickTrigger = newValue;
+
+				long quickTriggerCount = BuildingManager.getAllPlayerBuildings(demoPlayer).stream()
+					.filter(building -> building instanceof DemoMine demoMine && demoMine.quickTrigger)
+					.count();
+				demoPlayer.sendMessage(text().append(
+					text((newValue ? "Added" : "Removed") + " this "), mine.type.displayName(),
+					text(newValue ? " to " : " from "), QUICK_TRIGGER,
+					text(". You now have "),
+					text(quickTriggerCount, NamedTextColor.YELLOW),
+					text(" bombs in "), QUICK_TRIGGER_UNCOOL, text(".")
+				).color(newValue ? NamedTextColor.GREEN : NamedTextColor.RED));
+			} else {
+				mine.trigger(demoPlayer);
 			}
 		}
 
