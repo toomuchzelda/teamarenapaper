@@ -45,6 +45,8 @@ import org.jetbrains.annotations.Range;
 import java.util.*;
 
 public class RiptideAbility extends Ability {
+	public static final int MAX_RIPTIDE_LEVEL = 3;
+
 	public static final NamespacedKey TRIDENT_KEY = new NamespacedKey(Main.getPlugin(), "riptide_ability");
 	public static final NamespacedKey TRIDENT_DAMAGE = new NamespacedKey(Main.getPlugin(), "riptide_damage");
 	public static final ItemStack TRIDENT = ItemBuilder.of(Material.TRIDENT)
@@ -155,12 +157,12 @@ public class RiptideAbility extends Ability {
 		}
 
 		void setProgress(float progress) {
-			this.progress = MathUtils.clamp(0, 4, progress);
+			this.progress = MathUtils.clamp(0, MAX_RIPTIDE_LEVEL, progress);
 		}
 
 		void setProgress(float progress, int interpolationDuration) {
 			this.lastProgress = this.progress;
-			this.progress = MathUtils.clamp(0, 4, progress);
+			this.progress = MathUtils.clamp(0, MAX_RIPTIDE_LEVEL, progress);
 			this.interpolationStart = TeamArena.getGameTick();
 			this.interpolationDuration = interpolationDuration;
 		}
