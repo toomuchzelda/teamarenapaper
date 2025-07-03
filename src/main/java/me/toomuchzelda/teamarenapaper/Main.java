@@ -15,8 +15,10 @@ import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.FileUtils;
+import net.kyori.adventure.key.KeyPattern;
 import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
 import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
 import org.bukkit.command.CommandMap;
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
@@ -226,6 +228,10 @@ public final class Main extends JavaPlugin
 
 	public static ComponentLogger componentLogger() {
 		return componentLogger;
+	}
+
+	public static NamespacedKey key(@KeyPattern.Value String value) {
+		return new NamespacedKey(plugin, value);
 	}
 
 	public static Main getPlugin() {
