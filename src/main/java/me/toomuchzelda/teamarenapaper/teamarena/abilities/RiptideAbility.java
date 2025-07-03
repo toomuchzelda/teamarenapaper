@@ -45,7 +45,12 @@ import org.jetbrains.annotations.Range;
 import java.util.*;
 
 public class RiptideAbility extends Ability {
+	/** The maximum Riptide level given to player tridents */
 	public static final int MAX_RIPTIDE_LEVEL = 3;
+	/** The maximum Riptide progress the player can store */
+	public static final int MAX_RIPTIDE_PROGRESS = 4;
+	/** Whether the player will fly into the sky upon reaching MAX_RIPTIDE_PROGRESS */
+	public static final boolean CAN_OVERLOAD = false;
 
 	public static final NamespacedKey TRIDENT_KEY = new NamespacedKey(Main.getPlugin(), "riptide_ability");
 	public static final NamespacedKey TRIDENT_DAMAGE = new NamespacedKey(Main.getPlugin(), "riptide_damage");
@@ -127,7 +132,7 @@ public class RiptideAbility extends Ability {
 				int nextMilestone = (int) Math.ceil(progress + 0.001f);
 				float secondsUntilMilestone = (nextMilestone - progress) / increment / 20f;
 				builder.append(Component.text(" - " + TextUtils.formatNumber(secondsUntilMilestone) + "s "));
-				if (nextMilestone != 4) {
+				if (!CAN_OVERLOAD || nextMilestone != 4) {
 					builder.append(Component.text("to Riptide " + nextMilestone));
 				} else {
 					builder.append(Component.text("till OVERLOAD", TeamArena.getGameTick() % 20 < 10 ? NamedTextColor.GOLD : NamedTextColor.YELLOW));
@@ -145,10 +150,10 @@ public class RiptideAbility extends Ability {
 				bossBar.name(buildBarTitle(factors, increment));
 			}
 			if (interpolationDuration == 0 || (TeamArena.getGameTick() - interpolationStart > interpolationDuration)) {
-				bossBar.progress(progress / 4);
+				bossBar.progress(progress / MAX_RIPTIDE_PROGRESS);
 			} else {
 				float t = (float) (TeamArena.getGameTick() - interpolationStart) / interpolationDuration;
-				bossBar.progress(MathUtils.lerp(lastProgress, progress, t) / 4);
+				bossBar.progress(MathUtils.lerp(lastProgress, progress, t) / MAX_RIPTIDE_PROGRESS);
 			}
 		}
 
@@ -157,12 +162,12 @@ public class RiptideAbility extends Ability {
 		}
 
 		void setProgress(float progress) {
-			this.progress = MathUtils.clamp(0, MAX_RIPTIDE_LEVEL, progress);
+			this.progress = MathUtils.clamp(0, MAX_RIPTIDE_PROGRESS, progress);
 		}
 
 		void setProgress(float progress, int interpolationDuration) {
 			this.lastProgress = this.progress;
-			this.progress = MathUtils.clamp(0, MAX_RIPTIDE_LEVEL, progress);
+			this.progress = MathUtils.clamp(0, MAX_RIPTIDE_PROGRESS, progress);
 			this.interpolationStart = TeamArena.getGameTick();
 			this.interpolationDuration = interpolationDuration;
 		}
@@ -272,8 +277,8 @@ public class RiptideAbility extends Ability {
 
 	public float calcProgressIncrement(Set<RiptideFactor> factors, float progress) {
 		float sum = 0;
-		boolean overload = progress <= 3;
-		float t = overload ? progress / 3 : progress - 3;
+		boolean overload = progress <= MAX_RIPTIDE_LEVEL;
+		float t = overload ? progress / MAX_RIPTIDE_LEVEL : progress - MAX_RIPTIDE_LEVEL;
 		for (RiptideFactor factor : factors) {
 			sum += overload ?
 				MathUtils.lerp(factor.normalStart, factor.normalEnd, t) :
@@ -363,7 +368,7 @@ public class RiptideAbility extends Ability {
 
 	private static boolean canRiptide(Player player) {
 		return !(Main.getGame() instanceof CaptureTheFlag ctf && ctf.isFlagCarrier(player)) &&
-			((player.isSneaking() && player.isOnGround()  /* TODO replace with more robust check */) || player.isInWaterOrRain());
+			((player.isSneaking() && player.isOnGround()  /* TODO replace with more robust check */) || player.isInWater() || player.isInRain());
 	}
 
 	private static final BlockData SHALLOW_WATER_DATA = Material.WATER.createBlockData(blockData -> ((Levelled) blockData).setLevel(7));
@@ -376,12 +381,9 @@ public class RiptideAbility extends Ability {
 		int oldProgress = (int) info.progress;
 		Set<RiptideFactor> factors = calcFactors(player);
 		float increment = calcProgressIncrement(factors, info.progress);
-		if (!burdened)
-			info.setProgress(info.progress + increment);
-		else
-			info.setProgress(Math.min(3, info.progress + increment));
+		info.setProgress(info.progress + increment);
 
-		if (info.progress == 4) {
+		if (CAN_OVERLOAD && !burdened && info.progress == MAX_RIPTIDE_PROGRESS) {
 			// overload!
 			player.setVelocity(new Vector(MathUtils.random.nextGaussian(), 2.5, MathUtils.random.nextGaussian()));
 			player.startRiptideAttack(20, 0, null);
@@ -400,7 +402,7 @@ public class RiptideAbility extends Ability {
 		var attribute = Objects.requireNonNull(player.getAttribute(Attribute.WATER_MOVEMENT_EFFICIENCY));
 		if (info.progress >= 1 && !burdened) {
 			// is sneaking
-			if (canRiptide(player) && !player.isInWaterOrRain()) {
+			if (canRiptide(player) && !(player.isInWater() || player.isInRain())) {
 				if (attribute.getModifier(SNEAK_SPEED.getKey()) == null)
 					attribute.addModifier(SNEAK_SPEED);
 				BlockCoords targetCoords = new BlockCoords(player.getEyeLocation());
@@ -456,7 +458,7 @@ public class RiptideAbility extends Ability {
 		}
 		player.sendActionBar(actionBar);
 
-		updateItems(player, Math.min(3, (int) info.progress), changed);
+		updateItems(player, Math.min(MAX_RIPTIDE_LEVEL, (int) info.progress), changed);
 	}
 
 	private static final double ACCELERATION = 0.08;
@@ -521,7 +523,7 @@ public class RiptideAbility extends Ability {
 		if (item == null || item.getType() != Material.TRIDENT || item.getEnchantmentLevel(Enchantment.RIPTIDE) == 0)
 			return;
 		Player player = event.getPlayer();
-		if (player.isInWaterOrRain())
+		if (player.isInWater() || player.isInRain())
 			return; // no need to set fake water
 		((CraftPlayer) player).getHandle().wasTouchingWater = true;
 		riptideInfoMap.get(player).wasFakeWater = true;
@@ -533,7 +535,7 @@ public class RiptideAbility extends Ability {
 		if (item.getType() != Material.TRIDENT || item.getEnchantmentLevel(Enchantment.RIPTIDE) == 0 || event.getTicksHeldFor() < 10)
 			return;
 		Player player = event.getPlayer();
-		if (player.isInWaterOrRain())
+		if (player.isInWater() || player.isInRain())
 			return; // no need to set fake water
 		((CraftPlayer) player).getHandle().wasTouchingWater = true;
 		riptideInfoMap.get(player).wasFakeWater = true;
