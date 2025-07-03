@@ -280,15 +280,18 @@ public abstract class DemoMine extends EntityBuilding implements PreviewableBuil
 
 		@Override
 		public void onInteract(Player player, EquipmentSlot hand, boolean attack) {
-			if (!attack)
-				return;
 			if (Main.getGame().isDead(player))
 				return;
 
 			DemoMine mine = DemoMine.this;
 
 			// remote detonator left click takes priority
-			if (player == mine.owner && KitDemolitions.isRemoteDetonatorItem(player.getInventory().getItemInMainHand()))
+			if (player == mine.owner && KitDemolitions.isRemoteDetonatorItem(player.getInventory().getItemInMainHand())) {
+				KitDemolitions.DemolitionsAbility.doMineAction(player, mine, attack);
+				return;
+			}
+
+			if (!attack)
 				return;
 
 			//teammate punches it
