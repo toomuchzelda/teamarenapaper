@@ -7,12 +7,11 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingOutlineManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.EntityBuilding;
 import me.toomuchzelda.teamarenapaper.teamarena.building.PreviewableBuilding;
-import me.toomuchzelda.teamarenapaper.utils.BlockUtils;
-import me.toomuchzelda.teamarenapaper.utils.GlowUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
+import me.toomuchzelda.teamarenapaper.utils.*;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.util.TriState;
 import net.minecraft.world.phys.AABB;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -32,6 +31,9 @@ public abstract class DemoMine extends EntityBuilding implements PreviewableBuil
 	public static final int TIME_TO_ARM = 30;
 
 	public final TeamArenaTeam team;
+
+	boolean quickTrigger;
+
 	ArmorStand[] stands;
 	PacketMineHitbox hitboxEntity;
 	Player triggerer; //store the player that stepped on it for shaming OR the demo if remote detonate
@@ -63,6 +65,11 @@ public abstract class DemoMine extends EntityBuilding implements PreviewableBuil
 		super(player, block.getLocation().add(0.5, 0, 0.5));
 		setName("Mine");
 		this.team = Main.getPlayerInfo(player).team;
+	}
+
+	@Override
+	public TriState isOutlineVisibleToOwner() {
+		return quickTrigger ? TriState.TRUE : TriState.NOT_SET;
 	}
 
 	@Override
@@ -217,6 +224,10 @@ public abstract class DemoMine extends EntityBuilding implements PreviewableBuil
 		//subclass here
 	}
 
+	public Component formatActionBarMessage() {
+		return type.displayName(); // distance calculated by DemolitionsAbility
+	}
+
 	abstract boolean isDone();
 
 	boolean isTriggered() {
@@ -275,10 +286,19 @@ public abstract class DemoMine extends EntityBuilding implements PreviewableBuil
 				return;
 
 			DemoMine mine = DemoMine.this;
+
+			// remote detonator left click takes priority
+			if (player == mine.owner && KitDemolitions.isRemoteDetonatorItem(player.getInventory().getItemInMainHand()))
+				return;
+
 			//teammate punches it
 			if (player != mine.owner && mine.team.getPlayerMembers().contains(player)) {
-				player.sendMessage(Component.text("This is ", NamedTextColor.AQUA).append(
-					mine.owner.playerListName()).append(Component.text("'s " + mine.type.name)));
+				player.sendMessage(Component.textOfChildren(
+					Component.text("This is ", NamedTextColor.AQUA),
+					mine.owner.playerListName(),
+					Component.text("'s "),
+					mine.type.displayName()
+				));
 			} else {
 				int currentTick = TeamArena.getGameTick();
 				int diff = currentTick - lastHurtTime;

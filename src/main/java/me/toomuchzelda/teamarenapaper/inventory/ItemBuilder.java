@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.inventory;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.utils.MutableDataComponentPatch;
+import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.ComponentLike;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -166,8 +167,15 @@ public final class ItemBuilder {
 		return this;
 	}
 
-	public <T> ItemBuilder setPDC(NamespacedKey key, PersistentDataType<?, T> dataType, T value) {
-		meta.getPersistentDataContainer().set(key, dataType, value);
+	public <T> ItemBuilder setPDC(Key key, PersistentDataType<?, T> dataType, T value) {
+		meta.getPersistentDataContainer().set(key instanceof NamespacedKey nk ? nk : new NamespacedKey(key.namespace(), key.value()),
+			dataType, value);
+		return this;
+	}
+
+	public ItemBuilder setPDCFlag(Key key) {
+		meta.getPersistentDataContainer().set(key instanceof NamespacedKey nk ? nk : new NamespacedKey(key.namespace(), key.value()),
+			PersistentDataType.BOOLEAN, true);
 		return this;
 	}
 
@@ -175,6 +183,11 @@ public final class ItemBuilder {
 	private static int id = 0;
 	public ItemBuilder unique() {
 		return setPDC(UNIQUE_KEY, PersistentDataType.INTEGER, id++);
+	}
+
+	public ItemBuilder apply(Consumer<ItemBuilder> consumer) {
+		consumer.accept(this);
+		return this;
 	}
 
 	// Data Components API
