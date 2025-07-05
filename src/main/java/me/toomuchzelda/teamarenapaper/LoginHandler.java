@@ -16,6 +16,8 @@ import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketPlayer;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import org.bukkit.entity.Player;
@@ -28,7 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class LoginHandler
 {
-	private record DBLoadedData(Map<Preference<?>, ?> preferenceMap, String defaultKit, PermissionLevel permissionLevel) {}
+	private record DBLoadedData(DBGetPreferences.Result preferenceMap, String defaultKit, PermissionLevel permissionLevel) {}
 
 	private static final ConcurrentHashMap<UUID, DBLoadedData> loadedDbDataCache = new ConcurrentHashMap<>();
 
@@ -82,7 +84,7 @@ public class LoginHandler
 		//load preferences from DB
 		// cancel and return if fail
 		DBGetPreferences getPreferences = new DBGetPreferences(uuid);
-		Map<Preference<?>, ?> retrievedPrefs;
+		DBGetPreferences.Result retrievedPrefs;
 		try {
 			retrievedPrefs = getPreferences.run();
 			if (retrievedPrefs == null) {
@@ -155,26 +157,32 @@ public class LoginHandler
 			messages.add(Component.text("Your rank has been updated to " + playerInfo.permissionLevel.name(), NamedTextColor.GREEN));
 		}
 
-		Map<Preference<?>, ?> prefMap = loadedData.preferenceMap();
+		DBGetPreferences.Result prefResult = loadedData.preferenceMap();
+		Map<Preference<?>, ?> prefMap = prefResult.preferences();
 		if (prefMap == null) {
 			Main.logger().severe("prefMap is null in PlayerJoinEvent. Should be impossible.");
 			prefMap = new HashMap<>();
 		}
-		//null values are inserted in the DBGetPreferences operation to signal that a previously
-		// stored value is now invalid for some reason.
-		// so notify the player here of that.
-		for(var entry : prefMap.entrySet()) {
-			Preference<?> pref = entry.getKey();
-			if(entry.getValue() == null) {
-				((Map.Entry<Preference<?>, Object> ) entry).setValue(pref.getDefaultValue());
-				messages.add(Component.text(
-						"Your previous set value for preference " + pref.getName() +
-							" is now invalid and has been reset to default: " + pref.getDefaultValue() +
-							". This may have happened because the preference itself was changed or perhaps due to " +
-							"some extraneous shenanigans and perchance, a sizeable portion of tomfoolery.",
-						TextColors.ERROR_RED));
+
+		if (!prefResult.preferenceMessages().isEmpty()) {
+			messages.add(Component.text("Some preferences require your attention:", NamedTextColor.GOLD));
+			for (Map.Entry<String, Component> entry : prefResult.preferenceMessages().entrySet()) {
+				TextComponent.Builder builder = Component.text().append(Component.text("  "), entry.getValue());
+				Preference<?> preference = Preference.getByName(entry.getKey());
+				if (preference != null) {
+					if (preference.getValues() != null)
+						builder.clickEvent(ClickEvent.runCommand("/prefs gui " + entry.getKey()));
+					else
+						builder.clickEvent(ClickEvent.suggestCommand("/prefs change " + entry.getKey() + " <value>"));
+					builder.hoverEvent(Component.text("Click to change the preference", NamedTextColor.BLUE));
+				} else {
+					builder.hoverEvent(Component.text("This preference does not exist.", TextColors.ERROR_RED));
+				}
+				messages.add(builder.build());
 			}
+			messages.add(Component.text("You can click on the message to change the preference, if possible.", NamedTextColor.BLUE));
 		}
+
 		playerInfo.setPreferenceValues(prefMap);
 
 		String defaultKit = loadedData.defaultKit();

@@ -33,17 +33,20 @@ public class ParticleUtils {
 													 float offX, float offY, float offZ,
 													 float speed,
 													 boolean force) {
-
-		if (data != null && !particle.getDataType().isInstance(data)) {
-			throw new IllegalArgumentException("Particle and data mismatch");
-		}
-
+		return batchParticles(particle, data, loc.getX(), loc.getY(), loc.getZ(), count, offX, offY, offZ, speed, force);
+	}
+	public static <T> PacketContainer batchParticles(Particle particle, T data,
+													 double x, double y, double z, int count,
+													 float xOffset, float yOffset, float zOffset,
+													 float speed,
+													 boolean force) {
+		// data type is enforced by CraftParticle
 		ParticleOptions nmsParticleOptions = CraftParticle.createParticleParam(particle, data);
 		ClientboundLevelParticlesPacket packet = new ClientboundLevelParticlesPacket(
 			nmsParticleOptions,
 			force, false,
-			loc.getX(), loc.getY(), loc.getZ(),
-			offX, offY, offZ,
+			x, y, z,
+			xOffset, yOffset, zOffset,
 			speed,
 			count
 		);

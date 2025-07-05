@@ -1,13 +1,18 @@
 package me.toomuchzelda.teamarenapaper.teamarena.building;
 
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
+import net.kyori.adventure.util.TriState;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 public class BuildingOutlineManager {
 
@@ -57,7 +62,6 @@ public class BuildingOutlineManager {
 		allyOutlines.clear();
 		buildingSelectors.values().forEach(BuildingSelector::cleanUp);
 		buildingSelectors.clear();
-		teamCache.clear();
 	}
 
 	private static BuildingOutline buildingToOutline(Building building) {
@@ -74,24 +78,25 @@ public class BuildingOutlineManager {
 		return outline;
 	}
 
-	private static final Map<Player, TeamArenaTeam> teamCache = new WeakHashMap<>();
-	private static TeamArenaTeam teamOf(Player player) {
-		return teamCache.computeIfAbsent(player, p -> Main.getPlayerInfo(p).team);
-	}
-
 	private static final double MAX_DISTANCE = 12;
 	public static boolean shouldSeeOutline(Building building, Player player) {
+		// hide ALL ally outlines for player if holding remote detonator
+		BuildingSelector selector = getSelector(player);
+		if (selector != null && selector.isActive(player))
+			return false;
+
+		PlayerInfo playerInfo = Main.getPlayerInfo(player);
 		if (player == building.owner) {
-			// hide ally outlines for owner if selector is active
-			BuildingSelector selector = getSelector(player);
-			if (selector != null && selector.isActive(player))
+			TriState ownerVisibilityOverride = building.isOutlineVisibleToOwner();
+			if (ownerVisibilityOverride != TriState.NOT_SET)
+				return ownerVisibilityOverride == TriState.TRUE;
+		} else {
+			TeamArenaTeam ownerTeam = Main.getPlayerInfo(building.owner).team;
+			TeamArenaTeam viewerTeam = playerInfo.team;
+			if (ownerTeam != viewerTeam)
 				return false;
 		}
-		TeamArenaTeam ownerTeam = teamOf(building.owner);
-		TeamArenaTeam viewerTeam = teamOf(player);
-		if (ownerTeam != viewerTeam)
-			return false;
-		return switch (Main.getPlayerInfo(player).getPreference(Preferences.ALLY_BUILDING_OUTLINE)) {
+		return switch (playerInfo.getPreference(Preferences.ALLY_BUILDING_OUTLINE)) {
 			case NEVER -> false;
 			case ALWAYS -> true;
 			case NEARBY -> {
@@ -99,13 +104,5 @@ public class BuildingOutlineManager {
 				yield distanceSq < MAX_DISTANCE * MAX_DISTANCE;
 			}
 		};
-	}
-
-	public static void onTeamSwitch(Player player, TeamArenaTeam newTeam) {
-		if (Main.getGame().getSpectatorTeam() != newTeam) {
-			teamCache.put(player, newTeam);
-		} else {
-			teamCache.remove(player);
-		}
 	}
 }

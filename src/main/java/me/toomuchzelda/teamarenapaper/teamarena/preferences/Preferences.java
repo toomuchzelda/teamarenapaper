@@ -6,7 +6,10 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageLogEntry;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitSniper;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.SpeechBubbleHologram;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
 import org.bukkit.Registry;
 import org.bukkit.Sound;
@@ -19,6 +22,13 @@ public class Preferences {
 		// static initializer
 	}
 
+	private static final Component REMOVED_TEXT = Component.text("Removed. ", TextColors.ERROR_RED);
+	public static final Map<String, Component> REMOVED_PREFERENCES = Map.of(
+		"koth_hill_particles", REMOVED_TEXT.append(Component.text("Please use the client settings (Video -> Particles)", NamedTextColor.GREEN)),
+		"hearts_flash_damage", REMOVED_TEXT.append(Component.text("No longer supported by Minecraft", NamedTextColor.YELLOW)),
+		"damage_tilt", REMOVED_TEXT.append(Component.text("Please use client settings (Accessibility -> Damage Tilt)", NamedTextColor.GREEN))
+	);
+
 	// Clientside
 	public static final Preference<Sound> BOW_HIT_SOUND = SimplePreference.ofKeyed("bow_hit_sound",
 			"Sound that plays when you hit a bow shot on an entity", Sound.class, Sound.ENTITY_ARROW_HIT_PLAYER,
@@ -26,13 +36,6 @@ public class Preferences {
 			Registry.SOUNDS::get)
 		.setIcon(Material.BOW)
 		.setCategory(PreferenceCategory.VISUAL_EFFECTS);
-
-	/*public static final Preference<Boolean> HEARTS_FLASH_DAMAGE = SimplePreference.ofBoolean("hearts_flash_damage",
-			"If your hearts should flash when taking damage", true)
-		// https://minecraft-heads.com/custom-heads/miscellaneous/34659-damage-particle
-		.setIcon(ItemUtils.createPlayerHead("5ee118eddaee0dfb2cbc2c3d59c13a41a7d68cce945e42167aa1dcb8d0670517"))
-		.setCategory(PreferenceCategory.VISUAL_EFFECTS);
-	 */
 
 	public static final Preference<Boolean> HEARTS_FLASH_REGEN = SimplePreference.ofBoolean("hearts_flash_regen",
 			"If your hearts should flash while regenerating", true)
@@ -102,18 +105,6 @@ public class Preferences {
 		.setIcon(ItemUtils.createPlayerHead("b02af3ca2d5a160ca1114048b7947594269afe2b1b5ec255ee72b683b60b99b9"))
 		.setCategory(PreferenceCategory.GAMEPLAY);
 
-	public static final Preference<Integer> KOTH_HILL_PARTICLES = SimplePreference.ofNumber("koth_hill_particles",
-			"""
-				The frequency of particles along the Hill border in King of the Hill.
-				0 = disable particles
-				1 = fewer particles
-				10 = more particles""", Integer.class, 4,
-			value -> value >= 0 && value <= 10)
-		.setDisplayName("KOTH particle frequency")
-		// https://minecraft-heads.com/custom-heads/miscellaneous/34656-glint-particle
-		.setIcon(ItemUtils.createPlayerHead("9f84735fc9c760e95eaf10cec4f10edb5f3822a5ff9551eeb5095135d1ffa302"))
-		.setCategory(PreferenceCategory.GAMEPLAY);
-
 	public static final Preference<Boolean> RECEIVE_GAME_TITLES = SimplePreference.ofBoolean("receive_game_titles",
 			"Receive titles that cover up part of your screen during gameplay\n" +
 				"(you will also get a chat message regardless)", true)
@@ -146,7 +137,13 @@ public class Preferences {
 	public static final Preference<Boolean> DEFAULT_TEAM_CHAT = SimplePreference.ofBoolean("default_team_chat",
 			"Whether your chat messages should go to team chat instead of all chat by default.\n" +
 				"(Use /t to talk in the opposite chat)", false)
-		.setIcon(Material.GOAT_HORN)
+		.setIcon(Material.CALIBRATED_SCULK_SENSOR)
+		.setCategory(PreferenceCategory.GAMEPLAY);
+
+	public static final Preference<Boolean> DEFAULT_TEAMMATE_OUTLINE = SimplePreference.ofBoolean("default_teammate_outline",
+			"Whether your teammates should be highlighted by default. You can always change this in-game with your team item.",
+			false)
+		.setIcon(Material.MUSIC_DISC_5)
 		.setCategory(PreferenceCategory.GAMEPLAY);
 
 	public static final Preference<BuildingManager.AllyVisibility> ALLY_BUILDING_OUTLINE = SimplePreference.ofEnum("ally_building_outline",
