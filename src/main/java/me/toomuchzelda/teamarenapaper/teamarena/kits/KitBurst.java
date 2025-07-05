@@ -1,6 +1,9 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
+import com.destroystokyo.paper.event.player.PlayerReadyArrowEvent;
+import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
+import io.papermc.paper.persistence.PersistentDataContainerView;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
@@ -19,12 +22,16 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.*;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.Event;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.CrossbowMeta;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -37,6 +44,18 @@ import java.util.*;
 public class KitBurst extends Kit
 {
 	private static final NamespacedKey IS_CROSSBOW_KEY = new NamespacedKey(Main.getPlugin(), "burstcrossbow");
+	private static final NamespacedKey BURST_ROCKET_KEY = Main.key("burst_rocket");
+	private static final NamespacedKey BURST_ROCKET_FAKE_KEY = Main.key("burst_rocket_fake");
+
+	private static final ItemStack BURST_ROCKET = ItemBuilder.of(Material.FIREWORK_ROCKET)
+		.setPDCFlag(BURST_ROCKET_KEY)
+		.build();
+
+	private static final ItemStack BURST_ROCKET_FAKE = ItemBuilder.of(Material.ARROW)
+		.name(Component.translatable(Material.FIREWORK_ROCKET))
+		.setPDCFlag(BURST_ROCKET_FAKE_KEY)
+		.setData(DataComponentTypes.ITEM_MODEL, Material.FIREWORK_ROCKET.key())
+		.build();
 
 	public KitBurst() {
 		super("Burst", "Do you love fireworks? Kit Burst does! So much so, they often shoot them a bit too close and blow themselves up!\n\n" +
@@ -58,11 +77,12 @@ public class KitBurst extends Kit
 		crossbowLore.addAll(TextUtils.wrapString("Right click to load and launch a firework rocket", Style.style(TextUtils.RIGHT_CLICK_TO).decoration(TextDecoration.ITALIC, false)));
 		crossbowLore.addAll(TextUtils.wrapString("Left click while loaded to burst the firework right in front of you. Use it like a shotgun!", Style.style(TextUtils.LEFT_CLICK_TO).decoration(TextDecoration.ITALIC, false)));
 		bowMeta.lore(crossbowLore);
+		bowMeta.addEnchant(Enchantment.INFINITY, 1, true);
+		bowMeta.setEnchantmentGlintOverride(false);
+		bowMeta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
 		//bowMeta.addEnchant(Enchantment.QUICK_CHARGE, 1, true);
 		bowMeta.getPersistentDataContainer().set(IS_CROSSBOW_KEY, PersistentDataType.BOOLEAN, true);
 		crossbow.setItemMeta(bowMeta);
-
-		ItemStack firework = new ItemStack(Material.FIREWORK_ROCKET, 64);
 
 		ItemStack rocketLauncher = ItemBuilder.of(Material.FURNACE_MINECART)
 				.displayName(Component.text("Rocket Launcher"))
@@ -71,7 +91,7 @@ public class KitBurst extends Kit
 						Component.text("Cooldown: " + BurstAbility.ROCKET_CD/20 + " seconds", TextColors.LIGHT_BROWN))
 				.build();
 
-		setItems(sword, crossbow, /*rocketLauncher,*/ firework);
+		setItems(sword, crossbow, /*rocketLauncher,*/ BURST_ROCKET_FAKE);
 
 		setAbilities(new BurstAbility());
 
@@ -228,10 +248,51 @@ public class KitBurst extends Kit
 			}
 		}
 
+		private static final Map<Player, ItemStack> handStorage = new HashMap<>();
 		@Override
 		public void onLoadCrossbow(EntityLoadCrossbowEvent event) {
-			event.setConsumeItem(false);
-			((Player) event.getEntity()).updateInventory(); //do this to undo client prediction of using the firework
+			if (event.getCrossbow().getPersistentDataContainer().has(IS_CROSSBOW_KEY)) {
+				// do not call event.setConsumeItem(false) since
+				// 1. we don't care about the temporary rocket getting consumed,
+				// 2. it will also call Player#updateInventory,
+				//    which causes the temporary rocket to be sent to the player
+				//    before we can safely replace it with the old (off)hand item.
+				Player player = (Player) event.getEntity();
+				PlayerInventory inventory = player.getInventory();
+				EquipmentSlot otherHand = event.getHand().getOppositeHand();
+				ItemStack oldItem = inventory.getItem(otherHand);
+				handStorage.put(player, oldItem);
+				inventory.setItem(otherHand, BURST_ROCKET);
+			}
+		}
+
+		@Override
+		public void onReadyArrow(PlayerReadyArrowEvent event) {
+			if (!event.getBow().getPersistentDataContainer().has(IS_CROSSBOW_KEY))
+				return;
+			PersistentDataContainerView pdc = event.getArrow().getPersistentDataContainer();
+			if (pdc.has(BURST_ROCKET_KEY)) {
+				Player player = event.getPlayer();
+				PlayerInventory inventory = player.getInventory();
+				EquipmentSlot otherHand = player.getActiveItemHand().getOppositeHand();
+				// check if we are called after EntityLoadCrossbowEvent,
+				// since onReadyArrow is also called to check
+				// if the player can start loading the crossbow at all
+				ItemStack oldItem = handStorage.remove(player);
+				if (oldItem != null) {
+					// not safe to modify player's (off)hand slot in the event,
+					// since NMS accesses the slot again for no particular reason
+					Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
+						// sanity check
+						ItemStack item = inventory.getItem(otherHand);
+						if (item.isEmpty() || item.getPersistentDataContainer().has(BURST_ROCKET_KEY)) {
+							inventory.setItem(otherHand, oldItem);
+						} else {
+							inventory.addItem(oldItem);
+						}
+					});
+				}
+			}
 		}
 
 		@Override

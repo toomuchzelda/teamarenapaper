@@ -4,6 +4,7 @@ import com.destroystokyo.paper.event.brigadier.AsyncPlayerSendCommandsEvent;
 import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
 import com.destroystokyo.paper.event.player.PlayerAdvancementCriterionGrantEvent;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
+import com.destroystokyo.paper.event.player.PlayerReadyArrowEvent;
 import com.destroystokyo.paper.event.player.PlayerUseUnknownEntityEvent;
 import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
@@ -546,6 +547,15 @@ public class EventListeners implements Listener
 				for (Ability a : Kit.getAbilities(p)) {
 					a.onLoadCrossbow(event);
 				}
+			}
+		}
+	}
+
+	@EventHandler
+	public void readyArrow(PlayerReadyArrowEvent event) {
+		if (Main.getGame().getGameState() == LIVE) {
+			for (Ability a : Kit.getAbilities(event.getPlayer())) {
+				a.onReadyArrow(event);
 			}
 		}
 	}
