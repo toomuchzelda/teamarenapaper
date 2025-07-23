@@ -407,6 +407,35 @@ public abstract class TeamArena
 				p.showPlayer(Main.getPlugin(), otherP);
 			}
 		}
+
+		// TODO TEMPORARY
+		if (map.getName().equals("Smallest Map")) {
+			for (Player p : Bukkit.getOnlinePlayers()) {
+				p.getAttribute(Attribute.SCALE).setBaseValue(0.2d);
+				p.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.02d);
+				p.getAttribute(Attribute.JUMP_STRENGTH).setBaseValue(0.19d);
+				p.getAttribute(Attribute.GRAVITY).setBaseValue(0.016d);
+				p.getAttribute(Attribute.ENTITY_INTERACTION_RANGE).setBaseValue(3.0d / 5.0d);
+				p.getAttribute(Attribute.BLOCK_INTERACTION_RANGE).setBaseValue(4.5d / 5.0d);
+			}
+		}
+		else {
+			for (Player p : Bukkit.getOnlinePlayers()) {
+				/*EntityUtils.setAttributeBaseDefault(p.getAttribute(Attribute.SCALE));
+				EntityUtils.setAttributeBaseDefault(p.getAttribute(Attribute.MOVEMENT_SPEED));
+				//EntityUtils.setAttributeBaseDefault(p.getAttribute(Attribute.SNEAKING_SPEED));
+				EntityUtils.setAttributeBaseDefault(p.getAttribute(Attribute.JUMP_STRENGTH));
+				EntityUtils.setAttributeBaseDefault(p.getAttribute(Attribute.GRAVITY));
+				EntityUtils.setAttributeBaseDefault(p.getAttribute(Attribute.ENTITY_INTERACTION_RANGE));
+				EntityUtils.setAttributeBaseDefault(p.getAttribute(Attribute.BLOCK_INTERACTION_RANGE));*/
+				p.getAttribute(Attribute.SCALE).setBaseValue(1d);
+				p.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.1d);
+				p.getAttribute(Attribute.JUMP_STRENGTH).setBaseValue(0.42d);
+				p.getAttribute(Attribute.GRAVITY).setBaseValue(0.08d);
+				p.getAttribute(Attribute.ENTITY_INTERACTION_RANGE).setBaseValue(3.0d);
+				p.getAttribute(Attribute.BLOCK_INTERACTION_RANGE).setBaseValue(4.5d);
+			}
+		}
 	}
 
 	protected void registerKits() {
@@ -1408,6 +1437,19 @@ public abstract class TeamArena
 		}
 
 		Bukkit.broadcast(this.getHowToPlayBrief());
+
+		// TODO TEMPORARY
+		// for late joiners
+		if (this.gameMap.getName().equals("Smallest Map")) {
+			for (Player p : Bukkit.getOnlinePlayers()) {
+				p.getAttribute(Attribute.SCALE).setBaseValue(0.2d);
+				p.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.02d);
+				p.getAttribute(Attribute.JUMP_STRENGTH).setBaseValue(0.19d);
+				p.getAttribute(Attribute.GRAVITY).setBaseValue(0.016d);
+				p.getAttribute(Attribute.ENTITY_INTERACTION_RANGE).setBaseValue(3.0d / 5.0d);
+				p.getAttribute(Attribute.BLOCK_INTERACTION_RANGE).setBaseValue(4.5d / 5.0d);
+			}
+		}
 	}
 
 	@OverridingMethodsMustInvokeSuper
