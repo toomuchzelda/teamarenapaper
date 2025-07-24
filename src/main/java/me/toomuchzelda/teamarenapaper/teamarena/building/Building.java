@@ -9,6 +9,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -80,8 +81,12 @@ public abstract sealed class Building permits BlockBuilding, EntityBuilding {
 		this.outlineColor = NamedTextColor.nearestTo(color);
 	}
 
+	/**
+	 * {@return Whether owners should have their outline visibility overridden}
+	 */
+	@NotNull
 	public TriState isOutlineVisibleToOwner() {
-		return null;
+		return TriState.NOT_SET;
 	}
 
 	public void onPlace() {

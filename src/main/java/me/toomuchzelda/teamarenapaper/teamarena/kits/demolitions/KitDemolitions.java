@@ -4,7 +4,6 @@ import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
-import me.toomuchzelda.teamarenapaper.teamarena.building.Building;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingOutlineManager;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingSelector;
@@ -23,7 +22,6 @@ import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
@@ -32,7 +30,6 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
 import org.bukkit.event.Event;
-import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -41,7 +38,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-import static net.kyori.adventure.text.Component.*;
+import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.Component.textOfChildren;
 
 
 public class KitDemolitions extends Kit
@@ -198,32 +196,12 @@ public class KitDemolitions extends Kit
 
 		// <click:right>place mine</click>
 		private static final Component RCLICK_PLACE = text("Right click: place ", TextUtils.RIGHT_CLICK_TO);
-		// <quick_trigger_short> = <i>QT
-		// <quick_trigger_plain> = <i>Quick Trigger
-		private static final Component QUICK_TRIGGER_UNCOOL = text("Quick Trigger", Style.style(TextDecoration.ITALIC));
-		// <quick_trigger> = <#AE443E><i>Quick Trigger
-		private static final Component QUICK_TRIGGER = QUICK_TRIGGER_UNCOOL.color(TextColor.color(0xAE443E));
 
-		// <click:left>set <quick_trigger_plain></click><gray>
-		private static final Component LCLICK_SET_QUICK_TRIGGER = text("Left click: set ", TextUtils.LEFT_CLICK_TO)
-			.append(QUICK_TRIGGER_UNCOOL);
-		// <click:left>unset <quick_trigger_plain></click><gray>
-		private static final Component LCLICK_UNSET_QUICK_TRIGGER = text("Left click: unset ", TextUtils.LEFT_CLICK_TO)
-			.append(QUICK_TRIGGER_UNCOOL);
 		// </gray><click:right> detonate</click>
 		private static final Component RCLICK_DETONATE = text("Right click: detonate", TextUtils.RIGHT_CLICK_TO);
 
 		// <detonator_unfocused> = <dark_gray>Look at a landmine
 		private static final Component REMOTE_DETONATOR_MSG_UNFOCUSED = text("Look at a landmine", NamedTextColor.DARK_GRAY);
-		// Press [<key:key.drop>] to <quick_trigger>
-		private static final Component QUICK_TRIGGER_MSG = textOfChildren(
-			text("Press ["), keybind("key.drop", NamedTextColor.YELLOW), text("] to "), QUICK_TRIGGER
-		);
-		// <quick_trigger_action> = [<key:key.drop>]: <quick_trigger_plain>
-		private static final Component QUICK_TRIGGER_MSG_UNCOOL = textOfChildren(
-			text("["), keybind("key.drop", NamedTextColor.YELLOW), text("]: "),
-			QUICK_TRIGGER_UNCOOL
-		);
 
 		private static final Map<ItemStack, BuildingSelector.Action> SELECTOR_ACTION = Map.of(
 			// action bar message is now handled by onPlayerTick
@@ -306,24 +284,10 @@ public class KitDemolitions extends Kit
 			}
 		}
 
-		public static void doMineAction(Player demoPlayer, DemoMine mine, boolean attack) {
+		/* package-private */ static void doMineAction(Player demoPlayer, DemoMine mine, boolean attack) {
 			if (mine == null || mine.isTriggered())
 				return;
-			if (attack) {
-				boolean newValue = !mine.quickTrigger;
-				mine.quickTrigger = newValue;
-
-				long quickTriggerCount = BuildingManager.getAllPlayerBuildings(demoPlayer).stream()
-					.filter(building -> building instanceof DemoMine demoMine && demoMine.quickTrigger)
-					.count();
-				demoPlayer.sendMessage(text().append(
-					text((newValue ? "Added" : "Removed") + " this "), mine.type.displayName(),
-					text(newValue ? " to " : " from "), QUICK_TRIGGER,
-					text(". You now have "),
-					text(quickTriggerCount, NamedTextColor.YELLOW),
-					text(" bombs in "), QUICK_TRIGGER_UNCOOL, text(".")
-				).color(newValue ? NamedTextColor.GREEN : NamedTextColor.RED));
-			} else {
+			if (!attack) {
 				mine.trigger(demoPlayer);
 			}
 		}
@@ -422,9 +386,6 @@ public class KitDemolitions extends Kit
 
 		@Override
 		public void onPlayerTick(Player player) {
-			boolean hasQuickTrigger = BuildingManager.getAllPlayerBuildings(player).stream()
-				.anyMatch(building -> building instanceof DemoMine demoMine && demoMine.quickTrigger);
-
 			ComponentLike actionBarMsg = null;
 
 			ItemStack handItem = player.getInventory().getItemInMainHand();
@@ -435,8 +396,6 @@ public class KitDemolitions extends Kit
 						demoMine.formatActionBarMessage(),
 						text(" " + ((int) Math.round(distance)) + "m", TextColor.color(0xFFFFBF)),
 						SEPARATOR,
-						demoMine.quickTrigger ? LCLICK_UNSET_QUICK_TRIGGER : LCLICK_SET_QUICK_TRIGGER,
-						SEPARATOR,
 						RCLICK_DETONATE
 					);
 				} else {
@@ -446,25 +405,8 @@ public class KitDemolitions extends Kit
 				actionBarMsg = RCLICK_PLACE.append(mineType.displayName());
 			}
 
-			if (hasQuickTrigger && !handItem.isEmpty()) { // have to hold an item to trigger the drop event
-				if (actionBarMsg != null)
-					actionBarMsg = Component.text().append(actionBarMsg, SEPARATOR, QUICK_TRIGGER_MSG_UNCOOL);
-				else
-					actionBarMsg = QUICK_TRIGGER_MSG;
-			}
-
 			if (actionBarMsg != null)
 				player.sendActionBar(actionBarMsg);
-		}
-
-		@Override
-		public void onPlayerDropItem(PlayerDropItemEvent event) {
-			Player player = event.getPlayer();
-			for (Building building : BuildingManager.getAllPlayerBuildings(player)) {
-				if (building instanceof DemoMine demoMine && demoMine.quickTrigger && !demoMine.isTriggered()) {
-					demoMine.trigger(player);
-				}
-			}
 		}
 
 		@Override
