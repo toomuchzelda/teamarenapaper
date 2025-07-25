@@ -217,6 +217,10 @@ public abstract class DemoMine extends EntityBuilding implements PreviewableBuil
 		//subclass here
 	}
 
+	public Component formatActionBarMessage() {
+		return type.displayName(); // distance calculated by DemolitionsAbility
+	}
+
 	abstract boolean isDone();
 
 	boolean isTriggered() {
@@ -269,16 +273,28 @@ public abstract class DemoMine extends EntityBuilding implements PreviewableBuil
 
 		@Override
 		public void onInteract(Player player, EquipmentSlot hand, boolean attack) {
-			if (!attack)
-				return;
 			if (Main.getGame().isDead(player))
 				return;
 
 			DemoMine mine = DemoMine.this;
+
+			// remote detonator left click takes priority
+			if (player == mine.owner && KitDemolitions.isRemoteDetonatorItem(player.getInventory().getItemInMainHand())) {
+				KitDemolitions.DemolitionsAbility.doMineAction(player, mine, attack);
+				return;
+			}
+
+			if (!attack)
+				return;
+
 			//teammate punches it
 			if (player != mine.owner && mine.team.getPlayerMembers().contains(player)) {
-				player.sendMessage(Component.text("This is ", NamedTextColor.AQUA).append(
-					mine.owner.playerListName()).append(Component.text("'s " + mine.type.name)));
+				player.sendMessage(Component.textOfChildren(
+					Component.text("This is ", NamedTextColor.AQUA),
+					mine.owner.playerListName(),
+					Component.text("'s "),
+					mine.type.displayName()
+				));
 			} else {
 				int currentTick = TeamArena.getGameTick();
 				int diff = currentTick - lastHurtTime;

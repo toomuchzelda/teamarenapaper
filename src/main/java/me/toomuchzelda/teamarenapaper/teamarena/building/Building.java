@@ -4,10 +4,12 @@ import me.toomuchzelda.teamarenapaper.utils.RealHologram;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.util.TriState;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -77,6 +79,14 @@ public abstract sealed class Building permits BlockBuilding, EntityBuilding {
 
 	public void setOutlineColor(TextColor color) {
 		this.outlineColor = NamedTextColor.nearestTo(color);
+	}
+
+	/**
+	 * {@return Whether owners should have their outline visibility overridden}
+	 */
+	@NotNull
+	public TriState isOutlineVisibleToOwner() {
+		return TriState.NOT_SET;
 	}
 
 	public void onPlace() {

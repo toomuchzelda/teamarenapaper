@@ -1,12 +1,14 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
+import io.papermc.paper.datacomponent.DataComponentTypes;
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
-import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -16,10 +18,13 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.LeatherArmorMeta;
+import org.bukkit.inventory.meta.trim.TrimMaterial;
+import org.bukkit.inventory.meta.trim.TrimPattern;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
 
@@ -27,8 +32,7 @@ import java.util.*;
 
 public class TeamArenaTeam
 {
-	public static final Component SHOW_ALL_TEAMMATES = ItemUtils.noItalics(Component.text("Right click to see all your teammates", TextUtils.RIGHT_CLICK_TO));
-	public static final List<Component> HOTBAR_ITEM_LORE = List.of(SHOW_ALL_TEAMMATES); //PING1);
+	private static final NamespacedKey HOTBAR_ITEM_KEY = new NamespacedKey(Main.getPlugin(), "team_hotbar_item");
 
 	private final String name;
 	private final String simpleName;
@@ -53,6 +57,7 @@ public class TeamArenaTeam
 
 	//hotbar item players have during game
 	private final ItemStack hotbarItem;
+	private final ItemStack hotbarItemGlowing;
 
 	//paper good spigot bad
 	private final Team paperTeam;
@@ -106,12 +111,22 @@ public class TeamArenaTeam
 		meta.displayName(componentName.decoration(TextDecoration.ITALIC, false));
 		iconItem.setItemMeta(meta);
 
-		hotbarItem = new ItemStack(Material.LEATHER_CHESTPLATE);
-		LeatherArmorMeta leatherMeta = (LeatherArmorMeta) hotbarItem.getItemMeta();
-		leatherMeta.displayName(ItemUtils.noItalics(Component.text("You are on ", NamedTextColor.GOLD).append(componentName)));
-		leatherMeta.lore(HOTBAR_ITEM_LORE);
-		leatherMeta.setColor(this.colour);
-		hotbarItem.setItemMeta(leatherMeta);
+		TextComponent glowPreferenceText = Component.text("You can turn this on by default in the preferences.", NamedTextColor.BLUE);
+		hotbarItem = ItemBuilder.of(Material.LEATHER_CHESTPLATE)
+			.name(Component.text("You are on ", NamedTextColor.GOLD).append(componentName))
+			.lore(Component.text("Right click to highlight all your teammates", TextUtils.RIGHT_CLICK_TO),
+				glowPreferenceText)
+			.color(this.colour)
+			.hide(ItemFlag.HIDE_DYE, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ARMOR_TRIM)
+			.removeData(DataComponentTypes.EQUIPPABLE) // make non-equippable
+			.setPDC(HOTBAR_ITEM_KEY, PersistentDataType.BOOLEAN, true)
+			.build();
+
+		hotbarItemGlowing = ItemBuilder.from(hotbarItem.clone())
+			.trim(TrimMaterial.RESIN, TrimPattern.SPIRE)
+			.lore(Component.text("Right click to stop highlighting all your teammates", TextUtils.RIGHT_CLICK_TO),
+				glowPreferenceText)
+			.build();
 
 		paperTeam = PlayerScoreboard.SCOREBOARD.registerNewTeam(name);
 		paperTeam.displayName(componentName);
@@ -190,6 +205,14 @@ public class TeamArenaTeam
 
 	public ItemStack getHotbarItem() {
 		return this.hotbarItem.clone();
+	}
+
+	public ItemStack getGlowingHotbarItem() {
+		return hotbarItemGlowing.clone();
+	}
+
+	public static boolean isHotbarItem(ItemStack stack) {
+		return stack != null && stack.getPersistentDataContainer().has(HOTBAR_ITEM_KEY);
 	}
 
 	public static Color convert(NamedTextColor textColor) {

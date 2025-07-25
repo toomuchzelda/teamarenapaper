@@ -78,6 +78,7 @@ import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.potion.PotionEffect;
@@ -487,7 +488,7 @@ public abstract class TeamArena
 			inventory.clear();
 
 		inventory.setItem(8, miniMap.getMapItem(playerInfo.team));
-		inventory.setItem(7, playerInfo.team.getHotbarItem());
+		inventory.setItem(7, playerInfo.viewingGlowingTeammates ? playerInfo.team.getGlowingHotbarItem() : playerInfo.team.getHotbarItem());
 
 		playerInfo.kit.giveKit(player, true, playerInfo);
 	}
@@ -1068,12 +1069,15 @@ public abstract class TeamArena
 			}
 			else if (gameState == GameState.LIVE) {
 				//right click to glow teammates
-				if (team.getHotbarItem().isSimilar(item)) {
-					Action action = event.getAction();
-					if (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK) {
-						event.setUseItemInHand(Event.Result.DENY);
-						setViewingGlowingTeammates(pinfo, !pinfo.viewingGlowingTeammates, true);
-					}
+				if (TeamArenaTeam.isHotbarItem(item) && event.getAction().isRightClick()) {
+					event.setUseItemInHand(Event.Result.ALLOW);
+					event.setUseInteractedBlock(Event.Result.DENY);
+					boolean newValue = !pinfo.viewingGlowingTeammates;
+					setViewingGlowingTeammates(pinfo, newValue, true);
+					EquipmentSlot hand = Objects.requireNonNull(event.getHand());
+					ItemStack newItem = newValue ? team.getGlowingHotbarItem() : team.getHotbarItem();
+					// schedule next tick to prevent double firing
+					Bukkit.getScheduler().runTask(Main.getPlugin(), () -> player.getInventory().setItem(hand, newItem));
 				}
 				// Killstreak crate items
 				else {
@@ -1109,16 +1113,16 @@ public abstract class TeamArena
 	}
 
 	public void setViewingGlowingTeammates(PlayerInfo pinfo, boolean glow, boolean message) {
-		setViewingGlowingTeammates(pinfo, glow, message, null);
+		setViewingGlowingTeammates(pinfo, glow, message, Set.of());
 	}
 
-	public void setViewingGlowingTeammates(PlayerInfo pinfo, boolean glow, boolean message,
-										   @Nullable Set<Player> exceptions) {
+	protected void setViewingGlowingTeammates(PlayerInfo pinfo, boolean glow, boolean message,
+										   @NotNull Set<Player> exceptions) {
 		MetadataViewer meta = pinfo.getMetadataViewer();
 		pinfo.viewingGlowingTeammates = glow;
 
 		for (Player viewed : pinfo.team.getPlayerMembers()) {
-			if (exceptions != null && exceptions.contains(viewed))
+			if (exceptions.contains(viewed))
 				continue;
 
 			setViewingGlowingTeammate(viewed, glow, meta);
@@ -1127,7 +1131,7 @@ public abstract class TeamArena
 		if(message) {
 			Component text;
 			if (glow)
-				text = Component.text("Now seeing your teammates through walls", NamedTextColor.BLUE);
+				text = Component.text("Now seeing your teammates through walls", NamedTextColor.AQUA);
 			else
 				text = Component.text("Stopped seeing teammates through walls", NamedTextColor.BLUE);
 
@@ -1136,11 +1140,11 @@ public abstract class TeamArena
 	}
 
 	private static void setViewingGlowingTeammate(Player viewed, boolean glow, MetadataViewer viewerMetaViewer) {
-		if(glow) {
+		if (glow) {
 			viewerMetaViewer.updateBitfieldValue(viewed, MetaIndex.BASE_BITFIELD_IDX,
-					MetaIndex.BASE_BITFIELD_GLOWING_IDX, glow);
-		}
-		else {
+					MetaIndex.BASE_BITFIELD_GLOWING_IDX, true);
+		} else if (viewerMetaViewer.getViewedValue(viewed, MetaIndex.BASE_BITFIELD_IDX) != null) {
+			// only remove if actually glowing
 			viewerMetaViewer.removeBitfieldValue(viewed, MetaIndex.BASE_BITFIELD_IDX,
 					MetaIndex.BASE_BITFIELD_GLOWING_IDX);
 		}
@@ -1372,6 +1376,9 @@ public abstract class TeamArena
 
 			// give all players map item so they can view teammates kits
 			p.getInventory().setItem(8, miniMap.getMapItem(pinfo.team));
+
+			// set default teammate glow
+			setViewingGlowingTeammates(pinfo, pinfo.getPreference(Preferences.DEFAULT_TEAMMATE_OUTLINE), false);
 		}
 		Main.logger().info("Decided Teams");
 
@@ -2453,17 +2460,12 @@ public abstract class TeamArena
 		return false;
 	}
 
-	public boolean isTeamHotbarItem(ItemStack item) {
-		for(TeamArenaTeam team : teams) {
-			if(team.getHotbarItem().isSimilar(item))
-				return true;
-		}
-
-		return false;
-	}
-
+	/**
+	 * @deprecated Remove the {@linkplain io.papermc.paper.datacomponent.DataComponentTypes#EQUIPPABLE EQUIPPABLE} component instead
+	 */
+	@Deprecated
 	public boolean isWearableArmorPiece(ItemStack item) {
-		return !isTeamHotbarItem(item);
+		return true;
 	}
 
 	public boolean isVandalisableBlock(Block block) {

@@ -58,17 +58,10 @@ public class DBSetupTables extends DBOperation<Void>
 					);
 					""";
 
-			// Removed in 1.19.4 update as 1.19.4 has disable damage tilt as a client option.
-			final String deleteDamageTilt =
-    			"""
-				DELETE FROM Preferences WHERE name = 'damage_tilt';
-				""";
-
 			stmt.execute(createPlayerInfo);
 			stmt.execute(createDefaultKits);
 			stmt.execute(createPreferences);
 			stmt.execute(createPermissionLevel);
-			stmt.execute(deleteDamageTilt);
 		}
 
 		return null;

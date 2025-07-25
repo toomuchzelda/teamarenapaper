@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.inventory;
 
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.utils.MutableDataComponentPatch;
+import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.ComponentLike;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -16,7 +17,10 @@ import org.bukkit.inventory.meta.ArmorMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.trim.ArmorTrim;
+import org.bukkit.inventory.meta.trim.TrimMaterial;
+import org.bukkit.inventory.meta.trim.TrimPattern;
 import org.bukkit.persistence.PersistentDataType;
+import org.jetbrains.annotations.NotNullByDefault;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -25,9 +29,11 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.Consumer;
 
+@NotNullByDefault
 public final class ItemBuilder {
     private final ItemStack stack;
     private final ItemMeta meta;
+	@Nullable
 	private MutableDataComponentPatch dataComponentPatch;
     private ItemBuilder(Material material) {
         this(new ItemStack(material));
@@ -143,9 +149,8 @@ public final class ItemBuilder {
 		return this;
 	}
 
-	public ItemBuilder customModelData(@Nullable Integer data) {
-		meta.setCustomModelData(data);
-		return this;
+	public ItemBuilder trim(TrimMaterial trimMaterial, TrimPattern trimPattern) {
+		return armourTrim(new ArmorTrim(trimMaterial, trimPattern));
 	}
 
     public ItemBuilder hide(ItemFlag... flags) {
@@ -162,15 +167,31 @@ public final class ItemBuilder {
 		return this;
 	}
 
+	public <T> ItemBuilder setPDC(Key key, PersistentDataType<?, T> dataType, T value) {
+		meta.getPersistentDataContainer().set(key instanceof NamespacedKey nk ? nk : new NamespacedKey(key.namespace(), key.value()),
+			dataType, value);
+		return this;
+	}
+
+	public ItemBuilder setPDCFlag(Key key) {
+		meta.getPersistentDataContainer().set(key instanceof NamespacedKey nk ? nk : new NamespacedKey(key.namespace(), key.value()),
+			PersistentDataType.BOOLEAN, true);
+		return this;
+	}
+
 	private static final NamespacedKey UNIQUE_KEY = new NamespacedKey(Main.getPlugin(), "item_id");
 	private static int id = 0;
 	public ItemBuilder unique() {
-		meta.getPersistentDataContainer().set(UNIQUE_KEY, PersistentDataType.INTEGER, id++);
+		return setPDC(UNIQUE_KEY, PersistentDataType.INTEGER, id++);
+	}
+
+	public ItemBuilder apply(Consumer<ItemBuilder> consumer) {
+		consumer.accept(this);
 		return this;
 	}
 
 	// Data Components API
-	private MutableDataComponentPatch components() {
+	public MutableDataComponentPatch components() {
 		if (dataComponentPatch == null)
 			dataComponentPatch = MutableDataComponentPatch.fromItem(stack);
 		return dataComponentPatch;

@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.utils;
 
+import io.papermc.paper.datacomponent.DataComponentType;
 import io.papermc.paper.datacomponent.PaperDataComponentType;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.PatchedDataComponentMap;
@@ -35,21 +36,26 @@ public class MutableDataComponentPatch {
 	}
 
 	@Override
+	public String toString() {
+		return map.toString();
+	}
+
+	@Override
 	public int hashCode() {
 		return map.hashCode();
 	}
 
-	public MutableDataComponentPatch remove(io.papermc.paper.datacomponent.DataComponentType type) {
+	public MutableDataComponentPatch remove(DataComponentType type) {
 		map.remove(bukkitToMinecraft(type));
 		return this;
 	}
 
-	public MutableDataComponentPatch set(io.papermc.paper.datacomponent.DataComponentType.NonValued component) {
+	public MutableDataComponentPatch set(DataComponentType.NonValued component) {
 		map.set(bukkitToMinecraft(component), Unit.INSTANCE);
 		return this;
 	}
 
-	public <T> MutableDataComponentPatch set(io.papermc.paper.datacomponent.DataComponentType.Valued<T> component, T value) {
+	public <T> MutableDataComponentPatch set(DataComponentType.Valued<T> component, T value) {
 		var craftComponent = (PaperDataComponentType.ValuedImpl<T, ?>) component;
 		return setInternal(craftComponent, value);
 	}
@@ -60,22 +66,23 @@ public class MutableDataComponentPatch {
 		return this;
 	}
 
-	public <T> T get(io.papermc.paper.datacomponent.DataComponentType.Valued<T> component) {
+	public <T> T get(DataComponentType.Valued<T> component) {
 		var craftComponent = (PaperDataComponentType.ValuedImpl<T, ?>) component;
 		return convertDataComponentValue(map, craftComponent);
 	}
 
-	public <T> T getOrDefault(io.papermc.paper.datacomponent.DataComponentType.Valued<T> component, T fallback) {
+	public <T> T getOrDefault(DataComponentType.Valued<T> component, T fallback) {
 		var craftComponent = (PaperDataComponentType.ValuedImpl<T, ?>) component;
 		T value = convertDataComponentValue(map, craftComponent);
 		return value != null ? value : fallback;
 	}
 
-	public boolean has(io.papermc.paper.datacomponent.DataComponentType component) {
+	public boolean has(DataComponentType component) {
 		return map.has(bukkitToMinecraft(component));
 	}
 
 	public void apply(ItemStack stack) {
-		CraftItemStack.unwrap(stack).applyComponents(map);
+		// apply as patch to correctly remove components
+		CraftItemStack.unwrap(stack).applyComponents(map.asPatch());
 	}
 }
