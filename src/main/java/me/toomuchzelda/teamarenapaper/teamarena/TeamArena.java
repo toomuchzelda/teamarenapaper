@@ -821,7 +821,7 @@ public abstract class TeamArena
 		for (Player viewer : playerInfo.team.getPlayerMembers()) {
 			PlayerInfo viewerInfo = Main.getPlayerInfo(viewer);
 			if (viewerInfo.viewingGlowingTeammates) {
-				setViewingGlowingTeammate(player, true, viewerInfo.getMetadataViewer());
+				applyTeammateGlow(player, true, viewerInfo.getMetadataViewer());
 			}
 		}
 	}
@@ -1122,16 +1122,16 @@ public abstract class TeamArena
 		pinfo.viewingGlowingTeammates = glow;
 
 		for (Player viewed : pinfo.team.getPlayerMembers()) {
-			if (exceptions.contains(viewed))
-				continue;
-
-			setViewingGlowingTeammate(viewed, glow, meta);
+			if (!exceptions.contains(viewed))
+				applyTeammateGlow(viewed, glow, meta);
+			else
+				applyTeammateGlow(viewed, !glow, meta);
 		}
 
 		if(message) {
 			Component text;
 			if (glow)
-				text = Component.text("Now seeing your teammates through walls", NamedTextColor.AQUA);
+				text = Component.text("Now seeing your teammates through walls", NamedTextColor.BLUE);
 			else
 				text = Component.text("Stopped seeing teammates through walls", NamedTextColor.BLUE);
 
@@ -1139,17 +1139,18 @@ public abstract class TeamArena
 		}
 	}
 
-	private static void setViewingGlowingTeammate(Player viewed, boolean glow, MetadataViewer viewerMetaViewer) {
+	private static void applyTeammateGlow(Player viewed, boolean glow, MetadataViewer viewerMetaViewer) {
 		if (glow) {
 			viewerMetaViewer.updateBitfieldValue(viewed, MetaIndex.BASE_BITFIELD_IDX,
 					MetaIndex.BASE_BITFIELD_GLOWING_IDX, true);
+			viewerMetaViewer.refreshViewer(viewed);
 		} else if (viewerMetaViewer.getViewedValue(viewed, MetaIndex.BASE_BITFIELD_IDX) != null) {
 			// only remove if actually glowing
 			viewerMetaViewer.removeBitfieldValue(viewed, MetaIndex.BASE_BITFIELD_IDX,
 					MetaIndex.BASE_BITFIELD_GLOWING_IDX);
+			viewerMetaViewer.refreshViewer(viewed);
 		}
 
-		viewerMetaViewer.refreshViewer(viewed);
 	}
 
 	public void onInteractEntity(PlayerInteractEntityEvent event) {

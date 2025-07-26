@@ -15,6 +15,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.FilterRule;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitFilter;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitHider;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek.KitRadarSeeker;
+import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -166,6 +167,11 @@ public class HideAndSeek extends TeamArena {
 		this.president = this.hiderTeam.getRandomPlayer();
 		this.presidentSet = Collections.singleton(this.president);
 
+		// properly apply teammate glow exception
+		for (PlayerInfo playerInfo : Main.getPlayerInfos()) {
+			setViewingGlowingTeammates(playerInfo, playerInfo.getPreference(Preferences.DEFAULT_TEAMMATE_OUTLINE), false, presidentSet);
+		}
+
 		Component hiderKing = Component.text(" Hider King", this.hiderTeam.getRGBTextColor(), TextDecoration.BOLD);
 		Component presIsPres = Component.textOfChildren(
 			this.president.playerListName(),
@@ -224,7 +230,7 @@ public class HideAndSeek extends TeamArena {
 
 	@Override
 	public void setViewingGlowingTeammates(PlayerInfo pinfo, boolean glow, boolean message) {
-		this.setViewingGlowingTeammates(pinfo, glow, message, this.presidentSet);
+		this.setViewingGlowingTeammates(pinfo, glow, message, presidentSet != null ? presidentSet : Set.of());
 	}
 
 	@Override

@@ -50,21 +50,20 @@ public class RailgunAbility extends Ability {
 	public void onShootBow(EntityShootBowEvent event) {
 		final LivingEntity shooter = event.getEntity();
 		if (RAILGUN.isSimilar(event.getBow()) && event.getProjectile() instanceof AbstractArrow aa) {
-			if (event.getForce() < 3.0f) {
+			if (event.getForce() < 1) {
 				event.setCancelled(true);
 
-				shooter.getWorld().playSound(shooter, Sound.ENTITY_ARROW_SHOOT, SoundCategory.PLAYERS, 1f, 2f);
+				shooter.getWorld().playSound(shooter, Sound.ENTITY_BREEZE_JUMP, SoundCategory.PLAYERS, 1f, 2f);
 
-				/*
 				final Location particleLoc = shooter.getEyeLocation();
 				final Vector direction = particleLoc.getDirection();
 				particleLoc.add(direction);
 				particleLoc.subtract(0d, 0.5d, 0d);
 				shooter.getWorld().spawnParticle(Particle.FIREWORK, particleLoc, 1, 0.05d, 0.05d, 0.05d, 0.04d);
-				*/
 			}
 			else {
 				fireRailgun(shooter, aa);
+				shooter.getWorld().playSound(shooter, Sound.ENTITY_BREEZE_SHOOT, SoundCategory.PLAYERS, 1f, 0.5f);
 			}
 		}
 	}
