@@ -32,10 +32,10 @@ public class FilteringServerThread extends ServerRunnable {
 		this.ipLookup = new HashMap<>();
 	}
 
-	public void onConnect(Player joiner, InetAddress address) {
+	public void onConnect(InetAddress address) {
 		final String addr = getAddress(address);
 		if (addr == null) {
-			Main.logger().log(Level.WARNING, HttpDaemon.LOG_PREFIX + "Player:" + joiner.getName() + " had no addr", new RuntimeException());
+			Main.logger().log(Level.WARNING, HttpDaemon.LOG_PREFIX + "Null connection passed to onConnect", new RuntimeException());
 			return;
 		}
 

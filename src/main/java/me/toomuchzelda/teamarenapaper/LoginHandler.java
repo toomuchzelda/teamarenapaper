@@ -2,6 +2,8 @@ package me.toomuchzelda.teamarenapaper;
 
 import com.destroystokyo.paper.profile.CraftPlayerProfile;
 import com.destroystokyo.paper.profile.PlayerProfile;
+import io.papermc.paper.connection.PlayerConnection;
+import io.papermc.paper.event.connection.PlayerConnectionValidateLoginEvent;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.httpd.HttpDaemon;
 import me.toomuchzelda.teamarenapaper.sql.*;
@@ -24,9 +26,12 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 
 public class LoginHandler
 {
@@ -135,6 +140,19 @@ public class LoginHandler
 		}
 	}
 
+	static void validateLoginMonitor(PlayerConnectionValidateLoginEvent event) {
+		if (event.isAllowed()) {
+			HttpDaemon hd = Main.getHttpDaemon();
+			if (hd != null && event.getConnection() instanceof PlayerConnection pc &&
+				pc.getClientAddress() instanceof InetSocketAddress isa &&
+				isa.getAddress() instanceof InetAddress ia) // just null check everything
+				hd.onConnect(ia);
+			else {
+				Main.logger().log(Level.WARNING, "Bad address in PCVLEvent", new RuntimeException());
+			}
+		}
+	}
+
 	static void handlePlayerJoin(PlayerJoinEvent event) {
 		final Player player = event.getPlayer();
 		final UUID uuid = player.getUniqueId();
@@ -191,10 +209,6 @@ public class LoginHandler
 		playerInfo.defaultKit = defaultKit;
 
 		Main.playerIdLookup.put(player.getEntityId(), player);
-
-		HttpDaemon hd = Main.getHttpDaemon();
-		if (hd != null)
-			hd.onConnect(player, player.getAddress().getAddress());
 
 		Main.getGame().loggingInPlayer(player, playerInfo);
 

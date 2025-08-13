@@ -8,6 +8,7 @@ import com.destroystokyo.paper.event.player.PlayerReadyArrowEvent;
 import com.destroystokyo.paper.event.player.PlayerUseUnknownEntityEvent;
 import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
+import io.papermc.paper.event.connection.PlayerConnectionValidateLoginEvent;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
 import io.papermc.paper.event.packet.PlayerChunkLoadEvent;
@@ -185,6 +186,11 @@ public class EventListeners implements Listener
 //	public void playerLogin(PlayerLoginEvent event) {
 //		LoginHandler.handlePlayerLogin(event);
 //	}
+
+	@EventHandler(priority = EventPriority.MONITOR)
+	public void playerConnectionValidateLogin(PlayerConnectionValidateLoginEvent event) {
+		LoginHandler.validateLoginMonitor(event);
+	}
 
 	@EventHandler
 	public void playerSpawn(PlayerSpawnLocationEvent event) {

@@ -45,8 +45,8 @@ public class HttpDaemon extends NanoHTTPD {
 	}
 
 	// Pass through InetAddress from PlayerLoginEvent as player.getAddress() is null during event
-	public void onConnect(Player joiner, InetAddress address) {
-		this.serverListenerThread.onConnect(joiner, address);
+	public void onConnect(InetAddress address) {
+		this.serverListenerThread.onConnect(address);
 	}
 
 	public void onLeave(Player leaver) {
