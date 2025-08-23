@@ -136,7 +136,8 @@ public abstract class DemoMine extends EntityBuilding implements PreviewableBuil
 	}
 
 	protected void hideOutline(Player player) {
-		GlowUtils.setGlowing(List.of(player), Arrays.asList(stands), false, null);
+		if (player.isOnline())
+			GlowUtils.setGlowing(List.of(player), Arrays.asList(stands), false, null);
 	}
 
 	protected void showOutline(Player player) {

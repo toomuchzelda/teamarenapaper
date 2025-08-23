@@ -147,7 +147,7 @@ public class Preferences {
 		.setCategory(PreferenceCategory.GAMEPLAY);
 
 	public static final Preference<BuildingManager.AllyVisibility> ALLY_BUILDING_OUTLINE = SimplePreference.ofEnum("ally_building_outline",
-		"Appearance of ally buildings.", BuildingManager.AllyVisibility.class, BuildingManager.AllyVisibility.NEARBY)
+		"Appearance of ally buildings.", BuildingManager.AllyVisibility.class, BuildingManager.AllyVisibility.ALWAYS)
 		.setIcon(Material.SMITHING_TABLE)
 		.setValueDescriptionStrings(Map.of(
 			BuildingManager.AllyVisibility.ALWAYS, "Always show ally building outlines.",
