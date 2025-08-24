@@ -9,8 +9,6 @@ import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.PacketUtils;
 import net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket;
-import net.minecraft.world.entity.PositionMoveRotation;
-import net.minecraft.world.phys.Vec3;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -159,7 +157,7 @@ public class AttachedPacketEntity extends PacketEntity
 			entityPacket.getIntegers().write(0, this.getId());
 
 			// type check is retained for future migration
-			if (packet.getType() == PacketUtils.ENTITY_POSITION_SYNC &&
+			if (packet.getType() == PacketType.Play.Server.ENTITY_POSITION_SYNC &&
 				packet.getHandle() instanceof ClientboundEntityPositionSyncPacket) {
 				//adjust the entity's Y position
 				PacketUtils.addEntityPositionSyncY(entityPacket, this.getYOffset());

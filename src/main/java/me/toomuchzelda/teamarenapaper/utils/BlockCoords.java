@@ -51,8 +51,7 @@ public record BlockCoords(int x, int y, int z) {
 	}
 
 	public boolean hasLoaded(Player viewer) {
-		// https://github.com/PaperMC/Paper/issues/12304
-		return viewer.getSentChunkKeys().contains(Chunk.getChunkKey(x >> 4, z >> 4));
+		return viewer.isChunkSent(Chunk.getChunkKey(x >> 4, z >> 4));
 	}
 
 	@NotNull

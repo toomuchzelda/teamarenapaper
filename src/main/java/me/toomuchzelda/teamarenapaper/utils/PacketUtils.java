@@ -13,16 +13,14 @@ import org.bukkit.craftbukkit.util.CraftVector;
 import org.bukkit.util.Vector;
 
 public class PacketUtils {
-	public static final PacketType ENTITY_POSITION_SYNC = PacketType.fromCurrent(PacketType.Protocol.PLAY, PacketType.Sender.SERVER, 0x20, ClientboundEntityPositionSyncPacket.class);
-
 	public static PacketContainer newEntityPositionSync(int id) {
-		return new PacketContainer(ENTITY_POSITION_SYNC,
+		return new PacketContainer(PacketType.Play.Server.ENTITY_POSITION_SYNC,
 			new ClientboundEntityPositionSyncPacket(id, new PositionMoveRotation(Vec3.ZERO, Vec3.ZERO, 0f, 0f), false)
 		);
 	}
 
 	public static void setEntityPositionSyncPos(PacketContainer packet, Vector pos, Vector velocity) {
-		assert CompileAsserts.OMIT || packet.getType() == ENTITY_POSITION_SYNC;
+		assert CompileAsserts.OMIT || packet.getType() == PacketType.Play.Server.ENTITY_POSITION_SYNC;
 
 		final ClientboundEntityPositionSyncPacket eps = (ClientboundEntityPositionSyncPacket) packet.getHandle();
 		PositionMoveRotation pmr = eps.values();
@@ -36,7 +34,7 @@ public class PacketUtils {
 	}
 
 	public static void setEntityPositionSyncPos(PacketContainer packet, Location pos, Vector velocity) {
-		assert CompileAsserts.OMIT || packet.getType() == ENTITY_POSITION_SYNC;
+		assert CompileAsserts.OMIT || packet.getType() == PacketType.Play.Server.ENTITY_POSITION_SYNC;
 
 		final ClientboundEntityPositionSyncPacket eps = (ClientboundEntityPositionSyncPacket) packet.getHandle();
 		PositionMoveRotation pmr = eps.values();
@@ -50,7 +48,7 @@ public class PacketUtils {
 	}
 
 	public static void addEntityPositionSyncY(PacketContainer packet, double y) {
-		assert CompileAsserts.OMIT || packet.getType() == ENTITY_POSITION_SYNC;
+		assert CompileAsserts.OMIT || packet.getType() == PacketType.Play.Server.ENTITY_POSITION_SYNC;
 
 		final ClientboundEntityPositionSyncPacket eps = (ClientboundEntityPositionSyncPacket) packet.getHandle();
 		PositionMoveRotation pmr = eps.values();

@@ -143,8 +143,7 @@ public class PacketListeners
 		//when moving player also move their hitboxes with them
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
 				PacketType.Play.Server.REL_ENTITY_MOVE, PacketType.Play.Server.REL_ENTITY_MOVE_LOOK,
-				PacketType.Play.Server.ENTITY_LOOK,
-				PacketUtils.ENTITY_POSITION_SYNC)
+				PacketType.Play.Server.ENTITY_LOOK, PacketType.Play.Server.ENTITY_POSITION_SYNC)
 		{
 			@Override
 			public void onPacketSending(PacketEvent event) {
@@ -161,7 +160,7 @@ public class PacketListeners
 						if (hitboxViewer.isSeeingHitboxes()) {
 							//send a precise teleport packet if its right after spawning as desyncs happen here
 							PacketContainer[] toBundle = null;
-							if (event.getPacketType() == PacketUtils.ENTITY_POSITION_SYNC || hitboxViewer.getHitboxSpawnTime() < TeamArena.getGameTick()) {
+							if (event.getPacketType() == PacketType.Play.Server.ENTITY_POSITION_SYNC || hitboxViewer.getHitboxSpawnTime() < TeamArena.getGameTick()) {
 								hitboxViewer.setHitboxSpawnTime(Integer.MAX_VALUE);
 								//PlayerUtils.sendPacket(viewer, hitbox.getTeleportPackets());
 								toBundle = hitbox.getTeleportPackets();
@@ -196,7 +195,7 @@ public class PacketListeners
 		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(Main.getPlugin(),
 				PacketType.Play.Server.ENTITY_LOOK, PacketType.Play.Server.REL_ENTITY_MOVE,
 				PacketType.Play.Server.REL_ENTITY_MOVE_LOOK,
-				PacketUtils.ENTITY_POSITION_SYNC, PacketType.Play.Server.ENTITY_HEAD_ROTATION)
+				PacketType.Play.Server.ENTITY_POSITION_SYNC, PacketType.Play.Server.ENTITY_HEAD_ROTATION)
 		{
 			@Override
 			public void onPacketSending(PacketEvent event) {

@@ -4,6 +4,7 @@ import com.comphenix.protocol.wrappers.*;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher.WrappedDataWatcherObject;
 import me.toomuchzelda.teamarenapaper.Main;
 import net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket;
+import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -11,7 +12,10 @@ import net.minecraft.world.entity.decoration.ArmorStand;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Values used by Entity metadata. May change with each Minecraft version.
@@ -87,25 +91,26 @@ public class MetaIndex
 	public static final int TEXT_DISPLAY_TEXT_OPACITY_IDX = 26;
 	public static final int TEXT_DISPLAY_BITMASK_IDX = 27;
 
+	@SuppressWarnings("removal")
 	public static final WrappedDataWatcher.Serializer BITFIELD_SERIALIZER = WrappedDataWatcher.Registry.get(Byte.class);
 
-	public static final WrappedDataWatcherObject BASE_BITFIELD_OBJ;
-	public static final WrappedDataWatcherObject CUSTOM_NAME_OBJ;
-	public static final WrappedDataWatcherObject CUSTOM_NAME_VISIBLE_OBJ;
-	public static final WrappedDataWatcherObject NO_GRAVITY_OBJ;
-	public static final WrappedDataWatcherObject POSE_OBJ;
+	public static final WrappedDataWatcherObject BASE_BITFIELD_OBJ = dataWatcherObject(BASE_BITFIELD_IDX, Byte.class);
+	public static final WrappedDataWatcherObject CUSTOM_NAME_OBJ = dataWatcherObject(CUSTOM_NAME_IDX, WrappedDataWatcher.Registry.getChatComponentSerializer(true));
+	public static final WrappedDataWatcherObject CUSTOM_NAME_VISIBLE_OBJ = dataWatcherObject(CUSTOM_NAME_VISIBLE_IDX, Boolean.class);
+	public static final WrappedDataWatcherObject NO_GRAVITY_OBJ = dataWatcherObject(NO_GRAVITY_IDX, Boolean.class);
+	public static final WrappedDataWatcherObject POSE_OBJ = dataWatcherObject(POSE_IDX, EnumWrappers.getEntityPoseClass());
 
-	public static final WrappedDataWatcherObject INTERACTION_WIDTH_OBJ;
-	public static final WrappedDataWatcherObject INTERACTION_HEIGHT_OBJ;
+	public static final WrappedDataWatcherObject INTERACTION_WIDTH_OBJ = dataWatcherObject(INTERACTION_WIDTH_IDX, Float.class);
+	public static final WrappedDataWatcherObject INTERACTION_HEIGHT_OBJ = dataWatcherObject(INTERACTION_HEIGHT_IDX, Float.class);
 
-	public static final WrappedDataWatcherObject ABSTRACT_ARROW_BITFIELD_OBJ;
-	public static final WrappedDataWatcherObject ABSTRACT_ARROW_PIERCING_LEVEL_OBJ;
+	public static final WrappedDataWatcherObject ABSTRACT_ARROW_BITFIELD_OBJ = dataWatcherObject(ABSTRACT_ARROW_BITFIELD_IDX, Byte.class);
+	public static final WrappedDataWatcherObject ABSTRACT_ARROW_PIERCING_LEVEL_OBJ = dataWatcherObject(ABSTRACT_ARROW_PIERCING_LEVEL_IDX, Byte.class);
 
-	public static final WrappedDataWatcherObject ARMOR_STAND_BITFIELD_OBJ;
-	public static final WrappedDataWatcherObject ARMOR_STAND_LEFT_LEG_POSE;
-	public static final WrappedDataWatcherObject ARMOR_STAND_RIGHT_LEG_POSE;
+	public static final WrappedDataWatcherObject ARMOR_STAND_BITFIELD_OBJ = dataWatcherObject(ARMOR_STAND_BITFIELD_IDX, Byte.class);
+	public static final WrappedDataWatcherObject ARMOR_STAND_LEFT_LEG_POSE = dataWatcherObject(ArmorStand.DATA_LEFT_LEG_POSE);
+	public static final WrappedDataWatcherObject ARMOR_STAND_RIGHT_LEG_POSE = dataWatcherObject(ArmorStand.DATA_RIGHT_LEG_POSE);
 
-	public static final WrappedDataWatcherObject PLAYER_SKIN_PARTS_OBJ;
+	public static final WrappedDataWatcherObject PLAYER_SKIN_PARTS_OBJ = dataWatcherObject(PLAYER_SKIN_PARTS_IDX, Byte.class);
 	public enum SkinPart {
 		CAPE(0x01),
 		JACKET(0x02),
@@ -120,21 +125,21 @@ public class MetaIndex
 		public byte getMask() { return this.mask; }
 	}
 
-	public static final WrappedDataWatcherObject CREEPER_STATE_OBJ;
-	public static final WrappedDataWatcherObject CREEPER_CHARGED_OBJ;
-	public static final WrappedDataWatcherObject CREEPER_IGNITED_OBJ;
+	public static final WrappedDataWatcherObject CREEPER_STATE_OBJ = dataWatcherObject(CREEPER_STATE_IDX, Integer.class);
+	public static final WrappedDataWatcherObject CREEPER_CHARGED_OBJ = dataWatcherObject(CREEPER_CHARGED_IDX, Boolean.class);
+	public static final WrappedDataWatcherObject CREEPER_IGNITED_OBJ = dataWatcherObject(CREEPER_IGNITED_IDX, Boolean.class);
 
-	public static final WrappedDataWatcherObject ALLAY_DANCING_OBJ;
+	public static final WrappedDataWatcherObject ALLAY_DANCING_OBJ = dataWatcherObject(ALLAY_DANCING_IDX, Boolean.class);
 
-	public static final WrappedDataWatcherObject AXOLOTL_COLOR_OBJ;
+	public static final WrappedDataWatcherObject AXOLOTL_COLOR_OBJ = dataWatcherObject(AXOLOTL_COLOR_IDX, Integer.class);
 
-	public static final WrappedDataWatcherObject GUARDIAN_TARGET_OBJ;
+	public static final WrappedDataWatcherObject GUARDIAN_TARGET_OBJ = dataWatcherObject(GUARDIAN_TARGET_IDX, Integer.class);
 
-	public static final WrappedDataWatcherObject DISPLAY_INTERPOLATION_DELAY_OBJ;
+	public static final WrappedDataWatcherObject DISPLAY_INTERPOLATION_DELAY_OBJ = dataWatcherObject(DISPLAY_INTERPOLATION_DELAY_IDX, Integer.class);
 	public static final WrappedDataWatcherObject DISPLAY_TRANSFORMATION_INTERPOLATION_DURATION_OBJ = dataWatcherObject(DISPLAY_TRANSFORMATION_INTERPOLATION_DURATION_IDX, Integer.class);
-	public static final WrappedDataWatcherObject DISPLAY_POSROT_INTERPOLATION_DURATION_OBJ;
-	public static final WrappedDataWatcherObject DISPLAY_TRANSLATION_OBJ;
-	public static final WrappedDataWatcherObject DISPLAY_SCALE_OBJ;
+	public static final WrappedDataWatcherObject DISPLAY_POSROT_INTERPOLATION_DURATION_OBJ = dataWatcherObject(DISPLAY_POSROT_INTERPOLATION_DURATION_IDX, Integer.class);
+	public static final WrappedDataWatcherObject DISPLAY_TRANSLATION_OBJ = dataWatcherObject(DISPLAY_TRANSLATION_IDX, Vector3f.class);
+	public static final WrappedDataWatcherObject DISPLAY_SCALE_OBJ = dataWatcherObject(DISPLAY_SCALE_IDX, Vector3f.class);
 	public static final WrappedDataWatcherObject DISPLAY_ROTATION_LEFT_OBJ = dataWatcherObject(DISPLAY_ROTATION_LEFT_IDX, Quaternionf.class);
 	public static final WrappedDataWatcherObject DISPLAY_BRIGHTNESS_OVERRIDE_OBJ = dataWatcherObject(DISPLAY_BRIGHTNESS_OVERRIDE_IDX, Integer.class);
 	public static final WrappedDataWatcherObject DISPLAY_VIEW_RANGE_OBJ = dataWatcherObject(DISPLAY_VIEW_RANGE_IDX, Float.class);
@@ -142,7 +147,7 @@ public class MetaIndex
 	public static final WrappedDataWatcherObject DISPLAY_HEIGHT_OBJ = dataWatcherObject(DISPLAY_HEIGHT_IDX, Float.class);
 	public static final WrappedDataWatcherObject DISPLAY_GLOW_COLOR_OVERRIDE_OBJ = dataWatcherObject(DISPLAY_GLOW_COLOR_OVERRIDE_IDX, Integer.class);
 
-	public static final WrappedDataWatcherObject DISPLAY_BILLBOARD_OBJ;
+	public static final WrappedDataWatcherObject DISPLAY_BILLBOARD_OBJ = dataWatcherObject(DISPLAY_BILLBOARD_IDX, Byte.class);
 	public enum DisplayBillboardOption {
 		FIXED(0),
 		VERTICAL(1),
@@ -154,9 +159,9 @@ public class MetaIndex
 		public byte get() { return this.b; }
 	}
 
-	public static final WrappedDataWatcherObject BLOCK_DISPLAY_BLOCK_OBJ;
+	public static final WrappedDataWatcherObject BLOCK_DISPLAY_BLOCK_OBJ = dataWatcherObject(BLOCK_DISPLAY_BLOCK_IDX, WrappedDataWatcher.Registry.getBlockDataSerializer(false));
 
-	public static final WrappedDataWatcherObject ITEM_DISPLAY_ITEM_OBJ;
+	public static final WrappedDataWatcherObject ITEM_DISPLAY_ITEM_OBJ = dataWatcherObject(ITEM_DISPLAY_ITEM_IDX, WrappedDataWatcher.Registry.getItemStackSerializer(false));
 
 	public static final WrappedDataWatcherObject TEXT_DISPLAY_TEXT_OBJ = dataWatcherObject(TEXT_DISPLAY_TEXT_IDX, WrappedDataWatcher.Registry.getChatComponentSerializer());
 	public static final WrappedDataWatcherObject TEXT_DISPLAY_LINE_WIDTH_OBJ = dataWatcherObject(TEXT_DISPLAY_LINE_WIDTH_IDX, Integer.class);
@@ -170,99 +175,25 @@ public class MetaIndex
 		ALIGNMENT
 	}
 
+	@SuppressWarnings("removal")
 	private static WrappedDataWatcherObject dataWatcherObject(int index, Class<?> clazz) {
 		return dataWatcherObject(index, WrappedDataWatcher.Registry.get(clazz));
 	}
 
 	private static WrappedDataWatcherObject dataWatcherObject(int index, WrappedDataWatcher.Serializer serializer) {
-		var dataWatcherObject = new WrappedDataWatcherObject(index, serializer);
+		WrappedDataWatcherObject dataWatcherObject = new WrappedDataWatcherObject(index, serializer);
+		addMapping(dataWatcherObject);
+		return dataWatcherObject;
+	}
+
+	private static WrappedDataWatcherObject dataWatcherObject(EntityDataAccessor<?> nms) {
+		WrappedDataWatcherObject dataWatcherObject = new WrappedDataWatcherObject(nms);
 		addMapping(dataWatcherObject);
 		return dataWatcherObject;
 	}
 
 	private static void addMapping(WrappedDataWatcherObject object) {
 		INDEX_SERIALIZER_MAP.put(object.getIndex(), object.getSerializer());
-	}
-
-	static {
-		BASE_BITFIELD_OBJ = new WrappedDataWatcherObject(BASE_BITFIELD_IDX, WrappedDataWatcher.Registry.get(Byte.class));
-		addMapping(BASE_BITFIELD_OBJ);
-
-		CUSTOM_NAME_OBJ = new WrappedDataWatcherObject(CUSTOM_NAME_IDX, WrappedDataWatcher.Registry.getChatComponentSerializer(true));
-		addMapping(CUSTOM_NAME_OBJ);
-
-		CUSTOM_NAME_VISIBLE_OBJ = new WrappedDataWatcherObject(CUSTOM_NAME_VISIBLE_IDX, WrappedDataWatcher.Registry.get(Boolean.class));
-		addMapping( CUSTOM_NAME_VISIBLE_OBJ);
-
-		NO_GRAVITY_OBJ = new WrappedDataWatcherObject(NO_GRAVITY_IDX, WrappedDataWatcher.Registry.get(Boolean.class));
-		addMapping(NO_GRAVITY_OBJ);
-
-		POSE_OBJ = new WrappedDataWatcherObject(POSE_IDX, WrappedDataWatcher.Registry.get(EnumWrappers.getEntityPoseClass()));
-		addMapping(POSE_OBJ);
-
-		INTERACTION_WIDTH_OBJ = new WrappedDataWatcherObject(INTERACTION_WIDTH_IDX, WrappedDataWatcher.Registry.get(Float.class));
-		addMapping(INTERACTION_WIDTH_OBJ);
-
-		INTERACTION_HEIGHT_OBJ = new WrappedDataWatcherObject(INTERACTION_HEIGHT_IDX, WrappedDataWatcher.Registry.get(Float.class));
-		addMapping(INTERACTION_HEIGHT_OBJ);
-
-		ABSTRACT_ARROW_BITFIELD_OBJ = new WrappedDataWatcherObject(ABSTRACT_ARROW_BITFIELD_IDX, WrappedDataWatcher.Registry.get(Byte.class));
-		addMapping(ABSTRACT_ARROW_BITFIELD_OBJ);
-
-		ABSTRACT_ARROW_PIERCING_LEVEL_OBJ = new WrappedDataWatcherObject(ABSTRACT_ARROW_PIERCING_LEVEL_IDX, WrappedDataWatcher.Registry.get(Byte.class));
-		addMapping(ABSTRACT_ARROW_PIERCING_LEVEL_OBJ);
-
-		ARMOR_STAND_BITFIELD_OBJ = new WrappedDataWatcherObject(ARMOR_STAND_BITFIELD_IDX, WrappedDataWatcher.Registry.get(Byte.class));
-		addMapping(ARMOR_STAND_BITFIELD_OBJ);
-
-		ARMOR_STAND_LEFT_LEG_POSE = new WrappedDataWatcherObject(ArmorStand.DATA_LEFT_LEG_POSE);
-		addMapping(ARMOR_STAND_LEFT_LEG_POSE);
-
-		ARMOR_STAND_RIGHT_LEG_POSE = new WrappedDataWatcherObject(ArmorStand.DATA_RIGHT_LEG_POSE);
-		addMapping(ARMOR_STAND_RIGHT_LEG_POSE);
-
-		PLAYER_SKIN_PARTS_OBJ = new WrappedDataWatcherObject(PLAYER_SKIN_PARTS_IDX, WrappedDataWatcher.Registry.get(Byte.class));
-		addMapping(PLAYER_SKIN_PARTS_OBJ);
-
-		CREEPER_STATE_OBJ = new WrappedDataWatcherObject(CREEPER_STATE_IDX, WrappedDataWatcher.Registry.get(Integer.class));
-		addMapping(CREEPER_STATE_OBJ);
-
-		CREEPER_CHARGED_OBJ = new WrappedDataWatcherObject(CREEPER_CHARGED_IDX, WrappedDataWatcher.Registry.get(Boolean.class));
-		addMapping(CREEPER_CHARGED_OBJ);
-
-		CREEPER_IGNITED_OBJ = new WrappedDataWatcherObject(CREEPER_IGNITED_IDX, WrappedDataWatcher.Registry.get(Boolean.class));
-		addMapping(CREEPER_IGNITED_OBJ);
-
-		ALLAY_DANCING_OBJ = new WrappedDataWatcherObject(ALLAY_DANCING_IDX, WrappedDataWatcher.Registry.get(Boolean.class));
-		addMapping(ALLAY_DANCING_OBJ);
-
-		AXOLOTL_COLOR_OBJ = new WrappedDataWatcherObject(AXOLOTL_COLOR_IDX, WrappedDataWatcher.Registry.get(Integer.class));
-		addMapping(AXOLOTL_COLOR_OBJ);
-
-		GUARDIAN_TARGET_OBJ = new WrappedDataWatcherObject(GUARDIAN_TARGET_IDX, WrappedDataWatcher.Registry.get(Integer.class));
-		addMapping(GUARDIAN_TARGET_OBJ);
-
-
-		DISPLAY_INTERPOLATION_DELAY_OBJ = new WrappedDataWatcherObject(DISPLAY_INTERPOLATION_DELAY_IDX, WrappedDataWatcher.Registry.get(Integer.class));
-		addMapping(DISPLAY_INTERPOLATION_DELAY_OBJ);
-
-		DISPLAY_POSROT_INTERPOLATION_DURATION_OBJ = new WrappedDataWatcherObject(DISPLAY_POSROT_INTERPOLATION_DURATION_IDX, WrappedDataWatcher.Registry.get(Integer.class));
-		addMapping(DISPLAY_POSROT_INTERPOLATION_DURATION_OBJ);
-
-		DISPLAY_TRANSLATION_OBJ = new WrappedDataWatcherObject(DISPLAY_TRANSLATION_IDX, WrappedDataWatcher.Registry.get(Vector3f.class));
-		addMapping(DISPLAY_TRANSLATION_OBJ);
-
-		DISPLAY_SCALE_OBJ = new WrappedDataWatcherObject(DISPLAY_SCALE_IDX, WrappedDataWatcher.Registry.get(Vector3f.class));
-		addMapping(DISPLAY_SCALE_OBJ);
-
-		DISPLAY_BILLBOARD_OBJ = new WrappedDataWatcherObject(DISPLAY_BILLBOARD_IDX, WrappedDataWatcher.Registry.get(Byte.class));
-		addMapping(DISPLAY_BILLBOARD_OBJ);
-
-		BLOCK_DISPLAY_BLOCK_OBJ = new WrappedDataWatcherObject(BLOCK_DISPLAY_BLOCK_IDX, WrappedDataWatcher.Registry.getBlockDataSerializer(false));
-		addMapping(BLOCK_DISPLAY_BLOCK_OBJ);
-
-		ITEM_DISPLAY_ITEM_OBJ = new WrappedDataWatcherObject(ITEM_DISPLAY_ITEM_IDX, WrappedDataWatcher.Registry.getItemStackSerializer(false));
-		addMapping(ITEM_DISPLAY_ITEM_OBJ);
 	}
 
 	/**
@@ -285,6 +216,7 @@ public class MetaIndex
 
 			// If the mapping doesn't exist, get the serializer and cache it.
 			Object finalObject = object;
+			//noinspection removal
 			serializer = WrappedDataWatcher.Registry.get(finalObject.getClass());
 
 			WrappedDataWatcher.Serializer tabledSer = INDEX_SERIALIZER_MAP.put(index, serializer);
