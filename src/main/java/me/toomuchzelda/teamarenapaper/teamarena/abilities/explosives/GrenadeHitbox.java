@@ -1,6 +1,7 @@
 package me.toomuchzelda.teamarenapaper.teamarena.abilities.explosives;
 
 import com.comphenix.protocol.events.PacketContainer;
+import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
@@ -29,10 +30,10 @@ public class GrenadeHitbox extends PacketEntity {
 	}
 
 	@Override
-	public void respawn() {
-		super.respawn();
-
-		this.broadcastPacket(mountPacket);
+	protected void spawn(Player player) {
+		super.spawn(player);
+		assert CompileAsserts.OMIT || this.isAlive();
+		this.sendPacket(player, this.mountPacket);
 	}
 
 	@Override
