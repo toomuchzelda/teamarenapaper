@@ -1,8 +1,8 @@
 package me.toomuchzelda.teamarenapaper.teamarena.building;
 
 import me.toomuchzelda.teamarenapaper.Main;
-import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
+import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
@@ -16,6 +16,7 @@ import java.util.*;
  * @author jacky
  */
 public final class BuildingManager {
+	private static final ComponentLogger LOGGER = ComponentLogger.logger("BuildingManager");
 
 	private BuildingManager() {
 
@@ -30,18 +31,48 @@ public final class BuildingManager {
 	}
 
 	public static void tick() {
+		List<Throwable> exceptions = new ArrayList<>(0);
 		List<Building> staleBuildings = new ArrayList<>();
-		buildings.values().forEach(building -> {
-			if (building.invalid || !building.owner.isOnline())
+		for (Building building : buildings.values()) {
+			if (building.invalid || !building.owner.isOnline()) {
 				staleBuildings.add(building);
-			else
+				continue;
+			}
+			try {
 				building.onTick();
-		});
-		staleBuildings.forEach(BuildingManager::destroyBuilding);
+			} catch (Throwable ex) {
+				LOGGER.error("Failed to tick building {}", building, ex);
+				exceptions.add(ex);
+			}
+		}
+		for (Building staleBuilding : staleBuildings) {
+			try {
+				destroyBuilding(staleBuilding);
+			} catch (Throwable ex) {
+				LOGGER.error("Failed to destroy stale building {}", staleBuilding, ex);
+				exceptions.add(ex);
+			}
+		}
+		// finally rethrow all exceptions
+		if (!exceptions.isEmpty()) {
+			RuntimeException exception = new RuntimeException("Ticking building manager", exceptions.getFirst());
+			if (exceptions.size() > 1) {
+				for (ListIterator<Throwable> iter = exceptions.listIterator(1); iter.hasNext();) {
+					exception.addSuppressed(iter.next());
+				}
+			}
+			throw exception;
+		}
 	}
 
 	public static void cleanUp() {
-		buildings.values().forEach(Building::onDestroy);
+		for (Building building : buildings.values()) {
+			try {
+				building.onDestroy();
+			} catch (Exception ex) {
+				LOGGER.error("Failed to clean up building {}, ignoring", building, ex);
+			}
+		}
 		buildings.clear();
 		entityBuildings.clear();
 		playerBuildings.clear();
@@ -71,36 +102,47 @@ public final class BuildingManager {
 	}
 
 	public static void placeBuilding(@NotNull Building building) {
-		building.onPlace();
+		try {
+			building.onPlace();
 
-		buildings.put(new BlockCoords(building.getLocation()), building);
-		if (building instanceof EntityBuilding entityBuilding) {
-			entityBuilding.getEntities().forEach(entity -> entityBuildings.put(entity, entityBuilding));
-		}
+			buildings.put(new BlockCoords(building.getLocation()), building);
+			if (building instanceof EntityBuilding entityBuilding) {
+				for (Entity entity : entityBuilding.getEntities()) {
+					entityBuildings.put(entity, entityBuilding);
+				}
+			}
 
-		playerBuildings.computeIfAbsent(building.owner, ignored -> new HashMap<>())
+			playerBuildings.computeIfAbsent(building.owner, ignored -> new HashMap<>())
 				.computeIfAbsent(building.getClass(), ignored -> new ArrayList<>())
 				.add(building);
-
+		} catch (Exception ex) {
+			throw new RuntimeException("Failed to place building " + building, ex);
+		}
 	}
 
 	public static void destroyBuilding(@NotNull Building building) {
-		building.onDestroy();
-		building.markInvalid(); // ensure that it is invalid
+		try {
+			building.onDestroy();
+			building.markInvalid(); // ensure that it is invalid
 
-		buildings.remove(new BlockCoords(building.getLocation()));
-		if (building instanceof EntityBuilding entityBuilding) {
-			entityBuilding.getEntities().forEach(entityBuildings::remove);
-		}
+			buildings.remove(new BlockCoords(building.getLocation()));
+			if (building instanceof EntityBuilding entityBuilding) {
+				for (Entity entity : entityBuilding.getEntities()) {
+					entityBuildings.remove(entity);
+				}
+			}
 
-		var buildingsByClass = playerBuildings.get(building.owner);
-		var buildingsList = buildingsByClass.get(building.getClass());
-		buildingsList.remove(building);
-		if (buildingsList.size() == 0) {
-			buildingsByClass.remove(building.getClass());
-		}
-		if (buildingsByClass.size() == 0) {
-			playerBuildings.remove(building.owner);
+			var buildingsByClass = playerBuildings.get(building.owner);
+			var buildingsList = buildingsByClass.get(building.getClass());
+			buildingsList.remove(building);
+			if (buildingsList.isEmpty()) {
+				buildingsByClass.remove(building.getClass());
+			}
+			if (buildingsByClass.isEmpty()) {
+				playerBuildings.remove(building.owner);
+			}
+		} catch (Exception ex) {
+			throw new RuntimeException("Failed to destroy building " + building, ex);
 		}
 	}
 

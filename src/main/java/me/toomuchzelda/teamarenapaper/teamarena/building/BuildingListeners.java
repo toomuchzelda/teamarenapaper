@@ -40,7 +40,7 @@ public class BuildingListeners {
 		BuildingManager.getAllPlayerBuildings(event.getPlayer()).forEach(BuildingManager::destroyBuilding);
 	}
 
-	/** @return true if handled by Building framework */
+	/** {@return true if handled by Building framework} */
 	public static boolean onBlockBroken(BlockBreakEvent e) {
 		if (e.isCancelled())
 			return false;
@@ -50,7 +50,11 @@ public class BuildingListeners {
 		Building building = BuildingManager.getBuildingAt(actualBlock);
 		if (!(building instanceof BlockBuilding blockBuilding))
 			return false;
-		return blockBuilding.onBreak(e);
+		try {
+			return blockBuilding.onBreak(e);
+		} catch (Exception ex) {
+			throw new RuntimeException("Handling BlockBreakEvent for " + building, ex);
+		}
 	}
 
 	public static boolean onInteract(PlayerInteractEvent e) {
@@ -62,7 +66,11 @@ public class BuildingListeners {
 		Building building = BuildingManager.getBuildingAt(actualBlock);
 		if (!(building instanceof BlockBuilding blockBuilding))
 			return false;
-		blockBuilding.onInteract(e);
+		try {
+			blockBuilding.onInteract(e);
+		} catch (Exception ex) {
+			throw new RuntimeException("Handling PlayerInteractEvent for " + building, ex);
+		}
 		return true;
 	}
 
@@ -74,7 +82,11 @@ public class BuildingListeners {
 		EntityBuilding building = BuildingManager.getBuilding(victim);
 		if (building == null)
 			return false;
-		return building.onDamage(e);
+		try {
+			return building.onDamage(e);
+		} catch (Exception ex) {
+			throw new RuntimeException("Handling DamageEvent for " + building, ex);
+		}
 	}
 
 	public static boolean onEntityInteract(PlayerInteractEntityEvent e) {
@@ -85,7 +97,11 @@ public class BuildingListeners {
 		EntityBuilding building = BuildingManager.getBuilding(victim);
 		if (building == null)
 			return false;
-		building.onInteract(e);
+		try {
+			building.onInteract(e);
+		} catch (Exception ex) {
+			throw new RuntimeException("Handling PlayerInteractEntityEvent for " + building, ex);
+		}
 		return true;
 	}
 

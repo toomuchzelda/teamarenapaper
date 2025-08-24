@@ -34,7 +34,9 @@ public abstract non-sealed class EntityBuilding extends Building {
 	@Override
 	public void onDestroy() {
 		super.onDestroy();
-		managedEntities.forEach(BuildingListeners::unregisterEntity);
+		for (Entity managedEntity : managedEntities) {
+			BuildingListeners.unregisterEntity(managedEntity);
+		}
 		managedEntities.clear();
 	}
 
@@ -66,5 +68,12 @@ public abstract non-sealed class EntityBuilding extends Building {
 
 	public Vector getOffset() {
 		return new Vector();
+	}
+
+	@Override
+	public String toString() {
+		return getClass().getSimpleName() + "{owner=" + owner.getName() +
+			",name=" + name +
+			",location=" + ("(%.1f,%.1f,%.1f)".formatted(location.x(), location.y(), location.z())) + '}';
 	}
 }

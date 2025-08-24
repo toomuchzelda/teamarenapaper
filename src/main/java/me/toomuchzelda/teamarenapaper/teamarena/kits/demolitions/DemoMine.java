@@ -120,28 +120,27 @@ public abstract class DemoMine extends EntityBuilding implements PreviewableBuil
 			.filter(player -> BuildingOutlineManager.shouldSeeOutline(this, player))
 			.collect(Collectors.toSet());
 		// remove invalid viewers
-		for (var iter = outlineViewers.iterator(); iter.hasNext();) {
-			Player player = iter.next();
-			if (!player.isOnline() || !canSee.contains(player)) {
-				hideOutline(player);
-				iter.remove();
-			}
-		}
+		List<Player> previouslyVisible = new ArrayList<>(outlineViewers);
+		previouslyVisible.retainAll(canSee);
+		hideOutline(previouslyVisible);
+
 		// add new viewers
-		for (Player player : canSee) {
-			if (outlineViewers.add(player)) {
-				showOutline(player);
-			}
+		Set<Player> newlyVisible = new HashSet<>(canSee);
+		newlyVisible.removeAll(outlineViewers);
+		showOutline(newlyVisible);
+
+		// finally apply updates
+		for (Player player : previouslyVisible) {
+			outlineViewers.remove(player);
 		}
 	}
 
-	protected void hideOutline(Player player) {
-		if (player.isOnline())
-			GlowUtils.setGlowing(List.of(player), Arrays.asList(stands), false, null);
+	protected void hideOutline(Collection<? extends Player> players) {
+		GlowUtils.setGlowing(players, Arrays.asList(stands), false, null);
 	}
 
-	protected void showOutline(Player player) {
-		GlowUtils.setGlowing(List.of(player), Arrays.asList(stands), true, NamedTextColor.nearestTo(getOutlineColor()));
+	protected void showOutline(Collection<? extends Player> players) {
+		GlowUtils.setGlowing(players, Arrays.asList(stands), true, NamedTextColor.nearestTo(getOutlineColor()));
 	}
 
 	@Override
@@ -150,12 +149,11 @@ public abstract class DemoMine extends EntityBuilding implements PreviewableBuil
 
 		hitboxEntity.remove();
 
-		outlineViewers.forEach(this::hideOutline);
+		hideOutline(outlineViewers);
 		for (ArmorStand stand : stands) {
 			stand.remove();
 		}
 		outlineViewers.clear();
-		hitboxEntity.remove();
 	}
 
 	@Override

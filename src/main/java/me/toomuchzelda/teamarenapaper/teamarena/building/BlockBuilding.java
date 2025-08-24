@@ -38,7 +38,9 @@ public abstract non-sealed class BlockBuilding extends Building {
 	@Override
 	public void onDestroy() {
 		super.onDestroy();
-		managedBlocks.forEach(BuildingListeners::unregisterBlock);
+		for (Block managedBlock : managedBlocks) {
+			BuildingListeners.unregisterBlock(managedBlock);
+		}
 		managedBlocks.clear();
 	}
 
@@ -48,5 +50,12 @@ public abstract non-sealed class BlockBuilding extends Building {
 
 	public void onInteract(PlayerInteractEvent e) {
 
+	}
+
+	@Override
+	public String toString() {
+		return getClass().getSimpleName() + "{owner=" + owner.getName() +
+			",name=" + name +
+			",location=(" + location.getBlockX() + ',' + location.getBlockY() + ',' + location.getBlockZ() + ")}";
 	}
 }

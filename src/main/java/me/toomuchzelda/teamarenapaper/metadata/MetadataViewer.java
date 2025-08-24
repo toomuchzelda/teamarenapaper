@@ -14,7 +14,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntitySpawnEvent;
-import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
@@ -348,8 +347,6 @@ public class MetadataViewer
 			modifiedData = originalData;
 		}
 
-		// TODO: band-aid fix
-		//metadataPacket.getWatchableCollectionModifier().write(0, modifiedData.getWatchableObjects());
 		metadataPacket.getDataValueCollectionModifier().write(0,
 				MetaIndex.getFromWatchableObjectsList(modifiedData.getWatchableObjects())
 		);

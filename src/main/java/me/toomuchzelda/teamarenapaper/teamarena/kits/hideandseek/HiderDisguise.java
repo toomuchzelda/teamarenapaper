@@ -23,7 +23,6 @@ import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
-import org.bukkit.craftbukkit.block.CraftBlockState;
 import org.bukkit.craftbukkit.block.data.CraftBlockData;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;

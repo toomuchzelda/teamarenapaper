@@ -29,7 +29,7 @@ import static net.kyori.adventure.text.Component.*;
  * A building selector allows a player to see outlines of their existing buildings,
  * select buildings by looking in the general direction, and preview new buildings.
  */
-public class BuildingSelector {
+public final class BuildingSelector {
 
 	private BuildingSelector(Map<ItemStack, List<Action>> selectorItems) {
 		this.selectorItems = selectorItems;
@@ -542,7 +542,9 @@ public class BuildingSelector {
 	}
 
 	public void cleanUp() {
-		buildingOutlines.values().forEach(BuildingOutline::remove);
+		for (BuildingOutline buildingOutline : buildingOutlines.values()) {
+			buildingOutline.remove();
+		}
 		buildingOutlines.clear();
 		buildingPreviews.clear();
 		selected = null;

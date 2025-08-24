@@ -36,6 +36,8 @@ public class GlowUtils {
 		Entity[] entitiesArr = entities.toArray(new Entity[0]);
 		for (Player player : players) {
 			PlayerInfo info = Main.getPlayerInfo(player);
+			if (info == null) // player is offline
+				continue;
 			var scoreboard = info.getScoreboard();
 			if (glowing && team != null)
 				scoreboard.addEntities(team, entities);
@@ -47,12 +49,13 @@ public class GlowUtils {
 					metadata.updateBitfieldValue(entity,
 						MetaIndex.BASE_BITFIELD_IDX, MetaIndex.BASE_BITFIELD_GLOWING_IDX, true);
 				}
+				metadata.refreshViewer(entitiesArr);
 			} else {
 				for (Entity entity : entitiesArr) {
 					metadata.removeBitfieldValue(entity, MetaIndex.BASE_BITFIELD_IDX, MetaIndex.BASE_BITFIELD_GLOWING_IDX);
 				}
+				metadata.refreshViewer(entitiesArr);
 			}
-			metadata.refreshViewer(entitiesArr);
 		}
 	}
 
@@ -61,11 +64,15 @@ public class GlowUtils {
 			Team team = COLORED_TEAMS.get(color);
 			for (Player player : players) {
 				PlayerInfo info = Main.getPlayerInfo(player);
+				if (info == null) // player is offline
+					continue;
 				info.getScoreboard().addEntries(team, entries);
 			}
 		} else {
 			for (Player player : players) {
 				PlayerInfo info = Main.getPlayerInfo(player);
+				if (info == null) // player is offline
+					continue;
 				info.getScoreboard().removeEntries(entries);
 			}
 		}

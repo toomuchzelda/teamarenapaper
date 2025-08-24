@@ -106,4 +106,12 @@ public abstract sealed class Building permits BlockBuilding, EntityBuilding {
 	protected void markInvalid() {
 		this.invalid = true;
 	}
+
+	/**
+	 * {@return a string representation of this Building}
+	 * @implSpec 	Implementations have to ensure that this method does not throw an exception
+	 * 				even after the building is marked {@code invalid}.
+	 */
+	@Override
+	public abstract String toString();
 }
