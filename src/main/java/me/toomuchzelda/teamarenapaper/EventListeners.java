@@ -732,6 +732,9 @@ public class EventListeners implements Listener
 	@EventHandler(priority = EventPriority.MONITOR)
 	public void entitySpawn(EntitySpawnEvent event) {
 		if (!event.isCancelled()) {
+			if (event.getEntity() instanceof AbstractArrow aa) {
+				aa.setTicksLived(6);
+			}
 			ArrowManager.addArrowMetaFilter(event);
 			MetadataViewer.sendMetaIfNeeded(event);
 		}
