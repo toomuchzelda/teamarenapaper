@@ -10,6 +10,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.FakeBlockManager;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BlockBuilding;
 import me.toomuchzelda.teamarenapaper.teamarena.building.BuildingManager;
+import me.toomuchzelda.teamarenapaper.teamarena.hideandseek.HideAndSeek;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.AttachedPacketEntity;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
@@ -75,6 +76,7 @@ public class HiderDisguise {
 		this.game = game;
 		this.hider = hider;
 		this.timerSeed = TeamArena.getGameTick() - MathUtils.randomMax(4);
+		this.fbManagerKey = FakeBlockManager.INVALID_KEY;
 	}
 
 	// To try work with paved grass and odd blocks
@@ -172,24 +174,18 @@ public class HiderDisguise {
 	}
 
 	private void breakExistingSolid() {
-		if (TeamArena.getGameTick() >= this.blockChangeTick + BLOCK_SOLIDIFY_TICKS) {
-			if (!CompileAsserts.OMIT &&	this.fbManagerKey == FakeBlockManager.INVALID_KEY) {
-				Main.logger().severe("Invalid fakeblock key after it should have been placed");
-				Thread.dumpStack();
-			}
+		assert CompileAsserts.OMIT || // both are initialised or null
+			((this.building == null) == (this.fbManagerKey == FakeBlockManager.INVALID_KEY));
 
-			if (this.building == null) {
-				Main.logger().severe("breakExistingSolid() building was null");
-				Thread.dumpStack();
-			}
-			else {
-				BuildingManager.destroyBuilding(this.building);
-				this.building = null;
-			}
-			this.setBlockDisplayData(false, this.occupiedBlock, true);
+		if (this.building != null) {
+			BuildingManager.destroyBuilding(this.building);
+			this.building = null;
+		}
+		this.setBlockDisplayData(false, this.occupiedBlock, true);
 
-			//this.hider.getWorld().setBlockData(this.occupiedBlock.x(), this.occupiedBlock.y(), this.occupiedBlock.z(),
-			//	Material.AIR.createBlockData());
+		//this.hider.getWorld().setBlockData(this.occupiedBlock.x(), this.occupiedBlock.y(), this.occupiedBlock.z(),
+		//	Material.AIR.createBlockData());
+		if (fbManagerKey != FakeBlockManager.INVALID_KEY) {
 			this.game.getFakeBlockManager().removeFakeBlock(this.occupiedBlock, this.fbManagerKey);
 			this.fbManagerKey = FakeBlockManager.INVALID_KEY;
 			this.visualBlockEffect();
@@ -247,6 +243,13 @@ public class HiderDisguise {
 	}
 
 	void tick() {
+		final int currentTick = TeamArena.getGameTick();
+		// action bar message on held item
+		if (this.disguise != null && (currentTick - this.timerSeed) % 2 == 0 &&
+			EntityUtils.isHoldingItem(this.hider)) {
+			PlayerUtils.sendKitMessage(this.hider, null, HideAndSeek.HELD_ITEMS_VISIBLE);
+		}
+
 		if (this.blockData != null) {
 			BlockCoords currentCoords = this.getCoords();
 			// Use BuildingManager to prevent 2 solidifications in 1 block
@@ -254,7 +257,6 @@ public class HiderDisguise {
 				this.resetBlockTimer(currentCoords);
 			}
 			else {
-				final int currentTick = TeamArena.getGameTick();
 				assert CompileAsserts.OMIT || currentTick >= this.blockChangeTick;
 
 				if (currentTick <= this.blockChangeTick + BLOCK_SOLIDIFY_TICKS &&

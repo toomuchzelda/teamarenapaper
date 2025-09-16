@@ -46,7 +46,7 @@ public class HideAndSeek extends TeamArena {
 	private static final Component HIDERS_WIN = Component.text("Time's up!", NamedTextColor.GOLD, TextDecoration.BOLD);
 	private static final Component NO_RESPAWNING = Component.text("Hiders don't respawn", TextColors.ERROR_RED);
 	/*       Sidebar       */
-	private static final Component HELD_ITEMS_VISIBLE = Component.text("Held Items are visible!", NamedTextColor.RED);
+	public static final Component HELD_ITEMS_VISIBLE = Component.text("Held Items are visible!", TextColors.ERROR_RED);
 	private static final Component KILL_HIDER_KING = Component.textOfChildren(
 		Component.text("Find and kill the ", NamedTextColor.GOLD),
 		Component.text("Hider King", NamedTextColor.GREEN)

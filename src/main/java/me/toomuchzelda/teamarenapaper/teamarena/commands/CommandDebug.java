@@ -37,13 +37,12 @@ import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
 import net.minecraft.network.protocol.game.ClientboundHurtAnimationPacket;
 import net.minecraft.world.level.block.state.BlockState;
 import org.bukkit.*;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.command.CommandSender;
 import org.bukkit.craftbukkit.block.data.CraftBlockData;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.Villager;
+import org.bukkit.entity.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -651,6 +650,15 @@ public class CommandDebug extends CustomCommand {
 				display.updateMetadataPacket();
 				display.respawn();
 			}
+			case "fatmouse" -> {
+				final Location loc = player.getLocation();
+				final World world = loc.getWorld();
+
+				final LivingEntity wolf = world.spawn(loc, Wolf.class);
+				wolf.getAttribute(Attribute.SCALE).setBaseValue(0.25d);
+				wolf.setCustomName("Fat Mouse");
+				wolf.setCustomNameVisible(true);
+			}
 			default -> showUsage(sender);
 		}
 	}
@@ -661,7 +669,7 @@ public class CommandDebug extends CustomCommand {
 			return Arrays.asList("hide", "gui", "guitest", "signtest", "game", "setrank", "setteam", "setkit",
 				"votetest", "draw", "graffititest", "respawn", "fakehitbox", "testmotd", "arrowMarker", "packetcache", "showSpawns",
 				"flyingpoint", "fakeBlock", "elevator", "showores", "darken", "amogus", "loadsong", "movemaxxing", "packethuman",
-				"addshield", "clearshields", "invisibleBlock");
+				"addshield", "clearshields", "invisibleBlock", "fatmouse");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");

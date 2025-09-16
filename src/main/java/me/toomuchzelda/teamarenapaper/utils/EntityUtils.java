@@ -35,6 +35,7 @@ import org.bukkit.craftbukkit.util.CraftVector;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
+import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.BoundingBox;
@@ -429,6 +430,22 @@ public class EntityUtils {
 		var nmsPlayer = ((CraftPlayer) player).getHandle();
 		var boundingBox = nmsPlayer.getBoundingBox().move(0, -0.1, 0);
 		return !nmsPlayer.level().noCollision(nmsPlayer, boundingBox);
+	}
+
+	public static boolean isHoldingItem(LivingEntity living) {
+		boolean isHolding = false;
+		final EntityEquipment equipment = living.getEquipment();
+		if (equipment != null) {
+			if (living.canUseEquipmentSlot(EquipmentSlot.HAND) &&
+				!equipment.getItemInMainHand().getType().isAir()) {
+				isHolding = true;
+			}
+			if (living.canUseEquipmentSlot(EquipmentSlot.OFF_HAND) &&
+				!equipment.getItemInOffHand().getType().isAir()) {
+				isHolding = true;
+			}
+		}
+		return isHolding;
 	}
 
 	// For debugging only

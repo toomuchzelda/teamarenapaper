@@ -157,9 +157,12 @@ public class KitSniper extends Kit {
 			int scopedTicks = 0;
 			int lastScopeTick = Integer.MIN_VALUE;
 			Map<Material, Integer> blockHits = new HashMap<>();
+			// for grenade double-rclick prevention
+			private int lastClickTick;
 
 			SniperInfo(int spawnTime) {
 				this.spawnTime = spawnTime;
+				this.lastClickTick = TeamArena.getGameTick();
 			}
 
 			void sendStats(Player player) {
@@ -280,32 +283,36 @@ public class KitSniper extends Kit {
 			PlayerInfo pinfo = Main.getPlayerInfo(player);
 
 			//Grenade Pull Pin
-			if (mat == Material.TURTLE_HELMET && !player.hasCooldown(Material.TURTLE_HELMET) && player.getExp() == 0.999f && player.getInventory().getItemInMainHand().getType() == Material.TURTLE_HELMET) {
-				Component actionBar = text("Left Click to THROW    Right Click to TOSS", TextColor.color(242, 44, 44));
-				Component text = text("Left Click to throw the grenade, Right Click to lightly toss it", TextColor.color(242, 44, 44));
-				if (pinfo.getPreference(Preferences.KIT_ACTION_BAR)) {
-					player.sendActionBar(actionBar);
+			if (mat == Material.TURTLE_HELMET && event.getHand() == EquipmentSlot.HAND) {
+				if (!player.hasCooldown(Material.TURTLE_HELMET) && player.getExp() == 0.999f) {
+					Component actionBar = text("Left Click to THROW    Right Click to TOSS", TextColor.color(242, 44, 44));
+					Component text = text("Left Click to throw the grenade, Right Click to lightly toss it", TextColor.color(242, 44, 44));
+					if (pinfo.getPreference(Preferences.KIT_ACTION_BAR)) {
+						player.sendActionBar(actionBar);
+					}
+					if (pinfo.getPreference(Preferences.KIT_CHAT_MESSAGES)) {
+						player.sendMessage(text);
+					}
+					player.setExp(0);
+					player.setCooldown(Material.TURTLE_HELMET, (int) 3.5 * 20);
+					world.playSound(player, Sound.ITEM_FLINTANDSTEEL_USE, 2.0f, 1.5f);
+
+					sniperInfoMap.get(player).lastClickTick = TeamArena.getGameTick();
 				}
-				if (pinfo.getPreference(Preferences.KIT_CHAT_MESSAGES)) {
-					player.sendMessage(text);
-				}
-				player.setExp(0);
-				player.setCooldown(Material.TURTLE_HELMET, (int) 3.5 * 20);
-				world.playSound(player, Sound.ITEM_FLINTANDSTEEL_USE, 2.0f, 1.5f);
-			}
-			//Grenade Throw
-			//Main Hand ONLY
-			else if (mat == Material.TURTLE_HELMET) {
-				event.setCancelled(true);
-				if (player.hasCooldown(Material.TURTLE_HELMET) && event.getHand() == EquipmentSlot.HAND) {
-					//Removes 1 grenade from hand
-					inv.setItemInMainHand(item.subtract());
-					if (action == Action.LEFT_CLICK_AIR || action == Action.LEFT_CLICK_BLOCK) {
-						//Left Click => Hard Throw
-						throwGrenade(player, 1.5d);
-					} else if (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK) {
-						//Right Click => Soft Toss
-						throwGrenade(player, 0.8d);
+				//Grenade Throw
+				//Main Hand ONLY
+				else if (sniperInfoMap.get(player).lastClickTick < TeamArena.getGameTick()) {
+					event.setCancelled(true);
+					if (player.hasCooldown(Material.TURTLE_HELMET) && event.getHand() == EquipmentSlot.HAND) {
+						//Removes 1 grenade from hand
+						inv.setItemInMainHand(item.subtract());
+						if (action == Action.LEFT_CLICK_AIR || action == Action.LEFT_CLICK_BLOCK) {
+							//Left Click => Hard Throw
+							throwGrenade(player, 1.5d);
+						} else if (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK) {
+							//Right Click => Soft Toss
+							throwGrenade(player, 0.8d);
+						}
 					}
 				}
 			} else if (mat == Material.SPYGLASS && !player.hasCooldown(Material.SPYGLASS) && action.isLeftClick()) {

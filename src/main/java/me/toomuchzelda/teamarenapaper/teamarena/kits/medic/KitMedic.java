@@ -201,6 +201,7 @@ public class KitMedic extends Kit
 		public void onConsumeItem(PlayerItemConsumeEvent event) {
 			if(event.getItem().isSimilar(POTION)) {
 				event.setReplacement(POTION); // Setting the replacement effectively prevents losing the item
+				event.getPlayer().updateInventory(); // Prevent client prediction of empty bottle
 			}
 		}
 

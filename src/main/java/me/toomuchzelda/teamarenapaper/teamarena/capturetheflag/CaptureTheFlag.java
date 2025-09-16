@@ -700,7 +700,9 @@ public class CaptureTheFlag extends TeamArena
 	@Override
 	public void onInteractEntity(PlayerInteractEntityEvent event) {
 		super.onInteractEntity(event);
-		if(event.getRightClicked() instanceof Player receiver) {
+		if (event.isCancelled()) return;
+		// In rare cases an interaction can be called on a spectator
+		if(event.getRightClicked() instanceof Player receiver && !this.isDead(receiver)) {
 			ItemStack usedItem = event.getPlayer().getEquipment().getItem(event.getHand());
 			Set<Flag> flagsHeld = flagHolders.get(event.getPlayer());
 			if(flagsHeld != null) {
