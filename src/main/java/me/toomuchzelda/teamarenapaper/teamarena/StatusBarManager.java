@@ -9,6 +9,9 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.Style;
 import org.bukkit.entity.Player;
 
+import java.util.List;
+import java.util.stream.IntStream;
+
 /**
  * Methods for handling the Status Bars in Team Arena
  *
@@ -47,15 +50,13 @@ public class StatusBarManager
 	static class StatusBarHologram extends AttachedPacketHologram
 	{
 		private static final Component PREGAME_TEXT = Component.text("I love Team Arena!");
-		private static Component pregameComp;
+		/** Cached RGB text */
+		private static final List<Component> PREGAME_TEXT_RGB = IntStream.range(0, 20)
+			.mapToObj(i -> TextUtils.getRGBManiacComponent(PREGAME_TEXT, Style.empty(), i / 20d))
+			.toList();
+
 		// RGB effect uses a ton of CPU time, so limit who gets it.
 		private final boolean preGameRgb;
-
-		// Called by TeamArena
-		static void updatePregameText() {
-			final double offset = (((double) TeamArena.getGameTick()) / 20d) % 1;
-			pregameComp = TextUtils.getRGBManiacComponent(PREGAME_TEXT, Style.empty(), offset);
-		}
 
 		public StatusBarHologram(Player player) {
 			super(Main.getPlayerInfo(player).statusIndicatorId, player, null,
@@ -75,7 +76,7 @@ public class StatusBarManager
 			final GameState gameState = Main.getGame().getGameState();
 			if(gameState == GameState.PREGAME) {
 				if (this.preGameRgb)
-					this.setText(pregameComp, true);
+					this.setText(PREGAME_TEXT_RGB.get(gameTick % 20), true);
 			}
 			// Show health and other during the game
 			else if(gameState == GameState.LIVE) {

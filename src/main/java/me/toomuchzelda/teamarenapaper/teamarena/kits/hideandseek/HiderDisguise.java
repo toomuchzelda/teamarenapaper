@@ -1,6 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits.hideandseek;
 
-import com.comphenix.protocol.events.PacketContainer;
+import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import me.toomuchzelda.teamarenapaper.CompileAsserts;
@@ -29,8 +29,6 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.joml.Vector3f;
-
-import java.util.List;
 
 public class HiderDisguise {
 
@@ -367,10 +365,9 @@ public class HiderDisguise {
 		}
 
 		@Override
-		public void onPlayerMovePacket(PacketContainer packet, Player viewer, List<PacketContainer> packetsOut) {
-			if (!solid)
-				super.onPlayerMovePacket(packet, viewer, packetsOut);
-			// else no packets out
+		public boolean shouldRecreatePacket(PacketType packetType, Player viewer) {
+			// no packet out when solid
+			return !solid && super.shouldRecreatePacket(packetType, viewer);
 		}
 
 		@Override

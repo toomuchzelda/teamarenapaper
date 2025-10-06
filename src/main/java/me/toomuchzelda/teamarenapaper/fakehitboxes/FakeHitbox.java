@@ -2,8 +2,8 @@ package me.toomuchzelda.teamarenapaper.fakehitboxes;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.reflect.StructureModifier;
-import com.comphenix.protocol.wrappers.*;
+import com.comphenix.protocol.wrappers.WrappedAttribute;
+import com.comphenix.protocol.wrappers.WrappedDataValue;
 import com.mojang.authlib.GameProfile;
 import io.papermc.paper.adventure.PaperAdventure;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
@@ -430,16 +430,8 @@ public class FakeHitbox
 		else if(movePacket.getType() == PacketType.Play.Server.REL_ENTITY_MOVE_LOOK ||
 				movePacket.getType() == PacketType.Play.Server.REL_ENTITY_MOVE) {
 			packets = new PacketContainer[4];
-			for(int i = 0; i < 4; i++) {
-				packets[i] = new PacketContainer(PacketType.Play.Server.REL_ENTITY_MOVE);
-				//replace the entity id
-				packets[i].getIntegers().write(0, this.fakePlayerIds[i]);
-				StructureModifier<Short> movePacketShorts = movePacket.getShorts();
-				StructureModifier<Short> newPacketShorts = packets[i].getShorts();
-
-				for (int idx = 0; idx < 3; idx++) {
-					newPacketShorts.write(idx, movePacketShorts.read(idx));
-				}
+			for (int i = 0; i < 4; i++) {
+				packets[i] = PacketUtils.recreateMovementPacket(movePacket, fakePlayerIds[i], 0);
 			}
 		}
 

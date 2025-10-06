@@ -3,7 +3,6 @@ package me.toomuchzelda.teamarenapaper.fakehitboxes;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.scoreboard.PlayerScoreboard;
 import me.toomuchzelda.teamarenapaper.utils.PacketSender;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Team;

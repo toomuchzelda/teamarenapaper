@@ -15,6 +15,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.AttachedPacketHologram;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketDisplay;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
@@ -28,14 +29,13 @@ import org.joml.Vector3f;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Predicate;
 
 /**
  * An ability that
  */
 public class CritAbility extends Ability {
 
-	private static class CritHitbox {
+	private class CritHitbox {
 		private static final Component CUSTOM_NAME = Component.text("You shouldn't see this");
 		private static final float BOX_HEIGHT = 0.3f;
 
@@ -48,16 +48,12 @@ public class CritAbility extends Ability {
 		private final AttachedPacketHologram vehicle;
 
 		private float width;
-		private final PacketContainer mountPacket;
 
-		public CritHitbox(LivingEntity followed, CritAbility critAbility) {
+		public CritHitbox(LivingEntity followed) {
 			this.followed = followed;
 
-			final Predicate<Player> viewerRule =
-				viewer -> viewer != followed && viewer.canSee(followed);
-
 			this.vehicle = new AttachedPacketHologram(PacketEntity.NEW_ID, this.followed, null,
-				viewerRule, CUSTOM_NAME, false) {
+				viewer -> viewer != this.followed && viewer.canSee(this.followed), CUSTOM_NAME, false) {
 				@Override
 				public double getYOffset() {
 					return getBoxYOffset(entity);
@@ -68,23 +64,25 @@ public class CritAbility extends Ability {
 
 			interaction = new PacketEntity(PacketEntity.NEW_ID, EntityType.INTERACTION, followed.getLocation(), null,
 				viewer -> this.getVehicle().getRealViewers().contains(viewer) &&
-					Ability.getAbility(viewer, CritAbility.class) != null) {
+					// there's only one "canonical" instance of CritAbility, which is the enclosing instance
+					Main.getPlayerInfo(viewer).abilities.contains(CritAbility.this)
+			) {
+				private final PacketContainer mountPacket = EntityUtils.getMountPacket(vehicle.getId(), this.getId());
+
 				@Override
 				public void onInteract(Player player, EquipmentSlot hand, boolean attack) {
-					if (player == followed) return;
+					if (player == CritHitbox.this.followed) return;
 					if (attack)
-						critAbility.crit(player, followed);
+						CritAbility.this.crit(player, CritHitbox.this.followed);
 					else { // just pass the interaction to the entity
-						super.onInteract(player, hand, attack);
+						super.onInteract(player, hand, false);
 					}
 				}
 
-				// Always mount the vehicle. The vehicle should always be alive when this is called
-				// since it was registed before this
 				@Override
-				public void respawn() {
-					super.respawn();
-					this.broadcastPacket(CritHitbox.this.mountPacket);
+				protected void spawn(Player player) {
+					super.spawn(player);
+					PlayerUtils.sendPacket(player, mountPacket);
 				}
 			};
 
@@ -96,18 +94,18 @@ public class CritAbility extends Ability {
 			flashLoc.setPitch(0f); flashLoc.setYaw(0f);
 			this.flash = new PacketDisplay(PacketEntity.NEW_ID, EntityType.BLOCK_DISPLAY, flashLoc,
 				null, viewer -> this.getVehicle().getRealViewers().contains(viewer)) {
+				private final PacketContainer mountPacket = EntityUtils.getMountPacket(vehicle.getId(), this.getId());
+
 				@Override
-				public void respawn() {
-					super.respawn();
-					this.broadcastPacket(CritHitbox.this.mountPacket);
+				protected void spawn(Player player) {
+					super.spawn(player);
+					PlayerUtils.sendPacket(player, mountPacket);
 				}
 			};
 			this.flash.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, (byte) MetaIndex.BASE_BITFIELD_INVIS_MASK);
 			this.flash.setMetadata(MetaIndex.BLOCK_DISPLAY_BLOCK_OBJ, ((CraftBlockData) Material.AIR.createBlockData()).getState());
 
 			this.updateScale(this.width);
-
-			this.mountPacket = EntityUtils.getMountPacket(this.vehicle.getId(), this.interaction.getId(), this.flash.getId());
 		}
 
 		public void spawn() {
@@ -207,9 +205,7 @@ public class CritAbility extends Ability {
 	private void addHitboxes() {
 		this.game.getWorld().getLivingEntities().forEach(living -> {
 				if (this.isValidCritCandidate(living)) {
-					critHitboxes.computeIfAbsent(living,
-							lv -> new CritHitbox(living, this)
-					).spawn();
+					critHitboxes.computeIfAbsent(living, CritHitbox::new).spawn();
 				}
 			}
 		);

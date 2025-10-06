@@ -328,12 +328,10 @@ public abstract class TeamArena
 		DamageTimes.clear();
 		DamageType.updateDamageSources(this);
 
-		StatusBarManager.StatusBarHologram.updatePregameText();
-
 		{
 			this.gameTitle = this.getGameName();
 			var builder = Component.text()
-				.append(Component.text("GameType: ", NamedTextColor.GOLD))
+				.append(Component.text("Game mode: ", NamedTextColor.GOLD))
 				.append(this.getGameName());
 			if (!this.isRespawningGame()) {
 				TextComponent text = Component.text(" (No Respawning!)", NamedTextColor.RED);
@@ -547,7 +545,7 @@ public abstract class TeamArena
 				Component gameObjective = getGameObjective(playerInfo.team);
 				if (gameObjective != Component.empty()) {
 					sidebar.addEntry(Component.text("Objective"));
-					sidebar.addEntry(indent.append(gameObjective));
+					sidebar.addEntry(Component.textOfChildren(indent, gameObjective));
 					if (!isRespawningGame())
 						sidebar.addEntry(Component.text("  (No Respawning)", NamedTextColor.RED));
 				}
@@ -565,12 +563,15 @@ public abstract class TeamArena
 						showTeamSize ? Component.text(team.getPlayerMembers().size() + "\uD83D\uDC64") : null);
 				}
 			} else {
-				sharedSidebar.forEach(sidebar::addEntry);
+				for (Component component : sharedSidebar) {
+					sidebar.addEntry(component);
+				}
 				updateSidebar(player, sidebar);
 			}
 
 			if (style == SidebarManager.Style.RGB_MANIAC) {
-				double progress = (TeamArena.getGameTick() / 5 * 5) / 70d;
+				int truncatedTick = TeamArena.getGameTick() / 3 * 3;
+				double progress = truncatedTick / 70d;
 				for (var iterator = sidebar.getEntries().listIterator(); iterator.hasNext(); ) {
 					var index = iterator.nextIndex();
 					var entry = iterator.next();
@@ -682,7 +683,6 @@ public abstract class TeamArena
 			//setGameState(GameState.PREGAME);
 		}
 
-		StatusBarManager.StatusBarHologram.updatePregameText();
 	}
 
 	public void liveTick() {

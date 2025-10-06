@@ -7,8 +7,6 @@ import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
-import me.toomuchzelda.teamarenapaper.utils.PacketUtils;
-import net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -18,7 +16,6 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.function.Predicate;
 
 /**
@@ -146,25 +143,20 @@ public class AttachedPacketEntity extends PacketEntity
 		}
 	}
 
-	/** Called when the packets for the attached player's movement are sent to other players */
-	public void onPlayerMovePacket(PacketContainer packet, Player viewer, List<PacketContainer> packetsOut) {
-		if(this.getRealViewers().contains(viewer)) {
-			if (!this.sendHeadRotPackets && packet.getType() == PacketType.Play.Server.ENTITY_HEAD_ROTATION) {
-				return;
-			}
-
-			PacketContainer entityPacket = packet.shallowClone();
-			entityPacket.getIntegers().write(0, this.getId());
-
-			// type check is retained for future migration
-			if (packet.getType() == PacketType.Play.Server.ENTITY_POSITION_SYNC &&
-				packet.getHandle() instanceof ClientboundEntityPositionSyncPacket) {
-				//adjust the entity's Y position
-				PacketUtils.addEntityPositionSyncY(entityPacket, this.getYOffset());
-			}
-
-			packetsOut.add(entityPacket);
-		}
+	/**
+	 * Indicates whether an outgoing movement packet for the attached {@code entity}
+	 * should be recreated with this entity's ID.
+	 *
+	 * @implNote The recreation logic is specified in
+	 * {@link me.toomuchzelda.teamarenapaper.utils.PacketUtils#recreateMovementPacket(PacketContainer, int, double) PacketUtils.recreateMovementPacket}
+	 *
+	 * @param packetType The packet type
+	 * @param viewer The viewer receiving the movement packet
+	 * @return whether the packet should be recreated
+	 */
+	public boolean shouldRecreatePacket(PacketType packetType, Player viewer) {
+		return realViewers.contains(viewer) &&
+			(sendHeadRotPackets || packetType != PacketType.Play.Server.ENTITY_HEAD_ROTATION);
 	}
 
 	@Override

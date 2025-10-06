@@ -9,6 +9,7 @@ import net.kyori.adventure.text.ComponentBuilder;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
@@ -583,9 +584,11 @@ public class TeamArenaMap
 			if (this.url != null) {
 				builder.append(
 					Component.newline(),
-					Component.text( "URL: ", NamedTextColor.GOLD),
-					Component.text(this.url, NamedTextColor.YELLOW, TextDecoration.UNDERLINED)
-						.clickEvent(ClickEvent.clickEvent(ClickEvent.Action.OPEN_URL, this.url))
+					Component.text("URL: ", NamedTextColor.GOLD),
+					Component.text(this.url, Style.style()
+						.color(NamedTextColor.YELLOW).decorate(TextDecoration.UNDERLINED)
+						.clickEvent(ClickEvent.openUrl(this.url))
+						.build())
 				);
 			}
 

@@ -1,8 +1,5 @@
 package me.toomuchzelda.teamarenapaper.inventory;
 
-import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketEvent;
 import io.papermc.paper.adventure.PaperAdventure;
 import me.toomuchzelda.teamarenapaper.Main;
@@ -63,6 +60,7 @@ public final class Inventories implements Listener {
     public static boolean debug = false;
 
 	public static void onUpdateSign(PacketEvent event) { // Called by PacketListeners
+		// TODO replace with Paper event listener
 		Player player = event.getPlayer();
 		ManagedSign managedSign = managedSigns.remove(player);
 		if (managedSign == null) // ignore if not our sign

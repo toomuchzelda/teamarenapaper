@@ -2,7 +2,6 @@ package me.toomuchzelda.teamarenapaper;
 
 import com.destroystokyo.paper.profile.CraftPlayerProfile;
 import com.destroystokyo.paper.profile.PlayerProfile;
-import io.papermc.paper.connection.PlayerConnection;
 import io.papermc.paper.event.connection.PlayerConnectionValidateLoginEvent;
 import me.toomuchzelda.teamarenapaper.fakehitboxes.FakeHitboxManager;
 import me.toomuchzelda.teamarenapaper.httpd.HttpDaemon;
@@ -27,7 +26,6 @@ import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -143,9 +141,8 @@ public class LoginHandler
 	static void validateLoginMonitor(PlayerConnectionValidateLoginEvent event) {
 		if (event.isAllowed()) {
 			HttpDaemon hd = Main.getHttpDaemon();
-			if (hd != null && event.getConnection() instanceof PlayerConnection pc &&
-				pc.getClientAddress() instanceof InetSocketAddress isa &&
-				isa.getAddress() instanceof InetAddress ia) // just null check everything
+			if (hd == null) return;
+			if (event.getConnection().getClientAddress().getAddress() instanceof InetAddress ia)
 				hd.onConnect(ia);
 			else {
 				Main.logger().log(Level.WARNING, "Bad address in PCVLEvent", new RuntimeException());

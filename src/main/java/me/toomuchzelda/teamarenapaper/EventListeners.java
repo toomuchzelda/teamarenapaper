@@ -7,7 +7,6 @@ import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import com.destroystokyo.paper.event.player.PlayerReadyArrowEvent;
 import com.destroystokyo.paper.event.player.PlayerUseUnknownEntityEvent;
 import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
-import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import io.papermc.paper.event.connection.PlayerConnectionValidateLoginEvent;
 import io.papermc.paper.event.entity.EntityDamageItemEvent;
 import io.papermc.paper.event.entity.EntityLoadCrossbowEvent;
@@ -79,11 +78,14 @@ public class EventListeners implements Listener
 {
 	public EventListeners(Plugin plugin) {
 		Bukkit.getServer().getPluginManager().registerEvents(this,plugin);
+		// reduce stacktrace length
+		Bukkit.getScheduler().runTaskTimer(plugin, this::endTick, 0, 1);
 	}
 
 	//run the TeamArena tick
-	@EventHandler
-	public void endTick(ServerTickEndEvent event) {
+//	@EventHandler
+//	public void endTick(ServerTickEndEvent event) {
+	public void endTick() {
 		try {
 			ArrowManager.tick();
 		}
@@ -155,7 +157,7 @@ public class EventListeners implements Listener
 
 		// TODO - Find a way to do these as soon as relevant
 		//every 30 seconds
-		int count = event.getTickNumber() % (20 * 30);
+		int count = TeamArena.getGameTick() % (20 * 30);
 		if(count == 0) {
 			for(PlayerInfo pinfo : Main.getPlayerInfos()) {
 				pinfo.getMetadataViewer().cleanUp();

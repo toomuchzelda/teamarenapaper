@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.jetbrains.annotations.NotNull;
@@ -15,6 +16,8 @@ import static me.toomuchzelda.teamarenapaper.utils.ScoreboardUtils.*;
  * @author jacky
  */
 public class SidebarManager {
+
+	private static final ComponentLogger LOGGER = ComponentLogger.logger("SidebarManager");
 
 	public static final Component DEFAULT_TITLE = Component.text("Blue Warfare", NamedTextColor.BLUE);
 	private static final Map<Player, SidebarManager> cachedScoreboard = new HashMap<>();
@@ -115,7 +118,7 @@ public class SidebarManager {
 		@Nullable SidebarEntry @NotNull [] lastList = isSidebar2 ? sidebar2LastEntries : sidebar1LastEntries;
 		int lastListSize = isSidebar2 ? sidebar2LastSize : sidebar1LastSize;
 		boolean shouldSetScore = listSize != lastListSize;
-		boolean sidebarChanged = false;
+		boolean sidebarChanged = shouldSetScore;
 		var iterator = entries.listIterator(listSize);
 		// calculate score
 		for (int i = 0; i < MAX_ENTRIES; i++) {
@@ -127,17 +130,16 @@ public class SidebarManager {
 				if (!textEquals(theEntry, lastEntry)) {
 					sendTeamInfoPacket(player, line.teamName, true, Component.empty(),
 							NamedTextColor.WHITE, theEntry.text, Component.empty(), Collections.emptyList());
+					sidebarChanged = true;
 				}
 				// should update score or number format
 				if (shouldSetScore || !numberFormatEquals(theEntry, lastEntry)) {
 					sendSetScorePacket(player, objective, line.scoreboardName, i, theEntry.numberFormat);
 				}
 				lastList[i] = theEntry;
-				sidebarChanged = true;
 			} else if (shouldSetScore) {
 				// should reset (remove from sidebar) all indices >= listSize
 				sendResetScorePacket(player, objective, line.scoreboardName);
-				sidebarChanged = true;
 			}
 		}
 		// swap objectives
