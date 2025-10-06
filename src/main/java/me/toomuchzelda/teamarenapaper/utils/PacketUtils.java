@@ -69,10 +69,10 @@ public class PacketUtils {
 		packet.getModifier().write(1, pmr);
 	}
 
-	public static ClientboundPlayerInfoUpdatePacket.Entry replacePlayerInfoProfile(ClientboundPlayerInfoUpdatePacket.Entry entry, GameProfile profile) {
+	public static ClientboundPlayerInfoUpdatePacket.Entry replacePlayerInfoProfile(ClientboundPlayerInfoUpdatePacket.Entry entry, GameProfile profile, boolean listed) {
 		return new ClientboundPlayerInfoUpdatePacket.Entry(
 			profile.getId(), profile,
-			entry.listed(), entry.latency(), entry.gameMode(), entry.displayName(),
+			listed, entry.latency(), entry.gameMode(), entry.displayName(),
 			entry.showHat(), entry.listOrder(), null
 		);
 	}
