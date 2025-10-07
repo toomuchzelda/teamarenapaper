@@ -46,6 +46,7 @@ import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.type.TrapDoor;
 import org.bukkit.command.Command;
 import org.bukkit.craftbukkit.CraftWorldBorder;
 import org.bukkit.entity.*;
@@ -54,6 +55,8 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.*;
 import org.bukkit.event.entity.*;
+import org.bukkit.event.hanging.HangingBreakByEntityEvent;
+import org.bukkit.event.hanging.HangingBreakEvent;
 import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.Inventory;
@@ -1154,6 +1157,25 @@ public class EventListeners implements Listener
 	@EventHandler
 	public void playerResourcePackStatus(PlayerResourcePackStatusEvent event) {
 		AnnouncerManager.handleEvent(event);
+	}
+
+	@EventHandler
+	public void blockPhysics(BlockPhysicsEvent event) {
+		// love how the event doesn't provide any useful information whatsoever
+		BlockData blockData = event.getBlock().getBlockData();
+		if (blockData instanceof TrapDoor) { // can't do doors because it would cancel the state update to the other half
+			// please do not the lantern
+			event.setCancelled(true);
+		}
+	}
+
+	@EventHandler
+	public void hangingBreak(HangingBreakEvent event) {
+		if (event instanceof HangingBreakByEntityEvent byEntityEvent) {
+			event.setCancelled(!(byEntityEvent.getRemover() instanceof Player player && player.getGameMode() == GameMode.CREATIVE));
+		} else {
+			event.setCancelled(event.getCause() != HangingBreakEvent.RemoveCause.DEFAULT);
+		}
 	}
 
 	@EventHandler

@@ -15,7 +15,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitOptions;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.AttachedPacketHologram;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketDisplay;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
@@ -47,6 +46,10 @@ public class CritAbility extends Ability {
 		private final PacketDisplay flash; // For flash vfx
 		private final AttachedPacketHologram vehicle;
 
+		// bit 0 = interaction visible
+ 		// bit 1 = flash visible
+		private final PacketContainer[] mountPackets;
+
 		private float width;
 
 		public CritHitbox(LivingEntity followed) {
@@ -65,10 +68,8 @@ public class CritAbility extends Ability {
 			interaction = new PacketEntity(PacketEntity.NEW_ID, EntityType.INTERACTION, followed.getLocation(), null,
 				viewer -> this.getVehicle().getRealViewers().contains(viewer) &&
 					// there's only one "canonical" instance of CritAbility, which is the enclosing instance
-					Main.getPlayerInfo(viewer).abilities.contains(CritAbility.this)
+					Ability.hasAbility(viewer, CritAbility.class)
 			) {
-				private final PacketContainer mountPacket = EntityUtils.getMountPacket(vehicle.getId(), this.getId());
-
 				@Override
 				public void onInteract(Player player, EquipmentSlot hand, boolean attack) {
 					if (player == CritHitbox.this.followed) return;
@@ -82,7 +83,7 @@ public class CritAbility extends Ability {
 				@Override
 				protected void spawn(Player player) {
 					super.spawn(player);
-					PlayerUtils.sendPacket(player, mountPacket);
+					updateMount(player, this);
 				}
 			};
 
@@ -94,16 +95,22 @@ public class CritAbility extends Ability {
 			flashLoc.setPitch(0f); flashLoc.setYaw(0f);
 			this.flash = new PacketDisplay(PacketEntity.NEW_ID, EntityType.BLOCK_DISPLAY, flashLoc,
 				null, viewer -> this.getVehicle().getRealViewers().contains(viewer)) {
-				private final PacketContainer mountPacket = EntityUtils.getMountPacket(vehicle.getId(), this.getId());
 
 				@Override
 				protected void spawn(Player player) {
 					super.spawn(player);
-					PlayerUtils.sendPacket(player, mountPacket);
+					updateMount(player, this);
 				}
 			};
-			this.flash.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, (byte) MetaIndex.BASE_BITFIELD_INVIS_MASK);
+			this.flash.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_INVIS_MASK);
 			this.flash.setMetadata(MetaIndex.BLOCK_DISPLAY_BLOCK_OBJ, ((CraftBlockData) Material.AIR.createBlockData()).getState());
+
+			this.mountPackets = new PacketContainer[] {
+				EntityUtils.getMountPacket(vehicle.getId()),
+				EntityUtils.getMountPacket(vehicle.getId(), interaction.getId()),
+				EntityUtils.getMountPacket(vehicle.getId(), flash.getId()),
+				EntityUtils.getMountPacket(vehicle.getId(), interaction.getId(), flash.getId()),
+			};
 
 			this.updateScale(this.width);
 		}
@@ -138,6 +145,12 @@ public class CritAbility extends Ability {
 			}
 		}
 
+		private void updateMount(Player viewer, PacketEntity packetEntity) {
+			int index = (flash.getRealViewers().contains(viewer) ? 2 : 0) |
+				(interaction.getRealViewers().contains(viewer) ? 1 : 0);
+			packetEntity.sendPacket(viewer, mountPackets[index]);
+		}
+
 		private void updateScale(float width) {
 			this.interaction.setMetadata(MetaIndex.INTERACTION_HEIGHT_OBJ, BOX_HEIGHT);
 			this.interaction.setMetadata(MetaIndex.INTERACTION_WIDTH_OBJ, width);
@@ -148,9 +161,9 @@ public class CritAbility extends Ability {
 			this.flash.refreshViewerMetadata();
 		}
 
+		private static final byte GLOW_AND_INVIS = MetaIndex.BASE_BITFIELD_GLOWING_MASK | MetaIndex.BASE_BITFIELD_INVIS_MASK;
 		public void flash() {
-			final byte glowOn = (byte) (MetaIndex.BASE_BITFIELD_GLOWING_MASK | MetaIndex.BASE_BITFIELD_INVIS_MASK);
-			this.flash.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, glowOn);
+			this.flash.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, GLOW_AND_INVIS);
 			this.flash.setMetadata(MetaIndex.BLOCK_DISPLAY_BLOCK_OBJ,
 				((CraftBlockData) Material.RED_STAINED_GLASS.createBlockData()).getState());
 			this.flash.refreshViewerMetadata();

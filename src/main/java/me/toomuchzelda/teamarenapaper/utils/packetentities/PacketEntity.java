@@ -441,7 +441,7 @@ public class PacketEntity
 
 	protected void spawn(Player player) {
 		if (!isAlive)
-			return;
+			throw new IllegalStateException("spawn() called for non-alive PacketEntity " + this);
 
 		this.sendPacket(player, spawnPacket);
 		this.sendPacket(player, metadataPacket);

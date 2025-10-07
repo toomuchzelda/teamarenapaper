@@ -10,7 +10,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DetailedProjectileHitEvent;
-import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityPoseChangeEvent;
@@ -46,10 +45,10 @@ public abstract class Ability {
 	}
 
 	/**
-	 * @return the instance of Ability of type, or null
+	 * {@return the instance of Ability of type, or null}
 	 */
-	public static <T extends Ability> T getAbility(Player player, Class<T> type) {
-		for (Ability a : Kit.getAbilities(player)) {
+	public static <T extends Ability> @Nullable T getAbility(Player player, Class<T> type) {
+		for (Ability a : getAbilities(player)) {
 			if (type.isInstance(a)) {
 				return (T) a;
 			}
@@ -60,6 +59,14 @@ public abstract class Ability {
 	public static Set<Ability> getAbilities(Player player) {
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
 		return pinfo.abilities;
+	}
+
+	public static boolean hasAbility(Player player, Class<? extends Ability> abilityClass) {
+		return getAbility(player, abilityClass) != null;
+	}
+
+	public static boolean hasAbility(Player player, Ability ability) {
+		return ability != null && Main.getPlayerInfo(player).abilities.contains(ability);
 	}
 
 	@Override

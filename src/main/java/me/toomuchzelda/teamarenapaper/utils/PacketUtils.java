@@ -85,16 +85,16 @@ public class PacketUtils {
 	}
 
 	public static final List<PacketType> CLONABLE_MOVEMENT_PACKETS = List.of(
-		// updates to this list also needs an accompanying switch case below!
+		// any update to this list also needs an accompanying switch case below!
 		PacketType.Play.Server.ENTITY_LOOK, PacketType.Play.Server.REL_ENTITY_MOVE,
 		PacketType.Play.Server.REL_ENTITY_MOVE_LOOK, PacketType.Play.Server.ENTITY_POSITION_SYNC,
 		PacketType.Play.Server.ENTITY_HEAD_ROTATION);
 
 	/**
 	 * Recreates a movement packet, changing the entity ID (and optionally offsetting the absolute Y coordinates).
-	 * @param original
-	 * @param entityId
-	 * @param yOffset
+	 * @param original The original movement packet
+	 * @param entityId The new entity ID
+	 * @param yOffset Offset to the original absolute Y coordinates
 	 * @return The new packet
 	 */
 	public static PacketContainer recreateMovementPacket(PacketContainer original, int entityId, double yOffset) {
