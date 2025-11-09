@@ -1,20 +1,16 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
-import net.minecraft.world.phys.BlockHitResult;
-import org.bukkit.entity.AbstractArrow;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.util.RayTraceResult;
 
 /**
  * Class that contains lots of info about Arrow Projectile Hit events that
  * ProjectileHitEvent doesn't have.
+ * Not really longer useful as ProjectileHitEvent provides the precise hit location now.
  */
 public class DetailedProjectileHitEvent {
-	// If Bukkit event says Entity was hit, then there will be an EntityHitResult and may be a BlockHitResult
-	// If Bukkit says a block was hit, there will be a BlockHitResult and may be an EntityHitResult
 	public final ProjectileHitEvent projectileHitEvent;
-	private BlockHitResult blockHitResult;
 	private RayTraceResult entityHitResult;
 
 	public DetailedProjectileHitEvent(ProjectileHitEvent phevent) {
@@ -23,15 +19,11 @@ public class DetailedProjectileHitEvent {
 	}
 
 	public void refreshHitResults() {
-		this.blockHitResult = EntityUtils.getHitBlock(this.projectileHitEvent);
-		this.entityHitResult = EntityUtils.getEntityHitPoint(this.projectileHitEvent);
+		// this.entityHitResult = EntityUtils.getEntityHitPoint(this.projectileHitEvent);
+		this.entityHitResult = new RayTraceResult(this.projectileHitEvent.getEntity().getLocation().toVector(), this.projectileHitEvent.getEntity());
 	}
 
 	public RayTraceResult getEntityHitResult() {
 		return entityHitResult;
-	}
-
-	public BlockHitResult getBlockHitResult() {
-		return blockHitResult;
 	}
 }

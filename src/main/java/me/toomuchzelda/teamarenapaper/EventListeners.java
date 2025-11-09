@@ -40,6 +40,7 @@ import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntityManager;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketHologram;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.*;
@@ -664,11 +665,17 @@ public class EventListeners implements Listener
 
 	//stop projectiles from colliding with spectators
 	// and the flags in CTF
+	private static int projDebug = 0;
 	@EventHandler
 	public void projectileHit(ProjectileHitEvent event) {
 		if(Main.getGame() != null) {
 			final Entity collidedWith = event.getHitEntity();
 			final Projectile projectile = event.getEntity();
+
+			if (ArrowManager.spawnArrowMarkers) {
+				PacketHologram hologram = new PacketHologram(projectile.getLocation(), null, viewer -> true, Component.text("" + ++projDebug));
+				hologram.respawn();
+			}
 
 			if (collidedWith instanceof Player p && Main.getGame().isSpectator(p)) {
 				event.setCancelled(true);
@@ -699,7 +706,7 @@ public class EventListeners implements Listener
 			// Cancelled event at this point means absolutely NO collision
 			if (event.isCancelled()) {
 				if (collidedWith != null && projectile instanceof AbstractArrow) {
-					ArrowManager.handleBlockCollision(event);
+					//ArrowManager.handleBlockCollision(event);
 					ArrowManager.handleArrowEntityCollision(event);
 				}
 				return;
@@ -725,7 +732,7 @@ public class EventListeners implements Listener
 				betterEvent.projectileHitEvent.getEntity() instanceof AbstractArrow abstractArrow &&
 				!(abstractArrow instanceof Trident) // trident loyalty fix
 			) {
-				ArrowManager.handleBlockCollision(event);
+				//ArrowManager.handleBlockCollision(event);
 				ArrowManager.handleArrowEntityCollision(event);
 
 				// Cancel at the end for smooth arrow movement

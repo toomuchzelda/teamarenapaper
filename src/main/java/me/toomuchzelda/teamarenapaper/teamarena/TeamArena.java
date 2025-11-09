@@ -1918,6 +1918,8 @@ public abstract class TeamArena
 			}
 
 			SpectatorAngelManager.spawnAngel(playerVictim, this.spawnLockingAngel(playerVictim, event));
+
+			playerVictim.getEnderPearls().forEach(Entity::remove);
 		}
 		else if(victim instanceof Damageable dam) {
 			dam.setHealth(0);

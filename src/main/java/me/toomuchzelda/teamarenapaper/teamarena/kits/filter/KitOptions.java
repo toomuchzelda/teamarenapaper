@@ -25,7 +25,7 @@ public class KitOptions
 		ghostAetherial = false;
 		burstShowArrows = false;
 		ninjaFastAttack = false;
-		ninjaSlowFall = false;
+		ninjaSlowFall = true;
 		pyroMolotov = false;
 		rewindClockPhases = false;
 		rewindStasis = false;

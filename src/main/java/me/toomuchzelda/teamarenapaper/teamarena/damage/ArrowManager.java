@@ -141,6 +141,7 @@ public class ArrowManager {
 				// Order of these ops is important as onHitBlock changes pierce level of arrow
 				final net.minecraft.world.entity.projectile.AbstractArrow nmsAa = ((CraftAbstractArrow) arrow).getHandle();
 				if (ainfo.hitBlock != null) { // Assigned by handleBlockCollision
+					assert false;
 					ainfo.clearHit();
 					Location loc = arrow.getLocation();
 					arrow.teleport(CraftVector.toBukkit(ainfo.hitBlock.getLocation()).toLocation(loc.getWorld(), loc.getYaw(), loc.getPitch()));
@@ -184,7 +185,8 @@ public class ArrowManager {
 
 	private static int markerCtr = 0;
 	/** Fix bug when arrow collides with entity and block in same tick, it goes through the block.
-	 *  NMS bug */
+	 *  NMS bug
+	 *  No longer called, 1.21.8 seems to have fixed this */
 	public static void handleBlockCollision(ProjectileHitEvent event) {
 		if (event.getEntity() instanceof AbstractArrow aa) {
 			if (spawnArrowMarkers) {

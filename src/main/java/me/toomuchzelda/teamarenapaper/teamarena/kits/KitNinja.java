@@ -83,7 +83,8 @@ public class KitNinja extends Kit
 		@Override
 		public void giveAbility(Player player) {
 			player.getAttribute(Attribute.MOVEMENT_SPEED).addModifier(NINJA_SPEED_MODIFIER);
-			player.getAttribute(Attribute.GRAVITY).addModifier(NINJA_GRAVITY_MODIFIER);
+			if (KitOptions.ninjaSlowFall)
+				player.getAttribute(Attribute.GRAVITY).addModifier(NINJA_GRAVITY_MODIFIER);
 			player.addPotionEffect(NIGHT_VISION_EFFECT);
 		}
 
