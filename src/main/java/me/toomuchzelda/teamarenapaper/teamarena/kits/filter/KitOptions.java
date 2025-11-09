@@ -12,6 +12,7 @@ public class KitOptions
 	public static boolean ghostAetherial;
 	public static boolean burstShowArrows;
 	public static boolean ninjaFastAttack;
+	public static boolean ninjaSlowFall;
 	public static boolean pyroMolotov;
 	public static boolean rewindClockPhases;
 	public static boolean rewindStasis;
@@ -24,6 +25,7 @@ public class KitOptions
 		ghostAetherial = false;
 		burstShowArrows = false;
 		ninjaFastAttack = false;
+		ninjaSlowFall = false;
 		pyroMolotov = false;
 		rewindClockPhases = false;
 		rewindStasis = false;
@@ -52,6 +54,7 @@ public class KitOptions
 		OPTION_TOGGLE_FUNCS.put("ghostAetherial", () -> ghostAetherial = !ghostAetherial);
 		OPTION_TOGGLE_FUNCS.put("burstShowArrows", () -> burstShowArrows = !burstShowArrows);
 		OPTION_TOGGLE_FUNCS.put("ninjaFastAttack", () -> ninjaFastAttack = !ninjaFastAttack);
+		OPTION_TOGGLE_FUNCS.put("ninjaSlowFall", () -> ninjaSlowFall = !ninjaSlowFall);
 		OPTION_TOGGLE_FUNCS.put("pyroMolotov", () -> pyroMolotov = !pyroMolotov);
 		OPTION_TOGGLE_FUNCS.put("rewindClockPhases", () -> rewindClockPhases = !rewindClockPhases);
 		OPTION_TOGGLE_FUNCS.put("rewindStasis", () -> rewindStasis = !rewindStasis);

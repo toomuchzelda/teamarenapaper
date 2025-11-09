@@ -35,6 +35,8 @@ public class KitNinja extends Kit
 {
 	private static final AttributeModifier NINJA_SPEED_MODIFIER = new AttributeModifier(new NamespacedKey(Main.getPlugin(), "ninja_speed"),
 		0.4, AttributeModifier.Operation.MULTIPLY_SCALAR_1);
+	private static final AttributeModifier NINJA_GRAVITY_MODIFIER = new AttributeModifier(new NamespacedKey(Main.getPlugin(), "ninja_gravity"),
+		-0.5, AttributeModifier.Operation.MULTIPLY_SCALAR_1);
 	private static final Component NO_SPEED_WITH_FLAG = Component.text( "The weight of the flag bears down on you. You're no longer fast!", NamedTextColor.LIGHT_PURPLE);
 
 	private static final ItemStack PEARL = ItemBuilder.of(Material.ENDER_PEARL)
@@ -81,12 +83,14 @@ public class KitNinja extends Kit
 		@Override
 		public void giveAbility(Player player) {
 			player.getAttribute(Attribute.MOVEMENT_SPEED).addModifier(NINJA_SPEED_MODIFIER);
+			player.getAttribute(Attribute.GRAVITY).addModifier(NINJA_GRAVITY_MODIFIER);
 			player.addPotionEffect(NIGHT_VISION_EFFECT);
 		}
 
 		@Override
 		public void removeAbility(Player player) {
 			player.getAttribute(Attribute.MOVEMENT_SPEED).removeModifier(NINJA_SPEED_MODIFIER);
+			player.getAttribute(Attribute.GRAVITY).removeModifier(NINJA_GRAVITY_MODIFIER);
 			player.removePotionEffect(NIGHT_VISION_EFFECT.getType());
 			THROWN_PEARLS.remove(player);
 		}

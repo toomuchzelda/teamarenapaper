@@ -6,6 +6,7 @@ import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import io.papermc.paper.adventure.PaperAdventure;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
+import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
@@ -29,6 +30,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Predicate;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 /**
@@ -440,8 +442,10 @@ public class PacketEntity
 	}
 
 	protected void spawn(Player player) {
-		if (!isAlive)
-			throw new IllegalStateException("spawn() called for non-alive PacketEntity " + this);
+		if (!isAlive) {
+			Main.logger().log(Level.WARNING, "spawn() called for non-alive PacketEntity " + this, new IllegalStateException());
+			return;
+		}
 
 		this.sendPacket(player, spawnPacket);
 		this.sendPacket(player, metadataPacket);

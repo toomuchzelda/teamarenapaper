@@ -27,6 +27,7 @@ public class BreakableBlocks
 			setBlockBreakable(Material.BIG_DRIPLEAF_STEM, false);
 			setBlockBreakable(Material.BIG_DRIPLEAF, false);
 			setBlockBreakable(Material.SCAFFOLDING, false);
+			setBlockBreakable(Material.VINE, false);
 		}
 	}
 
