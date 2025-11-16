@@ -51,24 +51,18 @@ public class PlayerUtils {
 	}
 
 	public static void sendPacket(Player player, PacketContainer... packets) {
-		// Compile many packets into 1 if worth it
-		if (packets.length > 1) {
-			PacketContainer bundle = createBundle(Arrays.asList(packets));
-			sendPacket(player, bundle);
-		}
-		else if (packets.length != 0) {
-			sendPacket(player, packets[0]);
+		switch (packets.length) {
+			case 0 -> {}
+			case 1 -> sendPacket(player, packets[0]);
+			default -> sendPacket(player, createBundle(Arrays.asList(packets)));
 		}
 	}
 
 	public static void sendPacket(Player player, Collection<PacketContainer> packets) {
-		if (packets.size() > 1) {
-			PacketContainer bundle = createBundle(packets);
-			sendPacket(player, bundle);
-		}
-		else {
-			for (PacketContainer p : packets)
-				sendPacket(player, p);
+		switch (packets.size()) {
+			case 0 -> {}
+			case 1 -> sendPacket(player, packets.iterator().next());
+			default -> sendPacket(player, createBundle(packets));
 		}
 	}
 
@@ -79,17 +73,24 @@ public class PlayerUtils {
 	}
 
 	public static void sendPacket(Collection<? extends Player> players, PacketContainer... packets) {
+		if (players.isEmpty() || packets.length == 0)
+			return;
 		// Can reduce allocations by compiling into 1 bundle, if worth it, and sending that
 		// to all players
-		if (players.size() > 1 && packets.length > 1) {
-			PacketContainer bundle = createBundle(Arrays.asList(packets));
-			for (Player p : players)
-				sendPacket(p, bundle);
+		PacketContainer packet = packets.length != 1 ? createBundle(Arrays.asList(packets)) : packets[0];
+		for (Player player : players) {
+			sendPacket(player, packet);
 		}
-		else {
-			for (Player player : players) {
-				sendPacket(player, packets);
-			}
+	}
+
+	public static void sendPacket(Collection<? extends Player> players, Collection<PacketContainer> packets) {
+		if (players.isEmpty() || packets.isEmpty())
+			return;
+		// Can reduce allocations by compiling into 1 bundle, if worth it, and sending that
+		// to all players
+		PacketContainer packet = packets.size() != 1 ? createBundle(packets) : packets.iterator().next();
+		for (Player player : players) {
+			sendPacket(player, packet);
 		}
 	}
 

@@ -379,7 +379,7 @@ public abstract class TeamArena
 				}
 			}
 			// notify kit change
-			if (!pinfo.kit.getName().equalsIgnoreCase(pinfo.defaultKit))
+			if (!pinfo.kit.getKey().equalsIgnoreCase(pinfo.defaultKit))
 				p.sendMessage(KitFilter.getSelectedKitMessage(pinfo.defaultKit, pinfo.kit));
 
 			pinfo.team = noTeamTeam;
@@ -445,7 +445,7 @@ public abstract class TeamArena
 			new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(), new KitNone(),
 			new KitVenom(), new KitRewind(), new KitValkyrie(), new KitExplosive(), new KitTrigger(), new KitMedic(this.killStreakManager),
 			new KitBerserker(), new KitEngineer(), new KitPorcupine(this), new KitLongbow(), new KitSniper(), new KitBeekeeper(),
-			new KitMarine(this.commonAbilityManager),
+			new KitMarine(),
 
 			new KitHider(this), /*new KitSeeker(),*/ new KitRadarSeeker(this)
 		};
@@ -466,7 +466,7 @@ public abstract class TeamArena
 	}
 
 	protected void registerKit(Kit kit) {
-		if (kits.put(kit.getName().toLowerCase(Locale.ENGLISH), kit) != null) {
+		if (kits.put(kit.getKey(), kit) != null) {
 			throw new RuntimeException("Tried to register two kits of same name!");
 		}
 		for (Ability ability : kit.getAbilities()) {

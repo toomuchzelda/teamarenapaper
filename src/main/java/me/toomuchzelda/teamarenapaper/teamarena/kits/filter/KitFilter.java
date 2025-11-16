@@ -215,13 +215,13 @@ public class KitFilter {
 				if (globalKits == null)
 					globalKits = allKits.stream()
 						// not null
-						.map(name -> Objects.requireNonNull(game.findKit(name)))
+						.map(name -> Objects.requireNonNull(game.findKit(name), name))
 						.collect(Collectors.toUnmodifiableSet());
 				allPlayerKits.put(player, globalKits);
 			} else {
 				allPlayerKits.put(player, kits.stream()
 					// not null
-					.map(name -> Objects.requireNonNull(game.findKit(name)))
+					.map(name -> Objects.requireNonNull(game.findKit(name), name))
 					.collect(Collectors.toUnmodifiableSet()));
 			}
 		}

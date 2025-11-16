@@ -14,7 +14,7 @@ public class DBSetDefaultKit extends DBOperation<Void>
 
 	public DBSetDefaultKit(Player player, Kit kit) {
 		this.uuid = player.getUniqueId().toString();
-		this.kitName = kit.getName();
+		this.kitName = kit.getKey();
 	}
 
 	@Override

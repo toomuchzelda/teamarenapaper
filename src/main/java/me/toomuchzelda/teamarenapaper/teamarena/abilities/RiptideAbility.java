@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.teamarena.abilities;
 
+import com.comphenix.protocol.events.PacketContainer;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
 import io.papermc.paper.event.player.PlayerStopUsingItemEvent;
 import me.toomuchzelda.teamarenapaper.Main;
@@ -13,6 +14,8 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DetailedProjectileHitEven
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.ProjectileReflectEvent;
 import me.toomuchzelda.teamarenapaper.utils.*;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketDisplay;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -40,9 +43,12 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Range;
 
 import java.util.*;
+
+import static net.kyori.adventure.text.Component.*;
 
 public class RiptideAbility extends Ability {
 	/** The maximum Riptide level given to player tridents */
@@ -51,24 +57,27 @@ public class RiptideAbility extends Ability {
 	public static final int MAX_RIPTIDE_PROGRESS = 4;
 	/** Whether the player will fly into the sky upon reaching MAX_RIPTIDE_PROGRESS */
 	public static final boolean CAN_OVERLOAD = false;
+	/** Whether the trident can be thrown as a projectile */
+	public static final boolean CAN_THROW = false;
 
 	public static final NamespacedKey TRIDENT_KEY = new NamespacedKey(Main.getPlugin(), "riptide_ability");
 	public static final NamespacedKey TRIDENT_DAMAGE = new NamespacedKey(Main.getPlugin(), "riptide_damage");
 	public static final ItemStack TRIDENT = ItemBuilder.of(Material.TRIDENT)
-		.enchant(Enchantment.LOYALTY, 1)
 		.enchantmentGlint(false)
 		.meta(meta -> {
 			var lore = new ArrayList<Component>(List.of(
-				Component.text("Your trusty trident. Being near water allows you", NamedTextColor.YELLOW),
-				Component.text("to increase the strength of the trident.", NamedTextColor.YELLOW),
+				text("Your trusty trident. Being near water allows you", NamedTextColor.YELLOW),
+				text("to increase its strength.", NamedTextColor.YELLOW),
 				Component.empty(),
-				Component.text("Legend:", NamedTextColor.GRAY)
+				text("Legend:", NamedTextColor.GRAY)
 			));
 			for (RiptideFactor factor : RiptideFactor.values()) {
-				lore.add(Component.textOfChildren(factor.display, Component.space(), factor.explanation.colorIfAbsent(NamedTextColor.GRAY)));
+				lore.add(textOfChildren(factor.display, Component.space(), factor.explanation.colorIfAbsent(NamedTextColor.GRAY)));
 			}
 			meta.lore(lore.stream().map(component -> component.decorationIfAbsent(TextDecoration.ITALIC, TextDecoration.State.FALSE)).toList());
 
+			if (CAN_THROW)
+				meta.addEnchant(Enchantment.LOYALTY, 1, true);
 			meta.getPersistentDataContainer().set(TRIDENT_KEY, PersistentDataType.BOOLEAN, true);
 			meta.removeAttributeModifier(Attribute.ATTACK_DAMAGE);
 			meta.addAttributeModifier(Attribute.ATTACK_DAMAGE,
@@ -93,58 +102,65 @@ public class RiptideAbility extends Ability {
 		int lastImpact = -RIPTIDE_IMPACT_BOOST_DURATION;
 
 		private boolean burdened;
-		@Range(from = 0, to = 4)
-		private float progress = 0;
+		// riptide strength
+		private @Range(from = 0, to = 4) float progress = 0;
 		private float lastProgress = 0f;
 		private int interpolationStart;
 		private int interpolationDuration = 0;
+		// riptide path preview
+		private List<PacketDisplay> pathDisplays = new ArrayList<>();
 		// stats
-		double totalProgress = 0;
-		int startTick;
+		DoubleSummaryStatistics progressTracker = new DoubleSummaryStatistics();
 
 		RiptideInfo(Player player) {
 			bossBar = BossBar.bossBar(buildBarTitle(Set.of(), 0), 0f, BossBar.Color.WHITE, BossBar.Overlay.PROGRESS);
 			bossBar.addViewer(player);
-			startTick = TeamArena.getGameTick();
 		}
 
 		Component buildBarTitle(Set<RiptideFactor> factors, float increment) {
-			var builder = Component.text();
-			if (!factors.isEmpty()) {
-				for (RiptideFactor factor : factors) {
-					builder.append(factor.display);
-				}
+			var builder = text();
+			var incrementComponent = Component.text("+".repeat((int) Math.ceil(increment * 10 * 20)), NamedTextColor.GREEN);
+			if (increment > 0) {
+				builder.append(incrementComponent, space());
+			}
+			for (RiptideFactor factor : factors) {
+				builder.append(factor.display);
+			}
+			if (!factors.isEmpty())
 				builder.appendSpace();
-			}
+
 			if (progress < 1) {
-				builder.append(Component.text("Riptide", NamedTextColor.GRAY));
-			} else if (progress <= 3.5f) {
-				builder.append(Component.text("Riptide " + (int) progress));
-			} else {
-				// vibrate
-				Component text = Component.text("Riptide 3", NamedTextColor.YELLOW);
-				Component space = Component.text("  ");
+				builder.append(text("Riptide", NamedTextColor.GRAY));
+			} else if (progress <= 3.5f || !CAN_OVERLOAD) {
+				builder.append(text("Riptide " + Math.min(MAX_RIPTIDE_LEVEL, (int) progress)));
+			} else { // vibrate
+				Component text = text("Riptide 3", NamedTextColor.YELLOW);
+				Component space = text("  ");
 				builder.append(TeamArena.getGameTick() % 20 < 10 ?
-					Component.textOfChildren(text, space) :
-					Component.textOfChildren(space, text));
+					textOfChildren(text, space) :
+					textOfChildren(space, text));
 			}
+
 			if (increment > 0) {
 				int nextMilestone = (int) Math.ceil(progress + 0.001f);
-				float secondsUntilMilestone = (nextMilestone - progress) / increment / 20f;
-				builder.append(Component.text(" - " + TextUtils.formatNumber(secondsUntilMilestone) + "s "));
-				if (!CAN_OVERLOAD || nextMilestone != 4) {
-					builder.append(Component.text("to Riptide " + nextMilestone));
-				} else {
-					builder.append(Component.text("till OVERLOAD", TeamArena.getGameTick() % 20 < 10 ? NamedTextColor.GOLD : NamedTextColor.YELLOW));
+				if (CAN_OVERLOAD || nextMilestone <= MAX_RIPTIDE_LEVEL) {
+					float secondsUntilMilestone = (nextMilestone - progress) / increment / 20f;
+					builder.append(text(" - " + TextUtils.formatNumber(secondsUntilMilestone) + "s "));
+					if (nextMilestone != MAX_RIPTIDE_PROGRESS) {
+						builder.append(text("to Riptide " + nextMilestone));
+					} else {
+						builder.append(text("till OVERLOAD", TeamArena.getGameTick() % 20 < 10 ? NamedTextColor.GOLD : NamedTextColor.YELLOW));
+					}
 				}
+				builder.append(space(), incrementComponent);
 			}
 			return builder.build();
 		}
 
-		void update(Set<RiptideFactor> factors, float increment) {
+		void updateBossBar(Set<RiptideFactor> factors, float increment) {
 			if (burdened) {
 				bossBar.color(BossBar.Color.RED);
-				bossBar.name(Component.text("The weight of the flag bears down on you", NamedTextColor.RED));
+				bossBar.name(text("The weight of the flag bears down on you", NamedTextColor.RED));
 			} else {
 				bossBar.color(progress < 1 ? BossBar.Color.YELLOW : BossBar.Color.WHITE);
 				bossBar.name(buildBarTitle(factors, increment));
@@ -154,6 +170,41 @@ public class RiptideAbility extends Ability {
 			} else {
 				float t = (float) (TeamArena.getGameTick() - interpolationStart) / interpolationDuration;
 				bossBar.progress(MathUtils.lerp(lastProgress, progress, t) / MAX_RIPTIDE_PROGRESS);
+			}
+		}
+
+		private static final BlockData PATH_PREVIEW_STATE = Material.BLUE_STAINED_GLASS.createBlockData();
+		void updatePathPreview(Player player, List<Vector> points) {
+			World world = player.getWorld();
+			int requestedSize = points.size() - 1;
+			int size = pathDisplays.size();
+			for (int i = 0; i < size; i++) {
+				PacketDisplay entity = pathDisplays.get(i);
+				if (i < requestedSize) {
+					// update existing
+					Vector pointStart = points.get(i);
+					Vector direction = points.get(i + 1).clone().subtract(pointStart);
+					entity.move(pointStart.toLocation(world));
+					entity.setInterpolationDelay(0);
+					entity.setScale(DisplayUtils.calcSegmentScale((float) direction.length()));
+					entity.setLeftRotation(DisplayUtils.calcSegmentRotation(direction));
+					entity.refreshViewerMetadata();
+					entity.respawn();
+				} else { // i >= requestedSize
+					entity.despawn();
+				}
+			}
+			for (int i = size; i < requestedSize; i++) {
+				Vector pointStart = points.get(i);
+				Vector direction = points.get(i + 1).clone().subtract(pointStart);
+				PacketDisplay entity = DisplayUtils.createVirtualLineSegment(pointStart.toLocation(world),
+					DisplayUtils.calcSegmentRotation(direction), (float) direction.length(), Color.AQUA, PATH_PREVIEW_STATE);
+				entity.setTeleportDuration(1);
+				entity.setInterpolationDuration(1);
+				entity.updateMetadataPacket();
+				entity.respawn();
+				entity.setViewers(player);
+				pathDisplays.add(entity);
 			}
 		}
 
@@ -176,11 +227,30 @@ public class RiptideAbility extends Ability {
 			return progress;
 		}
 
-		void cleanUp(Player player) {
-			bossBar.removeViewer(player);
+		void setFakeWater(Player player, @NotNull Location location) {
+			BlockCoords targetCoords = new BlockCoords(location);
+			if (!targetCoords.equals(fakeWaterBlockCoords)) {
+				if (fakeWaterBlockKey != 0) {
+					Main.getGame().getFakeBlockManager().removeFakeBlock(fakeWaterBlockCoords, fakeWaterBlockKey);
+				}
+				fakeWaterBlockCoords = targetCoords;
+				fakeWaterBlockKey = Main.getGame().getFakeBlockManager().setFakeBlock(fakeWaterBlockCoords, SHALLOW_WATER_DATA, p -> p == player);
+			}
+		}
+
+		void removeFakeWater() {
 			if (fakeWaterBlockKey != 0) {
 				Main.getGame().getFakeBlockManager().removeFakeBlock(fakeWaterBlockCoords, fakeWaterBlockKey);
+				fakeWaterBlockKey = 0;
+				fakeWaterBlockCoords = null;
 			}
+		}
+
+		void cleanUp(Player player) {
+			bossBar.removeViewer(player);
+			removeFakeWater();
+			pathDisplays.forEach(PacketEntity::remove);
+			pathDisplays = null;
 		}
 	}
 
@@ -198,21 +268,21 @@ public class RiptideAbility extends Ability {
 	 */
 	public enum RiptideFactor {
 		// weather-based factors
-		SUNNY(Component.text("☀", TextColor.color(0xFEE137)), Component.text("You can feel the warmth of the sun."),
-			0.04f, 0.01f, 0),
-		STORM(Component.text("☔", TextColor.color(0x937DF2)), Component.text("The raindrops moisturize your skin."),
+		SUNNY(text("☀", TextColor.color(0xFEE137)), text("It is not raining. Your trident struggles to charge up."),
+			0.1f, 0.01f, 0),
+		STORM(text("☔", TextColor.color(0x937DF2)), text("It is raining. Your trident charges from the raindrops."),
 			0.2f, 0.1f, 0.005f),
-		THUNDERING(Component.text("⛈", TextColor.color(0xFFFECE)), Component.text("The thunderstorm makes your cells shiver in excitement."),
+		THUNDERING(text("⛈", TextColor.color(0xFFFECE)), text("It is thundering. Your trident is empowered."),
 			5, 2f, 0.075f), // let's get crazy
 		// environment factors
-		WATER(Component.text("\uD83D\uDCA6", TextColor.color(0x6FCAFF)), Component.text("Water is your domain."),
+		WATER(text("\uD83D\uDCA6", TextColor.color(0x6FCAFF)), text("You are in water. Your trident charges from the water."),
 			1, 0.8f, 0.2f),
-		DEEP_WATER(Component.text("\uD83C\uDF0A", TextColor.color(0x6FCAFF)), Component.text("You are thriving below the water surface."),
+		DEEP_WATER(text("\uD83C\uDF0A", TextColor.color(0x6FCAFF)), text("You are in deep water. Your trident charges from the water."),
 			1.8f, 1.5f, 1),
 		// troll factors
-		BLUE_TEAM(Component.text("⚑", NamedTextColor.BLUE), Component.text("Blue Team members do look like water, but no."), 0),
+//		BLUE_TEAM(Component.text("⚑", NamedTextColor.BLUE), Component.text("You are near a Blue Team member. Your trident charges from the blue dye."), 0),
 		// impact-based factors
-		IMPACT_BOOST(Component.text("🔱", TextColor.color(0x274036/*0x579B8C*/)), Component.text("You feel an adrenaline rush from masterfully impaling your enemy."),
+		IMPACT_BOOST(text("🔱", TextColor.color(0x274036/*0x579B8C*/)), text("You impaled an enemy. Your trident charges from their blood."),
 			0.2f),
 		;
 		public final Component display, explanation;
@@ -235,12 +305,17 @@ public class RiptideAbility extends Ability {
 		}
 	}
 
-	public Set<RiptideFactor> calcFactors(Player player) {
+	private Set<RiptideFactor> calcFactors(Player player, RiptideInfo riptideInfo) {
 		EnumSet<RiptideFactor> factors = EnumSet.noneOf(RiptideFactor.class);
 		World world = player.getWorld();
-		Location location = player.getLocation(), eyeLocation = player.getEyeLocation();
+		Location eyeLocation = player.getEyeLocation();
 		boolean canSeeSky = world.getHighestBlockYAt(eyeLocation, HeightMap.MOTION_BLOCKING_NO_LEAVES) <= eyeLocation.getY();
-		if (canSeeSky) {
+		boolean isRealWater = riptideInfo.fakeWaterBlockKey == 0L;
+		if (isRealWater && player.isUnderWater())
+				factors.add(RiptideFactor.DEEP_WATER);
+		else if (isRealWater && player.isInWater())
+			factors.add(RiptideFactor.WATER);
+		else if (canSeeSky) {
 			if (world.isThundering())
 				factors.add(RiptideFactor.THUNDERING);
 			else if (world.hasStorm())
@@ -248,29 +323,8 @@ public class RiptideAbility extends Ability {
 			else
 				factors.add(RiptideFactor.SUNNY);
 		}
-
-		if (player.isUnderWater())
-			factors.add(RiptideFactor.DEEP_WATER);
-		else if (player.isInWater())
-			factors.add(RiptideFactor.WATER);
-
-		RiptideInfo riptideInfo = riptideInfoMap.get(player);
-		if (riptideInfo != null && TeamArena.getGameTick() - riptideInfo.lastImpact <= RIPTIDE_IMPACT_BOOST_DURATION) {
+		if (CAN_THROW && TeamArena.getGameTick() - riptideInfo.lastImpact <= RIPTIDE_IMPACT_BOOST_DURATION) {
 			factors.add(RiptideFactor.IMPACT_BOOST);
-		}
-
-		team_loop:
-		for (TeamArenaTeam team : Main.getGame().getTeams()) {
-			if (team.getDyeColour() == DyeColor.BLUE) {
-				Location temp = location.clone();
-				for (Player playerMember : team.getPlayerMembers()) {
-					playerMember.getLocation(temp);
-					if (temp.getWorld() == world && temp.distanceSquared(location) <= 6 * 6) {
-						factors.add(RiptideFactor.BLUE_TEAM);
-						break team_loop;
-					}
-				}
-			}
 		}
 		return factors;
 	}
@@ -296,12 +350,10 @@ public class RiptideAbility extends Ability {
 	@Override
 	protected void removeAbility(Player player) {
 		RiptideInfo info = riptideInfoMap.remove(player);
-		player.sendMessage(Component.textOfChildren(
-			Component.text("Your average "),
-			Component.text("Riptide", NamedTextColor.AQUA),
-			Component.text(" level was "),
-			Component.text("%.2f".formatted(info.totalProgress / (TeamArena.getGameTick() - info.startTick)), NamedTextColor.YELLOW),
-			Component.text(".")
+		player.sendMessage(textOfChildren(
+			text("Your average "), text("Riptide", NamedTextColor.AQUA), text(" level was "),
+			text(TextUtils.formatNumber(info.progressTracker.getAverage()), NamedTextColor.YELLOW),
+			text(".")
 		));
 		info.cleanUp(player);
 		// only remove our trident in case of admin abuse
@@ -334,23 +386,22 @@ public class RiptideAbility extends Ability {
 	}
 
 	public void updateItems(Player player, int level, boolean updateMeta) {
-		boolean canRiptide = canRiptide(player);
 		for (var iter = player.getInventory().iterator(); iter.hasNext();) {
 			ItemStack stack = iter.next();
 			if (stack != null && stack.getType() == Material.TRIDENT && stack.getPersistentDataContainer().has(TRIDENT_KEY)) {
 				ItemMeta meta = stack.getItemMeta();
 				boolean changed = updateMeta;
-				if (level != 0 && canRiptide) {
-					changed |= meta.addEnchant(Enchantment.RIPTIDE, level, true);
+				if (!CAN_THROW || (level != 0 && canRiptide(player))) { // force add riptide if trident can't be thrown
+					changed |= meta.addEnchant(Enchantment.RIPTIDE, Math.max(1, level), true);
 				} else {
 					changed |= meta.removeEnchant(Enchantment.RIPTIDE);
 				}
 				if (updateMeta) {
 					meta.itemName(switch (level) {
-						case 0 -> Component.text("Trident");
-						case 1 -> Component.text("Trident Plus", NamedTextColor.YELLOW);
-						case 2 -> Component.text("Trident Pro", NamedTextColor.GOLD);
-						default -> Component.text("Trident Pro Max", NamedTextColor.RED);
+						case 0 -> text("Trident");
+						case 1 -> text("Trident Plus", NamedTextColor.YELLOW);
+						case 2 -> text("Trident Pro", NamedTextColor.GOLD);
+						default -> text("Trident Pro Max", NamedTextColor.RED);
 					});
 					meta.removeAttributeModifier(Attribute.ATTACK_DAMAGE);
 					meta.addAttributeModifier(Attribute.ATTACK_DAMAGE,
@@ -368,7 +419,7 @@ public class RiptideAbility extends Ability {
 
 	private static boolean canRiptide(Player player) {
 		return !(Main.getGame() instanceof CaptureTheFlag ctf && ctf.isFlagCarrier(player)) &&
-			((player.isSneaking() && player.isOnGround()  /* TODO replace with more robust check */) || player.isInWater() || player.isInRain());
+			((player.isSneaking() && player.isOnGround()) || player.isInWater() || player.isInRain());
 	}
 
 	private static final BlockData SHALLOW_WATER_DATA = Material.WATER.createBlockData(blockData -> ((Levelled) blockData).setLevel(7));
@@ -379,7 +430,7 @@ public class RiptideAbility extends Ability {
 		info.setBurdened(burdened);
 
 		int oldProgress = (int) info.progress;
-		Set<RiptideFactor> factors = calcFactors(player);
+		Set<RiptideFactor> factors = calcFactors(player, info);
 		float increment = calcProgressIncrement(factors, info.progress);
 		info.setProgress(info.progress + increment);
 
@@ -390,75 +441,107 @@ public class RiptideAbility extends Ability {
 			player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 100, 0, false, false, false));
 			info.setProgress(0, 5);
 		}
-		info.totalProgress += info.progress;
+		info.progressTracker.accept(info.progress);
 
 		boolean changed = (int) info.progress != oldProgress;
 		if (changed && (int) info.progress > oldProgress) {
 			player.playSound(player, Sound.BLOCK_ENCHANTMENT_TABLE_USE, SoundCategory.PLAYERS, 0.5f, 1f);
 		}
-		info.update(factors, increment);
+		info.updateBossBar(factors, increment);
 		Component actionBar;
 
+		boolean canRiptide = canRiptide(player);
 		var attribute = Objects.requireNonNull(player.getAttribute(Attribute.WATER_MOVEMENT_EFFICIENCY));
 		if (info.progress >= 1 && !burdened) {
 			// is sneaking
-			if (canRiptide(player) && !(player.isInWater() || player.isInRain())) {
+			if (canRiptide && !(player.isInWater() || player.isInRain())) {
 				if (attribute.getModifier(SNEAK_SPEED.getKey()) == null)
 					attribute.addModifier(SNEAK_SPEED);
-				BlockCoords targetCoords = new BlockCoords(player.getEyeLocation());
-				if (!targetCoords.equals(info.fakeWaterBlockCoords)) {
-					if (info.fakeWaterBlockKey != 0) {
-						Main.getGame().getFakeBlockManager().removeFakeBlock(info.fakeWaterBlockCoords, info.fakeWaterBlockKey);
-					}
-					info.fakeWaterBlockCoords = targetCoords;
-					info.fakeWaterBlockKey = Main.getGame().getFakeBlockManager().setFakeBlock(info.fakeWaterBlockCoords, SHALLOW_WATER_DATA, p -> p == player);
-				}
+				info.setFakeWater(player, player.getEyeLocation());
 				player.sendPotionEffectChange(player, new PotionEffect(PotionEffectType.CONDUIT_POWER, 1000000, 0, true));
 			} else {
 				player.sendPotionEffectChangeRemove(player, PotionEffectType.CONDUIT_POWER);
 				attribute.removeModifier(SNEAK_SPEED);
-				if (info.fakeWaterBlockKey != 0) {
-					Main.getGame().getFakeBlockManager().removeFakeBlock(info.fakeWaterBlockCoords, info.fakeWaterBlockKey);
-					info.fakeWaterBlockKey = 0;
-					info.fakeWaterBlockCoords = null;
-				}
+				info.removeFakeWater();
 			}
 
-			if (canRiptide(player)) {
-				actionBar = Component.text("Ready to Riptide", NamedTextColor.AQUA);
+			List<Vector> vectors = List.of();
+			if (canRiptide) {
+				actionBar = text("Ready to Riptide", NamedTextColor.AQUA);
 				if (player.getActiveItem().getType() == Material.TRIDENT) {
-					List<Vector> vectors = estimateRiptideLocation(player, player.getActiveItem());
-					if (!vectors.isEmpty()) {
-						var cache = new PacketSender.Cached(1, vectors.size());
-						Particle.DustOptions dustOptions = new Particle.DustOptions(Color.AQUA, 1);
-						Location eye = player.getEyeLocation();
-						Location temp = player.getLocation();
-						for (Vector vector : vectors) {
-							temp.set(vector.getX(), vector.getY(), vector.getZ());
-							if (eye.distanceSquared(temp) <= 2 * 2) continue;
-							ParticleUtils.batchParticles(
-								player, cache, Particle.DUST, dustOptions, temp,
-								64, 0, 0, 0, 0, 0, true
-							);
-						}
-						cache.flush();
-					}
+					vectors = estimateRiptideLocation(player, player.getActiveItem());
+					if (!vectors.isEmpty())
+						vectors = vectors.subList(1, vectors.size()); // avoid blocking player view
 				}
 			} else if (!player.isOnGround()) {
-				actionBar = Component.text("Stay on ground to Riptide", NamedTextColor.GRAY);
+				actionBar = text("Stay on ground to Riptide", NamedTextColor.GRAY);
 			} else {
-				actionBar = Component.textOfChildren(
-					Component.text("["),
+				actionBar = textOfChildren(
+					text("["),
 					Component.keybind("key.sneak", NamedTextColor.GREEN),
-					Component.text("] to Riptide")
+					text("] to Riptide")
 				).color(NamedTextColor.GRAY);
 			}
+			info.updatePathPreview(player, vectors);
 		} else {
-			actionBar = Component.text("Can't riptide", NamedTextColor.DARK_GRAY);
+			actionBar = text("Can't riptide", NamedTextColor.DARK_GRAY);
+			info.removeFakeWater();
+			info.updatePathPreview(player, List.of());
 		}
 		player.sendActionBar(actionBar);
 
 		updateItems(player, Math.min(MAX_RIPTIDE_LEVEL, (int) info.progress), changed);
+
+		displayParticles(player, (int) info.progress,
+			info.progress > 0 && player.getInventory().getItemInMainHand().getType() == Material.TRIDENT);
+	}
+
+	private static final int PARTICLE_BOB_INTERVAL = 5 * 20;
+	private static final int PARTICLE_SPIN_INTERVAL = 10 * 20;
+	private void displayParticles(Player player, int progress, boolean likelyToRiptide) {
+		if (progress <= 0 || TeamArena.getGameTick() % 2 != 0)
+			return;
+		Location loc = player.getLocation();
+		List<PacketContainer> packets = new ArrayList<>(progress);
+		List<PacketContainer> riptidePackets = new ArrayList<>(progress);
+
+		// spawn spinning particles around the player
+		Particle particle = switch (progress) {
+			case 1 -> Particle.RAIN;
+			case 2 -> Particle.DRIPPING_WATER;
+			default -> Particle.NAUTILUS;
+		};
+		int now = TeamArena.getGameTick();
+		double eyeHeight = player.getEyeHeight();
+		double yaw = Math.toRadians(player.getBodyYaw()) + Math.TAU * (now % PARTICLE_SPIN_INTERVAL) / PARTICLE_SPIN_INTERVAL;
+		double particleInterval = Math.TAU / progress;
+		for (int i = 0; i < progress; i++) {
+			double offset = particleInterval * i;
+			double angle = yaw + offset;
+			double sin = Math.sin(angle), cos = Math.cos(angle);
+			double x = loc.x() + 0.5 * sin, z = loc.z() + 0.5 * cos;
+			double y = loc.y() + eyeHeight * (0.25 + 0.125 * Math.sin(Math.TAU * (now % PARTICLE_BOB_INTERVAL) / PARTICLE_BOB_INTERVAL + offset));
+
+			packets.add(ParticleUtils.batchParticles(particle, null, x, y, z, 0, 0, 0, 0, 0, false));
+
+			if (likelyToRiptide && progress >= 3) { // crazy aura
+				double nx = loc.x() + 2 * sin, nz = loc.z() + 2 * cos;
+				riptidePackets.add(ParticleUtils.batchParticles(
+					Particle.TRIAL_SPAWNER_DETECTION_OMINOUS, null, nx, loc.y(), nz, 0,
+					(float) (-2 * sin) /* x - nx */, -2, (float) (-2 * cos) /* z - nz */,
+					0.05f, false
+				));
+			}
+		}
+
+		Location viewerLoc = loc.clone();
+		List<? extends Player> viewers = Bukkit.getOnlinePlayers().stream()
+			.filter(viewer -> viewer != player && viewer.getLocation(viewerLoc).distanceSquared(loc) <= 32 * 32)
+			.toList();
+		PlayerUtils.sendPacket(viewers, packets);
+		PlayerUtils.sendPacket(viewers, riptidePackets); // doesn't send anything if empty
+		PlayerUtils.sendPacket(player, packets);
+		PlayerUtils.sendPacket(player, riptidePackets);
 	}
 
 	private static final double ACCELERATION = 0.08;
@@ -475,7 +558,7 @@ public class RiptideAbility extends Ability {
 		var list = new ArrayList<Vector>();
 		for (int i = 0; i < 50; i++) {
 			list.add(location.toVector());
-			var hitResult = world.rayTraceBlocks(location, velocity, velocity.length(), FluidCollisionMode.ALWAYS, true);
+			var hitResult = world.rayTraceBlocks(location, velocity, velocity.length(), FluidCollisionMode.NEVER, true);
 			if (hitResult != null)
 				break;
 			location.add(velocity);
@@ -500,9 +583,9 @@ public class RiptideAbility extends Ability {
 
 	@Override
 	public void onRiptide(PlayerRiptideEvent event) {
-//		event.getPlayer().sendMessage("Riptide");
 		RiptideInfo info = riptideInfoMap.get(event.getPlayer());
-		info.setProgress(0, 10);
+		int riptideLevel = event.getItem().getEnchantmentLevel(Enchantment.RIPTIDE);
+		info.setProgress(info.getProgress() - Math.min(riptideLevel, MAX_RIPTIDE_LEVEL), 10);
 		updateItems(event.getPlayer(), 0, true);
 		// restore old block
 		if (info.wasFakeWater) {
@@ -520,13 +603,19 @@ public class RiptideAbility extends Ability {
 	@Override
 	public void onInteract(PlayerInteractEvent event) {
 		ItemStack item = event.getItem();
-		if (item == null || item.getType() != Material.TRIDENT || item.getEnchantmentLevel(Enchantment.RIPTIDE) == 0)
+		if (item == null || item.getType() != Material.TRIDENT ||
+			!item.getPersistentDataContainer().has(TRIDENT_KEY))
 			return;
 		Player player = event.getPlayer();
-		if (player.isInWater() || player.isInRain())
-			return; // no need to set fake water
-		((CraftPlayer) player).getHandle().wasTouchingWater = true;
-		riptideInfoMap.get(player).wasFakeWater = true;
+		RiptideInfo info = riptideInfoMap.get(player);
+		if (info.progress < 1) // ensure player can riptide with custom trident
+			return;
+		if (canRiptide(player)) {
+			if (player.isInWater() || player.isInRain())
+				return; // no need to set fake water
+			((CraftPlayer) player).getHandle().wasTouchingWater = true;
+			riptideInfoMap.get(player).wasFakeWater = true;
+		}
 	}
 
 	@Override
@@ -535,10 +624,12 @@ public class RiptideAbility extends Ability {
 		if (item.getType() != Material.TRIDENT || item.getEnchantmentLevel(Enchantment.RIPTIDE) == 0 || event.getTicksHeldFor() < 10)
 			return;
 		Player player = event.getPlayer();
-		if (player.isInWater() || player.isInRain())
-			return; // no need to set fake water
-		((CraftPlayer) player).getHandle().wasTouchingWater = true;
-		riptideInfoMap.get(player).wasFakeWater = true;
+		if (canRiptide(player)) {
+			if (player.isInWater() || player.isInRain())
+				return; // no need to set fake water
+			((CraftPlayer) player).getHandle().wasTouchingWater = true;
+			riptideInfoMap.get(player).wasFakeWater = true;
+		}
 	}
 
 	@Override

@@ -31,6 +31,7 @@ public abstract class Kit {
 
 	private final String name;
 	private Component displayName;
+	/** The unique key of this kit. Defaults to the kit's lowercased name. */
 	private final String key; // used in commands
     private final List<Component> description;
     private final ItemStack display;
@@ -231,8 +232,7 @@ public abstract class Kit {
     }
 
 	/**
-	 * Gets the key of this kit, to be used in commands
-	 * @return The key of this kit
+	 * {@return the unique key of this kit}
 	 */
 	public String getKey() {
 		return key;

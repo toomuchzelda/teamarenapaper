@@ -1,9 +1,9 @@
 package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
-import com.google.common.collect.Sets;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.FilterAction;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.FilterRule;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitFilter;
@@ -140,7 +140,7 @@ public class CommandKitControl extends CustomCommand {
 			}
 			else if ("allow".equals(args[0]) || "block".equals(args[0])) {
 				if (args.length == 2)
-					return Main.getGame().getKits().stream().map(kit -> kit.getName().toLowerCase(Locale.ENGLISH)).toList();
+					return Main.getGame().getKits().stream().map(Kit::getKey).toList();
 				else if (args.length == 3)
 					return List.of("team", "player");
 				else if (args.length == 4) {

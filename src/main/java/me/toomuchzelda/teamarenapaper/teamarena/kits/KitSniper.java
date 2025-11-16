@@ -591,8 +591,8 @@ public class KitSniper extends Kit {
 			var displays = DisplayUtils.createVirtualLine(tracerLocation, bulletDirection,
 				(float) (distance > 2 ? distance - 2 : distance), null, SELF_TRACER_BLOCK_DATA);
 			for (PacketDisplay display : displays) {
-				display.setViewers(player);
 				display.respawn();
+				display.setViewers(player);
 			}
 
 			TeamArenaTeam team = Main.getPlayerInfo(player).team;

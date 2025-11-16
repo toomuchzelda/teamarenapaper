@@ -13,6 +13,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.AxisAngle4d;
 import org.joml.Quaternionf;
@@ -156,18 +157,7 @@ public class DisplayUtils {
 
 	public static List<PacketDisplay> createVirtualLine(Location location, Vector direction, float length, @Nullable Color color, BlockData blockData) {
 		Vector normalized = direction.clone().normalize();
-		Vector cross = LINE_SEGMENT_AXIS.getCrossProduct(normalized);
-		Quaternionf leftRotation;
-		if (cross.isZero()) {
-			leftRotation = new Quaternionf();
-		} else {
-			cross.normalize();
-			leftRotation = new Quaternionf(new AxisAngle4d(
-				LINE_SEGMENT_AXIS.angle(normalized),
-				cross.getX(), cross.getY(), cross.getZ()
-			));
-		}
-
+		Quaternionf leftRotation = calcSegmentRotation(direction);
 		Location temp = location.clone();
 		temp.setYaw(0);
 		temp.setPitch(0);
@@ -180,19 +170,42 @@ public class DisplayUtils {
 				location.getY() + normalized.getY() * i,
 				location.getZ() + normalized.getZ() * i
 			);
-			Vector3f scale = new Vector3f(segmentLength, 0.05f, 0.05f);
-
-			PacketDisplay display = new PacketDisplay(PacketEntity.NEW_ID, EntityType.BLOCK_DISPLAY, temp, null, null);
-			display.setBlockData(blockData);
-			display.setScale(scale);
-			display.setLeftRotation(leftRotation);
-			if (color != null) {
-				display.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_GLOWING_MASK);
-				display.setGlowColorOverride(color);
-			}
-			display.updateMetadataPacket();
+			PacketDisplay display = createVirtualLineSegment(temp, leftRotation, segmentLength, color, blockData);
 			segments.add(display);
 		}
 		return List.copyOf(segments);
+	}
+
+	public static @NotNull PacketDisplay createVirtualLineSegment(Location location, Quaternionf leftRotation, float segmentLength, @Nullable Color color, BlockData blockData) {
+		Vector3f scale = calcSegmentScale(segmentLength);
+
+		PacketDisplay display = new PacketDisplay(PacketEntity.NEW_ID, EntityType.BLOCK_DISPLAY, location, null, null);
+		display.setBlockData(blockData);
+		display.setScale(scale);
+		display.setLeftRotation(leftRotation);
+		if (color != null) {
+			display.setMetadata(MetaIndex.BASE_BITFIELD_OBJ, MetaIndex.BASE_BITFIELD_GLOWING_MASK);
+			display.setGlowColorOverride(color);
+		}
+		display.updateMetadataPacket();
+		return display;
+	}
+
+	public static Quaternionf calcSegmentRotation(Vector direction) {
+		Vector normalized = direction.clone().normalize();
+		Vector cross = LINE_SEGMENT_AXIS.getCrossProduct(normalized);
+		if (cross.isZero()) {
+			return new Quaternionf();
+		} else {
+			cross.normalize();
+			return new Quaternionf(new AxisAngle4d(
+				LINE_SEGMENT_AXIS.angle(normalized),
+				cross.getX(), cross.getY(), cross.getZ()
+			));
+		}
+	}
+
+	public static Vector3f calcSegmentScale(float length) {
+		return new Vector3f(length, 0.05f, 0.05f);
 	}
 }

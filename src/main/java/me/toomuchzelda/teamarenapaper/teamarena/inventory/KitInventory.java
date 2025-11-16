@@ -240,7 +240,7 @@ public class KitInventory implements InventoryProvider {
 	protected static void saveDefaultKit(InventoryClickEvent e) {
 		Player clicker = (Player) e.getWhoClicked();
 		PlayerInfo playerInfo = Main.getPlayerInfo(clicker);
-		playerInfo.defaultKit = playerInfo.kit.getName();
+		playerInfo.defaultKit = playerInfo.kit.getKey();
 		DBSetDefaultKit dbSetKit = new DBSetDefaultKit(clicker, playerInfo.kit);
 		Bukkit.getScheduler().runTaskAsynchronously(Main.getPlugin(), bukkitTask -> {
 			try {
