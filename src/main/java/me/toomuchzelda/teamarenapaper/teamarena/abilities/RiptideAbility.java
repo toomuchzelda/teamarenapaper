@@ -492,15 +492,21 @@ public class RiptideAbility extends Ability {
 
 		updateItems(player, Math.min(MAX_RIPTIDE_LEVEL, (int) info.progress), changed);
 
-		displayParticles(player, (int) info.progress,
-			info.progress > 0 && player.getInventory().getItemInMainHand().getType() == Material.TRIDENT);
+		displayParticles(player, info, (int) info.progress);
 	}
 
 	private static final int PARTICLE_BOB_INTERVAL = 5 * 20;
 	private static final int PARTICLE_SPIN_INTERVAL = 10 * 20;
-	private void displayParticles(Player player, int progress, boolean likelyToRiptide) {
+	private void displayParticles(Player player, RiptideInfo info, int progress) {
 		if (progress <= 0 || TeamArena.getGameTick() % 2 != 0)
 			return;
+
+		boolean likelyToRiptide = player.getInventory().getItemInMainHand().getType() == Material.TRIDENT;
+		boolean reallyGoingToRiptideISwear = player.getActiveItem().getType() == Material.TRIDENT;
+		boolean showParticles = reallyGoingToRiptideISwear || !player.getCurrentInput().isSneak();
+		if (!showParticles)
+			return;
+
 		Location loc = player.getLocation();
 		List<PacketContainer> packets = new ArrayList<>(progress);
 		List<PacketContainer> riptidePackets = new ArrayList<>(progress);

@@ -25,7 +25,6 @@ public class KitMarine extends Kit {
 	private static final TextColor STUPID_BIRD_COLOR = TextColor.color(0xfce9a4);
 	public static final Component T_0_E_D = Component.text("T_0_E_D", Style.style(STUPID_BIRD_COLOR, ShadowColor.shadowColor(STUPID_BIRD_COLOR, 128)));
 
-	private static final Color CHESTPLATE_COLOR = Color.fromRGB(TextColor.color(0x2dc4c4).value());
 	private static final TextColor TEXT_COLOR = TextColor.color(0xEBAD6F);
 
 	private static final Style STYLE = DESC_STYLE;

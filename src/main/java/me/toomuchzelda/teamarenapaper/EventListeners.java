@@ -1187,7 +1187,14 @@ public class EventListeners implements Listener
 
 	@EventHandler
 	public void playerItemFrameChange(PlayerItemFrameChangeEvent event) {
-		if (event.getAction() != PlayerItemFrameChangeEvent.ItemFrameChangeAction.ROTATE)
+		if (event.getPlayer().getGameMode() != GameMode.CREATIVE &&
+			event.getAction() != PlayerItemFrameChangeEvent.ItemFrameChangeAction.ROTATE)
+			event.setCancelled(true);
+	}
+
+	@EventHandler
+	public void playerFlowerPotManipulate(PlayerFlowerPotManipulateEvent event) {
+		if (event.getPlayer().getGameMode() != GameMode.CREATIVE)
 			event.setCancelled(true);
 	}
 

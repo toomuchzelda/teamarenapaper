@@ -16,13 +16,15 @@ import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
-import org.bukkit.entity.*;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -63,7 +65,7 @@ public class KitVenom extends Kit {
 	public KitVenom() {
 		super("venom", "Venom",
 			TextUtils.wrapString("Poison damage on hit, poisoned people cannot be healed. It can also quickly jump in, afflicting" +
-				" all enemies it hits with poison and decreasing its cooldown with each enemy hit!", Style.empty()),
+				" all enemies it hits with poison and decreasing its cooldown with each enemy hit!", DESC_STYLE),
 			POTION_OF_POISON);
 		setArmor(
 			new ItemStack(Material.CHAINMAIL_HELMET),
