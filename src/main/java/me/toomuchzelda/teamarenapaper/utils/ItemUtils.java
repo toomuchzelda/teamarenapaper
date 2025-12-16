@@ -265,6 +265,16 @@ public class ItemUtils {
 		}
     }
 
+	public static void clearInventory(Player player) {
+		player.getInventory().clear();
+		player.setItemOnCursor(null);
+		player.getEquipment().clear();
+		final InventoryView openInventory = player.getOpenInventory();
+		if (openInventory.getType() == InventoryType.CRAFTING) {
+			openInventory.getTopInventory().clear();
+		}
+	}
+
     public static ItemStack colourLeatherArmor(Color color, ItemStack armorPiece) {
         LeatherArmorMeta meta = (LeatherArmorMeta) armorPiece.getItemMeta();
         meta.setColor(color);

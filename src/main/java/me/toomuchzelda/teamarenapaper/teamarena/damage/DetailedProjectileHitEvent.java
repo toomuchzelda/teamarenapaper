@@ -1,6 +1,5 @@
 package me.toomuchzelda.teamarenapaper.teamarena.damage;
 
-import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.util.RayTraceResult;
 

@@ -420,13 +420,6 @@ public abstract class TeamArena
 		}
 		else {
 			for (Player p : Bukkit.getOnlinePlayers()) {
-				/*EntityUtils.setAttributeBaseDefault(p.getAttribute(Attribute.SCALE));
-				EntityUtils.setAttributeBaseDefault(p.getAttribute(Attribute.MOVEMENT_SPEED));
-				//EntityUtils.setAttributeBaseDefault(p.getAttribute(Attribute.SNEAKING_SPEED));
-				EntityUtils.setAttributeBaseDefault(p.getAttribute(Attribute.JUMP_STRENGTH));
-				EntityUtils.setAttributeBaseDefault(p.getAttribute(Attribute.GRAVITY));
-				EntityUtils.setAttributeBaseDefault(p.getAttribute(Attribute.ENTITY_INTERACTION_RANGE));
-				EntityUtils.setAttributeBaseDefault(p.getAttribute(Attribute.BLOCK_INTERACTION_RANGE));*/
 				p.getAttribute(Attribute.SCALE).setBaseValue(1d);
 				p.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.1d);
 				p.getAttribute(Attribute.JUMP_STRENGTH).setBaseValue(0.42d);
@@ -483,7 +476,8 @@ public abstract class TeamArena
 	public void giveKitAndGameItems(Player player, PlayerInfo playerInfo, boolean clearInventory) {
 		PlayerInventory inventory = player.getInventory();
 		if (clearInventory)
-			inventory.clear();
+			//inventory.clear();
+			ItemUtils.clearInventory(player);
 
 		inventory.setItem(8, miniMap.getMapItem(playerInfo.team));
 		inventory.setItem(7, playerInfo.viewingGlowingTeammates ? playerInfo.team.getGlowingHotbarItem() : playerInfo.team.getHotbarItem());
@@ -1682,6 +1676,7 @@ public abstract class TeamArena
 
 	@Nullable
 	public Kit findKit(String name) {
+		// toLowerCase needed as existing saved default kits have capital letters
 		return kits.get(name.toLowerCase(Locale.ENGLISH));
 	}
 
