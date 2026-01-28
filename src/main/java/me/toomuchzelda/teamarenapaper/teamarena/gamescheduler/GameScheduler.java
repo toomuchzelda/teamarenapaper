@@ -17,6 +17,7 @@ import org.bukkit.Bukkit;
 import java.io.File;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.logging.Level;
 
 /**
  * @author toomuchzelda
@@ -80,7 +81,7 @@ public class GameScheduler
 					}
 				}
 				catch (Exception e) {
-					Main.logger().warning("Exception for: " + mapFolder.getName() + " " + e.getMessage());
+					Main.logger().log(Level.WARNING, "Exception for: " + mapFolder.getName() + " " + e.getMessage());
 					e.printStackTrace();
 				}
 			}

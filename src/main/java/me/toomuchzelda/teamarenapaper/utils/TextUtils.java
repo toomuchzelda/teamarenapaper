@@ -453,4 +453,16 @@ public class TextUtils {
 			(c.blue() + NamedTextColor.GRAY.blue()) / 2
 		);
 	}
+
+	public static org.bukkit.Color readConfigColour(String s) {
+		final String[] arr = s.split(",");
+		if (arr.length != 3)
+			throw new IllegalArgumentException("Poorly formatted string: " + s);
+
+		return org.bukkit.Color.fromRGB(
+			Integer.parseInt(arr[0]),
+			Integer.parseInt(arr[1]),
+			Integer.parseInt(arr[2])
+		);
+	}
 }

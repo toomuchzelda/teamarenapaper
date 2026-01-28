@@ -52,6 +52,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.preferences.Preferences;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketPlayer;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.SpeechBubbleHologram;
+import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -1533,7 +1534,7 @@ public abstract class TeamArena
 		setGameState(GameState.END);
 
 		GameScheduler.updateOptions();
-		CommandCallvote.instance.startVote(CommandCallvote.StartVoteOption.MAP);
+		//CommandCallvote.instance.startVote(CommandCallvote.StartVoteOption.MAP);
 		//Bukkit.broadcastMessage("Game end");
 	}
 
@@ -2332,14 +2333,26 @@ public abstract class TeamArena
 		teams = new TeamArenaTeam[numOfTeams];
 		int teamsArrIndex = 0;
 
-		for (Map.Entry<String, Vector[]> entry : map.getTeamSpawns().entrySet()) {
-			String teamName = entry.getKey();
+		for (Map.Entry<String, TeamArenaMap.TeamInfo> entry : map.getTeamSpawns().entrySet()) {
+			final TeamArenaMap.TeamInfo teamInfo = entry.getValue();
+			String teamName = teamInfo.name();
 
 			//if it's a legacy RWF team
 			//TeamColours teamColour = TeamColours.valueOf(teamName);
 			TeamArenaTeam teamArenaTeam = LegacyTeams.fromRWF(teamName);
 			if (teamArenaTeam == null) {
-				throw new IllegalArgumentException("Bad team name! Use RED, BLUE, DARK_GRAY, etc.");
+				//throw new IllegalArgumentException("Bad team name! Use RED, BLUE, DARK_GRAY, etc.");
+				Main.logger().info("The Based Department welcomes you to Custom Teams.");
+
+				teamArenaTeam = new TeamArenaTeam(
+					teamInfo.name(),
+					teamInfo.simpleName(),
+					teamInfo.colour1(),
+					teamInfo.colour2(),
+					teamInfo.dyeColour(),
+					BossBar.Color.PINK, // unused
+					teamInfo.icon()
+				);
 
 				// RGB teams are finally dead
 				//it's not a legacy rwf team
@@ -2363,7 +2376,7 @@ public abstract class TeamArena
 				teamArenaTeam = new TeamArenaTeam(teamName, simpleName, first, second, null);*/
 			}
 
-			Vector[] spawnVecs = entry.getValue();
+			Vector[] spawnVecs = teamInfo.spawns();
 			Location[] locArray = new Location[spawnVecs.length];
 
 			int index = 0;

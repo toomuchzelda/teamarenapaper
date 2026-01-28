@@ -261,7 +261,7 @@ public class CommandDebug extends CustomCommand {
 				TeamArena game = Main.getGame();
 				for (var entry : game.gameMap.getTeamSpawns().entrySet()) {
 					int ctr = 0;
-					for (Vector spawnLoc : entry.getValue()) {
+					for (Vector spawnLoc : entry.getValue().spawns()) {
 						new PacketHologram(spawnLoc.toLocation(game.getWorld()), null, PacketEntity.VISIBLE_TO_ALL,
 							Component.text(entry.getKey() + ctr++)).respawn();
 					}

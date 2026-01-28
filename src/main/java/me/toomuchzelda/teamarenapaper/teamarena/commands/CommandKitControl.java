@@ -100,7 +100,7 @@ public class CommandKitControl extends CustomCommand {
 		}
 		else if ("rules".equals(args[0])) {
 			if (args.length == 1)
-				throw throwUsage("kitcontrol rules [list|remove]");
+				throw throwUsage("kitcontrol rules [list|remove|removeall]");
 
 			if ("list".equals(args[1])) {
 				sender.sendMessage(KitFilter.listAllRules());
@@ -118,8 +118,21 @@ public class CommandKitControl extends CustomCommand {
 					sender.sendMessage(Component.text("No such rule " + args[2], TextColors.ERROR_RED));
 				}
 			}
+			else if ("removeall".equals(args[1])) {
+				boolean success = true;
+				for (NamespacedKey key : KitFilter.getAllRules()) {
+					final boolean r = KitFilter.removeRule(key);
+					success = success && r;
+					if (!r)
+						sender.sendMessage(Component.text("Somehow " + key + " was not successfully removed", TextColors.ERROR_RED));
+				}
+				if (success)
+					sender.sendMessage(Component.text("Removed successfully", NamedTextColor.YELLOW));
+				else
+					sender.sendMessage(Component.text("Removed with errors", NamedTextColor.YELLOW));
+			}
 			else {
-				throw throwUsage("kitcontrol rules [list|remove]");
+				throw throwUsage("kitcontrol rules [list|remove|removeall]");
 			}
 		}
 		else {
@@ -154,7 +167,7 @@ public class CommandKitControl extends CustomCommand {
 			}
 			else if ("rules".equals(args[0])) {
 				if (args.length == 2)
-					return List.of("list", "remove");
+					return List.of("list", "remove", "removeall");
 				else if ("remove".equalsIgnoreCase(args[1])) {
 					Set<NamespacedKey> allKeys = KitFilter.getAllRules();
 					ArrayList<String> list = new ArrayList<>(allKeys.size());

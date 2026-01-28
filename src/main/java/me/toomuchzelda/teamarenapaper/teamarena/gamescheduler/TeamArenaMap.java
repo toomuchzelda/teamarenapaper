@@ -11,6 +11,8 @@ import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
+import org.bukkit.Color;
+import org.bukkit.DyeColor;
 import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
@@ -36,6 +38,9 @@ import java.util.*;
  */
 public class TeamArenaMap
 {
+	public record TeamInfo(String name, String simpleName, Color colour1, Color colour2, NamedTextColor glowColour,
+						   DyeColor dyeColour, Material icon, Vector[] spawns) {}
+
 	public record KothHill(String name, Vector minCorner, Vector maxCorner, int time) {}
 	public record KOTHInfo(boolean randomOrder, List<KothHill> hills) {}
 
@@ -72,7 +77,7 @@ public class TeamArenaMap
 	private final int minPlayers;
 	private final int maxPlayers;
 
-	private final Map<String, Vector[]> teamSpawns;
+	private final Map<String, TeamInfo> teamSpawns;
 
 	private final List<GameType> gameTypes;
 	private final KOTHInfo kothInfo;
@@ -204,27 +209,80 @@ public class TeamArenaMap
 			this.noVerticalBorder = vec1.getY() == vec2.getY();
 
 			//load team spawns
-			Map<String, Map<String, List<String>>> teamsMap =
-					(Map<String, Map<String, List<String>>>) mainMap.get("Teams");
+			Map<String, Map<String, Object>> teamsMap =
+					(Map<String, Map<String, Object>>) mainMap.get("Teams");
 
-			int numOfTeams = teamsMap.size();
-			this.teamSpawns = new HashMap<>(numOfTeams);
-			for (Map.Entry<String, Map<String, List<String>>> entry : teamsMap.entrySet()) {
-				String teamName = entry.getKey();
+			this.teamSpawns = HashMap.newHashMap(teamsMap.size());
+			for (Map.Entry<String, Map<String, Object>> entry : teamsMap.entrySet()) {
+				final String teamName = entry.getKey();
 
-				Map<String, List<String>> spawnsYaml = entry.getValue();
+				try {
+					Map<String, Object> spawnsYaml = entry.getValue();
 
-				List<String> spawnsList = spawnsYaml.get("Spawns");
-				Vector[] vecArray = new Vector[spawnsList.size()];
+					List<String> spawnsList = (List<String>) spawnsYaml.get("Spawns");
+					Vector[] vecArray = new Vector[spawnsList.size()];
 
-				int index = 0;
-				for (String loc : spawnsList) {
-					Vector coords = BlockUtils.parseCoordsToVec(loc, 0.5, 0, 0.5);
+					int index = 0;
+					for (String loc : spawnsList) {
+						Vector coords = BlockUtils.parseCoordsToVec(loc, 0.5, 0, 0.5);
 
-					vecArray[index] = coords;
-					index++;
+						vecArray[index] = coords;
+						index++;
+					}
+
+					if (!teamName.startsWith("Custom")) {
+						// Remaining fields provided by LegacyTeams
+						final TeamInfo basicTeam = new TeamInfo(teamName, null, null, null, null, null, null, vecArray);
+						if (this.teamSpawns.put(teamName, basicTeam) != null) {
+							throw new IllegalArgumentException("Duplicate team " + teamName + " defined.");
+						}
+					} else { // a custom team
+						// Name
+						// SimpleName
+						// Colour1
+						// Colour2 (optional)
+						// ColourPattern (optional) (add later)
+						// - Gradient if unspecified and Colour2 specified
+						// GlowColour (NMS team colour)
+						// DyeColour
+						// Icon
+						final String name = (String) spawnsYaml.get("Name");
+						final String simpleName = spawnsYaml.containsKey("SimpleName") ?
+							(String) spawnsYaml.get("SimpleName") : name;
+
+						final Color colour1 = TextUtils.readConfigColour((String) spawnsYaml.get("Colour1"));
+						final Color colour2;
+						if (spawnsYaml.containsKey("Colour2"))
+							colour2 = TextUtils.readConfigColour((String) spawnsYaml.get("Colour2"));
+						else
+							colour2 = null;
+
+						final NamedTextColor glowColour;
+						if (spawnsYaml.containsKey("GlowColour"))
+							glowColour = NamedTextColor.NAMES.value(((String) spawnsYaml.get("GlowColour")).toLowerCase(Locale.ENGLISH));
+						else
+							throw new IllegalArgumentException("No GlowColour specified. ex. blue, yellow, light_purple");
+
+						final DyeColor dyeColour;
+						if (spawnsYaml.containsKey("DyeColour"))
+							dyeColour = DyeColor.valueOf(((String) spawnsYaml.get("DyeColour")).toUpperCase(Locale.ENGLISH));
+						else
+							throw new IllegalArgumentException("No DyeColour specified. ex. blue, red, etc.");
+
+						final Material icon = Material.valueOf((String) spawnsYaml.get("Icon"));
+
+						final TeamInfo tinfo = new TeamInfo(
+							name, simpleName, colour1, colour2, glowColour, dyeColour, icon, vecArray
+						);
+
+						if (this.teamSpawns.put(name, tinfo) != null) {
+							throw new IllegalArgumentException("Duplicate team " + teamName + " defined.");
+						}
+					}
 				}
-				this.teamSpawns.put(teamName, vecArray);
+				catch (Exception e) {
+					throw new RuntimeException("Error processing team " + teamName, e);
+				}
 			}
 		}
 
@@ -646,7 +704,7 @@ public class TeamArenaMap
 		return !noVerticalBorder;
 	}
 
-	public Map<String, Vector[]> getTeamSpawns() {
+	public Map<String, TeamInfo> getTeamSpawns() {
 		return teamSpawns;
 	}
 

@@ -21,7 +21,7 @@ import java.util.*;
 
 public class RailgunAbility extends Ability {
 	public static final ItemStack RAILGUN = ItemBuilder.of(Material.BOW)
-		.displayName(Component.text("Railgun", NamedTextColor.GREEN))
+		.displayName(Component.text("Railbow", NamedTextColor.GREEN))
 		.lore(
 			List.of(
 				Component.text("Fully charge to fire", TextUtils.RIGHT_CLICK_TO)
@@ -51,7 +51,8 @@ public class RailgunAbility extends Ability {
 		final LivingEntity shooter = event.getEntity();
 		if (RAILGUN.isSimilar(event.getBow()) && event.getProjectile() instanceof AbstractArrow aa) {
 			if (event.getForce() < 1) {
-				event.setCancelled(true);
+				// regular arrow
+				/*event.setCancelled(true);
 
 				shooter.getWorld().playSound(shooter, Sound.ENTITY_BREEZE_JUMP, SoundCategory.PLAYERS, 1f, 2f);
 
@@ -60,10 +61,17 @@ public class RailgunAbility extends Ability {
 				particleLoc.add(direction);
 				particleLoc.subtract(0d, 0.5d, 0d);
 				shooter.getWorld().spawnParticle(Particle.FIREWORK, particleLoc, 1, 0.05d, 0.05d, 0.05d, 0.04d);
+				 */
+				aa.setVelocity(aa.getVelocity().multiply(0.5d));
 			}
 			else {
 				fireRailgun(shooter, aa);
 				shooter.getWorld().playSound(shooter, Sound.ENTITY_BREEZE_SHOOT, SoundCategory.PLAYERS, 1f, 0.5f);
+			}
+
+			if (shooter instanceof Player pShooter) {
+				//pShooter.setCooldown(RAILGUN.getType(), RAILGUN_COOLDOWN);
+				pShooter.setCooldown(RAILGUN, RAILGUN_COOLDOWN);
 			}
 		}
 	}
@@ -83,10 +91,6 @@ public class RailgunAbility extends Ability {
 		rinfo.previousPosition = eyeLocation;
 
 		rails.put(aa, rinfo);
-
-		if (shooter instanceof Player pShooter) {
-			pShooter.setCooldown(RAILGUN.getType(), RAILGUN_COOLDOWN);
-		}
 	}
 
 	@Override
