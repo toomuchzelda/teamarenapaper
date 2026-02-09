@@ -504,7 +504,7 @@ public class DamageEvent {
 			}
 		}
 		net.minecraft.world.entity.Entity nmsEntity = ((CraftEntity) victim).getHandle();
-		nmsEntity.hasImpulse = true;
+		nmsEntity.needsSync = true;
 
 		//damager stuff
 		if (this.attacker instanceof SpectralArrow sa && this.damageType.isProjectile()) {
@@ -578,7 +578,7 @@ public class DamageEvent {
 					}
 					else if (sweepEffect) {
 						p.getWorld().playSound(p, Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 1f, 1f);
-						nmsPlayer.sweepAttack();
+						ParticleUtils.sweepEffect(p);
 					}
 					else if (wasSprinting) {
 						p.getWorld().playSound(p, Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK, SoundCategory.PLAYERS, 1f, 1f);

@@ -208,14 +208,14 @@ public class DisguiseManager
 			}*/
 
 			GameProfile disguiseAs = ((CraftPlayer) toDisguiseAs).getHandle().getGameProfile();
-			this.disguisedGameProfile = new GameProfile(disguisedPlayer.getUniqueId(), disguiseAs.getName());
-			this.disguisedGameProfile.getProperties().removeAll("textures");
-			this.disguisedGameProfile.getProperties().putAll("textures", disguiseAs.getProperties().get("textures"));
+			this.disguisedGameProfile = new GameProfile(disguisedPlayer.getUniqueId(), disguiseAs.name());
+			this.disguisedGameProfile.properties().removeAll("textures");
+			this.disguisedGameProfile.properties().putAll("textures", disguiseAs.properties().get("textures"));
 
 			GameProfile realPlayerProifle = ((CraftPlayer) disguisedPlayer).getHandle().getGameProfile();
 			tabListGameProfile = new GameProfile(tabListPlayerUuid, disguisedPlayer.getName());
-			tabListGameProfile.getProperties().removeAll("textures");
-			tabListGameProfile.getProperties().putAll("textures", realPlayerProifle.getProperties().get("textures"));
+			tabListGameProfile.properties().removeAll("textures");
+			tabListGameProfile.properties().putAll("textures", realPlayerProifle.properties().get("textures"));
 
 			// Store once at time of disguise to keep consistent even if toDisguiseAs changes their skin layers
 			this.skinParts = new boolean[PlayerModelPart.values().length];

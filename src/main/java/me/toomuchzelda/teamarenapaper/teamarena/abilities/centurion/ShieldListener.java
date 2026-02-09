@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.abilities.centurion;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import net.minecraft.world.entity.EntityReference;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ProjectileDeflection;
 import org.bukkit.FluidCollisionMode;
@@ -98,8 +99,8 @@ public class ShieldListener {
 				shield.damage(damage);
 			}
 			// use nms deflect to avoid damaging shooter's teammates
-			net.minecraft.world.entity.projectile.AbstractArrow nmsArrow = ((CraftAbstractArrow) arrow).getHandle();
-			nmsArrow.deflect(ProjectileDeflection.REVERSE, nmsArrow, nmsArrow.getOwner(), false);
+			net.minecraft.world.entity.projectile.arrow.AbstractArrow nmsArrow = ((CraftAbstractArrow) arrow).getHandle();
+			nmsArrow.deflect(ProjectileDeflection.REVERSE, nmsArrow, EntityReference.of(nmsArrow.getOwner()), false);
 			nmsArrow.setDeltaMovement(nmsArrow.getDeltaMovement().scale(0.2));
 		} else if (event.getEntity() instanceof Firework firework) {
 			firework.detonate();

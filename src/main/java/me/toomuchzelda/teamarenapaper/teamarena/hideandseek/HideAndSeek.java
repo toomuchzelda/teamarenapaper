@@ -82,7 +82,7 @@ public class HideAndSeek extends TeamArena {
 	public HideAndSeek(TeamArenaMap map) {
 		super(map);
 
-		this.gameWorld.setGameRule(GameRule.RANDOM_TICK_SPEED, 0);
+		this.gameWorld.setGameRule(GameRules.RANDOM_TICK_SPEED, 0);
 
 		for (TeamArenaTeam team : this.teams) {
 			if (team.getName().equals("Hiders"))

@@ -65,8 +65,8 @@ public class PacketPlayer extends PacketEntity {
 						@Nullable Predicate<Player> viewerRule, GameProfile inProfile) {
 		super(PacketEntity.NEW_ID, EntityType.PLAYER, location, viewers, viewerRule);
 
-		final GameProfile profile = new GameProfile(this.getUuid(), inProfile.getName());
-		profile.getProperties().putAll(inProfile.getProperties());
+		final GameProfile profile = new GameProfile(this.getUuid(), inProfile.name());
+		profile.properties().putAll(inProfile.properties());
 		ClientboundPlayerInfoUpdatePacket pinfoAdd = new ClientboundPlayerInfoUpdatePacket(
 			EnumSet.of(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER),
 			List.of(
@@ -76,7 +76,7 @@ public class PacketPlayer extends PacketEntity {
 						1,
 						EnumWrappers.NativeGameMode.SURVIVAL,
 						AdventureComponentConverter.fromComponent(
-							Component.text(profile.getName())
+							Component.text(profile.name())
 						)
 					)
 				)

@@ -43,7 +43,7 @@ public class DamageSourceCreator {
             if (projectile instanceof Trident) {
                 return DamageType.nmsDamageSources.trident(nmsProjectile, nmsEntity);
             } else {
-                net.minecraft.world.entity.projectile.AbstractArrow nmsAA = (net.minecraft.world.entity.projectile.AbstractArrow) nmsProjectile;
+                net.minecraft.world.entity.projectile.arrow.AbstractArrow nmsAA = (net.minecraft.world.entity.projectile.arrow.AbstractArrow) nmsProjectile;
                 return DamageType.nmsDamageSources.arrow(nmsAA, nmsEntity);
             }
         }

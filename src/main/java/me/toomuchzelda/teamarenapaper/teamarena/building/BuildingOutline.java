@@ -251,7 +251,7 @@ public sealed class BuildingOutline extends PacketEntity {
 		var viewer = getRealViewers().iterator().next();
 		Location hit = ensureTextVisible(viewer.getEyeLocation(), location, offset);
 		if (hologramBase.getLocation().distanceSquared(hit) > EPSILON)
-			hologramBase.teleport(hit, TeleportFlag.EntityState.RETAIN_PASSENGERS);
+			hologramBase.teleport(hit);
 
 		// perform display transformations
 		var transformation = hologram.getTransformation();

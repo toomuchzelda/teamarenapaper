@@ -5,10 +5,13 @@ import com.comphenix.protocol.events.PacketContainer;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.craftbukkit.CraftParticle;
+import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
@@ -121,5 +124,13 @@ public class ParticleUtils {
 
 			loc.setY(oY);
 		});
+	}
+
+	public static void sweepEffect(Player player) {
+		final ServerPlayer nmsPlayer = ((CraftPlayer) player).getHandle();
+		final double d = -Mth.sin(nmsPlayer.getYRot() * ((float)Math.PI / 180f));
+		final double d1 = Mth.cos(nmsPlayer.getYRot() * ((float)Math.PI / 180f));
+
+		nmsPlayer.level().sendParticles(ParticleTypes.SWEEP_ATTACK, nmsPlayer.getX() + d, nmsPlayer.getY(0.5d), nmsPlayer.getZ() + d1, 0, d, 0d, d1, 0d);
 	}
 }

@@ -41,7 +41,7 @@ public class ArrowManager {
 	static {
 		Method temp;
 		try {
-			temp = net.minecraft.world.entity.projectile.AbstractArrow.class
+			temp = net.minecraft.world.entity.projectile.arrow.AbstractArrow.class
 				.getDeclaredMethod("resetPiercedEntities");
 			temp.setAccessible(true);
 		}
@@ -53,7 +53,7 @@ public class ArrowManager {
 		NMS_AA_RESET_PIERCED_ENTITIES = temp;
 
 		try {
-			temp = net.minecraft.world.entity.projectile.AbstractArrow.class.getDeclaredMethod("onHitBlock", BlockHitResult.class);
+			temp = net.minecraft.world.entity.projectile.arrow.AbstractArrow.class.getDeclaredMethod("onHitBlock", BlockHitResult.class);
 			temp.setAccessible(true);
 		}
 		catch (NoSuchMethodException e) {
@@ -139,7 +139,7 @@ public class ArrowManager {
 				}
 
 				// Order of these ops is important as onHitBlock changes pierce level of arrow
-				final net.minecraft.world.entity.projectile.AbstractArrow nmsAa = ((CraftAbstractArrow) arrow).getHandle();
+				final net.minecraft.world.entity.projectile.arrow.AbstractArrow nmsAa = ((CraftAbstractArrow) arrow).getHandle();
 				if (ainfo.hitBlock != null) { // Assigned by handleBlockCollision
 					assert false;
 					ainfo.clearHit();

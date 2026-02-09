@@ -354,7 +354,7 @@ public class PacketListeners
 					// with the above replacementData profile
 					GameProfile tabListProfile = disguise.tabListGameProfile;
 
-					copyList.add(tabListProfile.getId());
+					copyList.add(tabListProfile.id());
 				}
 			}
 

@@ -320,7 +320,7 @@ public class PlayerUtils {
 
 	public static int getOpLevel(Player player) {
 		net.minecraft.world.entity.player.Player nmsPlayer = ((CraftPlayer) player).getHandle();
-		return nmsPlayer.getServer().getProfilePermissions(nmsPlayer.getGameProfile());
+		return nmsPlayer.level().getServer().getProfilePermissions(nmsPlayer.nameAndId()).level().id();
 	}
 
 	private static final PacketContainer MAX_DISTANCE_WARNING_PACKET;

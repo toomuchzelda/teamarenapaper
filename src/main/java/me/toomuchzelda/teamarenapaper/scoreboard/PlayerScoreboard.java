@@ -39,7 +39,7 @@ public class PlayerScoreboard
 	private static final Set<String> removedTeams = new HashSet<>();
 	static {
 		// attach a dirty listener to detect team unregisters
-		var nms = (ServerScoreboard) ((CraftScoreboard) SCOREBOARD).getHandle();
+		/*var nms = (ServerScoreboard) ((CraftScoreboard) SCOREBOARD).getHandle();
 		nms.addDirtyListener(() -> {
 			for (Team team : GLOBAL_TEAMS) {
 				String teamName = getNameUnsafe(team);
@@ -50,7 +50,7 @@ public class PlayerScoreboard
 					new RuntimeException("Stack trace").printStackTrace();
 				}
 			}
-		});
+		});*/
 	}
 
 	private final Player player;

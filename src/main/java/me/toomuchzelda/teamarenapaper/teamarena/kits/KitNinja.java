@@ -42,7 +42,7 @@ public class KitNinja extends Kit
 	private static final ItemStack PEARL = ItemBuilder.of(Material.ENDER_PEARL)
 		.displayName(Component.text("Really heavy ender pearl")).build();
 
-	public KitNinja() {
+	public KitNinja(TeamArena game) {
 		super("Ninja", "A kit that's a fast runner " +
 				(KitOptions.ninjaFastAttack ? "and a faster swinger. Every sword strike it does is weak, but it can hit enemies twice as fast, allowing for some brain melting combos."
 				: " and falls as gracefully as a cat."
@@ -67,7 +67,7 @@ public class KitNinja extends Kit
 
 		setItems(sword, PEARL);
 
-		setAbilities(new NinjaAbility());
+		setAbilities(new NinjaAbility(game));
 
 		setCategory(KitCategory.STEALTH);
 	}
@@ -79,6 +79,10 @@ public class KitNinja extends Kit
 
 		private static final Vector EXTRA_GRAVITY_DELTA = new Vector(0d, -0.1d, 0d);
 		private final Map<Player, EnderPearl> THROWN_PEARLS = new LinkedHashMap<>();
+
+		private final TeamArena game;
+
+		private NinjaAbility(TeamArena game) { this.game = game; }
 
 		@Override
 		public void giveAbility(Player player) {
@@ -134,18 +138,21 @@ public class KitNinja extends Kit
 		 */
 		@Override
 		public void onPlayerTick(Player player) {
-			TeamArena game = Main.getGame();
-			if(game instanceof CaptureTheFlag ctf) {
-				AttributeInstance speedAttr = player.getAttribute(Attribute.MOVEMENT_SPEED);
+			if(this.game instanceof CaptureTheFlag ctf) {
+				final AttributeInstance speedAttr = player.getAttribute(Attribute.MOVEMENT_SPEED);
+				final AttributeInstance gravityAttr = player.getAttribute(Attribute.GRAVITY);
 				if(ctf.isFlagCarrier(player)) {
 					if (speedAttr.getModifiers().contains(NINJA_SPEED_MODIFIER)) {
 						speedAttr.removeModifier(NINJA_SPEED_MODIFIER);
+						gravityAttr.removeModifier(NINJA_GRAVITY_MODIFIER);
 						player.sendMessage(NO_SPEED_WITH_FLAG);
 					}
 				}
 				else {
 					if(!speedAttr.getModifiers().contains(NINJA_SPEED_MODIFIER)) {
 						speedAttr.addModifier(NINJA_SPEED_MODIFIER);
+						if (KitOptions.ninjaSlowFall)
+							gravityAttr.addModifier(NINJA_GRAVITY_MODIFIER);
 					}
 				}
 			}

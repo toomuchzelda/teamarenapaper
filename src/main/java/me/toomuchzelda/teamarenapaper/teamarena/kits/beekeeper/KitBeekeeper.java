@@ -192,7 +192,7 @@ public class KitBeekeeper extends Kit
 				MobGoals manager = Bukkit.getMobGoals();
 				manager.removeAllGoals(beeEntity);
 				// Need to use NMS to add vanilla goals
-				net.minecraft.world.entity.animal.Bee nmsBee = ((CraftBee) beeEntity).getHandle();
+				net.minecraft.world.entity.animal.bee.Bee nmsBee = ((CraftBee) beeEntity).getHandle();
 				nmsBee.goalSelector.addGoal(9, new FloatGoal(nmsBee));
 				// Should only activate if the bee has a target via setTarget(LivingEntity)
 				nmsBee.goalSelector.addGoal(8, new MeleeAttackGoal(nmsBee, 1.399999976158142d, true));

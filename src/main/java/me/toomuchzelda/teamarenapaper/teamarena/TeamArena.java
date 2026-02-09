@@ -242,28 +242,28 @@ public abstract class TeamArena
 
 		gameWorld.setSpawnLocation(spawnPos);
 		gameWorld.setAutoSave(false);
-		gameWorld.setGameRule(GameRule.DISABLE_RAIDS, true);
-		gameWorld.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS,false);
-		gameWorld.setGameRule(GameRule.DO_INSOMNIA,	false);
-		gameWorld.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, map.isDoDaylightCycle());
-		gameWorld.setGameRule(GameRule.DO_WEATHER_CYCLE, map.isDoWeatherCycle());
+		gameWorld.setGameRule(GameRules.RAIDS, false);
+		gameWorld.setGameRule(GameRules.SHOW_ADVANCEMENT_MESSAGES,false);
+		gameWorld.setGameRule(GameRules.SPAWN_PHANTOMS,	false);
+		gameWorld.setGameRule(GameRules.ADVANCE_TIME, map.isDoDaylightCycle());
+		gameWorld.setGameRule(GameRules.ADVANCE_WEATHER, map.isDoWeatherCycle());
 		//undecided
-		gameWorld.setGameRule(GameRule.DO_ENTITY_DROPS, false);
-		gameWorld.setGameRule(GameRule.DO_FIRE_TICK, false);
+		gameWorld.setGameRule(GameRules.ENTITY_DROPS, false);
+		gameWorld.setGameRule(GameRules.FIRE_SPREAD_RADIUS_AROUND_PLAYER, 0);
 		//undecided
-		gameWorld.setGameRule(GameRule.DO_MOB_LOOT, false);
-		gameWorld.setGameRule(GameRule.DO_MOB_SPAWNING, false);
-		gameWorld.setGameRule(GameRule.DO_PATROL_SPAWNING, false);
-		gameWorld.setGameRule(GameRule.DO_TILE_DROPS, false);
+		gameWorld.setGameRule(GameRules.MOB_DROPS, false);
+		gameWorld.setGameRule(GameRules.SPAWN_MOBS, false);
+		gameWorld.setGameRule(GameRules.SPAWN_PATROLS, false);
+		gameWorld.setGameRule(GameRules.BLOCK_DROPS, false);
 		//handle ourselves
-		gameWorld.setGameRule(GameRule.KEEP_INVENTORY, true);
-		gameWorld.setGameRule(GameRule.MAX_ENTITY_CRAMMING, 0);
-		gameWorld.setGameRule(GameRule.MOB_GRIEFING, false);
+		gameWorld.setGameRule(GameRules.KEEP_INVENTORY, true);
+		gameWorld.setGameRule(GameRules.MAX_ENTITY_CRAMMING, 0);
+		gameWorld.setGameRule(GameRules.MOB_GRIEFING, false);
 		//handled ourselves
-		gameWorld.setGameRule(GameRule.NATURAL_REGENERATION, false);
-		gameWorld.setGameRule(GameRule.RANDOM_TICK_SPEED, 0);
-		gameWorld.setGameRule(GameRule.SHOW_DEATH_MESSAGES, false);
-		gameWorld.setGameRule(GameRule.LOCATOR_BAR, false);
+		gameWorld.setGameRule(GameRules.NATURAL_HEALTH_REGENERATION, false);
+		gameWorld.setGameRule(GameRules.RANDOM_TICK_SPEED, 0);
+		gameWorld.setGameRule(GameRules.SHOW_DEATH_MESSAGES, false);
+		gameWorld.setGameRule(GameRules.LOCATOR_BAR, false);
 		gameWorld.setDifficulty(Difficulty.NORMAL);
 
 		// random weather
@@ -436,7 +436,7 @@ public abstract class TeamArena
 		final KitSplitter splitter = new KitSplitter(this, trooper);
 		var defaultKits = new Kit[] {
 			trooper, splitter, new KitArcher(), new KitGhost(), new KitDwarf(), new KitBurst(),
-			new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(), new KitNone(),
+			new KitJuggernaut(), new KitNinja(this), new KitPyro(), new KitSpy(), new KitDemolitions(), new KitNone(),
 			new KitVenom(), new KitRewind(), new KitValkyrie(), new KitExplosive(), new KitTrigger(), new KitMedic(this.killStreakManager),
 			new KitBerserker(), new KitEngineer(), new KitPorcupine(this), new KitLongbow(), new KitSniper(), new KitBeekeeper(),
 			new KitMarine(),

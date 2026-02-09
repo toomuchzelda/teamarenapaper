@@ -71,7 +71,7 @@ public class PacketUtils {
 
 	public static ClientboundPlayerInfoUpdatePacket.Entry replacePlayerInfoProfile(ClientboundPlayerInfoUpdatePacket.Entry entry, GameProfile profile, boolean listed) {
 		return new ClientboundPlayerInfoUpdatePacket.Entry(
-			profile.getId(), profile,
+			profile.id(), profile,
 			listed, entry.latency(), entry.gameMode(), entry.displayName(),
 			entry.showHat(), entry.listOrder(), null
 		);

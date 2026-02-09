@@ -198,10 +198,20 @@ public class EventListeners implements Listener
 		LoginHandler.validateLoginMonitor(event);
 	}
 
-	@EventHandler
-	public void playerSpawn(PlayerSpawnLocationEvent event) {
-		event.setSpawnLocation(Main.getGame().getSpawnPos());
+	// to avoid bad async access to the TeamArena instance
+	/*private static final Object spawnPosLock = new Object();
+	private static Location spawnPos;
+	public static void setSpawnPos(Location loc) {
+		synchronized (spawnPosLock) { spawnPos = loc; }
 	}
+	private static Location getSpawnPos() {
+		synchronized (spawnPosLock) { return spawnPos; }
+	}
+
+	@EventHandler
+	public void playerSpawn(AsyncPlayerSpawnLocationEvent event) {
+		event.setSpawnLocation(getSpawnPos());
+	}*/
 
 	@EventHandler
 	public void playerJoin(PlayerJoinEvent event) {
@@ -359,19 +369,19 @@ public class EventListeners implements Listener
 						worldBorder = Bukkit.createWorldBorder();
 						worldBorder.setCenter(centerX, centerZ);
 						worldBorder.setSize(768);
-						worldBorder.setSize(512, 1);
+						worldBorder.changeSize(512, 1);
 						worldBorder.setWarningDistance(0);
-						worldBorder.setWarningTime(0);
+						worldBorder.setWarningTimeTicks(0);
 						player.setWorldBorder(worldBorder);
 					} else {
 						worldBorder.setCenter(centerX, centerZ);
-						worldBorder.setSize(512, 1);
+						worldBorder.changeSize(512, 1);
 					}
 				}
 			} else {
 				WorldBorder worldBorder = player.getWorldBorder();
-				if (worldBorder != null && ((CraftWorldBorder) worldBorder).getHandle().getLerpRemainingTime() == 0) {
-					worldBorder.setSize(768, 2);
+				if (worldBorder != null && ((CraftWorldBorder) worldBorder).getHandle().getLerpTime() == 0) {
+					worldBorder.changeSize(768, 2);
 					Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
 						// check if the world border is the same and has faded out completely
 						if (player.getWorldBorder() == worldBorder && worldBorder.getSize() == 768) {
