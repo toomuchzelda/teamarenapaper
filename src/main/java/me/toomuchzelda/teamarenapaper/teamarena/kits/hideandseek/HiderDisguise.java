@@ -18,6 +18,7 @@ import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
+import net.minecraft.core.Rotations;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -28,7 +29,6 @@ import org.bukkit.craftbukkit.block.data.CraftBlockData;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.joml.Vector3f;
 
 public class HiderDisguise {
 
@@ -80,8 +80,8 @@ public class HiderDisguise {
 	// To try work with paved grass and odd blocks
 	private BlockCoords getCoords() { return new BlockCoords(this.hider.getLocation().add(0, 0.1, 0)); }
 
-	// Is this the NMS type?
-	private static final Vector3f defaultTranslateVec = new Vector3f(-0.5f, -0.5f, -0.5f);
+	// The NMS type
+	private static final Rotations defaultTranslateVec = new Rotations(-0.5f, -0.5f, -0.5f);
 	void disguise(Block clicked) {
 		if (this.blockData != null) {
 			assert CompileAsserts.OMIT || this.occupiedBlock != null;
@@ -339,8 +339,8 @@ public class HiderDisguise {
 			return this.getEntityType() == EntityType.BLOCK_DISPLAY ? 0.5d : 0d;
 		}
 
-		private static final Vector3f nmsSmallScaleVec = new Vector3f(0.4f);
-		private static final Vector3f nmsFullScaleVec = new Vector3f(1f);
+		private static final Rotations nmsSmallScaleVec = new Rotations(0.4f, 0.4f, 0.4f);
+		private static final Rotations nmsFullScaleVec = new Rotations(1f, 1f, 1f);
 		public void setSolid(Location loc) {
 			if (loc != null) {
 				this.move(loc, true);

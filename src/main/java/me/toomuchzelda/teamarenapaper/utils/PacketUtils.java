@@ -6,6 +6,7 @@ import com.mojang.authlib.GameProfile;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import me.toomuchzelda.teamarenapaper.CompileAsserts;
+import net.minecraft.core.Rotations;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket;
@@ -18,6 +19,7 @@ import net.minecraft.world.phys.Vec3;
 import org.bukkit.Location;
 import org.bukkit.craftbukkit.util.CraftVector;
 import org.bukkit.util.Vector;
+import org.joml.Vector3f;
 
 import java.util.List;
 
@@ -126,5 +128,21 @@ public class PacketUtils {
 
 		};
 		return new PacketContainer(original.getType(), newPacket);
+	}
+
+	public static Rotations toNMS(Vector vector) {
+		return new Rotations(
+			(float) vector.getX(),
+			(float) vector.getY(),
+			(float) vector.getZ()
+		);
+	}
+
+	public static Rotations toNMS(Vector3f vector) {
+		return new Rotations(
+			vector.x(),
+			vector.y(),
+			vector.z()
+		);
 	}
 }

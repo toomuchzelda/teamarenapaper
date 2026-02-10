@@ -232,7 +232,7 @@ public class DisguiseManager
 				MetadataViewer metadataViewer = Main.getPlayerInfo(viewer).getMetadataViewer();
 				for (int i = 0; i < this.skinParts.length; i++) {
 					metadataViewer.updateBitfieldValue(this.disguisedPlayer,
-						MetaIndex.PLAYER_SKIN_PARTS_IDX, i, this.skinParts[i]);
+						MetaIndex.AVATAR_SKIN_PARTS_IDX, i, this.skinParts[i]);
 				}
 			}
 		}
@@ -245,7 +245,7 @@ public class DisguiseManager
 
 		private void removeSkinParts(Player viewer) {
 			MetadataViewer metadataViewer = Main.getPlayerInfo(viewer).getMetadataViewer();
-			metadataViewer.removeViewedValue(this.disguisedPlayer, MetaIndex.PLAYER_SKIN_PARTS_IDX);
+			metadataViewer.removeViewedValue(this.disguisedPlayer, MetaIndex.AVATAR_SKIN_PARTS_IDX);
 		}
 
 		/** Fill the lookup map on disguise start */

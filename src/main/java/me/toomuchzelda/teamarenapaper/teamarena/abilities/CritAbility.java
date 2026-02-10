@@ -24,7 +24,6 @@ import org.bukkit.craftbukkit.block.data.CraftBlockData;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.util.Vector;
-import org.joml.Vector3f;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -156,8 +155,8 @@ public class CritAbility extends Ability {
 			this.interaction.setMetadata(MetaIndex.INTERACTION_WIDTH_OBJ, width);
 			this.interaction.refreshViewerMetadata();
 
-			this.flash.translate(new Vector(-0.5d, 0d, -0.5d));
-			this.flash.setScale(new Vector3f(width, BOX_HEIGHT, width));
+			this.flash.setTranslation(new Vector(-0.5d, 0d, -0.5d));
+			this.flash.setScale(new Vector(width, BOX_HEIGHT, width));
 			this.flash.refreshViewerMetadata();
 		}
 

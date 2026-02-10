@@ -2,20 +2,17 @@ package me.toomuchzelda.teamarenapaper.metadata;
 
 import com.comphenix.protocol.wrappers.*;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher.WrappedDataWatcherObject;
-import me.toomuchzelda.teamarenapaper.Main;
 import net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.decoration.ArmorStand;
-import org.joml.Quaternionf;
-import org.joml.Vector3f;
+import org.joml.Quaternionfc;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Values used by Entity metadata. May change with each Minecraft version.
@@ -24,7 +21,6 @@ import java.util.Map;
  */
 public class MetaIndex
 {
-	private static final Map<Integer, WrappedDataWatcher.Serializer> INDEX_SERIALIZER_MAP = new HashMap<>();
 
 	public static final int BASE_BITFIELD_IDX = 0;
 	public static final int CUSTOM_NAME_IDX = 2;
@@ -53,7 +49,7 @@ public class MetaIndex
 	public static final int ARMOR_STAND_BITFIELD_IDX = 15;
 	public static final byte ARMOR_STAND_MARKER_MASK = 0x10;
 
-	public static final int PLAYER_SKIN_PARTS_IDX = 17;
+	public static final int AVATAR_SKIN_PARTS_IDX = 16;
 
 	public static final int CREEPER_STATE_IDX = 16;
 	public static final int CREEPER_CHARGED_IDX = 17;
@@ -110,21 +106,6 @@ public class MetaIndex
 	public static final WrappedDataWatcherObject ARMOR_STAND_LEFT_LEG_POSE = dataWatcherObject(ArmorStand.DATA_LEFT_LEG_POSE);
 	public static final WrappedDataWatcherObject ARMOR_STAND_RIGHT_LEG_POSE = dataWatcherObject(ArmorStand.DATA_RIGHT_LEG_POSE);
 
-	public static final WrappedDataWatcherObject PLAYER_SKIN_PARTS_OBJ = dataWatcherObject(PLAYER_SKIN_PARTS_IDX, Byte.class);
-	public enum SkinPart {
-		CAPE(0x01),
-		JACKET(0x02),
-		LEFT_SLEEVE(0x04),
-		RIGHT_SLEEVE(0x08),
-		LEFT_PANTS(0x10),
-		RIGHT_PANTS(0x20),
-		HAT(0x40);
-
-		private final byte mask;
-		SkinPart(int val) { this.mask = (byte) val; }
-		public byte getMask() { return this.mask; }
-	}
-
 	public static final WrappedDataWatcherObject CREEPER_STATE_OBJ = dataWatcherObject(CREEPER_STATE_IDX, Integer.class);
 	public static final WrappedDataWatcherObject CREEPER_CHARGED_OBJ = dataWatcherObject(CREEPER_CHARGED_IDX, Boolean.class);
 	public static final WrappedDataWatcherObject CREEPER_IGNITED_OBJ = dataWatcherObject(CREEPER_IGNITED_IDX, Boolean.class);
@@ -138,9 +119,9 @@ public class MetaIndex
 	public static final WrappedDataWatcherObject DISPLAY_INTERPOLATION_DELAY_OBJ = dataWatcherObject(DISPLAY_INTERPOLATION_DELAY_IDX, Integer.class);
 	public static final WrappedDataWatcherObject DISPLAY_TRANSFORMATION_INTERPOLATION_DURATION_OBJ = dataWatcherObject(DISPLAY_TRANSFORMATION_INTERPOLATION_DURATION_IDX, Integer.class);
 	public static final WrappedDataWatcherObject DISPLAY_POSROT_INTERPOLATION_DURATION_OBJ = dataWatcherObject(DISPLAY_POSROT_INTERPOLATION_DURATION_IDX, Integer.class);
-	public static final WrappedDataWatcherObject DISPLAY_TRANSLATION_OBJ = dataWatcherObject(DISPLAY_TRANSLATION_IDX, Vector3f.class);
-	public static final WrappedDataWatcherObject DISPLAY_SCALE_OBJ = dataWatcherObject(DISPLAY_SCALE_IDX, Vector3f.class);
-	public static final WrappedDataWatcherObject DISPLAY_ROTATION_LEFT_OBJ = dataWatcherObject(DISPLAY_ROTATION_LEFT_IDX, Quaternionf.class);
+	public static final WrappedDataWatcherObject DISPLAY_TRANSLATION_OBJ = dataWatcherObject(DISPLAY_TRANSLATION_IDX, WrappedDataWatcher.Registry.getVectorSerializer());
+	public static final WrappedDataWatcherObject DISPLAY_SCALE_OBJ = dataWatcherObject(DISPLAY_SCALE_IDX, WrappedDataWatcher.Registry.getVectorSerializer());
+	public static final WrappedDataWatcherObject DISPLAY_ROTATION_LEFT_OBJ = dataWatcherObject(DISPLAY_ROTATION_LEFT_IDX, Quaternionfc.class);
 	public static final WrappedDataWatcherObject DISPLAY_BRIGHTNESS_OVERRIDE_OBJ = dataWatcherObject(DISPLAY_BRIGHTNESS_OVERRIDE_IDX, Integer.class);
 	public static final WrappedDataWatcherObject DISPLAY_VIEW_RANGE_OBJ = dataWatcherObject(DISPLAY_VIEW_RANGE_IDX, Float.class);
 	public static final WrappedDataWatcherObject DISPLAY_WIDTH_OBJ = dataWatcherObject(DISPLAY_WIDTH_IDX, Float.class);
@@ -177,23 +158,17 @@ public class MetaIndex
 
 	@SuppressWarnings("removal")
 	private static WrappedDataWatcherObject dataWatcherObject(int index, Class<?> clazz) {
-		return dataWatcherObject(index, WrappedDataWatcher.Registry.get(clazz));
+		return dataWatcherObject(index, WrappedDataWatcher.Registry.get((Type) clazz));
 	}
 
 	private static WrappedDataWatcherObject dataWatcherObject(int index, WrappedDataWatcher.Serializer serializer) {
 		WrappedDataWatcherObject dataWatcherObject = new WrappedDataWatcherObject(index, serializer);
-		addMapping(dataWatcherObject);
 		return dataWatcherObject;
 	}
 
 	private static WrappedDataWatcherObject dataWatcherObject(EntityDataAccessor<?> nms) {
 		WrappedDataWatcherObject dataWatcherObject = new WrappedDataWatcherObject(nms);
-		addMapping(dataWatcherObject);
 		return dataWatcherObject;
-	}
-
-	private static void addMapping(WrappedDataWatcherObject object) {
-		INDEX_SERIALIZER_MAP.put(object.getIndex(), object.getSerializer());
 	}
 
 	public static WrappedDataValue copyValue(WrappedDataValue original) {

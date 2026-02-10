@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.utils.packetentities;
 
 import io.papermc.paper.adventure.PaperAdventure;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
+import me.toomuchzelda.teamarenapaper.utils.PacketUtils;
 import net.kyori.adventure.text.Component;
 import net.minecraft.util.Brightness;
 import org.bukkit.Color;
@@ -13,7 +14,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Quaternionf;
+import org.joml.Quaternionfc;
 import org.joml.Vector3f;
 
 import java.util.Collection;
@@ -24,14 +25,21 @@ public class PacketDisplay extends PacketEntity {
 	public PacketDisplay(int id, EntityType entityType, Location location, @Nullable Collection<? extends Player> viewers, @Nullable Predicate<Player> viewerRule) {
 		super(id, entityType, location, viewers, viewerRule);
 	}
-
-	// Not sure how this works with joml Vector3f serializer
-	public void translate(Vector translation) {
-		setTranslation(translation.toVector3f());
+	// bukkit
+	public void setTranslation(Vector translation) {
+		this.setMetadata(MetaIndex.DISPLAY_TRANSLATION_OBJ, PacketUtils.toNMS(translation));
 	}
-
+	// joml
+	public void setTranslation(Vector3f translation) {
+		this.setMetadata(MetaIndex.DISPLAY_TRANSLATION_OBJ, PacketUtils.toNMS(translation));
+	}
+ 	// bukkit
 	public void setScale(Vector scale) {
-		setScale(scale.toVector3f());
+		this.setMetadata(MetaIndex.DISPLAY_SCALE_OBJ, PacketUtils.toNMS(scale));
+	}
+	// joml
+	public void setScale(Vector3f scale) {
+		this.setMetadata(MetaIndex.DISPLAY_SCALE_OBJ, PacketUtils.toNMS(scale));
 	}
 
 	public void setBillboard(MetaIndex.DisplayBillboardOption option) {
@@ -50,16 +58,8 @@ public class PacketDisplay extends PacketEntity {
 		this.setMetadata(MetaIndex.DISPLAY_POSROT_INTERPOLATION_DURATION_OBJ, duration);
 	}
 
-	public void setTranslation(Vector3f translation) {
-		this.setMetadata(MetaIndex.DISPLAY_TRANSLATION_OBJ, translation);
-	}
-
-	public void setLeftRotation(Quaternionf leftRotation) {
+	public void setLeftRotation(Quaternionfc leftRotation) {
 		this.setMetadata(MetaIndex.DISPLAY_ROTATION_LEFT_OBJ, leftRotation);
-	}
-
-	public void setScale(Vector3f scale) {
-		this.setMetadata(MetaIndex.DISPLAY_SCALE_OBJ, scale);
 	}
 
 	public void setGlowColorOverride(@Nullable Color color) {

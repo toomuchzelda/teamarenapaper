@@ -28,6 +28,7 @@ import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
+import net.minecraft.core.Rotations;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
@@ -47,7 +48,6 @@ import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Vector3f;
 
 import java.util.*;
 
@@ -881,8 +881,8 @@ public class KitSniper extends Kit {
 			if (angle <= Math.PI / 9) { // 20 degrees
 				scale *= (float) MathUtils.lerp(3, 1, angle / (Math.PI / 9));
 			}
-			shouldInterp |= checkCache(cache, dirtyList, MetaIndex.DISPLAY_TRANSLATION_OBJ, new Vector3f(0, -scale / 10f /* magic number */, 0));
-			shouldInterp |= checkCache(cache, dirtyList, MetaIndex.DISPLAY_SCALE_OBJ, new Vector3f(scale));
+			shouldInterp |= checkCache(cache, dirtyList, MetaIndex.DISPLAY_TRANSLATION_OBJ, new Rotations(0, -scale / 10f /* magic number */, 0));
+			shouldInterp |= checkCache(cache, dirtyList, MetaIndex.DISPLAY_SCALE_OBJ, new Rotations(scale, scale, scale));
 			// opacity based on angle to the player
 			// 255 - fully opaque
 			double opacity = 255 * MathUtils.clamp(0.5, 1, 1 - (MathUtils.clamp(Math.PI / 18, Math.PI / 4, angle) - Math.PI / 18) / 35d);
