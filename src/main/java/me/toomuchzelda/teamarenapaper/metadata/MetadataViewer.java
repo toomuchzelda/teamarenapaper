@@ -67,38 +67,22 @@ public class MetadataViewer
 		this.entityValues = new LinkedHashMap<>();
 	}
 
-	public void setViewedValue(WrappedDataWatcher.WrappedDataWatcherObject object, Object value, Entity viewedEntity) {
-		setViewedValue(object.getIndex(), object.getSerializer(), value, false, viewedEntity);
-	}
-
-	public void setViewedValue(WrappedDataWatcher.WrappedDataWatcherObject object, Optional<?> value, Entity viewedEntity) {
-		setViewedValue(object.getIndex(), object.getSerializer(), value, true, viewedEntity);
+	public <T> void setViewedValue(DataWatcherObject<T> dataWatcherObject, T value, Entity viewedEntity) {
+		setViewedValue(dataWatcherObject.getIndex(), dataWatcherObject.getSerializer(), value, viewedEntity);
 	}
 
 	/**
 	 * Assumes all args are correct as given. Do not use for bitfield values, use updateBitfieldValue().
+	 *
 	 * @param index Index of metadata
 	 * @param value Value to put there. Must be NMS/ProtocolLib structure that has a ProtocolLib serializer
 	 */
-	private void setViewedValue(int index, final WrappedDataWatcher.Serializer serializer, Object value, boolean optionalValue,
-							   Entity viewedEntity) {
+	private void setViewedValue(int index, final WrappedDataWatcher.Serializer serializer, Object value,
+								Entity viewedEntity) {
 
 		if (!CompileAsserts.OMIT) {
 			if (value == null) {
 				throw new IllegalArgumentException("Call this.remove* for removing values");
-			}
-
-			if (optionalValue != serializer.isOptional()) {
-				throw new IllegalArgumentException("Optionality of value and serializer don't match. OptValue: " + optionalValue + ", serializer: " + serializer);
-			}
-			else if (optionalValue) {
-				Optional opt = (Optional) value;
-				if (opt.isPresent() && !serializer.getType().isAssignableFrom(opt.get().getClass())) {
-					throw new IllegalArgumentException("Provided serializer for optional is not correct. opt.isPresent=" + opt.isPresent() + ", serializerType=" + serializer.getType() + ", opt.get type=" + opt.get().getClass());
-				}
-			}
-			else if (!serializer.getType().isAssignableFrom(value.getClass())) {
-				throw new IllegalArgumentException("The provided serializer is not for the provided value type! serializer type=" + serializer.getType() + ", value type=" + value.getClass());
 			}
 		}
 
@@ -108,7 +92,7 @@ public class MetadataViewer
 
 		MetadataValueStatus origStatus = viewedValues.indexedValues().computeIfAbsent(index, integer -> new MetadataValueStatus(serializer, null));
 		if (!CompileAsserts.OMIT) {
-			if (!Objects.equals(origStatus.serializer.getType(), serializer.getType())) {
+			if (!Objects.equals(origStatus.serializer.getGenericType(), serializer.getGenericType())) {
 				Main.logger().severe("Subsequent calls to setViewedValue on player " + this.player.getName() +
 					" for entity " + viewedEntity.getName() + " for index " + index +
 					" provided two different serializers");
@@ -200,6 +184,10 @@ public class MetadataViewer
 		this.setAllNullDirty(viewedEntity);
 		this.refreshViewer(viewedEntity);
 		this.entityValues.remove(viewedEntity.getEntityId());
+	}
+
+	public void removeViewedValue(Entity viewedEntity, DataWatcherObject<?> dataWatcherObject) {
+		removeViewedValue(viewedEntity, dataWatcherObject.getIndex());
 	}
 
 	public void removeViewedValue(Entity viewedEntity, int index) {

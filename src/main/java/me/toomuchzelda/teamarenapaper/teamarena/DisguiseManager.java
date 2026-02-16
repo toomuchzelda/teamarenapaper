@@ -1,14 +1,16 @@
 package me.toomuchzelda.teamarenapaper.teamarena;
 
+import com.destroystokyo.paper.ClientOption;
+import com.destroystokyo.paper.SkinParts;
+import com.destroystokyo.paper.profile.CraftPlayerProfile;
+import com.destroystokyo.paper.profile.PlayerProfile;
 import com.mojang.authlib.GameProfile;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.metadata.MetadataViewer;
 import me.toomuchzelda.teamarenapaper.utils.PacketUtils;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
-import net.minecraft.world.entity.player.PlayerModelPart;
 import org.bukkit.Bukkit;
-import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 
 import java.util.*;
@@ -181,13 +183,13 @@ public class DisguiseManager
 	public static class Disguise
 	{
 		private static final Predicate<Player> TRUE = viewer -> true;
-		public Player disguisedPlayer;
-		public UUID tabListPlayerUuid;
-		public GameProfile disguisedGameProfile;
-		public GameProfile tabListGameProfile;
+		public final Player disguisedPlayer;
+		public final UUID tabListPlayerUuid;
+		public final GameProfile disguisedGameProfile;
+		public final GameProfile tabListGameProfile;
 		public final Map<Player, Integer> viewers;
 		private final Predicate<Player> viewerRule;
-		private final boolean[] skinParts;
+		private final SkinParts skinParts;
 
 		/** Players in the collection not matching the viewerRule are ignored */
 		private Disguise(Player player, Collection<? extends Player> viewers, Predicate<Player> viewerRule,
@@ -201,39 +203,26 @@ public class DisguiseManager
 			if (viewerRule == null) viewerRule = TRUE;
 			this.viewerRule = viewerRule;
 
-			/* Removed - now initialised on startDisguise()
-			for(Player viewer : viewers) {
-				if (this.viewerRule.test(viewer))
-					this.viewers.put(viewer, 0);
-			}*/
+			PlayerProfile disguiseAs = toDisguiseAs.getPlayerProfile();
+			PlayerProfile disguisedProfile = Bukkit.createProfile(disguisedPlayer.getUniqueId(), disguiseAs.getName());
+			disguisedProfile.setProperties(disguiseAs.getProperties());
 
-			GameProfile disguiseAs = ((CraftPlayer) toDisguiseAs).getHandle().getGameProfile();
-			this.disguisedGameProfile = new GameProfile(disguisedPlayer.getUniqueId(), disguiseAs.name());
-			this.disguisedGameProfile.properties().removeAll("textures");
-			this.disguisedGameProfile.properties().putAll("textures", disguiseAs.properties().get("textures"));
+			disguisedGameProfile = CraftPlayerProfile.asAuthlibCopy(disguisedProfile);
 
-			GameProfile realPlayerProifle = ((CraftPlayer) disguisedPlayer).getHandle().getGameProfile();
-			tabListGameProfile = new GameProfile(tabListPlayerUuid, disguisedPlayer.getName());
-			tabListGameProfile.properties().removeAll("textures");
-			tabListGameProfile.properties().putAll("textures", realPlayerProifle.properties().get("textures"));
+			PlayerProfile tabListProfile = Bukkit.createProfile(tabListPlayerUuid, disguisedPlayer.getName());
+			PlayerProfile currentProfile = disguisedPlayer.getPlayerProfile();
+			tabListProfile.setProperties(currentProfile.getProperties());
+
+			tabListGameProfile = CraftPlayerProfile.asAuthlibCopy(tabListProfile);
 
 			// Store once at time of disguise to keep consistent even if toDisguiseAs changes their skin layers
-			this.skinParts = new boolean[PlayerModelPart.values().length];
-			net.minecraft.world.entity.player.Player nmsToDisguiseAs = ((CraftPlayer) toDisguiseAs).getHandle();
-			for (PlayerModelPart part : PlayerModelPart.values()) {
-				if (nmsToDisguiseAs.isModelPartShown(part)) {
-					this.skinParts[part.getBit()] = true;
-				}
-			}
+			skinParts = toDisguiseAs.getClientOption(ClientOption.SKIN_PARTS);
 		}
 
 		private void updateViewedSkinParts() {
 			for (Player viewer : this.viewers.keySet()) {
 				MetadataViewer metadataViewer = Main.getPlayerInfo(viewer).getMetadataViewer();
-				for (int i = 0; i < this.skinParts.length; i++) {
-					metadataViewer.updateBitfieldValue(this.disguisedPlayer,
-						MetaIndex.AVATAR_SKIN_PARTS_IDX, i, this.skinParts[i]);
-				}
+				metadataViewer.setViewedValue(MetaIndex.AVATAR_SKIN_PARTS, (byte) skinParts.getRaw(), disguisedPlayer);
 			}
 		}
 
@@ -245,7 +234,7 @@ public class DisguiseManager
 
 		private void removeSkinParts(Player viewer) {
 			MetadataViewer metadataViewer = Main.getPlayerInfo(viewer).getMetadataViewer();
-			metadataViewer.removeViewedValue(this.disguisedPlayer, MetaIndex.AVATAR_SKIN_PARTS_IDX);
+			metadataViewer.removeViewedValue(this.disguisedPlayer, MetaIndex.AVATAR_SKIN_PARTS);
 		}
 
 		/** Fill the lookup map on disguise start */

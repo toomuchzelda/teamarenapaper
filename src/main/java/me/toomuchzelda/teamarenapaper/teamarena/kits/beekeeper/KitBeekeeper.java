@@ -3,6 +3,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits.beekeeper;
 import com.comphenix.protocol.wrappers.AdventureComponentConverter;
 import com.destroystokyo.paper.entity.ai.Goal;
 import com.destroystokyo.paper.entity.ai.MobGoals;
+import io.papermc.paper.adventure.PaperAdventure;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
@@ -12,7 +13,6 @@ import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageNumbers;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
@@ -222,7 +222,7 @@ public class KitBeekeeper extends Kit
 				//viewer.setViewedValue(MetaIndex.BASE_BITFIELD_IDX, MetaIndex.GLOWING_METADATA_VALUE, beeEntity);
 				viewer.updateBitfieldValue(beeEntity, MetaIndex.BASE_BITFIELD_IDX, MetaIndex.BASE_BITFIELD_GLOWING_IDX, true);
 				//viewer.setViewedValue(MetaIndex.CUSTOM_NAME_VISIBLE_IDX, new SimpleMetadataValue<>(Boolean.TRUE), beeEntity);
-				viewer.setViewedValue(MetaIndex.CUSTOM_NAME_OBJ, nameComponent, beeEntity);
+				viewer.setViewedValue(MetaIndex.CUSTOM_NAME_OBJ, Optional.of(PaperAdventure.asVanilla(this.name.displayName())), beeEntity);
 				viewer.refreshViewer(beeEntity);
 
 				// Make it glowing for all teammates.
@@ -279,7 +279,7 @@ public class KitBeekeeper extends Kit
 					builder.append(Component.text("⚔", NamedTextColor.GOLD));
 				}
 				builder.append(Component.space());
-				if (this.isDead()) {
+				if (this.isDead() || !beeEntity.isValid()) {
 					builder.append(ACTIONBAR_DEAD);
 				} else {
 					builder.append(this.task.getActionBarPart());

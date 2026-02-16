@@ -4,9 +4,11 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
+import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import io.papermc.paper.adventure.PaperAdventure;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import me.toomuchzelda.teamarenapaper.Main;
+import me.toomuchzelda.teamarenapaper.metadata.DataWatcherObject;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.utils.BlockCoords;
@@ -181,12 +183,17 @@ public class PacketEntity
 			.write(0, MetaIndex.getFromWatchableObjectsList(this.data.getWatchableObjects()));
 	}
 
-	public void setMetadata(WrappedDataWatcher.WrappedDataWatcherObject index, Object object) {
+	public <T> void setMetadata(DataWatcherObject<T> index, T object) {
 		this.data.setObject(index, object);
 	}
 
-	public Object getMetadata(WrappedDataWatcher.WrappedDataWatcherObject index) {
-		return this.data.getObject(index);
+	public void setMetadata(WrappedWatchableObject watchableObject) {
+		this.data.setObject(watchableObject.getWatcherObject(), watchableObject);
+	}
+
+	@SuppressWarnings("unchecked")
+	public <T> T getMetadata(DataWatcherObject<T> index) {
+		return (T) this.data.getObject(index);
 	}
 
 	public WrappedDataWatcher getDataWatcher() {
@@ -201,8 +208,7 @@ public class PacketEntity
 	public void setText(@Nullable Component component, boolean sendPacket) {
 		if (!Objects.equals(customNameCache, component)) {
 			customNameCache = component;
-			Optional<?> nameComponent = Optional.ofNullable(PaperAdventure.asVanilla(component));
-			this.setMetadata(MetaIndex.CUSTOM_NAME_OBJ, nameComponent);
+			this.setMetadata(MetaIndex.CUSTOM_NAME_OBJ, Optional.ofNullable(PaperAdventure.asVanilla(component)));
 
 			if (sendPacket) {
 				this.refreshViewerMetadata();

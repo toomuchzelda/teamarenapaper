@@ -2,7 +2,6 @@ package me.toomuchzelda.teamarenapaper.utils.packetentities;
 
 import io.papermc.paper.adventure.PaperAdventure;
 import me.toomuchzelda.teamarenapaper.metadata.MetaIndex;
-import me.toomuchzelda.teamarenapaper.utils.PacketUtils;
 import net.kyori.adventure.text.Component;
 import net.minecraft.util.Brightness;
 import org.bukkit.Color;
@@ -27,19 +26,19 @@ public class PacketDisplay extends PacketEntity {
 	}
 	// bukkit
 	public void setTranslation(Vector translation) {
-		this.setMetadata(MetaIndex.DISPLAY_TRANSLATION_OBJ, PacketUtils.toNMS(translation));
+		this.setMetadata(MetaIndex.DISPLAY_TRANSLATION_OBJ, translation.toVector3f());
 	}
 	// joml
 	public void setTranslation(Vector3f translation) {
-		this.setMetadata(MetaIndex.DISPLAY_TRANSLATION_OBJ, PacketUtils.toNMS(translation));
+		this.setMetadata(MetaIndex.DISPLAY_TRANSLATION_OBJ, translation);
 	}
  	// bukkit
 	public void setScale(Vector scale) {
-		this.setMetadata(MetaIndex.DISPLAY_SCALE_OBJ, PacketUtils.toNMS(scale));
+		this.setMetadata(MetaIndex.DISPLAY_SCALE_OBJ, scale.toVector3f());
 	}
 	// joml
 	public void setScale(Vector3f scale) {
-		this.setMetadata(MetaIndex.DISPLAY_SCALE_OBJ, PacketUtils.toNMS(scale));
+		this.setMetadata(MetaIndex.DISPLAY_SCALE_OBJ, scale);
 	}
 
 	public void setBillboard(MetaIndex.DisplayBillboardOption option) {

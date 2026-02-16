@@ -29,6 +29,7 @@ import org.bukkit.craftbukkit.block.data.CraftBlockData;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.joml.Vector3f;
 
 public class HiderDisguise {
 
@@ -80,8 +81,7 @@ public class HiderDisguise {
 	// To try work with paved grass and odd blocks
 	private BlockCoords getCoords() { return new BlockCoords(this.hider.getLocation().add(0, 0.1, 0)); }
 
-	// The NMS type
-	private static final Rotations defaultTranslateVec = new Rotations(-0.5f, -0.5f, -0.5f);
+	private static final Vector3f defaultTranslateVec = new Vector3f(-0.5f, -0.5f, -0.5f);
 	void disguise(Block clicked) {
 		if (this.blockData != null) {
 			assert CompileAsserts.OMIT || this.occupiedBlock != null;
@@ -135,7 +135,7 @@ public class HiderDisguise {
 		this.disguise = new AttachedHiderEntity(clicked.getType(), this.hider, true);
 		for (WrappedWatchableObject obj : WrappedDataWatcher.getEntityWatcher(clicked).getWatchableObjects()) {
 			if (obj.getIndex() == MetaIndex.BASE_BITFIELD_IDX) continue;
-			this.disguise.setMetadata(obj.getWatcherObject(), obj.getValue());
+			this.disguise.setMetadata(obj);
 		}
 		this.disguise.updateMetadataPacket();
 		this.disguise.respawn();

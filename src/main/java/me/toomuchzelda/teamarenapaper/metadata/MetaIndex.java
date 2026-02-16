@@ -1,18 +1,28 @@
 package me.toomuchzelda.teamarenapaper.metadata;
 
-import com.comphenix.protocol.wrappers.*;
+import com.comphenix.protocol.wrappers.WrappedDataValue;
+import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher.WrappedDataWatcherObject;
+import com.comphenix.protocol.wrappers.WrappedWatchableObject;
+import net.minecraft.core.Rotations;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.world.entity.Avatar;
+import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.state.BlockState;
 import org.joml.Quaternionfc;
+import org.joml.Vector3fc;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Values used by Entity metadata. May change with each Minecraft version.
@@ -49,8 +59,6 @@ public class MetaIndex
 	public static final int ARMOR_STAND_BITFIELD_IDX = 15;
 	public static final byte ARMOR_STAND_MARKER_MASK = 0x10;
 
-	public static final int AVATAR_SKIN_PARTS_IDX = 16;
-
 	public static final int CREEPER_STATE_IDX = 16;
 	public static final int CREEPER_CHARGED_IDX = 17;
 	public static final int CREEPER_IGNITED_IDX = 18;
@@ -63,7 +71,6 @@ public class MetaIndex
 
 	public static final int DISPLAY_INTERPOLATION_DELAY_IDX = 8;
 	public static final int DISPLAY_TRANSFORMATION_INTERPOLATION_DURATION_IDX = 9;
-	public static final int DISPLAY_POSROT_INTERPOLATION_DURATION_IDX = 10;
 	public static final int DISPLAY_TRANSLATION_IDX = 11;
 	public static final int DISPLAY_SCALE_IDX = 12;
 	public static final int DISPLAY_ROTATION_LEFT_IDX = 13;
@@ -82,53 +89,53 @@ public class MetaIndex
 	public static final int ITEM_DISPLAY_ITEM_IDX = 23;
 
 	public static final int TEXT_DISPLAY_TEXT_IDX = 23;
-	public static final int TEXT_DISPLAY_LINE_WIDTH_IDX = 24;
-	public static final int TEXT_DISPLAY_BACKGROUND_COLOR_IDX = 25;
 	public static final int TEXT_DISPLAY_TEXT_OPACITY_IDX = 26;
 	public static final int TEXT_DISPLAY_BITMASK_IDX = 27;
 
 	@SuppressWarnings("removal")
 	public static final WrappedDataWatcher.Serializer BITFIELD_SERIALIZER = WrappedDataWatcher.Registry.get(Byte.class);
 
-	public static final WrappedDataWatcherObject BASE_BITFIELD_OBJ = dataWatcherObject(BASE_BITFIELD_IDX, Byte.class);
-	public static final WrappedDataWatcherObject CUSTOM_NAME_OBJ = dataWatcherObject(CUSTOM_NAME_IDX, WrappedDataWatcher.Registry.getChatComponentSerializer(true));
-	public static final WrappedDataWatcherObject CUSTOM_NAME_VISIBLE_OBJ = dataWatcherObject(CUSTOM_NAME_VISIBLE_IDX, Boolean.class);
-	public static final WrappedDataWatcherObject NO_GRAVITY_OBJ = dataWatcherObject(NO_GRAVITY_IDX, Boolean.class);
-	public static final WrappedDataWatcherObject POSE_OBJ = dataWatcherObject(POSE_IDX, EnumWrappers.getEntityPoseClass());
+	public static final DataWatcherObject<Byte> BASE_BITFIELD_OBJ = dataWatcherObject(BASE_BITFIELD_IDX, Byte.class);
+	public static final DataWatcherObject<Optional<Component>> CUSTOM_NAME_OBJ = dataWatcherObject(CUSTOM_NAME_IDX, WrappedDataWatcher.Registry.getChatComponentSerializer(true));
+	public static final DataWatcherObject<Boolean> CUSTOM_NAME_VISIBLE_OBJ = dataWatcherObject(CUSTOM_NAME_VISIBLE_IDX, Boolean.class);
+	public static final DataWatcherObject<Boolean> NO_GRAVITY_OBJ = dataWatcherObject(NO_GRAVITY_IDX, Boolean.class);
+	public static final DataWatcherObject<Pose> POSE_OBJ = dataWatcherObject(POSE_IDX, Pose.class);
 
-	public static final WrappedDataWatcherObject INTERACTION_WIDTH_OBJ = dataWatcherObject(INTERACTION_WIDTH_IDX, Float.class);
-	public static final WrappedDataWatcherObject INTERACTION_HEIGHT_OBJ = dataWatcherObject(INTERACTION_HEIGHT_IDX, Float.class);
+	public static final DataWatcherObject<Float> INTERACTION_WIDTH_OBJ = dataWatcherObject(INTERACTION_WIDTH_IDX, Float.class);
+	public static final DataWatcherObject<Float> INTERACTION_HEIGHT_OBJ = dataWatcherObject(INTERACTION_HEIGHT_IDX, Float.class);
 
-	public static final WrappedDataWatcherObject ABSTRACT_ARROW_BITFIELD_OBJ = dataWatcherObject(ABSTRACT_ARROW_BITFIELD_IDX, Byte.class);
-	public static final WrappedDataWatcherObject ABSTRACT_ARROW_PIERCING_LEVEL_OBJ = dataWatcherObject(ABSTRACT_ARROW_PIERCING_LEVEL_IDX, Byte.class);
+	public static final DataWatcherObject<Byte> ABSTRACT_ARROW_BITFIELD_OBJ = dataWatcherObject(ABSTRACT_ARROW_BITFIELD_IDX, Byte.class);
+	public static final DataWatcherObject<Byte> ABSTRACT_ARROW_PIERCING_LEVEL_OBJ = dataWatcherObject(ABSTRACT_ARROW_PIERCING_LEVEL_IDX, Byte.class);
 
-	public static final WrappedDataWatcherObject ARMOR_STAND_BITFIELD_OBJ = dataWatcherObject(ARMOR_STAND_BITFIELD_IDX, Byte.class);
-	public static final WrappedDataWatcherObject ARMOR_STAND_LEFT_LEG_POSE = dataWatcherObject(ArmorStand.DATA_LEFT_LEG_POSE);
-	public static final WrappedDataWatcherObject ARMOR_STAND_RIGHT_LEG_POSE = dataWatcherObject(ArmorStand.DATA_RIGHT_LEG_POSE);
+	public static final DataWatcherObject<Byte> ARMOR_STAND_BITFIELD_OBJ = dataWatcherObject(ArmorStand.DATA_CLIENT_FLAGS);
+	public static final DataWatcherObject<Rotations> ARMOR_STAND_LEFT_LEG_POSE = dataWatcherObject(ArmorStand.DATA_LEFT_LEG_POSE);
+	public static final DataWatcherObject<Rotations> ARMOR_STAND_RIGHT_LEG_POSE = dataWatcherObject(ArmorStand.DATA_RIGHT_LEG_POSE);
 
-	public static final WrappedDataWatcherObject CREEPER_STATE_OBJ = dataWatcherObject(CREEPER_STATE_IDX, Integer.class);
-	public static final WrappedDataWatcherObject CREEPER_CHARGED_OBJ = dataWatcherObject(CREEPER_CHARGED_IDX, Boolean.class);
-	public static final WrappedDataWatcherObject CREEPER_IGNITED_OBJ = dataWatcherObject(CREEPER_IGNITED_IDX, Boolean.class);
+	public static final DataWatcherObject<Byte> AVATAR_SKIN_PARTS = dataWatcherObject(Avatar.DATA_PLAYER_MODE_CUSTOMISATION);
 
-	public static final WrappedDataWatcherObject ALLAY_DANCING_OBJ = dataWatcherObject(ALLAY_DANCING_IDX, Boolean.class);
+	public static final DataWatcherObject<Integer> CREEPER_STATE_OBJ = dataWatcherObject(CREEPER_STATE_IDX, Integer.class);
+	public static final DataWatcherObject<Boolean> CREEPER_CHARGED_OBJ = dataWatcherObject(CREEPER_CHARGED_IDX, Boolean.class);
+	public static final DataWatcherObject<Boolean> CREEPER_IGNITED_OBJ = dataWatcherObject(CREEPER_IGNITED_IDX, Boolean.class);
 
-	public static final WrappedDataWatcherObject AXOLOTL_COLOR_OBJ = dataWatcherObject(AXOLOTL_COLOR_IDX, Integer.class);
+	public static final DataWatcherObject<Boolean> ALLAY_DANCING_OBJ = dataWatcherObject(ALLAY_DANCING_IDX, Boolean.class);
 
-	public static final WrappedDataWatcherObject GUARDIAN_TARGET_OBJ = dataWatcherObject(GUARDIAN_TARGET_IDX, Integer.class);
+	public static final DataWatcherObject<Integer> AXOLOTL_COLOR_OBJ = dataWatcherObject(AXOLOTL_COLOR_IDX, Integer.class);
 
-	public static final WrappedDataWatcherObject DISPLAY_INTERPOLATION_DELAY_OBJ = dataWatcherObject(DISPLAY_INTERPOLATION_DELAY_IDX, Integer.class);
-	public static final WrappedDataWatcherObject DISPLAY_TRANSFORMATION_INTERPOLATION_DURATION_OBJ = dataWatcherObject(DISPLAY_TRANSFORMATION_INTERPOLATION_DURATION_IDX, Integer.class);
-	public static final WrappedDataWatcherObject DISPLAY_POSROT_INTERPOLATION_DURATION_OBJ = dataWatcherObject(DISPLAY_POSROT_INTERPOLATION_DURATION_IDX, Integer.class);
-	public static final WrappedDataWatcherObject DISPLAY_TRANSLATION_OBJ = dataWatcherObject(DISPLAY_TRANSLATION_IDX, WrappedDataWatcher.Registry.getVectorSerializer());
-	public static final WrappedDataWatcherObject DISPLAY_SCALE_OBJ = dataWatcherObject(DISPLAY_SCALE_IDX, WrappedDataWatcher.Registry.getVectorSerializer());
-	public static final WrappedDataWatcherObject DISPLAY_ROTATION_LEFT_OBJ = dataWatcherObject(DISPLAY_ROTATION_LEFT_IDX, Quaternionfc.class);
-	public static final WrappedDataWatcherObject DISPLAY_BRIGHTNESS_OVERRIDE_OBJ = dataWatcherObject(DISPLAY_BRIGHTNESS_OVERRIDE_IDX, Integer.class);
-	public static final WrappedDataWatcherObject DISPLAY_VIEW_RANGE_OBJ = dataWatcherObject(DISPLAY_VIEW_RANGE_IDX, Float.class);
-	public static final WrappedDataWatcherObject DISPLAY_WIDTH_OBJ = dataWatcherObject(DISPLAY_WIDTH_IDX, Float.class);
-	public static final WrappedDataWatcherObject DISPLAY_HEIGHT_OBJ = dataWatcherObject(DISPLAY_HEIGHT_IDX, Float.class);
-	public static final WrappedDataWatcherObject DISPLAY_GLOW_COLOR_OVERRIDE_OBJ = dataWatcherObject(DISPLAY_GLOW_COLOR_OVERRIDE_IDX, Integer.class);
+	public static final DataWatcherObject<Integer> GUARDIAN_TARGET_OBJ = dataWatcherObject(GUARDIAN_TARGET_IDX, Integer.class);
 
-	public static final WrappedDataWatcherObject DISPLAY_BILLBOARD_OBJ = dataWatcherObject(DISPLAY_BILLBOARD_IDX, Byte.class);
+	public static final DataWatcherObject<Integer> DISPLAY_INTERPOLATION_DELAY_OBJ = dataWatcherObject(DISPLAY_INTERPOLATION_DELAY_IDX, Integer.class);
+	public static final DataWatcherObject<Integer> DISPLAY_TRANSFORMATION_INTERPOLATION_DURATION_OBJ = dataWatcherObject(DISPLAY_TRANSFORMATION_INTERPOLATION_DURATION_IDX, Integer.class);
+	public static final DataWatcherObject<Integer> DISPLAY_POSROT_INTERPOLATION_DURATION_OBJ = dataWatcherObject(Display.DATA_POS_ROT_INTERPOLATION_DURATION_ID);
+	public static final DataWatcherObject<Vector3fc> DISPLAY_TRANSLATION_OBJ = dataWatcherObject(DISPLAY_TRANSLATION_IDX, Vector3fc.class);
+	public static final DataWatcherObject<Vector3fc> DISPLAY_SCALE_OBJ = dataWatcherObject(DISPLAY_SCALE_IDX, Vector3fc.class);
+	public static final DataWatcherObject<Quaternionfc> DISPLAY_ROTATION_LEFT_OBJ = dataWatcherObject(DISPLAY_ROTATION_LEFT_IDX, Quaternionfc.class);
+	public static final DataWatcherObject<Integer> DISPLAY_BRIGHTNESS_OVERRIDE_OBJ = dataWatcherObject(DISPLAY_BRIGHTNESS_OVERRIDE_IDX, Integer.class);
+	public static final DataWatcherObject<Float> DISPLAY_VIEW_RANGE_OBJ = dataWatcherObject(DISPLAY_VIEW_RANGE_IDX, Float.class);
+	public static final DataWatcherObject<Float> DISPLAY_WIDTH_OBJ = dataWatcherObject(DISPLAY_WIDTH_IDX, Float.class);
+	public static final DataWatcherObject<Float> DISPLAY_HEIGHT_OBJ = dataWatcherObject(DISPLAY_HEIGHT_IDX, Float.class);
+	public static final DataWatcherObject<Integer> DISPLAY_GLOW_COLOR_OVERRIDE_OBJ = dataWatcherObject(DISPLAY_GLOW_COLOR_OVERRIDE_IDX, Integer.class);
+
+	public static final DataWatcherObject<Byte> DISPLAY_BILLBOARD_OBJ = dataWatcherObject(DISPLAY_BILLBOARD_IDX, Byte.class);
 	public enum DisplayBillboardOption {
 		FIXED(0),
 		VERTICAL(1),
@@ -140,15 +147,15 @@ public class MetaIndex
 		public byte get() { return this.b; }
 	}
 
-	public static final WrappedDataWatcherObject BLOCK_DISPLAY_BLOCK_OBJ = dataWatcherObject(BLOCK_DISPLAY_BLOCK_IDX, WrappedDataWatcher.Registry.getBlockDataSerializer(false));
+	public static final DataWatcherObject<BlockState> BLOCK_DISPLAY_BLOCK_OBJ = dataWatcherObject(BLOCK_DISPLAY_BLOCK_IDX, WrappedDataWatcher.Registry.getBlockDataSerializer(false));
 
-	public static final WrappedDataWatcherObject ITEM_DISPLAY_ITEM_OBJ = dataWatcherObject(ITEM_DISPLAY_ITEM_IDX, WrappedDataWatcher.Registry.getItemStackSerializer(false));
+	public static final DataWatcherObject<ItemStack> ITEM_DISPLAY_ITEM_OBJ = dataWatcherObject(ITEM_DISPLAY_ITEM_IDX, WrappedDataWatcher.Registry.getItemStackSerializer(false));
 
-	public static final WrappedDataWatcherObject TEXT_DISPLAY_TEXT_OBJ = dataWatcherObject(TEXT_DISPLAY_TEXT_IDX, WrappedDataWatcher.Registry.getChatComponentSerializer());
-	public static final WrappedDataWatcherObject TEXT_DISPLAY_LINE_WIDTH_OBJ = dataWatcherObject(TEXT_DISPLAY_LINE_WIDTH_IDX, Integer.class);
-	public static final WrappedDataWatcherObject TEXT_DISPLAY_BACKGROUND_COLOR_OBJ = dataWatcherObject(TEXT_DISPLAY_BACKGROUND_COLOR_IDX, Integer.class);
-	public static final WrappedDataWatcherObject TEXT_DISPLAY_TEXT_OPACITY_OBJ = dataWatcherObject(TEXT_DISPLAY_TEXT_OPACITY_IDX, Byte.class);
-	public static final WrappedDataWatcherObject TEXT_DISPLAY_BITMASK_OBJ = dataWatcherObject(TEXT_DISPLAY_BITMASK_IDX, Byte.class);
+	public static final DataWatcherObject<Component> TEXT_DISPLAY_TEXT_OBJ = dataWatcherObject(TEXT_DISPLAY_TEXT_IDX, WrappedDataWatcher.Registry.getChatComponentSerializer());
+	public static final DataWatcherObject<Integer> TEXT_DISPLAY_LINE_WIDTH_OBJ = dataWatcherObject(Display.TextDisplay.DATA_LINE_WIDTH_ID);
+	public static final DataWatcherObject<Integer> TEXT_DISPLAY_BACKGROUND_COLOR_OBJ = dataWatcherObject(Display.TextDisplay.DATA_BACKGROUND_COLOR_ID);
+	public static final DataWatcherObject<Byte> TEXT_DISPLAY_TEXT_OPACITY_OBJ = dataWatcherObject(TEXT_DISPLAY_TEXT_OPACITY_IDX, Byte.class);
+	public static final DataWatcherObject<Byte> TEXT_DISPLAY_BITMASK_OBJ = dataWatcherObject(TEXT_DISPLAY_BITMASK_IDX, Byte.class);
 	public enum TextDisplayBitmask {
 		HAS_SHADOW,
 		IS_SEE_THROUGH,
@@ -156,19 +163,16 @@ public class MetaIndex
 		ALIGNMENT
 	}
 
-	@SuppressWarnings("removal")
-	private static WrappedDataWatcherObject dataWatcherObject(int index, Class<?> clazz) {
-		return dataWatcherObject(index, WrappedDataWatcher.Registry.get((Type) clazz));
+	private static <T> DataWatcherObject<T> dataWatcherObject(int index, Class<T> clazz) {
+		return new DataWatcherObject<>(index, WrappedDataWatcher.Registry.get((Type) clazz));
 	}
 
-	private static WrappedDataWatcherObject dataWatcherObject(int index, WrappedDataWatcher.Serializer serializer) {
-		WrappedDataWatcherObject dataWatcherObject = new WrappedDataWatcherObject(index, serializer);
-		return dataWatcherObject;
+	private static <T> DataWatcherObject<T> dataWatcherObject(int index, WrappedDataWatcher.Serializer serializer) {
+		return new DataWatcherObject<>(index, serializer);
 	}
 
-	private static WrappedDataWatcherObject dataWatcherObject(EntityDataAccessor<?> nms) {
-		WrappedDataWatcherObject dataWatcherObject = new WrappedDataWatcherObject(nms);
-		return dataWatcherObject;
+	private static <T> DataWatcherObject<T> dataWatcherObject(EntityDataAccessor<T> nms) {
+		return new DataWatcherObject<>(nms);
 	}
 
 	public static WrappedDataValue copyValue(WrappedDataValue original) {
