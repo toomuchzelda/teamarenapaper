@@ -24,6 +24,8 @@ import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.hideandseek.PacketFlyingPoint;
 import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.PayloadTestKillstreak;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.beekeeper.KitBeekeeper;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketDisplay;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
@@ -659,6 +661,16 @@ public class CommandDebug extends CustomCommand {
 				wolf.setCustomName("Fat Mouse");
 				wolf.setCustomNameVisible(true);
 			}
+			case "beekeeper" -> {
+				// I wrote the worst code ever - toomuchzelda 2026/06/06
+				Kit beek = Main.getGame().getKits().stream().filter(kit -> kit instanceof KitBeekeeper).findFirst().get();
+				KitBeekeeper.BeekeeperAbility ability = (KitBeekeeper.BeekeeperAbility)
+					Arrays.asList(beek.getAbilities()).stream()
+						.filter(a -> a instanceof KitBeekeeper.BeekeeperAbility)
+						.findFirst().get();
+
+				player.sendMessage(ability.debug());
+			}
 			default -> showUsage(sender);
 		}
 	}
@@ -669,7 +681,7 @@ public class CommandDebug extends CustomCommand {
 			return Arrays.asList("hide", "gui", "guitest", "signtest", "game", "setrank", "setteam", "setkit",
 				"votetest", "draw", "graffititest", "respawn", "fakehitbox", "testmotd", "arrowMarker", "packetcache", "showSpawns",
 				"flyingpoint", "fakeBlock", "elevator", "showores", "darken", "amogus", "loadsong", "movemaxxing", "packethuman",
-				"addshield", "clearshields", "invisibleBlock", "fatmouse", "villager");
+				"addshield", "clearshields", "invisibleBlock", "fatmouse", "villager", "beekeeper");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");

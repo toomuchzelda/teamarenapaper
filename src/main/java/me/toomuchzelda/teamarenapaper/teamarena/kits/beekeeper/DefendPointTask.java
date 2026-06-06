@@ -16,6 +16,7 @@ import org.bukkit.entity.Bee;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.EnumSet;
@@ -33,15 +34,17 @@ public class DefendPointTask extends BeeTask
 		.append(Component.text(" ‼", NamedTextColor.RED));
 
 	private final DefendPointGoal goal;
+	private final Vector faceDir;
 
-	private DefendPointTask(Bee beeEntity, DefendPointGoal goal) {
+	private DefendPointTask(Bee beeEntity, DefendPointGoal goal, Vector faceDir) {
 		super(beeEntity, goal);
 		this.goal = goal;
+		this.faceDir = faceDir;
 	}
 
-	public static DefendPointTask newInstance(Bee beeEntity, Player owner, Location loc) {
+	public static DefendPointTask newInstance(Bee beeEntity, Player owner, Location loc, Vector faceDir) {
 		DefendPointGoal goal = new DefendPointGoal(Main.getPlugin(), owner, loc, beeEntity, SWITCH_TARGET_CD, MAX_DISTANCE_SQR, MIN_DISTANCE_SQR);
-		return new DefendPointTask(beeEntity, goal);
+		return new DefendPointTask(beeEntity, goal, faceDir);
 	}
 
 	@Override
@@ -53,6 +56,10 @@ public class DefendPointTask extends BeeTask
 			return ACTIONBAR_DEFEND;
 		}
 	}
+
+	Location getLocation() { return this.goal.getDefendLoc(); }
+
+	Vector getFaceDir() { return this.faceDir; }
 
 	private static class DefendPointGoal extends TargetEnemiesAtPointGoal {
 		private static final GoalKey<Mob> KEY = GoalKey.of(Mob.class, new NamespacedKey(Main.getPlugin(), "bee_defend_point"));

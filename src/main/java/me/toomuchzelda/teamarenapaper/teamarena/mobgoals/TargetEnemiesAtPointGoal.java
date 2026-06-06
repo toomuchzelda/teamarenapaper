@@ -172,4 +172,7 @@ public class TargetEnemiesAtPointGoal<T> implements Goal
 
 		return true;
 	}
+
+	/** Don't mutate */
+	public Location getDefendLoc() { return this.defendLoc; }
 }

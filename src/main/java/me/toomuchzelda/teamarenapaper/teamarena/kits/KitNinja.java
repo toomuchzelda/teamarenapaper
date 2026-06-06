@@ -35,8 +35,11 @@ public class KitNinja extends Kit
 {
 	private static final AttributeModifier NINJA_SPEED_MODIFIER = new AttributeModifier(new NamespacedKey(Main.getPlugin(), "ninja_speed"),
 		0.4, AttributeModifier.Operation.MULTIPLY_SCALAR_1);
-	private static final AttributeModifier NINJA_GRAVITY_MODIFIER = new AttributeModifier(new NamespacedKey(Main.getPlugin(), "ninja_gravity"),
+
+	private static final NamespacedKey NINJA_GRAVITY_KEY = new NamespacedKey(Main.getPlugin(), "ninja_gravity");
+	private static final AttributeModifier NINJA_GRAVITY_MODIFIER = new AttributeModifier(NINJA_GRAVITY_KEY,
 		-0.5, AttributeModifier.Operation.MULTIPLY_SCALAR_1);
+
 	private static final Component NO_SPEED_WITH_FLAG = Component.text( "The weight of the flag bears down on you. You're no longer fast!", NamedTextColor.LIGHT_PURPLE);
 
 	private static final ItemStack PEARL = ItemBuilder.of(Material.ENDER_PEARL)
@@ -137,15 +140,18 @@ public class KitNinja extends Kit
 			TeamArena game = Main.getGame();
 			if(game instanceof CaptureTheFlag ctf) {
 				AttributeInstance speedAttr = player.getAttribute(Attribute.MOVEMENT_SPEED);
+				AttributeInstance gravAttr = player.getAttribute(Attribute.GRAVITY);
 				if(ctf.isFlagCarrier(player)) {
 					if (speedAttr.getModifiers().contains(NINJA_SPEED_MODIFIER)) {
 						speedAttr.removeModifier(NINJA_SPEED_MODIFIER);
+						gravAttr.removeModifier(NINJA_GRAVITY_MODIFIER);
 						player.sendMessage(NO_SPEED_WITH_FLAG);
 					}
 				}
 				else {
 					if(!speedAttr.getModifiers().contains(NINJA_SPEED_MODIFIER)) {
 						speedAttr.addModifier(NINJA_SPEED_MODIFIER);
+						gravAttr.addModifier(NINJA_GRAVITY_MODIFIER);
 					}
 				}
 			}
@@ -167,6 +173,18 @@ public class KitNinja extends Kit
 				if(ndt >= living.getMaximumNoDamageTicks() / 4) {
 					event.setIgnoreInvulnerability(true);
 				}
+			}
+		}
+
+		// Half knockback vertical while low gravity
+		@Override
+		public void onAttemptedDamage(DamageEvent event) {
+			if (!event.getDamageType().isMelee() || !event.hasKnockback()) return;
+
+			assert event.getVictim() instanceof LivingEntity;
+			final AttributeInstance attributeInstance = ((LivingEntity) event.getVictim()).getAttribute(Attribute.GRAVITY);
+			if (attributeInstance != null && attributeInstance.getModifier(NINJA_GRAVITY_KEY) != null) {
+				event.setKnockback(event.getKnockback().setY(event.getKnockback().getY() * 0.55d));
 			}
 		}
 	}

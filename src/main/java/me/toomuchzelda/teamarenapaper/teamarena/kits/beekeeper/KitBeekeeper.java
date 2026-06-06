@@ -12,19 +12,16 @@ import me.toomuchzelda.teamarenapaper.teamarena.PlayerInfo;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArenaTeam;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
-import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageNumbers;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitCategory;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
-import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
-import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
-import me.toomuchzelda.teamarenapaper.utils.TextColors;
-import me.toomuchzelda.teamarenapaper.utils.TextUtils;
+import me.toomuchzelda.teamarenapaper.utils.*;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketDisplay;
+import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
@@ -43,9 +40,12 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scoreboard.Team;
+import org.bukkit.util.Vector;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3f;
 
 import java.util.*;
+import java.util.logging.Level;
 
 /**
  * Kit Beekeeper class.
@@ -64,8 +64,9 @@ public class KitBeekeeper extends Kit
 {
 	private static final TextColor BEE_YELLOW = TextColor.color(255, 210, 81);
 
-	private static final ItemStack BEE_WAND = ItemBuilder.of(Material.HONEYCOMB)
-		.displayName(Component.text("Bee Commander", NamedTextColor.YELLOW))
+	private static final ItemStack BEE_WAND = ItemBuilder.of(Material.WOODEN_SHOVEL)
+		.displayName(Component.text("Honey Dipper", BEE_YELLOW))
+		.enchant(Enchantment.SHARPNESS, 1)
 		.lore(
 			/*
 			Use this to command one bee at a time
@@ -75,11 +76,7 @@ public class KitBeekeeper extends Kit
 			  <red>An enemy ⚔</red>: pursue
 			 */
 			List.of(
-				Component.text("Use this to command one bee at a time", BEE_YELLOW),
-				Component.textOfChildren(
-					Component.text("Right click", TextUtils.RIGHT_CLICK_TO, TextDecoration.BOLD),
-					Component.text(" on:")
-				),
+				Component.text("Right click to stick honey on:", TextUtils.RIGHT_CLICK_TO),
 				Component.textOfChildren(
 					Component.text("A block ⏹", TextColor.color(0xc09b61)),
 					Component.text(": defend", BEE_YELLOW)
@@ -102,7 +99,10 @@ public class KitBeekeeper extends Kit
 		.build();
 
 	public KitBeekeeper() {
-		super("Beekeeper", "Honey is sweet, but using bees to your military advantage is sweeter.", Material.BEE_NEST);
+		super("Beekeeper", "Honey is sweet, but using bees to your military advantage is sweeter." +
+			"\n\nBeekeeper's bees will follow whatever the user places honey on. Stickied enemies will be chased, ambered" +
+			" blocks will be camped, and sweetened teammates will be given 1 absorption heart.",
+			Material.BEE_NEST);
 
 		ItemStack helmet = ItemUtils.colourLeatherArmor(Color.BLACK, new ItemStack(Material.LEATHER_HELMET));
 		ItemStack boots = ItemUtils.colourLeatherArmor(Color.BLACK, new ItemStack(Material.LEATHER_BOOTS));
@@ -110,9 +110,9 @@ public class KitBeekeeper extends Kit
 		boots.addEnchantment(Enchantment.PROTECTION, 1);
 
 		this.setArmor(helmet, new ItemStack(Material.GOLDEN_CHESTPLATE), new ItemStack(Material.GOLDEN_LEGGINGS), boots);
-		ItemStack sword = ItemBuilder.of(Material.WOODEN_SHOVEL).displayName(Component.text("Honey dipper"))
-			.enchant(Enchantment.SHARPNESS, 1).build();
-		this.setItems(sword, BEE_WAND, REGROUP_ITEM);
+		//ItemStack sword = ItemBuilder.of(Material.WOODEN_SHOVEL).displayName(Component.text("Honey dipper"))
+		//	.enchant(Enchantment.SHARPNESS, 1).build();
+		this.setItems(BEE_WAND, REGROUP_ITEM);
 
 		this.setAbilities(new BeekeeperAbility());
 		this.setCategory(KitCategory.UTILITY);
@@ -134,12 +134,15 @@ public class KitBeekeeper extends Kit
 
 		private static final List<Team> GLOWING_COLOUR_TEAMS = new ArrayList<>(MAX_BEES);
 		private static final List<BeeName> BEE_NAMES = List.of(
-			BeeName.create("Richard", NamedTextColor.RED),
+			BeeName.create("Bee-lue", NamedTextColor.BLUE),
 			BeeName.create("Greenbee", NamedTextColor.GREEN),
-			BeeName.create("Bee-lue", NamedTextColor.BLUE)
+			BeeName.create("Richard", NamedTextColor.RED)
 		);
 
 		private static final Component ACTIONBAR_DEAD = Component.text("Dead", TextColors.ERROR_RED);
+
+		private static final org.bukkit.block.data.BlockData DEFEND_MARKER_BLOCKDATA = Material.HONEYCOMB_BLOCK.createBlockData();
+		private static final Vector3f DEFEND_MARKER_SCALE = new Vector3f(0.4f, 0.4f, 0.4f);
 
 		private record BeeName(String name, NamedTextColor color, Team team) {
 			public static BeeName create(String name, NamedTextColor color) {
@@ -158,6 +161,7 @@ public class KitBeekeeper extends Kit
 		}
 
 		private static class BeekeeperBee {
+			private final BeekeeperAbility beekeeperAbility;
 			private final Player owner;
 			private final BeeName name;
 			/**
@@ -171,7 +175,8 @@ public class KitBeekeeper extends Kit
 			private int lastRegenTick;
 			private int deathTime = -RESPAWN_TIME;
 
-			BeekeeperBee(Location loc, int beeNum, BeeName nameAndColour, Player owner) {
+			BeekeeperBee(BeekeeperAbility ability, Location loc, int beeNum, BeeName nameAndColour, Player owner) {
+				this.beekeeperAbility = ability;
 				this.owner = owner;
 				this.beeNum = beeNum;
 				this.name = nameAndColour;
@@ -209,11 +214,7 @@ public class KitBeekeeper extends Kit
 				// Beekeeper sees their bees' name and glowing
 				// Teammates see the bees glowing
 				// Other players see the owner's name
-				beeEntity.customName(Component.textOfChildren(
-					pinfo.team.colourWord(owner.getName() + "'s"),
-					Component.space(),
-					name.displayName()
-				));
+				beeEntity.customName(this.owner.displayName());
 
 				Optional<?> nameComponent = Optional.of(AdventureComponentConverter.fromComponent(
 					this.name.displayName()).getHandle());
@@ -263,24 +264,31 @@ public class KitBeekeeper extends Kit
 					}
 				}
 				// Add new
-				for (Goal<Bee> goal : newTask.getMobGoals()) {
-					Bukkit.getMobGoals().addGoal(beeEntity, 1, goal);
+				if (newTask != null) {
+					for (Goal<Bee> goal : newTask.getMobGoals()) {
+						Bukkit.getMobGoals().addGoal(beeEntity, 1, goal);
+					}
 				}
 				this.task = newTask;
+
+				if (newTask instanceof DefendPointTask dpTask) {
+					this.beekeeperAbility.spawnMarker(dpTask.getLocation(), dpTask.getFaceDir(), this);
+				}
+				else {
+					this.beekeeperAbility.decrementMarker(this);
+				}
 			}
 
 			private Component getTaskActionBar() {
 				var builder = Component.text();
 				double healthFraction = beeEntity != null ?
 					beeEntity.getHealth() / BEE_HEALTH :
-					(double) (TeamArena.getGameTick() - this.deathTime) / RESPAWN_TIME;
+					0d;
 				builder.append(TextUtils.getProgressText(name.name, NamedTextColor.DARK_GRAY, NamedTextColor.DARK_GRAY, name.color, healthFraction));
-				if (!isDead() && TeamArena.getGameTick() - lastDamageTick <= OUT_OF_COMBAT_TIME) { // in combat
-					builder.append(Component.text("⚔", NamedTextColor.GOLD));
-				}
 				builder.append(Component.space());
 				if (this.isDead()) {
 					builder.append(ACTIONBAR_DEAD);
+					builder.append(Component.text(" " + this.getSecondsToRespawn() + "s", TextColors.ERROR_RED));
 				} else {
 					builder.append(this.task.getActionBarPart());
 				}
@@ -290,8 +298,10 @@ public class KitBeekeeper extends Kit
 
 			/** Convenience method to set task to FollowOwnerTask */
 			void setFollowing() {
-				if (!this.isDead())
+				if (!this.isDead()) {
+					this.beeEntity.leaveVehicle();
 					this.setTask(new FollowOwnerTask(this.beeEntity, TeamArena.getGameTick() - this.beeEntity.getTicksLived(), this.beeNum, this.owner));
+				}
 			}
 
 			private boolean isFollowingOwner() {
@@ -308,11 +318,11 @@ public class KitBeekeeper extends Kit
 			}
 
 			private void setDead(boolean killEntity) {
+				this.setTask(null);
 				if (killEntity)
 					this.beeEntity.remove();
 
 				this.deathTime = TeamArena.getGameTick();
-				this.task = null;
 
 				PlayerInfo pinfo = Main.getPlayerInfo(this.owner);
 				pinfo.team.removeMembers(this.beeEntity);
@@ -374,12 +384,24 @@ public class KitBeekeeper extends Kit
 		private static final Map<Player, BeekeeperInfo> BEEKEEPERS = new LinkedHashMap<>();
 		private static final Map<Bee, BeePlayerPair> BEE_LOOKUP = new HashMap<>();
 
+		// reference counting defend point markers
+		private static class MarkerCounter {
+			private final PacketDisplay marker;
+			private final Block block;
+			int i;
+
+			public MarkerCounter(PacketDisplay disp, Block block) { this.marker = disp; this.block = block; this.i = 1; }
+			public String toString() { return this.block.getType() + "," + i; }
+		}
+		private final Map<Bee, MarkerCounter> defendPointMarkers = new HashMap<>();
+		private final Map<Block, MarkerCounter> defendPointLookup = new HashMap<>();
+
 		@Override
 		public void giveAbility(Player player) {
 			BeekeeperBee[] bees = new BeekeeperBee[MAX_BEES];
 			final int currentTick = TeamArena.getGameTick();
 			for (int i = 0; i < bees.length; i++) {
-				bees[i] = new BeekeeperBee(FollowOwnerTask.calculateBeeLocation(player, i, currentTick), i,
+				bees[i] = new BeekeeperBee(this, FollowOwnerTask.calculateBeeLocation(player, i, currentTick), i,
 					BEE_NAMES.get(i), player);
 			}
 
@@ -404,6 +426,14 @@ public class KitBeekeeper extends Kit
 
 					bee.setDead(true);
 				}
+
+				final MarkerCounter ctr = this.defendPointMarkers.remove(bee.beeEntity);
+				if (ctr != null) {
+					assert false;
+					Main.logger().log(Level.WARNING, player.getName() + "'s Beekeeper bee had entry in defendPointMarkers.", new RuntimeException());
+					ctr.marker.remove();
+					this.defendPointLookup.remove(ctr.block);
+				}
 			}
 		}
 
@@ -426,6 +456,9 @@ public class KitBeekeeper extends Kit
 				entry.getKey().remove();
 				lookupIter.remove();
 			}
+
+			assert this.defendPointMarkers.isEmpty();
+			assert this.defendPointLookup.isEmpty();
 		}
 
 		@Override
@@ -490,16 +523,8 @@ public class KitBeekeeper extends Kit
 		}
 
 		private void handleRegroupItemUse(Player beekeeper, Bee clickedBee) {
-			if (clickedBee != null) {
-				BeePlayerPair pair = BEE_LOOKUP.get(clickedBee);
-				if (pair != null) {
-					pair.beekeeperBee().setFollowing();
-				}
-			}
-			else {
-				for (BeekeeperBee beekeeperBee : BEEKEEPERS.get(beekeeper).bees) {
-					beekeeperBee.setFollowing();
-				}
+			for (BeekeeperBee beekeeperBee : BEEKEEPERS.get(beekeeper).bees) {
+				beekeeperBee.setFollowing();
 			}
 		}
 
@@ -519,6 +544,9 @@ public class KitBeekeeper extends Kit
 					BeekeeperBee freeBee = BEEKEEPERS.get(beekeeper).getNextAvailableBee();
 					if (freeBee != null) {
 						freeBee.setTask(new DeliverHoneyTask(freeBee.beeEntity, clickedEntity));
+						EntityUtils.forEachTrackedPlayer(freeBee.beeEntity, player -> {
+							player.playSound(freeBee.beeEntity, Sound.ENTITY_BEE_POLLINATE, SoundCategory.PLAYERS, 1f, 1f);
+						});
 					}
 				}
 				else {
@@ -537,6 +565,13 @@ public class KitBeekeeper extends Kit
 						BeekeeperBee freeBee = BEEKEEPERS.get(beekeeper).getNextAvailableBee();
 						if (freeBee != null) {
 							freeBee.setTask(PursueEnemyTask.newInstance(freeBee.beeEntity, clickedEntity));
+							EntityUtils.forEachTrackedPlayer(freeBee.beeEntity, player -> {
+								player.playSound(freeBee.beeEntity, Sound.ENTITY_BEE_LOOP_AGGRESSIVE, SoundCategory.HOSTILE, 0.5f, 2f);
+								player.playSound(clickedEntity, Sound.BLOCK_HONEY_BLOCK_PLACE, SoundCategory.PLAYERS, 1.5f, 0.65f);
+							});
+							/*if (clickedEntity instanceof Player clickedPlayer && Main.getPlayerInfo(clickedPlayer).messageHasCooldowned("bkprPrsd", )) {
+								clickedPlayer.sendMessage(Component.text("You've been covered in bee-attracting honey", BEE_YELLOW));
+							}*/
 						}
 					}
 				}
@@ -544,10 +579,63 @@ public class KitBeekeeper extends Kit
 			else if (clickedBlock != null) {
 				BeekeeperBee bee = BEEKEEPERS.get(beekeeper).getNextAvailableBee();
 				if (bee != null) {
+					assert !bee.isDead();
 					// The point to defend will be the centre of the block + the vector of the clicked block face.
 					// So actually the block connected to the face of the clickedBlock
-					Location locToDefend = clickedBlock.getLocation().add(0.5d, 0.5d, 0.5d).add(clickedBlockFace.getDirection());
-					bee.setTask(DefendPointTask.newInstance(bee.beeEntity, beekeeper, locToDefend));
+					final Vector faceDirection = clickedBlockFace.getDirection();
+					final Location locToDefend = clickedBlock.getLocation().add(0.5d, 0.5d, 0.5d).add(faceDirection);
+					final Block block = locToDefend.getBlock();
+					if (BlockUtils.isAirToTheNakedEye(block.getType())) {
+						bee.setTask(DefendPointTask.newInstance(bee.beeEntity, beekeeper, locToDefend, faceDirection));
+						final TeamArenaTeam keepersTeam = Main.getPlayerInfo(beekeeper).team;
+						EntityUtils.forEachTrackedPlayerAndSelf(beekeeper, player -> {
+							if (keepersTeam.hasMember(player))
+								player.playSound(locToDefend, Sound.BLOCK_HONEY_BLOCK_PLACE, SoundCategory.PLAYERS, 1f, 1f);
+						});
+					}
+				}
+			}
+		}
+
+		private void spawnMarker(Location locToDefend, Vector face, BeekeeperBee bee) {
+			final Block block = locToDefend.getBlock();
+			final MarkerCounter ctr = this.defendPointLookup.get(block);
+			if (ctr != null) {
+				ctr.i++;
+				this.defendPointMarkers.put(bee.beeEntity, ctr); // add tracker
+			}
+			else {
+				final PacketDisplay marker = new PacketDisplay(
+					PacketEntity.NEW_ID,
+					org.bukkit.entity.EntityType.BLOCK_DISPLAY,
+					locToDefend,
+					null, viewer -> true
+				);
+				marker.setBlockData(DEFEND_MARKER_BLOCKDATA);
+				final Vector3f vec = new Vector3f(
+					-0.25f - (float) face.getX() * 0.5f,
+					-0.25f - (float) face.getY() * 0.5f,
+					-0.25f - (float) face.getZ() * 0.5f
+				);
+				marker.setTranslation(vec);
+				marker.setScale(DEFEND_MARKER_SCALE);
+				marker.updateMetadataPacket();
+				marker.respawn();
+				final MarkerCounter newCtr = new MarkerCounter(marker, block);
+				this.defendPointMarkers.put(bee.beeEntity, newCtr);
+				this.defendPointLookup.put(block, newCtr);
+			}
+		}
+
+		private void decrementMarker(BeekeeperBee bee) {
+			final MarkerCounter ctr = this.defendPointMarkers.remove(bee.beeEntity);
+			if (ctr != null) {
+				ctr.i--;
+				assert ctr.i >= 0;
+				if (ctr.i <= 0) {
+					ctr.marker.remove();
+					final MarkerCounter other = this.defendPointLookup.remove(ctr.block);
+					assert other == ctr;
 				}
 			}
 		}
@@ -559,7 +647,7 @@ public class KitBeekeeper extends Kit
 
 			if (binfo.lastInteractTime != currentTick) {
 				if (BEE_WAND.isSimilar(event.getItem())) {
-					if (event.getAction() == Action.LEFT_CLICK_BLOCK || event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+					if (/*event.getAction() == Action.LEFT_CLICK_BLOCK || */event.getAction() == Action.RIGHT_CLICK_BLOCK) {
 						binfo.lastInteractTime = currentTick;
 						handleBeeCommanderUse(event.getPlayer(), event.getClickedBlock(), event.getBlockFace(), null);
 					}
@@ -634,6 +722,14 @@ public class KitBeekeeper extends Kit
 					}
 				}
 			}
+		}
+
+		public Component debug() {
+			return Component.textOfChildren(
+				Component.text(this.defendPointMarkers.toString()),
+				Component.newline(),
+				Component.text(this.defendPointLookup.toString())
+			);
 		}
 	}
 }

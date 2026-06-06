@@ -36,6 +36,7 @@ public class RailgunAbility extends Ability {
 	private static class RailInfo {
 		private Location previousPosition;
 		private LivingEntity playerWhoShotAReflector;
+		private boolean remove = false; // band aid order-of-processing fix hack
 	}
 
 	private final Map<AbstractArrow, RailInfo> rails = new HashMap<>();
@@ -101,6 +102,11 @@ public class RailgunAbility extends Ability {
 			final AbstractArrow aa = entry.getKey();
 			final RailInfo rinfo = entry.getValue();
 
+			if (rinfo.remove) {
+				iterator.remove();
+				continue;
+			}
+
 			Location currentLoc = aa.getLocation();
 			if (!currentLoc.equals(rinfo.previousPosition)) {
 				particleTrail(aa, currentLoc, rinfo);
@@ -109,7 +115,7 @@ public class RailgunAbility extends Ability {
 			}
 
 			if (aa.isInBlock() || !aa.isValid()) {
-				iterator.remove();
+				rinfo.remove = true; // defer removal until next tick for onAttemptedAttacks not yet done
 
 				currentLoc.getWorld().playSound(currentLoc, Sound.ENTITY_FIREWORK_ROCKET_BLAST, SoundCategory.HOSTILE, 1f, 2f);
 				particleBoom(aa, currentLoc);

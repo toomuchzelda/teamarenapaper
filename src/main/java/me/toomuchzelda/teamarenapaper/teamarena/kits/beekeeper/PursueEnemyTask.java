@@ -9,6 +9,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.NamespacedKey;
+import org.bukkit.Particle;
 import org.bukkit.entity.Bee;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -89,6 +90,15 @@ public class PursueEnemyTask extends BeeTask {
 		@Override
 		public void tick() {
 			bee.setTarget(this.target);
+
+			// visual indicator on the target
+			this.target.getWorld().spawnParticle(
+				Particle.FALLING_HONEY,
+				this.target.getLocation().add(0d, 0.6d, 0d),
+				1,
+				0.3d, 0.3d, 0.3d,
+				10d
+			);
 		}
 
 		@Override
