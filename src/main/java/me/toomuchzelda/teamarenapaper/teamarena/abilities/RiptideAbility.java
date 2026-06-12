@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.abilities;
 
 import com.comphenix.protocol.events.PacketContainer;
 import com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent;
+import io.papermc.paper.entity.TeleportFlag;
 import io.papermc.paper.event.player.PlayerStopUsingItemEvent;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
@@ -589,14 +590,25 @@ public class RiptideAbility extends Ability {
 
 	@Override
 	public void onRiptide(PlayerRiptideEvent event) {
-		RiptideInfo info = riptideInfoMap.get(event.getPlayer());
-		int riptideLevel = event.getItem().getEnchantmentLevel(Enchantment.RIPTIDE);
-		info.setProgress(info.getProgress() - Math.min(riptideLevel, MAX_RIPTIDE_LEVEL), 10);
-		updateItems(event.getPlayer(), 0, true);
+		final Player fish = event.getPlayer();
+
+		RiptideInfo info = riptideInfoMap.get(fish);
+		if (canRiptide(fish)) {
+			int riptideLevel = event.getItem().getEnchantmentLevel(Enchantment.RIPTIDE);
+			info.setProgress(info.getProgress() - Math.min(riptideLevel, MAX_RIPTIDE_LEVEL), 10);
+			updateItems(fish, 0, true);
+		}
+		else {
+			event.setCancelled(true);
+			// rubber band them
+			EntityUtils.setVelocity(fish, new Vector(0d, 0d, 0d));
+			fish.teleport(fish.getLocation(), TeleportFlag.EntityState.RETAIN_PASSENGERS);
+		}
+
 		// restore old block
 		if (info.wasFakeWater) {
 			info.wasFakeWater = false;
-			((CraftPlayer) event.getPlayer()).getHandle().wasTouchingWater = false;
+			((CraftPlayer) fish).getHandle().wasTouchingWater = false;
 		}
 
 		if (info.serverFakeWater != null) {

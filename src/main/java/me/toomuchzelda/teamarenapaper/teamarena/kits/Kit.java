@@ -54,6 +54,10 @@ public abstract class Kit {
 		this(name.toLowerCase(Locale.ENGLISH), name, convertDescription(description), display);
     }
 
+	public Kit(String key, String name, String description, ItemStack display) {
+		this(key, name, convertDescription(description), display);
+	}
+
 	public Kit(String key, String name, List<? extends Component> description, ItemStack display) {
 		this.key = key;
 		this.name = name;

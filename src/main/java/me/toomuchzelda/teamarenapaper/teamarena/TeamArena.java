@@ -196,7 +196,7 @@ public abstract class TeamArena
 	private final Component gameTitle;
 	private final Component gameSubTitle;
 
-	private static final FilterRule MISC_KITS = new FilterRule("tma/misc_kits", "Poorly balanced kits", FilterAction.block("sniper", "longbow"));
+	private static final FilterRule MISC_KITS = new FilterRule("tma/misc_kits", "Poorly balanced kits", FilterAction.block("sniper", "longbow", "fish"));
 	private static final FilterRule NO_HNS = new FilterRule("tma/no_hns", "No HNS kits by default", FilterAction.block("hider", "seeker", "radar"));
 
 	public TeamArena(TeamArenaMap map) {
@@ -439,7 +439,7 @@ public abstract class TeamArena
 			new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(), new KitNone(),
 			new KitVenom(), new KitRewind(), new KitValkyrie(), new KitExplosive(), new KitTrigger(), new KitMedic(this.killStreakManager),
 			new KitBerserker(), new KitEngineer(), new KitPorcupine(this), new KitLongbow(), new KitSniper(), new KitBeekeeper(),
-			new KitMarine(),
+			new KitMarine(), new KitFrost(),
 
 			new KitHider(this), /*new KitSeeker(),*/ new KitRadarSeeker(this)
 		};
