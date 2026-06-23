@@ -284,6 +284,10 @@ public class TeamArenaMap
 					throw new RuntimeException("Error processing team " + teamName, e);
 				}
 			}
+
+			if (this.teamSpawns.isEmpty()) {
+				throw new IllegalArgumentException("No teams defined!");
+			}
 		}
 
 		//parse KOTH config if present

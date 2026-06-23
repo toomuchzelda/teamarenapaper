@@ -197,7 +197,8 @@ public abstract class TeamArena
 	private final Component gameSubTitle;
 
 	private static final FilterRule MISC_KITS = new FilterRule("tma/misc_kits", "Poorly balanced kits", FilterAction.block("sniper", "longbow", "fish"));
-	private static final FilterRule NO_HNS = new FilterRule("tma/no_hns", "No HNS kits by default", FilterAction.block("hider", "seeker", "radar"));
+	public static final FilterRule NO_HNS = new FilterRule("tma/no_hns", "No HNS kits by default", FilterAction.block("hider", "seeker", "radar"));
+	private static final FilterRule NO_ONE = new FilterRule("tma/no_one", "No Kit One", FilterAction.block(KitOne.KEY));
 
 	public TeamArena(TeamArenaMap map) {
 		File worldFile = map.getFile();
@@ -441,7 +442,9 @@ public abstract class TeamArena
 			new KitBerserker(), new KitEngineer(), new KitPorcupine(this), new KitLongbow(), new KitSniper(), new KitBeekeeper(),
 			new KitMarine(), new KitFrost(),
 
-			new KitHider(this), /*new KitSeeker(),*/ new KitRadarSeeker(this)
+			new KitHider(this), /*new KitSeeker(),*/ new KitRadarSeeker(this),
+
+			new KitOne()
 		};
 
 		for (Kit kit : defaultKits) {
@@ -453,10 +456,12 @@ public abstract class TeamArena
 
 	protected void applyKitFilters() {
 		KitFilter.addGlobalRule(NO_HNS);
+		KitFilter.addGlobalRule(NO_ONE);
 	}
 
 	protected void removeKitFilters() {
 		KitFilter.removeGlobalRule(NO_HNS.key());
+		KitFilter.removeGlobalRule(NO_ONE.key());
 	}
 
 	protected void registerKit(Kit kit) {

@@ -48,7 +48,8 @@ public class KitFrost extends Kit {
 			.name(Component.text("Icey sword", NamedTextColor.AQUA))
 			.setPDC(SWORD_KEY, PersistentDataType.BOOLEAN, true)
 			.build();
-		this.setItems(sword);
+		final ItemStack snow = new ItemStack(Material.POWDER_SNOW_BUCKET, 10);
+		this.setItems(sword, snow);
 
 		this.setCategory(KitCategory.UTILITY);
 
