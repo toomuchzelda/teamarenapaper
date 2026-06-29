@@ -8,6 +8,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandCallvote;
 import me.toomuchzelda.teamarenapaper.teamarena.digandbuild.DigAndBuild;
 import me.toomuchzelda.teamarenapaper.teamarena.hideandseek.HideAndSeek;
 import me.toomuchzelda.teamarenapaper.teamarena.kingofthehill.KingOfTheHill;
+import me.toomuchzelda.teamarenapaper.teamarena.oneagainstall.OneAgainstAll;
 import me.toomuchzelda.teamarenapaper.teamarena.searchanddestroy.SearchAndDestroy;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.ShufflingQueue;
@@ -87,6 +88,13 @@ public class GameScheduler
 			}
 		}
 
+		final List<TeamArenaMap> oaaMaps = new ArrayList<>();
+		for (TeamArenaMap map : ALL_MAPS) {
+			if (map.getTeamSpawns().size() == 2)
+				oaaMaps.add(map);
+		}
+		GAMETYPE_MAPS.put(GameType.OAA, oaaMaps);
+
 		//setup gametype queue. Exclude DNB
 		GAMETYPE_Q = new GameType[2];
 		//GAMETYPE_Q[0] = GameType.KOTH;
@@ -103,6 +111,7 @@ public class GameScheduler
 		GAME_TYPE_MAP_QUEUE.put(GameType.SND, new ShufflingQueue<>(GAMETYPE_MAPS.get(GameType.SND)));
 		GAME_TYPE_MAP_QUEUE.put(GameType.DNB, new ShufflingQueue<>(GAMETYPE_MAPS.get(GameType.DNB)));
 		GAME_TYPE_MAP_QUEUE.put(GameType.HNS, new ShufflingQueue<>(GAMETYPE_MAPS.get(GameType.HNS)));
+		GAME_TYPE_MAP_QUEUE.put(GameType.OAA, new ShufflingQueue<>(oaaMaps));
 
 		gameTypeCtr = 0;
 
@@ -192,7 +201,8 @@ public class GameScheduler
 		}
 		//the chosen map's GameType can conflict with what was picked above
 		// just have the map's one override
-		if(!map.hasGameType(gameType)) {
+		// OAA can do any map
+		if(gameType != GameType.OAA && !map.hasGameType(gameType)) {
 			Main.logger().warning("Map " + map.getName() + " didn't have gametype, chose random from map");
 			gameType = map.getRandomGameType();
 		}
@@ -206,8 +216,10 @@ public class GameScheduler
 			newGame = new SearchAndDestroy(map);
 		else if (gameType == GameType.HNS)
 			newGame = new HideAndSeek(map);
-		else
+		else if (gameType == GameType.DNB)
 			newGame = new DigAndBuild(map);
+		else
+			newGame = new OneAgainstAll(map);
 
 		return newGame;
 	}

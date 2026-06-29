@@ -53,6 +53,7 @@ public class KillStreakManager
 	private final Map<Integer, List<KillStreak>> killstreaksByKills;
 	private final Map<ItemStack, CratedKillStreak> crateItemLookup;
 	private final Set<KillStreakID> disabledKillstreaks; // Will still be processed but not awarded to players upon kills
+	private final Map<KillStreakID, KillStreak> killstreaksById;
 
 	private final List<Crate> allCrates;
 
@@ -64,6 +65,7 @@ public class KillStreakManager
 		this.killstreaksByKills = new HashMap<>();
 		this.crateItemLookup = new HashMap<>();
 		this.disabledKillstreaks = Collections.newSetFromMap(new EnumMap<>(KillStreakID.class));
+		this.killstreaksById = new HashMap<>();
 
 		// KillStreak map keys must not have spaces in them
 		addKillStreak(-1, new PayloadTestKillstreak());
@@ -73,8 +75,10 @@ public class KillStreakManager
 		addKillStreak(11, new HarbingerKillStreak());
 
 		// Register all killstreaks
-		this.allKillstreaks.values().forEach(killStreak ->
-				killStreak.getAbilities().forEach(Ability::registerAbility));
+		this.allKillstreaks.values().forEach(killStreak -> {
+			killStreak.getAbilities().forEach(Ability::registerAbility);
+			this.killstreaksById.put(killStreak.getIdentifier(), killStreak);
+		});
 
 		this.allCrates = new ArrayList<>();
 	}
@@ -129,6 +133,18 @@ public class KillStreakManager
 				if (TeamArena.getGameTick() <= pinfo.lastKillTime + TIMES_SINCE_LAST_KILL[index]) {
 					AnnouncerManager.playSound(killer, SUCCESSIVE_KILL_SOUNDS[index]);
 				}
+			}
+		}
+	}
+
+	public void giveKillStreak(Player player, PlayerInfo pinfo, KillStreakID id) {
+		final KillStreak ks = this.killstreaksById.get(id);
+		if (ks != null) {
+			if (ks instanceof CratedKillStreak cratedStreak) {
+				player.getInventory().addItem(cratedStreak.getCrateItem());
+			}
+			else {
+				ks.giveStreak(player, pinfo);
 			}
 		}
 	}
