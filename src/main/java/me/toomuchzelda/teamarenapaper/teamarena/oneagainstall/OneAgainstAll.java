@@ -3,6 +3,8 @@ package me.toomuchzelda.teamarenapaper.teamarena.oneagainstall;
 import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.teamarena.*;
 import me.toomuchzelda.teamarenapaper.teamarena.commands.CommandDebug;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.KillAssistTracker;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.KillStreakManager;
@@ -19,22 +21,28 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.util.Ticks;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.util.BlockVector;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class OneAgainstAll extends TeamArena {
 	private static final Component GAME_NAME = Component.text("One Against All", GameType.OAA.shortName.color());
-	private static final Component HOW_TO_PLAY = Component.text("The Chosen One must kill everyone before time's up. Everyone else must kill them or survive!", NamedTextColor.GOLD);
+	private static final Component HOW_TO_PLAY = Component.textOfChildren(
+		Component.text("The Chosen One must kill everyone before time's up.", GameType.OAA.shortName.color()),
+		Component.newline(),
+		Component.text("Everyone else must kill them or survive.", GameType.OAA.shortName.color()),
+		Component.newline(),
+		Component.text("The Chosen One does not regen health.", GameType.OAA.shortName.color())
+	);
 
 	private static final FilterRule ONE_RULE = new FilterRule("oaa/one_team", "One team restrictions", FilterAction.allow(KitOne.KEY));
 	private static final FilterRule ALL_RULE = new FilterRule("oaa/all_team", "All team restrictions", FilterAction.block(KitOne.KEY));
@@ -44,6 +52,7 @@ public class OneAgainstAll extends TeamArena {
 	private TeamArenaTeam oneTeam;
 	private TeamArenaTeam allTeam;
 
+	private double onePlayerMaxHealth;
 	private AttributeModifier onePlayerHealthModifier;
 
 	private Player onePlayer; // null until teams decided
@@ -67,6 +76,21 @@ public class OneAgainstAll extends TeamArena {
 		assert this.teams.length == 2;
 		this.oneTeam = this.teams[0];
 		this.allTeam = this.teams[1];
+
+		final TeamArenaMap.SNDInfo sndInfo = map.getSndInfo();
+		if (sndInfo != null) {
+			for (final List<BlockVector> list : sndInfo.teamBombs().values()) {
+				list.forEach(bombPos -> {
+					final Block block = this.gameWorld.getBlockAt(
+						bombPos.getBlockX(),
+						bombPos.getBlockY(),
+						bombPos.getBlockZ()
+					);
+					if (block.getType() == Material.TNT)
+						block.setType(Material.AIR);
+				});
+			}
+		}
 	}
 
 	@Override
@@ -74,27 +98,12 @@ public class OneAgainstAll extends TeamArena {
 		super.prepTeamsDecided();
 
 		assert this.oneTeam.getPlayerMembers().size() == 1;
-		this.onePlayer = this.oneTeam.getRandomPlayer();
+		assert this.onePlayer == this.oneTeam.getRandomPlayer();
+		//this.onePlayer = this.oneTeam.getRandomPlayer();
+		Main.getPlayerInfo(this.onePlayer).kit = this.kitOne;
 
-		// announce stuff
-		final Component allAgainstPlayer = Component.text("All against ", NamedTextColor.GOLD)
-			.append(this.onePlayer.playerListName())
-			.append(Component.text("!", NamedTextColor.GOLD));
-		final Component allAgainstYou = Component.text("All against ", NamedTextColor.DARK_RED).append(Component.text("YOU", NamedTextColor.DARK_RED, TextDecoration.UNDERLINED));
-
-		for (Player player : this.getPlayers()) {
-			if (player == this.onePlayer) {
-				Main.getPlayerInfo(player).kit = this.kitOne;
-				this.informOfTeam(player, allAgainstYou);
-			}
-			else {
-				//final PlayerInfo pinfo = Main.getPlayerInfo(player);
-				//if (pinfo.kit == this.kitOne)
-				//	pinfo.kit =
-				this.informOfTeam(player, allAgainstPlayer);
-			}
-		}
-		Bukkit.broadcast(allAgainstPlayer);
+		// hacky, but this.allAgainstPlayer would've been assigned by this.informOfTeam, called by super.prepTeamsDecided
+		Bukkit.broadcast(this.allAgainstPlayer);
 
 		this.updateKitFilters();
 		KitFilter.updateKitsFor(this, this.players);
@@ -108,10 +117,31 @@ public class OneAgainstAll extends TeamArena {
 		else
 			chosen = this.allTeam;
 
-		if (add)
+		if (add) {
 			chosen.addMembers(player);
+			if (chosen == this.oneTeam) {
+				this.onePlayer = player;
+			}
+		}
 
 		return chosen;
+	}
+
+	private Component allAgainstPlayer = null;
+	@Override
+	public void informOfTeam(Player p, Component title) {
+		if (p == this.onePlayer) {
+			final Component allAgainstYou = Component.text("All against ", NamedTextColor.DARK_RED).append(Component.text("YOU", NamedTextColor.DARK_RED, TextDecoration.UNDERLINED));
+			super.informOfTeam(p, allAgainstYou);
+		}
+		else {
+			if (this.allAgainstPlayer == null) {
+				this.allAgainstPlayer = Component.text("All against ", NamedTextColor.GOLD)
+					.append(this.onePlayer.playerListName())
+					.append(Component.text("!", NamedTextColor.GOLD));
+			}
+			super.informOfTeam(p, this.allAgainstPlayer);
+		}
 	}
 
 	@Override
@@ -130,6 +160,7 @@ public class OneAgainstAll extends TeamArena {
 		assert attribute != null;
 		attribute.addModifier(onePlayerHealthModifier);
 		this.onePlayer.setHealth(attribute.getValue());
+		this.onePlayerMaxHealth = attribute.getValue();
 
 		// extra items
 		final PlayerInfo pinfo = Main.getPlayerInfo(this.onePlayer);
@@ -161,14 +192,16 @@ public class OneAgainstAll extends TeamArena {
 
 	@Override
 	public void liveTick() {
-		super.liveTick();
-
 		this.ticksLeft--;
 		if (this.ticksLeft <= 0) {
-			Bukkit.broadcast(Component.text("Time's up!", NamedTextColor.GOLD));
-			this.gameWorld.strikeLightningEffect(this.onePlayer.getLocation());
-			this.winningTeam = this.allTeam;
+			if (this.ticksLeft == 0)
+				Bukkit.broadcast(Component.text("Time's up!", NamedTextColor.RED));
+
+			if (!this.isDead(this.onePlayer) && this.ticksLeft % 40 == 0)
+				this.gameWorld.strikeLightning(this.onePlayer.getLocation());
 		}
+
+		super.liveTick();
 
 		if (this.winningTeam != null) {
 			this.prepEnd();
@@ -276,6 +309,15 @@ public class OneAgainstAll extends TeamArena {
 	}
 
 	@Override
+	public void onDamage(DamageEvent event) {
+		super.onDamage(event);
+
+		if (!event.isCancelled() && event.getDamageType().is(DamageType.LIGHTNING) && event.getVictim() == this.onePlayer) {
+			event.setRawDamage(event.getRawDamage() * 3d);
+		}
+	}
+
+	@Override
 	protected void applyKitFilters() {
 		KitFilter.addGlobalRule(TeamArena.NO_HNS);
 		KitFilter.addGlobalRule(ALL_RULE); // Noone can select super trooper until teams decided
@@ -297,22 +339,29 @@ public class OneAgainstAll extends TeamArena {
 
 	@Override
 	public Collection<Component> updateSharedSidebar() {
-		final double maxHealth = this.onePlayer.getAttribute(Attribute.MAX_HEALTH).getValue() / 2d;
-		final int health;
-		if (this.isDead(this.onePlayer))
-			health = 0;
-		else
-			health = (int) ((this.onePlayer.getHealth() / 2d) + 0.5d);
+		final List<Component> list = new ArrayList<>(4);
+		list.add(Component.text("Target:", NamedTextColor.GRAY));
+		list.add(this.onePlayer.playerListName());
 
-		return List.of(
-			Component.text("Target:", NamedTextColor.GRAY),
-			this.onePlayer.playerListName(),
-			Component.textOfChildren(
-				Component.text(health + "/" + ((int) maxHealth)),
+		if (this.gameState == GameState.LIVE) {
+			final int health;
+			if (this.isDead(this.onePlayer))
+				health = 0;
+			else
+				health = (int) ((this.onePlayer.getHealth() / 2d) + 0.5d);
+
+			list.add(Component.textOfChildren(
+				Component.text(health + "/" + ((int) (this.onePlayerMaxHealth / 2d))),
 				TextColors.HEART
-			),
-			TextUtils.formatDurationMmSs(Ticks.duration(this.ticksLeft)).append(Component.text(" left"))
-		);
+			));
+		}
+
+		if (this.ticksLeft > 0)
+			list.add(TextUtils.formatDurationMmSs(Ticks.duration(this.ticksLeft)).append(Component.text(" left")));
+		else
+			list.add(Component.text("Time's up!", NamedTextColor.YELLOW));
+
+		return list;
 	}
 
 	@Override

@@ -17,6 +17,8 @@ public class KitOne extends Kit {
 				.enchant(Enchantment.SHARPNESS, 3)
 				.enchant(Enchantment.SWEEPING_EDGE, 3)
 				.enchant(Enchantment.FIRE_ASPECT, 1).build(),
+			//ItemBuilder.of(Material.WOODEN_SWORD)
+			//	.enchant(Enchantment.KNOCKBACK, 4).build(),
 			//ItemBuilder.of(Material.BOW).enchant(Enchantment.POWER, 1).enchant(Enchantment.INFINITY, 1).build(),
 			ItemBuilder.of(Material.CROSSBOW).enchant(Enchantment.QUICK_CHARGE, 1)
 				.enchant(Enchantment.MULTISHOT, 1)
