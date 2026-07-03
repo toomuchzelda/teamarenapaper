@@ -16,16 +16,17 @@ import java.util.List;
 public class CommonAbilityManager {
 	public final RailgunAbility railgun;
 	public final ExplosiveProjectilesAbility explosives;
+	public final GasterBlasterAbility gaster;
 
 	private final List<Ability> all;
 
 	public CommonAbilityManager(TeamArena game) {
 		this.railgun = new RailgunAbility();
-		this.railgun.registerAbility();
 		this.explosives = new ExplosiveProjectilesAbility();
-		this.explosives.registerAbility();
+		this.gaster = new GasterBlasterAbility(game);
 
-		this.all = List.of(railgun, explosives);
+		this.all = List.of(railgun, explosives, gaster);
+		this.all.forEach(Ability::registerAbility);
 	}
 
 	public void tick() {

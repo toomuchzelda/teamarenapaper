@@ -61,6 +61,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.*;
+import java.util.logging.Level;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -632,7 +633,9 @@ public class CommandDebug extends CustomCommand {
 						duration.toMinutesPart() + ":" + duration.toSecondsPart() +
 						")"));
 				} catch (IOException e) {
-					throw new CommandException("Failed to load song: " + e.getMessage(), e);
+					final CommandException commandException = new CommandException("Failed to load song: " + e.getMessage(), e);
+					Main.logger().log(Level.SEVERE, "", commandException);
+					throw commandException;
 				}
 			}
 			case "packethuman" -> {

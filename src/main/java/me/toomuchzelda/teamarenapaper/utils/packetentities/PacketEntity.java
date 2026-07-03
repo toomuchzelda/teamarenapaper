@@ -406,8 +406,8 @@ public class PacketEntity
 	private static final double ANGLE_EPSILON = 0.01;
 	protected void move(Location newLocation, boolean force) {
 		if (!force && location.distance(newLocation) < EPSILON &&
-			location.getYaw() - newLocation.getYaw() < ANGLE_EPSILON &&
-			location.getPitch() - newLocation.getPitch() < ANGLE_EPSILON)
+			Math.abs(location.getYaw() - newLocation.getYaw()) < ANGLE_EPSILON &&
+			Math.abs(location.getPitch() - newLocation.getPitch()) < ANGLE_EPSILON)
 			return;
 
 		newLocation = newLocation.clone();

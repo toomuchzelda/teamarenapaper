@@ -258,6 +258,8 @@ public class DamageType {
 	public static final DamageType RATIO_CRIT = new DamageType("Splitter critical hit", "%Killed% was split in half by %Killer%").setMelee();
 	public static final DamageType REFLECTED_RATIO_CRIT = new DamageType("Reflected splitter critical hit", "%Killed% had their splitter bounce off %Killer%").setMelee();
 
+	public static final DamageType SANS_BEAM = new DamageType("Gaster Blaster", "%Killed% had a bad time by %Killer%").setIgnoreRate().setNoKnockback();
+
 	/*******************************************************************************************
 	 * 									GAMEMODE DAMAGETYPES
 	 ******************************************************************************************/

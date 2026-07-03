@@ -444,7 +444,9 @@ public abstract class TeamArena
 
 			new KitHider(this), /*new KitSeeker(),*/ new KitRadarSeeker(this),
 
-			new KitOne()
+			new KitOne(),
+
+			new KitSans()
 		};
 
 		for (Kit kit : defaultKits) {
