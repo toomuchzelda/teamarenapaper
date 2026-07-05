@@ -2,6 +2,8 @@ package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.abilities.GasterBlasterAbility;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import org.bukkit.Color;
 import org.bukkit.Material;
@@ -20,5 +22,16 @@ public class KitSans extends Kit {
 		);
 
 		this.setItems(GasterBlasterAbility.ITEM);
+	}
+
+	private static class SansAbility extends Ability {
+
+
+
+		@Override
+		public void onReceiveDamage(DamageEvent event) {
+			event.setFinalDamage(0d);
+			//event.setNoKnockback();
+		}
 	}
 }

@@ -6,6 +6,7 @@ import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.KitPorcupine;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
@@ -43,11 +44,15 @@ public class GasterBlasterAbility extends Ability {
 		private final Location spawnLoc;
 		private PacketDisplay skull;
 		private PacketDisplay beam;
+		private double beamLength;
+		private boolean reflected;
 
 		public BlasterInfo(Player shooter, int shootTime, Location spawnLoc) {
 			this.shooter = shooter;
 			this.shootTime = shootTime;
 			this.spawnLoc = spawnLoc;
+			this.beamLength = BEAM_LENGTH;
+			this.reflected = false;
 		}
 	}
 
@@ -61,7 +66,7 @@ public class GasterBlasterAbility extends Ability {
 	@Override
 	protected void removeAbility(Player player) {
 		blasters.removeIf(binfo -> {
-				if (binfo.shooter.equals(player.getUniqueId())) {
+				if (binfo.shooter == player) {
 					if (binfo.skull != null) binfo.skull.remove();
 					if (binfo.beam != null) binfo.beam.remove();
 					return true;
@@ -94,10 +99,14 @@ public class GasterBlasterAbility extends Ability {
 
 	@Override
 	public void onTick() {
+		if (this.blasters.isEmpty()) return;
+
 		final List<BlasterInfo> toRemove = new ArrayList<>(this.blasters.size() / 5);
+		final List<BlasterInfo> toAdd = new ArrayList<>(0);
 		final int currentTick = TeamArena.getGameTick();
 		for (final BlasterInfo binfo : this.blasters) {
-			final int timeDiff = currentTick - binfo.shootTime;
+			// if reflected skip the skull animation
+			final int timeDiff = (binfo.reflected ? currentTick + SKULL_ROTATION_TICKS : currentTick) - binfo.shootTime;
 			if (timeDiff < SKULL_ROTATION_TICKS) {
 				final Location animLoc = binfo.spawnLoc.clone();
 				animLoc.setDirection(animLoc.getDirection().multiply(-1d));
@@ -120,29 +129,41 @@ public class GasterBlasterAbility extends Ability {
 					binfo.skull.move(animLoc);
 				}
 			}
-			else if (timeDiff == SKULL_ROTATION_TICKS) { // shoot
-				final Location shootLoc = binfo.spawnLoc.clone().add(binfo.spawnLoc.getDirection());
-				binfo.skull.move(shootLoc);
+			else if (timeDiff < SKULL_BEAM_RESIDUAL_TICKS) { // shoot
+				final Location shootLoc =
+					binfo.reflected ? binfo.spawnLoc
+						: binfo.spawnLoc.clone().add(binfo.spawnLoc.getDirection());
 
-				assert binfo.beam == null;
-				shootLoc.add(shootLoc.getDirection().multiply(1d));
-				binfo.beam = new PacketDisplay(PacketEntity.NEW_ID, EntityType.BLOCK_DISPLAY, shootLoc, null, PacketEntity.VISIBLE_TO_ALL);
-				binfo.beam.setBlockData(BEAM_BLOCK_DATA);
-				binfo.beam.translate(new Vector(-0.4d, -0.4d, -0.4d));
-				binfo.beam.setScale(new Vector(0.8f, 0.8f, BEAM_LENGTH));
-				binfo.beam.updateMetadataPacket();
-				binfo.beam.setBrightnessOverride(new Display.Brightness(15, 15));
-				binfo.beam.respawn();
-			}
-			else if (timeDiff < SKULL_BEAM_RESIDUAL_TICKS) {
-				this.beamDamage(binfo.shooter, binfo);
+				if (binfo.skull != null) {// no skull if reflected beam
+					assert !binfo.reflected;
+					binfo.skull.move(shootLoc);
+				}
+
+				final BlasterInfo reflected = this.beamDamage(binfo.shooter, shootLoc, currentTick);
+				if (binfo.beam == null) {
+					double length = BEAM_LENGTH;
+					if (reflected != null) {
+						toAdd.add(reflected);
+						length = BEAM_LENGTH - reflected.beamLength;
+					}
+
+					if (!binfo.reflected)
+						shootLoc.add(shootLoc.getDirection().multiply(1d));
+					binfo.beam = new PacketDisplay(PacketEntity.NEW_ID, EntityType.BLOCK_DISPLAY, shootLoc, null, PacketEntity.VISIBLE_TO_ALL);
+					binfo.beam.setBlockData(BEAM_BLOCK_DATA);
+					binfo.beam.translate(new Vector(-0.4d, -0.4d, -0.4d));
+					binfo.beam.setScale(new Vector(0.8f, 0.8f, length));
+					binfo.beam.updateMetadataPacket();
+					binfo.beam.setBrightnessOverride(new Display.Brightness(15, 15));
+					binfo.beam.respawn();
+				}
 			}
 			else if (timeDiff == SKULL_BEAM_RESIDUAL_TICKS) {
 				final List<PacketContainer> packets = new ArrayList<>((int) BEAM_LENGTH + 1);
-				final Location loc = binfo.skull.getLocation();
+				final Location loc = binfo.skull != null ? binfo.skull.getLocation() : binfo.beam.getLocation();
 				final Vector dir = loc.getDirection();
 				final Vector vec = loc.toVector();
-				for (int i = 0; i < (int) BEAM_LENGTH + 1; i++) {
+				for (int i = 0; i < (int) binfo.beamLength; i++) {
 					packets.add(ParticleUtils.batchParticles(
 						Particle.CLOUD, null,
 						vec.getX(),
@@ -156,9 +177,10 @@ public class GasterBlasterAbility extends Ability {
 					vec.add(dir);
 				}
 
-				PlayerUtils.sendPacket(binfo.skull.getRealViewers(), packets); // batch
+				PlayerUtils.sendPacket(binfo.beam.getRealViewers(), packets); // batch
 
-				binfo.skull.remove();
+				if (binfo.skull != null)
+					binfo.skull.remove();
 				binfo.beam.remove();
 
 				toRemove.add(binfo);
@@ -169,16 +191,16 @@ public class GasterBlasterAbility extends Ability {
 		}
 
 		this.blasters.removeAll(toRemove);
+		this.blasters.addAll(toAdd);
 	}
 
-	private void beamDamage(Player shooter, BlasterInfo binfo) {
-		final World world = binfo.beam.getWorld();
-
+	// Return a binfo if hits a reflector (for the beam the reflector should spawn)
+	private BlasterInfo beamDamage(Player shooter, Location shootLoc, int currentTick) {
+		final World world = shootLoc.getWorld();
 		final List<Entity> hitList = new ArrayList<>();
-		final Location loc = binfo.beam.getLocationMut();
 		for (int i = 0; i < 20; i++) { // hit max 20 victims
 			final RayTraceResult raytrace = world.rayTraceEntities(
-				loc, loc.getDirection(), BEAM_LENGTH, 0.4d,
+				shootLoc, shootLoc.getDirection(), BEAM_LENGTH, 0.4d,
 				victim -> victim instanceof LivingEntity livingVictim &&
 					!hitList.contains(victim) &&
 					!this.game.isDead(livingVictim) &&
@@ -191,11 +213,30 @@ public class GasterBlasterAbility extends Ability {
 				if (hitEntity != null) {
 					hitList.add(hitEntity);
 
-					final DamageEvent dEvent = DamageEvent.newDamageEvent(hitEntity, 1d,
-						DamageType.SANS_BEAM,shooter, false);
-					this.game.queueDamage(dEvent);
+					if (hitEntity instanceof Player hitPlayer && Ability.hasAbility(hitPlayer, KitPorcupine.PorcupineAbility.class)) {
+						final Vector hitPosition = raytrace.getHitPosition();
+						final Location hitPositionLoc = hitPosition.toLocation(world);
+						hitPositionLoc.setDirection(hitPlayer.getLocation().getDirection());
+
+						KitPorcupine.PorcupineAbility.reflectEffect(hitPlayer, hitPositionLoc, true);
+
+						final BlasterInfo reflected = new BlasterInfo( // + 1 tick for spaghetti
+							hitPlayer, currentTick + 1, hitPositionLoc
+						);
+						reflected.beamLength = BEAM_LENGTH - hitPositionLoc.distance(shootLoc);
+						if (!Double.isFinite(reflected.beamLength)) reflected.beamLength = BEAM_LENGTH;
+						reflected.reflected = true;
+						return reflected;
+					}
+					else {
+						final DamageEvent dEvent = DamageEvent.newDamageEvent(hitEntity, 1d,
+							DamageType.SANS_BEAM, shooter, false);
+						this.game.queueDamage(dEvent);
+					}
 				}
 			}
 		}
+
+		return null;
 	}
 }

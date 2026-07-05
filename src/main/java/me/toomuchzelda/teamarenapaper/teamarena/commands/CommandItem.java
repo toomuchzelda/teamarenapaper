@@ -2,6 +2,7 @@ package me.toomuchzelda.teamarenapaper.teamarena.commands;
 
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
+import me.toomuchzelda.teamarenapaper.teamarena.abilities.GasterBlasterAbility;
 import me.toomuchzelda.teamarenapaper.teamarena.abilities.explosives.ExplosiveProjectilesAbility;
 import me.toomuchzelda.teamarenapaper.teamarena.abilities.RailgunAbility;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.demolitions.KitDemolitions;
@@ -26,7 +27,8 @@ public class CommandItem extends CustomCommand {
 		"PushMine", () -> KitDemolitions.PUSH_MINE_ITEM,
 		"Railgun", () -> RailgunAbility.RAILGUN,
 		"RPG", () -> ExplosiveProjectilesAbility.RPG,
-		"Grenade", () -> ExplosiveProjectilesAbility.GRENADE
+		"Grenade", () -> ExplosiveProjectilesAbility.GRENADE,
+		"Gaster", () -> GasterBlasterAbility.ITEM
 		// TODO add more as needed
 	);
 
