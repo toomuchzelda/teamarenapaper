@@ -8,8 +8,8 @@ import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageType;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.KitPorcupine;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.utils.PacketUtils;
 import me.toomuchzelda.teamarenapaper.utils.ParticleUtils;
-import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketDisplay;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import net.kyori.adventure.text.Component;
@@ -93,7 +93,7 @@ public class GasterBlasterAbility extends Ability {
 				player, TeamArena.getGameTick(),
 				player.getEyeLocation()
 			));
-			player.setCooldown(ITEM, SKULL_ROTATION_TICKS + SKULL_BEAM_RESIDUAL_TICKS + 5);
+			player.setCooldown(ITEM, SKULL_BEAM_RESIDUAL_TICKS);
 		}
 	}
 
@@ -156,6 +156,24 @@ public class GasterBlasterAbility extends Ability {
 					binfo.beam.updateMetadataPacket();
 					binfo.beam.setBrightnessOverride(new Display.Brightness(15, 15));
 					binfo.beam.respawn();
+
+					if (!binfo.reflected) { // firing sound effect
+						assert binfo.skull != null;
+						binfo.skull.broadcastPacket(List.of(
+							PacketUtils.createPlaySoundPacket(
+								shootLoc, Sound.ENTITY_BLAZE_HURT, SoundCategory.PLAYERS,
+								1f, 0.6f
+							),
+							PacketUtils.createPlaySoundPacket(
+								shootLoc, Sound.ENTITY_BLAZE_DEATH, SoundCategory.PLAYERS,
+								0.7f, 1.4f
+							),
+							PacketUtils.createPlaySoundPacket(
+								shootLoc, Sound.ENTITY_BREEZE_DEATH, SoundCategory.PLAYERS,
+								1f, 0.55f
+							)
+						));
+					}
 				}
 			}
 			else if (timeDiff == SKULL_BEAM_RESIDUAL_TICKS) {
@@ -177,7 +195,7 @@ public class GasterBlasterAbility extends Ability {
 					vec.add(dir);
 				}
 
-				PlayerUtils.sendPacket(binfo.beam.getRealViewers(), packets); // batch
+				binfo.beam.broadcastPacket(packets);
 
 				if (binfo.skull != null)
 					binfo.skull.remove();

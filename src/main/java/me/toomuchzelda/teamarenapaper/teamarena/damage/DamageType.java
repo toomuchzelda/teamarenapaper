@@ -154,15 +154,15 @@ public class DamageType {
     public static final DamageType UNKNOWN = new DamageType("Unknown", "%Killed% died from unknown causes").setNoKnockback();
 
     public static final DamageType VOID = new DamageType("Void", "%Killed% fell into the void").setIgnoreArmor(true).setNoKnockback()
-            .setIgnoreRate();
+            .setIgnoreRate().setInstantDeath();
 
     public static final DamageType VOID_PUSHED = new DamageType("Void Pushed", "%Killed% was knocked into the void by %Killer%")
-            .setIgnoreArmor(true).setNoKnockback().setIgnoreRate();
+            .setIgnoreArmor(true).setNoKnockback().setIgnoreRate().setInstantDeath();
 
-	public static final DamageType VOID_PUSHED_SELF = new DamageType(VOID_PUSHED, "%Killed% pushed themselves into the void");
+	public static final DamageType VOID_PUSHED_SELF = new DamageType(VOID_PUSHED, "%Killed% pushed themselves into the void").setInstantDeath();
 
     public static final DamageType VOID_SHOT = new DamageType("Void Shot", "%Killed% was shot into the void by %Killer%")
-            .setIgnoreArmor(true).setNoKnockback().setIgnoreRate();
+            .setIgnoreArmor(true).setNoKnockback().setIgnoreRate().setInstantDeath();
 
     public static final DamageType WITHER_POISON = new DamageType("Wither Poison", "%Killed% withered to death")
             .setNoKnockback();

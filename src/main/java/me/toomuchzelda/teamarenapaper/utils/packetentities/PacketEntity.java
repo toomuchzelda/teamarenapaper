@@ -714,4 +714,8 @@ public class PacketEntity
 	public void broadcastPacket(PacketContainer packet) {
 		this.realViewers.forEach(player -> this.sendPacket(player, packet));
 	}
+
+	public void broadcastPacket(Collection<PacketContainer> packets) {
+		packets.forEach(packet -> this.broadcastPacket(packet));
+	}
 }

@@ -8,14 +8,20 @@ import io.netty.buffer.Unpooled;
 import me.toomuchzelda.teamarenapaper.CompileAsserts;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket;
-import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
-import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
-import net.minecraft.network.protocol.game.ClientboundRotateHeadPacket;
+import net.minecraft.network.protocol.game.*;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.PositionMoveRotation;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.Location;
+import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
+import org.bukkit.craftbukkit.CraftSound;
 import org.bukkit.craftbukkit.util.CraftVector;
 import org.bukkit.util.Vector;
 
@@ -126,5 +132,43 @@ public class PacketUtils {
 
 		};
 		return new PacketContainer(original.getType(), newPacket);
+	}
+
+	private static final SoundSource[] soundSources = SoundSource.values();
+	public static SoundSource fromBukkit(SoundCategory bukkit) {
+		return soundSources[bukkit.ordinal()];
+	}
+
+	public static PacketContainer createPlaySoundPacket(int entityId, Sound sound, SoundCategory category, float volume, float pitch) {
+		return new PacketContainer(PacketType.Play.Server.ENTITY_SOUND, new ClientboundSoundEntityPacket(
+			CraftSound.bukkitToMinecraftHolder(sound),
+			fromBukkit(category),
+			new net.minecraft.world.entity.Entity(net.minecraft.world.entity.EntityType.MARKER, null) {
+				protected void defineSynchedData(SynchedEntityData.Builder builder) {}
+				public boolean hurtServer(ServerLevel serverLevel, DamageSource damageSource, float v) {return false;}
+				protected void readAdditionalSaveData(ValueInput valueInput) {}
+				protected void addAdditionalSaveData(ValueOutput valueOutput) {}
+
+				// what we need
+				@Override
+				public int getId() {
+					return entityId;
+				}
+			},
+			volume,
+			pitch,
+			MathUtils.random.nextLong() // seed
+		));
+	}
+
+	public static PacketContainer createPlaySoundPacket(Location loc, Sound sound, SoundCategory category, float volume, float pitch) {
+		return new PacketContainer(PacketType.Play.Server.NAMED_SOUND_EFFECT, new ClientboundSoundPacket(
+			CraftSound.bukkitToMinecraftHolder(sound),
+			fromBukkit(category),
+			loc.getX(), loc.getY(), loc.getZ(),
+			volume,
+			pitch,
+			MathUtils.random.nextLong() // seed
+		));
 	}
 }
