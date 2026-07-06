@@ -1,10 +1,13 @@
 package me.toomuchzelda.teamarenapaper.teamarena.kits;
 
+import me.toomuchzelda.teamarenapaper.Main;
 import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
+import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.abilities.GasterBlasterAbility;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
+import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.SpeechBubbleHologram;
 import net.kyori.adventure.text.Component;
@@ -12,11 +15,17 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class KitSans extends Kit {
 
@@ -36,18 +45,89 @@ public class KitSans extends Kit {
 	}
 
 	private static class SansAbility extends Ability {
-		public static final Vector VERTICAL = new Vector(0d, 0.4d, 0d);
+		private static final AttributeModifier HEALTH_MODIFIER = new AttributeModifier(
+			new NamespacedKey(Main.getPlugin(), "sanshealth"),
+			-0.95d,
+			AttributeModifier.Operation.ADD_SCALAR
+		);
+		private static final Vector VERTICAL = new Vector(0d, 0.4d, 0d);
+
+		private static class SansInfo {
+			private int dodges = 24;
+			private Component lastMessage = null;
+		}
+		private final Map<Player, SansInfo> sanses = new HashMap<>();
+
+		@Override
+		protected void giveAbility(Player player) {
+			this.sanses.put(player, new SansInfo());
+			player.getAttribute(Attribute.MAX_HEALTH).addModifier(HEALTH_MODIFIER);
+		}
+
+		@Override
+		protected void removeAbility(Player player) {
+			this.sanses.remove(player);
+			player.getAttribute(Attribute.MAX_HEALTH).removeModifier(HEALTH_MODIFIER);
+		}
+
+		private static final Component ONE = Component.text("Your movements grow a little wearier.", NamedTextColor.WHITE);
+		private static final Component TWO = Component.text("Your movements seem to be slower.", NamedTextColor.WHITE);
+		private static final Component THREE = Component.text("You're starting to look really tired.", NamedTextColor.WHITE);
+		private Component getWeariness(int dodges) {
+			assert dodges >= 0 && dodges <= 24;
+			if (dodges > 24 - 4) {
+				return null;
+			}
+			else if (dodges > 24 - 9) {
+				return ONE;
+			}
+			else if (dodges > 24 - 20) {
+				return TWO;
+			}
+			else {
+				return THREE;
+			}
+		}
+
+		@Override
+		public void onTick() {
+			if (TeamArena.getGameTick() % 3 == 0) {
+				for (var entry : this.sanses.entrySet()) {
+					final Player sans = entry.getKey();
+					final SansInfo sinfo = entry.getValue();
+
+					final Component actionBar = this.getWeariness(sinfo.dodges);
+					if (actionBar != null)
+						PlayerUtils.sendKitMessage(sans, null, actionBar);
+				}
+			}
+		}
 
 		@Override
 		public void onReceiveDamage(DamageEvent event) {
-			if (!event.getDamageType().isInstantDeath())
-				event.setFinalDamage(0d);
-
-			if (event.hasKnockback())
-				event.setKnockback(event.getKnockback().crossProduct(VERTICAL).add(VERTICAL));
+			if (event.getDamageType().isInstantDeath()) return;
 
 			assert event.getVictim() instanceof Player;
 			final Player sans = (Player) event.getVictim();
+			final SansInfo sinfo = this.sanses.get(sans);
+			sinfo.dodges--;
+			if (sinfo.dodges < 0) {
+				event.setIgnoreInvulnerability(true);
+				event.setFinalDamage(sans.getHealth());
+				return;
+			}
+
+			final Component msg = this.getWeariness(sinfo.dodges);
+			if (msg != null && msg != sinfo.lastMessage) {
+				sinfo.lastMessage = msg;
+				PlayerUtils.sendKitMessage(sans, msg, msg);
+			}
+
+			event.setFinalDamage(0d);
+			if (event.hasKnockback()) {
+				event.setKnockback(event.getKnockback().crossProduct(VERTICAL).add(VERTICAL));
+			}
+
 			final Location sansLoc = sans.getEyeLocation();
 			Location spawnLoc;
 			if (event.getFinalAttacker() instanceof Entity finalAttacker) {
