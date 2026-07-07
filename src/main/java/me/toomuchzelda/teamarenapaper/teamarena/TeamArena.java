@@ -199,6 +199,7 @@ public abstract class TeamArena
 	private static final FilterRule MISC_KITS = new FilterRule("tma/misc_kits", "Poorly balanced kits", FilterAction.block("sniper", "longbow", "fish"));
 	public static final FilterRule NO_HNS = new FilterRule("tma/no_hns", "No HNS kits by default", FilterAction.block("hider", "seeker", "radar"));
 	private static final FilterRule NO_ONE = new FilterRule("tma/no_one", "No Kit One", FilterAction.block(KitOne.KEY));
+	private static final FilterRule NO_SANS = new FilterRule("tma/no_sans", "No Sans", FilterAction.block("sans"));
 
 	public TeamArena(TeamArenaMap map) {
 		File worldFile = map.getFile();
@@ -435,10 +436,11 @@ public abstract class TeamArena
 	protected void registerKits() {
 		final KitTrooper trooper = new KitTrooper(this);
 		final KitSplitter splitter = new KitSplitter(this, trooper);
+		final KitRewind kitRewind = new KitRewind();
 		var defaultKits = new Kit[] {
 			trooper, splitter, new KitArcher(), new KitGhost(), new KitDwarf(), new KitBurst(),
 			new KitJuggernaut(), new KitNinja(), new KitPyro(), new KitSpy(), new KitDemolitions(), new KitNone(),
-			new KitVenom(), new KitRewind(), new KitValkyrie(), new KitExplosive(), new KitTrigger(), new KitMedic(this.killStreakManager),
+			new KitVenom(), kitRewind, new KitValkyrie(), new KitExplosive(), new KitTrigger(), new KitMedic(this.killStreakManager),
 			new KitBerserker(), new KitEngineer(), new KitPorcupine(this), new KitLongbow(), new KitSniper(), new KitBeekeeper(),
 			new KitMarine(), /*new KitFrost(),*/
 
@@ -446,7 +448,7 @@ public abstract class TeamArena
 
 			new KitOne(),
 
-			new KitSans()
+			new KitSans(kitRewind.getRewindAbility())
 		};
 
 		for (Kit kit : defaultKits) {
@@ -459,11 +461,13 @@ public abstract class TeamArena
 	protected void applyKitFilters() {
 		KitFilter.addGlobalRule(NO_HNS);
 		KitFilter.addGlobalRule(NO_ONE);
+		KitFilter.addGlobalRule(NO_SANS);
 	}
 
 	protected void removeKitFilters() {
 		KitFilter.removeGlobalRule(NO_HNS.key());
 		KitFilter.removeGlobalRule(NO_ONE.key());
+		KitFilter.removeGlobalRule(NO_SANS.key());
 	}
 
 	protected void registerKit(Kit kit) {
@@ -1465,6 +1469,9 @@ public abstract class TeamArena
 				p.getAttribute(Attribute.BLOCK_INTERACTION_RANGE).setBaseValue(4.5d / 5.0d);
 			}
 		}
+		else if (this.gameMap.getName().equals("Judgement Hallway")) {// hehe
+			KitSans.script(this);
+		}
 	}
 
 	@OverridingMethodsMustInvokeSuper
@@ -2349,7 +2356,7 @@ public abstract class TeamArena
 			final TeamArenaMap.TeamInfo teamInfo = entry.getValue();
 			String teamName = teamInfo.name();
 
-			//if it's a legacy RWF team
+			//if it's a legacy RWF teamSND
 			//TeamColours teamColour = TeamColours.valueOf(teamName);
 			TeamArenaTeam teamArenaTeam = LegacyTeams.fromRWF(teamName);
 			if (teamArenaTeam == null) {
@@ -2574,10 +2581,14 @@ public abstract class TeamArena
 
 	//Get by config names like "RED", "BLUE" etc.
 	protected TeamArenaTeam getTeamByLegacyConfigName(String name) {
-		name = name.replace('_', ' ');
 		for(TeamArenaTeam team : this.teams) {
-			if(team.getSimpleName().equalsIgnoreCase(name))
+			if(team.getSimpleName().equalsIgnoreCase(name.replace('_', ' ')))
 				return team;
+		}
+
+		// May not be a legacy team, so also check for full name matches
+		for (TeamArenaTeam team : this.teams) {
+			if (team.getName().equals(name)) return team;
 		}
 
 		return null;

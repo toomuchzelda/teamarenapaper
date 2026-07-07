@@ -5,31 +5,31 @@ import me.toomuchzelda.teamarenapaper.inventory.ItemBuilder;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.abilities.GasterBlasterAbility;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
+import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
+import me.toomuchzelda.teamarenapaper.teamarena.kits.rewind.KitRewind;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
 import me.toomuchzelda.teamarenapaper.utils.PlayerUtils;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.SpeechBubbleHologram;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.Color;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
+import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class KitSans extends Kit {
-
-	public KitSans() {
+	public KitSans(KitRewind.RewindAbility rewindAbility) {
 		super("sans", "Sans Undertale", "The easiest enemy. Can only deal 1 damage.", new ItemStack(Material.SKELETON_SKULL));
 
 		this.setArmor(
@@ -39,9 +39,9 @@ public class KitSans extends Kit {
 			ItemBuilder.of(Material.LEATHER_BOOTS).color(Color.FUCHSIA).build()
 		);
 
-		this.setItems(GasterBlasterAbility.ITEM);
+		this.setItems(GasterBlasterAbility.ITEM, KitRewind.TIME_MACHINE);
 
-		this.setAbilities(new SansAbility());
+		this.setAbilities(new SansAbility(), rewindAbility);
 	}
 
 	private static class SansAbility extends Ability {
@@ -104,6 +104,36 @@ public class KitSans extends Kit {
 		}
 
 		@Override
+		public void onAttemptedAttack(DamageEvent event) {
+			if (event.getDamageType().isMelee())
+				event.setFinalDamage(1d);
+		}
+
+		@Override
+		public void onDealtAttack(DamageEvent event) {
+			// melee attacks give poison
+			if (event.getDamageType().isMelee()) {
+				if (event.getVictim() instanceof LivingEntity livingVictim) {
+					int duration = 24;
+					if (livingVictim instanceof Player playerVictim)
+						duration += (int) Main.getPlayerInfo(playerVictim).kills * 24;
+					boolean hadPoison = livingVictim.hasPotionEffect(PotionEffectType.POISON);
+					livingVictim.addPotionEffect(new PotionEffect(PotionEffectType.POISON, duration, 1));
+					if (livingVictim.hasPotionEffect(PotionEffectType.POISON)) {
+						DamageTimes.DamageTime poisonTime = DamageTimes.getDamageTime(livingVictim, DamageTimes.TrackedDamageTypes.POISON);
+						int timeGiven;
+						if (hadPoison)
+							timeGiven = poisonTime.getTimeGiven();
+						else
+							timeGiven = TeamArena.getGameTick();
+
+						poisonTime.update(event.getFinalAttacker(), timeGiven);
+					}
+				}
+			}
+		}
+
+		@Override
 		public void onReceiveDamage(DamageEvent event) {
 			if (event.getDamageType().isInstantDeath()) return;
 
@@ -152,6 +182,36 @@ public class KitSans extends Kit {
 				new SpeechBubbleHologram.DamageIndicatorMovementFunc(0.15d, 0.7d)
 			);
 			hologram.respawn();
+		}
+	}
+
+	public static void script(final TeamArena game) {
+		final String[] lines = new String[] {
+			"heya.",
+			"you've been busy, huh?",
+			"...",
+			"so, i've got a question for ya.",
+			"do you think even the worst person can change...?",
+			"that everybody can be a good person, if they just try?",
+			"heh heh heh heh...",
+			"all right.",
+			"well, here's a better question.",
+			"do you wanna have a bad time?",
+			"'cause if you take another step forward...",
+			"you are REALLY not going to like what happens next.",
+			"welp.",
+			"sorry, old lady.",
+			"this is why i never make promises."
+		};
+
+		long start = 1;
+		for (String line : lines) {
+			Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
+				if (Main.getGame() != game) // don't persist into the next game
+					return;
+				Bukkit.broadcast(Component.text(line, NamedTextColor.WHITE));
+			}, start);
+			start += (line.length() * 2) + 10 + (line.charAt(line.length() - 1) == '?' ? 40 : 0);
 		}
 	}
 }

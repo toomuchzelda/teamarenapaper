@@ -153,6 +153,10 @@ public class KitRewind extends Kit {
 		setCategory(KitCategory.FIGHTER);
 	}
 
+	public RewindAbility getRewindAbility() {
+		return (RewindAbility) this.getAbilities()[0];
+	}
+
 	public static class RewindAbility extends Ability {
 
 		public static final int TICK_CYCLE = 15 * 20;
