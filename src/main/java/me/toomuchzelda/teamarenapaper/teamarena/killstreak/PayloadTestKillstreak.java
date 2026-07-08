@@ -97,6 +97,12 @@ public class PayloadTestKillstreak extends CratedKillStreak {
 			return (float) Math.pow(2, (key - 45) / 12f);
 		}
 
+		public void play() {
+			Bukkit.getOnlinePlayers().forEach(player -> {
+				player.playSound(player, Objects.requireNonNull(getInstrument().getSound()), SoundCategory.RECORDS, 1, getPitch());
+			});
+		}
+
 		public void play(World world, Location location) {
 			world.playSound(location, Objects.requireNonNull(getInstrument().getSound()), SoundCategory.PLAYERS, 1, getPitch());
 		}
@@ -173,6 +179,16 @@ public class PayloadTestKillstreak extends CratedKillStreak {
 		int elapsed;
 		NbsTick tick;
 
+		public NbsSongPlayer(NbsSong song) {
+			this.song = song;
+			this.iterator = song.ticks.iterator();
+			this.world = null;
+			this.location = null;
+			this.entity = null;
+			elapsed = 0;
+			Main.logger().info("Song " + song + " initialized");
+		}
+
 		public NbsSongPlayer(NbsSong song, Location location) {
 			this.song = song;
 			this.iterator = song.ticks.iterator();
@@ -211,8 +227,10 @@ public class PayloadTestKillstreak extends CratedKillStreak {
 				for (NbsNote note : tick.notes) {
 					if (entity != null)
 						note.play(world, entity);
-					else
+					else if (location != null)
 						note.play(world, location);
+					else
+						note.play();
 				}
 				tick = null;
 			}

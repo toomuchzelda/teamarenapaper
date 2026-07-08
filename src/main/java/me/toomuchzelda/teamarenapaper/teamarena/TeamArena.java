@@ -200,6 +200,7 @@ public abstract class TeamArena
 	public static final FilterRule NO_HNS = new FilterRule("tma/no_hns", "No HNS kits by default", FilterAction.block("hider", "seeker", "radar"));
 	private static final FilterRule NO_ONE = new FilterRule("tma/no_one", "No Kit One", FilterAction.block(KitOne.KEY));
 	private static final FilterRule NO_SANS = new FilterRule("tma/no_sans", "No Sans", FilterAction.block("sans"));
+	private static final FilterRule ONLY_SANS = new FilterRule("tma/no_sans", "No Sans", FilterAction.allow("sans"));
 
 	public TeamArena(TeamArenaMap map) {
 		File worldFile = map.getFile();
@@ -461,13 +462,24 @@ public abstract class TeamArena
 	protected void applyKitFilters() {
 		KitFilter.addGlobalRule(NO_HNS);
 		KitFilter.addGlobalRule(NO_ONE);
-		KitFilter.addGlobalRule(NO_SANS);
+
+		// me loves hardcoding
+		if (!this.gameMap.getName().equals("Judgement Hallway"))
+			KitFilter.addGlobalRule(NO_SANS);
+		else {
+			KitFilter.addTeamRule("Human", NO_SANS);
+			KitFilter.addTeamRule("Sans", ONLY_SANS);
+		}
 	}
 
 	protected void removeKitFilters() {
 		KitFilter.removeGlobalRule(NO_HNS.key());
 		KitFilter.removeGlobalRule(NO_ONE.key());
 		KitFilter.removeGlobalRule(NO_SANS.key());
+		if (this.gameMap.getName().equals("Judgement Hallway")) {
+			KitFilter.removeTeamRule("Human", NO_SANS.key());
+			KitFilter.removeTeamRule("Sans", ONLY_SANS.key());
+		}
 	}
 
 	protected void registerKit(Kit kit) {
@@ -1402,6 +1414,9 @@ public abstract class TeamArena
 		}
 
 		sendCountdown(true);
+
+		// team filters now need applying
+		KitFilter.updateKitsFor(this, Bukkit.getOnlinePlayers());
 	}
 
 	@OverridingMethodsMustInvokeSuper

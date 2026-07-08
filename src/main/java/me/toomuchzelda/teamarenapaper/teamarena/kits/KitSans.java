@@ -6,6 +6,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.abilities.GasterBlasterAbility;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageEvent;
 import me.toomuchzelda.teamarenapaper.teamarena.damage.DamageTimes;
+import me.toomuchzelda.teamarenapaper.teamarena.killstreak.PayloadTestKillstreak;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.abilities.Ability;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.rewind.KitRewind;
 import me.toomuchzelda.teamarenapaper.utils.ItemUtils;
@@ -25,8 +26,12 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
 
 public class KitSans extends Kit {
 	public KitSans(KitRewind.RewindAbility rewindAbility) {
@@ -210,6 +215,23 @@ public class KitSans extends Kit {
 				if (Main.getGame() != game) // don't persist into the next game
 					return;
 				Bukkit.broadcast(Component.text(line, NamedTextColor.WHITE));
+
+				if (line.equals("you are REALLY not going to like what happens next.")) {
+					final File songFile = new File(new File("songs"), "megalovania.nbs");
+					try {
+						PayloadTestKillstreak.NbsSong song = PayloadTestKillstreak.loadSong(new FileInputStream(songFile));
+						new PayloadTestKillstreak.NbsSongPlayer(song).schedule();
+						Bukkit.broadcast(Component.textOfChildren(
+							Component.text("Now playing " + song.name(), NamedTextColor.GOLD),
+							Component.newline(),
+							Component.text("By " + song.author(), NamedTextColor.GOLD),
+							Component.newline(),
+							Component.text("Original by " + song.originalAuthor(), NamedTextColor.GOLD)
+						));
+					} catch (IOException e) {
+						Main.logger().log(Level.WARNING, "Couldn't load " + songFile, e);
+					}
+				}
 			}, start);
 			start += (line.length() * 2) + 10 + (line.charAt(line.length() - 1) == '?' ? 40 : 0);
 		}
