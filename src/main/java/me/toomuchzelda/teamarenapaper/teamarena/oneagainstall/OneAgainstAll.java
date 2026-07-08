@@ -103,7 +103,9 @@ public class OneAgainstAll extends TeamArena {
 		Main.getPlayerInfo(this.onePlayer).kit = this.kitOne;
 
 		// hacky, but this.allAgainstPlayer would've been assigned by this.informOfTeam, called by super.prepTeamsDecided
-		Bukkit.broadcast(this.allAgainstPlayer);
+		// unless there's only 1 player in the game...
+		if (this.allAgainstPlayer != null)
+			Bukkit.broadcast(this.allAgainstPlayer);
 
 		this.updateKitFilters();
 		KitFilter.updateKitsFor(this, this.players);

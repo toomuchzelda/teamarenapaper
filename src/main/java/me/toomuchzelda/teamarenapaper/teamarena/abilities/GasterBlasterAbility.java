@@ -118,6 +118,13 @@ public class GasterBlasterAbility extends Ability {
 					binfo.skull.translate(new Vector(-0.5d, -0.25d, -0.5d));
 					binfo.skull.updateMetadataPacket();
 					binfo.skull.respawn();
+
+					binfo.skull.broadcastPacket(
+						PacketUtils.createPlaySoundPacket(
+							binfo.skull.getId(), Sound.BLOCK_CHEST_OPEN,
+							SoundCategory.PLAYERS, 0.7f, 0.7f
+						)
+					);
 				}
 				else { // spin
 					final float diff = (float) timeDiff / (float) SKULL_ROTATION_TICKS;

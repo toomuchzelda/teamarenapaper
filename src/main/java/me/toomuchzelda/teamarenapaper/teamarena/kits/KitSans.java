@@ -209,10 +209,11 @@ public class KitSans extends Kit {
 			"this is why i never make promises."
 		};
 
+		final String worldName = game.getWorld().getName(); // use world name so the tasks don't hold a reference to a stale TeamArena
 		long start = 1;
 		for (String line : lines) {
 			Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
-				if (Main.getGame() != game) // don't persist into the next game
+				if (!Main.getGame().getWorld().getName().equals(worldName)) // don't persist into the next game
 					return;
 				Bukkit.broadcast(Component.text(line, NamedTextColor.WHITE));
 

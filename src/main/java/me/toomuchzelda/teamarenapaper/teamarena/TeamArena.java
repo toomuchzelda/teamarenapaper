@@ -2518,6 +2518,9 @@ public abstract class TeamArena
 	}
 
 	public void queueDamage(DamageEvent event) {
+		if (event.getVictim() instanceof ArmorStand stand && stand.isMarker())
+			return;
+
 		if(this.gameState == GameState.LIVE && !isDead(event.getVictim()))
 			damageQueue.add(event);
 	}
