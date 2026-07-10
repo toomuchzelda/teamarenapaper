@@ -26,6 +26,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.inventory.SpectateInventory;
 import me.toomuchzelda.teamarenapaper.teamarena.killstreak.PayloadTestKillstreak;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.Kit;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.beekeeper.KitBeekeeper;
+import me.toomuchzelda.teamarenapaper.teamarena.oneagainstall.OneAgainstAll;
 import me.toomuchzelda.teamarenapaper.utils.*;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketDisplay;
 import me.toomuchzelda.teamarenapaper.utils.packetentities.PacketEntity;
@@ -674,6 +675,9 @@ public class CommandDebug extends CustomCommand {
 
 				player.sendMessage(ability.debug());
 			}
+			case "alreadychosen" -> {
+				player.sendMessage(Component.text(OneAgainstAll.getAlreadyChosen().toString()));
+			}
 			default -> showUsage(sender);
 		}
 	}
@@ -684,7 +688,7 @@ public class CommandDebug extends CustomCommand {
 			return Arrays.asList("hide", "gui", "guitest", "signtest", "game", "setrank", "setteam", "setkit",
 				"votetest", "draw", "graffititest", "respawn", "fakehitbox", "testmotd", "arrowMarker", "packetcache", "showSpawns",
 				"flyingpoint", "fakeBlock", "elevator", "showores", "darken", "amogus", "loadsong", "movemaxxing", "packethuman",
-				"addshield", "clearshields", "invisibleBlock", "fatmouse", "villager", "beekeeper");
+				"addshield", "clearshields", "invisibleBlock", "fatmouse", "villager", "beekeeper", "alreadychosen");
 		} else if (args.length == 2) {
 			return switch (args[0].toLowerCase(Locale.ENGLISH)) {
 				case "gui" -> Arrays.asList("true", "false");

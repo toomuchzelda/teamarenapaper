@@ -14,6 +14,7 @@ import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.FilterAction;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.FilterRule;
 import me.toomuchzelda.teamarenapaper.teamarena.kits.filter.KitFilter;
 import me.toomuchzelda.teamarenapaper.utils.EntityUtils;
+import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import me.toomuchzelda.teamarenapaper.utils.TextColors;
 import me.toomuchzelda.teamarenapaper.utils.TextUtils;
 import net.kyori.adventure.text.Component;
@@ -33,6 +34,7 @@ import org.bukkit.util.BlockVector;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.logging.Level;
 
 public class OneAgainstAll extends TeamArena {
 	private static final Component GAME_NAME = Component.text("One Against All", GameType.OAA.shortName.color());
@@ -55,10 +57,11 @@ public class OneAgainstAll extends TeamArena {
 	private double onePlayerMaxHealth;
 	private AttributeModifier onePlayerHealthModifier;
 
-	private Player onePlayer; // null until teams decided
+	private Player onePlayer; // null until teams decided unless admin set
 	private double oneKills = 0d;
 	private Entity oneKiller; // player (or not) who kills the one
 	private final Map<Player, Double> damagers = new HashMap<>();
+	private int allTeamSize; // teams decided
 
 	private int ticksLeft;
 
@@ -99,8 +102,9 @@ public class OneAgainstAll extends TeamArena {
 
 		assert this.oneTeam.getPlayerMembers().size() == 1;
 		assert this.onePlayer == this.oneTeam.getRandomPlayer();
-		//this.onePlayer = this.oneTeam.getRandomPlayer();
 		Main.getPlayerInfo(this.onePlayer).kit = this.kitOne;
+
+		this.allTeamSize = this.allTeam.getPlayerMembers().size();
 
 		// hacky, but this.allAgainstPlayer would've been assigned by this.informOfTeam, called by super.prepTeamsDecided
 		// unless there's only 1 player in the game...
@@ -111,11 +115,41 @@ public class OneAgainstAll extends TeamArena {
 		KitFilter.updateKitsFor(this, this.players);
 	}
 
+	private static final WeakHashMap<Player, Void> alreadyChosen = new WeakHashMap<>();
+	@Override
+	public void setupTeams() {
+		// assign all players to a team before super
+		assert !this.players.isEmpty();
+
+		final List<Player> shuffled = new ArrayList<>(this.players);
+		shuffled.removeIf(player -> Main.getPlayerInfo(player).team != this.noTeamTeam);
+		Collections.shuffle(shuffled, MathUtils.random);
+
+		if (this.onePlayer == null) { // if not already set by external forces
+			final List<Player> oneCandidates = new ArrayList<>(shuffled);
+			oneCandidates.removeIf(alreadyChosen::containsKey);
+			if (oneCandidates.isEmpty()) {
+				alreadyChosen.clear();
+				oneCandidates.add(MathUtils.randomElement(shuffled));
+			}
+			this.onePlayer = oneCandidates.getFirst();
+		}
+
+		this.oneTeam.addMembers(this.onePlayer);
+		alreadyChosen.put(this.onePlayer, null);
+		shuffled.remove(this.onePlayer);
+		shuffled.forEach(player -> this.allTeam.addMembers(player));
+
+		super.setupTeams();
+	}
+
 	@Override
 	public TeamArenaTeam addToLowestTeam(Player player, boolean add) {
 		final TeamArenaTeam chosen;
-		if (this.oneTeam.getPlayerMembers().isEmpty())
+		if (this.oneTeam.getPlayerMembers().isEmpty()) {
 			chosen = this.oneTeam;
+			Main.logger().log(Level.WARNING, "Should be unreachable", new RuntimeException());
+		}
 		else
 			chosen = this.allTeam;
 
@@ -266,7 +300,7 @@ public class OneAgainstAll extends TeamArena {
 		if (maxKiller != null) {
 			final Component msg = Component.textOfChildren(
 				maxKiller.playerListName(),
-				Component.text(" dealt the most damage at " + TextUtils.formatNumber(killAmount / 2d, 2), NamedTextColor.GOLD),
+				Component.text(" dealt the most damage at " + TextUtils.formatNumber(killAmount / 2d, 2) + "/" + (this.onePlayerMaxHealth / 2d), NamedTextColor.GOLD),
 				TextColors.HEART,
 				Component.newline()
 			);
@@ -285,7 +319,7 @@ public class OneAgainstAll extends TeamArena {
 
 			builder.append(Component.textOfChildren(
 				EntityUtils.getComponent(this.onePlayer),
-				Component.text(" killed " + TextUtils.formatNumber(this.oneKills, 2) + " ", NamedTextColor.GOLD),
+				Component.text(" killed " + TextUtils.formatNumber(this.oneKills, 2) + "/" + this.allTeamSize + " ", NamedTextColor.GOLD),
 				this.allTeam.getComponentName(),
 				Component.text(" players", NamedTextColor.GOLD)
 			));
@@ -294,7 +328,7 @@ public class OneAgainstAll extends TeamArena {
 			final double health = this.onePlayer.getHealth();
 			final Component msg = Component.textOfChildren(
 				EntityUtils.getComponent(this.onePlayer),
-				Component.text(" had " + TextUtils.formatNumber(health / 2d, 2), NamedTextColor.GOLD),
+				Component.text(" had " + TextUtils.formatNumber(health / 2d, 2) + "/" + (this.onePlayerMaxHealth / 2d), NamedTextColor.GOLD),
 				TextColors.HEART,
 				Component.text(" left", NamedTextColor.GOLD)
 			);
@@ -364,6 +398,18 @@ public class OneAgainstAll extends TeamArena {
 			list.add(Component.text("Time's up!", NamedTextColor.YELLOW));
 
 		return list;
+	}
+
+	public void setOne(Player one) {
+		if (this.gameState != GameState.PREGAME)
+			throw new IllegalStateException("Too late!");
+
+		this.onePlayer = one;
+	}
+
+	// debug
+	public static Set<Player> getAlreadyChosen() {
+		return alreadyChosen.keySet();
 	}
 
 	@Override

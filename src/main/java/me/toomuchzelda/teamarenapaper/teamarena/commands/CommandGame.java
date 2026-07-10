@@ -7,11 +7,14 @@ import me.toomuchzelda.teamarenapaper.teamarena.PermissionLevel;
 import me.toomuchzelda.teamarenapaper.teamarena.TeamArena;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.GameScheduler;
 import me.toomuchzelda.teamarenapaper.teamarena.gamescheduler.TeamArenaMap;
+import me.toomuchzelda.teamarenapaper.teamarena.oneagainstall.OneAgainstAll;
 import me.toomuchzelda.teamarenapaper.utils.MathUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -87,6 +90,26 @@ public class CommandGame extends CustomCommand {
 					Component.text("random", NamedTextColor.GRAY))
 			).color(NamedTextColor.BLUE));
 		}
+		else if (args[0].equalsIgnoreCase("setone")) {
+			if (!(game instanceof OneAgainstAll oaa))
+				throw new CommandException("Gametype isn't OAA");
+			if (args.length < 2)
+				throw throwUsage("/game setone player");
+
+			final List<Entity> selection = selectEntities(sender, args[1]);
+			Player chosen = null;
+			for (Entity e : selection) if (e instanceof Player p) chosen = p;
+			if (chosen != null) {
+				try {
+					oaa.setOne(chosen);
+				} catch (IllegalStateException e) {
+					throw new CommandException(e.getMessage());
+				}
+				sender.sendMessage(Component.text(chosen.getName() + " will be the one", NamedTextColor.BLUE));
+			}
+			else
+				throw throwUsage("Nobody was selected");
+		}
 	}
 
 	//auto-completion
@@ -102,13 +125,16 @@ public class CommandGame extends CustomCommand {
     @Override
     public @NotNull List<String> onTabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args) {
         if (args.length == 1) {
-            return Arrays.asList("start", "stop", "setnext");
+            return Arrays.asList("start", "stop", "setnext", "setone");
         } else if (args[0].equals("setnext")) {
 			if (args.length == 2)
 				return GAMETYPE_ARGS;
 			GameType type = args[1].equals("any") ? null : GameType.valueOf(args[1]);
 			List<TeamArenaMap> eligibleMaps = type != null ? GameScheduler.getMaps(type) : GameScheduler.getAllMaps();
 			return eligibleMaps.stream().map(TeamArenaMap::getName).toList();
+		}
+		else if (args[0].equals("setone")) {
+			return CustomCommand.suggestPlayerSelectors();
 		}
         return Collections.emptyList();
     }
