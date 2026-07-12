@@ -858,7 +858,10 @@ public abstract class TeamArena
 
 	// For immediately, manually processing Damage Events instead of waiting for the ticker.
 	private void processDamageEvent(DamageEvent event) {
+		if (event.checkNaN()) return;
 		this.onDamage(event);
+		if (event.checkNaN()) return;
+
 		if(event.isCancelled())
 			return;
 
@@ -886,11 +889,13 @@ public abstract class TeamArena
 			}
 		}
 
+		if (event.checkNaN()) return;
 		event.executeAttack();
+		if (event.checkNaN()) return;
 	}
 
 	public void onConfirmedDamage(DamageEvent event) {
-
+		if (event.checkNaN()) return;
 		Player playerCause = null; //for hologram
 		if(event.getFinalAttacker() instanceof Player p) {
 			for(Ability ability : Kit.getAbilities(p)) {
@@ -912,6 +917,7 @@ public abstract class TeamArena
 
 					//give kill assist credit
 					if (event.getFinalAttacker() instanceof Player attacker && p != attacker) {
+						event.checkNaN();
 						pinfo.getKillAssistTracker().addDamage(attacker, event.getFinalDamage());
 					}
 				}
@@ -940,6 +946,8 @@ public abstract class TeamArena
 				hologram.respawn();
 			}
 		}
+
+		if (event.checkNaN()) return;
 	}
 
 	/**

@@ -31,8 +31,8 @@ public abstract class Ability {
 
 		}
 		else {
+			// maybe not a bug
 			Main.logger().warning("Tried to add ability " + ability.getClass() + " to player " + player.getName() + " when they already had it");
-			Thread.dumpStack();
 		}
 
 		ability.giveAbility(player);

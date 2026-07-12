@@ -38,6 +38,7 @@ import java.lang.reflect.Field;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
+import java.util.logging.Level;
 
 import static me.toomuchzelda.teamarenapaper.teamarena.GameState.LIVE;
 
@@ -429,23 +430,7 @@ public class DamageEvent {
 
 			//this should be impossible normally but can happen in some circumstances
 			if(finalDamage < 0) {
-				StringBuilder error = new StringBuilder();
-				error.append(getFinalAttacker().getName()).append(" is doing ").append(finalDamage)
-						.append(" damage to ").append(victim.getName()).append(" DamageType: ")
-						.append(damageType.toString()).append(" attacker: ")
-						.append(attacker != null ? attacker.getName() : "null").append("\n");
-				if(Main.getGame().getGameState() == LIVE) {
-					if (getFinalAttacker() instanceof Player p && Main.getPlayerInfo(p).activeKit != null) {
-						error.append("attacker kit: ").append(Main.getPlayerInfo(p).activeKit.getName()).append("\n");
-					}
-					if (victim instanceof Player p && Main.getPlayerInfo(p).activeKit != null) {
-						error.append("victim kit: ").append(Main.getPlayerInfo(p).activeKit.getName()).append("\n");
-					}
-				}
-
-				String errString = error.toString();
-				Main.logger().warning(errString);
-
+				Main.logger().log(Level.WARNING, "finalDamage < 0 for DamageEvent: " + this.toString(), new RuntimeException());
 				finalDamage = 0;
 			}
 
@@ -908,6 +893,23 @@ public class DamageEvent {
 			catch (IllegalArgumentException | IllegalAccessException ignored) {}
 		}
 
+		if(Main.getGame().getGameState() == LIVE) {
+			if (getFinalAttacker() instanceof Player p && Main.getPlayerInfo(p).activeKit != null) {
+				s.append("attacker kit: ").append(Main.getPlayerInfo(p).activeKit.getName()).append("\n");
+			}
+			if (victim instanceof Player p && Main.getPlayerInfo(p).activeKit != null) {
+				s.append("victim kit: ").append(Main.getPlayerInfo(p).activeKit.getName()).append("\n");
+			}
+		}
+
 		return s.toString();
+	}
+
+	public boolean checkNaN() { // put up a bug net
+		if (Double.isNaN(this.getFinalDamage())) {
+			Main.logger().log(Level.SEVERE, "DamageEvent final damage NaN: " + this, new RuntimeException());
+			return true;
+		}
+		return false;
 	}
 }

@@ -876,7 +876,6 @@ public class EventListeners implements Listener
 		if (game instanceof DigAndBuild dnb) {
 			ItemStack item;
 			if (action == InventoryAction.HOTBAR_SWAP) {
-				assert CompileAsserts.OMIT || event.getHotbarButton() != -1;
 				item = view.getBottomInventory().getItem(event.getHotbarButton());
 			}
 			else
