@@ -116,9 +116,10 @@ public class CommandGame extends CustomCommand {
 	private static final List<String> GAMETYPE_ARGS;
 
 	static {
-		GAMETYPE_ARGS = new ArrayList<>(GameType.values().length + 1);
+		final GameType[] values = GameType.values();
+		GAMETYPE_ARGS = new ArrayList<>(values.length + 1);
 		GAMETYPE_ARGS.add("any");
-		for (GameType gameType : GameType.values()) {
+		for (GameType gameType : values) {
 			GAMETYPE_ARGS.add(gameType.name());
 		}
 	}

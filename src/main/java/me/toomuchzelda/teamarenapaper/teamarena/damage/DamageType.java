@@ -139,9 +139,8 @@ public class DamageType {
 	public static final DamageType SPECTATE = new DamageType("Suicide", "%Killed% died").setInstantDeath().setNoKnockback();
 
     public static final DamageType KILL_ADMIN = new DamageType("Admin",
-            "%Killed% saw T_0_E_D's face and died", "%Killed% caught a whiff " +
-            "of their own body odour", "%Killed% thought Mineplex was better than Red Warfare", "%Killed% kicked a stray " +
-            "cat and thought it was funny", "%Killed% had negative social credit score", "%Killed% played " +
+		"%Killed% caught a whiff of their own body odour", "%Killed% thought Mineplex was better than Red Warfare", "%Killed% kicked a stray " +
+            "cat and laughed", "%Killed% had negative social credit score", "%Killed% played " +
             "russian roulette, and lost", "%Killed% lost against themselves in a 1v1")
 		.setInstantDeath().setNoKnockback().setIgnoreRate();
 

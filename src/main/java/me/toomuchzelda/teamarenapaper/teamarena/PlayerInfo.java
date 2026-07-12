@@ -21,6 +21,7 @@ import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.*;
+import java.util.logging.Level;
 
 //container class to store per-player info
 public final class PlayerInfo
@@ -49,9 +50,9 @@ public final class PlayerInfo
 	private final MetadataViewer metadataViewer; //custom entity metadata tracker
 
 	// Kills + kill assists
-	public double kills;
+	private double kills;
 	// Amount of kills/deaths they got in the whole game.
-	public double totalKills;
+	private double totalKills;
 	public int deaths;
 	// Currently used for KillStreak announcements
 	public int lastKillTime;
@@ -87,8 +88,8 @@ public final class PlayerInfo
 		damageReceivedLog = new ArrayList<>(128);
 
 		killAssistTracker = new KillAssistTracker(player);
-		kills = 0;
-		totalKills = 0;
+		setKills(0);
+		setTotalKills(0);
 		deaths = 0;
 		lastKillTime = 0;
 		lastInteractUnknownEntityTimes = new int[2];
@@ -222,5 +223,29 @@ public final class PlayerInfo
 
 	public List<DamageLogEntry> getDamageReceivedLog() {
 		return damageReceivedLog;
+	}
+
+	public double getKills() {
+		return kills;
+	}
+
+	public void setKills(double kills) {
+		if (Double.isNaN(kills)) {
+			Main.logger().log(Level.SEVERE, "NaN passed to setKills, kills=" + kills, new RuntimeException());
+			return;
+		}
+		this.kills = kills;
+	}
+
+	public double getTotalKills() {
+		return totalKills;
+	}
+
+	public void setTotalKills(double totalKills) {
+		if (Double.isNaN(totalKills)) {
+			Main.logger().log(Level.SEVERE, "NaN passed to setTotalKills, totalKills=" + totalKills, new RuntimeException());
+			return;
+		}
+		this.totalKills = totalKills;
 	}
 }

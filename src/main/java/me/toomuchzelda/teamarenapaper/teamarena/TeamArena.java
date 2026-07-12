@@ -389,8 +389,8 @@ public abstract class TeamArena
 			pinfo.team = noTeamTeam;
 			pinfo.clearDamageReceivedLog();
 			pinfo.getKillAssistTracker().clear();
-			pinfo.kills = 0;
-			pinfo.totalKills = 0;
+			pinfo.setKills(0);
+			pinfo.setTotalKills(0);
 			pinfo.deaths = 0;
 			noTeamTeam.addMembers(p);
 
@@ -1845,7 +1845,7 @@ public abstract class TeamArena
 
 		giveKitAndGameItems(player, pinfo, true);
 		this.commonAbilityManager.give(player);
-		pinfo.kills = 0;
+		pinfo.setKills(0);
 		PlayerListScoreManager.setKills(player, 0);
 
 		StatusBarManager.initStatusBar(player, pinfo);
@@ -1992,11 +1992,11 @@ public abstract class TeamArena
 			player.sendMessage(Component.text("Scored a kill assist of " + MathUtils.round(amount, 2) + "!", NamedTextColor.RED));
 
 		PlayerInfo pinfo = Main.getPlayerInfo(player);
-		pinfo.totalKills += amount;
+		pinfo.setTotalKills(pinfo.getTotalKills() + amount);
 
-		int killsBefore = (int) pinfo.kills;
-		pinfo.kills += amount;
-		int killsAfter = (int) pinfo.kills;
+		int killsBefore = (int) pinfo.getKills();
+		pinfo.setKills(pinfo.getKills() + amount);
+		int killsAfter = (int) pinfo.getKills();
 
 		PlayerListScoreManager.setKills(player, killsAfter);
 
@@ -2226,7 +2226,7 @@ public abstract class TeamArena
 	private void informKillsDeaths(Player player, PlayerInfo pinfo) {
 		player.sendMessage(Component.textOfChildren(
 			Component.text("You got "),
-			Component.text(TextUtils.formatNumber(pinfo.totalKills, 2), NamedTextColor.YELLOW),
+			Component.text(TextUtils.formatNumber(pinfo.getTotalKills(), 2), NamedTextColor.YELLOW),
 			Component.text(" kills and died " + pinfo.deaths + " times this game.")
 		).color(NamedTextColor.GRAY));
 	}

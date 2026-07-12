@@ -121,7 +121,7 @@ public class KitSans extends Kit {
 				if (event.getVictim() instanceof LivingEntity livingVictim) {
 					int duration = 24;
 					if (livingVictim instanceof Player playerVictim)
-						duration += (int) Main.getPlayerInfo(playerVictim).kills * 24;
+						duration += (int) Main.getPlayerInfo(playerVictim).getKills() * 24;
 					boolean hadPoison = livingVictim.hasPotionEffect(PotionEffectType.POISON);
 					livingVictim.addPotionEffect(new PotionEffect(PotionEffectType.POISON, duration, 1));
 					if (livingVictim.hasPotionEffect(PotionEffectType.POISON)) {
@@ -209,6 +209,21 @@ public class KitSans extends Kit {
 			"this is why i never make promises."
 		};
 
+		final File songFile = new File(new File("songs"), "megalovania.nbs");
+		try {
+			PayloadTestKillstreak.NbsSong song = PayloadTestKillstreak.loadSong(new FileInputStream(songFile));
+			new PayloadTestKillstreak.NbsSongPlayer(song).schedule();
+			Bukkit.broadcast(Component.textOfChildren(
+				Component.text("Now playing " + song.name(), NamedTextColor.GOLD),
+				Component.newline(),
+				Component.text("By " + song.author(), NamedTextColor.GOLD),
+				Component.newline(),
+				Component.text("Original by " + song.originalAuthor(), NamedTextColor.GOLD)
+			));
+		} catch (IOException e) {
+			Main.logger().log(Level.WARNING, "Couldn't load " + songFile, e);
+		}
+
 		final String worldName = game.getWorld().getName(); // use world name so the tasks don't hold a reference to a stale TeamArena
 		long start = 1;
 		for (String line : lines) {
@@ -216,23 +231,6 @@ public class KitSans extends Kit {
 				if (!Main.getGame().getWorld().getName().equals(worldName)) // don't persist into the next game
 					return;
 				Bukkit.broadcast(Component.text(line, NamedTextColor.WHITE));
-
-				if (line.equals("you are REALLY not going to like what happens next.")) {
-					final File songFile = new File(new File("songs"), "megalovania.nbs");
-					try {
-						PayloadTestKillstreak.NbsSong song = PayloadTestKillstreak.loadSong(new FileInputStream(songFile));
-						new PayloadTestKillstreak.NbsSongPlayer(song).schedule();
-						Bukkit.broadcast(Component.textOfChildren(
-							Component.text("Now playing " + song.name(), NamedTextColor.GOLD),
-							Component.newline(),
-							Component.text("By " + song.author(), NamedTextColor.GOLD),
-							Component.newline(),
-							Component.text("Original by " + song.originalAuthor(), NamedTextColor.GOLD)
-						));
-					} catch (IOException e) {
-						Main.logger().log(Level.WARNING, "Couldn't load " + songFile, e);
-					}
-				}
 			}, start);
 			start += (line.length() * 2) + 10 + (line.charAt(line.length() - 1) == '?' ? 40 : 0);
 		}

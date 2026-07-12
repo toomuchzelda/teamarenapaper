@@ -119,7 +119,7 @@ public class KitBerserker extends Kit {
 		@Override
 		public void onAttemptedAttack(DamageEvent event) {
 			if (event.getDamageType().isMelee() && event.getMeleeWeapon().getType() == TEMPLATE_AXE.getType()) {
-				double kills = Main.getPlayerInfo((Player) event.getFinalAttacker()).kills;
+				double kills = Main.getPlayerInfo((Player) event.getFinalAttacker()).getKills();
 				kills = Math.floor(kills);
 				if (kills == 0d) return;
 				if (kills >= KB_LOSS_STEPS) {
@@ -137,15 +137,20 @@ public class KitBerserker extends Kit {
 
 		@Override
 		public void onHeal(EntityRegainHealthEvent event) {
-			double kills = Main.getPlayerInfo((Player) event.getEntity()).kills;
+			double kills = Main.getPlayerInfo((Player) event.getEntity()).getKills();
+			if (Double.isNaN(kills)) { Thread.dumpStack(); return; }
 			kills = Math.floor(kills);
+			if (Double.isNaN(kills)) { Thread.dumpStack(); return; }
 
 			if (kills == 0d) return;
 			if (kills >= HEAL_LOSS_STEPS - 1d) {
+				if (Double.isNaN(kills)) { Thread.dumpStack(); return; }
 				kills = HEAL_LOSS_STEPS - 1d;
+				if (Double.isNaN(kills)) { Thread.dumpStack(); return; }
 			}
 
 			kills = 1d - (kills / HEAL_LOSS_STEPS);
+			if (Double.isNaN(kills)) { Thread.dumpStack(); return; }
 
 			if (Double.isNaN(kills)) {
 				Main.logger().warning("NaN in berserker heal");
@@ -156,7 +161,7 @@ public class KitBerserker extends Kit {
 
 		@Override
 		public void onAssist(Player berserker, double amount, Player victim) {
-			final double killsNow = Main.getPlayerInfo(berserker).kills;
+			final double killsNow = Main.getPlayerInfo(berserker).getKills();
 
 			// Update bossbar
 			final double floor = Math.floor(killsNow);
@@ -200,7 +205,7 @@ public class KitBerserker extends Kit {
 		public void onPlayerTick(Player player) {
 			if (player.isSneaking()) return;
 
-			final double kills = Main.getPlayerInfo(player).kills;
+			final double kills = Main.getPlayerInfo(player).getKills();
 			final int iKills = (int) kills;
 			if (iKills == 0) return;
 			final int particleCount = MathUtils.randomRange(Math.max(0, iKills - 1), iKills);

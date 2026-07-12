@@ -1,5 +1,6 @@
 package me.toomuchzelda.teamarenapaper.utils;
 
+import me.toomuchzelda.teamarenapaper.Main;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -25,6 +26,7 @@ import java.time.format.FormatStyle;
 import java.util.*;
 import java.util.List;
 import java.util.function.Function;
+import java.util.logging.Level;
 import java.util.regex.Pattern;
 
 public class TextUtils {
@@ -67,6 +69,10 @@ public class TextUtils {
 	}
 
 	public static String formatNumber(double value, int scale) {
+		if (Double.isNaN(value)) {
+			Main.logger().log(Level.SEVERE, "NaN passed to formatNumber, value=" + value + ",scale=" + scale, new RuntimeException());
+			return "Error";
+		}
 		if ((int) value == value) {
 			return "" + ((int) value);
 		}
@@ -75,6 +81,10 @@ public class TextUtils {
 	}
 
 	public static String formatNumber(double value) {
+		if (Double.isNaN(value)) {
+			Main.logger().log(Level.SEVERE, "NaN passed to formatNumber, value=" + value, new RuntimeException());
+			return "Error";
+		}
 		if ((int) value == value) {
 			return "" + ((int) value);
 		}
